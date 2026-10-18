@@ -1,7 +1,7 @@
 import { translate, useT } from '@/lang';
 import { departmentApi, useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
 import { EmptyState } from '@/shared/components/empty-state';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { localName } from '@/shared/lib/local-name';
@@ -16,6 +16,7 @@ import { ArrowRight, Check, Info, Loader2, UserPlus, Users, X } from 'lucide-rea
 import { useEffect, useMemo, useState } from 'react';
 import type { GroupRole } from '../api/permissionApi';
 import { useGroupRoleMutations, useGroupRoles, usePermissionMatrix } from '../hooks/use-permissions';
+import { permissionRefusalText } from '../lib/refusal';
 
 interface DeptEmployee {
     id: number;
@@ -50,12 +51,14 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     // Name lookup for the chips and the move review: the people on the list, plus the latest matches
     const employees = useMemo(() => [...selectedEmployees, ...found], [selectedEmployees, found]);
 
-    // Review-before-move: holds the employees that will be pulled out of another
-    // group on save. When non-null, the confirmation dialog is shown.
+    // Employees leaving another group on save; non-null opens the review dialog
     const [pendingMoves, setPendingMoves] = useState<MoveRow[] | null>(null);
 
     // Brief "Saved" success state shown on the save/OK button before the modal closes.
     const [saved, setSaved] = useState(false);
+    // Server refusal banner; the count re-runs the shake on a repeat refusal
+    const [formError, setFormError] = useState('');
+    const [formErrorCount, setFormErrorCount] = useState(0);
 
     // Department employee expansion panel
     const [expandedDeptId, setExpandedDeptId] = useState<number | null>(null);
@@ -71,6 +74,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             setDeptMembers([]);
             setPendingMoves(null);
             setSaved(false);
+            setFormError('');
         }
     }, [open, group]);
 
@@ -133,14 +137,19 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
 
     /** Commits the create/update mutation, then briefly shows a "Saved" state. */
     const persist = async () => {
-        // Department is only a quick-add shortcut for picking employees — it is not
-        // linked to the group (the group↔department pivot was removed).
+        // Departments only quick-add employees; the group stores employees alone
         const payload = { name, role: role || null, employee_ids: empIds };
-        if (group) await update.mutateAsync({ id: group.id, payload });
-        else await create.mutateAsync(payload);
+        setFormError('');
+        try {
+            if (group) await update.mutateAsync({ id: group.id, payload });
+            else await create.mutateAsync(payload);
+        } catch (err: unknown) {
+            setFormError(permissionRefusalText(err, t));
+            setFormErrorCount((n) => n + 1);
+            return;
+        }
         setSaved(true);
-        // Keep the dialog (review or main) open so the green check lands on the
-        // button the user just clicked, then close.
+        // The green check lands on the button just clicked, then the dialog closes
         setTimeout(() => {
             setPendingMoves(null);
             onClose();
@@ -150,6 +159,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     /** On save: if any selected employee is moving groups, review first; else commit. */
     const submit = async () => {
         if (!name.trim()) return;
+        setFormError('');
         const moves = computeMoves();
         if (moves.length > 0) {
             setPendingMoves(moves);
@@ -228,9 +238,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                             )}
                         </Field>
 
-                        {/* Quick add by department — clicking a department expands its
-                        members so they can be added to the employee list above. It
-                        does NOT link the department to the group. */}
+                        {/* Quick add by department: expands its members for the list above */}
                         <Field label={t('gr_departments')} help={t('gr_quick_add_dept_help')}>
                             <div className="space-y-2">
                                 <div className="flex flex-wrap gap-1.5">
@@ -316,6 +324,8 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <span>{t('gr_note')}</span>
                         </div>
+                        {/* Server refusal, next to Save */}
+                        <FormErrorBanner message={formError} shakeKey={formErrorCount} />
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => guardClose(onClose)}>
@@ -353,6 +363,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                 </li>
                             ))}
                         </ul>
+                        <FormErrorBanner message={formError} shakeKey={formErrorCount} />
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setPendingMoves(null)} disabled={saving || saved}>

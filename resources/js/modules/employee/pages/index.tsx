@@ -71,6 +71,7 @@ import { SetCredentialsModal } from '../components/set-credentials-modal';
 import { useDepartmentMutations, useDepartments } from '../hooks/use-departments';
 import { useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary } from '../hooks/use-employees';
 import { usePositionMutations, usePositions } from '../hooks/use-positions';
+import { accountDeleteRefusal } from '../lib/delete-account';
 
 const TAB_IDS = ['overview', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
@@ -145,11 +146,7 @@ export default function EmployeesPage() {
     const departmentMut = useDepartmentMutations();
     const employeeMut = useEmployeeMutations();
 
-    /**
-     * Erase a record that was typed in by mistake. The server refuses anything with history,
-     * so the confirm can be short — but it names the login account, because that is the part
-     * an admin would not expect and cannot undo.
-     */
+    /** Erase a record typed in by mistake; the confirm names the login account that goes with it. */
     const askDeleteEmployee = async (e: Employee) => {
         await confirm({
             variant: 'danger',
@@ -160,6 +157,10 @@ export default function EmployeesPage() {
             action: async () => {
                 await employeeMut.remove.mutateAsync(e.id);
                 closeEmp();
+            },
+            errorMessage: (err) => {
+                const refusal = accountDeleteRefusal(err);
+                return refusal ? t(`emp_del_block_${refusal}`) : undefined;
             },
         });
     };

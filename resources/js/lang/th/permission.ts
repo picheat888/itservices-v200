@@ -271,6 +271,8 @@ export const permission: Dict = {
     'perm_desc_notifications.inapp_test': 'ส่งตัวอย่างการแจ้งเตือนเข้าถาดของตัวเอง',
     'perm_desc_notifications.logs': 'อ่านประวัติการส่งทุกฉบับและเหตุที่ข้ามไป รวมถึงผู้รับและเนื้อความ',
     'perm_act_system.view_audit': 'ดูบันทึกการตรวจสอบ',
+    'perm_desc_system.view_audit':
+        'เห็นบันทึกการตรวจสอบของทุกโมดูล รวมถึงข้อมูลที่ถูกลบไปแล้ว เช่น อีเมลและเบอร์โทรของพนักงาน ควรให้เฉพาะผู้ดูแลระบบ',
     // ผังสิทธิ์ — Reports
     perm_mod_reports: 'รายงาน',
     'perm_act_reports.module': 'เข้าศูนย์รายงาน',
@@ -379,6 +381,14 @@ export const permission: Dict = {
     perm_saved_title: 'บันทึกสิทธิ์แล้ว',
     perm_saved_desc: 'บันทึกสิทธิ์ของ {name} แล้ว มีผลกับ {n} คน',
     perm_saved_desc_none: 'บันทึกสิทธิ์ของ {name} แล้ว',
+    perm_refusal_default_group_super: 'ตั้งกลุ่มที่มีบทบาทผู้ดูแลระบบสูงสุดเป็นกลุ่มเริ่มต้นไม่ได้ เพราะพนักงานใหม่จะได้สิทธิ์ทั้งหมด',
+    perm_refusal_admin_members_protected: 'รายชื่อนี้มีผู้ดูแลระบบสูงสุดอยู่ ต้องให้ผู้ดูแลระบบสูงสุดเป็นคนย้าย',
+    perm_refusal_last_super_admin: 'บันทึกไม่ได้ เพราะจะไม่เหลือผู้ดูแลระบบสูงสุดเลย',
+    perm_refusal_own_access: 'แก้บทบาทหรือกลุ่มของตัวเองไม่ได้ ให้ผู้ดูแลระบบสูงสุดแก้ให้',
+    perm_refusal_grant_ceiling: 'ให้ได้เฉพาะสิทธิ์ที่คุณมีอยู่เอง',
+    audit_members_added: 'สมาชิกที่เพิ่ม',
+    audit_members_removed: 'สมาชิกที่เอาออก',
+    audit_role_changes: 'บทบาทบัญชีที่เปลี่ยน',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้',

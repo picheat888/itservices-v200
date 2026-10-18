@@ -82,6 +82,7 @@ import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { permissionRefusalText } from '../lib/refusal';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
 const TABS = ['templates', 'groups', 'logs'] as const;
@@ -385,8 +386,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         setSaveStep('saving');
         try {
             await update.mutateAsync({ role: role.value, permissions: [...draft] });
-        } catch {
-            setSaveError(t('cd_error'));
+        } catch (err: unknown) {
+            setSaveError(permissionRefusalText(err, t));
             setSaveStep('confirm');
             return;
         }
@@ -671,6 +672,8 @@ function GroupRolesTab() {
     const defaultGroupId = data?.default_group_id ?? null;
 
     const defaultGroup = groups.find((g) => g.id === defaultGroupId);
+    // Super admin groups are never offered as the default; the current one stays visible
+    const defaultChoices = groups.filter((g) => g.role !== SUPER_ROLE || g.id === defaultGroupId);
 
     if (isLoading)
         return (
@@ -750,6 +753,7 @@ function GroupRolesTab() {
                                                     variant: 'danger',
                                                     entity: { name: g.name },
                                                     action: () => remove.mutateAsync(g.id),
+                                                    errorMessage: (err) => permissionRefusalText(err, t),
                                                 });
                                             }}
                                             disabled={adminLocked}
@@ -798,7 +802,7 @@ function GroupRolesTab() {
                                 <SelectItem value="__none__">
                                     <span className="text-muted-foreground">{translate(lang, 'perm_ui_none_set')}</span>
                                 </SelectItem>
-                                {groups.map((g) => (
+                                {defaultChoices.map((g) => (
                                     <SelectItem key={g.id} value={String(g.id)}>
                                         {g.name}
                                     </SelectItem>
@@ -823,6 +827,7 @@ function GroupRolesTab() {
                                     title: t('perm_default_group'),
                                     entity: groupToSet ? { name: groupName } : { name: translate(lang, 'perm_ui_clear_default') },
                                     action: () => setDefaultGroup.mutateAsync(groupToSet),
+                                    errorMessage: (err) => permissionRefusalText(err, t),
                                 });
 
                                 if (!ok) {

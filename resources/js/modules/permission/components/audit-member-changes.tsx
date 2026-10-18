@@ -19,9 +19,9 @@ export function AuditMemberChanges({
 
     return (
         <>
-            {(membersAdded.length > 0 || membersRemoved.length > 0) && (
+            {membersAdded.length > 0 && (
                 <div>
-                    <div className={HEADING}>{t('perm_ui_members')}</div>
+                    <div className={HEADING}>{t('audit_members_added')}</div>
                     <div className="flex flex-wrap gap-1">
                         {membersAdded.map((name) => (
                             <span
@@ -31,6 +31,13 @@ export function AuditMemberChanges({
                                 + {name}
                             </span>
                         ))}
+                    </div>
+                </div>
+            )}
+            {membersRemoved.length > 0 && (
+                <div>
+                    <div className={HEADING}>{t('audit_members_removed')}</div>
+                    <div className="flex flex-wrap gap-1">
                         {membersRemoved.map((name) => (
                             <span
                                 key={`removed-${name}`}
@@ -44,7 +51,7 @@ export function AuditMemberChanges({
             )}
             {roleChanges.length > 0 && (
                 <div>
-                    <div className={HEADING}>{t('audit_field_role_id')}</div>
+                    <div className={HEADING}>{t('audit_role_changes')}</div>
                     <div className="space-y-1.5">
                         {roleChanges.map((change, index) => (
                             <div key={`${change.name}-${index}`} className="flex items-center gap-2 text-sm">
