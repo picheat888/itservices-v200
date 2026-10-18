@@ -201,6 +201,8 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::enum('skip_reason', 'เหตุผลที่ข้าม', fn (RequestApproval $s) => $s->skip_reason?->value, self::SKIP_KEYS, self::SKIP_TH)
                 ->labelKey('rep_c_rqa_skip_reason')->hiddenByDefault(),
             ReportColumn::text('requester', 'ผู้ขอ', fn (RequestApproval $s) => $s->request?->requester_name)->sheetOnly(),
+            ReportColumn::text('requester_code', 'รหัสพนักงานผู้ขอ', fn (RequestApproval $s) => $s->request?->employee?->code)->sheetOnly()
+                ->describe('รหัสพนักงานของผู้ขอ ใช้เชื่อมกับตารางพนักงาน'),
             ReportColumn::localized('department', 'แผนกผู้ขอ', fn (RequestApproval $s) => $this->requesterDepartment($s->request))->sheetOnly()->withCode('รหัสแผนกผู้ขอ', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('request_status', 'สถานะคำขอ', fn (RequestApproval $s) => $s->request?->status, self::STATUS_KEYS, self::STATUS_TH)->sheetOnly(),
         ];
