@@ -45,6 +45,7 @@ class EmployeePermissionGatingTest extends TestCase
         // module + view present -> add kept; view_section absent -> section_add dropped
         $this->actingAs($admin)->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['employees.module', 'employees.view', 'employees.add', 'employees.section_add'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
@@ -59,6 +60,7 @@ class EmployeePermissionGatingTest extends TestCase
 
         $this->actingAs($admin)->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['profile.edit', 'profile.return_assets'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
@@ -72,6 +74,7 @@ class EmployeePermissionGatingTest extends TestCase
 
         $this->actingAs($this->admin())->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['employees.edit_own'],
+            'version' => $role->permissionsVersion(),
         ])->assertUnprocessable();
     }
 

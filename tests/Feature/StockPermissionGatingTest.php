@@ -153,6 +153,7 @@ class StockPermissionGatingTest extends TestCase
         // stock.view_request absent โ’ stock.fulfill is an orphan and must be dropped
         $this->actingAs($admin)->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['stock.module', 'stock.view', 'stock.receive', 'stock.fulfill'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)

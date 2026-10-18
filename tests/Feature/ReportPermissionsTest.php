@@ -51,7 +51,7 @@ class ReportPermissionsTest extends TestCase
         $editor = User::factory()->create(['role' => 'super']);
         $role = Role::create(['key' => 'rpt_'.uniqid(), 'name' => 'Report Save', 'is_system' => false]);
 
-        $this->actingAs($editor)->putJson("/api/permissions/{$role->key}", ['permissions' => ['reports.assets', 'reports.export']])->assertOk();
+        $this->actingAs($editor)->putJson("/api/permissions/{$role->key}", ['permissions' => ['reports.assets', 'reports.export'], 'version' => $role->permissionsVersion()])->assertOk();
 
         $this->assertSame([], RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all());
     }

@@ -28,7 +28,7 @@ class RequestRolePermissionSaveTest extends TestCase
     /** @param list<string> $permissions */
     private function save(array $permissions): void
     {
-        $this->putJson("/api/permissions/{$this->role->key}", ['permissions' => $permissions])->assertOk();
+        $this->putJson("/api/permissions/{$this->role->key}", ['permissions' => $permissions, 'version' => $this->role->permissionsVersion()])->assertOk();
     }
 
     private function stored(string $key): ?bool

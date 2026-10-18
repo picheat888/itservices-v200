@@ -50,6 +50,23 @@ class RolePermissionController extends Controller
         ], 403));
     }
 
+    /**
+     * Refuses a save made from an older copy of the role's permissions.
+     *
+     * @param  array<int, string>  $storedKeys  read under the role's row lock
+     */
+    private function guardVersion(array $storedKeys, string $sentVersion): void
+    {
+        if (hash_equals(Role::versionOf($storedKeys), $sentVersion)) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'Someone else changed this role\'s permissions. Reload it and try again.',
+            'code' => 'role_changed',
+        ], 409));
+    }
+
     public function index(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
@@ -88,6 +105,7 @@ class RolePermissionController extends Controller
                 'members' => (int) ($memberCounts[$role->id] ?? 0),
                 'groups' => (int) ($groupCounts[$role->id] ?? 0),
                 'permissions' => $allowed,
+                'version' => Role::versionOf($permsByRoleId[$role->id] ?? []),
             ];
         });
 
@@ -111,6 +129,7 @@ class RolePermissionController extends Controller
         $data = $request->validate([
             'permissions' => ['present', 'array'],
             'permissions.*' => [Rule::in(Permissions::all())],
+            'version' => ['required', 'string'],
         ]);
 
         $granted = Permissions::normalizeStock($data['permissions']);
@@ -126,12 +145,14 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeReports($granted);
         $granted = Permissions::normalizeSystem($granted);
 
-        DB::transaction(function () use ($request, $roleId, $granted) {
+        DB::transaction(function () use ($request, $roleId, $granted, $data) {
             $lockedRole = Role::whereKey($roleId)->lockForUpdate()->firstOrFail();
 
-            // Current keys, for the ceiling and the audit diff
+            // Current keys, for the version check, the ceiling and the audit diff
             $before = $lockedRole->allowedKeys();
+            $this->guardVersion($before, $data['version']);
             $added = array_values(array_diff($granted, $before));
+            $removed = array_values(array_diff($before, $granted));
             $this->guardGrantCeiling($request, $added);
 
             // Bulk upsert
@@ -144,11 +165,14 @@ class RolePermissionController extends Controller
 
             RolePermission::upsert($upsertRows, ['role_id', 'permission'], ['allowed']);
 
-            AuditLog::record(
-                'Updated permissions',
-                $lockedRole->name ?? $lockedRole->key,
-                ['added' => $added, 'removed' => array_values(array_diff($before, $granted))],
-            );
+            if ($added !== [] || $removed !== []) {
+                AuditLog::record(
+                    'Updated permissions',
+                    $lockedRole->name ?? $lockedRole->key,
+                    ['added' => $added, 'removed' => $removed],
+                    subject: $lockedRole,
+                );
+            }
         });
 
         return $this->index($request);

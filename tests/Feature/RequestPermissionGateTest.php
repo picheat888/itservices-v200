@@ -57,6 +57,7 @@ class RequestPermissionGateTest extends TestCase
         // be unreachable, so the grant is dropped on save rather than stored as a loose end.
         $this->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['requests.notify_stalled', 'requests.complete'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
@@ -74,6 +75,7 @@ class RequestPermissionGateTest extends TestCase
         // The shape this card has to allow: someone who follows the queue but never works it.
         $this->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['requests.module', 'requests.notify_approved'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();

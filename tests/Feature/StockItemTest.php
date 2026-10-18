@@ -393,6 +393,7 @@ class StockItemTest extends TestCase
         $role = Role::create(['key' => 'stock_deleter', 'name' => 'Stock deleter', 'is_system' => false]);
         $this->actingAs($this->superUser())->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['stock.module', 'stock.view', 'stock.delete'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
         $this->assertTrue(RolePermission::where('role_id', $role->id)->where('permission', 'stock.delete')->where('allowed', true)->exists());
 

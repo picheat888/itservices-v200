@@ -169,6 +169,7 @@ class NotificationPermissionGateTest extends TestCase
 
         $this->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['notifications.email_edit', 'notifications.logs', 'tickets.module'],
+            'version' => $role->permissionsVersion(),
         ])->assertOk();
 
         $kept = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
