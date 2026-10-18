@@ -70,4 +70,12 @@ class StoreAssetRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return ['tag' => 'Tag'];
+    }
 }
