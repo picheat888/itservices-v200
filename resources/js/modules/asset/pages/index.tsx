@@ -408,9 +408,9 @@ export default function AssetsPage() {
         enabled: editId != null,
     });
     const [editing, setEditing] = useState<Asset | null>(null);
+    // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
-        if (editId == null) setEditing(null);
-        else if (editSource && !editFetching && editing?.id !== editId) setEditing(editSource);
+        if (editId != null && editSource && !editFetching && editing?.id !== editId) setEditing(editSource);
     }, [editId, editSource, editFetching, editing?.id]);
     // A link or reload cannot open a form the menus would not offer
     const editOpen = editing != null && editing.id === editId && canEdit && editing.status !== 'writeoff';

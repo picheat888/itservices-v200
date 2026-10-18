@@ -268,9 +268,9 @@ export default function TicketsPage() {
         queryFn: () => ticketApi.get(editId as number),
         enabled: editId != null,
     });
+    // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
-        if (editId == null) setEditTicket(null);
-        else if (editSource && !editFetching && editTicket?.id !== editId) setEditTicket(editSource);
+        if (editId != null && editSource && !editFetching && editTicket?.id !== editId) setEditTicket(editSource);
     }, [editId, editSource, editFetching, editTicket?.id]);
     // A link or reload cannot open a form the menus would not offer
     const editOpen = editTicket != null && editTicket.id === editId && canEditTicket(editTicket);

@@ -193,9 +193,9 @@ export default function EmployeesPage() {
     // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the view ?view stays under it
     const editId = toRecordId(searchParams.get('edit'));
     const { data: editSource, isError: editMissing, isFetching: editFetching } = useEmployee(editId);
+    // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
-        if (editId == null) setEditEmp(null);
-        else if (editSource && !editFetching && editEmp?.id !== editId) setEditEmp(editSource);
+        if (editId != null && editSource && !editFetching && editEmp?.id !== editId) setEditEmp(editSource);
     }, [editId, editSource, editFetching, editEmp?.id]);
     // A link or reload cannot open a form the menus would not offer
     const editOpen = editEmp != null && editEmp.id === editId && canEdit && editEmp.status !== 'resigned' && (!editEmp.is_super_admin || isSuper);
