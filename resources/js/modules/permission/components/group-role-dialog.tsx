@@ -2,7 +2,6 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { InfoHint } from '@/shared/components/info-hint';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
@@ -16,11 +15,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useBaseRoleLabel, useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
-import { isOverCeiling } from '../lib/group-rules';
+import { isOverCeiling, removeLine } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
 import { GroupMemberPicker } from './group-member-picker';
+import { LockHint } from './group-pane';
 import { RoleBar } from './role-bar';
 
 type SaveStep = 'idle' | 'confirm' | 'saving' | 'done';
@@ -46,7 +46,7 @@ export function GroupRoleDialog({
     const { user, isSuper } = useAuth();
     const { data: matrix } = usePermissionMatrix();
     const baseRole = useBaseRoleLabel();
-    const { create, update } = useGroupRoleMutations();
+    const { create, update, refreshList } = useGroupRoleMutations();
     const deleteGroup = useDeleteGroup(defaultGroup);
 
     const [name, setName] = useState('');
@@ -67,24 +67,29 @@ export function GroupRoleDialog({
     }, [open, liveGroup]);
     const group = open ? liveGroup : shown;
 
-    // Fresh state when the dialog opens or switches group; a refetch of the same group keeps it
-    useEffect(() => {
-        if (!open) return;
-        setName(group?.name ?? '');
-        setRole(group?.role ?? '');
-        setAdded(new Map());
-        setRemoved(new Map());
-        setTab(group ? 'members' : 'pick');
-        setTried(false);
-        setSaveStep('idle');
-        setSaveError(null);
-    }, [open, group?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Fresh state, set while rendering, when the dialog opens or switches group; a refetch of the same group keeps it
+    const session = open ? String(group?.id ?? 'new') : null;
+    const [seenSession, setSeenSession] = useState<string | null>(null);
+    if (session !== seenSession) {
+        setSeenSession(session);
+        if (session !== null) {
+            setName(group?.name ?? '');
+            setRole(group?.role ?? '');
+            setAdded(new Map());
+            setRemoved(new Map());
+            setTab(group ? 'members' : 'pick');
+            setTried(false);
+            setSaveStep('idle');
+            setSaveError(null);
+        }
+    }
 
     const roles = matrix?.roles ?? [];
     const myPermissions = new Set(user?.permissions ?? []);
     const readOnly = group !== null && group.role === SUPER_ROLE && !isSuper;
     const roleLocked = readOnly || !!group?.includes_me;
     const chosenRole = roles.find((r) => r.value === role);
+    const paneKey = String(group?.id ?? 'new');
 
     const nameChanged = group !== null && name.trim() !== group.name;
     const roleChanged = group !== null && role !== (group.role ?? '');
@@ -93,11 +98,17 @@ export function GroupRoleDialog({
     const memberCount = (group?.member_count ?? 0) + added.size - removed.size;
 
     const leavesTo = defaultGroup && defaultGroup.id !== group?.id ? defaultGroup : null;
-    const leaveNote = leavesTo ? t('gr_leaves_to').replace('{name}', leavesTo.name) : t('gr_leaves_none').replace('{role}', baseRole);
+    // With no default group and no known base role label the destination is left unsaid
+    const leaveNote = leavesTo
+        ? t('gr_leaves_to').replace('{name}', leavesTo.name)
+        : baseRole
+          ? t('gr_leaves_none').replace('{role}', baseRole)
+          : null;
 
     const taken = groups.some((g) => g.id !== group?.id && g.name.trim().toLowerCase() === name.trim().toLowerCase());
     const nameError = !name.trim() ? t('gr_err_name') : taken ? t('gr_err_name_taken') : null;
-    const roleError = !role ? t('gr_err_role') : null;
+    // A locked role stays as saved, even when that is none
+    const roleError = !role && !roleLocked ? t('gr_err_role') : null;
 
     const guardClose = useDiscardGuard(open && dirty && saveStep === 'idle');
     const close = () => guardClose(onClose);
@@ -170,6 +181,7 @@ export function GroupRoleDialog({
             setSaveStep('idle');
             onClose();
             onSaved(saved);
+            void refreshList();
         }, 850);
     };
 
@@ -184,10 +196,7 @@ export function GroupRoleDialog({
             (movedIn > 0
                 ? t('gr_confirm_add_moved').replace('{n}', fmtN(added.size)).replace('{m}', fmtN(movedIn))
                 : t('gr_confirm_add').replace('{n}', fmtN(added.size))),
-        removed.size > 0 &&
-            t('gr_confirm_remove')
-                .replace('{n}', fmtN(removed.size))
-                .replace('{where}', leavesTo ? t('gr_where_group').replace('{name}', leavesTo.name) : t('gr_where_none').replace('{role}', baseRole)),
+        removed.size > 0 && removeLine(t, fmtN(removed.size), leavesTo?.name ?? null, baseRole),
         roleChanged && chosenRole && t('gr_confirm_role').replace('{role}', chosenRole.label),
         nameChanged && group && t('gr_confirm_rename').replace('{name}', group.name),
         group === null && added.size === 0 && t('gr_no_members'),
@@ -315,6 +324,7 @@ export function GroupRoleDialog({
                         {!readOnly && (
                             <div className={cn('border-border min-h-0 flex-col lg:flex lg:border-r', tab === 'pick' ? 'flex' : 'hidden')}>
                                 <GroupMemberPicker
+                                    key={paneKey}
                                     groupId={group?.id ?? null}
                                     added={added}
                                     onToggle={toggleStaged}
@@ -325,6 +335,7 @@ export function GroupRoleDialog({
                         )}
                         <div className={cn('min-h-0 flex-col lg:flex', readOnly || tab === 'members' ? 'flex' : 'hidden')}>
                             <GroupMemberList
+                                key={paneKey}
                                 groupId={group?.id ?? null}
                                 memberCount={memberCount}
                                 added={added}
@@ -355,7 +366,7 @@ export function GroupRoleDialog({
                                         <span id="gr-delete-blocked" className="sr-only">
                                             {deleteBlocked}
                                         </span>
-                                        <InfoHint text={deleteBlocked} />
+                                        <LockHint text={deleteBlocked} />
                                     </>
                                 )}
                             </span>

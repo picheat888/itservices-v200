@@ -85,7 +85,7 @@ export interface GroupRole {
     role: string | null;
     role_label: string | null;
     member_count: number;
-    /** The signed-in user's own employee is a member (only a Super admin may then change it). */
+    /** The signed-in user's own employee is a member: nobody may then change its role, members or delete it. */
     includes_me: boolean;
 }
 
@@ -94,14 +94,18 @@ export interface GroupRoleListResponse {
     default_group_id: number | null;
 }
 
-/** A new group sends everyone in employee_ids; an edit sends only who joined (add_ids) and who left (remove_ids). */
-export interface GroupRolePayload {
+interface GroupRoleFields {
     name: string;
     role: string | null;
-    employee_ids?: number[];
-    add_ids?: number[];
-    remove_ids?: number[];
 }
+
+/** A new group sends everyone in employee_ids. */
+export type GroupRoleCreatePayload = GroupRoleFields & { employee_ids: number[]; add_ids?: never; remove_ids?: never };
+
+/** An edit sends only who joined (add_ids) and who left (remove_ids). */
+export type GroupRoleUpdatePayload = GroupRoleFields & { add_ids: number[]; remove_ids: number[]; employee_ids?: never };
+
+export type GroupRolePayload = GroupRoleCreatePayload | GroupRoleUpdatePayload;
 
 /** A person in the Role Group dialog; `group` is the group they sit in now, `protected` = only a Super admin may move them, `is_me` = the caller's own employee. */
 export interface GroupMember {
@@ -114,7 +118,7 @@ export interface GroupMember {
     group_id: number | null;
     group: string | null;
     protected: boolean;
-    is_me?: boolean;
+    is_me: boolean;
 }
 
 export interface GroupMemberPage {
@@ -160,8 +164,8 @@ export const roleApi = {
 
 export const groupRoleApi = {
     list: () => http.get<GroupRoleListResponse>('/group-roles').then((r) => r.data),
-    create: (payload: GroupRolePayload) => send<GroupRole>('post', '/group-roles', payload),
-    update: (id: number, payload: GroupRolePayload) => send<GroupRole>('put', `/group-roles/${id}`, payload),
+    create: (payload: GroupRoleCreatePayload) => send<GroupRole>('post', '/group-roles', payload),
+    update: (id: number, payload: GroupRoleUpdatePayload) => send<GroupRole>('put', `/group-roles/${id}`, payload),
     remove: (id: number) => send<void>('delete', `/group-roles/${id}`),
     members: (id: number, search: string, page: number) =>
         http.get<GroupMemberPage>(`/group-roles/${id}/members`, { params: { search: search || undefined, page } }).then((r) => r.data),
@@ -171,13 +175,10 @@ export const groupRoleApi = {
                 params: { group_id: p.groupId ?? undefined, search: p.search || undefined, department_id: p.departmentId ?? undefined, page: p.page },
             })
             .then((r) => r.data),
-    /** Everyone in a department at once; the answer may or may not carry `meta`. */
+    /** Everyone in a department on one page (all=1), for "Everyone in …". */
     departmentCandidates: (groupId: number | null, departmentId: number) =>
         http
-            .get<{
-                data: GroupMember[];
-                meta?: GroupMemberPage['meta'];
-            }>('/group-roles-candidates', { params: { group_id: groupId ?? undefined, department_id: departmentId, all: 1 } })
+            .get<GroupMemberPage>('/group-roles-candidates', { params: { group_id: groupId ?? undefined, department_id: departmentId, all: 1 } })
             .then((r) => r.data.data),
     /** Returns the whole list in the list cache's shape; not send(), which would unwrap its `data`. */
     setDefault: async (groupId: number | null): Promise<GroupRoleListResponse> => {

@@ -65,6 +65,8 @@ export const permission: Dict = {
     gr_pick_hint: 'Pick people one by one or a whole department',
     gr_pick_search: 'Search name or employee code…',
     gr_all_departments: 'All departments',
+    gr_department: 'Department',
+    gr_departments_search: 'Search code or department…',
     gr_pick_department: 'Everyone in {dept} ({n} people)',
     gr_pick_department_one: 'Everyone in {dept} (1 person)',
     gr_in_group: 'In {name}',

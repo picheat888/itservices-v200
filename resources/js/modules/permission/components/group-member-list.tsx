@@ -33,7 +33,7 @@ export function GroupMemberList({
     onRemove: (person: GroupMember) => void;
     onUndo: (person: GroupMember) => void;
     /** Where a leaver ends up, e.g. "Moves to User". */
-    leaveNote: string;
+    leaveNote: string | null;
     readOnly: boolean;
 }) {
     const t = useT();
@@ -42,9 +42,9 @@ export function GroupMemberList({
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading, isError, isPlaceholderData, refetch } = useGroupMembers(groupId, debounced, page);
-    const busy = groupId !== null && (isLoading || isPlaceholderData);
+    const { data, isLoading, isFetching, isError, isPlaceholderData, refetch } = useGroupMembers(groupId, debounced, page);
     const failed = groupId !== null && isError && !data;
+    const busy = groupId !== null && (isLoading || isPlaceholderData || (failed && isFetching));
 
     const name = (p: GroupMember) => localName(p, lang) ?? p.name;
     const department = (p: GroupMember) => localName(p.department ? { name: p.department, name_th: p.department_th } : null, lang);
@@ -55,7 +55,8 @@ export function GroupMemberList({
                   .reverse()
                   .filter((p) => matchesAllWords(`${p.name} ${p.name_th ?? ''} ${p.code} ${p.department ?? ''} ${p.department_th ?? ''}`, debounced))
             : [];
-    const saved = data?.data ?? [];
+    // A staged joiner already shows above; never twice
+    const saved = (data?.data ?? []).filter((p) => !added.has(p.id));
     const total = data?.meta.total ?? 0;
     const lockReason = (p: GroupMember) => (p.is_me ? t('perm_refusal_own_access') : p.protected ? t('perm_refusal_admin_members_protected') : null);
 
@@ -120,7 +121,7 @@ export function GroupMemberList({
                     />
                 ))}
                 {busy && <PaneSkeleton />}
-                {failed && <LoadFailedPanel onRetry={() => void refetch()} />}
+                {failed && !busy && <LoadFailedPanel onRetry={() => void refetch()} />}
                 {!busy &&
                     saved.map((p) => {
                         const leaving = removed.has(p.id);

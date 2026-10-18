@@ -65,6 +65,8 @@ export const permission: Dict = {
     gr_pick_hint: 'เลือกทีละคน หรือเลือกทั้งแผนก',
     gr_pick_search: 'ค้นหาชื่อ หรือรหัสพนักงาน…',
     gr_all_departments: 'ทุกแผนก',
+    gr_department: 'แผนก',
+    gr_departments_search: 'ค้นหารหัสหรือชื่อแผนก…',
     gr_pick_department: 'เลือกทั้งแผนก {dept} ({n} คน)',
     gr_pick_department_one: 'เลือกทั้งแผนก {dept} ({n} คน)',
     gr_in_group: 'อยู่ในกลุ่ม {name}',

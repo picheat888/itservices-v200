@@ -2,7 +2,7 @@
 import { useT } from '@/lang';
 import { useDepartments } from '@/modules/employee';
 import { EmptyState } from '@/shared/components/empty-state';
-import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -42,10 +42,14 @@ export function GroupMemberPicker({
     const [page, setPage] = useState(1);
     const [departmentIds, setDepartmentIds] = useState<number[] | null>(null);
     const [loadingAll, setLoadingAll] = useState(false);
+    const [departmentFailed, setDepartmentFailed] = useState(false);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading, isError, isPlaceholderData, refetch } = useGroupCandidates({ groupId, search: debounced, departmentId, page }, true);
-    const busy = isLoading || isPlaceholderData;
+    const { data, isLoading, isFetching, isError, isPlaceholderData, refetch } = useGroupCandidates(
+        { groupId, search: debounced, departmentId, page },
+        true,
+    );
     const failed = isError && !data;
+    const busy = isLoading || isPlaceholderData || (failed && isFetching);
 
     const rows = data?.data ?? [];
     const total = data?.meta.total ?? 0;
@@ -58,6 +62,7 @@ export function GroupMemberPicker({
     const pickDepartment = (value: string) => {
         setDepartmentId(value === ALL ? null : Number(value));
         setDepartmentIds(null);
+        setDepartmentFailed(false);
         setPage(1);
     };
     const toggleDepartment = async () => {
@@ -67,6 +72,7 @@ export function GroupMemberPicker({
             return;
         }
         setLoadingAll(true);
+        setDepartmentFailed(false);
         try {
             const people = await qc.fetchQuery({
                 queryKey: ['group-roles', 'department-candidates', groupId, departmentId],
@@ -75,6 +81,8 @@ export function GroupMemberPicker({
             const addable = people.filter((p) => lockReason(p) === null);
             setDepartmentIds(addable.map((p) => p.id));
             onAddMany(addable);
+        } catch {
+            setDepartmentFailed(true);
         } finally {
             setLoadingAll(false);
         }
@@ -99,11 +107,11 @@ export function GroupMemberPicker({
                 />
                 <div className="w-[46%] shrink-0">
                     <label htmlFor="gr-pick-department-select" className="sr-only">
-                        {t('department')}
+                        {t('gr_department')}
                     </label>
                     <SearchableSelect
                         id="gr-pick-department-select"
-                        searchPlaceholder={t('emp_departments_search')}
+                        searchPlaceholder={t('gr_departments_search')}
                         value={departmentId === null ? ALL : String(departmentId)}
                         onChange={pickDepartment}
                         options={departmentOptions}
@@ -125,8 +133,13 @@ export function GroupMemberPicker({
                             .replace('{n}', fmtN(total))}
                     </label>
                 )}
+                {wholeDepartment && departmentFailed && (
+                    <div className="border-border/60 flex justify-center border-b px-5 py-2.5">
+                        <LoadFailed onRetry={() => void toggleDepartment()} />
+                    </div>
+                )}
                 {busy && <PaneSkeleton />}
-                {failed && <LoadFailedPanel onRetry={() => void refetch()} />}
+                {failed && !busy && <LoadFailedPanel onRetry={() => void refetch()} />}
                 {!busy &&
                     rows.map((p) => {
                         const locked = lockReason(p);
