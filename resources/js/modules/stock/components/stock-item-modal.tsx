@@ -8,6 +8,7 @@ import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { nameSearch } from '@/shared/lib/local-name';
+import { digitsOnly } from '@/shared/lib/number';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
@@ -194,24 +195,20 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_min_stock')}>
                             <Input
-                                type="number"
                                 name="min_stock"
                                 inputMode="numeric"
                                 autoComplete="off"
-                                min={0}
                                 value={form.min_stock}
-                                onChange={(e) => set('min_stock', Math.max(0, +e.target.value))}
+                                onChange={(e) => set('min_stock', Number(digitsOnly(e.target.value)))}
                             />
                         </Field>
                         <Field label={t('stock_max_stock')} error={minMaxInvalid ? t('stock_minmax_invalid') : undefined}>
                             <Input
-                                type="number"
                                 name="max_stock"
                                 inputMode="numeric"
                                 autoComplete="off"
-                                min={0}
                                 value={form.max_stock}
-                                onChange={(e) => set('max_stock', Math.max(0, +e.target.value))}
+                                onChange={(e) => set('max_stock', Number(digitsOnly(e.target.value)))}
                             />
                         </Field>
                     </div>

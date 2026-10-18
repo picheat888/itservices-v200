@@ -8,7 +8,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { formatNumber } from '@/shared/lib/number';
+import { digitsOnly, formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
@@ -535,15 +535,12 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             {!selected.track_serial && from && !sameWarehouse && (
                                 <Field label={t('stock_qty')} required error={transferQtyError}>
                                     <Input
-                                        type="number"
                                         name="qty"
                                         inputMode="numeric"
                                         autoComplete="off"
-                                        min={1}
-                                        max={sourceBalance}
-                                        value={qty}
+                                        value={qty || ''}
                                         disabled={sourceBalance === 0}
-                                        onChange={(e) => setQty(Math.max(1, Math.min(sourceBalance, +e.target.value)))}
+                                        onChange={(e) => setQty(Math.min(sourceBalance, Number(digitsOnly(e.target.value))))}
                                     />
                                 </Field>
                             )}
@@ -730,13 +727,11 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     {selected && !isSerial && !isTransfer && !returnIsSerial && (
                         <Field label={isReceive ? t('stock_qty_received') : t('stock_qty')} required>
                             <Input
-                                type="number"
                                 name="qty"
                                 inputMode="numeric"
                                 autoComplete="off"
-                                min={1}
-                                value={qty}
-                                onChange={(e) => setQty(+e.target.value)}
+                                value={qty || ''}
+                                onChange={(e) => setQty(Number(digitsOnly(e.target.value)))}
                             />
                         </Field>
                     )}
@@ -860,13 +855,11 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                             −
                                         </button>
                                         <Input
-                                            type="number"
                                             name="serial_rows"
                                             inputMode="numeric"
                                             autoComplete="off"
-                                            min={1}
                                             value={serials.length}
-                                            onChange={(e) => setSerialCount(+e.target.value)}
+                                            onChange={(e) => setSerialCount(Number(digitsOnly(e.target.value)))}
                                             aria-label={t('stock_serial_rows')}
                                             className="h-7 w-16 text-center"
                                         />
