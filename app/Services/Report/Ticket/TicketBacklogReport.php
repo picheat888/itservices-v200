@@ -279,17 +279,20 @@ class TicketBacklogReport extends TabularReport
 
         return [
             [
-                'title' => (ThaiWords::get('rep_bl_board_title') ?? 'กระดานครบกำหนด SLA').' (เวลาที่เหลือ ณ ตอนพิมพ์)',
+                'title' => ThaiWords::get('rep_bl_board_title') ?? 'กระดานครบกำหนด SLA',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับตัวกรอง SLA',
                 'headings' => ['เวลาที่เหลือถึงกำหนด SLA', 'Ticket', 'สัดส่วน (%)'],
                 'rows' => $laneRows,
             ],
             [
                 'title' => ThaiWords::get('rep_bl_owners_title') ?? 'ค้างอยู่กับใคร',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับตัวกรอง SLA',
                 'headings' => ['ผู้รับผิดชอบ', 'เกิน SLA', 'ครบกำหนดใน 24 ชม.', 'ยังมีเวลา', 'รวม'],
                 'rows' => $owners,
             ],
             [
                 'title' => ThaiWords::get('rep_bl_cats_title') ?? 'ค้างตามหมวด',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับตัวกรอง SLA',
                 'headings' => ['หมวด', 'เกิน SLA', 'ยังไม่เกิน', 'รวม', 'เกิน SLA (%)'],
                 'rows' => $categories,
             ],

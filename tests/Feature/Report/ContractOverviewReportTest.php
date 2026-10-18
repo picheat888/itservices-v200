@@ -242,6 +242,18 @@ class ContractOverviewReportTest extends TestCase
         $this->assertSame(['แอคมี', 3, 3100.0, 37200.0, 91.2, 27100.0, 1], $sections[3]['rows'][0]);
     }
 
+    public function test_money_tiles_say_how_many_contracts_have_not_started(): void
+    {
+        $this->seedContracts();
+        $report = app(ContractOverviewReport::class);
+        $filters = $report->resolveFilters([]);
+        $tiles = collect($report->summary($report->query($this->userWith(), $filters), $filters))->keyBy('key');
+
+        $this->assertSame('rep_cov_k_next12_file', $tiles['cov_next_12']->note['label_key']);
+        $this->assertSame(1, $tiles['cov_next_12']->note['values']['waiting']);
+        $this->assertSame(1, $tiles['cov_remaining']->note['values']['waiting']);
+    }
+
     public function test_xlsx_export_carries_thai_headings_and_labels(): void
     {
         Excel::fake();

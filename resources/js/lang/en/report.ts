@@ -1599,6 +1599,8 @@ export const report: Dict = {
     rep_cov_k_remaining_hint: 'Bills left until the end date of every contract still open',
     rep_cov_k_remaining_foot: 'Longest runs to {month}',
     rep_cov_k_remaining_none: 'No bills left',
+    rep_cov_k_next12_file: 'From {n} bills, incl. {waiting} contracts not started yet',
+    rep_cov_k_remaining_file: 'Incl. {waiting} contracts not started yet',
     rep_cov_k_top_vendor: 'Biggest vendor',
     rep_cov_k_top_vendor_unit: 'of yearly cost',
     rep_cov_k_top_vendor_this: 'This vendor',

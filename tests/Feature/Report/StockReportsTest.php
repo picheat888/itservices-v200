@@ -102,9 +102,9 @@ class StockReportsTest extends TestCase
         $this->assertEqualsWithDelta(0.0, $body['data'][1]['line_value'], 0.001);
 
         $summary = collect($body['summary'])->keyBy('key');
-        $this->assertSame(4, $summary['total']['value']);
-        // The file headline repeats the page tiles: pieces and value per movement type.
-        $this->assertSame(['total', 'receive_qty', 'receive_value', 'issue_qty', 'issue_value', 'return_qty', 'transfer_qty', 'adjust_net'], $summary->keys()->all());
+        $this->assertSame(4, $body['meta']['total']);
+        // The file headline repeats the page tiles: pieces and value per movement type (the row count is not a tile).
+        $this->assertSame(['receive_qty', 'receive_value', 'issue_qty', 'issue_value', 'return_qty', 'transfer_qty', 'adjust_net'], $summary->keys()->all());
         $this->assertSame(10, $summary['receive_qty']['value']);
         $this->assertEqualsWithDelta(15000.0, $summary['receive_value']['value'], 0.001);
         $this->assertSame(3, $summary['issue_qty']['value']);

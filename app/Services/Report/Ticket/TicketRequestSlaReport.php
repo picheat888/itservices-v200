@@ -251,6 +251,8 @@ class TicketRequestSlaReport extends TabularReport
 
         return [[
             'title' => 'ตามประเภทคำขอ',
+            // As on the page: every request type is listed, the filtered one among them.
+            ...(filled($filters['request_type'] ?? null) ? ['note' => 'ทุกประเภทคำขอ ไม่ขึ้นกับตัวกรองประเภทคำขอ'] : []),
             'headings' => [
                 'ประเภทคำขอ', 'ทั้งหมด', 'เสร็จสิ้น', 'ยกเลิก', 'ยังเปิด',
                 'รับเคสทัน SLA (ทัน/รับแล้ว)', 'รับเคสทัน SLA (%)', 'ปิดทัน SLA (ทัน/เสร็จสิ้น)', 'ปิดทัน SLA (%)',

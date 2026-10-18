@@ -263,6 +263,8 @@ class TicketManualSlaReport extends TabularReport
 
         return [[
             'title' => "ตาม{$heading}",
+            // As on the page: the grouped table lists every group of its own dimension, the filtered one among them.
+            ...(filled($filters[$breakdown['by']] ?? null) ? ['note' => "ทุก{$heading} ไม่ขึ้นกับตัวกรอง{$heading}"] : []),
             'headings' => [
                 $heading, 'ทั้งหมด', 'เสร็จสิ้น', 'ยกเลิก', 'ยังเปิด',
                 'รับเคสทัน SLA (ทัน/รับแล้ว)', 'รับเคสทัน SLA (%)', 'ปิดทัน SLA (ทัน/เสร็จสิ้น)', 'ปิดทัน SLA (%)',

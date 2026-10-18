@@ -508,6 +508,7 @@ class AssetTransferHistoryReport extends TabularReport
             ],
             [
                 'title' => 'ค้างอยู่ตอนนี้',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่',
                 'headings' => ['รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'สถานะ', 'ผู้ถือ', 'แผนก', 'เริ่มรอ', 'สาเหตุ', 'รอมาแล้ว (วัน)'],
                 'rows' => array_map(fn (array $w) => [
                     $w['code'], $w['brand'], $w['model'], $w['status'] === 'pending_acceptance' ? 'รอกดรับ' : 'รอรับคืน',

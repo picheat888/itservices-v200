@@ -143,7 +143,7 @@ class EmployeeOverviewReportTest extends TestCase
         $total = end($sections[1]['rows']);
         $this->assertSame('รวม', $total[0]);
         $this->assertSame($total[1] + $total[2] - $total[3], $total[4]);
-        $this->assertStringContainsString('ไม่ขึ้นกับช่วงวันที่', $sections[2]['title']);
+        $this->assertSame('ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่', $sections[2]['note']);
     }
 
     public function test_same_day_join_and_leave_is_two_rows_and_counts_in_both(): void

@@ -81,7 +81,11 @@
 
 {{-- Extra tables a report adds above its rows (TabularReport::exportSections). --}}
 @foreach ($sections ?? [] as $section)
-    <h2>{{ $section['title'] }}</h2>
+    <h2>{{ $section['title'] }}@if (! empty($section['note'])) <span class="count">{{ $section['note'] }}</span>@endif</h2>
+    @if (! empty($section['empty']))
+        <div class="muted">{{ $section['empty'] }}</div>
+        @continue
+    @endif
     <table class="data">
         <thead><tr>
             @foreach ($section['headings'] as $i => $heading)
