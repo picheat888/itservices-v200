@@ -732,6 +732,7 @@ export const permission: Dict = {
     audit_ev_reset_email_template_to_standard: 'Reset email template to standard',
     audit_ev_updated_bell: 'Updated notification',
     audit_ev_reset_bell_to_standard: 'Reset notification to standard',
+    audit_ev_downloaded_report_export: 'Downloaded a report export',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'You have no access to this page yet',

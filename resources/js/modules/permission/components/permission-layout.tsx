@@ -70,6 +70,9 @@ function useSwitchWiring(s: SwitchProps, extraDescribedBy?: string) {
 }
 
 /** The row's words; a click on them toggles the switch. */
+// The (i) flows after the label's last word, also when the label wraps
+const HINT_AFTER_LABEL = 'ml-1 align-[-2px]';
+
 function SwitchLabel({ htmlFor, s }: { htmlFor: string; s: SwitchProps }) {
     return (
         <label htmlFor={htmlFor} className={cn('min-w-0', !s.locked && 'cursor-pointer')}>
@@ -144,9 +147,9 @@ function MasterBand({
     return (
         <div className={cn('bg-brand/5 border-border flex items-center gap-2.5 px-3.5 py-2.5', hasBody && 'border-b')}>
             <div className="min-w-0">
-                <div className="flex items-center gap-1 text-sm font-semibold">
+                <div className="text-sm font-semibold">
                     <SwitchLabel htmlFor={wiring.switchId} s={master} />
-                    {master.info && <InfoHint text={master.info} tabbable={false} shown={wiring.hintShown} />}
+                    {master.info && <InfoHint text={master.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
                 </div>
                 <div id={subId} className="text-muted-foreground text-xs">
                     {masterSub(master, hidden, lang)}
@@ -178,9 +181,9 @@ export function GroupHead({ chip, lang, ...s }: SwitchProps & { chip?: boolean; 
     const wiring = useSwitchWiring(s);
     return (
         <div className="bg-muted -mx-2 mb-1 flex min-h-[34px] items-center gap-2 rounded-md px-2">
-            <span className="flex min-w-0 items-center gap-1 text-sm font-medium">
+            <span className="min-w-0 text-sm font-medium">
                 <SwitchLabel htmlFor={wiring.switchId} s={s} />
-                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} />}
+                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
             </span>
             <span className="ml-auto flex items-center gap-2">
                 {chip && <span className="bg-brand/10 text-brand-ink rounded px-1.5 text-xs font-semibold">{translate(lang, 'perm_ui_view')}</span>}
@@ -232,9 +235,9 @@ export function ChildRow({ aria, ...s }: SwitchProps & { aria?: string }) {
     const wiring = useSwitchWiring(s);
     return (
         <div className="flex min-h-[30px] items-center gap-2">
-            <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-[13px]">
+            <span className="text-muted-foreground min-w-0 text-[13px]">
                 <SwitchLabel htmlFor={wiring.switchId} s={s} />
-                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} />}
+                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
             </span>
             <span className="ml-auto">
                 <PermissionSwitch
@@ -258,11 +261,9 @@ export function PlainRow({ dimOff, comingSoon, lang, ...s }: SwitchProps & { dim
     const wiring = useSwitchWiring(s, comingSoon ? tagId : undefined);
     return (
         <div className="flex min-h-[34px] items-center gap-2">
-            <span
-                className={cn('flex min-w-0 items-center gap-1 text-sm', dimOff && !s.on ? 'text-muted-foreground' : 'text-foreground font-medium')}
-            >
+            <span className={cn('min-w-0 text-sm', dimOff && !s.on ? 'text-muted-foreground' : 'text-foreground font-medium')}>
                 <SwitchLabel htmlFor={wiring.switchId} s={s} />
-                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} />}
+                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
                 {comingSoon && (
                     <span id={tagId} className="ml-1 text-xs italic opacity-70">
                         ({translate(lang, 'coming_soon_tag')})
