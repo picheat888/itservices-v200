@@ -24,6 +24,7 @@ import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
+import { styleVars } from '@/shared/lib/style-vars';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
@@ -783,13 +784,13 @@ function OverviewTab({
                                 <div key={m.key} className={m.isNow ? 'bg-brand/10' : ''} />
                             ))}
                         </div>
-                        <div className="relative z-10 mx-2 mt-3" style={{ height: `${plotHeight}px` }}>
+                        <div className="relative z-10 mx-2 mt-3 h-(--plot-h)" ref={styleVars({ '--plot-h': `${plotHeight}px` })}>
                             {/* Month separators */}
                             {months.slice(1).map((m, i) => (
                                 <div
                                     key={m.key}
-                                    className="border-border/40 absolute inset-y-0 border-l"
-                                    style={{ left: `${((i + 1) / 12) * 100}%` }}
+                                    className="border-border/40 absolute inset-y-0 left-(--x) border-l"
+                                    ref={styleVars({ '--x': `${((i + 1) / 12) * 100}%` })}
                                 />
                             ))}
                             {/* Axis baseline */}
@@ -803,29 +804,34 @@ function OverviewTab({
                                           ? t('contract_timeline_expired_ago').replace('{n}', fmtN(-c.days))
                                           : t('contract_days_many').replace('{n}', fmtN(c.days));
                                 return (
-                                    <InfoPopover
+                                    // Positioned wrapper: InfoPopover keeps its own ref, so the dot's place is set here
+                                    <span
                                         key={c.id}
-                                        label={`${c.code} ${c.name}, ${fmt.date(c.end)} (${when})`}
-                                        content={(close) => (
-                                            <TimelineDotNote
-                                                dot={c}
-                                                onOpen={() => {
-                                                    close();
-                                                    onSelect(c.id);
-                                                }}
-                                            />
-                                        )}
-                                        onActivate={() => onSelect(c.id)}
-                                        contentClassName="w-64"
-                                        className={cn(
-                                            // A 24px hit area around the 12px dot (WCAG 2.5.8)
-                                            'ring-background focus-visible:outline-ring absolute h-3 w-3 -translate-x-1/2 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:z-10 hover:scale-125 focus-visible:z-10 data-[state=open]:z-10 data-[state=open]:scale-125',
-                                            c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-600 dark:bg-amber-500' : 'bg-brand',
-                                        )}
-                                        style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
+                                        className="absolute bottom-(--y) left-(--x) h-3 w-3 -translate-x-1/2 focus-within:z-10 hover:z-10 has-[[data-state=open]]:z-10"
+                                        ref={styleVars({ '--x': `${frac * 100}%`, '--y': `${8 + lane * 16}px` })}
                                     >
-                                        {null}
-                                    </InfoPopover>
+                                        <InfoPopover
+                                            label={`${c.code} ${c.name}, ${fmt.date(c.end)} (${when})`}
+                                            content={(close) => (
+                                                <TimelineDotNote
+                                                    dot={c}
+                                                    onOpen={() => {
+                                                        close();
+                                                        onSelect(c.id);
+                                                    }}
+                                                />
+                                            )}
+                                            onActivate={() => onSelect(c.id)}
+                                            contentClassName="w-64"
+                                            className={cn(
+                                                // A 24px hit area around the 12px dot (WCAG 2.5.8)
+                                                'ring-background focus-visible:outline-ring relative block h-3 w-3 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:scale-125 data-[state=open]:scale-125',
+                                                c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-600 dark:bg-amber-500' : 'bg-brand',
+                                            )}
+                                        >
+                                            {null}
+                                        </InfoPopover>
+                                    </span>
                                 );
                             })}
                         </div>
@@ -864,8 +870,8 @@ function OverviewTab({
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
                                     <span
-                                        className="bg-brand block h-full rounded-full"
-                                        style={{ width: `${maxVendor > 0 ? (r.amount / maxVendor) * 100 : 0}%` }}
+                                        className="bg-brand block h-full w-(--w) rounded-full"
+                                        ref={styleVars({ '--w': `${maxVendor > 0 ? (r.amount / maxVendor) * 100 : 0}%` })}
                                     />
                                 </div>
                             </div>
