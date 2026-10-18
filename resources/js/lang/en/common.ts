@@ -30,6 +30,8 @@ export const common: Dict = {
     saving: 'Saving…',
     saved: 'Saved',
     cancel: 'Cancel',
+    yes: 'Yes',
+    no: 'No',
     edit_confirm_title: 'Confirm changes',
     edit_confirm_desc: 'Your changes will replace the current details of this record. Please check them before saving.',
     edit_confirm_save: 'Save changes',

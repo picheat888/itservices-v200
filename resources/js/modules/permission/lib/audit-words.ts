@@ -33,7 +33,11 @@ export function auditEventLabel(action: string, t: Translate): string {
     return wordOr(t, auditEventKey(action), action);
 }
 
+// Detail keys with no audit_field_* word, read with words the app already has
+const DETAIL_KEY_WORDS: Record<string, string> = { from: 'asset_hist_from', permissions: 'permissions' };
+
 /** The field label in the reader's language; a column with no key shows as stored. */
 export function auditFieldText(field: string, t: Translate, subjectType?: string | null): string {
-    return wordOr(t, auditFieldKey(field, subjectType), field);
+    const fallback = Object.hasOwn(DETAIL_KEY_WORDS, field) ? wordOr(t, DETAIL_KEY_WORDS[field], field) : field;
+    return wordOr(t, auditFieldKey(field, subjectType), fallback);
 }

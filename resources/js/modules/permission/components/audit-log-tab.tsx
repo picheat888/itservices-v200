@@ -18,7 +18,7 @@ import { ArrowLeftRight, Check, ChevronRight, Eye, LogIn, Pencil, Plus, Trash2, 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AuditEntry, AuditFilters } from '../api/permissionApi';
 import { useAuditLogs } from '../hooks/use-permissions';
-import { auditDiffSummary, hasAuditDetails, isBlankAuditValue } from '../lib/audit-details';
+import { auditDiffSummary, auditFacts, hasAuditDetails, hasAuditMove, isBlankAuditValue } from '../lib/audit-details';
 import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, auditValueText, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
@@ -115,7 +115,7 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
                     })}
                 </div>
             )}
-            {(details.from !== undefined || details.to !== undefined) && (
+            {hasAuditMove(details) && (
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground line-through">{shown(text('', details.from))}</span>
                     <ChevronRight aria-hidden className="text-muted-foreground h-3.5 w-3.5" />
@@ -134,10 +134,10 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
             )}
             <AuditMemberChanges membersAdded={membersAdded} membersRemoved={membersRemoved} roleChanges={details.role_changes ?? []} />
             {(details.items ?? []).length > 0 && <WordList heading={t('audit_records')} items={details.items ?? []} />}
-            {Object.entries(details.facts ?? {}).map(([key, value]) => (
+            {auditFacts(details).map(([key, value]) => (
                 <div key={key} className="flex items-baseline gap-2 text-sm">
                     <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{label(key)}</span>
-                    <span className="min-w-0 break-words">{value}</span>
+                    <span className="min-w-0 break-words">{shown(text(key, value))}</span>
                 </div>
             ))}
             {/* The deleted row as it stood */}

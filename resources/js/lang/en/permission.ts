@@ -682,6 +682,7 @@ export const permission: Dict = {
     audit_ev_created_role: 'Created Role Template',
     audit_ev_updated_role: 'Updated Role Template',
     audit_ev_deleted_role: 'Deleted Role Template',
+    audit_ev_duplicated_role: 'Duplicated Role Template',
     audit_ev_updated_permissions: 'Updated permissions',
     audit_ev_created_role_group: 'Created Role Group',
     audit_ev_updated_role_group: 'Updated Role Group',

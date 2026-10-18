@@ -101,7 +101,7 @@ function appAuditActions(): Set<string> {
 // Written only by the perf / demo data generators
 const GENERATED_ACTIONS = ['Bulk asset writeoff', 'Stock issue', 'Stock adjust_up', 'Stock adjust_down'];
 // Written by the app but still waiting for approved words
-const AWAITING_WORDS = ['Duplicated role'];
+const AWAITING_WORDS: string[] = [];
 
 test('every action the app writes has a word in both languages', () => {
     const actions = [...appAuditActions(), ...GENERATED_ACTIONS].filter((action) => !AWAITING_WORDS.includes(action));
@@ -110,4 +110,18 @@ test('every action the app writes has a word in both languages', () => {
         const missing = actions.filter((action) => !words[auditEventKey(action)]);
         assert.deepEqual(missing, [], `${lang}: no audit_ev_* word`);
     }
+});
+
+test('an action waiting for words leaves the list once both languages have one', () => {
+    for (const action of AWAITING_WORDS) {
+        assert.ok(!th[auditEventKey(action)] || !en[auditEventKey(action)], `${action} has words now; take it off AWAITING_WORDS`);
+    }
+});
+
+test('detail keys with no field word read with existing words', () => {
+    const words: Record<string, string> = { asset_hist_from: 'จาก', permissions: 'สิทธิ์การใช้งาน', audit_field_owner: 'ผู้ถือครอง' };
+    const tr = (key: string) => words[key] ?? key;
+    assert.equal(auditFieldText('from', tr), 'จาก');
+    assert.equal(auditFieldText('permissions', tr), 'สิทธิ์การใช้งาน');
+    assert.equal(auditFieldText('toString', tr), 'toString');
 });

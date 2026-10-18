@@ -4,7 +4,7 @@ import { translate } from '@/lang';
 import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
 import { formatNumber } from '@/shared/lib/number';
 import type { Lang } from '@/shared/types';
-import { auditValueKey, decimalPlaces, isBlankAuditValue } from './audit-details';
+import { auditBooleanKey, auditValueKey, decimalPlaces, isBlankAuditValue } from './audit-details';
 import { auditFieldText } from './audit-words';
 
 /** A column's label (audit_field_<column>, owner by subject type), or the raw column name when it has none. */
@@ -41,7 +41,7 @@ export function resolveAuditValue(field: string, value: unknown, lookups: AuditL
     return lookups[lookupKey].get(id) ?? `#${id}`;
 }
 
-/** A stored value as the reader sees it: a name, a date in the date setting, a module word, a grouped decimal; null when blank. */
+/** A stored value as the reader sees it: a name, a date in the date setting, yes/no, a module word, a grouped decimal; null when blank. */
 export function auditValueText(
     field: string,
     value: unknown,
@@ -50,9 +50,9 @@ export function auditValueText(
     const resolved = resolveAuditValue(field, value, ctx.lookups);
     if (isBlankAuditValue(resolved)) return null;
     if (isDateString(resolved)) return storedDateText(resolved, ctx.fmt);
-    const key = auditValueKey(field, resolved, ctx.subjectType);
+    const key = auditBooleanKey(field, resolved) ?? auditValueKey(field, resolved, ctx.subjectType);
     if (key) return translate(ctx.lang, key);
-    const places = decimalPlaces(resolved);
+    const places = decimalPlaces(field, resolved);
     if (places !== null) return formatNumber(Number(resolved), ctx.lang, { decimals: places });
     return String(resolved);
 }
