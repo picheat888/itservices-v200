@@ -1,8 +1,11 @@
 // Which moves an unsaved-changes navigation guard stops: a new path, or a change to one of the watched ?params.
 
-/** True when going from `from` to `to` leaves the page or changes a param the guard watches. */
+const isWebLink = (url: URL) => url.protocol === 'http:' || url.protocol === 'https:';
+
+/** True when an in-app move leaves the page or changes a watched param; mailto:/tel: and other origins are left to beforeunload. */
 export function isGuardedMove(from: URL, to: URL, watchParams: readonly string[]): boolean {
-    if (from.origin !== to.origin || from.pathname !== to.pathname) return true;
+    if (!isWebLink(to) || from.origin !== to.origin) return false;
+    if (from.pathname !== to.pathname) return true;
     return watchParams.some((key) => from.searchParams.get(key) !== to.searchParams.get(key));
 }
 

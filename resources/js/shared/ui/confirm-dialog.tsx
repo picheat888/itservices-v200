@@ -118,6 +118,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const confirm = React.useCallback<ConfirmFn>((options) => {
+        // A prompt replaced by a new one answers "no", so its caller never waits forever
+        resolver.current?.(false);
+        resolver.current = null;
         returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setOpts(options);
         setError(null);
