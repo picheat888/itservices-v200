@@ -10,15 +10,12 @@ use App\Models\Permission\GroupRole;
 use App\Support\SearchTerms;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
+use Illuminate\Pagination\LengthAwarePaginator as Page;
 
 class GroupRoleMemberService
 {
-    /** A whole department picked at once is capped here. */
-    public const MAX_ALL = 500;
-
     /** The group's members, searchable by name, code or department. */
-    public function members(GroupRole $group, mixed $search, int $perPage): LengthAwarePaginator
+    public function members(GroupRole $group, ?string $search, int $perPage): LengthAwarePaginator
     {
         $query = $this->baseQuery()->whereHas('groupRoles', fn (Builder $q) => $q->whereKey($group->id));
         $this->search($query, $search, withDepartment: true);
@@ -26,12 +23,8 @@ class GroupRoleMemberService
         return $query->paginate($perPage);
     }
 
-    /**
-     * Active employees who are not in the group yet, with the group they sit in now.
-     *
-     * @return LengthAwarePaginator|Collection<int, Employee>
-     */
-    public function candidates(?GroupRole $group, mixed $search, ?int $departmentId, bool $all, int $perPage): LengthAwarePaginator|Collection
+    /** Active employees who are not in the group yet, with the group they sit in now; $all sends every match as one page. */
+    public function candidates(?GroupRole $group, ?string $search, ?int $departmentId, bool $all, int $perPage): LengthAwarePaginator
     {
         $query = $this->baseQuery()
             ->with('groupRoles:id,name')
@@ -45,7 +38,13 @@ class GroupRoleMemberService
         }
         $this->search($query, $search, withDepartment: false);
 
-        return $all ? $query->limit(self::MAX_ALL)->get() : $query->paginate($perPage);
+        if (! $all) {
+            return $query->paginate($perPage);
+        }
+
+        $everyone = $query->get();
+
+        return new Page($everyone, $everyone->count(), max(1, $everyone->count()), 1);
     }
 
     private function baseQuery(): Builder
@@ -58,7 +57,7 @@ class GroupRoleMemberService
             ->orderBy('id');
     }
 
-    private function search(Builder $query, mixed $search, bool $withDepartment): void
+    private function search(Builder $query, ?string $search, bool $withDepartment): void
     {
         SearchTerms::apply($query, $search, [
             ...SearchTerms::personName(), 'code',
