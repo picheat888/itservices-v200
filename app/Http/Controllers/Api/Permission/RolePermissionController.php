@@ -126,7 +126,7 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeReports($granted);
 
         DB::transaction(function () use ($request, $roleId, $granted) {
-            $lockedRole = Role::whereKey($roleId)->lockForUpdate()->first();
+            $lockedRole = Role::whereKey($roleId)->lockForUpdate()->firstOrFail();
 
             // Current keys, for the ceiling and the audit diff
             $before = $lockedRole->allowedKeys();
