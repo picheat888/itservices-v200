@@ -14,7 +14,14 @@ class SetDefaultGroupRequest extends ManageGroupsRequest
     public function rules(): array
     {
         return [
-            'group_id' => ['nullable', Rule::exists('group_roles', 'id')],
+            'group_id' => ['nullable', 'integer', Rule::exists('group_roles', 'id')],
         ];
+    }
+
+    public function groupId(): ?int
+    {
+        $groupId = $this->validated('group_id');
+
+        return $groupId === null ? null : (int) $groupId;
     }
 }

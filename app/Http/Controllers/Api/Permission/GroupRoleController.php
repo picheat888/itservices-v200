@@ -64,7 +64,7 @@ class GroupRoleController extends Controller
     /** Sets the default Role Group for new employees, then answers with the whole list. */
     public function setDefaultGroup(SetDefaultGroupRequest $request, GroupRoleService $groups, RoleOptionService $roleOptions): JsonResponse
     {
-        $groups->setDefault($request->user(), $request->validated('group_id'));
+        $groups->setDefault($request->user(), $request->groupId());
 
         return $this->index($request, $groups, $roleOptions);
     }

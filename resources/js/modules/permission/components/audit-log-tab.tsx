@@ -37,7 +37,7 @@ const REMOVED_WORD = 'text-rose-700 dark:text-rose-400';
 /** An icon for the action's leading verb. */
 function auditIcon(action: string): typeof Plus {
     const a = action.toLowerCase();
-    if (/^(created|registered|submitted|opened|uploaded|imported)/.test(a)) return Plus;
+    if (/^(created|duplicated|registered|submitted|opened|uploaded|imported)/.test(a)) return Plus;
     if (/^(deleted|removed)/.test(a)) return Trash2;
     if (/^rejected/.test(a)) return X;
     if (/^(approved|accepted|received|committed|fulfilled|completed|resolved)/.test(a)) return Check;

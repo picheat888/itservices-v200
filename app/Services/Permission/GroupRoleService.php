@@ -1,7 +1,7 @@
 <?php
 
-// Role Group create, update, delete and default-group writes: one transaction each that opens with locking reads,
-// keeps at least one Administrator, retries on a deadlock, and writes the audit row.
+// Role Group create, update, delete and default-group writes, each in one transaction with its audit row;
+// create, update and delete open with locking reads, keep at least one Administrator and retry on a deadlock.
 
 namespace App\Services\Permission;
 
@@ -146,7 +146,7 @@ class GroupRoleService
     }
 
     /** Sets the Role Group new employees join, or none. */
-    public function setDefault(User $caller, mixed $groupId): void
+    public function setDefault(User $caller, ?int $groupId): void
     {
         $group = $groupId ? GroupRole::with('role')->find($groupId) : null;
 
@@ -156,8 +156,10 @@ class GroupRoleService
             $this->guards->guardGrantCeiling($caller, $group->role, true);
         }
 
-        AppSetting::put('default_employee_group_id', $groupId);
-        AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
+        DB::transaction(function () use ($groupId, $group) {
+            AppSetting::put('default_employee_group_id', $groupId === null ? null : (string) $groupId);
+            AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
+        });
     }
 
     /** Re-reads the group under a row lock, so two saves of one group run one after the other. */
