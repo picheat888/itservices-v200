@@ -3,6 +3,7 @@
 namespace App\Models\Permission;
 
 use App\Models\User;
+use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -13,6 +14,18 @@ class Role extends Model
     protected function casts(): array
     {
         return ['is_system' => 'boolean'];
+    }
+
+    /**
+     * The catalogue keys this role is allowed (stale non-catalogue rows are ignored).
+     *
+     * @return array<int, string>
+     */
+    public function allowedKeys(): array
+    {
+        $allowed = RolePermission::where('role_id', $this->id)->where('allowed', true)->pluck('permission')->all();
+
+        return array_values(array_intersect($allowed, Permissions::all()));
     }
 
     /**

@@ -518,7 +518,7 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame($auditBefore, AuditLog::count());
     }
 
-    public function test_the_last_super_admins_employee_cannot_be_deleted(): void
+    public function test_the_only_super_admin_deleting_their_own_employee_is_refused_before_the_last_admin_check(): void
     {
         Storage::fake('local');
         Storage::disk('local')->put('employees/ada.png', 'bytes');
@@ -731,6 +731,76 @@ class PermissionSecurityTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'super']))
             ->putJson('/api/group-roles-default', ['group_id' => $bosses->id])
             ->assertOk();
+    }
+
+    public function test_group_manager_can_clear_the_default_group(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        AppSetting::put('default_employee_group_id', (string) $ordinary->id);
+        [$caller] = $this->groupManager();
+
+        $this->actingAs($caller)
+            ->putJson('/api/group-roles-default', ['group_id' => null])
+            ->assertOk()
+            ->assertJsonPath('default_group_id', null);
+
+        $this->assertNull(AppSetting::get('default_employee_group_id'));
+    }
+
+    public function test_raising_an_empty_default_groups_role_is_ceiling_checked(): void
+    {
+        $this->roleWith('boss', 'system.manage_groups', 'system.manage_roles', 'system.view_audit');
+        [$caller] = $this->groupManager();
+        $team = GroupRole::create(['name' => 'Team', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $team);
+        $tom = $this->staffEmployee('Tom', $team);
+        $everyone = GroupRole::create(['name' => 'Everyone', 'role' => 'staff']);
+        AppSetting::put('default_employee_group_id', (string) $everyone->id);
+        $this->actingAs($caller);
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$everyone->id}", ['name' => 'Everyone', 'role' => 'boss', 'employee_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+
+        $this->assertSame('staff', $everyone->fresh()->role->key);
+        $this->assertSame($auditBefore, AuditLog::count());
+
+        $this->putJson("/api/group-roles/{$team->id}", ['name' => 'Team', 'role' => 'staff', 'employee_ids' => [$tom->id]])
+            ->assertOk();
+
+        $this->assertTrue($this->isMember($everyone, $sam));
+        $this->assertSame('staff', User::where('employee_id', $sam->id)->first()->role->key);
+    }
+
+    public function test_a_default_groups_role_can_change_within_the_ceiling(): void
+    {
+        $this->roleWith('clerk', 'system.manage_groups');
+        [$caller] = $this->groupManager();
+        $everyone = GroupRole::create(['name' => 'Everyone', 'role' => 'staff']);
+        AppSetting::put('default_employee_group_id', (string) $everyone->id);
+
+        $this->actingAs($caller)
+            ->putJson("/api/group-roles/{$everyone->id}", ['name' => 'Everyone', 'role' => 'clerk', 'employee_ids' => []])
+            ->assertOk();
+
+        $this->assertSame('clerk', $everyone->fresh()->role->key);
+    }
+
+    public function test_a_stale_permission_key_does_not_block_handing_out_a_role(): void
+    {
+        $legacy = $this->roleWith('legacy', 'system.manage_groups', 'retired.old_key');
+        [$caller] = $this->groupManager();
+        $loose = GroupRole::create(['name' => 'Loose', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $loose);
+
+        $this->assertSame(['system.manage_groups'], $legacy->allowedKeys());
+
+        $this->actingAs($caller)
+            ->postJson('/api/group-roles', ['name' => 'Legacy', 'role' => 'legacy', 'employee_ids' => [$sam->id]])
+            ->assertCreated();
+
+        $this->assertSame('legacy', User::where('employee_id', $sam->id)->first()->role->key);
     }
 
     public function test_group_manager_can_rename_their_own_group(): void
