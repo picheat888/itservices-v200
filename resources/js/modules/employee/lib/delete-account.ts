@@ -12,7 +12,7 @@ interface Viewer {
 
 /** Same account link as the server: the user's employee_id, or an employee with the same username. */
 function isOwnRecord(employee: DeleteTarget, viewer: Viewer): boolean {
-    return viewer.employee_id === employee.id || (!!viewer.username && viewer.username === employee.username);
+    return viewer.employee_id === employee.id || (!!viewer.username && viewer.username.toLowerCase() === employee.username?.toLowerCase());
 }
 
 /** The blocker a refused delete names in `message` (403 own_account / super_account), if it is one of these. */
