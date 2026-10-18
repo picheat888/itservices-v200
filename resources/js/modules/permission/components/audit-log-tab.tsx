@@ -222,7 +222,7 @@ export function AuditLogTab() {
         {
             key: 'action',
             header: t('audit_action'),
-            minWidth: '13rem',
+            minWidth: '10rem',
             render: (l) => {
                 const Icon = auditIcon(l.action);
                 const summary = auditDiffSummary(l.details, {
@@ -247,7 +247,7 @@ export function AuditLogTab() {
         {
             key: 'user',
             header: t('audit_user'),
-            width: '170px',
+            width: 'var(--audit-user-w)',
             render: (l) => (
                 <div className="flex min-w-0 items-center gap-2">
                     <UserAvatar name={l.user_name} className="h-7 w-7 shrink-0" textClassName="text-[10px]" />
@@ -258,13 +258,13 @@ export function AuditLogTab() {
         {
             key: 'target',
             header: t('audit_target'),
-            width: '200px',
+            width: 'var(--audit-target-w)',
             render: (l) => <TruncText text={l.target} className="text-muted-foreground" />,
         },
         {
             key: 'time',
             header: t('audit_time'),
-            width: '112px',
+            width: '132px',
             render: (l) => (
                 <span className="text-muted-foreground block truncate text-xs whitespace-nowrap" title={fmt.dateTime(l.created_at)}>
                     {auditAgo(l.created_at, lang, fmt.dateTime(l.created_at))}
@@ -273,9 +273,11 @@ export function AuditLogTab() {
         },
         {
             key: 'open',
+            sticky: 'right',
             header: <span className="sr-only">{t('audit_details')}</span>,
-            width: '52px',
+            width: '44px',
             align: 'center',
+            className: 'px-1',
             render: (l) =>
                 hasAuditDetails(l.details) && (
                     // The Tab stop of the row; a click anywhere on the row toggles too
@@ -299,8 +301,9 @@ export function AuditLogTab() {
         },
     ];
 
+    // User and target widths: narrower below xl so a tablet fits without scrolling
     return (
-        <div className="p-5">
+        <div className="p-5 [--audit-target-w:120px] [--audit-user-w:128px] xl:[--audit-target-w:200px] xl:[--audit-user-w:170px]">
             <DataTable
                 columns={columns}
                 rows={logs}
