@@ -108,6 +108,22 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.asset_code', fn ($assetCode) => is_string($assetCode) && str_starts_with($assetCode, 'INK-IT-'));
     }
 
+    public function test_tag_is_at_most_ten_characters(): void
+    {
+        $this->actingAs($this->super());
+        $payload = ['category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100];
+
+        $this->postJson('/api/assets', [...$payload, 'tag' => 'PC-ACC-0123'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('tag');
+
+        // Thai counts characters, not bytes
+        $this->postJson('/api/assets', [...$payload, 'tag' => 'เครื่องสมชาย'])->assertUnprocessable();
+        $this->postJson('/api/assets', [...$payload, 'tag' => 'เครื่องพี่'])
+            ->assertCreated()
+            ->assertJsonPath('data.tag', 'เครื่องพี่');
+    }
+
     public function test_rented_asset_derives_value_and_dates_from_contract(): void
     {
         $this->actingAs($this->super());

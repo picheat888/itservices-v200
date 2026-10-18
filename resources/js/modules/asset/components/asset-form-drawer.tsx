@@ -368,7 +368,12 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                     </Field>
                                 )}
                                 <Field label={t('asset_nickname')} icon={Tag} help={t('asset_nickname_help')}>
-                                    <Input value={form.tag} onChange={(e) => upd('tag', e.target.value)} placeholder={t('asset_nickname_ph')} />
+                                    <Input
+                                        value={form.tag}
+                                        maxLength={10}
+                                        onChange={(e) => upd('tag', e.target.value)}
+                                        placeholder={t('asset_nickname_ph')}
+                                    />
                                 </Field>
                             </div>
 
