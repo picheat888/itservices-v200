@@ -242,7 +242,7 @@ export default function RequestsPage() {
         {
             key: 'title',
             header: t('req_col_title'),
-            minWidth: '16rem',
+            minWidth: '14rem',
             render: (r) => {
                 const Icon = REQUEST_TYPE_META[r.type].icon;
                 return (
@@ -259,7 +259,7 @@ export default function RequestsPage() {
         {
             key: 'requester',
             header: t('req_col_requester'),
-            width: '190px',
+            width: '180px',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={localPair(r.requester.name, r.requester.name_th, lang)} className="text-sm font-medium" />
@@ -276,7 +276,7 @@ export default function RequestsPage() {
         {
             key: 'department',
             header: t('req_department'),
-            width: '190px',
+            width: '176px',
             render: (r) => <TruncText text={localPair(r.requester.department, r.requester.department_th, lang)} className="text-sm" />,
         },
         {
@@ -296,7 +296,7 @@ export default function RequestsPage() {
         {
             key: 'waiting',
             header: t('req_col_waiting'),
-            width: '220px',
+            width: '200px',
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
@@ -319,11 +319,11 @@ export default function RequestsPage() {
         },
         {
             key: 'actions',
-            header: t('actions'),
+            sticky: 'right',
+            header: <span className="sr-only">{t('actions')}</span>,
             align: 'right',
-            // Room for the approve and reject buttons only when this page has a request the reader can decide
-            // Icon buttons below xl, labelled buttons from xl up
-            width: rows.some((r) => r.can_approve) ? 'clamp(150px, calc(150px + (100vw - 1100px) * 0.8), 300px)' : '72px',
+            // Room for approve and reject only when this page has a request the reader can decide; icon buttons below xl
+            width: rows.some((r) => r.can_approve) ? 'clamp(150px, calc(150px + (100vw - 1100px)), 276px)' : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve && (

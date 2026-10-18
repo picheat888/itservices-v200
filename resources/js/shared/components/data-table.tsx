@@ -117,7 +117,7 @@ interface DataTableProps<T> {
 }
 
 /** Rows-per-page choices; the first is the default. */
-export const PAGE_SIZES = [20, 50, 100];
+export const PAGE_SIZES = [10, 25, 50, 100];
 
 export function DataTable<T>({
     columns,
@@ -156,7 +156,7 @@ export function DataTable<T>({
         setOwnQuery(value);
         search?.onChange(value);
     };
-    const [clientPageSize, setClientPageSize] = useState(fixedPageSize ?? 20);
+    const [clientPageSize, setClientPageSize] = useState(fixedPageSize ?? PAGE_SIZES[0]);
     const [clientPage, setClientPage] = useState(1);
 
     // fillHeight: measure the body container and derive how many rows fit.
