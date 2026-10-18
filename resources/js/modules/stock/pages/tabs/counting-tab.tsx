@@ -371,7 +371,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     return (
         <div className="space-y-3">
             {can('view_count') && (
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center justify-between gap-3">
                     <p id="stock-count-start-hint" className="text-muted-foreground text-sm">
                         {t('stock_count_start_hint')}
                     </p>
