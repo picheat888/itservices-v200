@@ -265,7 +265,7 @@ class AssetActivityReportsTest extends TestCase
             return $titles === ['ทรัพย์สินแยกตามแผนก', 'ทรัพย์สินในคลัง (พร้อมใช้งาน)', 'ทรัพย์สินในส่วนกลาง', 'ตัดจำหน่าย']
                 && $warehouseRows === [['Main store', 1, 1, 0]]
                 && $export->sheets()[4]->array()[0][5] === 'Broken'
-                && count($export->sheets()) === 6;
+                && count($export->sheets()) === 7;
         });
     }
 
@@ -362,8 +362,7 @@ class AssetActivityReportsTest extends TestCase
             ->exportReport('/api/reports/tabular/assets.transfer_history/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-transfer_history_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheets = $export->sheets();
-            $row = end($sheets)->map($export->rows->first());
+            $row = $this->rowsSheet($export)->map($export->rows->first());
 
             return in_array('ส่งมอบ', $row, true) && in_array('Somchai Deploy (EMP-9)', $row, true);
         });

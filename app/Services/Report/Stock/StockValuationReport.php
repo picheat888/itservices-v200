@@ -7,12 +7,12 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -247,7 +247,7 @@ class StockValuationReport extends TabularReport
             'headings' => ['SKU', 'รายการ', 'หมวด', 'คงเหลือ', 'หน่วย', 'มูลค่า', 'เคลื่อนไหวล่าสุด', 'ไม่เคลื่อนไหว (วัน)'],
             'rows' => array_map(fn (array $d) => [
                 $d['sku'], $d['name'], ($d['category_th'] ?: $d['category']) ?? '—', $d['qty'], $d['unit'],
-                $d['value'], DateDisplay::date($d['last_move']), $d['days'],
+                $d['value'], CellDate::date($d['last_move']), $d['days'],
             ], $data['dead']),
         ];
 

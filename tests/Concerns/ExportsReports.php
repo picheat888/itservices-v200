@@ -2,10 +2,13 @@
 
 namespace Tests\Concerns;
 
+use App\Exports\Report\TabularReportExport;
+use App\Exports\Report\TabularRowsSheet;
 use App\Models\Report\ReportExport;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 /**
  * Report export tests: exports are queued (POST → 202) and built by GenerateReportExport,
@@ -39,5 +42,19 @@ trait ExportsReports
         $this->assertSame($fileName, $export->file_name);
 
         Excel::assertStored($export->file_path, 'local', $callback);
+    }
+
+    /** An Excel date cell read back as text ("2026-09-20 10:00"); null stays null. */
+    protected function excelDate(mixed $cell, string $format = 'Y-m-d H:i'): ?string
+    {
+        $this->assertTrue($cell === null || is_float($cell), 'Expected an Excel date number, got '.var_export($cell, true));
+
+        return $cell === null ? null : ExcelDate::excelToDateTimeObject($cell)->format($format);
+    }
+
+    /** The workbook's rows sheet ("ข้อมูลดิบ"), wherever it sits among the sheets. */
+    protected function rowsSheet(TabularReportExport $export): TabularRowsSheet
+    {
+        return collect($export->sheets())->first(fn (object $sheet) => $sheet instanceof TabularRowsSheet);
     }
 }

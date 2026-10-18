@@ -10,12 +10,12 @@ use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -450,7 +450,7 @@ class StockMovementReport extends TabularReport
             'title' => 'รับเข้าและเบิกออกรายเดือน',
             'headings' => ['เดือน', 'รับเข้า (ชิ้น)', 'คืนของ (ชิ้น)', 'เบิกออก (ชิ้น)', 'ย้ายคลัง (ชิ้น)', 'มูลค่ารับเข้า', 'มูลค่าเบิกออก', 'ปรับยอดสุทธิ (ชิ้น)'],
             'rows' => array_values(array_map(fn (array $m) => [
-                DateDisplay::monthYear($m['month']), $m['receive'], $m['return'], $m['issue'], $m['transfer'],
+                CellDate::month($m['month']), $m['receive'], $m['return'], $m['issue'], $m['transfer'],
                 $m['receive_value'], $m['issue_value'], $m['adjust_net'],
             ], $data['months'])),
         ]];
@@ -460,7 +460,7 @@ class StockMovementReport extends TabularReport
             'headings' => ['เลขที่', 'รายการ', 'SKU', 'จำนวน', 'ผู้ขอ', 'สถานะ', 'รอตั้งแต่'],
             'rows' => array_map(fn (array $r) => [
                 $r['reference'], $r['item_name'], $r['sku'], $r['qty'], $r['requester_th'] ?: $r['requester'],
-                $r['status'] === 'approved' ? 'อนุมัติแล้ว รอจ่าย' : 'รออนุมัติ', DateDisplay::dateTime($r['waiting_since']),
+                $r['status'] === 'approved' ? 'อนุมัติแล้ว รอจ่าย' : 'รออนุมัติ', CellDate::dateTime($r['waiting_since']),
             ], $data['requests']['rows']),
         ];
         $sections[] = [
@@ -484,7 +484,7 @@ class StockMovementReport extends TabularReport
             'title' => 'ส่วนต่างจากการนับสต็อก',
             'headings' => ['รอบนับ', 'คลัง', 'ยืนยันเมื่อ', 'รายการที่มีส่วนต่าง', 'ปรับเพิ่ม', 'ปรับลด', 'มูลค่าสุทธิ'],
             'rows' => array_map(fn (array $c) => [
-                $c['reference'], $c['warehouse'], DateDisplay::dateTime($c['committed_at']),
+                $c['reference'], $c['warehouse'], CellDate::dateTime($c['committed_at']),
                 $c['lines'], $c['up'], $c['down'], $c['net_value'],
             ], $data['counts']),
         ];

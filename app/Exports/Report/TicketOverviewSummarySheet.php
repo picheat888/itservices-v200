@@ -8,6 +8,7 @@ use App\Support\DateDisplay;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 
@@ -15,10 +16,11 @@ use Maatwebsite\Excel\Events\AfterSheet;
  * "สรุป" sheet of the ticket report workbook: headline numbers and the breakdowns, down to
  * every department by category and every IT staff member, as the page shows them.
  */
-class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvents, WithTitle
+class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvents, WithStrictNullComparison, WithTitle
 {
     /** @param array<string, mixed> $summary */
-    public function __construct(private array $summary) {}
+    /** @param list<list<string|int>> $fileFacts SheetLayout::fileFacts() */
+    public function __construct(private array $summary, private array $fileFacts = []) {}
 
     public function title(): string
     {
@@ -60,14 +62,15 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvent
         $rows = [
             ['รายงานภาพรวม Ticket & SLA'],
             ['ช่วงวันที่', DateDisplay::range($s['range']['from'], $s['range']['to'])],
-            ['สร้างเมื่อ', DateDisplay::dateTime($s['generated_at'])],
+            ...$this->fileFacts,
             [],
             ['ตัวชี้วัด', 'ค่า'],
             ['Ticket ทั้งหมด', $k['total']],
             ['ปิดสำเร็จ', $k['completed']],
             ['ยกเลิก', $k['canceled']],
             ['ปิดตาม SLA (%)', $k['sla_rate']],
-            ['วัด SLA ได้ / ตรง SLA', $k['sla_measured'].' / '.$k['sla_met']],
+            ['Ticket ที่วัด SLA ได้', $k['sla_measured']],
+            ['Ticket ที่ตรง SLA', $k['sla_met']],
             ['เวลาแก้ไขโดยเฉลี่ย (ชม.)', $k['avg_resolve_hours']],
             ['90% ปิดได้ไม่เกิน (ชม.)', $k['p90_resolve_hours']],
             ['ค้างอยู่ตอนนี้', $s['backlog']['open'] + $s['backlog']['in_progress']],

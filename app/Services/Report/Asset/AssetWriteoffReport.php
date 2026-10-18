@@ -7,12 +7,12 @@ use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -496,7 +496,7 @@ class AssetWriteoffReport extends TabularReport
                 'title' => 'แยกตามเดือน',
                 'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่าที่คืนผู้ให้เช่า', 'เช่าที่ตัดด้วยเหตุผลอื่น'],
                 'rows' => array_map(
-                    fn (array $m) => [DateDisplay::monthYear($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
+                    fn (array $m) => [CellDate::month($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
                     $breakdown['months'],
                 ),
             ],
@@ -529,7 +529,7 @@ class AssetWriteoffReport extends TabularReport
                 'headings' => ['สัญญา', 'ชื่อสัญญา', 'ผู้ให้เช่า', 'สิ้นสุดสัญญา', 'เครื่องในสัญญา', 'คืนแล้ว', 'ตัดด้วยเหตุผลอื่น', 'ยังไม่คืน', 'เหลือ (วัน)', 'คืนก่อนกำหนด', 'สถานะ'],
                 'rows' => array_map(
                     fn (array $c) => [
-                        $c['code'], $c['name'], $c['vendor'], DateDisplay::cellDate($c['end_date']), $c['units'], $c['returned'], $c['written_off_other'],
+                        $c['code'], $c['name'], $c['vendor'], CellDate::date($c['end_date']), $c['units'], $c['returned'], $c['written_off_other'],
                         $c['still_out'], $c['days_left'], $c['returned_early'], self::CONTRACT_FLAG_TH[$c['flag']],
                     ],
                     $breakdown['contracts'],

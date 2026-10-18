@@ -66,10 +66,12 @@ class AssetOverviewRegisteredColumnsTest extends TestCase
         Asset::factory()->create();
         $this->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx')->assertAccepted();
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) use ($viewer) {
-            $sheet = last($export->sheets());
+            $sheet = $this->rowsSheet($export);
+            [$registeredAt, $registeredBy] = array_slice($sheet->map($export->rows->first()), -2);
 
             return array_slice($sheet->headings(), -2) === ['วันที่ลงทะเบียน', 'ลงทะเบียนโดย']
-                && array_slice($sheet->map($export->rows->first()), -2) === ['25/09/2026', $viewer->name];
+                && $this->excelDate($registeredAt, 'Y-m-d') === '2026-09-25'
+                && $registeredBy === $viewer->name;
         });
     }
 }

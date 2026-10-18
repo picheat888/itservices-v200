@@ -60,7 +60,7 @@
         @foreach ($section['rows'] as $cells)
             <tr>
                 @foreach ($cells as $cell)
-                    <td>{{ is_int($cell) || is_float($cell) ? $group($cell) : ($cell ?? '—') }}</td>
+                    <td>{{ $cell instanceof \App\Services\Report\Tabular\CellDate ? $cell->display() : (is_int($cell) || is_float($cell) ? $group($cell) : ($cell ?? '—')) }}</td>
                 @endforeach
             </tr>
         @endforeach

@@ -165,7 +165,7 @@ class AssetReportsTest extends TestCase
             ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheet = last($export->sheets());
+            $sheet = $this->rowsSheet($export);
             $row = $sheet->map($export->rows->first());
 
             return in_array('พร้อมส่งมอบ', $row, true);

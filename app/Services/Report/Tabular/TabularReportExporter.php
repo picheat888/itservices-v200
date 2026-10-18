@@ -68,7 +68,7 @@ class TabularReportExporter
             $rows = (clone $query)->get();
             $report->hydrateRows($rows, $viewer, $filters);
 
-            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TabularReportExport($report, $summary, $rows, $sections, $scope)];
+            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TabularReportExport($report, $summary, $rows, $sections, $scope, $viewer->name)];
         }
 
         $rows = (clone $query)->limit(self::PDF_ROW_LIMIT)->get();

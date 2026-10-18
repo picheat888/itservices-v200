@@ -5,16 +5,18 @@ namespace App\Exports\Report;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
  * "คำอธิบายคอลัมน์" sheet: what every column of the "ข้อมูลดิบ" and "ประวัติ" sheets means,
  * read straight from those sheets' columns() — so a column added there is explained here too.
  */
-class TicketOverviewGlossarySheet implements FromArray, ShouldAutoSize, WithColumnWidths, WithHeadings, WithStyles, WithTitle
+class TicketOverviewGlossarySheet implements FromArray, ShouldAutoSize, WithColumnWidths, WithEvents, WithHeadings, WithStyles, WithTitle
 {
     public function title(): string
     {
@@ -40,7 +42,15 @@ class TicketOverviewGlossarySheet implements FromArray, ShouldAutoSize, WithColu
         // How the hour figures are counted — the one thing a column name cannot say.
         $rows[] = ['หมายเหตุ', 'ชั่วโมง (ชม.)', 'นับเป็นชั่วโมงตามปฏิทิน (รวมนอกเวลาทำการและวันหยุด) ส่วนกำหนดเวลา SLA คำนวณตามกติกา SLA ที่ตั้งไว้ในหน้า "ตั้งค่า"'];
 
+        $rows[] = ['หมายเหตุ', 'วันที่และวันเวลา', 'เป็นเซลล์วันที่ของ Excel ปี ค.ศ. แสดงแบบ yyyy-mm-dd hh:mm ใช้กรอง เรียง และนำเข้า Power BI ได้โดยตรง'];
+
         return $rows;
+    }
+
+    /** @return array<class-string, callable> */
+    public function registerEvents(): array
+    {
+        return [AfterSheet::class => fn (AfterSheet $event) => SheetLayout::table($event->sheet->getDelegate())];
     }
 
     /** @return array<string, int> */

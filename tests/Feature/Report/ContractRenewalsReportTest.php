@@ -348,11 +348,11 @@ class ContractRenewalsReportTest extends TestCase
             ->exportReport('/api/reports/tabular/contracts.renewals/export?format=xlsx&type=hardware')->assertAccepted();
         $this->assertExportStored('Report_contracts-renewals_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
-            $rows = end($sheets);
+            $rows = $this->rowsSheet($export);
 
             return $export->rows->count() === 3
                 && in_array('สิ่งที่ต้องทำ', $rows->headings(), true)
-                && count($sheets) === 5;
+                && count($sheets) === 6;
         });
     }
 

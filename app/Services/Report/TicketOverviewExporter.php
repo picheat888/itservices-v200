@@ -70,7 +70,7 @@ class TicketOverviewExporter
                 ->load(['relatedAsset:id,asset_code', 'serviceRequest:id,ticket_id,reference'])
                 ->loadCount(['updates', 'attachments']);
 
-            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TicketOverviewExport($summary, $rows, $this->history->for($rows))];
+            return ['name' => $name, 'rows' => $rows->count(), 'export' => new TicketOverviewExport($summary, $rows, $this->history->for($rows), $viewer->name)];
         }
 
         $rows = $this->reports->exportRows($viewer, $filters, self::PDF_ROW_LIMIT);

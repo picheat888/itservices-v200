@@ -5,12 +5,12 @@ namespace App\Services\Report\Access;
 use App\Models\Access\AccessMembership;
 use App\Models\Employee\Employee;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -435,7 +435,7 @@ class AccessOverviewReport extends TabularReport
                 'title' => 'ให้–ถอนรายเดือน',
                 'headings' => ['เดือน', 'ให้สิทธิ์', ...$types, 'ถอนระหว่างทำงาน', 'ถอนเมื่อลาออก'],
                 'rows' => array_map(fn (array $m) => [
-                    DateDisplay::monthYear($m['month']), $m['granted'], ...array_values($m['by_type']), $m['revoked_work'], $m['revoked_leave'],
+                    CellDate::month($m['month']), $m['granted'], ...array_values($m['by_type']), $m['revoked_work'], $m['revoked_leave'],
                 ], $b['months']),
             ],
             [
@@ -450,7 +450,7 @@ class AccessOverviewReport extends TabularReport
                 'title' => 'ผู้ลาออกที่ยังถือสิทธิ์',
                 'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันสุดท้าย', 'ลาออกมาแล้ว (วัน)', 'จำนวนสิทธิ์', 'สิทธิ์ที่ยังถือ'],
                 'rows' => array_map(fn (array $p) => [
-                    $p['code'], $p['name'], $name($p['department'], '—'), DateDisplay::cellDate($p['last_day']), $p['days'], count($p['grants']),
+                    $p['code'], $p['name'], $name($p['department'], '—'), CellDate::date($p['last_day']), $p['days'], count($p['grants']),
                     implode(', ', array_map(fn (array $g) => "{$g['name']} ({$g['code']})", $p['grants'])),
                 ], $b['leavers']['people']),
             ],

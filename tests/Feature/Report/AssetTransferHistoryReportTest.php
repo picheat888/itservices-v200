@@ -334,8 +334,11 @@ class AssetTransferHistoryReportTest extends TestCase
             $moves = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'อัปเดตสถานที่');
             $acceptance = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'การกดรับมอบ');
 
-            return count($sheets) === 9
-                && $moves->array() === [['15/07/2026 09:00', 'A6', $brand, 'Latitude 5440', 'Floor 1', 'Floor 2', null, 'IT Team']]
+            $move = $moves->array()[0];
+
+            return count($sheets) === 10
+                && $this->excelDate($move[0]) === '2026-07-15 09:00'
+                && array_slice($move, 1) === ['A6', $brand, 'Latitude 5440', 'Floor 1', 'Floor 2', null, 'IT Team']
                 && $moves->headings() === ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ']
                 && $waiting->headings()[1] === 'ยี่ห้อ'
                 && in_array(['ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)', 1], $acceptance->array(), true)

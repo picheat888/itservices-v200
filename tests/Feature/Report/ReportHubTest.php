@@ -234,8 +234,8 @@ class ReportHubTest extends TestCase
 
         // Picked columns in report order; hidden-by-default columns always stay in the file
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
-            return last($export->sheets())->headings() === ['รหัสทรัพย์สิน', 'สถานะ', 'วันที่ลงทะเบียน', 'ลงทะเบียนโดย']
-                && count(last($export->sheets())->map($export->rows->first())) === 4;
+            return $this->rowsSheet($export)->headings() === ['รหัสทรัพย์สิน', 'สถานะ', 'วันที่ลงทะเบียน', 'ลงทะเบียนโดย']
+                && count($this->rowsSheet($export)->map($export->rows->first())) === 4;
         });
     }
 

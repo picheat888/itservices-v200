@@ -3,20 +3,24 @@
 namespace App\Exports\Report;
 
 use App\Models\Ticket\Ticket;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
-use App\Support\DateDisplay;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
 
 /**
  * "รายการ Ticket" sheet: one line per ticket in the report population.
  */
-class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
+class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithColumnFormatting, WithEvents, WithHeadings, WithMapping, WithStrictNullComparison, WithTitle
 {
     private const SLA_LABELS = ['met' => 'ตรง SLA', 'over_sla' => 'เกิน SLA'];
 
@@ -60,10 +64,22 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHea
             TicketLabels::status($ticket->status?->value),
             TicketLabels::source($ticket->source?->value),
             $ticket->assignee?->name,
-            DateDisplay::cellDateTime($ticket->created_at),
-            DateDisplay::cellDateTime($ticket->resolved_at),
+            CellDate::dateTime($ticket->created_at)?->excelValue(),
+            CellDate::dateTime($ticket->resolved_at)?->excelValue(),
             TicketMetrics::resolveHours($ticket),
             self::SLA_LABELS[TicketMetrics::slaState($ticket, now())] ?? '',
         ];
+    }
+
+    /** @return array<string, string> */
+    public function columnFormats(): array
+    {
+        return ['J' => CellDate::DATETIME_FORMAT, 'K' => CellDate::DATETIME_FORMAT, 'L' => '#,##0.0'];
+    }
+
+    /** @return array<class-string, callable> */
+    public function registerEvents(): array
+    {
+        return [AfterSheet::class => fn (AfterSheet $event) => SheetLayout::table($event->sheet->getDelegate())];
     }
 }

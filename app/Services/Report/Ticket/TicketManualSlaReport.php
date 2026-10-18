@@ -133,12 +133,6 @@ class TicketManualSlaReport extends TabularReport
         ];
     }
 
-    /** The rows sheet carries every field, so it is the raw data. */
-    public function sheetTitle(): string
-    {
-        return 'ข้อมูลดิบ';
-    }
-
     /** @return list<string> */
     protected function sheetOrder(): array
     {

@@ -10,12 +10,12 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\User;
 use App\Services\Report\Asset\AssetColumns;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -494,7 +494,7 @@ class ContractRentalsReport extends TabularReport
                 ],
                 'rows' => array_map(fn (array $c) => [
                     $c['code'], $c['name'], $name($c['vendor']), self::KIND_TH[$c['kind']], $c['units'], ...array_values($c['statuses']),
-                    $c['per_unit'], $c['yearly'], DateDisplay::cellDate($c['end_date']), self::STATE_TH[$c['state']],
+                    $c['per_unit'], $c['yearly'], CellDate::date($c['end_date']), self::STATE_TH[$c['state']],
                     in_array($c['state'], ['cancelled', 'expired'], true) ? null : $c['days_left'],
                 ], $breakdown['contracts']),
             ],
