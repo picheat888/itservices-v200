@@ -722,7 +722,7 @@ export default function EmailTemplatesPage() {
                     <DisabledReason reason={rights.reset ? null : t('email_no_reset_right')} label={t('email_reset_all')}>
                         <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending || !rights.reset}>
                             {resetAll.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                             ) : (
                                 <RotateCcw className="h-4 w-4" aria-hidden />
                             )}
@@ -1248,7 +1248,7 @@ function DeliveryLogPane() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, query, list.searchParams]);
 
-    const { data, isLoading, isFetching, isError, refetch } = useEmailLogs(
+    const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useEmailLogs(
         { page, per_page: perPage, search: query || undefined, status: status || undefined },
         true,
     );
@@ -1342,7 +1342,7 @@ function DeliveryLogPane() {
                 columns={columns}
                 rows={rows}
                 rowKey={(r) => r.id}
-                loading={isLoading || isFetching}
+                loading={isLoading || (isFetching && isPlaceholderData)}
                 rowHeight={44}
                 onRowClick={(r) => openLog(r.id)}
                 caption={t('email_tab_log')}
@@ -1400,7 +1400,7 @@ function PreviewPane({
             <span role="status" className={cn(!rendering && 'sr-only')}>
                 {rendering && (
                     <span className="bg-background/90 text-muted-foreground absolute top-6 right-6 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs shadow-sm backdrop-blur-sm">
-                        <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" aria-hidden />
+                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
                         {t('email_preview_updating')}
                     </span>
                 )}
@@ -1824,7 +1824,7 @@ function EditorDialog({
                                         title={rights.test ? t('email_test_hint') : undefined}
                                     >
                                         {testing ? (
-                                            <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
+                                            <Loader2 className="animate-spin" aria-hidden />
                                         ) : sentOk ? (
                                             <Check className="animate-in zoom-in-50 fade-in duration-300" aria-hidden />
                                         ) : (
@@ -1846,7 +1846,7 @@ function EditorDialog({
                                             title={shown.is_modified && rights.reset ? t('email_reset_hint') : undefined}
                                         >
                                             {resetting ? (
-                                                <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
+                                                <Loader2 className="animate-spin" aria-hidden />
                                             ) : resetOk ? (
                                                 <Check className="animate-in zoom-in-50 fade-in duration-300" aria-hidden />
                                             ) : (

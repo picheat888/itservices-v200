@@ -10,6 +10,7 @@ import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { useContractOverviewBreakdown } from '../hooks/use-reports';
 import type { ContractOverviewBreakdown, TabularFilters } from '../types';
+import { CardsUpdating } from './cards-updating';
 import { CardTitle, CardEmpty as Empty, InfoMark, monthLabel, rich } from './chart-parts';
 import { FILL } from './chart-tones';
 import { ContractMonthCard, compactMoney, contractMoney, type ContractMonth } from './contract-month-card';
@@ -385,13 +386,13 @@ function CardsSkeleton() {
 
 export function ContractOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useContractOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useContractOverviewBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <OverviewTiles tiles={data.tiles} />
             {/* Side by side from xl; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 xl:grid-cols-5">
@@ -404,6 +405,6 @@ export function ContractOverviewCards({ filters }: { filters: TabularFilters }) 
                 monthly={data.tiles.monthly}
                 narrowed={Boolean(filters.type || filters.vendor_id || filters.billing_cycle)}
             />
-        </div>
+        </CardsUpdating>
     );
 }

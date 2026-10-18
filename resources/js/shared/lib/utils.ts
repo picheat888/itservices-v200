@@ -35,8 +35,9 @@ export function focusFirstError(errors: Record<string, string>) {
     setTimeout(() => {
         const field = document.querySelector<HTMLElement>(`[data-field="${firstKey}"]`);
         if (!field) return;
-        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        field.querySelector<HTMLElement>('input, textarea, button, [tabindex]')?.focus();
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        field.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+        field.querySelector<HTMLElement>('input, textarea, button, [tabindex]')?.focus({ preventScroll: true });
     }, 0);
 }
 

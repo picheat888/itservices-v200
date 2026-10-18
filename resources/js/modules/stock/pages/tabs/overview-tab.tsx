@@ -116,10 +116,10 @@ export function OverviewTab({
                         ) : (
                             <>
                                 <div className={PANEL_LIST}>
-                                    {reorderItems.slice(0, REORDER_SHOWN).map((it) => {
+                                    {reorderItems.slice(0, REORDER_SHOWN).map((it, i) => {
                                         const out = it.current_stock === 0;
                                         return (
-                                            <div key={it.id} className="hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors">
+                                            <div key={it.id} className="row-in flex items-stretch gap-3 px-3 py-2.5" style={rowDelay(i)}>
                                                 <span
                                                     className={cn(
                                                         'w-1 shrink-0 rounded-full',
@@ -180,11 +180,11 @@ export function OverviewTab({
                                 <EmptyState title={t('stock_empty_overview_recent_moves')} hint={t('stock_empty_overview_recent_moves_hint')} />
                             ) : (
                                 <div className={PANEL_LIST}>
-                                    {movements.slice(0, 6).map((m) => {
+                                    {movements.slice(0, 6).map((m, i) => {
                                         const meta = MV_META[m.type];
                                         const MIcon = meta.icon;
                                         return (
-                                            <div key={m.id} className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors">
+                                            <div key={m.id} className="row-in flex items-center gap-3 px-3 py-2.5" style={rowDelay(i)}>
                                                 <span
                                                     className={cn(
                                                         'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
@@ -282,7 +282,7 @@ export function OverviewTab({
                                     style={rowDelay(i)}
                                     onClick={() => onSelectCategory(c.category)}
                                     title={t('stock_view_items')}
-                                    className="row-in group focus-visible:ring-ring block w-full rounded-sm text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                                    className="row-in press group focus-visible:ring-ring block w-full rounded-sm text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                                 >
                                     <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
                                         <span className="group-hover:text-brand min-w-0 truncate font-medium transition-colors">
@@ -291,10 +291,7 @@ export function OverviewTab({
                                         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{fmtN(c.units)}</span>
                                     </div>
                                     <div className="bg-muted h-2 overflow-hidden rounded-full">
-                                        <span
-                                            className="bg-brand block h-full rounded-full transition-[width]"
-                                            style={{ width: `${(c.units / maxUnits) * 100}%` }}
-                                        />
+                                        <span className="bg-brand block h-full rounded-full" style={{ width: `${(c.units / maxUnits) * 100}%` }} />
                                     </div>
                                 </button>
                             ))}

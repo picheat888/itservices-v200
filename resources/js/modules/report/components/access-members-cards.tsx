@@ -34,6 +34,7 @@ import {
 } from './access-overview-cards';
 import { count, type Lang, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
 import { CARD_HEADING_TINT } from './card-heading';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardTitle, fold, FoldToggle, reportDates } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -733,7 +734,7 @@ function CardsSkeleton() {
 
 export function AccessMembersCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error, isPlaceholderData } = useAccessMembersBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error, isPlaceholderData } = useAccessMembersBreakdown(filters);
     // A pick the other filters have since left out: drop it rather than show an empty list under its chip.
     const stalePick = Boolean(data && !isPlaceholderData && filters.resource && !data.sheet);
     useEffect(() => {
@@ -745,9 +746,9 @@ export function AccessMembersCards({ filters, patch }: { filters: TabularFilters
     const showSpace = !filters.type || filters.type === 'file_share';
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             {showSpace && <StorageCards resources={data.resources} />}
             <ResourceTableCard resources={data.resources} filters={filters} patch={patch} />
-        </div>
+        </CardsUpdating>
     );
 }

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
     nextPromotionAt,
     promoteNext,
+    TOAST_LEAVE_MS,
     TOAST_MAX_TIMED,
     TOAST_STAGGER_MS,
     useToastStore,
@@ -87,4 +88,34 @@ test('the same key within a second collapses into one toast', (t) => {
     push('slow down', 'warning', undefined, undefined, { key: 'http-throttle' });
     push('slow down 59', 'warning', undefined, undefined, { key: 'http-throttle' });
     assert.equal(useToastStore.getState().toasts.length, 1);
+});
+
+test('a group dismissal slides shown toasts out before removing them; queued ones drop at once', (t) => {
+    reset();
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let now = 5_000_000;
+    t.mock.method(Date, 'now', () => now);
+    const { push, promote, dismissGroup } = useToastStore.getState();
+    push('a', 'info', undefined, undefined, { group: 'g' });
+    now += TOAST_STAGGER_MS;
+    promote(now);
+    push('b', 'info', undefined, undefined, { group: 'g' });
+    push('c', 'info', undefined, undefined, { group: 'g' });
+    assert.deepEqual(shownIds(), ['a', 'b']);
+
+    const [a] = useToastStore.getState().toasts;
+    dismissGroup('g', a.id);
+    assert.deepEqual(
+        useToastStore.getState().toasts.map((toast) => [toast.message, Boolean(toast.leaving)]),
+        [
+            ['a', false],
+            ['b', true],
+        ],
+    );
+
+    t.mock.timers.tick(TOAST_LEAVE_MS);
+    assert.deepEqual(
+        useToastStore.getState().toasts.map((toast) => toast.id),
+        [a.id],
+    );
 });

@@ -2,7 +2,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-/** Shimmer rows that mimic a data table. */
+/** Pulsing rows that mimic a data table. */
 export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
     return (
         <div className="border-border overflow-hidden rounded-xl border">
@@ -22,7 +22,7 @@ export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: nu
     );
 }
 
-/** Shimmer cards in a responsive grid. */
+/** Pulsing cards in a responsive grid. */
 export function CardGridSkeleton({ count = 6, cols = 3 }: { count?: number; cols?: number }) {
     return (
         <div
@@ -46,7 +46,7 @@ export function CardGridSkeleton({ count = 6, cols = 3 }: { count?: number; cols
     );
 }
 
-/** Shimmer rows for a side-list (like role template list). */
+/** Pulsing rows for a side-list (like role template list). */
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
     return (
         <div className="divide-border/60 divide-y">

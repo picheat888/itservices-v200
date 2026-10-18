@@ -25,6 +25,9 @@ export const TOAST_STAGGER_MS = 1500;
 // Identical toasts (same key) within this window collapse into one
 const DEDUPE_MS = 1000;
 
+/** Slide-out plus row collapse (app.css .toast-leave / .toast-row-leaving); the toast is removed after it. */
+export const TOAST_LEAVE_MS = 360;
+
 /** Per-toast overrides for the things the tone cannot decide on its own. */
 export interface ToastOptions {
     /** Identity for the duplicate guard; defaults to the message. */
@@ -57,6 +60,8 @@ export interface Toast {
     createdAt: number;
     /** When it entered the screen; null while it waits in the queue. */
     shownAt: number | null;
+    /** Playing its slide-out; removed after TOAST_LEAVE_MS. */
+    leaving?: boolean;
 }
 
 interface ToastState {
@@ -66,7 +71,9 @@ interface ToastState {
     /** `tone` is required so no caller gets the loudest tone by accident. */
     push: (message: string, tone: ToastTone, title?: string, icon?: ToastIcon, options?: ToastOptions) => void;
     dismiss: (id: number) => void;
-    /** Drop every toast in a group except the one just activated (it plays its own slide-out). */
+    /** Slide a toast out, then remove it. */
+    leave: (id: number) => void;
+    /** Slide out every toast in a group except the one just activated (it plays its own); queued ones drop at once. */
     dismissGroup: (group: string, exceptId: number) => void;
     /** Let the next waiting toast in if a slot is free and the gap has passed. */
     promote: (now?: number) => void;
@@ -110,7 +117,7 @@ export function visibleToasts(toasts: Toast[]): Toast[] {
 
 let nextId = 1;
 
-export const useToastStore = create<ToastState>((set) => ({
+export const useToastStore = create<ToastState>((set, get) => ({
     toasts: [],
     lastShownAt: Number.NEGATIVE_INFINITY,
     push: (message, tone, title, icon, options) =>
@@ -141,6 +148,19 @@ export const useToastStore = create<ToastState>((set) => ({
             return promoteNext(toasts, s.lastShownAt, now) ?? { toasts };
         }),
     dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-    dismissGroup: (group, exceptId) => set((s) => ({ toasts: s.toasts.filter((t) => t.id === exceptId || t.group !== group) })),
+    leave: (id) => {
+        const target = get().toasts.find((t) => t.id === id);
+        if (!target || target.leaving) return;
+        if (target.shownAt === null) {
+            get().dismiss(id);
+            return;
+        }
+        set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t)) }));
+        setTimeout(() => get().dismiss(id), TOAST_LEAVE_MS);
+    },
+    dismissGroup: (group, exceptId) => {
+        const { toasts, leave } = get();
+        toasts.filter((t) => t.group === group && t.id !== exceptId).forEach((t) => leave(t.id));
+    },
     promote: (now = Date.now()) => set((s) => promoteNext(s.toasts, s.lastShownAt, now) ?? s),
 }));

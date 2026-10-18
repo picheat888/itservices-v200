@@ -141,6 +141,7 @@ export default function ContractsPage() {
         data: listData,
         isLoading,
         isFetching,
+        isPlaceholderData,
     } = useContracts(
         {
             page,
@@ -267,7 +268,7 @@ export default function ContractsPage() {
                         <AlertButton
                             tone="amber"
                             icon={AlertTriangle}
-                            iconClassName={BANNER_BLINK}
+                            iconClassName="alert-blink"
                             pressed={tab === 'all' && statusFilter === 'expiring'}
                             onClick={() => showAllWithStatus(statusFilter === 'expiring' ? '' : 'expiring')}
                         >
@@ -278,7 +279,7 @@ export default function ContractsPage() {
                         <AlertButton
                             tone="red"
                             icon={AlertOctagon}
-                            iconClassName={BANNER_BLINK}
+                            iconClassName="alert-blink"
                             pressed={tab === 'all' && statusFilter === 'expired'}
                             onClick={() => showAllWithStatus(statusFilter === 'expired' ? '' : 'expired')}
                         >
@@ -450,7 +451,7 @@ export default function ContractsPage() {
                             rowKey={(c) => c.id}
                             onRowClick={(c) => setSelectedId(c.id)}
                             rowClassName={(c) => (c.id === newlyCreated?.id ? NEW_ROW : undefined)}
-                            loading={isLoading || isFetching}
+                            loading={isLoading || (isFetching && isPlaceholderData)}
                             loadingRows={rows.length || 8}
                             caption={t('contracts_title')}
                             empty={
@@ -612,9 +613,6 @@ function ContractStatusBadge({ status, days }: { status: ContractStatus; days: n
     if (status === 'overdue') return <StatusBadge tone="red">{t(days === 0 ? 'contract_due_today' : 'contract_overdue')}</StatusBadge>;
     return <StatusBadge tone="green">{t('contract_active')}</StatusBadge>;
 }
-
-/** Alert-banner icons pulse three times on arrival (4.2s, under WCAG 2.2.2's 5s), not forever. */
-const BANNER_BLINK = 'motion-safe:animate-[pulse_1.4s_ease-in-out_3]';
 
 function OverviewTab({
     summary,
@@ -805,7 +803,7 @@ function OverviewTab({
                                             contentClassName="w-64"
                                             className={cn(
                                                 // A 24px hit area around the 12px dot (WCAG 2.5.8)
-                                                'ring-background focus-visible:outline-ring relative block h-3 w-3 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:scale-125 data-[state=open]:scale-125',
+                                                'ring-background focus-visible:outline-ring relative block h-3 w-3 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:scale-125 data-[state=open]:scale-125 motion-reduce:transition-none motion-reduce:hover:scale-100',
                                                 c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-600 dark:bg-amber-500' : 'bg-brand',
                                             )}
                                         >
@@ -875,11 +873,12 @@ function OverviewTab({
                                 hint={t('contract_empty_overview_action_queue_hint')}
                             />
                         )}
-                        {summary.action_queue.map((c) => (
+                        {summary.action_queue.map((c, i) => (
                             <button
                                 key={c.id}
                                 onClick={() => onSelect(c.id)}
-                                className="hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                                className="row-in press hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                                style={rowDelay(i)}
                             >
                                 <span className="flex h-9 w-16 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
                                     {t('contract_days_short').replace('{n}', fmtN(c.days))}

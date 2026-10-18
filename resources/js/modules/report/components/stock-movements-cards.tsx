@@ -11,6 +11,7 @@ import { useRef, useState } from 'react';
 import { useStockMovementsBreakdown } from '../hooks/use-reports';
 import type { StockMovementsBreakdown, StockWaitingRequest, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardTitle, fold, FoldToggle, Sparkline } from './chart-parts';
 import { FILL, TEXT } from './chart-tones';
 import { KpiTile } from './kpi-tile';
@@ -471,13 +472,13 @@ function CardsSkeleton() {
 
 export function StockMovementsCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useStockMovementsBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useStockMovementsBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <MovementTiles tiles={data.tiles} months={data.months} />
             {/* Side by side from lg; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
@@ -486,6 +487,6 @@ export function StockMovementsCards({ filters, patch }: { filters: TabularFilter
             </div>
             <RankCards people={data.people} departments={data.departments} filters={filters} patch={patch} />
             <CountsCard counts={data.counts} />
-        </div>
+        </CardsUpdating>
     );
 }

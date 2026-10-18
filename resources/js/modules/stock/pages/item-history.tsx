@@ -9,6 +9,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -79,8 +80,27 @@ export default function ItemHistoryPage() {
 
     if (isLoading || !data) {
         return (
-            <div role="status" className="flex min-h-screen items-center justify-center">
-                <div className="border-muted-foreground/30 border-t-primary h-7 w-7 animate-spin rounded-full border-2" aria-hidden />
+            <div role="status" className="bg-background mx-auto min-h-screen max-w-5xl px-6 py-8">
+                {/* Header + view cards + table rows */}
+                <div className="mb-6 flex items-start justify-between gap-4" aria-hidden>
+                    <div className="space-y-2">
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-6 w-64" />
+                        <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-8 w-28" />
+                </div>
+                <Skeleton className="mb-2 h-4 w-32" aria-hidden />
+                <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-hidden>
+                    {Array.from({ length: 5 }, (_, i) => (
+                        <Skeleton key={i} className="h-12" />
+                    ))}
+                </div>
+                <div className="space-y-2" aria-hidden>
+                    {Array.from({ length: 6 }, (_, i) => (
+                        <Skeleton key={i} className="h-9" />
+                    ))}
+                </div>
                 <span className="sr-only">{t('loading')}</span>
             </div>
         );

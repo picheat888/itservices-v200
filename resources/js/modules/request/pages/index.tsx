@@ -166,7 +166,7 @@ export default function RequestsPage() {
               : tab === 'all'
                 ? { page, per_page: perPage, search: sentSearch, status, type, ...filed }
                 : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
-    const { data: pageData, isLoading, isFetching, isError, refetch } = useRequests(listParams);
+    const { data: pageData, isLoading, isFetching, isPlaceholderData, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
 
@@ -457,7 +457,7 @@ export default function RequestsPage() {
                                             <div
                                                 key={r.id}
                                                 className={cn(
-                                                    'row-in hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
+                                                    'row-in row-hover relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
                                                     onboardingRowClass(r),
                                                 )}
                                                 style={rowDelay(i)}
@@ -543,7 +543,7 @@ export default function RequestsPage() {
                                         return (
                                             <div
                                                 key={r.id}
-                                                className="row-in hover:bg-muted/50 relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                                                className="row-in row-hover relative flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
                                                 style={rowDelay(i)}
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -677,7 +677,7 @@ export default function RequestsPage() {
                             columns={columns}
                             rows={rows}
                             rowKey={(r) => r.id}
-                            loading={isLoading || isFetching}
+                            loading={isLoading || (isFetching && isPlaceholderData)}
                             onRowClick={openDetail}
                             rowClassName={onboardingRowClass}
                             server={{ ...list.table.paging, total: meta?.total ?? 0 }}

@@ -1,15 +1,15 @@
 import { useT } from '@/lang';
 import { initials } from '@/shared/components/user-avatar';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName, localPair, otherName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { useUiStore } from '@/stores/ui';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { OrgFlowNode, OrgNodeData } from '../../lib/org-tree';
 import { deptFill, deptInk, NODE_W } from '../../lib/org-tree';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** One person card in the org chart: department bar + avatar, four text lines, code chip and collapse toggle. */
 export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
@@ -106,7 +106,9 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     }}
                     className="nokey bg-brand/10 text-brand-ink hover:bg-brand/20 focus-visible:ring-brand absolute right-[11px] bottom-[11px] inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    {d.collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    <ChevronRight
+                        className={cn('h-3 w-3 transition-transform duration-150 motion-reduce:transition-none', !d.collapsed && 'rotate-90')}
+                    />
                     {fmtN(d.reports_count)}
                 </button>
             )}

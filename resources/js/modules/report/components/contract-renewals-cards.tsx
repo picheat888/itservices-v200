@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { useContractRenewalsBreakdown } from '../hooks/use-reports';
 import type { ChartTone, ContractClosedRange, ContractClosedRow, ContractRenewalBand, ContractRenewalsBreakdown, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
+import { CardsUpdating } from './cards-updating';
 import { CardTitle, CardEmpty as Empty, FoldToggle, InfoMark, rich, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { ContractCode, ContractNameCell, TypePill } from './contract-cells';
@@ -286,13 +287,13 @@ export function ContractRenewalsCards({ filters }: { filters: TabularFilters }) 
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
-    const { data, isLoading, isError, error } = useContractRenewalsBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useContractRenewalsBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <Tiles data={data} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 xl:grid-cols-5">
@@ -316,7 +317,7 @@ export function ContractRenewalsCards({ filters }: { filters: TabularFilters }) 
                 />
                 <TimeLeftCard data={data} />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }
 
@@ -569,7 +570,7 @@ function ClosedTable({ rows }: { rows: ContractClosedRow[] }) {
 export function ClosedContractsCard({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { data, isLoading, isError, error } = useContractRenewalsBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useContractRenewalsBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) {
@@ -591,13 +592,15 @@ export function ClosedContractsCard({ filters, patch }: { filters: TabularFilter
               ];
 
     return (
-        <Card className="flex flex-col overflow-hidden">
-            <CardTitle title={t('rep_cren_closed_title')} info={info} sub={<ClosedRangeSegments active={closed.range} patch={patch} />} />
-            {closed.rows.length === 0 ? (
-                <Empty kind="empty" title={t('rep_empty_renewals_closed')} hint={t('rep_empty_renewals_closed_hint')} />
-            ) : (
-                <ClosedTable key={closed.range} rows={closed.rows} />
-            )}
-        </Card>
+        <CardsUpdating updating={isFetching && !isLoading}>
+            <Card className="flex flex-col overflow-hidden">
+                <CardTitle title={t('rep_cren_closed_title')} info={info} sub={<ClosedRangeSegments active={closed.range} patch={patch} />} />
+                {closed.rows.length === 0 ? (
+                    <Empty kind="empty" title={t('rep_empty_renewals_closed')} hint={t('rep_empty_renewals_closed_hint')} />
+                ) : (
+                    <ClosedTable key={closed.range} rows={closed.rows} />
+                )}
+            </Card>
+        </CardsUpdating>
     );
 }

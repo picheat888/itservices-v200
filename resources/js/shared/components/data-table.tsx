@@ -71,7 +71,7 @@ interface DataTableProps<T> {
     actions?: React.ReactNode;
     /** Content rendered on the left, right next to the search box (e.g. filter/sort selects). */
     filters?: React.ReactNode;
-    /** Show shimmering skeleton rows instead of the empty state while data loads. */
+    /** Show pulsing skeleton rows instead of the rows. Pass it for a new page/filter/sort/search, not a plain background refetch. */
     loading?: boolean;
     /** Skeleton rows on a first load, when the caller already knows how many rows are coming (default 6). */
     loadingRows?: number;
@@ -498,7 +498,7 @@ export function DataTable<T>({
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 disabled={safePage <= 1}
                                 aria-label={t('page_prev')}
-                                className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+                                className="press-icon border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <ChevronLeft aria-hidden className="h-4 w-4" />
                             </button>
@@ -509,7 +509,7 @@ export function DataTable<T>({
                                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}
                                 disabled={safePage >= pageCount}
                                 aria-label={t('page_next')}
-                                className="border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+                                className="press-icon border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <ChevronRight aria-hidden className="h-4 w-4" />
                             </button>

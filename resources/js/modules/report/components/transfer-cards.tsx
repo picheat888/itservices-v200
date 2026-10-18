@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetTransferBreakdown } from '../hooks/use-reports';
 import type { AssetTransferBreakdown, ChartLabel, ChartTone, TabularFilters } from '../types';
+import { CardsUpdating } from './cards-updating';
 import {
     barTop,
     CardEmpty,
@@ -938,13 +939,13 @@ function CardsSkeleton() {
 
 export function TransferCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useAssetTransferBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useAssetTransferBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthFlowCard months={data.months} />
@@ -961,6 +962,6 @@ export function TransferCards({ filters }: { filters: TabularFilters }) {
                 <DepartmentCard departments={data.departments} shared={data.acceptance.to_shared} />
                 <CategoryCard categories={data.categories} />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }

@@ -30,6 +30,7 @@ import type {
 } from '../types';
 import { NUM, Segments, TD, TH } from './access-overview-cards';
 import { count, PieceBar, TodoLines, type TodoTone } from './access-parts';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, InfoMark, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -784,17 +785,17 @@ function CardsSkeleton() {
 
 export function RequestApprovalsCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useRequestApprovalsBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useRequestApprovalsBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <StuckCard stuck={data.stuck} />
             <ApproversCard approvers={data.approvers} filtered={Boolean(filters.approver)} />
             <EndingsCard endings={data.endings} />
             <SkipsCard skips={data.skips} />
-        </div>
+        </CardsUpdating>
     );
 }

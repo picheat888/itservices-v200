@@ -21,6 +21,7 @@ import type {
 } from '../types';
 import { Cols, NUM, Segments, TD, TH } from './access-overview-cards';
 import { count, PieceBar, type Lang } from './access-parts';
+import { CardsUpdating } from './cards-updating';
 import {
     barTop,
     CardEmpty,
@@ -855,18 +856,18 @@ function CardsSkeleton() {
 
 export function RequestOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useRequestOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useRequestOverviewBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <MonthFlowCard months={data.months} />
             <TypesCard types={data.types} />
             <DeliveryCard delivery={data.delivery} />
             <ItemsCard items={data.items} />
             <DepartmentCard departments={data.departments} />
-        </div>
+        </CardsUpdating>
     );
 }

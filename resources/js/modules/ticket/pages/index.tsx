@@ -299,6 +299,7 @@ export default function TicketsPage() {
         data: listData,
         isLoading,
         isFetching,
+        isPlaceholderData,
     } = useTickets({
         page,
         per_page: perPage,
@@ -724,7 +725,7 @@ export default function TicketsPage() {
                             rows={rows}
                             rowKey={(tk) => tk.id}
                             onRowClick={openDetail}
-                            loading={isLoading || isFetching}
+                            loading={isLoading || (isFetching && isPlaceholderData)}
                             empty={listEmpty}
                             server={{ ...list.table.paging, total: meta?.total ?? 0 }}
                         />
@@ -807,7 +808,7 @@ function TicketTable({
                     {rows.map((tk, i) => (
                         <tr
                             key={tk.id}
-                            className="row-in border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
+                            className="row-in row-hover border-border/60 cursor-pointer border-b last:border-0"
                             style={rowDelay(i)}
                             onClick={() => onRow(tk)}
                         >

@@ -332,20 +332,33 @@
     from {
         transform: translateX(0);
         opacity: 1;
-        max-height: 7rem;
     }
     to {
         transform: translateX(120%);
         opacity: 0;
-        max-height: 0;
-        margin-bottom: -0.75rem;
     }
 }
 .toast-enter {
     animation: toast-enter 0.42s cubic-bezier(0.21, 1.02, 0.42, 1) both;
 }
 .toast-leave {
-    animation: toast-leave 0.3s ease forwards;
+    animation: toast-leave var(--motion-close) var(--ease-exit) forwards;
+    pointer-events: none;
+}
+/* Each toast sits in a one-row grid; once the card has slid out the row folds
+   1fr → 0fr (any height) and the gap above it closes, so the rest glide up.
+   Keep the delay + duration within TOAST_LEAVE_MS (stores/toast.ts). */
+.toast-row {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition:
+        grid-template-rows var(--motion-close) var(--ease-exit),
+        margin-bottom var(--motion-close) var(--ease-exit);
+}
+.toast-row-leaving {
+    grid-template-rows: 0fr;
+    margin-bottom: -0.625rem;
+    transition-delay: 150ms;
 }
 /* The bar depletes over the toast's life. The length comes from the card
    (`[animation-duration:…]`) so it can never drift from the JS countdown; the 6s
@@ -395,6 +408,9 @@
     .toast-enter,
     .toast-leave {
         animation-duration: 0.01ms;
+    }
+    .toast-row {
+        transition: none;
     }
     .toast-bar-fg {
         animation: none;
@@ -767,6 +783,12 @@
 @keyframes fade-out-only {
     to {
         opacity: 0;
+    }
+}
+/* Header alert buttons: the icon pulses three times to draw the eye, then rests */
+@media (prefers-reduced-motion: no-preference) {
+    .alert-blink {
+        animation: pulse 1.4s ease-in-out 3;
     }
 }
 /* Hand-built pop-ups (FilterPopover, SearchSelect, SearchableSelect) with usePresence */

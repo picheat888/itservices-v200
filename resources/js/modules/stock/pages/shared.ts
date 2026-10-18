@@ -21,6 +21,3 @@ export const MV_TONE_BG: Record<MovementTone, string> = {
     blue: 'bg-blue-500/12 text-blue-600 dark:text-blue-400',
     amber: 'bg-amber-500/12 text-amber-600 dark:text-amber-400',
 };
-
-/** Finite attention blink for an alert icon (three pulses, off under reduced motion). */
-export const ALERT_BLINK = 'motion-safe:animate-[pulse_1.4s_ease-in-out_3]';

@@ -837,7 +837,7 @@ export default function AssetsPage() {
                                         {(summary?.top_value ?? []).map((a) => (
                                             <tr
                                                 key={a.id}
-                                                className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
+                                                className="row-hover border-border/60 cursor-pointer border-b last:border-0"
                                                 onClick={() => openAsset(a)}
                                             >
                                                 {/* The row click is mouse-only; the code is the keyboard / screen-reader way in

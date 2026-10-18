@@ -101,7 +101,7 @@ function TabularReportRows({
         );
     // Filters that only shape the cards above stay out of the rows request, so switching one does not refetch the list.
     const rowFilters = withoutFilters(filters, extras.cardOnlyFilters ?? []);
-    const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, rowFilters, page, perPage, true);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useTabularRows(reportKey, rowFilters, page, perPage, true);
     // The tiles and charts come once per filter set; a page turn fetches only the rows.
     const headline = useTabularSummary(reportKey, withoutFilters(rowFilters, extras.rowsOnlyFilters ?? []), !extras.hideSummary || hasCharts);
     const canOpen = useCanOpen();
@@ -165,7 +165,7 @@ function TabularReportRows({
                             rowClassName={extras.rowClassName}
                             emptyState={emptyState}
                             caption={rowsTitle}
-                            loading={isLoading || isFetching}
+                            loading={isLoading || (isFetching && isPlaceholderData)}
                             server={{
                                 page,
                                 pageSize: perPage,

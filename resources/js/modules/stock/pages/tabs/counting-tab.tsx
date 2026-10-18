@@ -22,6 +22,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Check, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
@@ -838,11 +839,18 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             ) : sessionFailed ? (
                                 <LoadFailedPanel onRetry={() => void refetchSession()} />
                             ) : (
-                                <div role="status" className="flex items-center justify-center py-16">
-                                    <div
-                                        className="border-muted-foreground/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2"
-                                        aria-hidden
-                                    />
+                                <div role="status" className="space-y-3">
+                                    {/* Summary strip + sheet rows */}
+                                    <div className="grid grid-cols-3 gap-2" aria-hidden>
+                                        {Array.from({ length: 3 }, (_, i) => (
+                                            <Skeleton key={i} className="h-12" />
+                                        ))}
+                                    </div>
+                                    <div className="space-y-2" aria-hidden>
+                                        {Array.from({ length: 6 }, (_, i) => (
+                                            <Skeleton key={i} className="h-9" />
+                                        ))}
+                                    </div>
                                     <span className="sr-only">{t('loading')}</span>
                                 </div>
                             )}

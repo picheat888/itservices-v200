@@ -12,6 +12,7 @@ import { Fragment, useState } from 'react';
 import { useContractRentalsBreakdown } from '../hooks/use-reports';
 import type { ChartTone, ContractRentalKind, ContractRentalsBreakdown, ContractRentalState, RentalAssetStatus, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
+import { CardsUpdating } from './cards-updating';
 import { CardTitle, CountBar, CardEmpty as Empty, FoldToggle, rich, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { ContractCode, ContractNameCell } from './contract-cells';
@@ -478,16 +479,16 @@ function CardsSkeleton() {
 
 export function ContractRentalsCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useContractRentalsBreakdown(cardFilters(filters));
+    const { data, isLoading, isFetching, isError, error } = useContractRentalsBreakdown(cardFilters(filters));
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <Tiles data={data} />
             <ContractsCard data={data} />
             <ModelsCard models={data.models} />
-        </div>
+        </CardsUpdating>
     );
 }

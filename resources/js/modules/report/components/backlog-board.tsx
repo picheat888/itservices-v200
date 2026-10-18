@@ -24,6 +24,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useBacklogBoard } from '../hooks/use-reports';
 import type { BacklogBoardTicket, ChartSeries, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
+import { CardsUpdating } from './cards-updating';
 import { fold, FoldToggle, InfoMark, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
@@ -480,7 +481,7 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
 
 /** The board and its two cards, between the summary tiles and the table; a card row press filters the page. */
 export function BacklogBoardCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading } = useBacklogBoard(filters);
+    const { data, isLoading, isFetching } = useBacklogBoard(filters);
 
     if (isLoading || !data) {
         return (
@@ -497,12 +498,12 @@ export function BacklogBoardCards({ filters, patch }: { filters: TabularFilters;
     const tickets = narrowed(data, filters);
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <DueBoard tickets={tickets} />
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                 <Owners tickets={tickets} filters={filters} patch={patch} />
                 <Categories tickets={tickets} filters={filters} patch={patch} />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }

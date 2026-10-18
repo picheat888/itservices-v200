@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWriteoffBreakdown } from '../hooks/use-reports';
 import type { AssetWriteoffBreakdown, ChartSeries, TabularFilters } from '../types';
+import { CardsUpdating } from './cards-updating';
 import {
     barTop,
     CardTitle,
@@ -714,13 +715,13 @@ function CardsSkeleton() {
 
 export function WriteoffCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useAssetWriteoffBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useAssetWriteoffBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} />
@@ -728,6 +729,6 @@ export function WriteoffCards({ filters }: { filters: TabularFilters }) {
             </div>
             <CategoryCard categories={data.categories} totals={data.category_totals} />
             <ContractCard contracts={data.contracts} />
-        </div>
+        </CardsUpdating>
     );
 }

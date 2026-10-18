@@ -14,6 +14,7 @@ import { useSoftwareLicenseBreakdown } from '../hooks/use-reports';
 import type { SoftwareLicenseBreakdown, SoftwareSeats, TabularFilters } from '../types';
 import { CODE_LINK, DaysOut, Group, GroupRow, heldStyle, scrollToRows, Segments, TD, TH, useFoldRow } from './access-overview-cards';
 import { count, PickButton, pickRow, PieceBar, TodoLines, type TodoTone } from './access-parts';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -494,7 +495,7 @@ function CardsSkeleton() {
 
 export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error, isPlaceholderData } = useSoftwareLicenseBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error, isPlaceholderData } = useSoftwareLicenseBreakdown(filters);
     // A pick the other filters have since left out: drop it rather than show an empty list under its chip.
     const stalePick = Boolean(data && !isPlaceholderData && filters.software_id && !data.picked);
     const pair = useFoldRow(PAIR_FOLDS);
@@ -506,7 +507,7 @@ export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilte
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <SeatTableCard softwares={data.softwares} filters={filters} patch={patch} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className={cn('grid gap-3 lg:grid-cols-2', pair.anyOpen && 'lg:items-start')}>
@@ -519,6 +520,6 @@ export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilte
                 />
                 <RequestsCard requests={data.requests} cardRef={pair.right} heldHeight={pair.heldRight} open={pair.open} onToggle={pair.toggle} />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }

@@ -56,7 +56,6 @@ import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
 import { STOCK_STATUS_TONE, StockLevelBar } from '../components/stock-level-bar';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
-import { ALERT_BLINK } from './shared';
 import { AuditTab } from './tabs/counting-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { OverviewTab } from './tabs/overview-tab';
@@ -501,7 +500,7 @@ export default function StockPage() {
                         <AlertButton
                             tone={stockAlert.tone}
                             icon={AlertTriangle}
-                            iconClassName={ALERT_BLINK}
+                            iconClassName="alert-blink"
                             pressed={tab === 'items' && statusFilter === 'alerts'}
                             onClick={statusFilter === 'alerts' && tab === 'items' ? () => openItems({ status: 'all' }) : viewAlerts}
                         >

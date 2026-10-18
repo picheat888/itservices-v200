@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { nextPromotionAt, useToastStore, visibleToasts, type Toast, type ToastIcon, type ToastTone } from '@/stores/toast';
 import { Check, Info, Trash2, TriangleAlert, Users, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 /** Per-tone glyph and colours (emerald=success, amber=warning, red=error, blue=info). */
@@ -74,16 +74,14 @@ export function Toaster() {
 /** One toast. Its countdown pauses while hovered or while focus is inside it (the bar pauses via CSS). */
 function ToastItem({ toast }: { toast: Toast }) {
     const t = useT();
-    const dismiss = useToastStore((s) => s.dismiss);
+    const leave = useToastStore((s) => s.leave);
     const dismissGroup = useToastStore((s) => s.dismissGroup);
     const { Icon: ToneIcon, badge, border, bar } = TONE_META[toast.tone];
     const Icon = toast.Icon ?? (toast.icon ? ICON_OVERRIDES[toast.icon] : ToneIcon);
     const hasTitle = Boolean(toast.title);
     const sticky = toast.duration === null;
 
-    const [leaving, setLeaving] = useState(false);
-    const leavingRef = useRef(false);
-    const removeTimer = useRef<number | undefined>(undefined);
+    const leaving = Boolean(toast.leaving);
     const lifeTimer = useRef<number | undefined>(undefined);
     const remaining = useRef(toast.duration ?? 0);
     const startedAt = useRef(0);
@@ -91,11 +89,8 @@ function ToastItem({ toast }: { toast: Toast }) {
     const held = useRef({ hover: false, focus: false });
 
     const beginClose = () => {
-        if (leavingRef.current) return;
-        leavingRef.current = true;
         window.clearTimeout(lifeTimer.current);
-        setLeaving(true);
-        removeTimer.current = window.setTimeout(() => dismiss(toast.id), 300);
+        leave(toast.id);
     };
     const closeRef = useRef(beginClose);
     closeRef.current = beginClose;
@@ -108,14 +103,16 @@ function ToastItem({ toast }: { toast: Toast }) {
     useEffect(() => {
         if (toast.duration === null) return;
         run();
-        return () => {
-            window.clearTimeout(lifeTimer.current);
-            window.clearTimeout(removeTimer.current);
-        };
+        return () => window.clearTimeout(lifeTimer.current);
     }, [toast.duration]);
 
+    // A group dismissal starts the slide-out from the store; stop the countdown too
+    useEffect(() => {
+        if (leaving) window.clearTimeout(lifeTimer.current);
+    }, [leaving]);
+
     const hold = (reason: 'hover' | 'focus', on: boolean) => {
-        if (sticky || leavingRef.current || held.current[reason] === on) return;
+        if (sticky || leaving || held.current[reason] === on) return;
         const wasRunning = !held.current.hover && !held.current.focus;
         held.current[reason] = on;
         const nowRunning = !held.current.hover && !held.current.focus;
@@ -128,7 +125,7 @@ function ToastItem({ toast }: { toast: Toast }) {
     };
 
     const activate = () => {
-        if (leavingRef.current || !toast.onActivate) return;
+        if (leaving || !toast.onActivate) return;
         toast.onActivate();
         if (toast.group) dismissGroup(toast.group, toast.id);
         beginClose();
@@ -157,51 +154,54 @@ function ToastItem({ toast }: { toast: Toast }) {
     );
 
     return (
-        <div
-            onMouseEnter={() => hold('hover', true)}
-            onMouseLeave={() => hold('hover', false)}
-            onFocus={() => hold('focus', true)}
-            onBlur={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hold('focus', false);
-            }}
-            className={cn(
-                'toast-card bg-popover pointer-events-auto w-[320px] max-w-full overflow-hidden rounded-xl border',
-                border,
-                leaving ? 'toast-leave' : 'toast-enter',
-            )}
-        >
-            <div className={cn('flex min-h-[2.25rem] gap-1 py-3 pr-2 pl-3.5', hasTitle ? 'items-start' : 'items-center')}>
-                {toast.onActivate ? (
+        // Row collapses after the card slides out, so the toasts below glide up
+        <div className={cn('toast-row w-full justify-items-end', leaving && 'toast-row-leaving')}>
+            <div
+                onMouseEnter={() => hold('hover', true)}
+                onMouseLeave={() => hold('hover', false)}
+                onFocus={() => hold('focus', true)}
+                onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hold('focus', false);
+                }}
+                className={cn(
+                    'toast-card bg-popover pointer-events-auto min-h-0 w-[320px] max-w-full overflow-hidden rounded-xl border',
+                    border,
+                    leaving ? 'toast-leave' : 'toast-enter',
+                )}
+            >
+                <div className={cn('flex min-h-[2.25rem] gap-1 py-3 pr-2 pl-3.5', hasTitle ? 'items-start' : 'items-center')}>
+                    {toast.onActivate ? (
+                        <button
+                            type="button"
+                            onClick={activate}
+                            className={cn(
+                                'focus-visible:ring-ring -m-1 flex min-w-0 flex-1 cursor-pointer gap-2.5 rounded-lg p-1 text-left focus-visible:ring-2 focus-visible:outline-none',
+                                hasTitle ? 'items-start' : 'items-center',
+                            )}
+                        >
+                            {body}
+                        </button>
+                    ) : (
+                        <div className={cn('flex min-w-0 flex-1 gap-2.5', hasTitle ? 'items-start' : 'items-center')}>{body}</div>
+                    )}
+
                     <button
                         type="button"
-                        onClick={activate}
-                        className={cn(
-                            'focus-visible:ring-ring -m-1 flex min-w-0 flex-1 cursor-pointer gap-2.5 rounded-lg p-1 text-left focus-visible:ring-2 focus-visible:outline-none',
-                            hasTitle ? 'items-start' : 'items-center',
-                        )}
+                        onClick={beginClose}
+                        aria-label={t('notif_dismiss')}
+                        className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring relative flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md transition-colors after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:outline-none"
                     >
-                        {body}
+                        <X className="h-3.5 w-3.5" aria-hidden />
                     </button>
-                ) : (
-                    <div className={cn('flex min-w-0 flex-1 gap-2.5', hasTitle ? 'items-start' : 'items-center')}>{body}</div>
-                )}
-
-                <button
-                    type="button"
-                    onClick={beginClose}
-                    aria-label={t('notif_dismiss')}
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring relative flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md transition-colors after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:outline-none"
-                >
-                    <X className="h-3.5 w-3.5" aria-hidden />
-                </button>
-            </div>
-
-            {/* Depletes over the toast's life; a toast that waits to be dismissed has none */}
-            {!sticky && (
-                <div className="bg-muted h-1">
-                    <span className={cn('toast-bar-fg block h-full', bar, BAR_LIFE[toast.duration!] ?? BAR_LIFE[6000])} />
                 </div>
-            )}
+
+                {/* Depletes over the toast's life; a toast that waits to be dismissed has none */}
+                {!sticky && (
+                    <div className="bg-muted h-1">
+                        <span className={cn('toast-bar-fg block h-full', bar, BAR_LIFE[toast.duration!] ?? BAR_LIFE[6000])} />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
