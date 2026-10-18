@@ -70,7 +70,7 @@ class ContractDigestService
 
         foreach ($recipients as $recipient) {
             $this->email->sendTemplate('contract.weekly_digest', $recipient->email, [
-                'user.first_name' => strtok((string) $recipient->name, ' '),
+                'user.first_name' => e(strtok((string) $recipient->name, ' ')),
                 'digest.expiring_count' => number_format($expiring->count()),
                 'digest.expiring_table' => $this->table($expiring),
                 'digest.overdue_count' => number_format($overdue->count()),

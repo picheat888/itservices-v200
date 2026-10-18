@@ -274,6 +274,9 @@ export default function LoginPage() {
                                     }}
                                     autoFocus
                                     autoComplete="username"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
                                     placeholder={t('login_field')}
                                     aria-invalid={!!fieldErrors.login}
                                     aria-describedby={fieldErrors.login ? 'login-error' : undefined}
@@ -310,6 +313,9 @@ export default function LoginPage() {
                                         if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
                                     }}
                                     autoComplete="current-password"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
                                     placeholder={t('login_password')}
                                     aria-invalid={!!fieldErrors.password}
                                     aria-describedby={fieldErrors.password ? 'password-error' : undefined}

@@ -69,7 +69,7 @@ class TicketService
             $this->email->sendTemplate(
                 'ticket.new_case',
                 $taker->email,
-                ['user.first_name' => strtok((string) $taker->name, ' ')] + $this->staffVars($ticket),
+                ['user.first_name' => e(strtok((string) $taker->name, ' '))] + $this->staffVars($ticket),
                 // ?tab=all as well as ?view=: the drawer opens either way, but closing it
                 // on the default tab leaves the reader looking at the dashboard instead of
                 // the case they just came from.
@@ -145,7 +145,7 @@ class TicketService
         // requester used to hear nothing between filing and closing: the two mails they got
         // were "we have it" and "it is done", with the whole middle silent.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'taken', $staff->name));
-        $this->emailOwner($ticket, 'ticket.owner_taken', ['ticket.assignee' => (string) $staff->name]);
+        $this->emailOwner($ticket, 'ticket.owner_taken', ['ticket.assignee' => e((string) $staff->name)]);
 
         return $ticket->fresh();
     }
@@ -180,15 +180,15 @@ class TicketService
         $staff->notify(new TicketAssignedNotification($ticket->fresh()));
         // The assigned staff also gets the templated email (bell alone is easy to miss).
         $this->email->sendTemplate('ticket.assigned', $staff->email, [
-            'user.first_name' => strtok((string) $staff->name, ' '),
-            'actor.name' => (string) ($assignedBy?->name ?? '-'),
+            'user.first_name' => e(strtok((string) $staff->name, ' ')),
+            'actor.name' => e((string) ($assignedBy?->name ?? '-')),
             'reference.id' => (string) $ticket->ticket_no,
             ...$this->staffVars($ticket),
         ], $this->staffUrl($ticket), 'Open the case', $staff->name);
         // Tell the owner their case is now in someone's hands. Same news as take() from
         // where they sit — who picked it up is IT's business, that somebody has is theirs.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'taken', $staff->name));
-        $this->emailOwner($ticket, 'ticket.owner_taken', ['ticket.assignee' => (string) $staff->name]);
+        $this->emailOwner($ticket, 'ticket.owner_taken', ['ticket.assignee' => e((string) $staff->name)]);
 
         return $ticket->fresh();
     }
@@ -227,10 +227,10 @@ class TicketService
         $staff->notify(new TicketForwardedNotification($ticket->fresh(), $fromName));
         // The receiving staff also gets the templated email (bell alone is easy to miss).
         $this->email->sendTemplate('ticket.forwarded', $staff->email, [
-            'user.first_name' => strtok((string) $staff->name, ' '),
+            'user.first_name' => e(strtok((string) $staff->name, ' ')),
             'ticket.id' => $ticket->ticket_no,
-            'ticket.subject' => $ticket->subject,
-            'from.name' => $fromName ?? '—',
+            'ticket.subject' => e((string) $ticket->subject),
+            'from.name' => e($fromName ?? '—'),
             'reference.id' => $ticket->ticket_no,
         ], $this->staffUrl($ticket), 'Open the case', $staff->name);
         // Tell the owner who is responsible for their case now. Its own template rather than
@@ -238,8 +238,8 @@ class TicketService
         // previous technician, and the mail has to name both ends of the handover.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'forwarded', $staff->name));
         $this->emailOwner($ticket, 'ticket.owner_forwarded', [
-            'ticket.assignee' => (string) $staff->name,
-            'from.name' => $fromName ?: '-',
+            'ticket.assignee' => e((string) $staff->name),
+            'from.name' => e($fromName ?: '-'),
         ]);
 
         return $ticket->fresh();
@@ -298,9 +298,7 @@ class TicketService
         $ticket = $ticket->fresh();
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket, 'updated', $staff->name));
         $this->emailOwner($ticket, 'ticket.updated', [
-            'ticket.assignee' => (string) $staff->name,
-            // Free text somebody typed, into an HTML email — escaped and line-broken for the
-            // same reason ticket.details and ticket.resolution are.
+            'ticket.assignee' => e((string) $staff->name),
             'ticket.update' => nl2br(e($body)),
         ]);
 
@@ -502,28 +500,22 @@ class TicketService
     {
         return [
             'ticket.id' => (string) $ticket->ticket_no,
-            'ticket.subject' => (string) $ticket->subject,
+            'ticket.subject' => e((string) $ticket->subject),
             'ticket.category' => $ticket->category?->label() ?? '-',
             'ticket.details' => nl2br(e((string) $ticket->description)),
-            'ticket.requester' => (string) ($ticket->requester?->name ?? '-'),
+            'ticket.requester' => e((string) ($ticket->requester?->name ?? '-')),
         ];
     }
 
     private function ownerVars(Ticket $ticket): array
     {
         return [
-            'user.first_name' => strtok((string) ($ticket->requester?->name ?? ''), ' '),
+            'user.first_name' => e(strtok((string) ($ticket->requester?->name ?? ''), ' ')),
             'ticket.id' => (string) $ticket->ticket_no,
-            'ticket.subject' => (string) $ticket->subject,
+            'ticket.subject' => e((string) $ticket->subject),
             'ticket.category' => $ticket->category?->label() ?? '-',
-            // The only variable carrying free text the requester typed. It goes into an HTML
-            // email, so it is escaped — otherwise a description containing a stray tag would
-            // break the message, or worse — and its line breaks are turned into <br> so a
-            // multi-line description does not arrive as one run-on paragraph.
+            // Every typed value goes into an HTML email escaped
             'ticket.details' => nl2br(e((string) $ticket->description)),
-            // What IT wrote when they closed it — the fix on a completed case, the reason on
-            // a cancelled one. Escaped and line-broken for the same reason as the details
-            // above: it is free text somebody typed, and it goes into an HTML email.
             'ticket.resolution' => filled($ticket->resolution) ? nl2br(e((string) $ticket->resolution)) : '-',
             'reference.id' => (string) $ticket->ticket_no,
         ];
