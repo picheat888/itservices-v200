@@ -126,7 +126,7 @@ class GroupRoleController extends Controller
      *
      * @param  array<int>  $removedEmployeeIds
      */
-    private function fallbackOrphansToDefault(GroupRole $fromGroup, array $removedEmployeeIds): void
+    private function fallbackOrphansToDefault(Request $request, GroupRole $fromGroup, array $removedEmployeeIds): void
     {
         // Still in another group means a move, not an orphaning
         $orphanIds = Employee::whereIn('id', $removedEmployeeIds)
@@ -139,7 +139,10 @@ class GroupRoleController extends Controller
         }
 
         $defaultGroup = GroupRole::defaultForNewEmployees();
-        if ($defaultGroup && $defaultGroup->id !== $fromGroup->id) {
+        $landsInDefault = $defaultGroup && $defaultGroup->id !== $fromGroup->id;
+        // The role they land on is handed out by this write
+        $this->guardGrantCeiling($request, $landsInDefault ? $defaultGroup->role : null, true);
+        if ($landsInDefault) {
             $defaultGroup->employees()->attach($orphanIds);
             $this->syncUserRoles($defaultGroup, $orphanIds);
         } else {
@@ -289,15 +292,22 @@ class GroupRoleController extends Controller
         ], 403));
     }
 
+    /** Whether the caller may hand out this role; null is a group without a role, which hands out the base role. */
+    private function withinGrantCeiling(User $caller, ?Role $role): bool
+    {
+        if ($caller->isSuper()) {
+            return true;
+        }
+
+        $role ??= RoleKeys::find('user');
+
+        return $role === null || array_diff($role->allowedKeys(), $caller->permissions()) === [];
+    }
+
     /** Blocks a non-super caller from handing out a role that holds permissions they do not. */
     private function guardGrantCeiling(Request $request, ?Role $role, bool $handsRoleOut): void
     {
-        $caller = $request->user();
-        if ($caller->isSuper() || $role === null || ! $handsRoleOut) {
-            return;
-        }
-
-        if (array_diff($role->allowedKeys(), $caller->permissions()) === []) {
+        if (! $handsRoleOut || $this->withinGrantCeiling($request->user(), $role)) {
             return;
         }
 
@@ -417,7 +427,7 @@ class GroupRoleController extends Controller
             $this->syncUserRoles($group, $roleChanges ? $this->memberIds($group) : $change->added);
 
             if ($change->removed !== []) {
-                $this->fallbackOrphansToDefault($group, $change->removed);
+                $this->fallbackOrphansToDefault($request, $group, $change->removed);
             }
 
             $details = [
@@ -454,7 +464,7 @@ class GroupRoleController extends Controller
             }
 
             $group->delete();
-            $this->fallbackOrphansToDefault($group, $memberIds);
+            $this->fallbackOrphansToDefault($request, $group, $memberIds);
 
             AuditLog::recordDeleted('Deleted role group', $group->name, $group, $this->membershipDetails([], $memberIds, $rolesBefore));
         }, attempts: 3);
@@ -481,7 +491,9 @@ class GroupRoleController extends Controller
             ], 422));
         }
 
-        $this->guardGrantCeiling($request, $group?->role, true);
+        if ($group) {
+            $this->guardGrantCeiling($request, $group->role, true);
+        }
 
         AppSetting::put('default_employee_group_id', $groupId);
         AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
@@ -543,10 +555,21 @@ class GroupRoleController extends Controller
         $page = $service->candidates($group, $params['search'] ?? null, $departmentId, $all, $perPage);
         // For "Everyone in {dept} (n)": who this caller may actually add
         $extraMeta = $departmentId !== null
-            ? ['addable' => $service->addableCount($group, $params['search'] ?? null, $departmentId, $request->user())]
+            ? ['addable' => $this->refusesEveryAdd($request, $group) ? 0 : $service->addableCount($group, $params['search'] ?? null, $departmentId, $request->user())]
             : [];
 
         return $this->memberPage($request, $page, $extraMeta);
+    }
+
+    /** Whether a non-super caller is refused every add to this group: a super-role group, or a role above their ceiling. */
+    private function refusesEveryAdd(Request $request, ?GroupRole $group): bool
+    {
+        $caller = $request->user();
+        if ($group === null || $caller->isSuper()) {
+            return false;
+        }
+
+        return UserRole::isSuperKey($group->role?->key) || ! $this->withinGrantCeiling($caller, $group->role);
     }
 
     /**
