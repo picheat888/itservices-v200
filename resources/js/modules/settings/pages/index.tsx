@@ -243,7 +243,7 @@ export default function SettingsPage() {
 
     return (
         <div className="settings-page space-y-6">
-            <div>
+            <div className="mb-3">
                 <h1 className="text-2xl font-bold">{t('settings')}</h1>
                 <p className="text-muted-foreground text-sm">{t('settings_sub')}</p>
             </div>

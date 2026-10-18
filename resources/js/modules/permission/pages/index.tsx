@@ -121,7 +121,7 @@ export default function PermissionsPage() {
 
     return (
         <div className="space-y-6">
-            <div>
+            <div className="mb-3">
                 <h1 className="text-2xl font-bold">{t('permissions')}</h1>
                 <p className="text-muted-foreground text-sm">{t('perm_sub')}</p>
             </div>

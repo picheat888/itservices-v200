@@ -632,7 +632,7 @@ export default function AssetsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">{t('assets_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('assets_sub')}</p>

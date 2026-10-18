@@ -66,7 +66,7 @@ export function AppShell() {
                     {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} onChangePassword={openChangePassword} />}
                 </div>
 
-                <main className="bg-content relative flex-1 overflow-y-auto p-6 [--sticky-top:-1.5rem] [scrollbar-gutter:stable]">
+                <main className="bg-content relative flex-1 overflow-y-auto px-6 py-4 [--sticky-top:-1rem] [scrollbar-gutter:stable]">
                     <Outlet />
                 </main>
             </div>
