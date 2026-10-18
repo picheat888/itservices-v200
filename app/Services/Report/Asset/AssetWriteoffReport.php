@@ -529,6 +529,7 @@ class AssetWriteoffReport extends TabularReport
             ],
             [
                 'title' => 'ตามหมวดหมู่',
+                'money' => [4],
                 'headings' => ['หมวดหมู่', 'ทั้งหมด', 'ซื้อ', 'เช่า', 'มูลค่าซื้อ', 'อายุใช้งานเฉลี่ย (ปี)', 'ไม่ถึง 3 ปี', '3-5 ปี', 'เกิน 5 ปี', 'ยังมีประกัน'],
                 'rows' => array_map(
                     fn (array $c) => [

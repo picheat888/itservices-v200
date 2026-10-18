@@ -405,7 +405,7 @@ export const report: Dict = {
     rep_opt_value_excess: 'ส่วนที่เกิน Max',
     rep_c_last_move: 'เคลื่อนไหวล่าสุด',
     rep_c_avg_cost: 'ต้นทุนเฉลี่ย',
-    rep_c_stock_value: 'มูลค่าคงคลัง',
+    rep_c_stock_value: 'มูลค่าคงคลัง (FIFO)',
     rep_c_monthly_cost: 'ต่อเดือน',
     rep_c_yearly_cost: 'ต่อปี',
     rep_fl_from: 'ช่วงวันที่',

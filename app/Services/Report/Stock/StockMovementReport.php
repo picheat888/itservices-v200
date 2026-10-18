@@ -475,6 +475,7 @@ class StockMovementReport extends TabularReport
 
         $sections = [[
             'title' => 'รับเข้าและเบิกออกรายเดือน',
+            'money' => [5, 6],
             'headings' => ['เดือน', 'รับเข้า (ชิ้น)', 'คืนของ (ชิ้น)', 'เบิกออก (ชิ้น)', 'ย้ายคลัง (ชิ้น)', 'มูลค่ารับเข้า', 'มูลค่าเบิกออก', 'ปรับยอดสุทธิ (ชิ้น)'],
             'rows' => array_values(array_map(fn (array $m) => [
                 CellDate::month($m['month']), $m['receive'], $m['return'], $m['issue'], $m['transfer'],
@@ -493,6 +494,7 @@ class StockMovementReport extends TabularReport
         ];
         $sections[] = [
             'title' => 'ผู้ขอที่เบิกมากที่สุด',
+            'money' => [2],
             'headings' => ['ผู้ขอ', 'แผนก', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
             'rows' => array_map(fn (array $p) => [
                 $p['name_th'] ?: $p['name'], $p['department_id'] === null ? self::NO_DEPARTMENT_TH : ($p['department_th'] ?: $p['department']),
@@ -501,6 +503,7 @@ class StockMovementReport extends TabularReport
         ];
         $sections[] = [
             'title' => 'แผนกที่เบิกมากที่สุด',
+            'money' => [2],
             'headings' => ['แผนก', 'คน', 'มูลค่า', 'ชิ้น', 'ครั้ง'],
             'rows' => array_map(fn (array $d) => [
                 $d['department_id'] === null ? self::NO_DEPARTMENT_TH : ($d['name_th'] ?: $d['name']),
@@ -510,6 +513,7 @@ class StockMovementReport extends TabularReport
 
         $sections[] = [
             'title' => 'ส่วนต่างจากการนับสต็อก',
+            'money' => [6],
             'headings' => ['รอบนับ', 'คลัง', 'ยืนยันเมื่อ', 'รายการที่มีส่วนต่าง', 'ปรับเพิ่ม', 'ปรับลด', 'มูลค่าสุทธิ'],
             'rows' => array_map(fn (array $c) => [
                 $c['reference'], $c['warehouse'], CellDate::dateTime($c['committed_at']),

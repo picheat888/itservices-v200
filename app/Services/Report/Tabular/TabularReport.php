@@ -312,13 +312,31 @@ abstract class TabularReport
      * rows do not (one line per request type above a list of tickets). None by default.
      * `note` (PDF only) says what the table does not follow, in the page's words ("ตามสถานะตอนนี้
      * ไม่ขึ้นกับช่วงวันที่"); `empty` (PDF only) replaces the table with one line when it cannot be drawn.
+     * `money` lists the column indexes holding baht: both files add "(บาท)" and show 2 decimals.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>, note?: string, empty?: string}>
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>, note?: string, empty?: string, money?: list<int>}>
      */
     public function exportSections(User $viewer, array $filters): array
     {
         return [];
+    }
+
+    /**
+     * A section's headings as both files print them: money columns end in "(บาท)".
+     *
+     * @param  array{headings: list<string>, money?: list<int>}  $section
+     * @return list<string>
+     */
+    public static function sectionHeadings(array $section): array
+    {
+        $money = $section['money'] ?? [];
+
+        return array_map(
+            fn (string $heading, int $i) => in_array($i, $money, true) && ! str_contains($heading, 'บาท') ? "{$heading} (บาท)" : $heading,
+            $section['headings'],
+            array_keys($section['headings']),
+        );
     }
 
     /** Whether charts() draws anything — lets the page hold their place while rows load. */

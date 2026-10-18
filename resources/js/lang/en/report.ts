@@ -405,7 +405,7 @@ export const report: Dict = {
     rep_opt_value_excess: 'Above max',
     rep_c_last_move: 'Last movement',
     rep_c_avg_cost: 'Average cost',
-    rep_c_stock_value: 'Stock value',
+    rep_c_stock_value: 'Stock value (FIFO)',
     rep_c_monthly_cost: 'Per month',
     rep_c_yearly_cost: 'Per year',
     rep_fl_from: 'Dates',
