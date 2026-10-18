@@ -30,3 +30,8 @@ export function formatStatValue(value: ReactNode, lang: string): ReactNode {
     }
     return value;
 }
+
+/** A typed whole-number quantity reduced to its digits ('' when nothing is left). */
+export function digitsOnly(raw: string): string {
+    return raw.replace(/\D/g, '');
+}

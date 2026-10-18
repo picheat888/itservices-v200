@@ -4,6 +4,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -89,14 +90,11 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                             <>
                                 <Input
                                     {...control}
-                                    type="number"
                                     name="qty"
                                     inputMode="numeric"
                                     autoComplete="off"
-                                    min={1}
-                                    max={available || undefined}
                                     value={qtyInput}
-                                    onChange={(e) => setQtyInput(e.target.value)}
+                                    onChange={(e) => setQtyInput(digitsOnly(e.target.value))}
                                 />
                                 <div className="text-muted-foreground mt-1.5 text-xs">
                                     {t('stock_available')}{' '}

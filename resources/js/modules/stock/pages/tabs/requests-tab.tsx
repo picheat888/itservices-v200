@@ -12,6 +12,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { digitsOnly } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -417,15 +418,12 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                     {fmtN(b.qty)} {fulfillItem?.unit}
                                                 </span>
                                                 <Input
-                                                    type="number"
                                                     inputMode="numeric"
                                                     name={`alloc-${b.warehouse}`}
                                                     autoComplete="off"
                                                     aria-label={b.warehouse}
-                                                    min={0}
-                                                    max={b.qty}
                                                     value={alloc[b.warehouse] ?? 0}
-                                                    onChange={(e) => setAllocFor(b.warehouse, b.qty, +e.target.value)}
+                                                    onChange={(e) => setAllocFor(b.warehouse, b.qty, Number(digitsOnly(e.target.value)))}
                                                     className="h-8 w-20 text-right tabular-nums"
                                                 />
                                             </div>
