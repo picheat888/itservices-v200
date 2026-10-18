@@ -201,8 +201,11 @@ function AssetOverviewSkeleton() {
     );
 }
 
-/** Pinned body cells: solid like the card, and tinted with the row when it is selected or hovered. */
-const PINNED_CELL = 'bg-card group-hover/row:bg-accent group-data-[selected=true]/row:bg-brand/5 sticky z-[1]';
+/** Pinned body cells: solid like the card, with the row's tint on top (.pin-cell). */
+const PINNED_CELL = 'pin-cell sticky z-[1]';
+// Row tints, through --row-tint so the pinned cells carry them too
+const ROW_SELECTED = 'bg-(--row-tint) [--row-tint:color-mix(in_oklab,var(--color-brand)_5%,transparent)]';
+const ROW_LOCKED = 'bg-(--row-tint) [--row-tint:color-mix(in_oklab,var(--color-muted)_40%,transparent)]';
 
 /** Warranty end for an owned asset, lease end for a rented one: a date, or how close it is when that matters. */
 function AssetCoverCell({ asset }: { asset: Asset }) {
@@ -1238,9 +1241,9 @@ export default function AssetsPage() {
                                                     onClick={() => openAsset(a)}
                                                     data-selected={selectedIds.includes(a.id)}
                                                     className={cn(
-                                                        'group/row border-border/60 cursor-pointer border-b transition-opacity last:border-0',
-                                                        selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
-                                                        rowLockedOut(a) && 'bg-muted/40',
+                                                        'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
+                                                        selectedIds.includes(a.id) ? ROW_SELECTED : 'row-hover',
+                                                        rowLockedOut(a) && ROW_LOCKED,
                                                     )}
                                                 >
                                                     <td

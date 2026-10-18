@@ -219,8 +219,8 @@ export function DataTable<T>({
     };
     const stickyStyle = (c: Column<T>): React.CSSProperties | undefined =>
         c.sticky ? { position: 'sticky', [c.sticky]: stickyOffset(c) } : undefined;
-    // Pinned cells need their own solid background so scrolled cells do not show through
-    const stickyClass = (c: Column<T>, head: boolean) => (c.sticky ? cn('bg-card z-[1]', head && 'dark:bg-muted') : undefined);
+    // Pinned cells: solid so scrolled cells do not show through; body cells follow the row's tint (.pin-cell)
+    const stickyClass = (c: Column<T>, head: boolean) => (c.sticky ? cn('z-[1]', head ? 'bg-card dark:bg-muted' : 'pin-cell') : undefined);
 
     // Fixed widths plus room for each flexible column among the columns a screen shows, so a narrow screen scrolls instead of squeezing it to 0
     const floorOf = (visible: Column<T>[]) => {
@@ -274,7 +274,7 @@ export function DataTable<T>({
                 ref={bodyRef}
                 className={cn(
                     // relative: absolute children (sr-only headers) stay inside the scroll box instead of widening <main>
-                    '@container border-border relative rounded-xl border',
+                    'border-border @container relative rounded-xl border',
                     // Too wide: scroll sideways; fits: clip (not a scroll box) so the header can stick to the page
                     fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : fitsWidth ? 'overflow-clip' : 'overflow-x-auto',
                 )}
@@ -394,7 +394,7 @@ export function DataTable<T>({
                                         // side, which silently ate the left accent a rowClassName had set.
                                         'border-border/60 border-b last:border-b-0',
                                         onRowClick &&
-                                            'hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
+                                            'row-hover focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
                                         rowClassName?.(row),
                                     )}
                                 >
