@@ -154,6 +154,7 @@ export const stock: Dict = {
     stock_level_aria: 'คงเหลือ {current} {unit}, Min {min}, Max {max}',
     stock_fulfill_desc: 'ตรวจสอบจำนวนที่จะจ่ายแล้วตัดสต็อกให้ผู้ขอ',
     stock_count_start_new: 'เริ่มนับสต็อก',
+    stock_count_start_hint: 'นับของจริงเทียบกับยอดในระบบ',
     stock_count_cancel_draft: 'ยกเลิกใบนับสต็อก',
     stock_new_count_desc: 'เลือกคลัง หมวดหมู่ และ SKU ที่จะนับ',
     stock_opens_new_tab: 'เปิดในแท็บใหม่',

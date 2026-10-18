@@ -534,8 +534,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 {role.is_super ? t('perm_super_locked') : `${fmtN(draft.size)} ${t('perm_enabled')}`}
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-end gap-2">
-                            <div className="relative w-72 max-w-full">
+                        {/* Below lg: search fills its own row, Save stays at the right edge */}
+                        <div className="flex flex-wrap items-end gap-2 max-lg:w-full max-lg:flex-nowrap">
+                            <div className="relative w-72 max-w-full max-lg:w-auto max-lg:min-w-0 max-lg:flex-1">
                                 <Search
                                     className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
                                     aria-hidden

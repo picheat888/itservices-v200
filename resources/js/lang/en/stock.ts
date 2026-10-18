@@ -154,6 +154,7 @@ export const stock: Dict = {
     stock_level_aria: 'On hand {current} {unit}, Min {min}, Max {max}',
     stock_fulfill_desc: 'Review the units to issue, then deduct the stock for the requester',
     stock_count_start_new: 'Start count',
+    stock_count_start_hint: "Count what's on hand against the system",
     stock_count_cancel_draft: 'Cancel draft count',
     stock_new_count_desc: 'Choose the warehouse, category and SKUs to count',
     stock_opens_new_tab: 'opens in a new tab',
