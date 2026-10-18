@@ -437,7 +437,7 @@ export function MembersDrawer({
                         )}
 
                         {/* Members — the one part that scrolls */}
-                        <div className="border-border min-h-0 flex-1 overflow-y-auto border-t px-6 py-4">
+                        <div className="border-border min-h-0 flex-1 overflow-y-auto border-t px-6 py-4 [--sticky-top:-1rem]">
                             <SectionLabel>
                                 {t('access_members')} ({fmtN(members.length)})
                             </SectionLabel>
