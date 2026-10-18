@@ -1,4 +1,4 @@
-// Toast queue: timed toasts enter one at a time 2.5s apart, at most 5 on screen; errors show at once and do not count.
+// Toast queue: timed toasts enter one at a time 1.5s apart, at most 5 on screen; errors show at once and do not count.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
