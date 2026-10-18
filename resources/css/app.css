@@ -608,7 +608,7 @@
     transition: transform var(--nav-dur) var(--nav-ease);
 }
 [data-narrow][data-nav='open'] .nav-toggle {
-    transform: translateX(7.75rem);
+    transform: translateX(7.5rem);
 }
 .nav-burger-top {
     transform-origin: 12px 6px;
