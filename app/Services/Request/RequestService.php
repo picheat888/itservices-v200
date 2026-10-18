@@ -283,7 +283,7 @@ class RequestService
      *
      * The button is the whole delivery record only when no case was opened — a
      * workflow with auto_ticket off, or one whose case could not be opened. Where a
-     * case exists, closing it is what completes the request (settleFromTicket), so
+     * case exists, closing it is what completes the request (TicketClosureService), so
      * this refuses while that case is still in flight.
      */
     public function complete(ServiceRequest $request, User $actor): ServiceRequest
@@ -293,14 +293,7 @@ class RequestService
         $request = DB::transaction(function () use ($request, $actor) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Approved);
-            // Pressing this while the technician is mid-delivery would finish the request
-            // behind them and leave the case open — the same split settleFromTicket exists
-            // to close, from the other side. Whoever cannot close a stalled case hands it
-            // on (POST tickets/{ticket}/forward) instead of finishing the request without it.
-            //
-            // Read from the case's state, not from "has a case": a request whose ticket was
-            // closed before settleFromTicket existed still sits here as Approved, and those
-            // rows have nothing left to close.
+            // Refused while its case is still live: closing the case is what completes the request
             abort_if(
                 in_array($fresh->ticket?->status, TicketStatus::live(), true),
                 422,
@@ -331,37 +324,21 @@ class RequestService
         return $request;
     }
 
-    /** Requester withdraws their own still-pending request. */
     /**
-     * The ticket a request auto-opened has been closed, so the request follows it.
+     * The ticket a request auto-opened was closed, so the request follows it: complete, or
+     * cancelled (not rejected) when the case was canceled. Writes only; runs inside the
+     * caller's transaction (TicketClosureService). Null when there is nothing to settle.
      *
-     * Closing that ticket IS the delivery: the technician who resolves it is the person
-     * who handed the laptop over, and the resolution text they had to write is already
-     * the record of what happened. Asking them to go and press Complete afterwards was a
-     * second act of bookkeeping for one real event, and a request whose work was finished
-     * days ago would sit in the queue until somebody remembered.
-     *
-     * A cancelled ticket cancels the request rather than rejecting it: no approver
-     * refused this one — it cleared every step and then could not be delivered, so
-     * counting it as a rejection would misreport the approval chain. The ticket's own
-     * resolution is stamped on the completion row, which is the same words on both sides
-     * for whoever checks later.
-     *
-     * Deliberately not gated by requests.complete. The gate that matters already fired:
-     * only the ticket's assignee may resolve it. Refusing here would leave the ticket
-     * closed and the request stranded, which is the state this exists to prevent.
-     *
-     * Does nothing when the ticket belongs to no request, or when that request has
-     * already settled — closing a ticket twice must not rewrite a decided request.
+     * @return array{0: ServiceRequest, 1: ?RequestApproval}|null
      */
-    public function settleFromTicket(Ticket $ticket, User $actor, bool $completed, string $resolution): void
+    public function settleRowsFromTicket(Ticket $ticket, User $actor, bool $completed, string $resolution): ?array
     {
         $request = ServiceRequest::where('ticket_id', $ticket->id)->first();
         if ($request === null || $request->status !== RequestStatus::Approved) {
-            return;
+            return null;
         }
 
-        $settled = DB::transaction(function () use ($request, $actor, $completed, $resolution) {
+        return DB::transaction(function () use ($request, $actor, $completed, $resolution) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             if ($fresh->status !== RequestStatus::Approved) {
                 return null;
@@ -386,28 +363,29 @@ class RequestService
 
             return [$fresh, $queueRow];
         });
+    }
 
-        if ($settled === null) {
-            return;
-        }
-
+    /**
+     * Audit and tell the requester once the settle has committed.
+     *
+     * @param  array{0: ServiceRequest, 1: ?RequestApproval}  $settled
+     */
+    public function announceSettledFromTicket(Ticket $ticket, bool $completed, array $settled): void
+    {
         [$fresh, $queueRow] = $settled;
-        // Named for how it happened, so the trail says the ticket closed this and not
-        // that somebody went and pressed the button.
         AuditLog::record(
             $completed ? 'Completed request via ticket' : 'Cancelled request via ticket',
             $fresh->reference,
             ['ticket' => $ticket->ticket_no], subject: $fresh);
 
         $fresh->refresh()->load('approvals');
-        // Both go to the requester and whoever filed it for them. NOT cancelled(), which
-        // speaks to an approver still holding a pending request — there is none here, so
-        // that route reached nobody and the request closed in silence.
+        // Requester and whoever filed it for them; not cancelled(), which speaks to a pending approver
         $completed
             ? $this->notifications->completed($fresh)
             : $this->notifications->notDelivered($fresh, $queueRow?->note);
     }
 
+    /** Requester withdraws their own still-pending request. */
     public function cancel(ServiceRequest $request, User $actor, string $reason): ServiceRequest
     {
         abort_unless($request->mayBeCancelledBy($actor, $actor->hasPermission('requests.cancel_any')), 403);

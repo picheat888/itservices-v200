@@ -305,6 +305,33 @@ class RequestAutoTicketTest extends TestCase
         $this->assertContains('completed', $this->requestBells($this->requester));
     }
 
+    public function test_a_failed_request_settle_leaves_the_case_open_and_sends_nothing(): void
+    {
+        [$request, $tech] = $this->approveAndAssignTicket();
+        Bus::fake();
+        $this->partialMock(RequestService::class, fn ($mock) => $mock
+            ->shouldReceive('settleRowsFromTicket')->once()->andThrow(new RuntimeException('settle failed')));
+
+        $this->actingAs($tech)->postJson("/api/tickets/{$request->ticket_id}/resolve", [
+            'mode' => 'complete',
+            'resolution' => 'Desktop delivered and set up at the desk.',
+        ])->assertServerError();
+
+        // Both rows roll back together and no mail or bell went out
+        $this->assertSame(TicketStatus::InProgress, $request->ticket()->first()->status);
+        $this->assertSame(RequestStatus::Approved, $request->fresh()->status);
+        Bus::assertNotDispatched(SendTemplatedEmail::class);
+        $this->assertNotContains('completed', $this->requestBells($this->requester));
+
+        // The case is still in progress, so pressing it again works
+        $this->app->forgetInstance(RequestService::class);
+        $this->actingAs($tech)->postJson("/api/tickets/{$request->ticket_id}/resolve", [
+            'mode' => 'complete',
+            'resolution' => 'Desktop delivered and set up at the desk.',
+        ])->assertOk();
+        $this->assertSame(RequestStatus::Completed, $request->fresh()->status);
+    }
+
     public function test_cancelling_the_ticket_cancels_the_request_rather_than_rejecting_it(): void
     {
         [$request, $tech] = $this->approveAndAssignTicket();

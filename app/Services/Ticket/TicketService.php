@@ -350,11 +350,8 @@ class TicketService
         return $ticket->fresh();
     }
 
-    /**
-     * Close an in-progress case. $complete=true marks it Completed, otherwise
-     * Canceled. Either way a resolution note is recorded and resolved_at is stamped.
-     */
-    public function resolve(Ticket $ticket, bool $complete, string $resolution): Ticket
+    /** Writes the closing of an in-progress case; notifications follow in announceClosed() after commit. */
+    public function closeRow(Ticket $ticket, bool $complete, string $resolution): void
     {
         $this->updateUnlessMoved(
             $ticket,
@@ -365,9 +362,11 @@ class TicketService
                 'resolved_at' => now(),
             ],
         );
+    }
 
-        // Tell the owner their case is finished, whichever way it ended (with the reason when canceled)
-        $ticket = $ticket->fresh();
+    /** Tell the owner their case is finished, whichever way it ended (with the reason when canceled). */
+    public function announceClosed(Ticket $ticket, bool $complete): void
+    {
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket, $complete ? 'resolved' : 'cancelled'));
         $this->email->sendTemplate(
             $complete ? 'ticket.resolved' : 'ticket.cancelled',
@@ -377,8 +376,6 @@ class TicketService
             'Open the ticket',
             $ticket->requester?->name,
         );
-
-        return $ticket->fresh();
     }
 
     /**

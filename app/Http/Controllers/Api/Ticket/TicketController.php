@@ -17,8 +17,8 @@ use App\Models\AuditLog;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Report\TicketOverviewReportService;
-use App\Services\Request\RequestService;
 use App\Services\Sidebar\SidebarBadgeService;
+use App\Services\Ticket\TicketClosureService;
 use App\Services\Ticket\TicketService;
 use App\Services\Ticket\TicketSummaryService;
 use App\Support\Permissions;
@@ -569,16 +569,8 @@ class TicketController extends Controller
         );
     }
 
-    /**
-     * The assignee completes or cancels an in-progress case with a resolution note
-     * (tickets.resolve). Only the assignee may close their own case.
-     *
-     * A case a request auto-opened settles that request too — see
-     * RequestService::settleFromTicket. Closing the case is the delivery; making the
-     * technician press Complete afterwards recorded one real event twice, and a request
-     * whose work was long finished sat in the queue until somebody remembered it.
-     */
-    public function resolve(Request $request, Ticket $ticket, RequestService $requests): JsonResponse
+    /** The assignee completes or cancels their in-progress case; a request it came from settles with it. */
+    public function resolve(Request $request, Ticket $ticket, TicketClosureService $closure): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
         abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'not_assignee');
@@ -589,11 +581,7 @@ class TicketController extends Controller
             'resolution' => ['required', 'string', 'min:10', 'max:5000'],
         ]);
 
-        $completed = $data['mode'] === 'complete';
-        $ticket = $this->service->resolve($ticket, $completed, $data['resolution']);
-        AuditLog::record('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}", subject: $ticket);
-
-        $requests->settleFromTicket($ticket, $request->user(), $completed, $data['resolution']);
+        $ticket = $closure->close($ticket, $request->user(), $data['mode'] === 'complete', $data['resolution']);
 
         return (new TicketResource($ticket->load(['requester', 'assignee.employee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
