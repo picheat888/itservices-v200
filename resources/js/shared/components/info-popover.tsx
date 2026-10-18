@@ -3,12 +3,15 @@
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 type Side = 'top' | 'right' | 'left';
 
 /** Space kept between a note and the top of the scrolling area. */
 const VIEW_GAP = 8;
+
+/** A second tap within this time is a double tap. */
+const DOUBLE_TAP_MS = 300;
 
 export function InfoPopover({
     label,
@@ -26,6 +29,7 @@ export function InfoPopover({
     openOnFocus = false,
     inactive = false,
     disabled = false,
+    doubleTapInRow = false,
 }: {
     /** What a screen reader hears for the trigger. */
     label: string;
@@ -53,6 +57,8 @@ export function InfoPopover({
     inactive?: boolean;
     /** Span mode only: tell assistive tech the wrapped control is unavailable. */
     disabled?: boolean;
+    /** Inside a clickable row ([data-row-click]): a tap opens the row, a double tap shows the note. */
+    doubleTapInRow?: boolean;
 }) {
     const [openState, setOpen] = useState(false);
     const open = openState && !inactive;
@@ -60,7 +66,14 @@ export function InfoPopover({
     const closing = useRef<number | null>(null);
     const openedByHover = useRef(false);
     const pressedBy = useRef<string | null>(null);
+    const tapTimer = useRef<number | null>(null);
     const trigger = useRef<HTMLElement>(null);
+    useEffect(
+        () => () => {
+            if (tapTimer.current) window.clearTimeout(tapTimer.current);
+        },
+        [],
+    );
     const [note, setNote] = useState<HTMLDivElement | null>(null);
     // The page's scrolling area starts under the top bar; a bar top scrolled out of it is held at its edge
     const viewTop = useCallback(() => (trigger.current?.closest('main')?.getBoundingClientRect().top ?? 0) + VIEW_GAP, []);
@@ -102,6 +115,23 @@ export function InfoPopover({
             if (isolate) event.stopPropagation();
             const by = pressedBy.current;
             pressedBy.current = null;
+            const row = doubleTapInRow && by === 'touch' ? trigger.current?.closest<HTMLElement>('[data-row-click]') : null;
+            if (row) {
+                // Wait for a second tap before handing the tap to the row
+                event.preventDefault();
+                if (tapTimer.current) {
+                    window.clearTimeout(tapTimer.current);
+                    tapTimer.current = null;
+                    setOpen(true);
+                    return;
+                }
+                tapTimer.current = window.setTimeout(() => {
+                    tapTimer.current = null;
+                    setOpen(false);
+                    row.click();
+                }, DOUBLE_TAP_MS);
+                return;
+            }
             if (onActivate && by !== 'touch') {
                 event.preventDefault();
                 openedByHover.current = false;

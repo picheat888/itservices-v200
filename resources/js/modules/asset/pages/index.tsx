@@ -1239,6 +1239,7 @@ export default function AssetsPage() {
                                                 <tr
                                                     key={a.id}
                                                     onClick={() => openAsset(a)}
+                                                    data-row-click=""
                                                     data-selected={selectedIds.includes(a.id)}
                                                     className={cn(
                                                         'border-border/60 cursor-pointer border-b transition-opacity last:border-0',

@@ -21,7 +21,7 @@ export function TruncText({ text, className }: { text: string | null | undefined
     if (!text) return <span className="text-muted-foreground">—</span>;
 
     return (
-        <InfoPopover as="span" inactive={!cut} label={text} content={text} isolate className="block min-w-0">
+        <InfoPopover as="span" inactive={!cut} label={text} content={text} isolate doubleTapInRow className="block min-w-0 touch-manipulation">
             <span ref={inner} className={cn('block truncate', className)}>
                 {text}
             </span>
