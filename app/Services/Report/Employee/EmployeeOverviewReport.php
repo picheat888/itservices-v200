@@ -12,11 +12,13 @@ use App\Models\Employee\Section;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Services\Report\Access\AccessFacts;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Support\DateDisplay;
 use App\Support\ReportCatalogue;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -221,6 +223,52 @@ class EmployeeOverviewReport extends TabularReport
     public function breakdown(User $viewer, array $filters): array
     {
         return [...$this->facts($filters, true), 'can_open_access' => ReportCatalogue::allows($viewer, ReportCatalogue::ACCESS_OVERVIEW)];
+    }
+
+    /**
+     * The page's cards as tables: headcount with joiners and leavers per period, the department
+     * table with its totals, and leavers still holding access.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{title: string, headings: list<string>, rows: list<list<mixed>>}>
+     */
+    public function exportSections(User $viewer, array $filters): array
+    {
+        $f = $this->facts($filters, true);
+        $name = fn (?array $n, string $empty = '—') => $n === null ? $empty : ((($n['name_th'] ?? null) ?: ($n['name'] ?? null)) ?: $empty);
+
+        $periods = array_map(fn (array $p) => [
+            CellDate::date($p['start']), CellDate::date($p['end']), $p['base'], $p['joined'], $p['left'], $p['headcount'], $p['headcount'] - $p['base'],
+        ], $f['points']);
+
+        $endTotal = max(1, $f['total']['end']);
+        $line = fn (string $label, array $s) => [$label, $s['start'], $s['joined'], $s['left'], $s['end'], $s['end'] - $s['start'], round($s['end'] / $endTotal * 100, 1)];
+        $departments = array_map(fn (array $d) => $line($name($d, 'ไม่ระบุแผนก'), $d), $f['departments']);
+        $departments[] = $line('รวม', $f['total']);
+
+        $types = ['email_group' => 'Email Group', 'file_share' => 'File Share', 'social_platform' => 'Social / Internet', 'software' => 'Software'];
+        $holding = array_map(fn (array $r) => [
+            $r['employee']['code'], $name($r['employee']), $name($r['department']), CellDate::date($r['last_day']), $r['days_out'], count($r['grants']),
+            implode(', ', array_map(fn (array $g) => ($types[$g['type']] ?? $g['type']).': '.$g['name'], $r['grants'])),
+        ], $f['holding']['rows']);
+
+        return [
+            [
+                'title' => 'จำนวนพนักงาน เข้าใหม่ และลาออก ตามช่วง',
+                'headings' => ['ตั้งแต่', 'ถึง', 'ต้นช่วง (คน)', 'เข้าใหม่ (คน)', 'ลาออก (คน)', 'ปลายช่วง (คน)', 'เปลี่ยนไป (คน)'],
+                'rows' => $periods,
+            ],
+            [
+                'title' => 'ตามแผนก (ณ '.DateDisplay::date($f['as_of']).')',
+                'headings' => ['แผนก', 'ต้นช่วง', 'เข้าใหม่', 'ลาออก', 'ปลายช่วง', 'เปลี่ยนไป', 'สัดส่วนของพนักงานทั้งหมด (%)'],
+                'rows' => $departments,
+            ],
+            [
+                'title' => 'ผู้ลาออกที่ยังถือสิทธิ์ ('.$f['holding']['people'].' คน '.$f['holding']['grants'].' สิทธิ์ ไม่ขึ้นกับช่วงวันที่)',
+                'headings' => ['รหัสพนักงาน', 'พนักงาน', 'แผนก', 'วันทำงานวันสุดท้าย', 'ออกมาแล้ว (วัน)', 'จำนวนสิทธิ์', 'สิทธิ์ที่ยังถือ'],
+                'rows' => $holding,
+            ],
+        ];
     }
 
     /**

@@ -14,6 +14,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
@@ -108,6 +109,19 @@ class EmployeeOpenItemsReportTest extends TestCase
         $this->assertSame([$nine->code, $ten->code, $noLastDay->code], array_column($asset['rows'], 'code'));
         $this->assertSame([42, 42, null], array_column($asset['rows'], 'days_out'));
         $this->assertSame(42, $asset['oldest_days']);
+    }
+
+    public function test_file_sums_each_topic_like_the_cards(): void
+    {
+        $gone = $this->employee('Gone', ['status' => 'resigned', 'last_day' => '2026-09-30']);
+        $this->grant($gone, 'All Gone');
+        $report = ReportCatalogue::tabular('employees.open_items');
+
+        $sections = $report->exportSections($this->userWith([...$this->reportRights('employees')]), $report->resolveFilters([]));
+
+        $this->assertCount(3, $sections);
+        $this->assertSame(['สิทธิ์ค้างถอน', 1, 1, 'สิทธิ์', 13], $sections[0]['rows'][1]);
+        $this->assertSame('บัญชีเข้าใช้งาน', $sections[0]['rows'][2][0]);
     }
 
     public function test_access_group_counts_people_who_left_with_open_grants_only(): void

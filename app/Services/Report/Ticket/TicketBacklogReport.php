@@ -9,6 +9,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Services\Report\Tabular\ThaiWords;
 use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
 use App\Support\SearchTerms;
@@ -215,6 +216,84 @@ class TicketBacklogReport extends TabularReport
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * The page's three board cards as tables: tickets per time-left lane, who holds them, and
+     * which categories. Time left is counted at the moment the file is made.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
+     */
+    public function exportSections(User $viewer, array $filters): array
+    {
+        $board = collect($this->board($viewer, $filters));
+        $total = $board->count();
+        $percent = fn (int $n) => $total > 0 ? round($n / $total * 100, 1) : null;
+
+        $lanes = [
+            'over7' => fn (?float $h) => $h !== null && $h < -168,
+            'over1' => fn (?float $h) => $h !== null && $h >= -168 && $h < -24,
+            'over0' => fn (?float $h) => $h !== null && $h >= -24 && $h < 0,
+            'soon' => fn (?float $h) => $h !== null && $h >= 0 && $h <= 24,
+            'later' => fn (?float $h) => $h !== null && $h > 24 && $h <= 72,
+            'far' => fn (?float $h) => $h === null || $h > 72,
+        ];
+        $laneRows = [];
+        foreach ($lanes as $key => $test) {
+            $n = $board->filter(fn (array $t) => $test($t['hours_left']))->count();
+            $laneRows[] = [ThaiWords::get("rep_bl_lane_{$key}") ?? $key, $n, $percent($n)];
+        }
+        $laneRows[] = ['รวม', $total, $total > 0 ? 100 : null];
+
+        $state = fn (array $t) => match (true) {
+            $t['hours_left'] !== null && $t['hours_left'] < 0 => 'over',
+            $t['hours_left'] !== null && $t['hours_left'] <= 24 => 'soon',
+            default => 'track',
+        };
+        $owners = $board
+            ->groupBy(fn (array $t) => ($t['assignee_th'] ?: $t['assignee']) ?: (ThaiWords::get('rep_opt_unassigned') ?? 'ยังไม่มีผู้รับ'))
+            ->map(fn ($group, string $name) => [
+                $name,
+                $group->filter(fn ($t) => $state($t) === 'over')->count(),
+                $group->filter(fn ($t) => $state($t) === 'soon')->count(),
+                $group->filter(fn ($t) => $state($t) === 'track')->count(),
+                $group->count(),
+            ])
+            ->sort(fn (array $a, array $b) => [$b[1], $b[4]] <=> [$a[1], $a[4]])
+            ->values()
+            ->all();
+
+        $categories = $board
+            ->groupBy('category')
+            ->map(function ($group, string $category) {
+                $over = $group->filter(fn ($t) => $t['hours_left'] !== null && $t['hours_left'] < 0)->count();
+
+                return [TicketLabels::category($category), $over, $group->count() - $over, $group->count(), round($over / $group->count() * 100, 1)];
+            })
+            ->sortByDesc(fn (array $row) => $row[3])
+            ->values()
+            ->all();
+        $over = $board->filter(fn ($t) => $t['hours_left'] !== null && $t['hours_left'] < 0)->count();
+        $categories[] = ['รวม', $over, $total - $over, $total, $percent($over)];
+
+        return [
+            [
+                'title' => (ThaiWords::get('rep_bl_board_title') ?? 'กระดานครบกำหนด SLA').' (เวลาที่เหลือ ณ ตอนพิมพ์)',
+                'headings' => ['เวลาที่เหลือถึงกำหนด SLA', 'Ticket', 'สัดส่วน (%)'],
+                'rows' => $laneRows,
+            ],
+            [
+                'title' => ThaiWords::get('rep_bl_owners_title') ?? 'ค้างอยู่กับใคร',
+                'headings' => ['ผู้รับผิดชอบ', 'เกิน SLA', 'ครบกำหนดใน 24 ชม.', 'ยังมีเวลา', 'รวม'],
+                'rows' => $owners,
+            ],
+            [
+                'title' => ThaiWords::get('rep_bl_cats_title') ?? 'ค้างตามหมวด',
+                'headings' => ['หมวด', 'เกิน SLA', 'ยังไม่เกิน', 'รวม', 'เกิน SLA (%)'],
+                'rows' => $categories,
+            ],
+        ];
     }
 
     /** "response" while the ticket waits to be taken, "resolve" afterwards — which deadline activeDue picked. */

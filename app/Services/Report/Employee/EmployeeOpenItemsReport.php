@@ -67,6 +67,42 @@ class EmployeeOpenItemsReport extends TabularReport
         return OpenItems::collect($this->departmentId($filters), $filters['search'] ?? null);
     }
 
+    /**
+     * The page's topic cards as tables: each topic's people, pieces and oldest case, then the
+     * account kinds and data issues behind the last two. All as of the moment the file is made.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
+     */
+    public function exportSections(User $viewer, array $filters): array
+    {
+        $b = $this->breakdown($viewer, $filters);
+        $topics = [
+            [OpenItems::GROUP_TH['asset'], $b['asset']['people'], $b['asset']['pieces'], 'ชิ้น', $b['asset']['oldest_days']],
+            [OpenItems::GROUP_TH['access'], $b['access']['people'], $b['access']['grants'], 'สิทธิ์', $b['access']['oldest_days']],
+            [OpenItems::GROUP_TH['acct'], null, $b['acct']['accounts'], 'บัญชี', null],
+            [OpenItems::GROUP_TH['data'], $b['data']['people'], array_sum($b['data']['by_issue']), 'เรื่อง', null],
+        ];
+
+        return [
+            [
+                'title' => 'สรุปตามเรื่อง (ณ วันที่ส่งออก รวม '.$b['people_total'].' คน/บัญชี)',
+                'headings' => ['เรื่อง', 'พนักงาน (คน)', 'จำนวนรายการ', 'หน่วย', 'ค้างนานสุด (วัน)'],
+                'rows' => $topics,
+            ],
+            [
+                'title' => 'บัญชีเข้าใช้งานที่ต้องจัดการ',
+                'headings' => ['ประเภท', 'บัญชี'],
+                'rows' => array_map(fn (string $kind) => [OpenItems::ACCOUNT_KIND_TH[$kind] ?? $kind, $b['acct']['by_kind'][$kind]], array_keys($b['acct']['by_kind'])),
+            ],
+            [
+                'title' => 'ข้อมูลพนักงานไม่ครบ ตามปัญหา',
+                'headings' => ['ปัญหา', 'พนักงาน (คน)'],
+                'rows' => collect($b['data']['by_issue'])->map(fn (int $n, string $issue) => [OpenItems::ISSUE_TH[$issue] ?? $issue, $n])->sortByDesc(1)->values()->all(),
+            ],
+        ];
+    }
+
     /** @param Collection<int, Model> $rows */
     public function hydrateRows(Collection $rows, User $viewer, array $filters): void
     {

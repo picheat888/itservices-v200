@@ -6303,3 +6303,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **เทส** เขียน log ลงโฟลเดอร์ชั่วคราว (`tests/TestCase.php`) ไม่แตะ `storage/logs`; `ClientErrorReportTest`, `LogDigestTest`, `LogFileRetentionTest`
 - **ค่า .env บน prod**: `APP_DEBUG=false`, `LOG_STACK=source`, `LOG_LEVEL=warning`, `LOG_DAILY_DAYS=90` และต้องรัน scheduler + queue worker
 - วิธีส่งให้ Claude: รัน `php artisan logs:digest` บนเครื่อง prod แล้วแนบไฟล์ `.md` จาก `storage/logs/digest/` (ไม่มี API ดึง log โดยตั้งใจ)
+
+## รายงาน: ตารางสรุปที่เคยมีแค่บนเว็บ ลง PDF/Excel แล้ว (Ticket ค้าง, พนักงาน) (2026-10-18)
+- **Ticket ค้าง และเกิน SLA** (`TicketBacklogReport::exportSections`): กระดานครบกำหนด 6 ช่วงเวลาที่เหลือ (ณ ตอนพิมพ์) + สัดส่วน, ค้างอยู่กับใคร (เกิน SLA / ครบใน 24 ชม. / ยังมีเวลา / รวม เรียงเกิน SLA มากสุด), ค้างตามหมวด + แถวรวม — ไม่ใช้ตัวกรอง SLA เหมือนกระดานบนเว็บ
+- **ภาพรวมพนักงาน**: จำนวนพนักงาน เข้าใหม่ ลาออก ตามช่วง (ต้นช่วง/ปลายช่วง/เปลี่ยนไป), ตามแผนก (ณ วันที่) + สัดส่วน + แถวรวม (ต้นช่วง + เข้า − ออก = ปลายช่วง), ผู้ลาออกที่ยังถือสิทธิ์พร้อมรายการสิทธิ์ (บอกว่าไม่ขึ้นกับช่วงวันที่)
+- **สรุปเรื่องค้างของพนักงาน**: สรุปตามเรื่อง (คน/จำนวน/ค้างนานสุด), บัญชีเข้าใช้งานแยกประเภท, ข้อมูลไม่ครบแยกปัญหา
+- ตารางเหล่านี้เป็นชีตใน Excel ด้วย (ใช้ `exportSections` ร่วมกัน); เทสใน `TicketTabularReportsTest`, `EmployeeOverviewReportTest`, `EmployeeOpenItemsReportTest`
