@@ -124,6 +124,7 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeRequests($granted);
         $granted = Permissions::normalizeNotifications($granted);
         $granted = Permissions::normalizeReports($granted);
+        $granted = Permissions::normalizeSystem($granted);
 
         DB::transaction(function () use ($request, $roleId, $granted) {
             $lockedRole = Role::whereKey($roleId)->lockForUpdate()->firstOrFail();

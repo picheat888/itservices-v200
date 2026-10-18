@@ -374,7 +374,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
 
     // Permissions / RBAC + audit
     Route::get('permissions', [RolePermissionController::class, 'index'])->name('api.permissions.index');
-    Route::get('permissions/{role}/members', [RolePermissionController::class, 'members'])->name('api.permissions.members');
     Route::put('permissions/{role}', [RolePermissionController::class, 'update'])->name('api.permissions.update');
     Route::post('roles', [RoleController::class, 'store'])->name('api.roles.store');
     Route::put('roles/{key}', [RoleController::class, 'update'])->name('api.roles.update');

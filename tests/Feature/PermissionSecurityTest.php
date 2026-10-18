@@ -598,39 +598,40 @@ class PermissionSecurityTest extends TestCase
 
     public function test_role_manager_cannot_grant_a_key_they_do_not_hold(): void
     {
-        $this->roleWith('clerk', 'system.view_audit');
+        $this->roleWith('clerk', 'system.manage_permissions', 'system.view_audit');
         $this->actingAs($this->userWith('system.manage_roles'));
         $auditBefore = AuditLog::count();
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.view_audit', 'system.manage_groups']])
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.view_audit', 'system.manage_groups']])
             ->assertForbidden()
             ->assertJsonPath('code', 'grant_ceiling');
 
-        $this->assertSame(['system.view_audit'], $this->allowedKeys('clerk'));
+        $this->assertSame(['system.manage_permissions', 'system.view_audit'], $this->allowedKeys('clerk'));
         $this->assertSame($auditBefore, AuditLog::count());
     }
 
     public function test_role_manager_can_keep_or_remove_keys_they_do_not_hold(): void
     {
-        $this->roleWith('clerk', 'system.view_audit', 'system.manage_groups');
+        $this->roleWith('clerk', 'system.manage_permissions', 'system.view_audit', 'system.manage_groups');
         $this->actingAs($this->userWith('system.manage_roles'));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.view_audit', 'system.manage_roles']])->assertOk();
-        $this->assertSame(['system.manage_roles', 'system.view_audit'], $this->allowedKeys('clerk'));
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.view_audit', 'system.manage_roles']])->assertOk();
+        $this->assertSame(['system.manage_permissions', 'system.manage_roles', 'system.view_audit'], $this->allowedKeys('clerk'));
 
         $this->putJson('/api/permissions/clerk', ['permissions' => []])->assertOk();
         $this->assertSame([], $this->allowedKeys('clerk'));
     }
 
-    public function test_super_caller_can_grant_any_key_to_any_role(): void
+    public function test_super_caller_can_grant_the_system_master_with_all_its_children(): void
     {
         $this->roleWith('clerk');
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_groups', 'system.manage_roles', 'system.view_audit']])
-            ->assertOk();
+        $all = ['system.manage_groups', 'system.manage_permissions', 'system.manage_roles', 'system.view_audit'];
 
-        $this->assertSame(['system.manage_groups', 'system.manage_roles', 'system.view_audit'], $this->allowedKeys('clerk'));
+        $this->putJson('/api/permissions/clerk', ['permissions' => $all])->assertOk();
+
+        $this->assertSame($all, $this->allowedKeys('clerk'));
     }
 
     public function test_creating_a_role_grants_no_permissions(): void
@@ -1064,10 +1065,10 @@ class PermissionSecurityTest extends TestCase
 
     public function test_permission_save_still_writes_its_audit_row(): void
     {
-        $this->roleWith('clerk', 'system.view_audit');
+        $this->roleWith('clerk', 'system.manage_permissions', 'system.view_audit');
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_groups']])->assertOk();
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_permissions', 'system.manage_groups']])->assertOk();
 
         $audit = $this->lastAuditFor('Updated permissions');
         $this->assertSame('Clerk', $audit->target);
@@ -1108,5 +1109,57 @@ class PermissionSecurityTest extends TestCase
         $details = $this->lastAuditFor('Updated role group')->details;
         $this->assertSame([$this->memberLabel($tom)], $details['removed']);
         $this->assertSame([['name' => $this->accountOf($tom)->name, 'from' => 'Staff', 'to' => 'User']], $details['role_changes']);
+    }
+
+    public function test_the_retired_role_members_route_is_gone(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->getJson('/api/permissions/staff/members')->assertNotFound();
+    }
+
+    public function test_array_audit_filters_are_refused_not_a_server_error(): void
+    {
+        $this->actingAs($this->userWith('system.view_audit'));
+
+        $this->getJson('/api/audit-logs?category[]=x')->assertUnprocessable()->assertJsonValidationErrors('category');
+        $this->getJson('/api/audit-logs?user[]=x')->assertUnprocessable()->assertJsonValidationErrors('user');
+        $this->getJson('/api/audit-logs?search[]=x')->assertUnprocessable()->assertJsonValidationErrors('search');
+    }
+
+    public function test_bad_audit_paging_and_unknown_category_are_refused(): void
+    {
+        $this->actingAs($this->userWith('system.view_audit'));
+
+        foreach (['abc', '5', '500'] as $perPage) {
+            $this->getJson("/api/audit-logs?per_page={$perPage}")->assertUnprocessable()->assertJsonValidationErrors('per_page');
+        }
+        $this->getJson('/api/audit-logs?page=abc')->assertUnprocessable()->assertJsonValidationErrors('page');
+        $this->getJson('/api/audit-logs?category=all')->assertUnprocessable()->assertJsonValidationErrors('category');
+        $this->getJson('/api/audit-logs?user='.str_repeat('a', 256))->assertUnprocessable()->assertJsonValidationErrors('user');
+    }
+
+    public function test_the_audit_tabs_own_queries_still_pass(): void
+    {
+        $this->actingAs($this->userWith('system.view_audit'));
+        AuditLog::create(['user_name' => 'Mia', 'action' => 'Created asset', 'target' => 'NB-0001']);
+
+        $this->getJson('/api/audit-logs?page=1&per_page=20')->assertOk()->assertJsonPath('meta.per_page', 20);
+        $this->getJson('/api/audit-logs?page=2&per_page=100&search=nb-0001&category=created&user=Mia')->assertOk();
+        $this->getJson('/api/audit-logs?page=1&per_page=50&category=&user=&search=')->assertOk();
+        $this->getJson('/api/audit-logs?per_page=20&category=created&user=Mia')
+            ->assertOk()
+            ->assertJsonPath('data.0.target', 'NB-0001');
+    }
+
+    public function test_system_children_without_their_master_are_not_stored(): void
+    {
+        $this->roleWith('clerk');
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson('/api/permissions/clerk', ['permissions' => ['system.manage_groups', 'system.view_audit', 'tickets.module']])
+            ->assertOk();
+
+        $this->assertSame(['tickets.module'], $this->allowedKeys('clerk'));
     }
 }
