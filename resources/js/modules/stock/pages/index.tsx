@@ -558,7 +558,7 @@ export default function StockPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-start justify-between gap-4">
+            <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">{t('stock_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('stock_subtitle')}</p>

@@ -10,8 +10,8 @@ import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
-import { UserAvatar } from '@/shared/components/user-avatar';
 import { TruncText } from '@/shared/components/trunc-text';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
@@ -471,7 +471,7 @@ export default function EmployeesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                     <h1 className="text-2xl font-bold">{t('employees')}</h1>
                     <p className="text-muted-foreground text-sm">{t('emp_subtitle')}</p>
@@ -932,8 +932,8 @@ function DirectoryTab({
     );
 }
 
-import type { EmployeeSummary } from '../api/employeeApi';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import type { EmployeeSummary } from '../api/employeeApi';
 
 const DASH_DEPT_LIMIT = 8;
 
@@ -1056,9 +1056,7 @@ function OverviewTab({
                     <div className="p-5">
                         <div className="flex items-baseline gap-2.5">
                             <span className="text-[54px] leading-none font-bold">{fmtN(summary?.active ?? 0)}</span>
-                            <span className="text-muted-foreground text-sm">
-                                {t('emp_status_caption').replace('{n}', fmtN(summary?.total ?? 0))}
-                            </span>
+                            <span className="text-muted-foreground text-sm">{t('emp_status_caption').replace('{n}', fmtN(summary?.total ?? 0))}</span>
                         </div>
                         <div
                             role="img"

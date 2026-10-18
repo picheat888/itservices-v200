@@ -80,7 +80,7 @@ export default function WorkflowsPage() {
     return (
         <div className="space-y-6">
             {/* Page head — no "new" action: the routes come with the request types */}
-            <div>
+            <div className="mb-3">
                 <h1 className="text-2xl font-bold">{t('wf_title')}</h1>
                 <p className="text-muted-foreground text-sm">{t('wf_sub')}</p>
             </div>
