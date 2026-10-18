@@ -65,7 +65,7 @@ export function PageTabs<T extends string>({
                         aria-selected={selected}
                         onClick={() => onChange(tb.id)}
                         className={cn(
-                            'focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+                            'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
                             selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                         )}
                     >

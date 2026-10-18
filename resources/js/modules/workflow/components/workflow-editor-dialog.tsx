@@ -788,7 +788,7 @@ function IconBtn({
             disabled={disabled}
             onClick={onClick}
             className={cn(
-                'text-muted-foreground hover:bg-muted hover:text-foreground flex h-6 w-7 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40',
+                'press-icon text-muted-foreground hover:bg-muted hover:text-foreground flex h-6 w-7 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40',
                 className,
             )}
         >

@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePresence } from '@/shared/hooks/use-presence';
 import { cn } from '@/shared/lib/utils';
 import { SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
@@ -66,6 +67,7 @@ export function FilterPopover({
     const t = useT();
     const fmtN = useNumberFormat();
     const [open, setOpen] = useState(false);
+    const { mounted, closing } = usePresence(open);
     const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -172,7 +174,7 @@ export function FilterPopover({
                 aria-expanded={open}
                 aria-controls={open ? panelId : undefined}
                 className={cn(
-                    'flex items-center rounded-md border font-medium transition-colors',
+                    'press flex items-center rounded-md border font-medium transition-colors',
                     size === 'sm' ? 'bg-background h-8 gap-1.5 px-2.5 text-xs' : 'h-10 gap-2 px-3 text-sm',
                     count > 0 ? 'border-brand/50 bg-brand/5 text-brand' : 'border-input hover:bg-accent',
                 )}
@@ -186,7 +188,7 @@ export function FilterPopover({
                     </span>
                 )}
             </button>
-            {open &&
+            {mounted &&
                 createPortal(
                     <div
                         ref={panelRef}
@@ -196,11 +198,8 @@ export function FilterPopover({
                         tabIndex={-1}
                         onKeyDown={onPanelKeyDown}
                         style={{ position: 'fixed', top: pos.top, left: pos.left, width, zIndex: 9999 }}
-                        className="border-border bg-popover rounded-lg border shadow-md motion-safe:animate-[filter-pop_0.28s_cubic-bezier(0.16,1,0.3,1)]"
+                        className={cn('border-border bg-popover rounded-lg border shadow-md', closing ? 'motion-pop-out' : 'motion-pop-in')}
                     >
-                        {/* Scoped keyframes for the panel's pop-in (skipped under prefers-reduced-motion). */}
-                        <style>{`@keyframes filter-pop{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}`}</style>
-
                         <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
                             <Icon className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
                             <span id={titleId} className="text-sm font-semibold">

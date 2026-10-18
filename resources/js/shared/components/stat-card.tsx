@@ -119,7 +119,7 @@ export function StatCard({
                 'flex min-w-0 flex-col transition-colors',
                 compact ? 'gap-1.5 p-4' : 'p-5',
                 level && ALERT[level].card,
-                onClick && 'hover:border-brand/40 focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none',
+                onClick && 'press hover:border-brand/40 focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none',
                 className,
             )}
         >

@@ -40,8 +40,8 @@ export function PermissionSwitch({
         >
             <span
                 className={cn(
-                    'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                    on ? 'left-[1.125rem]' : 'left-0.5',
+                    'absolute top-0.5 left-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-transform motion-reduce:transition-none',
+                    on && 'translate-x-4',
                 )}
             >
                 {on && <Check className="text-brand h-2.5 w-2.5" />}

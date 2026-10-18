@@ -325,7 +325,7 @@ export function EditTicketDrawer({
                     {saving && totalOps > 0 && (
                         <div className="mr-auto flex items-center gap-2">
                             <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
-                                <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
+                                <div className="bg-brand h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${overallPct}%` }} />
                             </div>
                             <span className="text-muted-foreground text-xs">{overallPct}%</span>
                         </div>

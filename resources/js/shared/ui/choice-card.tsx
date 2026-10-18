@@ -23,7 +23,7 @@ const ChoiceCard = React.forwardRef<
         type={type}
         aria-pressed={selected}
         className={cn(
-            'focus-visible:border-brand focus-visible:ring-brand/15 border transition-colors focus:outline-hidden focus-visible:ring-[3px]',
+            'press focus-visible:border-brand focus-visible:ring-brand/15 border transition-colors focus:outline-hidden focus-visible:ring-[3px]',
             selected
                 ? 'border-brand bg-brand/5 ring-brand/15 ring-[3px]'
                 : invalid

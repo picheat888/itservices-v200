@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
+import { usePresence } from '@/shared/hooks/use-presence';
 import type { SelectOption } from '@/shared/lib/locale-data';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -60,6 +61,7 @@ function scrollableAncestor(from: HTMLElement | null): HTMLElement | null {
 export function SearchSelect({ value, onChange, options, placeholder, className, id, ariaLabel }: SearchSelectProps) {
     const t = useT();
     const [open, setOpen] = useState(false);
+    const { mounted, closing } = usePresence(open);
     const [query, setQuery] = useState('');
     const [rect, setRect] = useState<DropdownRect>({ left: 0, width: 0, maxWidth: PANEL_MAX_W, top: 0, maxHeight: PANEL_MAX });
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -189,7 +191,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className,
             </button>
 
             {/* Dropdown rendered at document.body to escape any overflow:hidden ancestor */}
-            {open &&
+            {mounted &&
                 createPortal(
                     <div
                         id="search-select-portal"
@@ -206,7 +208,10 @@ export function SearchSelect({ value, onChange, options, placeholder, className,
                             maxHeight: rect.maxHeight,
                             zIndex: 9999,
                         }}
-                        className="bg-popover animate-in fade-in-0 zoom-in-95 flex flex-col overflow-hidden rounded-md border shadow-md"
+                        className={cn(
+                            'bg-popover flex flex-col overflow-hidden rounded-md border shadow-md',
+                            closing ? 'motion-pop-out' : 'motion-pop-in',
+                        )}
                     >
                         {/* Search row */}
                         <div className="flex shrink-0 items-center border-b px-3">

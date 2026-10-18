@@ -130,7 +130,7 @@ export function AttachmentList({ count, max, progressPct, children }: { count: n
                 however many files have scrolled off. */}
             {progressPct != null && (
                 <div className="bg-muted mb-2.5 h-1.5 overflow-hidden rounded-full">
-                    <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                    <div className="bg-brand h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progressPct}%` }} />
                 </div>
             )}
             <div className="max-h-[196px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">{children}</div>
