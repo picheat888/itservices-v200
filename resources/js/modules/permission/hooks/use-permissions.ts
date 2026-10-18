@@ -1,5 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { groupRoleApi, permissionApi, roleApi, type AuditFilters, type GroupRoleListResponse, type GroupRolePayload } from '../api/permissionApi';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+    groupRoleApi,
+    permissionApi,
+    roleApi,
+    type AuditFilters,
+    type GroupCandidateParams,
+    type GroupRoleListResponse,
+    type GroupRolePayload,
+} from '../api/permissionApi';
 
 const KEY = ['permissions-matrix'] as const;
 const GROUPS = ['group-roles'] as const;
@@ -31,6 +39,24 @@ export function useRoleMutations() {
 }
 
 export const useGroupRoles = () => useQuery({ queryKey: GROUPS, queryFn: groupRoleApi.list });
+
+/** One page of a saved group's members (none for a new group). */
+export const useGroupMembers = (groupId: number | null, search: string, page: number) =>
+    useQuery({
+        queryKey: [...GROUPS, groupId, 'members', search, page],
+        queryFn: () => groupRoleApi.members(groupId as number, search, page),
+        enabled: groupId !== null,
+        placeholderData: keepPreviousData,
+    });
+
+/** One page of the people who can join the group. */
+export const useGroupCandidates = (params: GroupCandidateParams, enabled: boolean) =>
+    useQuery({
+        queryKey: [...GROUPS, 'candidates', params],
+        queryFn: () => groupRoleApi.candidates(params),
+        enabled,
+        placeholderData: keepPreviousData,
+    });
 
 export function useGroupRoleMutations() {
     const qc = useQueryClient();

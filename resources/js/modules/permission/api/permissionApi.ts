@@ -84,9 +84,9 @@ export interface GroupRole {
     name: string;
     role: string | null;
     role_label: string | null;
-    employee_ids: number[];
-    employees: { id: number; name: string; code: string }[];
     member_count: number;
+    /** The signed-in user's own employee is a member (only a Super admin may then change it). */
+    includes_me: boolean;
 }
 
 export interface GroupRoleListResponse {
@@ -94,10 +94,38 @@ export interface GroupRoleListResponse {
     default_group_id: number | null;
 }
 
+/** A new group sends everyone in employee_ids; an edit sends only who joined (add_ids) and who left (remove_ids). */
 export interface GroupRolePayload {
     name: string;
     role: string | null;
-    employee_ids: number[];
+    employee_ids?: number[];
+    add_ids?: number[];
+    remove_ids?: number[];
+}
+
+/** A person in the Role Group dialog; `group` is the group they sit in now, `protected` = only a Super admin may move them. */
+export interface GroupMember {
+    id: number;
+    code: string;
+    name: string;
+    name_th: string | null;
+    department: string | null;
+    department_th: string | null;
+    group_id: number | null;
+    group: string | null;
+    protected: boolean;
+}
+
+export interface GroupMemberPage {
+    data: GroupMember[];
+    meta: { total: number; per_page: number; current_page: number; last_page: number };
+}
+
+export interface GroupCandidateParams {
+    groupId: number | null;
+    search: string;
+    departmentId: number | null;
+    page: number;
 }
 
 async function send<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -134,6 +162,21 @@ export const groupRoleApi = {
     create: (payload: GroupRolePayload) => send<GroupRole>('post', '/group-roles', payload),
     update: (id: number, payload: GroupRolePayload) => send<GroupRole>('put', `/group-roles/${id}`, payload),
     remove: (id: number) => send<void>('delete', `/group-roles/${id}`),
+    members: (id: number, search: string, page: number) =>
+        http.get<GroupMemberPage>(`/group-roles/${id}/members`, { params: { search: search || undefined, page } }).then((r) => r.data),
+    candidates: (p: GroupCandidateParams) =>
+        http
+            .get<GroupMemberPage>('/group-roles-candidates', {
+                params: { group_id: p.groupId ?? undefined, search: p.search || undefined, department_id: p.departmentId ?? undefined, page: p.page },
+            })
+            .then((r) => r.data),
+    /** Everyone a department can add at once (capped on the server). */
+    departmentCandidates: (groupId: number | null, departmentId: number) =>
+        http
+            .get<
+                ApiEnvelope<GroupMember[]>
+            >('/group-roles-candidates', { params: { group_id: groupId ?? undefined, department_id: departmentId, all: 1 } })
+            .then((r) => r.data.data),
     /**
      * Answers with the whole list (the endpoint returns index()), and that answer is
      * written straight into the list cache — so it must keep the list's shape.
