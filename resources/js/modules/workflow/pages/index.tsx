@@ -6,6 +6,7 @@ import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -34,21 +35,28 @@ export default function WorkflowsPage() {
     const search = list.get('search');
     const setSearch = (value: string) => list.setFilter('search', value);
 
-    // Dialogs are URL-driven (?view=<id> / ?edit=<id>); open() keeps only one of them.
-    const [searchParams, setSearchParams] = useSearchParams();
-    const open = (mode: 'view' | 'edit' | null, id?: number) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('view');
-                p.delete('edit');
-                if (mode && id != null) {
-                    p.set(mode, String(id));
-                }
-                return p;
+    // Dialogs are URL-driven (?view=<id> / ?edit=<id>); open() keeps only one of them. Opening pushes an entry so Back
+    // closes it; view → edit swaps in place, so closing the editor returns to the list
+    const [searchParams] = useSearchParams();
+    const dialogs = usePageDialogs();
+    const open = (mode: 'view' | 'edit' | null, id?: number) => {
+        if (!mode || id == null) {
+            dialogs.close(['view', 'edit']);
+            return;
+        }
+        const other = mode === 'view' ? 'edit' : 'view';
+        if (searchParams.get(other) == null) {
+            dialogs.open({ [mode]: String(id) });
+            return;
+        }
+        dialogs.replace(
+            (p) => {
+                p.delete(other);
+                p.set(mode, String(id));
             },
-            { replace: true },
+            [mode],
         );
+    };
 
     const viewingId = toRecordId(searchParams.get('view'));
     const editingId = toRecordId(searchParams.get('edit'));

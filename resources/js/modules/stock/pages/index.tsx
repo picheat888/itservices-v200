@@ -16,6 +16,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair, nameSearch } from '@/shared/lib/local-name';
@@ -135,7 +136,7 @@ export default function StockPage() {
     const can = (p: string) => hasPermission(`stock.${p}`);
     const canManage = can('manage_items');
 
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isStockTab, 'overview');
 
@@ -210,39 +211,13 @@ export default function StockPage() {
     const [editItem, setEditItem] = useState<StockItem | null>(null);
     // Item detail is URL-driven (?view=<id>); only a real record id opens it.
     const viewId = toRecordId(searchParams.get('view'));
-    const setViewId = (id: number | null) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                if (id == null) {
-                    p.delete('view');
-                } else {
-                    p.set('view', String(id));
-                }
-                return p;
-            },
-            { replace: true },
-        );
+    // Opening pushes a history entry so Back closes it
+    const dialogs = usePageDialogs();
+    const setViewId = (id: number | null) => (id == null ? dialogs.close(['view']) : dialogs.open({ view: String(id) }));
     // The add-item drawer is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
-    const openAdd = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('add', '1');
-                return p;
-            },
-            { replace: true },
-        );
-    const closeAdd = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('add');
-                return p;
-            },
-            { replace: true },
-        );
+    const openAdd = () => dialogs.open({ add: '1' });
+    const closeAdd = () => dialogs.close(['add']);
     const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
 

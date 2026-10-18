@@ -14,6 +14,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -105,7 +106,7 @@ export default function RequestsPage() {
     const { can } = useAuth();
     const canSubmit = canFileAnyRequest(can);
 
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
 
     // Active tab lives in the URL only (validated); each press is a history entry.
     const [tab, setTab] = useTabParam(isTab, 'overview');
@@ -181,33 +182,11 @@ export default function RequestsPage() {
     // Dialogs: create via ?add=1, detail via ?view=<id> (a malformed id leaves the list alone).
     const adding = searchParams.get('add') === '1';
     const viewId = toRecordId(searchParams.get('view'));
-    const openCreate = () =>
-        setSearchParams(
-            (p) => {
-                const sp = new URLSearchParams(p);
-                sp.set('add', '1');
-                return sp;
-            },
-            { replace: true },
-        );
-    const closeParam = (key: string) =>
-        setSearchParams(
-            (p) => {
-                const sp = new URLSearchParams(p);
-                sp.delete(key);
-                return sp;
-            },
-            { replace: true },
-        );
-    const openDetail = (r: ServiceRequest) =>
-        setSearchParams(
-            (p) => {
-                const sp = new URLSearchParams(p);
-                sp.set('view', String(r.id));
-                return sp;
-            },
-            { replace: true },
-        );
+    // Opening pushes a history entry so Back closes the dialog
+    const dialogs = usePageDialogs();
+    const openCreate = () => dialogs.open({ add: '1' });
+    const closeParam = (key: string) => dialogs.close([key]);
+    const openDetail = (r: ServiceRequest) => dialogs.open({ view: String(r.id) });
 
     const [decide, setDecide] = useState<{ request: ServiceRequest; action: DecisionAction } | null>(null);
 

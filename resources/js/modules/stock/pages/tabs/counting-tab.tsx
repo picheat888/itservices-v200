@@ -11,6 +11,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { localPair } from '@/shared/lib/local-name';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -62,7 +63,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const shownId = countId ?? lastId;
     const { data: session, isError: sessionFailed, error: sessionError, refetch: refetchSession } = useStockCount(shownId);
     const sessionMissing = (sessionError as { response?: { status?: number } } | null)?.response?.status === 404;
-    const openSheet = (id: number) => list.setParams({ count: String(id) });
+    // Opening pushes a history entry so Back closes the sheet (and asks first while counts are typed)
+    const dialogs = usePageDialogs();
+    const openSheet = (id: number) => dialogs.open({ count: String(id) });
     // Counts typed since the sheet opened; a refetch must not overwrite them
     const typedRef = useRef(false);
     const [creating, setCreating] = useState(false);
@@ -223,32 +226,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             return (raw === '' ? null : Math.max(0, parseInt(raw, 10) || 0)) !== l.counted_qty;
         });
     const guardSheetClose = useDiscardGuard(sheetOpen && sheetDirty);
-    const closingRef = useRef(false);
     const closeSheet = () => {
-        closingRef.current = true;
         typedRef.current = false;
-        list.setParams({ count: null });
+        dialogs.close(['count']);
     };
-    // Back (or any link) dropped ?count while counts were typed: reopen and ask before throwing them away
-    const dirtyRef = useRef(false);
-    dirtyRef.current = sheetDirty;
-    const prevCountRef = useRef(countId);
-    useEffect(() => {
-        const prev = prevCountRef.current;
-        prevCountRef.current = countId;
-        if (prev !== null && countId === null && !closingRef.current && dirtyRef.current) {
-            list.setParams({ count: String(prev) });
-            setBackedOut(true);
-        }
-        closingRef.current = false;
-    }, [countId]); // eslint-disable-line react-hooks/exhaustive-deps
-    // Ask once the sheet is back open, so the guard sees it as open and dirty
-    const [backedOut, setBackedOut] = useState(false);
-    useEffect(() => {
-        if (!backedOut || !sheetOpen) return;
-        setBackedOut(false);
-        guardSheetClose(closeSheet);
-    }, [backedOut, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Live audit summary for the open sheet: draft reads the typed entries, committed reads stored values.
     const countSummary = (() => {

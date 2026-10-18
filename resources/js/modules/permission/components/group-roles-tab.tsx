@@ -10,6 +10,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -68,9 +69,11 @@ export function GroupRolesTab() {
     const adding = list.get('add') !== '';
     const viewing = viewId !== null ? (groups.find((g) => g.id === viewId) ?? null) : null;
     const dialogOpen = adding || viewing !== null;
-    const openGroup = (g: GroupRole) => list.setParams({ view: String(g.id), add: null });
-    const openNew = () => list.setParams({ add: '1', view: null });
-    const closeDialog = () => list.setParams({ view: null, add: null });
+    // Opening pushes a history entry so Back closes the dialog
+    const dialogs = usePageDialogs();
+    const openGroup = (g: GroupRole) => dialogs.open({ view: String(g.id) });
+    const openNew = () => dialogs.open({ add: '1' });
+    const closeDialog = () => dialogs.close(['view', 'add']);
 
     const rows = useMemo(() => {
         const byName = (a: GroupRole, b: GroupRole) => a.name.localeCompare(b.name, 'th', { sensitivity: 'base' });

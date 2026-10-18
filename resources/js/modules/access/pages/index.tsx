@@ -10,6 +10,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { readTabParam } from '@/shared/lib/tab-param';
@@ -183,53 +184,20 @@ export default function AccessControlPage() {
 
     // Open a resource's manage drawer by (kind, id) — deep-linked as ?tab=<kind>&view=<id>.
     // The URL is the single source of truth; the drawer content is derived in `members`.
-    const openResource = (kind: AccessKind, id: number) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('tab', kind);
-                p.set('view', String(id));
-                p.delete('add');
-                return p;
-            },
-            { replace: true },
-        );
+    // Opening pushes a history entry so Back closes it; from another tab it switches the tab in the same step
+    const dialogs = usePageDialogs();
+    const openResource = (kind: AccessKind, id: number) => dialogs.open(kind === tab ? { view: String(id) } : { tab: kind, view: String(id) });
 
-    // Close the drawer — just drop ?open from the URL (members recomputes to null; no reopen race).
-    const closeDrawer = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('view');
-                return p;
-            },
-            { replace: true },
-        );
+    // Close the drawer — just drop ?view from the URL (members recomputes to null; no reopen race).
+    const closeDrawer = () => dialogs.close(['view']);
 
     // Open the "add" form for a kind — deep-linked as ?tab=<kind>&add=1 (row stays null = create).
-    const openAdd = (kind: AccessKind) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('tab', kind);
-                p.set('add', '1');
-                p.delete('view');
-                return p;
-            },
-            { replace: true },
-        );
+    const openAdd = (kind: AccessKind) => dialogs.open(kind === tab ? { add: '1' } : { tab: kind, add: '1' });
 
     // Close the create/edit modal — clear the edit state and drop ?add.
     const closeModal = () => {
         setEditing(null);
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('add');
-                return p;
-            },
-            { replace: true },
-        );
+        if (searchParams.get('add') != null) dialogs.close(['add']);
     };
     // Search, filters, page and rows-per-page live in the URL (?search, dept, license, brand, page, per).
     const list = useListParams();
