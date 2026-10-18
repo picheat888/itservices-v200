@@ -254,7 +254,7 @@ class ContractOverviewReportTest extends TestCase
             $sheet = collect($export->sheets())->first(fn (object $s) => $s instanceof TabularRowsSheet);
             $row = $sheet->map($export->rows->first());
 
-            return in_array('ต่อเดือน', $sheet->headings(), true)
+            return in_array('ค่าใช้จ่ายต่อเดือน', $sheet->headings(), true)
                 && in_array('รอบการเรียกเก็บ', $sheet->headings(), true)
                 && in_array('จ่ายครั้งถัดไป', $sheet->headings(), true)
                 && in_array('รายปี', $row, true)

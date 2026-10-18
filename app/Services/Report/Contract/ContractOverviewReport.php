@@ -90,10 +90,10 @@ class ContractOverviewReport extends TabularReport
     protected function meanings(): array
     {
         return [
-            'value_per_period' => 'จำนวนเงินที่เรียกเก็บต่อหนึ่งรอบบิลตามที่บันทึกในสัญญา (ต่อเดือน ต่อไตรมาส หรือต่อปีตามรอบการเรียกเก็บ) เป็นมูลค่าตามสัญญา ระบบไม่ได้บันทึกการจ่ายจริง',
+            'value_per_period' => 'จำนวนเงินที่เรียกเก็บต่อหนึ่งรอบการเรียกเก็บตามที่บันทึกในสัญญา (ต่อเดือน ต่อไตรมาส หรือต่อปีตามรอบการเรียกเก็บ) เป็นมูลค่าตามสัญญา ระบบไม่ได้บันทึกการจ่ายจริง',
             'monthly_cost' => 'ค่าใช้จ่ายต่อปีหารด้วย 12 ปัดทศนิยม 2 ตำแหน่ง',
-            'yearly_cost' => 'ค่างวดคูณจำนวนรอบบิลใน 1 ปี: รายเดือน คูณ 12, รายไตรมาส คูณ 4, รายปี คูณ 1',
-            'remaining' => 'จำนวนงวดตามตารางบิลที่ตกตั้งแต่วันที่ส่งออกจนถึงก่อนวันที่สิ้นสุดคูณค่างวด โดยวันบิลคือวันที่เริ่มบวกทีละรอบ (1, 3 หรือ 12 เดือน) เป็นยอดตามสัญญา ไม่ใช่ยอดค้างจ่ายจริง',
+            'yearly_cost' => 'ค่างวดคูณจำนวนรอบการเรียกเก็บใน 1 ปี: รายเดือน คูณ 12, รายไตรมาส คูณ 4, รายปี คูณ 1',
+            'remaining' => 'ค่างวดคูณจำนวนงวดที่ยังเหลือ นับตั้งแต่วันที่ส่งออกถึงก่อนวันที่สิ้นสุด (วันครบงวดคือวันที่เริ่มบวกทีละรอบ 1, 3 หรือ 12 เดือน) เป็นยอดตามสัญญา ไม่ใช่ยอดค้างจ่ายจริง',
             'days_left' => 'จำนวนวันจากวันที่ส่งออกถึงวันที่สิ้นสุดสัญญา 0 = สิ้นสุดวันนี้ (รายงานนี้มีเฉพาะสัญญาที่ยังไม่ถึงวันสิ้นสุด)',
             'time_state' => 'ครบกำหนดวันนี้ = วันที่สิ้นสุดคือวันนี้, ใกล้หมดอายุ = วันที่เหลือไม่เกินรอบแจ้งเตือนที่ไกลที่สุดที่เปิดไว้ในสัญญา (เช่นเปิด 90 และ 30 วันใช้ 90), ใช้งาน = ยังไม่ถึงช่วงแจ้งเตือนหรือไม่ได้เปิดแจ้งเตือน',
         ];
@@ -109,8 +109,8 @@ class ContractOverviewReport extends TabularReport
             ReportColumn::enum('billing_cycle', 'รอบการเรียกเก็บ', fn (Contract $c) => $c->billing_cycle, self::CYCLE_KEYS, self::CYCLE_TH)
                 ->labelKey('contract_billing'),
             ReportColumn::money('value_per_period', 'ค่างวด', fn (Contract $c) => $c->value)->labelKey('rep_cov_c_bill'),
-            ReportColumn::money('monthly_cost', 'ต่อเดือน', fn (Contract $c) => round(ContractBilling::monthlyCost($c), 2)),
-            ReportColumn::money('yearly_cost', 'ต่อปี', fn (Contract $c) => round(ContractBilling::yearlyCost($c), 2)),
+            ReportColumn::money('monthly_cost', 'ค่าใช้จ่ายต่อเดือน', fn (Contract $c) => round(ContractBilling::monthlyCost($c), 2)),
+            ReportColumn::money('yearly_cost', 'ค่าใช้จ่ายต่อปี', fn (Contract $c) => round(ContractBilling::yearlyCost($c), 2)),
             ReportColumn::date('next_bill', 'จ่ายครั้งถัดไป', fn (Contract $c) => $this->nextBill($c))->labelKey('rep_cov_c_next_bill'),
             ReportColumn::money('remaining', 'คงเหลือตามสัญญา', fn (Contract $c) => ContractBilling::remainingValue($c, today()))
                 ->labelKey('rep_cov_c_remaining'),
@@ -393,17 +393,17 @@ class ContractOverviewReport extends TabularReport
             ],
             [
                 'title' => 'ค่าใช้จ่ายต่อปีตามประเภท',
-                'headings' => ['ประเภท', 'สัญญา', 'ต่อปี', 'สัดส่วน (%)'],
+                'headings' => ['ประเภท', 'สัญญา', 'ค่าใช้จ่ายต่อปี', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $t) => [self::TYPE_TH[$t['type']], $t['contracts'], $t['yearly'], $share($t['yearly'])], $data['types']),
             ],
             [
                 'title' => 'ตามรอบการเรียกเก็บ',
-                'headings' => ['รอบการเรียกเก็บ', 'สัญญา', 'ต่อปี', 'สัดส่วน (%)'],
+                'headings' => ['รอบการเรียกเก็บ', 'สัญญา', 'ค่าใช้จ่ายต่อปี', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $c) => [self::CYCLE_TH[$c['cycle']], $c['contracts'], $c['yearly'], $share($c['yearly'])], $data['cycles']),
             ],
             [
                 'title' => 'ค่าใช้จ่ายตามผู้ขาย',
-                'headings' => ['ผู้ขาย', 'สัญญา', 'ต่อเดือน', 'ต่อปี', 'สัดส่วนต่อปี (%)', 'คงเหลือตามสัญญา', 'หมดใน 90 วัน (สัญญา)'],
+                'headings' => ['ผู้ขาย', 'สัญญา', 'ค่าใช้จ่ายต่อเดือน', 'ค่าใช้จ่ายต่อปี', 'สัดส่วนต่อปี (%)', 'คงเหลือตามสัญญา', 'หมดใน 90 วัน (สัญญา)'],
                 'rows' => array_map(fn (array $v) => [
                     $v['vendor_id'] === null ? self::NO_VENDOR_TH : ($v['name_th'] ?: $v['name']),
                     $v['contracts'], $v['monthly'], $v['yearly'], $share($v['yearly']), $v['remaining'], $v['ending_soon'],

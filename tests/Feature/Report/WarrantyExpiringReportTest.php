@@ -167,7 +167,7 @@ class WarrantyExpiringReportTest extends TestCase
         $report = app(WarrantyExpiringReport::class);
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters([]));
 
-        $this->assertSame(['ประกันหมดรายเดือน', 'ประกันเหลืออีกเท่าไร', 'แยกตามหมวดหมู่', 'แยกตามผู้ขาย'], array_column($sections, 'title'));
+        $this->assertSame(['ประกันหมดรายเดือน', 'ตามเวลาประกันที่เหลือ', 'ตามหมวดหมู่', 'ตามผู้ขาย'], array_column($sections, 'title'));
         $this->assertSame(['หมวดหมู่', 'ทั้งหมด', 'หมดแล้ว', 'ภายใน 90 วัน', '91 วัน - 1 ปี', 'เกิน 1 ปี', 'ใกล้สุด'], $sections[2]['headings']);
         $this->assertSame('ไม่ระบุผู้ขาย', $sections[3]['rows'][2][0]);
     }

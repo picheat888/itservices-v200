@@ -173,7 +173,7 @@ class ContractRentalsReport extends TabularReport
             ReportColumn::text('contract_name', 'ชื่อสัญญา', fn (Asset $a) => $a->contract?->name)->labelKey('rep_c_name')->hiddenByDefault(),
             ReportColumn::localized('vendor', 'ผู้ขาย', fn (Asset $a) => $a->contract?->vendor ? ['name' => $a->contract->vendor->name, 'name_th' => $a->contract->vendor->name_th] : null)
                 ->hiddenByDefault(),
-            ReportColumn::date('end_date', 'สัญญาสิ้นสุด', fn (Asset $a) => $a->contract?->end_date)->labelKey('rep_crent_c_end'),
+            ReportColumn::date('end_date', 'วันที่สิ้นสุด', fn (Asset $a) => $a->contract?->end_date)->labelKey('rep_crent_c_end'),
             ReportColumn::enum('contract_state', 'สถานะสัญญา', fn (Asset $a) => $a->contract ? self::state($a->contract) : null, self::STATE_KEYS, self::STATE_TH)
                 ->labelKey('rep_crent_c_state'),
             // A closed contract has no time left, only its state.
@@ -502,7 +502,7 @@ class ContractRentalsReport extends TabularReport
                 'title' => 'สถานะเครื่องตามสัญญา',
                 'headings' => [
                     'เลขที่สัญญา', 'ชื่อสัญญา', 'ผู้ขาย', 'ที่มา', 'เครื่อง', ...array_map(fn (string $s) => self::STATUS_TH[$s], self::STATUSES),
-                    'ต่อเครื่องต่อเดือน', 'ต่อปี', 'วันสิ้นสุด', 'สถานะสัญญา', 'เหลือ (วัน)',
+                    'ค่าเช่าต่อเครื่องต่อเดือน', 'ค่าเช่าต่อปี', 'วันที่สิ้นสุด', 'สถานะสัญญา', 'เหลือ (วัน)',
                 ],
                 'rows' => array_map(fn (array $c) => [
                     $c['code'], $c['name'], $name($c['vendor']), self::KIND_TH[$c['kind']], $c['units'], ...array_values($c['statuses']),

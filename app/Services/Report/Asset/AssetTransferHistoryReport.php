@@ -134,15 +134,15 @@ class AssetTransferHistoryReport extends TabularReport
             ReportColumn::localized('category', 'หมวดหมู่', fn (AssetTransfer $t) => $this->trail($t, 'categories')[$t->asset_id] ?? null)
                 ->labelKey('rep_c_asset_category')->hiddenByDefault(),
             ReportColumn::number('asset_moves', 'จำนวนครั้งที่เคลื่อนไหว', fn (AssetTransfer $t) => $this->trail($t, 'moves')[$t->asset_id] ?? null)->hiddenByDefault(),
-            ReportColumn::enum('transfer_kind', 'รายการ', fn (AssetTransfer $t) => $t->kind, self::KIND_KEYS, self::KIND_TH),
+            ReportColumn::enum('transfer_kind', 'ประเภทรายการ', fn (AssetTransfer $t) => $t->kind, self::KIND_KEYS, self::KIND_TH),
             ReportColumn::localized('from_label', 'จาก', fn (AssetTransfer $t) => $this->partyLabel($t, 'from_owner')),
             ...$this->partyColumns('from'),
             ReportColumn::localized('to_label', 'ไปยัง', fn (AssetTransfer $t) => $this->partyLabel($t, 'to_owner')),
             ...$this->partyColumns('to'),
-            ReportColumn::enum('outcome', 'ผลหลังส่ง', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['outcome'] ?? null, self::OUTCOME_KEYS, self::OUTCOME_TH)
+            ReportColumn::enum('outcome', 'ผลหลังส่งมอบ', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['outcome'] ?? null, self::OUTCOME_KEYS, self::OUTCOME_TH)
                 ->labelKey('rep_c_th_outcome'),
             // Hours to the acceptance, the wait so far, or from the return request to the return.
-            ReportColumn::number('outcome_hours', 'ผลหลังส่ง (ชม.)', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['hours'] ?? null, 1)->hiddenByDefault(),
+            ReportColumn::number('outcome_hours', 'ผลหลังส่งมอบ (ชม.)', fn (AssetTransfer $t) => $this->trail($t, 'outcomes')[$t->id]['hours'] ?? null, 1)->hiddenByDefault(),
             ReportColumn::text('reason', 'เหตุผล', fn (AssetTransfer $t) => $t->reason),
             ReportColumn::localized('performed_by', 'ผู้ดำเนินการ', fn (AssetTransfer $t) => ['name' => $t->performed_by, 'name_th' => $t->performer?->name_th]),
         ];
@@ -477,7 +477,7 @@ class AssetTransferHistoryReport extends TabularReport
 
         return [
             [
-                'title' => 'แยกตามเดือน',
+                'title' => 'ตามเดือน',
                 'headings' => ['เดือน', 'ส่งมอบ', 'รับคืน', 'เรียกคืน', 'ย้ายที่ตั้ง'],
                 'rows' => array_map(fn (array $m) => [CellDate::month($m['month']), $m['handover'], $m['return'], $m['recall'], $m['relocate']], $b['months']),
             ],
@@ -492,17 +492,17 @@ class AssetTransferHistoryReport extends TabularReport
                 ],
             ],
             [
-                'title' => 'แยกตามคลัง',
+                'title' => 'ตามคลัง',
                 'headings' => ['คลัง', 'ส่งมอบออก', 'กลับเข้าคลัง'],
                 'rows' => array_map(fn (array $w) => [$w['name'], $w['out'], $w['back']], $b['warehouses']),
             ],
             [
-                'title' => 'แยกตามแผนกผู้รับ',
+                'title' => 'ตามแผนกผู้รับ',
                 'headings' => ['แผนก', 'ส่งมอบ'],
                 'rows' => array_map(fn (array $d) => [$name($d['name'], $d['name_th'], 'ไม่ระบุแผนก'), $d['count']], $b['departments']),
             ],
             [
-                'title' => 'แยกตามหมวดหมู่',
+                'title' => 'ตามหมวดหมู่',
                 'headings' => ['หมวดหมู่', 'ส่งมอบ'],
                 'rows' => array_map(fn (array $c) => [$name($c['name'], $c['name_th'], 'ไม่ระบุหมวดหมู่'), $c['count']], $b['categories']),
             ],
@@ -521,7 +521,7 @@ class AssetTransferHistoryReport extends TabularReport
                 ], $b['waiting']),
             ],
             [
-                'title' => 'อัปเดตสถานที่',
+                'title' => 'ย้ายที่ตั้ง',
                 'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
                 'rows' => array_map(fn (array $r) => [CellDate::dateTime($r['at']), $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by_th'] ?: $r['by']], $b['relocations']),
             ],

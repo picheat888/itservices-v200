@@ -151,7 +151,7 @@ class AssetOverviewReport extends TabularReport
     {
         return [
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
-            ReportColumn::text('tag', 'Tag', fn (Asset $a) => $a->tag),
+            ReportColumn::text('tag', 'ชื่อ Tag', fn (Asset $a) => $a->tag),
             ReportColumn::localized('category', 'หมวดหมู่', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null)
                 ->labelKey('rep_c_asset_category'),
             ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name),
@@ -520,7 +520,7 @@ class AssetOverviewReport extends TabularReport
 
         return [
             [
-                'title' => 'ทรัพย์สินแยกตามแผนก',
+                'title' => 'ตามแผนก',
                 'headings' => ['แผนก', 'ทั้งหมด', ...$sourceHeadings, ...array_map(fn (string $s) => self::STATUS_TH[$s], self::HELD_STATUSES)],
                 'rows' => $this->departmentLines($filters)->map(fn (Asset $a) => [
                     $a->getAttribute('department_id') === null ? self::NO_DEPARTMENT['name_th'] : ($a->getAttribute('department_name_th') ?: $a->getAttribute('department_name')),
@@ -530,7 +530,7 @@ class AssetOverviewReport extends TabularReport
                 ])->values()->all(),
             ],
             [
-                'title' => 'ทรัพย์สินในคลัง (พร้อมใช้งาน)',
+                'title' => 'ทรัพย์สินในคลัง (พร้อมส่งมอบ)',
                 'headings' => ['คลัง', 'ทั้งหมด', ...$sourceHeadings],
                 'rows' => $this->placeLines($filters, 'ready', 'warehouses', 'warehouse_id')
                     ->map(fn (Asset $a) => [$place($a, self::NO_WAREHOUSE), (int) $a->getAttribute('total_count'), ...$sources($a)])->values()->all(),

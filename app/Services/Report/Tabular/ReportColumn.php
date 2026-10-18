@@ -288,7 +288,7 @@ final class ReportColumn
             'days_left' => 'จำนวนวันนับจากวันที่ส่งออก (ติดลบ = เลยมาแล้ว)',
             'hours_left' => 'จำนวนชั่วโมงถึงกำหนด (ติดลบ = เกินกำหนดแล้ว)',
             'enum' => 'ค่าใดค่าหนึ่งใน: '.implode(', ', array_values(array_diff(array_unique($this->exportLabels), [self::NONE]))),
-            'localized' => 'ข้อความ (ชื่อภาษาไทย ถ้าไม่มีใช้ชื่ออังกฤษ)',
+            'localized' => 'ข้อความ (ชื่อภาษาไทย หรือชื่ออังกฤษถ้าไม่ได้ตั้งชื่อไทย)',
             default => 'ข้อความ',
         };
     }

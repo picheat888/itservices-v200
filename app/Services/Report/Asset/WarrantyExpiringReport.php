@@ -121,7 +121,7 @@ class WarrantyExpiringReport extends TabularReport
     protected function meanings(): array
     {
         return [
-            'days_left' => 'จำนวนวันจากวันที่ส่งออกถึงวันหมดประกัน ติดลบ = หมดประกันมาแล้ว (มุมมองหมดแล้ว)',
+            'days_left' => 'จำนวนวันจากวันที่ส่งออกถึงวันหมดประกัน ค่าติดลบคือหมดประกันมาแล้วกี่วัน (มีเมื่อเลือกแสดงที่หมดแล้ว)',
             'value' => 'ราคาซื้อของทรัพย์สินตามที่บันทึกไว้ (รายงานนี้มีเฉพาะทรัพย์สินที่ซื้อ ไม่รวมประกันตลอดอายุและที่ตัดจำหน่ายแล้ว)',
             'holder' => 'ผู้ถือปัจจุบันในรูปแบบ ชื่อ (รหัสพนักงาน) ถ้าเป็นส่วนกลางแสดงชื่อการใช้งานส่วนกลางที่บันทึกไว้ ว่าง = ไม่มีผู้ถือ เช่นอยู่ในคลัง',
         ];
@@ -432,12 +432,12 @@ class WarrantyExpiringReport extends TabularReport
                 'rows' => array_map(fn (array $m) => [CellDate::month($m['month']), $m['total'], ...array_values($m['statuses'])], $breakdown['months']),
             ],
             [
-                'title' => 'ประกันเหลืออีกเท่าไร',
+                'title' => 'ตามเวลาประกันที่เหลือ',
                 'headings' => ['ช่วง', 'ทั้งหมด', ...$statusHeadings],
                 'rows' => array_map(fn (array $b) => [self::BAND_TH[$b['key']], $b['total'], ...array_values($b['statuses'])], $breakdown['bands']),
             ],
             [
-                'title' => 'แยกตามหมวดหมู่',
+                'title' => 'ตามหมวดหมู่',
                 'headings' => ['หมวดหมู่', 'ทั้งหมด', ...$periodHeadings, 'ใกล้สุด'],
                 'rows' => array_map(
                     fn (array $c) => [$c['category_id'] === null ? self::NO_CATEGORY_TH : ($c['name_th'] ?: $c['name']), $c['total'], ...$periods($c), $nearest($c)],
@@ -445,7 +445,7 @@ class WarrantyExpiringReport extends TabularReport
                 ),
             ],
             [
-                'title' => 'แยกตามผู้ขาย',
+                'title' => 'ตามผู้ขาย',
                 'headings' => ['ผู้ขาย', 'ทั้งหมด', ...$periodHeadings, 'ใกล้สุด'],
                 'rows' => array_map(
                     fn (array $v) => [$v['vendor_id'] === null ? self::NO_VENDOR_TH : ($v['name_th'] ?: $v['name']), $v['total'], ...$periods($v), $nearest($v)],

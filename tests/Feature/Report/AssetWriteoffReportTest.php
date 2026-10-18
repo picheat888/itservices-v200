@@ -433,12 +433,12 @@ class AssetWriteoffReportTest extends TestCase
             $months = $sheets[1]->array();
             $contract = $sheets[4]->array()[0];
 
-            return $sheets[1]->title() === 'แยกตามเดือน'
+            return $sheets[1]->title() === 'ตามเดือน'
                 && array_map(fn (array $m) => [$this->excelDate($m[0], 'Y-m'), ...array_slice($m, 1)], $months) === [['2026-08', 2, 1, 1, 0], ['2026-09', 5, 3, 1, 1]]
-                && $sheets[2]->title() === 'แยกตามเหตุผล'
+                && $sheets[2]->title() === 'ตามเหตุผล'
                 && in_array(['คืนผู้ให้เช่า', 2, 0, 2], $sheets[2]->array(), true)
                 && in_array(['ไม่ระบุเหตุผล', 1, 1, 0], $sheets[2]->array(), true)
-                && $sheets[3]->title() === 'แยกตามหมวดหมู่'
+                && $sheets[3]->title() === 'ตามหมวดหมู่'
                 && $sheets[3]->array()[0] === ['แล็ปท็อป', 5, 2, 3, 38000.0, 2.3, 1, 1, 0, 0]
                 && $sheets[4]->title() === 'เครื่องเช่าตามสัญญา'
                 && $this->excelDate($contract[3], 'Y-m-d') === '2026-08-31'

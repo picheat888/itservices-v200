@@ -22,7 +22,7 @@ use Maatwebsite\Excel\Events\AfterSheet;
  */
 class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithColumnFormatting, WithEvents, WithHeadings, WithMapping, WithStrictNullComparison, WithTitle
 {
-    private const SLA_LABELS = ['met' => 'ตรง SLA', 'over_sla' => 'เกิน SLA'];
+    private const SLA_LABELS = ['met' => 'ทัน SLA', 'over_sla' => 'เกิน SLA'];
 
     /** @param Collection<int, Ticket> $rows */
     public function __construct(private Collection $rows) {}
@@ -42,7 +42,7 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithCol
      */
     public function headings(): array
     {
-        return ['เลขที่', 'เรื่อง', 'ผู้แจ้ง', 'แผนก', 'หมวด', 'ความสำคัญ', 'สถานะ', 'ที่มา', 'ผู้รับผิดชอบ', 'เปิดเมื่อ', 'ปิดเมื่อ', 'เวลาแก้ไข (ชม.)', 'SLA'];
+        return ['เลขที่', 'เรื่อง', 'ผู้แจ้ง', 'แผนก', 'หมวด', 'ความสำคัญ', 'สถานะ', 'ที่มา', 'ผู้รับผิดชอบ', 'วันที่แจ้ง', 'ปิดเคสเมื่อ', 'เวลาปิดเคส (ชม.)', 'SLA'];
     }
 
     /**

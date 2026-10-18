@@ -108,16 +108,16 @@ class TicketOverviewExportTest extends TestCase
             $rows = (new TicketOverviewSummarySheet($export->summary))->array();
             $department = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ปฏิบัติการ');
             $staff = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'Tech One');
-            // The 90th percentile reads as a ceiling ("ไม่เกิน"), never as an average of the 90%.
-            $p90 = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === '90% ปิดได้ไม่เกิน (ชม.)');
+            // The 90th percentile reads as a ceiling ("ภายใน"), never as an average of the 90%.
+            $p90 = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === '90% ของเคสปิดได้ภายใน (ชม.)');
             $range = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ช่วงวันที่');
 
-            // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA %
-            return $p90 === ['90% ปิดได้ไม่เกิน (ชม.)', 2.0]
+            // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA (%)
+            return $p90 === ['90% ของเคสปิดได้ภายใน (ชม.)', 2.0]
                 // A whole calendar month reads as the month, in the date setting.
                 && $range === ['ช่วงวันที่', 'ก.ย. 2026']
                 && $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
-                // ผู้รับผิดชอบ, ทั้งหมด, ปิดสำเร็จ, ยกเลิก, เวลาแก้ไขโดยเฉลี่ย, ทัน SLA % — the period only
+                // ผู้รับผิดชอบ, ทั้งหมด, ปิดสำเร็จ, ยกเลิก, เวลาปิดเคสเฉลี่ย, ทัน SLA (%) — the period only
                 && $staff === ['Tech One', 1, 1, 0, 2.0, 100.0];
         });
     }
@@ -220,9 +220,9 @@ class TicketOverviewExportTest extends TestCase
                 && $row['ทรัพย์สินที่เกี่ยวข้อง'] === $asset->asset_code
                 && $row['เบอร์ติดต่อกลับ'] === '0812345678'
                 && $this->excelDate($row['รับเคสเมื่อ']) === '2026-09-05 10:00'
-                && $row['เวลาที่ใช้รับเคส (ชม.)'] === 2.0
-                && $row['ผลการรับเคสตาม SLA'] === 'เกิน SLA' // taken an hour after its response deadline
-                && $row['ผลการแก้ไขตาม SLA'] === 'ทัน SLA'
+                && $row['เวลารอรับเคส (ชม.)'] === 2.0
+                && $row['รับเคสทัน SLA'] === 'เกิน SLA' // taken an hour after its response deadline
+                && $row['ปิดทัน SLA'] === 'ทัน SLA'
                 && $row['บันทึกตอนรับเคส'] === 'Checking the roller'
                 && $row['ผลการดำเนินงาน'] === 'Roller replaced'
                 && $row['จำนวนบันทึกความคืบหน้า'] === 1
@@ -251,8 +251,8 @@ class TicketOverviewExportTest extends TestCase
             $sheet = new TicketOverviewRawSheet($export->rows);
             $row = array_combine($sheet->headings(), $sheet->map($export->rows->first()));
 
-            return $row['ผลการรับเคสตาม SLA'] === 'เกิน SLA'
-                && $row['ผลการแก้ไขตาม SLA'] === null
+            return $row['รับเคสทัน SLA'] === 'เกิน SLA'
+                && $row['ปิดทัน SLA'] === null
                 && $row['จำนวนบันทึกความคืบหน้า'] === 0;
         });
     }

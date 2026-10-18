@@ -33,7 +33,7 @@ trait StockColumns
     {
         return [
             ReportColumn::text('sku', 'SKU', fn ($row) => $item($row)?->sku),
-            ReportColumn::text('item_name', 'รายการ', fn ($row) => $item($row)?->name),
+            ReportColumn::text('item_name', 'ชื่อรายการ', fn ($row) => $item($row)?->name),
             ReportColumn::localized('category', 'หมวด', fn ($row) => ($category = $item($row)?->category) ? ['name' => $category->name, 'name_th' => $category->name_th] : null),
             ReportColumn::text('unit', 'หน่วย', fn ($row) => $item($row)?->unit?->name),
         ];

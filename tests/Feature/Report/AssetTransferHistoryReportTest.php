@@ -331,7 +331,7 @@ class AssetTransferHistoryReportTest extends TestCase
             $sheets = $export->sheets();
             $titles = array_map(fn ($sheet) => $sheet->title(), $sheets);
             $waiting = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'ค้างอยู่ตอนนี้');
-            $moves = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'อัปเดตสถานที่');
+            $moves = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'ย้ายที่ตั้ง');
             $acceptance = collect($sheets)->first(fn ($sheet) => $sheet->title() === 'การกดรับมอบ');
 
             $move = $moves->array()[0];

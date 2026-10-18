@@ -171,7 +171,7 @@ class TabularReportEngineTest extends TestCase
             $sheet = $this->rowsSheet($export);
             $row = $sheet->map($export->rows->first());
 
-            return in_array('วันสิ้นสุด', $sheet->headings(), true)
+            return in_array('วันที่สิ้นสุด', $sheet->headings(), true)
                 && in_array('ฮาร์ดแวร์', $row, true)
                 && in_array('แอคมี', $row, true);
         });
