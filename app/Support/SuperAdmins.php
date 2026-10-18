@@ -55,7 +55,7 @@ class SuperAdmins
             ->whereIn('group_role_employee.employee_id', $employeeIds)
             ->pluck('group_role_employee.employee_id');
 
-        // Same account match as GroupRoleController::syncUserRoles
+        // Same account match as GroupMembershipWriter::syncUserRoles
         $withSuperAccount = DB::table('employees')
             ->join('users', fn ($join) => $join->on('users.employee_id', '=', 'employees.id')->orOn('users.username', '=', 'employees.username'))
             ->where('users.role_id', $roleId)

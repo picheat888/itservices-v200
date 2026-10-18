@@ -308,7 +308,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Ids of the employees this account belongs to, by employee_id or by username (the GroupRoleController link).
+     * Ids of the employees this account belongs to, by employee_id or by username (the GroupMembershipWriter link).
      *
      * @return array<int, int>
      */

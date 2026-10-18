@@ -16,6 +16,8 @@ use Illuminate\Pagination\LengthAwarePaginator as Page;
 
 class GroupRoleMemberService
 {
+    public function __construct(private GroupRoleGuards $guards) {}
+
     /** The group's members, searchable by name, code or department. */
     public function members(GroupRole $group, ?string $search, int $perPage): LengthAwarePaginator
     {
@@ -39,9 +41,13 @@ class GroupRoleMemberService
         return new Page($everyone, $everyone->count(), max(1, $everyone->count()), 1);
     }
 
-    /** How many candidates the caller may add: never their own employee, and no Super admin unless they are one. */
+    /** How many candidates the caller may add: none to a group they may not add to, never their own employee, and no Super admin unless they are one. */
     public function addableCount(?GroupRole $group, ?string $search, ?int $departmentId, User $caller): int
     {
+        if ($this->guards->refusesEveryAdd($caller, $group)) {
+            return 0;
+        }
+
         $ids = $this->candidateQuery($group, $search, $departmentId)->pluck('id')->map(fn ($id) => (int) $id)->all();
         $ids = array_values(array_diff($ids, $caller->linkedEmployeeIds()));
 
