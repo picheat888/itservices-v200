@@ -165,12 +165,10 @@ export default function EmployeesPage() {
         });
     };
 
-    // The view drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
-    // drops the param. Row clicks seed the cache for an instant open; "view profile" jumps by id.
+    // View drawer in ?view=<id>; row clicks seed the cache for an instant open
     const qc = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
-    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
-    // `!= null` guard and used to fetch /employees/NaN.
+    // Only a real record id opens the drawer (never NaN)
     const openId = toRecordId(searchParams.get('view'));
     const { data: viewEmp, isError: viewEmpMissing } = useEmployee(openId);
     const setView = (id: number | null) =>
@@ -238,8 +236,7 @@ export default function EmployeesPage() {
     // Positions / Departments tables: search, page and rows-per-page in the URL (?search, page, per).
     const list = useListParams();
 
-    // The Directory badge counts active staff still waiting for a login account — work left to do,
-    // not a headcount — so it is tinted amber and hidden once everyone has one.
+    // Directory badge: active staff still without a login account (amber, hidden at zero)
     const tabs: TabItem[] = [
         canViewOverview && { id: 'overview' as Tab, label: t('sub_overview') },
         canViewDirectory && {
@@ -255,8 +252,7 @@ export default function EmployeesPage() {
         canViewOrg && { id: 'orgchart' as Tab, label: t('sub_org_chart') },
     ].filter(Boolean) as TabItem[];
 
-    // If the landing tab isn't visible (permission removed), fall back to the first visible tab —
-    // replace, so Back does not bounce the reader into it again.
+    // A landing tab the reader can't see falls back to the first visible one (replace)
     useEffect(() => {
         if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
             setTab(tabs[0].id, { replace: true, extra: clearListKeys });
@@ -381,8 +377,7 @@ export default function EmployeesPage() {
 
     const deptName = (d: Department) => localName(d, lang);
 
-    // A department can only be deleted when it has no employees AND no sections.
-    // Otherwise show a blocking notice (sections cascade-delete, employees unassign).
+    // A department is deletable only with no employees and no sections; otherwise a notice
     const handleDeleteDept = (d: Department) => {
         const members = d.count ?? 0;
         const sections = d.sections_count ?? 0;
@@ -621,8 +616,7 @@ export default function EmployeesPage() {
             <AddEmployeeDrawer open={adding} onClose={closeAdd} />
             <EditEmployeeDialog open={!!editEmp} onClose={() => setEditEmp(null)} employee={editEmp} />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
-            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
-                render and said nothing. This says it instead. */}
+            {/* A dead ?view= link says so */}
             <RecordMissingDialog open={viewEmpMissing} onClose={() => closeEmp()} />
             <EmployeeViewDrawer
                 employee={viewEmp ?? null}
