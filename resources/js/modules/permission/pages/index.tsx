@@ -494,16 +494,22 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                             </div>
                         </div>
                         <div className="flex flex-wrap items-end gap-2">
-                            <Input
-                                type="search"
-                                name="perm-search"
-                                autoComplete="off"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder={searchPlaceholder}
-                                aria-label={searchLabel(searchPlaceholder)}
-                                className="w-72 max-w-full text-ellipsis"
-                            />
+                            <div className="relative w-72 max-w-full">
+                                <Search
+                                    className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                                    aria-hidden
+                                />
+                                <Input
+                                    type="search"
+                                    name="perm-search"
+                                    autoComplete="off"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder={searchPlaceholder}
+                                    aria-label={searchLabel(searchPlaceholder)}
+                                    className="pl-9 text-ellipsis"
+                                />
+                            </div>
                             {/* Amber badge where Save stands: the role is protected, not wrong */}
                             {role.is_super ? (
                                 <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-amber-300/70 bg-amber-50 px-2.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
