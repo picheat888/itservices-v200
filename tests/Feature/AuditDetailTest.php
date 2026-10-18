@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
+use App\Models\Settings\Unit;
+use App\Models\Settings\WriteoffReason;
+use App\Models\Stock\StockItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -103,6 +107,26 @@ class AuditDetailTest extends TestCase
         // A null foreign key stays null (shown as a dash in the UI).
         $this->assertNull($details['changes']['manager_id']['from']);
         $this->assertNull($details['changes']['department_id']['from']);
+    }
+
+    public function test_changes_helper_resolves_master_data_and_actor_keys(): void
+    {
+        $lost = WriteoffReason::create(['name' => 'Lost']);
+        $broken = WriteoffReason::create(['name' => 'Broken']);
+        $item = StockItem::create(['sku' => 'SKU-AUD-1', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 5]);
+        $before = $item->getOriginal();
+        $item->update(['unit_id' => Unit::create(['name' => 'Box'])->id]);
+
+        $this->assertSame('Box', AuditLog::changes($before, $item)['changes']['unit_id']['to']);
+
+        $asset = new Asset(['writeoff_reason_id' => $lost->id]);
+        $asset->syncOriginal();
+        $asset->writeoff_reason_id = $broken->id;
+        $asset->syncChanges();
+
+        $details = AuditLog::changes(['writeoff_reason_id' => $lost->id], $asset);
+        $this->assertSame('Lost', $details['changes']['writeoff_reason_id']['from']);
+        $this->assertSame('Broken', $details['changes']['writeoff_reason_id']['to']);
     }
 
     public function test_employee_update_endpoint_records_resolved_org_labels(): void

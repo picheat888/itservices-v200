@@ -69,7 +69,7 @@ class AuditLogController extends Controller
             $query->where('user_name', $user);
         }
 
-        $paginator = $query->paginate($perPage, ['id', 'user_name', 'action', 'target', 'details', 'created_at']);
+        $paginator = $query->paginate($perPage, ['id', 'user_name', 'action', 'target', 'subject_type', 'details', 'created_at']);
 
         return response()->json([
             'data' => $paginator->items(),

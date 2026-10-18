@@ -11,8 +11,16 @@ use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
+use App\Models\Settings\Location;
+use App\Models\Settings\Unit;
+use App\Models\Settings\Vendor;
+use App\Models\Settings\WarrantyType;
+use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\Workflow\Workflow;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +36,9 @@ class AuditLog extends Model
 
     /** Fields never worth recording in an audit diff. */
     private const DIFF_HIDDEN = ['updated_at', 'created_at', 'updated_by', 'password', 'remember_token'];
+
+    /** Secret columns a delete snapshot never keeps, on top of hidden and encrypted-cast attributes. */
+    private const SNAPSHOT_SECRETS = ['password', 'remember_token', 'product_key', 'api_token', 'two_factor_secret', 'two_factor_recovery_codes'];
 
     /**
      * Foreign-key columns resolved to a human label in audit diffs, so a stored
@@ -63,6 +74,17 @@ class AuditLog extends Model
         'written_off_by' => [User::class, 'name'],
         'cancelled_by' => [User::class, 'name'],
         'writeoff_reason_id' => [WriteoffReason::class, 'name'],
+        'category_id' => [Category::class, 'name'],
+        'model_id' => [AssetModel::class, 'name'],
+        'location_id' => [Location::class, 'name'],
+        'vendor_id' => [Vendor::class, 'name'],
+        'unit_id' => [Unit::class, 'name'],
+        'warehouse_id' => [Warehouse::class, 'name'],
+        'warranty_type_id' => [WarrantyType::class, 'name'],
+        'owner_employee_id' => [Employee::class, 'name'],
+        'returned_to_vendor_by' => [User::class, 'name'],
+        'created_by' => [User::class, 'name'],
+        'updated_by' => [User::class, 'name'],
     ];
 
     /**
@@ -85,19 +107,39 @@ class AuditLog extends Model
     }
 
     /**
-     * Record a delete with the row as it stood (details.snapshot). Deletes are hard, so this snapshot is
-     * what is left of the record afterwards; passwords, tokens and the model's hidden fields are left out.
-     * It reads the attributes still held in memory, so it works just before or just after the delete.
+     * Record a delete with the row as it stood (details.snapshot), foreign keys resolved to labels.
+     * Secrets, hidden and encrypted-cast attributes are left out. It reads the attributes held in
+     * memory, so it works just before or just after the delete.
      *
      * @param  array<string, mixed>|null  $details
      */
     public static function recordDeleted(string $action, ?string $target, Model $model, ?array $details = null): void
     {
         $snapshot = collect($model->getAttributes())
-            ->except(['password', 'remember_token', ...$model->getHidden()])
+            ->except([...self::SNAPSHOT_SECRETS, ...$model->getHidden(), ...self::encryptedAttributes($model)])
+            ->reject(fn (mixed $value, string $field): bool => self::looksSecret($field))
+            ->map(fn (mixed $value, string $field): mixed => self::resolveLabel($field, $value))
             ->all();
 
         static::record($action, $target, [...($details ?? []), 'snapshot' => $snapshot], $model);
+    }
+
+    /**
+     * Attributes cast as encrypted (encrypted, encrypted:array, AsEncrypted* casts).
+     *
+     * @return array<int, string>
+     */
+    private static function encryptedAttributes(Model $model): array
+    {
+        return collect($model->getCasts())
+            ->filter(fn (mixed $cast): bool => is_string($cast) && (str_starts_with($cast, 'encrypted') || str_contains($cast, 'AsEncrypted')))
+            ->keys()
+            ->all();
+    }
+
+    private static function looksSecret(string $field): bool
+    {
+        return str_contains($field, 'password') || str_contains($field, 'secret') || str_ends_with($field, 'token');
     }
 
     /**
