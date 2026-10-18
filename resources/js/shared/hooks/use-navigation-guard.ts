@@ -1,7 +1,7 @@
 // Asks before in-app links, Back/Forward and guardNavigation() calls drop unsaved changes (BrowserRouter has no useBlocker).
-// A page registers with useNavigationGuard(isDirty, watchParams); AppShell mounts useNavigationGuardHost() once.
+// A page or form registers with useNavigationGuard(isDirty, watchParams); the newest one asks. AppShell mounts useNavigationGuardHost() once.
 import { useT } from '@/lang';
-import { discardConfirmOptions } from '@/shared/hooks/use-discard-guard';
+import { discardConfirmOptions } from '@/shared/lib/discard-confirm';
 import { isGuardedMove, isPlainLinkClick } from '@/shared/lib/navigation-guard';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useEffect, useRef } from 'react';
@@ -10,7 +10,16 @@ import { create } from 'zustand';
 
 type NavigationGuard = { watch: readonly string[]; ask: () => Promise<boolean> };
 
-const useNavigationGuardStore = create<{ guard: NavigationGuard | null }>(() => ({ guard: null }));
+// A stack: a dirty dialog form over a dirty page asks for itself, and the page's guard is back once the form goes
+const useNavigationGuardStore = create<{ guards: NavigationGuard[] }>(() => ({ guards: [] }));
+const activeGuard = (): NavigationGuard | null => useNavigationGuardStore.getState().guards.at(-1) ?? null;
+
+// The app's own step back (closing a dialog the reader already agreed to drop, or after a save) passes once
+let passOwnPop = false;
+export function passNextBack(): void {
+    passOwnPop = true;
+    window.setTimeout(() => (passOwnPop = false), 1000);
+}
 
 let asking = false;
 
@@ -40,16 +49,14 @@ export function useNavigationGuard(active: boolean, watchParams: readonly string
     useEffect(() => {
         if (!active) return;
         const guard: NavigationGuard = { watch: watchKey === '' ? [] : watchKey.split('&'), ask: () => askRef.current() };
-        useNavigationGuardStore.setState({ guard });
-        return () => {
-            if (useNavigationGuardStore.getState().guard === guard) useNavigationGuardStore.setState({ guard: null });
-        };
+        useNavigationGuardStore.setState((s) => ({ guards: [...s.guards, guard] }));
+        return () => useNavigationGuardStore.setState((s) => ({ guards: s.guards.filter((g) => g !== guard) }));
     }, [active, watchKey]);
 }
 
 /** For code that navigates itself (a bell item): `go` runs now, or after the reader agrees to discard. */
 export function guardNavigation(to: string, go: () => void) {
-    const guard = useNavigationGuardStore.getState().guard;
+    const guard = activeGuard();
     if (!guard || !isGuardedMove(new URL(window.location.href), new URL(to, window.location.href), guard.watch)) {
         go();
         return;
@@ -75,7 +82,7 @@ export function useNavigationGuardHost() {
         let passNextPop = false;
 
         const onClick = (event: MouseEvent) => {
-            const guard = useNavigationGuardStore.getState().guard;
+            const guard = activeGuard();
             if (!guard || replaying) return;
             const anchor = (event.target as Element | null)?.closest?.('a[href]');
             if (!(anchor instanceof HTMLAnchorElement) || !isPlainLinkClick(event, anchor)) return;
@@ -97,11 +104,12 @@ export function useNavigationGuardHost() {
         };
 
         const onPopState = (event: PopStateEvent) => {
-            if (passNextPop) {
+            if (passNextPop || passOwnPop) {
                 passNextPop = false;
+                passOwnPop = false;
                 return;
             }
-            const guard = useNavigationGuardStore.getState().guard;
+            const guard = activeGuard();
             const from = settled.current;
             if (!guard || !from || !isGuardedMove(new URL(from.href), new URL(window.location.href), guard.watch)) return;
 

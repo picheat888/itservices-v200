@@ -29,3 +29,8 @@ export function resolveNotificationTarget(target: string, currentSearch: string)
     PAGE_DIALOG_PARAMS.forEach((key) => pageSearch.delete(key));
     return { search: mergeDialogSearch(pageSearch.toString(), Object.fromEntries(new URLSearchParams(target))) };
 }
+
+/** Closing a page modal: step Back when this history entry was pushed to open only `keys`, else drop them in place. */
+export function pageDialogClose(pushed: readonly string[], keys: readonly string[]): 'back' | 'replace' {
+    return pushed.length > 0 && pushed.every((key) => keys.includes(key)) ? 'back' : 'replace';
+}

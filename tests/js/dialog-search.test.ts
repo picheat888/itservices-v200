@@ -1,7 +1,7 @@
 // A dialog opened over a page keeps the page's query; closing it drops only the dialog and its companion params.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dialogCloseParams, mergeDialogSearch, resolveNotificationTarget } from '../../resources/js/shared/lib/dialog-search.ts';
+import { dialogCloseParams, mergeDialogSearch, pageDialogClose, resolveNotificationTarget } from '../../resources/js/shared/lib/dialog-search.ts';
 
 test('merging keeps the page query and adds the dialog params', () => {
     assert.equal(mergeDialogSearch('?tab=my&view=12', { dialog: 'profile', section: 'assets' }), '?tab=my&view=12&dialog=profile&section=assets');
@@ -28,4 +28,18 @@ test("a query target drops the page's own modal params", () => {
     assert.deepEqual(resolveNotificationTarget('?dialog=profile&section=assets', '?tab=my&view=12'), {
         search: '?tab=my&dialog=profile&section=assets',
     });
+});
+
+test('closing a modal this entry pushed steps Back', () => {
+    assert.equal(pageDialogClose(['view'], ['view', 'edit']), 'back');
+    assert.equal(pageDialogClose(['edit'], ['edit']), 'back');
+});
+
+test('a modal opened by a link or a reload is dropped in place', () => {
+    assert.equal(pageDialogClose([], ['view']), 'replace');
+});
+
+test('an entry pushed for another modal is not stepped over', () => {
+    assert.equal(pageDialogClose(['view'], ['edit']), 'replace');
+    assert.equal(pageDialogClose(['view', 'edit'], ['edit']), 'replace');
 });
