@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class Employee extends Model
@@ -92,13 +93,11 @@ class Employee extends Model
             }
         });
 
-        // Replacing a photo already deletes the file it replaces; deleting the
-        // employee has to take the last one with it, or the binary stays on the
-        // private disk forever with nothing left that names it. On the model
-        // rather than the controller so every delete path is covered.
+        // Every delete path takes the photo file with it, once the delete commits
         static::deleting(function (Employee $employee) {
-            if ($employee->photo_path) {
-                Storage::disk('local')->delete($employee->photo_path);
+            $photoPath = $employee->photo_path;
+            if ($photoPath) {
+                DB::afterCommit(fn () => Storage::disk('local')->delete($photoPath));
             }
         });
     }
