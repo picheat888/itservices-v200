@@ -1,6 +1,6 @@
 <?php
 
-// One person in the Role Group dialog: identity, department, the group they sit in now, and whether only a Super admin may move them.
+// One person in the Role Group dialog: identity, department, the group they sit in now, whether only a Super admin may move them, and whether it is the caller.
 
 namespace App\Http\Resources\Permission;
 
@@ -27,8 +27,9 @@ class GroupRoleMemberResource extends JsonResource
             'department_th' => $this->department?->name_th,
             'group_id' => $group?->id,
             'group' => $group?->name,
-            // The controller puts the page's Super-admin employee ids on the request
+            // The controller puts the page's Super-admin employee ids and the caller's own ids on the request
             'protected' => in_array($this->id, (array) $request->attributes->get('protected_employee_ids', []), true),
+            'is_me' => in_array($this->id, (array) $request->attributes->get('my_employee_ids', []), true),
         ];
     }
 }

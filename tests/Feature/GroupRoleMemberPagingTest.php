@@ -6,6 +6,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,6 +37,17 @@ class GroupRoleMemberPagingTest extends TestCase
     private function employee(string $first, ?int $departmentId = null): Employee
     {
         return Employee::create(['first_name' => $first, 'last_name' => 'Test', 'department_id' => $departmentId]);
+    }
+
+    /** A non-super caller holding the given permission keys. */
+    private function userWith(string ...$permissions): User
+    {
+        $role = Role::create(['key' => 'clerk', 'name' => 'Clerk', 'is_system' => false]);
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return User::factory()->create(['role' => 'clerk']);
     }
 
     public function test_the_list_sends_member_counts_without_member_ids(): void
@@ -119,7 +131,9 @@ class GroupRoleMemberPagingTest extends TestCase
             ->getJson("/api/group-roles-candidates?department_id={$it->id}&all=1")
             ->assertOk()
             ->assertJsonCount(3, 'data')
-            ->assertJsonMissingPath('meta');
+            ->assertJsonPath('meta.total', 3)
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 1);
 
         // Without a department "all" falls back to one page
         $this->getJson('/api/group-roles-candidates?all=1')
@@ -169,5 +183,98 @@ class GroupRoleMemberPagingTest extends TestCase
             ->getJson("/api/group-roles/{$group->id}/members")
             ->assertForbidden();
         $this->getJson('/api/group-roles-candidates')->assertForbidden();
+    }
+
+    public function test_the_lists_need_manage_groups_even_with_the_permission_module(): void
+    {
+        $group = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
+
+        $this->actingAs($this->userWith('system.manage_permissions'))
+            ->getJson("/api/group-roles/{$group->id}/members")
+            ->assertForbidden();
+        $this->getJson('/api/group-roles-candidates')->assertForbidden();
+    }
+
+    public function test_super_admins_are_flagged_protected_for_a_non_super_caller_only(): void
+    {
+        $group = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
+        $ada = $this->employee('Ada');
+        User::factory()->create(['role' => 'super', 'employee_id' => $ada->id]);
+        $sam = $this->employee('Sam');
+        $group->employees()->attach([$ada->id, $sam->id]);
+        $outsider = $this->employee('Abe');
+        User::factory()->create(['role' => 'super', 'employee_id' => $outsider->id]);
+
+        $flags = fn (string $url) => collect($this->getJson($url)->assertOk()->json('data'))->pluck('protected', 'id')->all();
+
+        $this->actingAs($this->userWith('system.manage_groups'));
+        $this->assertSame([$ada->id => true, $sam->id => false], $flags("/api/group-roles/{$group->id}/members"));
+        $this->assertSame([$outsider->id => true], $flags("/api/group-roles-candidates?group_id={$group->id}"));
+
+        $this->actingAs($this->super());
+        $this->assertSame([$ada->id => false, $sam->id => false], $flags("/api/group-roles/{$group->id}/members"));
+        $this->assertSame([$outsider->id => false], $flags("/api/group-roles-candidates?group_id={$group->id}"));
+    }
+
+    public function test_candidates_leave_out_inactive_employees(): void
+    {
+        $active = $this->employee('Active');
+        Employee::create(['first_name' => 'Gone', 'last_name' => 'Test', 'status' => 'resigned']);
+
+        $response = $this->actingAs($this->super())
+            ->getJson('/api/group-roles-candidates')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        $this->assertSame($active->id, $response->json('data.0.id'));
+    }
+
+    public function test_array_params_are_refused(): void
+    {
+        $group = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
+        $this->actingAs($this->super());
+
+        foreach (['search[]=a', 'per_page[]=10'] as $query) {
+            $this->getJson("/api/group-roles/{$group->id}/members?{$query}")->assertUnprocessable();
+            $this->getJson("/api/group-roles-candidates?{$query}")->assertUnprocessable();
+        }
+        foreach (['group_id[]=1', 'department_id[]=1', 'all[]=1'] as $query) {
+            $this->getJson("/api/group-roles-candidates?{$query}")->assertUnprocessable();
+        }
+    }
+
+    public function test_a_whole_department_is_sent_with_no_cap(): void
+    {
+        $it = Department::create(['name' => 'IT', 'tag' => 'IT']);
+        foreach (array_chunk(range(1, 520), 100) as $numbers) {
+            Employee::insert(array_map(fn (int $n) => [
+                'code' => sprintf('EMP-T%04d', $n), 'first_name' => "Person{$n}", 'last_name' => 'Test', 'department_id' => $it->id, 'status' => 'active',
+                'created_at' => now(), 'updated_at' => now(),
+            ], $numbers));
+        }
+
+        $this->actingAs($this->super())
+            ->getJson("/api/group-roles-candidates?department_id={$it->id}&all=1")
+            ->assertOk()
+            ->assertJsonCount(520, 'data')
+            ->assertJsonPath('meta.total', 520)
+            ->assertJsonPath('meta.last_page', 1);
+    }
+
+    public function test_the_callers_own_row_is_marked_is_me(): void
+    {
+        $group = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
+        $byId = $this->employee('Ann');
+        $byUsername = Employee::create(['first_name' => 'Ann', 'last_name' => 'Alias', 'username' => 'ann']);
+        $other = $this->employee('Ben');
+        $group->employees()->attach([$byId->id, $other->id]);
+        $caller = User::factory()->create(['role' => 'super', 'employee_id' => $byId->id, 'username' => 'ann']);
+
+        $this->actingAs($caller);
+        $members = collect($this->getJson("/api/group-roles/{$group->id}/members")->assertOk()->json('data'))->pluck('is_me', 'id')->all();
+        $candidates = collect($this->getJson("/api/group-roles-candidates?group_id={$group->id}")->assertOk()->json('data'))->pluck('is_me', 'id')->all();
+
+        $this->assertSame([$byId->id => true, $other->id => false], $members);
+        $this->assertSame([$byUsername->id => true], $candidates);
     }
 }

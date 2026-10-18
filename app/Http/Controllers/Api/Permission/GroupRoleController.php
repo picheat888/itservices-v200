@@ -11,13 +11,13 @@ use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Services\Permission\GroupMembershipChange;
 use App\Services\Permission\GroupRoleMemberService;
 use App\Support\RoleKeys;
 use App\Support\SuperAdmins;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -58,20 +58,37 @@ class GroupRoleController extends Controller
     }
 
     /**
-     * Moves the employees into this group, detaching them from every other group.
+     * Moves the added employees into this group out of every other group, and detaches the removed ones.
      *
-     * @param  array<int>  $employeeIds
+     * @param  array<int>  $addedEmployeeIds
+     * @param  array<int>  $removedEmployeeIds
      */
-    private function moveEmployeesInto(GroupRole $group, array $employeeIds): void
+    private function moveEmployeesInto(GroupRole $group, array $addedEmployeeIds, array $removedEmployeeIds = []): void
     {
-        if (count($employeeIds) > 0) {
-            DB::table('group_role_employee')
-                ->whereIn('employee_id', $employeeIds)
-                ->where('group_role_id', '!=', $group->id)
-                ->delete();
+        if ($addedEmployeeIds !== []) {
+            DB::table('group_role_employee')->whereIn('employee_id', $addedEmployeeIds)->delete();
+            $group->employees()->attach($addedEmployeeIds);
         }
 
-        $group->employees()->sync($employeeIds);
+        if ($removedEmployeeIds !== []) {
+            $group->employees()->detach($removedEmployeeIds);
+        }
+    }
+
+    /**
+     * The group's members now.
+     *
+     * @return array<int>
+     */
+    private function memberIds(GroupRole $group): array
+    {
+        return $group->employees()->pluck('employees.id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /** Re-reads the group under a row lock, so two saves of one group run one after the other. */
+    private function lockGroup(GroupRole $group): GroupRole
+    {
+        return GroupRole::with('role')->lockForUpdate()->findOrFail($group->id);
     }
 
     /**
@@ -225,19 +242,14 @@ class GroupRoleController extends Controller
     }
 
     /**
-     * Blocks a non-super caller from adding or removing their own employee, or changing the role of a group they sit in.
+     * Blocks every caller, Super admin included, from adding or removing their own employee, or changing the role of a group they sit in.
      *
      * @param  array<int>  $changedEmployeeIds  employees the write adds or removes
      * @param  array<int>  $currentEmployeeIds  the group's members before the write
      */
     private function guardOwnAccess(Request $request, array $changedEmployeeIds, array $currentEmployeeIds = [], bool $roleChanges = false): void
     {
-        $caller = $request->user();
-        if ($caller->isSuper()) {
-            return;
-        }
-
-        $ownEmployeeIds = $caller->linkedEmployeeIds();
+        $ownEmployeeIds = $request->user()->linkedEmployeeIds();
         $touchesOwnAccess = array_intersect($ownEmployeeIds, $changedEmployeeIds) !== []
             || ($roleChanges && array_intersect($ownEmployeeIds, $currentEmployeeIds) !== []);
         if (! $touchesOwnAccess) {
@@ -280,7 +292,7 @@ class GroupRoleController extends Controller
             'role' => $g->role?->key,
             'role_label' => $g->role ? ($g->role->name ?? $g->role->key) : null,
             'member_count' => $g->employees_count ?? $g->employees()->count(),
-            // The caller's own employee sits here: only a Super admin may change its role or members
+            // The caller's own employee sits here: nobody may change its role or their own membership
             'includes_me' => in_array($g->id, $mine, true),
         ];
     }
@@ -314,7 +326,7 @@ class GroupRoleController extends Controller
         $this->guardRole($data, $role);
         $this->guardSuperGroup($request, null, $role?->key);
 
-        $employeeIds = $data['employee_ids'] ?? [];
+        $employeeIds = GroupMembershipChange::from($data, [])->next;
         $this->guardOwnAccess($request, $employeeIds);
         $this->guardProtectedMembers($request, $employeeIds);
         $this->guardGrantCeiling($request, $role, $employeeIds !== []);
@@ -337,66 +349,66 @@ class GroupRoleController extends Controller
     public function update(Request $request, GroupRole $groupRole): JsonResponse
     {
         $this->gate($request);
-        $data = $this->validateData($request);
-        $role = RoleKeys::find($data['role'] ?? null);
+        $data = $this->validateData($request, updating: true);
+        $role = RoleKeys::find($data['role']);
         $this->guardRole($data, $role);
-        $this->guardSuperGroup($request, $groupRole->role?->key, $role?->key);
 
-        $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
-        $newEmployeeIds = $this->nextMembers($data, $oldEmployeeIds);
-        $addedEmployeeIds = array_values(array_diff($newEmployeeIds, $oldEmployeeIds));
-        $removedEmployeeIds = array_values(array_diff($oldEmployeeIds, $newEmployeeIds));
-        $roleChanges = (int) $groupRole->role_id !== (int) $role?->id;
+        $groupRole = SuperAdmins::keepAtLeastOne(function () use ($request, $groupRole, $data, $role) {
+            $group = $this->lockGroup($groupRole);
+            $change = GroupMembershipChange::from($data, $this->memberIds($group));
+            $roleChanges = (int) $group->role_id !== (int) $role?->id;
 
-        $this->guardOwnAccess($request, [...$addedEmployeeIds, ...$removedEmployeeIds], $oldEmployeeIds, $roleChanges);
-        $this->guardProtectedMembers($request, array_values(array_unique([...$newEmployeeIds, ...$removedEmployeeIds])));
-        $isDefaultGroup = GroupRole::defaultForNewEmployees()?->id === $groupRole->id;
-        $handsRoleOut = $addedEmployeeIds !== [] || ($roleChanges && ($newEmployeeIds !== [] || $isDefaultGroup));
-        $this->guardGrantCeiling($request, $role, $handsRoleOut);
+            $this->guardSuperGroup($request, $group->role?->key, $role?->key);
+            $this->guardOwnAccess($request, $change->changed(), $change->current, $roleChanges);
+            $this->guardProtectedMembers($request, $change->touched());
+            $isDefaultGroup = GroupRole::defaultForNewEmployees()?->id === $group->id;
+            $handsRoleOut = $change->added !== [] || ($roleChanges && ($change->next !== [] || $isDefaultGroup));
+            $this->guardGrantCeiling($request, $role, $handsRoleOut);
 
-        SuperAdmins::keepAtLeastOne(function () use ($groupRole, $data, $role, $newEmployeeIds, $addedEmployeeIds, $removedEmployeeIds) {
-            $before = $groupRole->getOriginal();
-            $rolesBefore = $this->accountRoles([...$newEmployeeIds, ...$removedEmployeeIds]);
-            $groupRole->update(['name' => $data['name'], 'role_id' => $role?->id]);
-            $this->moveEmployeesInto($groupRole, $newEmployeeIds);
-            $this->syncUserRoles($groupRole, $newEmployeeIds);
+            $before = $group->getOriginal();
+            $rolesBefore = $this->accountRoles($change->touched());
+            $group->update(['name' => $data['name'], 'role_id' => $role?->id]);
+            $this->moveEmployeesInto($group, $change->added, $change->removed);
+            $this->syncUserRoles($group, $this->memberIds($group));
 
-            if (count($removedEmployeeIds) > 0) {
-                $this->fallbackOrphansToDefault($groupRole, $removedEmployeeIds);
+            if ($change->removed !== []) {
+                $this->fallbackOrphansToDefault($group, $change->removed);
             }
 
             $details = [
-                ...(AuditLog::changes($before, $groupRole) ?? []),
-                ...$this->membershipDetails($addedEmployeeIds, $removedEmployeeIds, $rolesBefore),
+                ...(AuditLog::changes($before, $group) ?? []),
+                ...$this->membershipDetails($change->added, $change->removed, $rolesBefore),
             ];
-            AuditLog::record('Updated role group', $groupRole->name, $details ?: null, subject: $groupRole);
+            AuditLog::record('Updated role group', $group->name, $details ?: null, subject: $group);
+
+            return $group;
         });
 
-        return response()->json(['data' => $this->present($groupRole->loadCount('employees')), 'message' => 'success']);
+        return response()->json(['data' => $this->present($groupRole->load('role')->loadCount('employees')), 'message' => 'success']);
     }
 
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
     {
         $this->gate($request);
-        $this->guardSuperGroup($request, $groupRole->role?->key);
 
-        $memberIds = $groupRole->employees->pluck('id')->all();
-        $this->guardOwnAccess($request, $memberIds);
-        $this->guardProtectedMembers($request, $memberIds);
-        $name = $groupRole->name;
+        SuperAdmins::keepAtLeastOne(function () use ($request, $groupRole) {
+            $group = $this->lockGroup($groupRole);
+            $memberIds = $this->memberIds($group);
+            $this->guardSuperGroup($request, $group->role?->key);
+            $this->guardOwnAccess($request, $memberIds);
+            $this->guardProtectedMembers($request, $memberIds);
 
-        SuperAdmins::keepAtLeastOne(function () use ($groupRole, $memberIds, $name) {
             $rolesBefore = $this->accountRoles($memberIds);
 
             // Unset default group if this one is being deleted
-            if ((int) AppSetting::get('default_employee_group_id', 0) === $groupRole->id) {
+            if ((int) AppSetting::get('default_employee_group_id', 0) === $group->id) {
                 AppSetting::put('default_employee_group_id', null);
             }
 
-            $groupRole->delete();
-            $this->fallbackOrphansToDefault($groupRole, $memberIds);
+            $group->delete();
+            $this->fallbackOrphansToDefault($group, $memberIds);
 
-            AuditLog::recordDeleted('Deleted role group', $name, $groupRole, $this->membershipDetails([], $memberIds, $rolesBefore));
+            AuditLog::recordDeleted('Deleted role group', $group->name, $group, $this->membershipDetails([], $memberIds, $rolesBefore));
         });
 
         return response()->json(['message' => 'success']);
@@ -430,14 +442,18 @@ class GroupRoleController extends Controller
     }
 
     /**
+     * Members come as a full employee_ids list or as add_ids / remove_ids, never both; an update must send the role, even as null.
+     *
      * @return array<string, mixed>
      */
-    private function validateData(Request $request): array
+    private function validateData(Request $request, bool $updating = false): array
     {
+        $roleRules = ['nullable', 'string', Rule::in(RoleKeys::all())];
+
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'role' => ['nullable', 'string', Rule::in(RoleKeys::all())],
-            'employee_ids' => ['array'],
+            'role' => $updating ? ['present', ...$roleRules] : $roleRules,
+            'employee_ids' => ['array', 'missing_with:add_ids,remove_ids'],
             'employee_ids.*' => ['exists:employees,id'],
             'add_ids' => ['array'],
             'add_ids.*' => ['exists:employees,id'],
@@ -446,32 +462,17 @@ class GroupRoleController extends Controller
         ]);
     }
 
-    /**
-     * The members after the write: a full employee_ids list, or the current members with add_ids and remove_ids applied.
-     *
-     * @param  array<string, mixed>  $data
-     * @param  array<int>  $current
-     * @return array<int>
-     */
-    private function nextMembers(array $data, array $current): array
-    {
-        if (! array_key_exists('add_ids', $data) && ! array_key_exists('remove_ids', $data)) {
-            return array_map('intval', $data['employee_ids'] ?? []);
-        }
-
-        $added = array_map('intval', $data['add_ids'] ?? []);
-        $removed = array_map('intval', $data['remove_ids'] ?? []);
-
-        return array_values(array_diff(array_unique([...$current, ...$added]), $removed));
-    }
-
     /** One page of the group's members for the dialog. */
     public function members(Request $request, GroupRole $groupRole, GroupRoleMemberService $service): JsonResponse
     {
         $this->gate($request);
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $params = $request->validate([
+            'search' => ['nullable', 'string'],
+            'per_page' => ['nullable', 'integer'],
+        ]);
+        $perPage = max(10, min(100, (int) ($params['per_page'] ?? 20)));
 
-        return $this->memberPage($request, $service->members($groupRole, $request->query('search'), $perPage));
+        return $this->memberPage($request, $service->members($groupRole, $params['search'] ?? null, $perPage));
     }
 
     /** People who can join a group (or a new one): one page, or a whole department with all=1. */
@@ -491,19 +492,12 @@ class GroupRoleController extends Controller
         $all = $request->boolean('all') && $departmentId !== null;
         $perPage = max(10, min(100, (int) ($params['per_page'] ?? 20)));
 
-        $result = $service->candidates($group, $params['search'] ?? null, $departmentId, $all, $perPage);
-        if ($result instanceof Collection) {
-            $this->flagProtected($request, $result->pluck('id')->all());
-
-            return response()->json(['data' => GroupRoleMemberResource::collection($result), 'message' => 'success']);
-        }
-
-        return $this->memberPage($request, $result);
+        return $this->memberPage($request, $service->candidates($group, $params['search'] ?? null, $departmentId, $all, $perPage));
     }
 
     private function memberPage(Request $request, LengthAwarePaginator $page): JsonResponse
     {
-        $this->flagProtected($request, collect($page->items())->pluck('id')->all());
+        $this->flagCallerRows($request, collect($page->items())->pluck('id')->all());
 
         return response()->json([
             'data' => GroupRoleMemberResource::collection($page->items()),
@@ -517,13 +511,14 @@ class GroupRoleController extends Controller
     }
 
     /**
-     * Marks the Super-admin employees a non-super caller may not move.
+     * Marks the Super-admin employees a non-super caller may not move, and the caller's own employee.
      *
      * @param  array<int>  $employeeIds
      */
-    private function flagProtected(Request $request, array $employeeIds): void
+    private function flagCallerRows(Request $request, array $employeeIds): void
     {
         $protected = $request->user()?->isSuper() ? [] : SuperAdmins::protectedEmployeeIds($employeeIds);
         $request->attributes->set('protected_employee_ids', array_map('intval', $protected));
+        $request->attributes->set('my_employee_ids', $request->user()->linkedEmployeeIds());
     }
 }

@@ -383,7 +383,7 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame($auditBefore, AuditLog::count());
     }
 
-    public function test_last_super_admin_cannot_be_removed_from_the_administrator_group(): void
+    public function test_the_only_super_admin_cannot_remove_themselves_from_the_administrator_group(): void
     {
         $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
         [$adminEmployee, $admin] = $this->superAdminEmployee('Ada', $adminGroup);
@@ -393,8 +393,8 @@ class PermissionSecurityTest extends TestCase
 
         $this->actingAs($admin)
             ->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Admins', 'role' => 'super', 'employee_ids' => []])
-            ->assertUnprocessable()
-            ->assertJsonPath('code', 'last_super_admin');
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
 
         $this->assertSame('Administrators', $adminGroup->fresh()->name);
         $this->assertTrue($this->isMember($adminGroup, $adminEmployee));
@@ -404,7 +404,7 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame($auditBefore, AuditLog::count());
     }
 
-    public function test_last_super_admin_cannot_be_removed_by_deleting_the_administrator_group(): void
+    public function test_the_only_super_admin_cannot_delete_their_own_administrator_group(): void
     {
         $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
         [$adminEmployee, $admin] = $this->superAdminEmployee('Ada', $adminGroup);
@@ -413,8 +413,8 @@ class PermissionSecurityTest extends TestCase
 
         $this->actingAs($admin)
             ->deleteJson("/api/group-roles/{$adminGroup->id}")
-            ->assertUnprocessable()
-            ->assertJsonPath('code', 'last_super_admin');
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
 
         $this->assertDatabaseHas('group_roles', ['id' => $adminGroup->id]);
         $this->assertTrue($this->isMember($adminGroup, $adminEmployee));
@@ -431,7 +431,7 @@ class PermissionSecurityTest extends TestCase
         $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
         AppSetting::put('default_employee_group_id', (string) $ordinary->id);
 
-        $this->actingAs($admin)
+        $this->actingAs($unlinkedSuper)
             ->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Administrators', 'role' => 'super', 'employee_ids' => []])
             ->assertOk();
 
@@ -471,7 +471,7 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame('Ordinary Team', $ordinary->fresh()->name);
     }
 
-    public function test_last_super_admin_cannot_be_moved_into_a_new_staff_group(): void
+    public function test_the_only_super_admin_cannot_move_themselves_into_a_new_staff_group(): void
     {
         $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
         [$adminEmployee, $admin] = $this->superAdminEmployee('Ada', $adminGroup);
@@ -479,8 +479,8 @@ class PermissionSecurityTest extends TestCase
 
         $this->actingAs($admin)
             ->postJson('/api/group-roles', ['name' => 'Staff', 'role' => 'staff', 'employee_ids' => [$adminEmployee->id]])
-            ->assertUnprocessable()
-            ->assertJsonPath('code', 'last_super_admin');
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
 
         $this->assertDatabaseMissing('group_roles', ['name' => 'Staff']);
         $this->assertTrue($this->isMember($adminGroup, $adminEmployee));
@@ -1049,7 +1049,7 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame($auditBefore, AuditLog::count());
     }
 
-    public function test_super_caller_passes_the_ceiling_and_own_access_checks(): void
+    public function test_super_caller_passes_the_ceiling_check(): void
     {
         $this->roleWith('boss', 'system.manage_groups', 'system.view_audit');
         $own = Employee::create(['first_name' => 'Sue', 'last_name' => 'Super', 'email' => 'sue@inaba.co.th']);
@@ -1057,18 +1057,294 @@ class PermissionSecurityTest extends TestCase
         User::factory()->create(['role' => 'super']);
         $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
         $sam = $this->staffEmployee('Sam', $ordinary);
+        $loose = GroupRole::create(['name' => 'Loose', 'role' => 'staff']);
+        $tom = $this->staffEmployee('Tom', $loose);
         $this->actingAs($caller);
 
         $bosses = $this->postJson('/api/group-roles', ['name' => 'Bosses', 'role' => 'boss', 'employee_ids' => [$sam->id]])
             ->assertCreated()
             ->json('data.id');
-        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'boss', 'employee_ids' => [$own->id]])
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'boss', 'add_ids' => [$tom->id], 'remove_ids' => []])
             ->assertOk();
 
         $this->assertSame('boss', User::where('employee_id', $sam->id)->first()->role->key);
         $this->assertTrue($this->isMember(GroupRole::find($bosses), $sam));
-        $this->assertTrue($this->isMember($ordinary, $own));
+        $this->assertTrue($this->isMember($ordinary, $tom));
+        $this->assertSame('boss', User::where('employee_id', $tom->id)->first()->role->key);
         $this->assertSame('boss', $ordinary->fresh()->role->key);
+    }
+
+    /**
+     * A Super admin whose employee sits in the Administrator group, with a second Super admin so the last-admin net stays out of the way.
+     *
+     * @return array{0: User, 1: Employee, 2: GroupRole}
+     */
+    private function superInAdminGroup(): array
+    {
+        $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        [$own, $caller] = $this->superAdminEmployee('Sue', $adminGroup);
+        User::factory()->create(['role' => 'super']);
+
+        return [$caller, $own, $adminGroup];
+    }
+
+    public function test_super_admin_cannot_add_or_remove_themselves(): void
+    {
+        [$caller, $own, $adminGroup] = $this->superInAdminGroup();
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $this->actingAs($caller);
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Administrators', 'role' => 'super', 'add_ids' => [], 'remove_ids' => [$own->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+        $this->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Administrators', 'role' => 'super', 'employee_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'add_ids' => [$own->id], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+        $this->postJson('/api/group-roles', ['name' => 'Fresh', 'role' => 'staff', 'add_ids' => [$own->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+
+        $this->assertTrue($this->isMember($adminGroup, $own));
+        $this->assertFalse($this->isMember($ordinary, $own));
+        $this->assertDatabaseMissing('group_roles', ['name' => 'Fresh']);
+        $this->assertTrue($caller->fresh()->isSuper());
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_super_admin_cannot_change_the_role_of_their_own_group_or_delete_it(): void
+    {
+        [$caller, $own, $adminGroup] = $this->superInAdminGroup();
+        $this->actingAs($caller);
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Administrators', 'role' => 'staff', 'add_ids' => [], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+        $this->deleteJson("/api/group-roles/{$adminGroup->id}")
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+
+        $this->assertSame('super', $adminGroup->fresh()->role->key);
+        $this->assertTrue($this->isMember($adminGroup, $own));
+        $this->assertTrue($caller->fresh()->isSuper());
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_super_admin_can_rename_their_own_group_and_add_other_people(): void
+    {
+        [$caller, $own, $adminGroup] = $this->superInAdminGroup();
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $ben = $this->staffEmployee('Ben', $ordinary);
+        $this->actingAs($caller);
+
+        $this->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Admins', 'role' => 'super', 'add_ids' => [], 'remove_ids' => []])
+            ->assertOk();
+        $this->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Admins', 'role' => 'super', 'add_ids' => [$ben->id], 'remove_ids' => []])
+            ->assertOk();
+
+        $this->assertSame('Admins', $adminGroup->fresh()->name);
+        $this->assertTrue($this->isMember($adminGroup, $own));
+        $this->assertTrue($this->isMember($adminGroup, $ben));
+        $this->assertTrue($this->accountOf($ben)->isSuper());
+        $this->assertTrue($caller->fresh()->isSuper());
+    }
+
+    public function test_an_update_without_membership_keys_keeps_every_member(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $tom = $this->staffEmployee('Tom', $ordinary);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary Team', 'role' => 'staff'])
+            ->assertOk()
+            ->assertJsonPath('data.member_count', 2);
+
+        $this->assertSame('Ordinary Team', $ordinary->fresh()->name);
+        $this->assertTrue($this->isMember($ordinary, $sam));
+        $this->assertTrue($this->isMember($ordinary, $tom));
+    }
+
+    public function test_an_update_must_send_the_role_and_a_null_role_clears_it(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'add_ids' => [], 'remove_ids' => []])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('role');
+        $this->assertSame('staff', $ordinary->fresh()->role->key);
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => null])
+            ->assertOk()
+            ->assertJsonPath('data.role', null);
+        $this->assertNull($ordinary->fresh()->role_id);
+        $this->assertTrue($this->isMember($ordinary, $sam));
+    }
+
+    public function test_a_full_list_and_a_diff_cannot_be_sent_together(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $loose = GroupRole::create(['name' => 'Loose', 'role' => 'staff']);
+        $tom = $this->staffEmployee('Tom', $loose);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'employee_ids' => [], 'add_ids' => [$tom->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('employee_ids');
+        $this->postJson('/api/group-roles', ['name' => 'Fresh', 'role' => 'staff', 'employee_ids' => [$sam->id], 'remove_ids' => []])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('employee_ids');
+
+        $this->assertTrue($this->isMember($ordinary, $sam));
+        $this->assertTrue($this->isMember($loose, $tom));
+    }
+
+    public function test_a_new_group_takes_add_ids_like_employee_ids(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $this->roleWith('boss');
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $id = $this->postJson('/api/group-roles', ['name' => 'Bosses', 'role' => 'boss', 'add_ids' => [$sam->id]])
+            ->assertCreated()
+            ->assertJsonPath('data.member_count', 1)
+            ->json('data.id');
+
+        $this->assertTrue($this->isMember(GroupRole::find($id), $sam));
+        $this->assertFalse($this->isMember($ordinary, $sam));
+        $this->assertSame('boss', $this->accountOf($sam)->role->key);
+    }
+
+    public function test_diff_saves_are_refused_when_they_touch_the_callers_own_access(): void
+    {
+        $this->roleWith('clerk');
+        [$caller, $own] = $this->groupManager();
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $mine = GroupRole::create(['name' => 'Mine', 'role' => 'staff']);
+        $mine->employees()->attach($own->id);
+        $this->actingAs($caller);
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'add_ids' => [$own->id], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+        $this->putJson("/api/group-roles/{$mine->id}", ['name' => 'Mine', 'role' => 'staff', 'add_ids' => [], 'remove_ids' => [$own->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+        $this->putJson("/api/group-roles/{$mine->id}", ['name' => 'Mine', 'role' => 'clerk', 'add_ids' => [], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_access');
+
+        $this->assertTrue($this->isMember($mine, $own));
+        $this->assertFalse($this->isMember($ordinary, $own));
+        $this->assertSame('staff', $mine->fresh()->role->key);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_diff_saves_cannot_add_or_remove_a_super_admin(): void
+    {
+        $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        [$ada] = $this->superAdminEmployee('Ada', $adminGroup);
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $team = GroupRole::create(['name' => 'Team', 'role' => 'staff']);
+        [$abe, $abeAccount] = $this->superAdminEmployee('Abe', $team, linkByUsername: true);
+        $this->actingAs($this->userWith('system.manage_groups'));
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'add_ids' => [$ada->id], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'admin_members_protected');
+        $this->putJson("/api/group-roles/{$team->id}", ['name' => 'Team', 'role' => 'staff', 'add_ids' => [$sam->id], 'remove_ids' => [$abe->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'admin_members_protected');
+
+        $this->assertTrue($this->isMember($adminGroup, $ada));
+        $this->assertFalse($this->isMember($ordinary, $ada));
+        $this->assertTrue($this->isMember($team, $abe));
+        $this->assertTrue($this->isMember($ordinary, $sam));
+        $this->assertTrue($abeAccount->fresh()->isSuper());
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_diff_saves_are_held_to_the_grant_ceiling(): void
+    {
+        $this->roleWith('boss', 'system.manage_groups', 'system.view_audit');
+        [$caller] = $this->groupManager();
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $bosses = GroupRole::create(['name' => 'Bosses', 'role' => 'boss']);
+        $this->actingAs($caller);
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$bosses->id}", ['name' => 'Bosses', 'role' => 'boss', 'add_ids' => [$sam->id], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'boss', 'add_ids' => [], 'remove_ids' => []])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'grant_ceiling');
+
+        $this->assertTrue($this->isMember($ordinary, $sam));
+        $this->assertFalse($this->isMember($bosses, $sam));
+        $this->assertSame('staff', $ordinary->fresh()->role->key);
+        $this->assertSame('staff', $this->accountOf($sam)->role->key);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_the_last_admin_net_still_rolls_back_a_diff_save(): void
+    {
+        $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        [$ada, $adaAccount] = $this->superAdminEmployee('Ada', $adminGroup);
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        AppSetting::put('default_employee_group_id', (string) $ordinary->id);
+        $caller = User::factory()->create(['role' => 'super']);
+        $staffRoleId = Role::where('key', 'staff')->value('id');
+        // Another session demotes the caller while this save runs
+        GroupRole::saving(fn () => User::whereKey($caller->id)->update(['role_id' => $staffRoleId]));
+        $auditBefore = AuditLog::count();
+
+        $this->actingAs($caller)
+            ->putJson("/api/group-roles/{$adminGroup->id}", ['name' => 'Administrators', 'role' => 'super', 'add_ids' => [], 'remove_ids' => [$ada->id]])
+            ->assertUnprocessable()
+            ->assertJsonPath('code', 'last_super_admin');
+
+        $this->assertTrue($this->isMember($adminGroup, $ada));
+        $this->assertFalse($this->isMember($ordinary, $ada));
+        $this->assertTrue($adaAccount->fresh()->isSuper());
+        $this->assertTrue($caller->fresh()->isSuper());
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_a_diff_save_leaves_alone_a_member_moved_out_meanwhile(): void
+    {
+        $this->roleWith('boss');
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $bosses = GroupRole::create(['name' => 'Bosses', 'role' => 'boss']);
+        $loose = GroupRole::create(['name' => 'Loose', 'role' => 'staff']);
+        $tom = $this->staffEmployee('Tom', $loose);
+        // Another session moves Sam to Bosses while this save runs
+        GroupRole::saving(function (GroupRole $group) use ($ordinary, $bosses, $sam) {
+            if ($group->id === $ordinary->id) {
+                DB::table('group_role_employee')->where('employee_id', $sam->id)->update(['group_role_id' => $bosses->id]);
+            }
+        });
+
+        $this->actingAs(User::factory()->create(['role' => 'super']))
+            ->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'add_ids' => [$tom->id], 'remove_ids' => []])
+            ->assertOk();
+
+        $this->assertFalse($this->isMember($ordinary, $sam));
+        $this->assertTrue($this->isMember($bosses, $sam));
+        $this->assertTrue($this->isMember($ordinary, $tom));
     }
 
     private function memberLabel(Employee $employee): string
