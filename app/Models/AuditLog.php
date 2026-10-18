@@ -41,13 +41,7 @@ class AuditLog extends Model
     private const SNAPSHOT_SECRETS = ['password', 'remember_token', 'product_key', 'api_token', 'two_factor_secret', 'two_factor_recovery_codes'];
 
     /**
-     * Foreign-key columns resolved to a human label in audit diffs, so a stored
-     * `position_id` change reads as the position title rather than a raw id. The
-     * label is captured at write time, which is point-in-time correct for an
-     * audit trail (a later rename of the entity does not rewrite history).
-     *
-     * Each column name maps to one entity app-wide, so this is applied globally
-     * to every model that records changes — no per-controller wiring needed.
+     * Foreign-key columns stored as the entity's label in audit diffs and delete snapshots.
      *
      * @var array<string, array{0: class-string<Model>, 1: string}>
      */
@@ -107,9 +101,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Record a delete with the row as it stood (details.snapshot), foreign keys resolved to labels.
-     * Secrets, hidden and encrypted-cast attributes are left out. It reads the attributes held in
-     * memory, so it works just before or just after the delete.
+     * Record a delete with the row as it stood (details.snapshot), secrets left out.
      *
      * @param  array<string, mixed>|null  $details
      */
@@ -166,13 +158,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Build a field-level before/after diff to attach as audit `details`.
-     * Capture `$before = $model->getOriginal()` (or `->getAttributes()`) BEFORE the
-     * update, then call this AFTER `$model->save()` — it reads the saved changes and
-     * pairs each changed field with its prior value.
-     *
-     * Returns `['changes' => ['field' => ['from' => .., 'to' => ..], ...]]`,
-     * or null when nothing meaningful changed (so `record()` stores no details).
+     * Field-level before/after diff of a saved model, or null when nothing meaningful changed.
      *
      * @param  array<string, mixed>  $before
      * @param  array<int, string>  $hidden  extra fields to omit (merged with defaults)
@@ -197,11 +183,7 @@ class AuditLog extends Model
         return $diff === [] ? null : ['changes' => $diff];
     }
 
-    /**
-     * Swap a foreign-key id for its entity label (e.g. position_id 12 → "Manager"),
-     * falling back to "#<id>" when the record no longer exists. Non-FK values and
-     * nulls pass through unchanged.
-     */
+    /** A foreign-key id as its entity label ("#<id>" when the record is gone); other values unchanged. */
     private static function resolveLabel(string $field, mixed $value): mixed
     {
         if ($value === null || ! isset(self::FK_LABELS[$field])) {
@@ -210,8 +192,7 @@ class AuditLog extends Model
 
         [$class, $attr] = self::FK_LABELS[$field];
 
-        // Load the record so computed accessors (e.g. Employee::$name, built from
-        // first_name + last_name) resolve too — not just real columns.
+        // Loaded, not plucked: the label can be an accessor
         $label = $class::find($value)?->{$attr};
 
         return ($label === null || $label === '') ? "#{$value}" : $label;

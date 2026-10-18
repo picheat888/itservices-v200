@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Access\EmailGroup;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Employee\Department;
@@ -9,9 +10,11 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Settings\Unit;
+use App\Models\Settings\Vendor;
 use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\StockItem;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -145,6 +148,73 @@ class AuditDetailTest extends TestCase
         $this->assertNotNull($log);
         $this->assertSame('Director', $log->details['changes']['position_id']['from']);
         $this->assertSame('Manager', $log->details['changes']['position_id']['to']);
+    }
+
+    public function test_audit_index_returns_the_subject_type(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        AuditLog::create(['user_name' => 'Boss', 'action' => 'Updated asset', 'subject_type' => Asset::class, 'subject_id' => 7]);
+        AuditLog::create(['user_name' => 'Boss', 'action' => 'Signed in']);
+
+        $this->getJson('/api/audit-logs')
+            ->assertOk()
+            ->assertJsonPath('data.0.subject_type', null)
+            ->assertJsonPath('data.1.subject_type', Asset::class);
+    }
+
+    public function test_changes_helper_resolves_owner_and_vendor_ids(): void
+    {
+        $holder = Employee::create(['first_name' => 'Hana', 'last_name' => 'Holder']);
+        $owner = Employee::create(['first_name' => 'Olly', 'last_name' => 'Owner']);
+        $vendor = Vendor::create(['name' => 'Acme Supply']);
+
+        $asset = new Asset(['owner_employee_id' => null, 'vendor_id' => null]);
+        $asset->syncOriginal();
+        $asset->forceFill(['owner_employee_id' => $holder->id, 'vendor_id' => $vendor->id])->syncChanges();
+        $details = AuditLog::changes(['owner_employee_id' => null, 'vendor_id' => null], $asset);
+        $this->assertSame('Hana Holder', $details['changes']['owner_employee_id']['to']);
+        $this->assertSame('Acme Supply', $details['changes']['vendor_id']['to']);
+
+        $group = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co', 'owner_employee_id' => $holder->id]);
+        $before = $group->getOriginal();
+        $group->update(['owner_employee_id' => $owner->id]);
+        $changes = AuditLog::changes($before, $group)['changes'];
+        $this->assertSame('Hana Holder', $changes['owner_employee_id']['from']);
+        $this->assertSame('Olly Owner', $changes['owner_employee_id']['to']);
+
+        // A deleted vendor reads as its id
+        $gone = $vendor->id;
+        $vendor->delete();
+        $asset->forceFill(['vendor_id' => $gone])->syncChanges();
+        $this->assertSame("#{$gone}", AuditLog::changes(['vendor_id' => null], $asset)['changes']['vendor_id']['to']);
+    }
+
+    public function test_a_delete_snapshot_leaves_out_encrypted_and_secret_looking_columns(): void
+    {
+        $record = new class extends Model
+        {
+            protected $table = 'secret_things';
+
+            protected function casts(): array
+            {
+                return ['license_blob' => 'encrypted', 'settings' => 'encrypted:array'];
+            }
+        };
+        $record->setRawAttributes([
+            'id' => 5,
+            'name' => 'Vault',
+            'license_blob' => 'cipher-1',
+            'settings' => 'cipher-2',
+            'smtp_password_hint' => 'p',
+            'client_secret' => 's',
+            'refresh_token' => 't',
+            'tokens_left' => 3,
+        ]);
+
+        AuditLog::recordDeleted('Deleted thing', 'Vault', $record);
+
+        $snapshot = AuditLog::where('action', 'Deleted thing')->sole()->details['snapshot'];
+        $this->assertSame(['id' => 5, 'name' => 'Vault', 'tokens_left' => 3], $snapshot);
     }
 
     public function test_role_update_endpoint_records_audit_details(): void
