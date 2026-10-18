@@ -739,6 +739,29 @@ class Permissions
     }
 
     /**
+     * Every module's hierarchy rule applied to a granted set, in the order a role save has always used.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalize(array $granted): array
+    {
+        $granted = self::normalizeStock($granted);
+        $granted = self::normalizeSettings($granted);
+        $granted = self::normalizeEmployees($granted);
+        $granted = self::normalizeContracts($granted);
+        $granted = self::normalizeAssets($granted);
+        $granted = self::normalizeAccess($granted);
+        $granted = self::normalizeTickets($granted);
+        $granted = self::normalizeWorkflows($granted);
+        $granted = self::normalizeRequests($granted);
+        $granted = self::normalizeNotifications($granted);
+        $granted = self::normalizeReports($granted);
+
+        return self::normalizeSystem($granted);
+    }
+
+    /**
      * Without the master every system key is dropped. Other keys pass through.
      *
      * @param  list<string>  $granted
