@@ -1,7 +1,7 @@
 // Permission refusals: a server code picks its lang key, anything else falls back to the server or the generic error.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { permissionRefusalText, refusalKey } from '../../resources/js/modules/permission/lib/refusal.ts';
+import { isRoleChanged, permissionRefusalText, refusalKey } from '../../resources/js/modules/permission/lib/refusal.ts';
 
 const t = (key: string) => `T:${key}`;
 const refused = (status: number, data: Record<string, unknown>) => ({ response: { status, data } });
@@ -34,4 +34,13 @@ test('no code and no message falls back to the generic error', () => {
     assert.equal(permissionRefusalText(refused(500, {}), t), 'T:cd_error');
     assert.equal(permissionRefusalText(new Error('Network Error'), t), 'T:cd_error');
     assert.equal(permissionRefusalText(undefined, t), 'T:cd_error');
+});
+
+test('a stale role save is told apart and shows the server words until its key exists', () => {
+    const stale = refused(409, { code: 'role_changed', message: 'This role was changed by someone else.' });
+    assert.equal(isRoleChanged(stale), true);
+    assert.equal(isRoleChanged(refused(409, { code: 'other' })), false);
+    assert.equal(isRoleChanged(refused(422, { code: 'role_changed' })), false);
+    assert.equal(isRoleChanged(new Error('network')), false);
+    assert.equal(permissionRefusalText(stale, t), 'This role was changed by someone else.');
 });

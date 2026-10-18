@@ -72,7 +72,7 @@ import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
-import { permissionRefusalText } from '../lib/refusal';
+import { isRoleChanged, permissionRefusalText } from '../lib/refusal';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
 const TABS = ['templates', 'groups', 'logs'] as const;
@@ -213,7 +213,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
-    const { data, isLoading, isError } = usePermissionMatrix();
+    const { data, isLoading, isError, refetch } = usePermissionMatrix();
     const update = useUpdateRolePermissions();
     const roleMut = useRoleMutations();
     const [selected, setSelected] = useState<string | null>(null);
@@ -234,14 +234,6 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         () => new Set(Object.entries(data?.catalog ?? {}).flatMap(([module, actions]) => actions.map((action) => `${module}.${action}`))),
         [data],
     );
-
-    useEffect(() => {
-        if (role) {
-            setSelected(role.value);
-            setDraft(new Set(role.permissions.filter((p) => catalogKeys.has(p))));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [role?.value, data]);
 
     /** Delete a role template, or say up front why the API would refuse it. */
     const handleDeleteRole = (r: RoleRow) => {
@@ -282,6 +274,26 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         onDirtyChange(dirty);
         return () => onDirtyChange(false);
     }, [dirty, onDirtyChange]);
+
+    // Seed the draft and its version for a newly selected role; a refetch only re-seeds while nothing is unsaved
+    const seededFor = useRef<string | null>(null);
+    const draftVersion = useRef('');
+    const adoptVersion = useRef(false);
+    useEffect(() => {
+        if (!role) return;
+        setSelected(role.value);
+        if (seededFor.current === role.value && dirty) {
+            // After a 409 the reload brings the stored side; the kept draft saves against it
+            if (adoptVersion.current) draftVersion.current = role.version;
+            adoptVersion.current = false;
+            return;
+        }
+        seededFor.current = role.value;
+        draftVersion.current = role.version;
+        adoptVersion.current = false;
+        setDraft(new Set(role.permissions.filter((p) => catalogKeys.has(p))));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [role?.value, data]);
 
     // A refused or failed load says so
     if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
@@ -350,10 +362,17 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         setSaveError(null);
         setSaveStep('saving');
         try {
-            await update.mutateAsync({ role: role.value, permissions: [...draft] });
+            const fresh = await update.mutateAsync({ role: role.value, permissions: [...draft], version: draftVersion.current });
+            const stored = fresh.roles.find((r) => r.value === role.value);
+            if (stored) draftVersion.current = stored.version;
         } catch (err: unknown) {
             setSaveError(permissionRefusalText(err, t));
             setSaveStep('confirm');
+            // Someone else saved this role: reload it, keeping the draft
+            if (isRoleChanged(err)) {
+                adoptVersion.current = true;
+                void refetch();
+            }
             return;
         }
         // Same beat as the shared confirm's success check, then the saved notice

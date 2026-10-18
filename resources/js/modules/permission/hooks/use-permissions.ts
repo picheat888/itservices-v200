@@ -26,7 +26,7 @@ export function useBaseRoleLabel(): string {
 export function useUpdateRolePermissions() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (v: { role: string; permissions: string[] }) => permissionApi.updateRole(v.role, v.permissions),
+        mutationFn: (v: { role: string; permissions: string[]; version: string }) => permissionApi.updateRole(v.role, v.permissions, v.version),
         onSuccess: (data) => {
             qc.setQueryData(KEY, data);
             qc.invalidateQueries({ queryKey: ['auth', 'me'] });
