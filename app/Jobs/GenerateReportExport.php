@@ -27,10 +27,15 @@ class GenerateReportExport implements ShouldQueue
     /** Seconds — a whole-year workbook of every ticket still finishes well inside this. */
     public int $timeout = 600;
 
+    /** PHP memory ceiling while a report file is built — a 1,000-row PDF peaks near 2.2 GB. */
+    public const MEMORY_LIMIT = '4G';
+
     public function __construct(public int $exportId) {}
 
     public function handle(ReportExportService $service): void
     {
+        ini_set('memory_limit', self::MEMORY_LIMIT);
+
         $export = ReportExport::find($this->exportId);
         if ($export !== null) {
             $service->build($export);

@@ -29,6 +29,8 @@ class SendScheduledReport implements ShouldQueue
 
     public function handle(ReportScheduleService $service): void
     {
+        ini_set('memory_limit', GenerateReportExport::MEMORY_LIMIT);
+
         $schedule = ReportSchedule::find($this->scheduleId);
         if ($schedule !== null) {
             $service->run($schedule, CarbonImmutable::parse($this->runAt));

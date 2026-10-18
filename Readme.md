@@ -6202,3 +6202,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `Input` และ `Textarea` กลางใส่ id อัตโนมัติ (`useId`) เมื่อผู้เรียกไม่ได้ส่ง `id` หรือ `name` (ตั้งหลัง props จึงชนะ `id={undefined}`); ช่องที่อยู่ใน `Field` ได้ id จาก Field เหมือนเดิม
 - ช่องที่เขียน `<input>` ตรง 17 จุดได้ `name` ที่สื่อความหมาย: ไฟล์รูป / โลโก้ / ไฟล์แนบ (`photo`, `logo`, `files`), ช่องค้นหาใน SearchableSelect / SearchSelect / ผังองค์กร / icon picker (`search`, `icon_search`), ตัวเลือกวัน SLA, serial ที่ติ๊กในคลัง, ขนาดพื้นที่ Access, ตัวแทรกตัวแปรอีเมล, zoom ตัดรูป
 - ตรวจใน Chrome: ฟอร์มสร้าง Ticket / ทรัพย์สิน / พนักงาน / สัญญา / คำขอ / สินค้าคลัง / Software (Access), หน้า Role Templates, ตั้งค่า (+ SLA), อีเมลและการแจ้งเตือน, รายงาน, Workflow — ไม่เหลือช่องที่ไม่มีทั้ง id และ name
+
+## รายงาน: งานสร้างไฟล์ใช้หน่วยความจำได้ถึง 4GB (2026-10-18)
+- ตรวจ PDF ทั้ง 22 รายงาน + ประวัติ SKU (ผลตรวจ https://claude.ai/artifact/YDEovaV5D4JmjbwaJVGtDk): PDF ที่มีรายการ 600–1,000 แถว ใช้หน่วยความจำ 570MB–2.2GB แต่ PHP ตั้งไว้ 512M จึงล้ม 11 รายงาน (fatal error จับด้วย try/catch ไม่ได้ ไฟล์ค้าง "กำลังสร้าง" แล้วกลายเป็นสร้างไม่สำเร็จ)
+- `GenerateReportExport` และ `SendScheduledReport` ตั้ง `memory_limit` เป็น `GenerateReportExport::MEMORY_LIMIT` (4G) ก่อนสร้างไฟล์ ค่ากลางของ PHP ยัง 512M
+- วัดจริง: ประวัติโอนย้ายและรับคืน (973 แถว 127 หน้า) ใช้ 2.2GB ใช้เวลา ~70 วินาที สร้างผ่านในโปรเซส 512M ที่ยกเพดานแล้ว; เทส `ReportJobMemoryLimitTest`
+- ยังค้าง: ลดแถวใน PDF, แยกคิว Export ออกจากคิวอีเมล, หัว/ท้ายกระดาษ (ดู `forward-session.md`)
