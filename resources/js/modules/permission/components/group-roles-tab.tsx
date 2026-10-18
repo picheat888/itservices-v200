@@ -18,8 +18,8 @@ import { ArrowUpDown, Check, Loader2, Plus, Shield, ShieldCheck, Users } from 'l
 import { useMemo, useState } from 'react';
 import type { GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
-import { useGroupRoles, usePermissionMatrix, useSetDefaultGroup } from '../hooks/use-permissions';
-import { countKey, defaultOffReasonKey } from '../lib/group-rules';
+import { useGroupRoles, useSetDefaultGroup } from '../hooks/use-permissions';
+import { countKey, defaultOffReasonKey, findRole, roleLabel } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { LockHint } from './group-pane';
@@ -40,7 +40,6 @@ export function GroupRolesTab() {
     const fmtN = useNumberFormat();
     const { user, isSuper } = useAuth();
     const { data, isLoading, isFetching, isError, refetch } = useGroupRoles();
-    const { data: matrix } = usePermissionMatrix();
     const setDefaultGroup = useSetDefaultGroup();
     const list = useListParams();
     const [defaultChange, setDefaultChange] = useState<DefaultStep | null>(null);
@@ -51,7 +50,9 @@ export function GroupRolesTab() {
     const defaultGroupId = data?.default_group_id ?? null;
     const defaultGroup = groups.find((g) => g.id === defaultGroupId) ?? null;
     const deleteGroup = useDeleteGroup(defaultGroup);
-    const roleOf = (key: string | null) => matrix?.roles.find((r) => r.value === key);
+    const roleOptions = data?.roles ?? [];
+    // No role is the base role, as the server ceiling-checks it
+    const roleOf = (key: string | null) => findRole(roleOptions, key);
     const myPermissions = new Set(user?.permissions ?? []);
     const defaultOffReason = (g: GroupRole) => {
         const key = defaultOffReasonKey(g, defaultGroupId, roleOf(g.role), isSuper, myPermissions);
@@ -108,7 +109,7 @@ export function GroupRolesTab() {
             width: '34%',
             render: (g) => (
                 <span className="flex min-w-0 items-center gap-2">
-                    <RoleBar color={roleOf(g.role)?.color} />
+                    <RoleBar color={g.role ? roleOf(g.role)?.color : null} />
                     <span className="truncate">{g.role_label ?? '—'}</span>
                 </span>
             ),
@@ -140,9 +141,9 @@ export function GroupRolesTab() {
         },
     ];
 
-    const roleOptions = [
+    const roleFilterOptions = [
         { value: ALL, label: t('all'), search: t('all') },
-        ...(matrix?.roles ?? []).map((r) => ({ value: r.value, label: r.label, search: r.label })),
+        ...roleOptions.map((r) => ({ value: r.key, label: roleLabel(r), search: roleLabel(r) })),
     ];
     const filterCount = (roleFilter ? 1 : 0) + (sort !== 'default_first' ? 1 : 0);
     const fieldLabel = (htmlFor: string, icon: React.ReactNode, label: string) => (
@@ -162,7 +163,7 @@ export function GroupRolesTab() {
                             active={!!roleFilter}
                             value={roleFilter || ALL}
                             onChange={(v) => list.setFilter('role', v === ALL ? '' : v)}
-                            options={roleOptions}
+                            options={roleFilterOptions}
                             searchPlaceholder={t('gr_role_search')}
                         />
                     </div>

@@ -1,7 +1,18 @@
-// Role Group rules: the singular lang key, which role templates a caller may hand out, and which groups may become the default.
+// Role Group rules: the singular lang key, role names, which role templates a caller may hand out, the default group and "Everyone in".
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { countKey, defaultOffReasonKey, isOverCeiling, leaversWhere, removeLine } from '../../resources/js/modules/permission/lib/group-rules.ts';
+import {
+    BASE_ROLE_KEY,
+    baseRoleLabel,
+    countKey,
+    defaultOffReasonKey,
+    departmentLockKey,
+    findRole,
+    isOverCeiling,
+    leaversWhere,
+    removeLine,
+    roleLabel,
+} from '../../resources/js/modules/permission/lib/group-rules.ts';
 
 test('one picks the _one key, anything else the plain key', () => {
     assert.equal(countKey('gr_people', 1), 'gr_people_one');
@@ -49,7 +60,7 @@ test('a group above the caller is greyed out with the ceiling reason', () => {
     assert.equal(off(group(4, 'ops'), 1), null);
 });
 
-test('an unknown role (no matrix) or no role leaves the choice to the server', () => {
+test('an unknown role or no role leaves the choice to the server', () => {
     assert.equal(defaultOffReasonKey(group(5, 'gone'), 1, undefined, false, mine), null);
     assert.equal(off(group(6, null), 1), null);
 });
@@ -67,13 +78,47 @@ test('leavers go to the default group first, else to the base role', () => {
     assert.equal(leaversWhere(tr, null, 'User'), 'no group, User role');
 });
 
-test('with no default group and no base role label the destination is unknown', () => {
-    assert.equal(leaversWhere(tr, null, ''), null);
-    assert.equal(removeLine(tr, 2, '2', null, ''), 'Remove 2 people');
+test('the remove line always names where leavers go', () => {
     assert.equal(removeLine(tr, 2, '2', null, 'User'), 'Remove 2 people (no group, User role)');
+    assert.equal(removeLine(tr, 2, '2', 'Staff group', 'User'), 'Remove 2 people (they move to Staff group)');
 });
 
 test('one leaver reads in the singular', () => {
-    assert.equal(removeLine(tr, 1, '1', 'Staff group', ''), 'Remove 1 person (they move to Staff group)');
-    assert.equal(removeLine(tr, 1, '1', null, ''), 'Remove 1 person');
+    assert.equal(removeLine(tr, 1, '1', 'Staff group', 'User'), 'Remove 1 person (they move to Staff group)');
+    assert.equal(removeLine(tr, 1, '1', null, 'User'), 'Remove 1 person (no group, User role)');
+});
+
+const options = [
+    { key: 'super', name: 'Super admin' },
+    { key: 'user', name: 'User' },
+    { key: 'ops', name: null },
+];
+
+test('a role reads by its name, else its key', () => {
+    assert.equal(roleLabel(options[1]), 'User');
+    assert.equal(roleLabel(options[2]), 'ops');
+});
+
+test('no role key finds the base role', () => {
+    assert.equal(findRole(options, null)?.key, BASE_ROLE_KEY);
+    assert.equal(findRole(options, 'ops')?.key, 'ops');
+    assert.equal(findRole(options, 'gone'), undefined);
+});
+
+test('the base role label comes from the role list', () => {
+    assert.equal(baseRoleLabel(options), 'User');
+    assert.equal(baseRoleLabel([{ key: 'user', name: 'Staff' }]), 'Staff');
+    assert.equal(baseRoleLabel([]), 'user');
+});
+
+test('"Everyone in" stays open while anyone can be added', () => {
+    assert.equal(departmentLockKey(3, true, false), null);
+    assert.equal(departmentLockKey(1, false, true), null);
+});
+
+test('"Everyone in" with nobody addable says why', () => {
+    assert.equal(departmentLockKey(0, true, false), 'perm_refusal_grant_ceiling');
+    assert.equal(departmentLockKey(0, true, true), 'perm_refusal_grant_ceiling');
+    assert.equal(departmentLockKey(0, false, true), 'gr_your_account');
+    assert.equal(departmentLockKey(0, false, false), 'gr_admin_only');
 });

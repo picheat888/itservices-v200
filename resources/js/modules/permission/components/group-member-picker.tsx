@@ -7,25 +7,30 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
+import { cn } from '@/shared/lib/utils';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
+import { Lock } from 'lucide-react';
 import { useState } from 'react';
 import { groupRoleApi, type GroupMember } from '../api/permissionApi';
 import { useGroupCandidates } from '../hooks/use-permissions';
-import { countKey } from '../lib/group-rules';
+import { countKey, departmentLockKey } from '../lib/group-rules';
 import { PaneHeader, PanePager, PaneRow, PaneSearch, PaneSkeleton } from './group-pane';
 
 const ALL = '__all__';
 
 export function GroupMemberPicker({
     groupId,
+    groupOverCeiling,
     added,
     onToggle,
     onAddMany,
     onRemoveMany,
 }: {
     groupId: number | null;
+    /** The saved group's role is above the caller, so the server refuses every add. */
+    groupOverCeiling: boolean;
     /** People staged to join; ticked here. */
     added: Map<number, GroupMember>;
     onToggle: (person: GroupMember) => void;
@@ -59,6 +64,11 @@ export function GroupMemberPicker({
     const lockReason = (p: GroupMember) => (p.is_me ? t('gr_your_account') : p.protected ? t('gr_admin_only') : null);
     const wholeDepartment = departmentId !== null && debounced === '' && total > 0 && !busy;
     const allPicked = departmentIds !== null && departmentIds.length > 0 && departmentIds.every((id) => added.has(id));
+    // "Everyone in" counts only who this caller may add
+    const addable = data?.meta.addable ?? total;
+    const onlyMe = total === 1 && rows[0]?.is_me === true;
+    const departmentLockedKey = departmentLockKey(addable, groupOverCeiling, onlyMe);
+    const departmentLocked = departmentLockedKey ? t(departmentLockedKey) : null;
 
     const pickDepartment = (value: string) => {
         setDepartmentId(value === ALL ? null : Number(value));
@@ -126,12 +136,27 @@ export function GroupMemberPicker({
                 {wholeDepartment && (
                     <label
                         htmlFor="gr-pick-department"
-                        className="border-border/60 bg-background sticky top-0 z-[1] flex min-h-10 cursor-pointer items-center gap-3 border-b px-5 text-[13px] font-medium"
+                        className={cn(
+                            'border-border/60 bg-background sticky top-0 z-[1] flex min-h-10 items-center gap-3 border-b px-5 text-[13px] font-medium',
+                            departmentLocked ? 'text-muted-foreground' : 'cursor-pointer',
+                        )}
                     >
-                        <Checkbox id="gr-pick-department" checked={allPicked} disabled={loadingAll} onCheckedChange={() => void toggleDepartment()} />
-                        {t(countKey('gr_pick_department', total))
+                        <Checkbox
+                            id="gr-pick-department"
+                            checked={allPicked}
+                            disabled={loadingAll || departmentLocked !== null}
+                            aria-describedby={departmentLocked ? 'gr-pick-department-locked' : undefined}
+                            onCheckedChange={() => void toggleDepartment()}
+                        />
+                        {t(countKey('gr_pick_department', addable))
                             .replace('{dept}', localName(department ?? null, lang) ?? '')
-                            .replace('{n}', fmtN(total))}
+                            .replace('{n}', fmtN(addable))}
+                        {departmentLocked && (
+                            <span id="gr-pick-department-locked" className="ml-auto flex min-w-0 items-center gap-1 text-xs font-normal">
+                                <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                {departmentLocked}
+                            </span>
+                        )}
                     </label>
                 )}
                 {wholeDepartment && departmentFailed && (

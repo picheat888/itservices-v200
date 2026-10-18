@@ -14,8 +14,8 @@ import { Check, Loader2, Lock, PencilLine, Trash2, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
-import { useBaseRoleLabel, useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
-import { countKey, isOverCeiling, removeLine } from '../lib/group-rules';
+import { useBaseRoleLabel, useGroupRoleMutations, useGroupRoleOptions } from '../hooks/use-permissions';
+import { countKey, findRole, isOverCeiling, removeLine, roleLabel } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
@@ -44,7 +44,7 @@ export function GroupRoleDialog({
     const t = useT();
     const fmtN = useNumberFormat();
     const { user, isSuper } = useAuth();
-    const { data: matrix } = usePermissionMatrix();
+    const roles = useGroupRoleOptions();
     const baseRole = useBaseRoleLabel();
     const { create, update, refreshList } = useGroupRoleMutations();
     const deleteGroup = useDeleteGroup(defaultGroup);
@@ -84,11 +84,10 @@ export function GroupRoleDialog({
         }
     }
 
-    const roles = matrix?.roles ?? [];
     const myPermissions = new Set(user?.permissions ?? []);
     const readOnly = group !== null && group.role === SUPER_ROLE && !isSuper;
     const roleLocked = readOnly || !!group?.includes_me;
-    const chosenRole = roles.find((r) => r.value === role);
+    const chosenRole = role ? findRole(roles, role) : undefined;
     const paneKey = String(group?.id ?? 'new');
 
     const nameChanged = group !== null && name.trim() !== group.name;
@@ -98,12 +97,10 @@ export function GroupRoleDialog({
     const memberCount = (group?.member_count ?? 0) + added.size - removed.size;
 
     const leavesTo = defaultGroup && defaultGroup.id !== group?.id ? defaultGroup : null;
-    // With no default group and no known base role label the destination is left unsaid
-    const leaveNote = leavesTo
-        ? t('gr_leaves_to').replace('{name}', leavesTo.name)
-        : baseRole
-          ? t('gr_leaves_none').replace('{role}', baseRole)
-          : null;
+    const leaveNote = leavesTo ? t('gr_leaves_to').replace('{name}', leavesTo.name) : t('gr_leaves_none').replace('{role}', baseRole);
+    // The server refuses every add to a saved group whose role is above the caller
+    const savedRole = group ? findRole(roles, group.role) : undefined;
+    const groupOverCeiling = savedRole !== undefined && isOverCeiling(savedRole, isSuper, myPermissions);
 
     const taken = groups.some((g) => g.id !== group?.id && g.name.trim().toLowerCase() === name.trim().toLowerCase());
     const nameError = !name.trim() ? t('gr_err_name') : taken ? t('gr_err_name_taken') : null;
@@ -197,7 +194,7 @@ export function GroupRoleDialog({
                 ? t(countKey('gr_confirm_add_moved', added.size)).replace('{n}', fmtN(added.size)).replace('{m}', fmtN(movedIn))
                 : t(countKey('gr_confirm_add', added.size)).replace('{n}', fmtN(added.size))),
         removed.size > 0 && removeLine(t, removed.size, fmtN(removed.size), leavesTo?.name ?? null, baseRole),
-        roleChanged && chosenRole && t('gr_confirm_role').replace('{role}', chosenRole.label),
+        roleChanged && chosenRole && t('gr_confirm_role').replace('{role}', roleLabel(chosenRole)),
         nameChanged && group && t('gr_confirm_rename').replace('{name}', group.name),
         group === null && added.size === 0 && t('gr_no_members'),
     ].filter((line): line is string => !!line);
@@ -263,7 +260,7 @@ export function GroupRoleDialog({
                             <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
                                 {fieldLabel('gr-role', t('gr_role'), roleChanged)}
                                 <span id="gr-role-help" className="text-muted-foreground text-xs">
-                                    {roleHelp ?? (chosenRole ? t('gr_role_help').replace('{role}', chosenRole.label) : t('gr_role_help_none'))}
+                                    {roleHelp ?? (chosenRole ? t('gr_role_help').replace('{role}', roleLabel(chosenRole)) : t('gr_role_help_none'))}
                                 </span>
                             </div>
                             <Select value={role || undefined} onValueChange={setRole} disabled={roleLocked}>
@@ -278,14 +275,10 @@ export function GroupRoleDialog({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {roles.map((r) => (
-                                        <SelectItem
-                                            key={r.value}
-                                            value={r.value}
-                                            disabled={r.value !== role && isOverCeiling(r, isSuper, myPermissions)}
-                                        >
+                                        <SelectItem key={r.key} value={r.key} disabled={r.key !== role && isOverCeiling(r, isSuper, myPermissions)}>
                                             <span className="flex items-center gap-2">
                                                 <RoleBar color={r.color} />
-                                                {r.label}
+                                                {roleLabel(r)}
                                             </span>
                                         </SelectItem>
                                     ))}
@@ -326,6 +319,7 @@ export function GroupRoleDialog({
                                 <GroupMemberPicker
                                     key={paneKey}
                                     groupId={group?.id ?? null}
+                                    groupOverCeiling={groupOverCeiling}
                                     added={added}
                                     onToggle={toggleStaged}
                                     onAddMany={addMany}

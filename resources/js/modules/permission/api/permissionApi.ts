@@ -95,9 +95,20 @@ export interface GroupRole {
     includes_me: boolean;
 }
 
+/** A role a Role Group can be given, with its keys so roles above the caller's ceiling grey out. */
+export interface GroupRoleOption {
+    key: string;
+    name: string | null;
+    color: string | null;
+    is_super: boolean;
+    permissions: string[];
+}
+
 export interface GroupRoleListResponse {
     data: GroupRole[];
     default_group_id: number | null;
+    /** Every role a group can be given (manage_groups is enough to read them). */
+    roles: GroupRoleOption[];
 }
 
 interface GroupRoleFields {
@@ -129,7 +140,14 @@ export interface GroupMember {
 
 export interface GroupMemberPage {
     data: GroupMember[];
-    meta: { total: number; per_page: number; current_page: number; last_page: number };
+    meta: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+        /** Candidates with a department only: how many of them the caller may add. */
+        addable?: number;
+    };
 }
 
 export interface GroupCandidateParams {
