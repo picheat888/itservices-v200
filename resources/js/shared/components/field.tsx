@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/utils';
 import { Label } from '@/shared/ui/label';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, type LucideIcon } from 'lucide-react';
 import { Children, cloneElement, isValidElement, useId } from 'react';
 
 /** Props Field hands to its control: the id its label points at plus the error/help/required links. */
@@ -31,6 +31,7 @@ export function FormErrorBanner({ message, shakeKey, className }: { message: str
 
 export function Field({
     label,
+    icon: Icon,
     error,
     required,
     help,
@@ -41,6 +42,8 @@ export function Field({
     children,
 }: {
     label: string;
+    /** Small icon in front of the label text. */
+    icon?: LucideIcon;
     error?: string;
     required?: boolean;
     help?: string;
@@ -77,7 +80,8 @@ export function Field({
     }
 
     const labelNode = (
-        <Label htmlFor={labelFor}>
+        <Label htmlFor={labelFor} className={cn(Icon && 'inline-flex items-center gap-1.5')}>
+            {Icon && <Icon className="text-muted-foreground h-3.5 w-3.5" aria-hidden />}
             {label}
             {required && (
                 <span className="text-destructive ml-0.5" aria-hidden>

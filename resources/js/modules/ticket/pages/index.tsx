@@ -50,6 +50,7 @@ import {
     TicketSubject,
 } from '../components/ticket-meta';
 import { TicketOverviewTiles } from '../components/ticket-overview-tiles';
+import { TicketRowMenu } from '../components/ticket-row-menu';
 import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 
@@ -252,12 +253,17 @@ export default function TicketsPage() {
     // A case a service request opened is excluded outright: its words are a snapshot
     // of what was approved, and the endpoint refuses the edit (UpdateTicketRequest).
     // The requester also needs tickets.edit_own — the endpoint checks it first.
-    const canEditDetail =
-        has('tickets.edit_own') &&
-        !!shownTicket &&
-        shownTicket.status === 'open' &&
-        shownTicket.requester_id === user?.employee_id &&
-        !shownTicket.from_request;
+    const canEditTicket = (tk: Ticket) =>
+        has('tickets.edit_own') && tk.status === 'open' && tk.requester_id === user?.employee_id && !tk.from_request;
+    const canEditDetail = !!shownTicket && canEditTicket(shownTicket);
+    // Desk gates of one ticket, for the row menu
+    const gatesFor = (tk: Ticket) => ({
+        canTake: canTake && hasLevel(tk.category),
+        canAssign,
+        canForward,
+        meId: user?.id,
+        meEmployeeId: user?.employee_id,
+    });
 
     // Switch tab (?tab=): the new tab starts unfiltered on page 1, plus any `filters` given, in one write.
     const changeTab = (next: Tab, filters: Record<string, string> = {}) => {
@@ -314,6 +320,12 @@ export default function TicketsPage() {
     // Workflow modals stack over the still-open detail drawer (kept via ?view=) and bounce
     // back to it on save/close — matching the edit-over-detail pattern of the sibling modules.
     const startResolve = (tk: Ticket, mode: ResolveMode) => setResolveState({ ticket: tk, mode });
+    // The progress dialog needs the single-ticket read (work-class forecast), which list rows do not carry
+    const startUpdateFromList = (tk: Ticket) =>
+        ticketApi
+            .get(tk.id)
+            .then(setUpdateTicket)
+            .catch(() => setUpdateTicket(tk));
 
     // Filter-popover helpers (Stock-style): the active count drives the trigger badge;
     // reset clears every list filter back to "all".
@@ -414,6 +426,27 @@ export default function TicketsPage() {
                 ) : (
                     <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
                 ),
+        },
+        {
+            key: 'actions',
+            sticky: 'right',
+            header: <span className="sr-only">{t('actions')}</span>,
+            width: '60px',
+            align: 'right',
+            render: (tk) => (
+                <TicketRowMenu
+                    ticket={tk}
+                    gates={gatesFor(tk)}
+                    canEdit={canEditTicket(tk)}
+                    onView={openDetail}
+                    onEdit={setEditTicket}
+                    onTake={setTakeTicket}
+                    onAssign={setAssignTicket}
+                    onForward={setForwardTicket}
+                    onUpdate={startUpdateFromList}
+                    onResolve={startResolve}
+                />
+            ),
         },
     ];
 
