@@ -22,8 +22,11 @@ class ReportExport extends Model
 
     public const FAILED = 'failed';
 
-    /** How long a finished file stays downloadable. */
-    public const KEEP_DAYS = 7;
+    /** How long a finished file stays downloadable, from the app and from the email link. */
+    public const KEEP_DAYS = 30;
+
+    /** The queue report files are built on, apart from mail so a long build never holds up email. */
+    public const QUEUE = 'reports';
 
     protected $fillable = [
         'user_id', 'report_key', 'format', 'filters', 'columns', 'status',

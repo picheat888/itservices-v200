@@ -57,12 +57,12 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently --restart-tries -1 --restart-after 3000 -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=660\" \"npm run dev\" \"php artisan schedule:work\" --names='server,queue,vite,schedule'"
+            "npx concurrently --restart-tries -1 --restart-after 3000 -c \"#93c5fd,#c4b5fd,#f0abfc,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=660\" \"php artisan queue:listen --queue=reports --tries=1 --timeout=660\" \"npm run dev\" \"php artisan schedule:work\" --names='server,queue,reports,vite,schedule'"
         ],
         "demo": [
             "Composer\\Config::disableProcessTimeout",
             "@php -r \"file_exists('public/hot') && unlink('public/hot');\"",
-            "npx concurrently --restart-tries -1 --restart-after 3000 -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=660\" \"npx vite build --watch\" \"php artisan schedule:work\" --names='server,queue,build,schedule'"
+            "npx concurrently --restart-tries -1 --restart-after 3000 -c \"#93c5fd,#c4b5fd,#f0abfc,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=660\" \"php artisan queue:listen --queue=reports --tries=1 --timeout=660\" \"npx vite build --watch\" \"php artisan schedule:work\" --names='server,queue,reports,build,schedule'"
         ]
     },
     "extra": {

@@ -22,7 +22,13 @@ class PdfNumberFormatTest extends TestCase
     public function test_stock_history_pdf_groups_stock_quantity_and_cost(): void
     {
         $history = [
-            'item' => ['sku' => 'SKU-12345', 'name' => 'Cable', 'current_stock' => 1234],
+            'item' => ['sku' => 'SKU-12345', 'name' => 'Cable', 'unit' => 'pcs', 'current_stock' => 1234, 'stock_value' => 1523373.0, 'track_serial' => false],
+            'reconciliation' => [
+                'lines' => [['type' => 'receive', 'count' => 1, 'qty' => 1500, 'sign' => 1], ['type' => 'issue', 'count' => 1, 'qty' => 266, 'sign' => -1]],
+                'computed' => 1234, 'current' => 1234, 'difference' => 0,
+            ],
+            'balances' => [['warehouse' => 'Main', 'qty' => 1234]],
+            'lots' => [['unit_cost' => 1234.5, 'qty_received' => 1500, 'qty_remaining' => 1234, 'received_at' => '2026-10-01T09:00:00', 'doc_no' => 'RC-2026-0001', 'serials' => []]],
             'serials' => [],
             'movements' => [[
                 'type' => 'receive', 'doc_no' => 'RC-2026-0001', 'moved_at' => '2026-10-01T09:00:00',
@@ -30,10 +36,8 @@ class PdfNumberFormatTest extends TestCase
                 'qty' => 1500, 'notes' => null, 'recorded_by' => 'Admin', 'recorded_by_th' => null,
             ]],
         ];
-        $base = [
-            'history' => $history, 'logo' => null, 'company' => 'Acme', 'legalName' => null, 'address' => null,
-            'taxId' => null, 'printedBy' => 'Admin', 'printedAt' => '2026-10-18', 'dateConfig' => DateDisplay::config(),
-        ];
+        $company = ['name' => 'Acme', 'legal_name' => '', 'address' => '', 'country' => '', 'tax_id' => '', 'currency' => 'THB', 'app_name' => 'IT Service Desk', 'accent' => '#2563eb', 'logo' => null];
+        $base = ['history' => $history, 'company' => $company, 'printedAt' => '2026-10-18', 'dateConfig' => DateDisplay::config()];
 
         $summary = view('pdf.stock-history', $base + ['view' => 'summary'])->render();
         $this->assertStringContainsString('1,234', $summary);

@@ -5,6 +5,7 @@ use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => EnsurePermission::class,
         ]);
+        // A signed-out browser opening a file link (e.g. from an email) signs in, then comes back to it.
+        $middleware->redirectGuestsTo(fn (Request $request) => '/login?next='.rawurlencode($request->getRequestUri()));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

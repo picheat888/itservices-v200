@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Report\ReportExport;
 use App\Models\Report\ReportSchedule;
 use App\Services\Report\ReportScheduleService;
 use Carbon\CarbonImmutable;
@@ -25,7 +26,10 @@ class SendScheduledReport implements ShouldQueue
 
     public int $timeout = 600;
 
-    public function __construct(public int $scheduleId, public string $runAt) {}
+    public function __construct(public int $scheduleId, public string $runAt)
+    {
+        $this->onQueue(ReportExport::QUEUE);
+    }
 
     public function handle(ReportScheduleService $service): void
     {
