@@ -7,10 +7,11 @@ import { createPortal } from 'react-dom';
 
 /** Per-tone glyph and colours (emerald=success, amber=warning, red=error, blue=info). */
 const TONE_META: Record<ToastTone, { Icon: typeof X; badge: string; border: string; bar: string }> = {
-    success: { Icon: Check, badge: 'bg-emerald-600', border: 'border-emerald-200 dark:border-emerald-900', bar: 'bg-emerald-600' },
-    error: { Icon: X, badge: 'bg-red-600', border: 'border-red-200 dark:border-red-900', bar: 'bg-red-600' },
-    warning: { Icon: TriangleAlert, badge: 'bg-amber-500', border: 'border-amber-200 dark:border-amber-900', bar: 'bg-amber-500' },
-    info: { Icon: Info, badge: 'bg-blue-600', border: 'border-blue-200 dark:border-blue-900', bar: 'bg-blue-600' },
+    success: { Icon: Check, badge: 'bg-emerald-600 text-white', border: 'border-emerald-200 dark:border-emerald-900', bar: 'bg-emerald-600' },
+    error: { Icon: X, badge: 'bg-red-600 text-white', border: 'border-red-200 dark:border-red-900', bar: 'bg-red-600' },
+    // Dark glyph: white on amber-500 is about 2.1:1, under the 3:1 for graphics
+    warning: { Icon: TriangleAlert, badge: 'bg-amber-500 text-amber-950', border: 'border-amber-200 dark:border-amber-900', bar: 'bg-amber-500' },
+    info: { Icon: Info, badge: 'bg-blue-600 text-white', border: 'border-blue-200 dark:border-blue-900', bar: 'bg-blue-600' },
 };
 
 /** Glyph overrides for the optional per-toast `icon` (keeps the tone's colours). */
@@ -30,8 +31,8 @@ const BAR_LIFE: Record<number, string> = {
 const interrupts = (toast: Toast) => toast.tone === 'error' && !toast.polite;
 
 /**
- * The app's single toast corner (bottom-right). Two always-mounted live regions: errors
- * interrupt (assertive) and sit on top, everything else is read politely below them.
+ * The app's single toast corner, top-right under the topbar so it never covers a dialog's footer buttons.
+ * Two always-mounted live regions: errors interrupt (assertive) and sit on top, the rest are read politely.
  */
 export function Toaster() {
     const t = useT();
@@ -51,7 +52,7 @@ export function Toaster() {
     return createPortal(
         <section
             aria-label={t('toast_region')}
-            className="pointer-events-none fixed right-5 bottom-5 z-[120] flex w-[320px] max-w-[calc(100vw-2.5rem)] flex-col items-end gap-2.5"
+            className="pointer-events-none fixed top-[4.75rem] right-5 z-[120] flex w-[320px] max-w-[calc(100vw-2.5rem)] flex-col items-end gap-2.5"
         >
             <div aria-live="assertive" aria-relevant="additions" className="flex w-full flex-col items-end gap-2.5">
                 {visible.filter(interrupts).map((toast) => (
@@ -135,7 +136,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 
     const body = (
         <>
-            <span aria-hidden className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-full text-white', badge)}>
+            <span aria-hidden className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-full', badge)}>
                 <Icon className="h-4 w-4" strokeWidth={2.5} />
             </span>
             {/* A step smaller than body copy: a toast is read at a glance */}
