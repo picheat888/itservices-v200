@@ -1,9 +1,11 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketWorkClass } from '@/shared/types';
@@ -11,7 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { AlertTriangle, ArrowRight, Loader2, MessageSquarePlus, Send } from 'lucide-react';
+import { AlertTriangle, ArrowRight, MessageSquarePlus, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_WORK_CLASS_META } from './ticket-meta';
@@ -33,7 +35,8 @@ export function TicketUpdateModal({
     const { addUpdate } = useTicketMutations();
     const [body, setBody] = useState('');
     const [err, setErr] = useState('');
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     const [workClass, setWorkClass] = useState<TicketWorkClass>('standard');
 
     const open = !!ticket;
@@ -48,10 +51,10 @@ export function TicketUpdateModal({
         if (ticket) {
             setBody('');
             setErr('');
-            setFormError('');
+            clearFormError();
             setWorkClass(ticket.work_class ?? 'standard');
         }
-    }, [ticket]);
+    }, [ticket, clearFormError]);
 
     const currentClass = view?.work_class ?? 'standard';
     // A request-born case already has its target; the endpoint refuses the field there
@@ -86,7 +89,7 @@ export function TicketUpdateModal({
             return;
         }
         if (reclassifying && !forecastAvailable) return;
-        setFormError('');
+        formError.clear();
         try {
             await addUpdate.mutateAsync({
                 id: ticket.id,
@@ -96,7 +99,7 @@ export function TicketUpdateModal({
             });
             onClose();
         } catch (e: unknown) {
-            setFormError(refusalText(e, t, 'ticket_refusal_'));
+            formError.show(refusalText(e, t, 'ticket_refusal_'));
         }
     };
 
@@ -117,14 +120,7 @@ export function TicketUpdateModal({
                 />
 
                 <div className="flex-1 space-y-4 overflow-y-auto border-t px-6 py-6">
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <p className="text-muted-foreground text-sm">{t('ticket_update_hint')}</p>
 
@@ -197,10 +193,10 @@ export function TicketUpdateModal({
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={saving || blocked}>
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <SaveButton onClick={submit} loading={saving} disabled={blocked}>
+                        <Send className="h-4 w-4" />
                         {t('ticket_update_save')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

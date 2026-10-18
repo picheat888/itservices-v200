@@ -1,9 +1,11 @@
 import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { fieldError } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
@@ -17,9 +19,8 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
-import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
+import { Check, FileText, Infinity as InfinityIcon, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
@@ -101,10 +102,13 @@ export function AssetFormDrawer({
     const [initial, setInitial] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     useEffect(() => {
         if (!open) return;
         setErr({});
+        clearFormError();
         setSaveState('idle');
         const next: FormState = editing
             ? {
@@ -127,7 +131,7 @@ export function AssetFormDrawer({
         setForm(next);
         // Baseline for the dirty check (Save enable + discard guard).
         setInitial(next);
-    }, [open, editing]);
+    }, [open, editing, clearFormError]);
 
     /** Form field → validation-error key (they don't always share a name). */
     const ERR_KEY: Partial<Record<keyof FormState, string>> = {
@@ -241,6 +245,7 @@ export function AssetFormDrawer({
                   }),
         };
 
+        formError.clear();
         try {
             if (editing) await update.mutateAsync({ id: editing.id, payload });
             else await create.mutateAsync(payload);
@@ -258,7 +263,7 @@ export function AssetFormDrawer({
                 if (message && !fieldErrors[errKey]) fieldErrors[errKey] = message;
             }
             if (Object.keys(fieldErrors).length) setErr(fieldErrors);
-            else useToastStore.getState().push(t('asset_could_not_save'), 'error');
+            else formError.show(serverMessage(error) ?? t('asset_could_not_save'));
         }
     };
 
@@ -291,6 +296,8 @@ export function AssetFormDrawer({
 
                 {/* Body */}
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+
                     {/* Asset nature — purchased vs rented */}
                     <div>
                         <SectionLabel>{t('asset_nature')}</SectionLabel>
@@ -501,10 +508,10 @@ export function AssetFormDrawer({
                     <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={saving || saveState === 'done' || (!!editing && !isDirty)}>
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        {saving ? t('saving') : saveState === 'done' ? t('asset_saved') : editing ? t('save') : t('register')}
-                    </Button>
+                    <SaveButton onClick={submit} loading={saving} disabled={saveState === 'done' || (!!editing && !isDirty)}>
+                        <Check className="h-4 w-4" />
+                        {saveState === 'done' ? t('asset_saved') : editing ? t('save') : t('register')}
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

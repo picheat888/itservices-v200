@@ -1,15 +1,15 @@
-import { translate, useT } from '@/lang';
+import { useT } from '@/lang';
 import { ColorSwatchPicker, DEFAULT_SWATCHES } from '@/shared/components/color-swatch-picker';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useToastStore } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RoleRow } from '../api/permissionApi';
 import { useRoleMutations } from '../hooks/use-permissions';
@@ -33,7 +33,6 @@ export function RoleModal({
 }) {
     const t = useT();
     const fmtN = useNumberFormat();
-    const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { create, update, duplicate } = useRoleMutations();
     const role = mode.kind === 'edit' ? mode.role : null;
@@ -44,12 +43,14 @@ export function RoleModal({
     const [color, setColor] = useState(DEFAULT_COLOR);
     // Brief "Saved" success state shown on the save button before the modal closes.
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
 
     useEffect(() => {
         if (open) {
             setName(initialName);
             setColor(initialColor);
             setSaved(false);
+            formError.clear();
         }
     }, [open, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -61,6 +62,7 @@ export function RoleModal({
     const submit = async () => {
         if (submitting.current || saved || !name.trim()) return;
         submitting.current = true;
+        formError.clear();
         try {
             let createdKey: string | null = null;
             if (role) {
@@ -79,42 +81,13 @@ export function RoleModal({
         } catch (error) {
             const ceiling = source && refusalCode(error) === 'grant_ceiling';
             const text = ceiling ? t('perm_duplicate_ceiling').replace('{name}', source.label) : permissionRefusalText(error, t);
-            useToastStore.getState().push(text, 'error');
+            formError.show(text);
         } finally {
             submitting.current = false;
         }
     };
 
     const saving = create.isPending || update.isPending || duplicate.isPending;
-
-    /** Save button label that swaps to a spinner then a green check while saving. */
-    const saveButtonLabel = () => {
-        if (saved) {
-            return (
-                <span className="flex items-center gap-1.5">
-                    <Check className="h-4 w-4" />
-                    {translate(lang, 'perm_ui_saved')}
-                </span>
-            );
-        }
-        if (saving) {
-            return (
-                <span className="flex items-center gap-1.5">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {translate(lang, 'perm_ui_saving')}
-                </span>
-            );
-        }
-        if (source) {
-            return (
-                <span className="flex items-center gap-1.5">
-                    <Copy className="h-4 w-4" />
-                    {t('perm_duplicate')}
-                </span>
-            );
-        }
-        return t('save');
-    };
 
     const title = source ? t('perm_duplicate_title') : role ? t('perm_change_props') : t('perm_new_role');
 
@@ -127,6 +100,7 @@ export function RoleModal({
                     {source && <DialogDescription>{t('perm_duplicate_from').replace('{name}', source.label)}</DialogDescription>}
                 </DialogHeader>
                 <div className="space-y-4">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('perm_role_name')}>
                         <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('perm_role_name_ph')} />
                     </Field>
@@ -143,9 +117,16 @@ export function RoleModal({
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving || saved}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!name.trim() || (role !== null && !isDirty) || saving || saved}>
-                        {saveButtonLabel()}
-                    </Button>
+                    <SaveButton onClick={submit} loading={saving} success={saved} disabled={!name.trim() || (role !== null && !isDirty) || saved}>
+                        {source ? (
+                            <>
+                                <Copy className="h-4 w-4" />
+                                {t('perm_duplicate')}
+                            </>
+                        ) : (
+                            t('save')
+                        )}
+                    </SaveButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -2,8 +2,10 @@
  * Withdraw a pending request: the requester (or the HR filer) must say why, like an IT "not delivered" close.
  */
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest } from '@/shared/types';
@@ -11,7 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Ban, Loader2 } from 'lucide-react';
+import { Ban } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRequestMutations } from '../hooks/use-requests';
 
@@ -36,12 +38,13 @@ export function CancelRequestDialog({
 
     const [reason, setReason] = useState('');
     const [reasonErr, setReasonErr] = useState('');
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     useEffect(() => {
         setReason('');
         setReasonErr('');
-        setFormError('');
-    }, [request?.id]);
+        clearFormError();
+    }, [request?.id, clearFormError]);
 
     const isOpen = !!request;
     const guardClose = useDiscardGuard(isOpen && reason.trim() !== '');
@@ -53,12 +56,12 @@ export function CancelRequestDialog({
             setReasonErr(t('req_cancel_reason_required'));
             return;
         }
-        setFormError('');
+        formError.clear();
         try {
             await cancel.mutateAsync({ id: ctx.id, reason: reason.trim() });
             onCancelled();
         } catch (e) {
-            setFormError(serverMessage(e) ?? t('cd_error'));
+            formError.show(serverMessage(e) ?? t('cd_error'));
         }
     };
 
@@ -75,15 +78,7 @@ export function CancelRequestDialog({
                 </div>
 
                 <div className="space-y-4">
-                    {formError && (
-                        <div
-                            key={formError}
-                            role="alert"
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <p className="border-border rounded-lg border px-3.5 py-2.5 text-sm font-semibold">{requestTitle(ctx, t, lang)}</p>
                     <Field label={t('req_cancel_reason')} required error={reasonErr} name="cancel_reason">
                         <Textarea
@@ -104,10 +99,10 @@ export function CancelRequestDialog({
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={cancel.isPending}>
                         {t('req_cancel_keep')}
                     </Button>
-                    <Button variant="destructive" onClick={submit} disabled={cancel.isPending}>
-                        {cancel.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+                    <SaveButton variant="destructive" onClick={submit} loading={cancel.isPending}>
+                        <Ban className="h-4 w-4" />
                         {t('req_cancel_request')}
-                    </Button>
+                    </SaveButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

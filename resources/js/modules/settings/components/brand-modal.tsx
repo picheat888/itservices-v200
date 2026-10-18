@@ -1,15 +1,15 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { hasFieldError } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useToastStore } from '@/stores/toast';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useBrandMutations } from '../hooks/use-master-data';
 
@@ -22,6 +22,8 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     const nameRef = useRef<HTMLInputElement>(null);
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
@@ -32,8 +34,9 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
             setDescription(brand?.description ?? '');
             setNameError(undefined);
             setSaved(false);
+            clearFormError();
         }
-    }, [open, brand]);
+    }, [open, brand, clearFormError]);
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
     const isDirty = !saved && (name !== (brand?.name ?? '') || description !== (brand?.description ?? ''));
@@ -51,6 +54,7 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
         setNameError(undefined);
         if (brand && isDirty && !(await confirmEdit({ name: brand.name }))) return;
         const payload = { name: name.trim(), description: description.trim() || null };
+        formError.clear();
         try {
             if (brand) {
                 await update.mutateAsync({ id: brand.id, ...payload });
@@ -64,7 +68,7 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                 setNameError(t('md_name_taken'));
                 nameRef.current?.focus();
             } else {
-                useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
+                formError.show(serverMessage(err) ?? t('cd_error'));
             }
         }
     };
@@ -83,6 +87,7 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                     <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('md_brand_name')} required error={nameError}>
                         <Input
                             ref={nameRef}

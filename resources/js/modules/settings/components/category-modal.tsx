@@ -1,17 +1,17 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { IconPicker } from '@/shared/components/icon-picker';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { hasFieldError } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Category } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useCategoryMutations } from '../hooks/use-master-data';
@@ -28,6 +28,8 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     const nameRef = useRef<HTMLInputElement>(null);
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
@@ -40,8 +42,9 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             setDescription(category?.description ?? '');
             setNameError(undefined);
             setSaved(false);
+            clearFormError();
         }
-    }, [open, category]);
+    }, [open, category, clearFormError]);
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
     const isDirty =
@@ -69,6 +72,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             icon: icon || null,
             description: description.trim() || null,
         };
+        formError.clear();
         try {
             if (category) {
                 await update.mutateAsync({ id: category.id, ...payload });
@@ -82,7 +86,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                 setNameError(t('md_name_taken'));
                 nameRef.current?.focus();
             } else {
-                useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
+                formError.show(serverMessage(err) ?? t('cd_error'));
             }
         }
     };
@@ -101,6 +105,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                     <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('md_category_name_en')} required error={nameError}>
                             <Input

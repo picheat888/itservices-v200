@@ -1,13 +1,15 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { refusalText } from '@/shared/lib/api-errors';
 import type { Ticket } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { ArrowRightLeft, Check, Info, Loader2 } from 'lucide-react';
+import { ArrowRightLeft, Check, Info } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
 
@@ -24,7 +26,8 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
     // Only staff whose Ticket Level covers this case's category can receive it
     const { data: staff = [] } = useTicketStaff(!!view, view?.category);
     const [assigneeId, setAssigneeId] = useState('');
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     // Neither the current assignee nor the person who filed it; the API refuses both
     const staffOptions = useMemo(
@@ -39,18 +42,18 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
     useEffect(() => {
         if (ticket) {
             setAssigneeId('');
-            setFormError('');
+            clearFormError();
         }
-    }, [ticket]);
+    }, [ticket, clearFormError]);
 
     const submit = async () => {
         if (!ticket || !assigneeId) return;
-        setFormError('');
+        formError.clear();
         try {
             await forward.mutateAsync({ id: ticket.id, assignee_id: Number(assigneeId) });
             onClose();
         } catch (e: unknown) {
-            setFormError(refusalText(e, t, 'ticket_refusal_'));
+            formError.show(refusalText(e, t, 'ticket_refusal_'));
         }
     };
 
@@ -69,14 +72,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                 />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm text-red-700"
-                        >
-                            {formError}
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <Field label={t('ticket_select_staff')} required>
                         <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} preferDown />
@@ -92,10 +88,10 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!assigneeId || pending}>
-                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    <SaveButton onClick={submit} loading={pending} disabled={!assigneeId}>
+                        <Check className="h-4 w-4" />
                         {t('ticket_forward')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

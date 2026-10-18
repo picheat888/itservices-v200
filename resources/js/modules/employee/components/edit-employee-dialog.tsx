@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -16,7 +17,7 @@ import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, ArrowRight, Briefcase, Check, Loader2, SquarePen, Upload, User, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, Check, SquarePen, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useEmployeePicker, useEmployeesByIds } from '../hooks/use-employee-pickers';
@@ -628,10 +629,10 @@ export function EditEmployeeDialog({
                                 >
                                     {t('cancel')}
                                 </Button>
-                                <Button onClick={persist} disabled={update.isPending}>
-                                    {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                    {update.isPending ? t('saving') : t('emp_org_confirm')}
-                                </Button>
+                                <SaveButton onClick={persist} loading={update.isPending}>
+                                    <Check className="h-4 w-4" />
+                                    {t('emp_org_confirm')}
+                                </SaveButton>
                             </div>
                         </>
                     )}
@@ -694,10 +695,13 @@ export function EditEmployeeDialog({
                                 <Button variant="outline" onClick={() => guardClose(onClose)}>
                                     {t('cancel')}
                                 </Button>
-                                <Button ref={saveButtonRef} onClick={submit} disabled={update.isPending || saved || !isDirty}>
-                                    {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : null}
-                                    {update.isPending ? t('saving') : saved ? t('saved') : t('save')}
-                                </Button>
+                                <SaveButton
+                                    ref={saveButtonRef}
+                                    onClick={submit}
+                                    loading={update.isPending}
+                                    success={saved}
+                                    disabled={saved || !isDirty}
+                                />
                             </div>
                         </>
                     )}

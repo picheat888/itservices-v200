@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
@@ -10,7 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Check, Loader2, Lock, PencilLine, Trash2, Users } from 'lucide-react';
+import { Lock, PencilLine, Trash2, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
@@ -402,21 +403,15 @@ export function GroupRoleDialog({
                         <Button variant="outline" className="w-full" disabled={saveStep !== 'confirm'} onClick={() => setSaveStep('idle')}>
                             {t('cancel')}
                         </Button>
-                        <Button className="w-full font-semibold" disabled={saveStep !== 'confirm'} onClick={() => void runSave()}>
-                            {saveStep === 'saving' ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('saving')}
-                                </>
-                            ) : saveStep === 'done' ? (
-                                <>
-                                    <Check className="h-4 w-4" />
-                                    {t('saved')}
-                                </>
-                            ) : (
-                                t('save')
-                            )}
-                        </Button>
+                        <SaveButton
+                            className="w-full font-semibold"
+                            loading={saveStep === 'saving'}
+                            success={saveStep === 'done'}
+                            disabled={saveStep !== 'confirm'}
+                            onClick={() => void runSave()}
+                        >
+                            {t('save')}
+                        </SaveButton>
                     </>
                 }
             >

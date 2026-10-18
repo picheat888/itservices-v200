@@ -1,9 +1,11 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
+import { SaveButton } from '@/shared/components/save-button';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
@@ -13,7 +15,7 @@ import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { Loader2, Pencil, Save } from 'lucide-react';
+import { Pencil, Save } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
@@ -49,7 +51,8 @@ export function EditTicketDrawer({
     const [phone, setPhone] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     // Why the server refused, shown as the banner over the form.
-    const [formError, setFormError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
 
     // Attachments: already-saved files (with pending removals) + newly picked files.
     // Both are applied on Save (upload new, delete removed).
@@ -83,7 +86,7 @@ export function EditTicketDrawer({
         setDescription(ticket.description ?? '');
         setPhone(ticket.callback_phone ?? '');
         setErrors({});
-        setFormError('');
+        clearFormError();
         setExisting(ticket.attachments ?? []);
         setRemovedIds([]);
         setPending([]);
@@ -91,7 +94,7 @@ export function EditTicketDrawer({
         setProgress({});
         setDeleted(0);
         setSaving(false);
-    }, [ticket]);
+    }, [ticket, clearFormError]);
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
     const totalFiles = keptExisting.length + pending.length;
@@ -113,7 +116,7 @@ export function EditTicketDrawer({
         if (isDirty && !(await confirmEdit({ name: ticket.subject, sub: ticket.ticket_no }))) return;
 
         setDeleted(0);
-        setFormError('');
+        formError.clear();
         // The files already on the ticket stay full; the rest start again from empty.
         setProgress(Object.fromEntries(pending.slice(0, savedFiles).map((_, i) => [i, 100])));
         setSaving(true);
@@ -156,7 +159,7 @@ export function EditTicketDrawer({
             setExisting((prev) => prev.filter((a) => !removedNow.includes(a.id)));
             setRemovedIds((prev) => prev.filter((id) => !removedNow.includes(id)));
             // One file per request, so a file the upload rules turn down comes back as `files.0`.
-            setFormError(
+            formError.show(
                 hasFieldError(err, 'files.0')
                     ? t('ticket_refusal_file_rejected').replace('{name}', pending[saved]?.name ?? '')
                     : refusalText(err, t, 'ticket_refusal_'),
@@ -205,14 +208,7 @@ export function EditTicketDrawer({
 
                 {/* Two equal columns mirroring Open Ticket: left = describe the issue, right = reach-back + evidence. */}
                 <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">
-                    {formError && (
-                        <div
-                            key={formError}
-                            className="bg-destructive/10 dark:text-destructive animate-shake space-y-1 rounded-lg px-3.5 py-2.5 text-sm text-red-700 sm:col-span-2"
-                        >
-                            <p>{formError}</p>
-                        </div>
-                    )}
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} className="sm:col-span-2" />
 
                     {/* LEFT: what's wrong */}
                     <div className="space-y-6">
@@ -325,7 +321,10 @@ export function EditTicketDrawer({
                     {saving && totalOps > 0 && (
                         <div className="mr-auto flex items-center gap-2">
                             <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
-                                <div className="bg-brand h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${overallPct}%` }} />
+                                <div
+                                    className="bg-brand h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+                                    style={{ width: `${overallPct}%` }}
+                                />
                             </div>
                             <span className="text-muted-foreground text-xs">{overallPct}%</span>
                         </div>
@@ -333,10 +332,10 @@ export function EditTicketDrawer({
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={saving || !isDirty}>
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    <SaveButton onClick={submit} loading={saving} disabled={!isDirty}>
+                        <Save className="h-4 w-4" />
                         {t('save')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </DialogContent>
         </Dialog>

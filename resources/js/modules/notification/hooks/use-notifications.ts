@@ -164,7 +164,6 @@ export function useNotificationTemplateMutations() {
 
                 return invalidate();
             },
-            onError: () => useToastStore.getState().push(t('notification_save_failed'), 'error'),
         }),
         // A test lands in the reader's own tray, so the tray query has to refetch — but not
         // the settings table, which nothing about a sample changes.
@@ -184,7 +183,6 @@ export function useNotificationTemplateMutations() {
 
                 return invalidate();
             },
-            onError: () => useToastStore.getState().push(t('notification_save_failed'), 'error'),
         }),
     };
 }

@@ -3,7 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SaveButton } from '@/shared/components/save-button';
@@ -11,9 +11,11 @@ import { StatCard } from '@/shared/components/stat-card';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormError } from '@/shared/hooks/use-form-error';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
+import { serverMessage } from '@/shared/lib/api-errors';
 import { relativeTime } from '@/shared/lib/datetime';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -22,6 +24,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import {
     Archive,
@@ -134,6 +137,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
     const [th, setTh] = useState('');
     const [enabled, setEnabled] = useState(true);
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
 
     // Re-seed on open or a different notification only, so a list refetch keeps what is typed
     useEffect(() => {
@@ -142,6 +146,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
         setTh(bell.message_th);
         setEnabled(bell.enabled);
         setSaved(false);
+        formError.clear();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, bell?.key]);
 
@@ -157,12 +162,13 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
     const save = async () => {
         if (!bell || !rights.any || submitting.current || saved || !en.trim() || !th.trim()) return;
         submitting.current = true;
+        formError.clear();
         try {
             await update.mutateAsync({ key: bell.key, payload: { message_en: en.trim(), message_th: th.trim(), enabled } });
             setSaved(true);
             closeAfterSave();
-        } catch {
-            // The mutation's onError shows the toast
+        } catch (error) {
+            formError.show(serverMessage(error) ?? t('notification_save_failed'));
         } finally {
             submitting.current = false;
         }
@@ -179,11 +185,12 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
         });
         if (!confirmed) return;
         submitting.current = true;
+        formError.clear();
         try {
             await reset.mutateAsync(bell.key);
             onClose();
-        } catch {
-            // The mutation's onError shows the toast
+        } catch (error) {
+            formError.show(serverMessage(error) ?? t('notification_save_failed'));
         } finally {
             submitting.current = false;
         }
@@ -218,6 +225,8 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                     />
 
                     <div className="mt-4 space-y-5">
+                        <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+
                         {/* On / off */}
                         <div className="flex items-start gap-3 rounded-lg border p-3">
                             <DisabledReason reason={rights.toggle ? null : t('notification_no_toggle_right')} label={t('notification_toggle')}>
@@ -489,7 +498,10 @@ export function NotificationSettingsPane() {
                             disabled={togglePending(n) || !rights.toggle}
                             aria-label={`${t('notification_toggle')} ${t(`notification_name_${suffix(n.key)}`)}`}
                             onChange={(next) =>
-                                update.mutate({ key: n.key, payload: { message_en: n.message_en, message_th: n.message_th, enabled: next } })
+                                update.mutate(
+                                    { key: n.key, payload: { message_en: n.message_en, message_th: n.message_th, enabled: next } },
+                                    { onError: () => useToastStore.getState().push(t('notification_save_failed'), 'error') },
+                                )
                             }
                         />
                     </span>

@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { refusalText } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +12,6 @@ import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
-import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useSectionMutations } from '../hooks/use-sections';
@@ -26,17 +27,20 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     const [form, setForm] = useState(empty);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     const initial = useRef(empty);
 
     useEffect(() => {
         if (open) {
             setSaved(false);
             setError('');
+            clearFormError();
             const values = section ? { department_id: String(section.department_id), name: section.name, name_th: section.name_th ?? '' } : empty;
             setForm(values);
             initial.current = values;
         }
-    }, [open, section]);
+    }, [open, section, clearFormError]);
 
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -65,6 +69,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
         if (!canSave) return;
         if (section && !(await confirmEdit({ name: localName(section, lang), sub: section.code }))) return;
         setError('');
+        formError.clear();
         const payload = { department_id: Number(form.department_id), name: form.name.trim(), name_th: form.name_th.trim() || null };
         try {
             if (section) await update.mutateAsync({ id: section.id, payload });
@@ -72,7 +77,9 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
             setSaved(true);
             setTimeout(onClose, 1200);
         } catch (e) {
-            setError(refusalText(e, t, 'section_err_'));
+            const text = refusalText(e, t, 'section_err_');
+            if (refusalReason(e)?.reason === 'section_has_employees_move') setError(text);
+            else formError.show(text);
         }
     };
 
@@ -88,6 +95,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                 </DialogHeader>
                 <form onSubmit={submit} className="contents">
                     <div className="space-y-4">
+                        <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                         <Field label={t('department')} required error={error || undefined}>
                             <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={deptOptions} />
                         </Field>
@@ -110,21 +118,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                         <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
-                        <Button type="submit" disabled={!canSave}>
-                            {saving ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('saving')}
-                                </>
-                            ) : saved ? (
-                                <>
-                                    <Check className="h-4 w-4" />
-                                    {t('saved')}
-                                </>
-                            ) : (
-                                t('save')
-                            )}
-                        </Button>
+                        <SaveButton type="submit" loading={saving} success={saved} disabled={!canSave} />
                     </DialogFooter>
                 </form>
             </DialogContent>

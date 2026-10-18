@@ -1,16 +1,16 @@
 import { useT } from '@/lang';
-import { Field } from '@/shared/components/field';
+import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { hasFieldError } from '@/shared/lib/api-errors';
+import { useFormError } from '@/shared/hooks/use-form-error';
+import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useVendorMutations } from '../hooks/use-master-data';
@@ -41,6 +41,8 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState<VendorErrors>({});
     const [saved, setSaved] = useState(false);
+    const formError = useFormError();
+    const clearFormError = formError.clear;
     const nameRef = useRef<HTMLInputElement>(null);
     const nameThRef = useRef<HTMLInputElement>(null);
     const emailRef = useRef<HTMLInputElement>(null);
@@ -56,8 +58,9 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
             setForm(fromVendor(vendor));
             setErrors({});
             setSaved(false);
+            clearFormError();
         }
-    }, [open, vendor]);
+    }, [open, vendor, clearFormError]);
 
     const set = (k: keyof typeof emptyForm, v: string) => {
         setForm((f) => ({ ...f, [k]: v }));
@@ -94,6 +97,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
             email: form.email.trim() || null,
             address: form.address.trim() || null,
         };
+        formError.clear();
         try {
             if (vendor) {
                 await update.mutateAsync({ id: vendor.id, ...payload });
@@ -112,7 +116,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                 setErrors(found);
                 focusFirstError(found);
             } else {
-                useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
+                formError.show(serverMessage(err) ?? t('cd_error'));
             }
         }
     };
@@ -131,6 +135,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                     <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('md_vendor_name_en')} required error={errors.name}>
                             <Input
