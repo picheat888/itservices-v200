@@ -153,14 +153,14 @@ class ReportScheduleService
             $tooLarge = $size > $this->attachmentLimitBytes;
 
             $rendered = $this->mail->renderTemplate('report.scheduled', [
-                'report.name' => ReportCatalogue::title($schedule->report_key),
-                'report.period' => $this->periodLabel($schedule, $period, $runAt),
-                'report.rows' => number_format($file['rows']),
-                'report.frequency' => $this->frequencyLabel($schedule),
-                'report.owner' => $owner->name,
-                'report.attachment_note' => $tooLarge
+                'report.name' => e(ReportCatalogue::title($schedule->report_key)),
+                'report.period' => e($this->periodLabel($schedule, $period, $runAt)),
+                'report.rows' => e(number_format($file['rows'])),
+                'report.frequency' => e($this->frequencyLabel($schedule)),
+                'report.owner' => e($owner->name),
+                'report.attachment_note' => e($tooLarge
                     ? 'The file ('.round($size / 1048576, 1).' MB) is too large to attach. '.$owner->name.' can download it from My exports on the Report Center.'
-                    : 'The report file is attached.',
+                    : 'The report file is attached.'),
             ]);
 
             if ($rendered === null) {
