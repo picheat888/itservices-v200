@@ -99,8 +99,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     const [opts, setOpts] = React.useState<ConfirmOptions | null>(null);
     const [open, setOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
-    // Brief success state — shows a checkmark for a beat before auto-closing,
-    // matching the SaveButton "spinner → check" pattern used elsewhere.
+    // Brief success check before auto-closing
     const [done, setDone] = React.useState(false);
     const [error, setError] = React.useState<React.ReactNode>(null);
     const resolver = React.useRef<((v: boolean) => void) | null>(null);
@@ -159,9 +158,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             setLoading(true);
             await opts.action();
         } catch (e) {
-            // The caller gets first refusal on the wording: a server that refuses for a
-            // reason (a SKU with a ledger, an asset with a custody trail) can say so here
-            // instead of the dialog showing the same generic failure for every cause.
+            // Caller's own refusal wording first
             setError(opts.errorMessage?.(e) ?? t('cd_error'));
             setLoading(false);
             return;

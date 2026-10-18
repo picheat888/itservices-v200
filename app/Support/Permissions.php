@@ -257,9 +257,7 @@ class Permissions
     }
 
     /**
-     * Enforce the stock hierarchy on a granted set: a management child requires its
-     * group's view key; every view key requires the master. Non-stock keys pass
-     * through untouched. Returns the normalized list.
+     * Drops stock keys whose group view key or master is off; other keys pass through.
      *
      * @param  list<string>  $granted
      * @return list<string>
@@ -472,13 +470,7 @@ class Permissions
     }
 
     /**
-     * Ticket permission tree used for client cascade and server normalization.
-     * Master gates the module tabs for staff; the self-service pair
-     * (`create` + its child `edit_own`) and the My Tickets tab (`my`) are
-     * standalone — an ordinary employee files and tracks their own cases with
-     * no staff-side access at all. The `level_*` keys — one per TicketCategory — scope which ticket
-     * categories a staff member may see / take / be alerted about (strict: no
-     * level = no cases).
+     * Ticket tree: master gates staff tabs; create, edit_own and my stand alone; level_* scope the categories.
      *
      * @return array{master: string, standalone: array{view: string, children: list<string>}, standalone_solo: list<string>, groups: array<string, list<string>>}
      */
@@ -552,11 +544,7 @@ class Permissions
     }
 
     /**
-     * Request permission tree. The master gates the module and its sidebar entry; `submit`
-     * gates the 13 per-type submit keys and `view_all` gates `cancel_any`.
-     *
-     * The two notify_* keys deliberately do NOT hang off `complete`: who hears that a request
-     * reached the queue is a different question from who may work that queue.
+     * Request tree: submit gates the per-type submit keys, view_all gates cancel_any; notify_* sit apart from complete.
      *
      * @return array{master: string, groups: array<string, list<string>>}
      */
@@ -635,14 +623,7 @@ class Permissions
     }
 
     /**
-     * Email & Notification tree: the master gates the page and its sidebar entry, and the
-     * three groups under it are the page's three tabs.
-     *
-     * Editing the wording and switching a template on are separate rights on purpose. Turning
-     * an alert off stops it reaching anybody, which is a decision about who hears what;
-     * rewording one is a decision about how it reads. The same hands do not always do both,
-     * and the controllers enforce the split by looking at which fields a save actually
-     * changed rather than trusting the form that sent it.
+     * Email & Notification tree: one group per page tab; rewording and switching a template on are separate keys.
      *
      * @return array{master: string, groups: array<string, list<string>>}
      */
