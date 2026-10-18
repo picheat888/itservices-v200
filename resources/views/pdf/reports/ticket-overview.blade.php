@@ -65,6 +65,10 @@
         .bar div { height: 6px; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
+        .explain { page-break-before: always; }
+        h3 { font-size: 11px; margin: 10px 0 3px; page-break-after: avoid; }
+        ul.notes { margin: 0; padding-left: 16px; }
+        ul.notes li { margin-bottom: 2px; }
         table.sign { width: 100%; margin-top: 26px; border-collapse: separate; border-spacing: 14px 0; page-break-inside: avoid; }
         table.sign td { width: 33%; text-align: center; vertical-align: bottom; padding-top: 26px; }
         .sign-line { border-bottom: 0.8px dotted #0f172a; height: 22px; margin-bottom: 4px; }
@@ -159,6 +163,19 @@
     @endforelse
     </tbody>
 </table>
+
+<div class="explain">
+    <h2>คำอธิบายตัวเลขและคอลัมน์</h2>
+    <h3>หมายเหตุการนับ</h3>
+    <ul class="notes">
+        <li>เวลาทั้งหมดเป็นเวลาประเทศไทย</li>
+        <li>"ข้อมูล ณ" คือเวลาที่ระบบดึงข้อมูลมาสร้างไฟล์นี้ ตัวเลขที่บอกว่า "ตอนนี้" นับ ณ เวลานั้น</li>
+        <li>Ticket ทั้งหมด ปิดสำเร็จ ปิดทัน SLA และเวลาแก้ไข นับ Ticket ที่เปิดในช่วงวันที่ ส่วนค้างอยู่ตอนนี้และอายุงานค้างนับ Ticket ที่ยังไม่ปิด ณ เวลาพิมพ์</li>
+        <li>เป้าปิดทัน SLA {{ $goal }}% ตามที่ตั้งในหน้าตั้งค่า SLA กำหนดรับเคสและปิดเคสนับตามเวลาทำการที่ตั้งไว้ในหน้าเดียวกัน</li>
+        <li>เกิน SLA = Ticket ที่ปิดหลังกำหนด หรือยังไม่ปิดและเลยกำหนดแล้ว</li>
+        <li>รายการใน PDF แสดงไม่เกิน {{ number_format(\App\Services\Report\TicketOverviewExporter::PDF_ROW_LIMIT) }} แถว รายการครบทุกแถวอยู่ในไฟล์ Excel ของรายงานเดียวกัน</li>
+    </ul>
+</div>
 
 <table class="sign"><tr>
     <td><div class="sign-line"></div>ผู้จัดทำ<div class="muted">{{ $printedBy }}</div><div class="muted">วันที่ ........ / ........ / ........</div></td>

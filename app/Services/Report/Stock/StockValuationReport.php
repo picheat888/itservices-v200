@@ -99,6 +99,11 @@ class StockValuationReport extends TabularReport
         ];
     }
 
+    public function countingNotes(array $filters): array
+    {
+        return [...parent::countingNotes($filters), 'มูลค่าคงคลังคิดแบบเข้าก่อนออกก่อน (FIFO) ต้นทุนเฉลี่ย = มูลค่าคงคลัง (FIFO) ÷ จำนวนคงเหลือ'];
+    }
+
     public function summary(Builder $query, array $filters): array
     {
         // Needs the lots on every item, so keep the eager loads (but not the name relations).

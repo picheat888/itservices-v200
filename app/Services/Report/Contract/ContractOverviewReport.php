@@ -10,6 +10,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Services\Report\Tabular\ThaiWords;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -136,6 +137,16 @@ class ContractOverviewReport extends TabularReport
         }
 
         return $contract->isInReminder() ? 'reminder' : 'active';
+    }
+
+    /** The page's ⓘ text of the tiles it shares with the file. */
+    public function summaryMeanings(): array
+    {
+        return array_filter([
+            'cov_active' => ThaiWords::get('rep_cov_k_active_hint'),
+            'cov_next_12' => ThaiWords::get('rep_cov_k_next12_hint'),
+            'cov_remaining' => ThaiWords::get('rep_cov_k_remaining_hint'),
+        ]);
     }
 
     public function summary(Builder $query, array $filters): array

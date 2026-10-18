@@ -158,6 +158,11 @@ class TicketManualSlaReport extends TabularReport
         ];
     }
 
+    public function countingNotes(array $filters): array
+    {
+        return [...parent::countingNotes($filters), 'เป้าปิดทัน SLA '.TicketSla::goalPercent().'% ตามที่ตั้งในหน้าตั้งค่า SLA กำหนดรับเคสและปิดเคสนับตามเวลาทำการที่ตั้งไว้ในหน้าเดียวกัน'];
+    }
+
     public function summary(Builder $query, array $filters): array
     {
         $tally = TicketSlaFacts::tally(TicketSlaFacts::load(clone $query), withWork: true);

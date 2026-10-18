@@ -61,6 +61,11 @@
         .late { color: #dc2626; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
+        .explain { page-break-before: always; }
+        h3 { font-size: 11px; margin: 10px 0 3px; page-break-after: avoid; }
+        table.data td.term { width: 24%; font-weight: bold; }
+        ul.notes { margin: 0; padding-left: 16px; }
+        ul.notes li { margin-bottom: 2px; }
         table.sign { width: 100%; margin-top: 26px; border-collapse: separate; border-spacing: 14px 0; page-break-inside: avoid; }
         table.sign td { width: 33%; text-align: center; vertical-align: bottom; padding-top: 26px; }
         .sign-line { border-bottom: 0.8px dotted #0f172a; height: 22px; margin-bottom: 4px; }
@@ -142,6 +147,40 @@
     @endforelse
     </tbody>
 </table>
+
+{{-- Explanation page: the summary tiles the page explains, every printed column's meaning (the Excel glossary), how it counts --}}
+@php
+    $tileMeanings = $report->summaryMeanings();
+    $countingNotes ??= $report->countingNotes([]);
+    $columnMeanings = array_values(array_filter(array_map(fn ($c) => [$c->heading, $report->columnMeaning($c)], $columns), fn ($m) => $m[1] !== ''));
+@endphp
+<div class="explain">
+    <h2>คำอธิบายตัวเลขและคอลัมน์</h2>
+    @if ($tileMeanings)
+        <h3>ตัวเลขสรุป</h3>
+        <table class="data">
+            @foreach ($summary as $i => $tile)
+                @if (isset($tileMeanings[$tile->key]))
+                    <tr><td class="term">{{ $tiles[$i]['label'] }}</td><td>{{ $tileMeanings[$tile->key] }}</td></tr>
+                @endif
+            @endforeach
+        </table>
+    @endif
+    @if ($columnMeanings)
+        <h3>คอลัมน์</h3>
+        <table class="data">
+            @foreach ($columnMeanings as [$heading, $meaning])
+                <tr><td class="term">{{ $heading }}</td><td>{{ $meaning }}</td></tr>
+            @endforeach
+        </table>
+    @endif
+    <h3>หมายเหตุการนับ</h3>
+    <ul class="notes">
+        @foreach ($countingNotes as $note)
+            <li>{{ $note }}</li>
+        @endforeach
+    </ul>
+</div>
 
 {{-- Sign-off --}}
 <table class="sign"><tr>

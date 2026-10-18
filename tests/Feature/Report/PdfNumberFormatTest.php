@@ -174,6 +174,9 @@ class PdfNumberFormatTest extends TestCase
         $sheet = new TabularSectionSheet(['title' => 'ค่าเช่า', 'headings' => ['สัญญา', 'ต่อเดือน', 'ต่อปี'], 'rows' => [['CT-2', 4666.67, 392000.0]], 'money' => [1, 2]]);
         $this->assertSame(['สัญญา', 'ต่อเดือน (บาท)', 'ต่อปี (บาท)'], $sheet->headings());
         $this->assertSame([['CT-2', 4666.67, 392000.0]], $sheet->array());
+        $this->assertStringContainsString('คำอธิบายตัวเลขและคอลัมน์', $html);
+        $this->assertStringContainsString('หมายเหตุการนับ', $html);
+        $this->assertStringContainsString('เวลาทั้งหมดเป็นเวลาประเทศไทย', $html);
         $this->assertStringContainsString('ผู้ตรวจทาน', $html);
         $this->assertStringContainsString('ผู้อนุมัติ', $html);
     }
