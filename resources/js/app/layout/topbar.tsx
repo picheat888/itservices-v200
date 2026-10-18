@@ -27,6 +27,8 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     // Narrow screens: the menu covers the page, so only ≡ (now X) stays reachable
     const menuOpen = narrow && !iconsOnly;
     const toggleLabel = narrow ? t(menuOpen ? 'nav_close_menu' : 'nav_open_menu') : t('toggle_sidebar');
+    // Written in the language it switches to (the button carries that lang)
+    const langSwitchLabel = t(lang === 'en' ? 'lang_switch_to_th' : 'lang_switch_to_en');
     const { data: notifData } = useNotifications();
     const unreadCount = notifData?.unread ?? 0;
 
@@ -41,7 +43,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             <button
                 data-nav-toggle
                 onClick={toggleSidebar}
-                className="nav-toggle group text-muted-foreground hover:bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-md"
+                className="nav-toggle group text-muted-foreground hover:bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-md max-xl:h-10 max-xl:w-10"
                 title={toggleLabel}
                 aria-label={toggleLabel}
                 aria-expanded={!iconsOnly}
@@ -84,9 +86,10 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             <div inert={menuOpen} className="flex shrink-0 items-center gap-3">
                 <button
                     onClick={toggleLang}
-                    className="text-muted-foreground hover:bg-accent flex h-9 items-center gap-2 rounded-md px-2.5"
-                    title={lang === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
-                    aria-label={lang === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
+                    className="text-muted-foreground hover:bg-accent flex h-9 items-center gap-2 rounded-md px-2.5 max-xl:h-10"
+                    title={langSwitchLabel}
+                    aria-label={langSwitchLabel}
+                    lang={lang === 'en' ? 'th' : 'en'}
                 >
                     <span aria-hidden>{lang === 'en' ? <FlagEN /> : <FlagTH />}</span>
                     <span className="text-[11px] font-bold tracking-wide">{lang === 'en' ? 'EN' : 'TH'}</span>
@@ -94,7 +97,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
 
                 <button
                     onClick={toggleDark}
-                    className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md"
+                    className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md max-xl:h-10 max-xl:w-10"
                     title={dark ? t('light_mode') : t('dark_mode')}
                     aria-label={dark ? t('light_mode') : t('dark_mode')}
                 >
@@ -109,7 +112,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                     aria-expanded={notifOpen}
                     aria-controls={notifOpen ? 'notif-tray' : undefined}
                     className={cn(
-                        'relative flex h-9 w-9 items-center justify-center rounded-md transition-colors',
+                        'relative flex h-9 w-9 items-center justify-center rounded-md transition-colors max-xl:h-10 max-xl:w-10',
                         notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent',
                     )}
                     title={t('notif_title')}

@@ -1,3 +1,4 @@
+import { useT } from '@/lang';
 import {
     AccountSwitchedDialog,
     ChangePasswordDialog,
@@ -30,6 +31,7 @@ export function AppShell() {
     useDocumentTitle();
     useUserPreferences();
     useNavigationGuardHost();
+    const t = useT();
     const density = useUiStore((s) => s.density);
     const { iconsOnly, narrow } = useSidebarStyle();
     const menuOpen = narrow && !iconsOnly;
@@ -68,6 +70,16 @@ export function AppShell() {
             data-nav={iconsOnly ? 'closed' : 'open'}
             data-narrow={narrow || undefined}
         >
+            <a
+                href="#main-content"
+                onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('main-content')?.focus();
+                }}
+                className="bg-background text-foreground ring-ring sr-only rounded-md text-sm font-medium shadow-lg focus:not-sr-only focus:px-3 focus:py-2 focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:ring-2"
+            >
+                {t('skip_to_content')}
+            </a>
             <Sidebar onProfile={(section) => setShellDialog('profile', section ? { with: { section } } : undefined)} />
 
             <div className="flex min-w-0 flex-1 flex-col">
@@ -77,6 +89,8 @@ export function AppShell() {
                 </div>
 
                 <main
+                    id="main-content"
+                    tabIndex={-1}
                     inert={menuOpen}
                     className="bg-content relative flex-1 overflow-y-auto px-6 py-4 [--sticky-top:-1rem] [scrollbar-gutter:stable]"
                 >

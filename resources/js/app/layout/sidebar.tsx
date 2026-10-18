@@ -331,7 +331,7 @@ function NarrowSidebar({ onProfile }: SidebarProps) {
                                         <div className="text-muted-foreground truncate text-xs">{user?.group_name ?? user?.role_label}</div>
                                     </div>
                                 </button>
-                                <SignOutButton pending={logout.isPending} onClick={() => logout.mutate()} className="h-8 w-8 shrink-0" />
+                                <SignOutButton pending={logout.isPending} onClick={() => logout.mutate()} className="h-10 w-10 shrink-0" />
                             </div>
                             {settings?.company_name && (
                                 <p className="text-muted-foreground truncate text-center text-[10px]">
@@ -352,6 +352,7 @@ function NarrowSidebar({ onProfile }: SidebarProps) {
 /** One menu row: rail icon + dot when closed, label + count pill when open. */
 function NarrowNavItem({ item, badge, onPick }: { item: NavItem; badge: number; onPick: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const Icon = item.icon;
     return (
         <NavLink
@@ -380,9 +381,13 @@ function NarrowNavItem({ item, badge, onPick }: { item: NavItem; badge: number; 
                     {badge > 0 && (
                         <>
                             <span aria-hidden="true" className="nav-mark bg-brand absolute top-1.5 left-[35px] h-2 w-2 rounded-full" />
-                            <span className="nav-label bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground relative shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold">
-                                {badge}
+                            <span
+                                aria-hidden="true"
+                                className="nav-label bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground relative shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
+                            >
+                                {fmtN(badge)}
                             </span>
+                            <span className="sr-only">, {t('nav_badge_sr').replace('{n}', fmtN(badge))}</span>
                         </>
                     )}
                 </>
