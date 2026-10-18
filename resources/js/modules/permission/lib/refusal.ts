@@ -5,6 +5,7 @@ const REFUSAL_KEYS: Record<string, string> = {
     last_super_admin: 'perm_refusal_last_super_admin',
     own_access: 'perm_refusal_own_access',
     grant_ceiling: 'perm_refusal_grant_ceiling',
+    // TODO(wording): role_changed → perm_refusal_role_changed once approved; the server's message shows until then
 };
 
 export function refusalKey(code: unknown): string | undefined {
@@ -16,4 +17,10 @@ export function permissionRefusalText(error: unknown, t: (key: string) => string
     const key = refusalKey(body?.code);
     if (key) return t(key);
     return typeof body?.message === 'string' && body.message !== '' ? body.message : t('cd_error');
+}
+
+/** A save refused because the role changed since its draft was loaded (409 role_changed). */
+export function isRoleChanged(error: unknown): boolean {
+    const response = (error as { response?: { status?: number; data?: { code?: unknown } } } | undefined)?.response;
+    return response?.status === 409 && response.data?.code === 'role_changed';
 }

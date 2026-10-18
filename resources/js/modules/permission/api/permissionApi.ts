@@ -11,6 +11,8 @@ export interface RoleRow {
     /** How many Role Groups point at this role — deletion is refused while any do. */
     groups: number;
     permissions: string[];
+    /** Hash of the stored set; a save sends the one its draft started from (409 role_changed when stale). */
+    version: string;
 }
 
 export interface PermissionMatrix {
@@ -141,7 +143,8 @@ async function send<T>(method: 'post' | 'put' | 'delete', url: string, body?: un
 
 export const permissionApi = {
     matrix: () => http.get<ApiEnvelope<PermissionMatrix>>('/permissions').then((r) => r.data.data),
-    updateRole: (role: string, permissions: string[]) => send<PermissionMatrix>('put', `/permissions/${role}`, { permissions }),
+    updateRole: (role: string, permissions: string[], version: string) =>
+        send<PermissionMatrix>('put', `/permissions/${role}`, { permissions, version }),
     auditLogs: (page: number, perPage: number, filters: AuditFilters = {}) =>
         http
             .get<AuditLogsResponse>('/audit-logs', {
