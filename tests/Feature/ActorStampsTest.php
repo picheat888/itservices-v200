@@ -406,4 +406,32 @@ class ActorStampsTest extends TestCase
         $this->assertArrayNotHasKey('password', $snapshot);
         $this->assertArrayNotHasKey('remember_token', $snapshot);
     }
+
+    public function test_a_deleted_software_snapshot_has_no_product_key(): void
+    {
+        $this->actingAs($this->super());
+        $software = Software::create(['name' => 'Office', 'license_type' => 'subscription', 'product_key' => 'AAAAA-BBBBB-CCCCC']);
+
+        $this->deleteJson("/api/software/{$software->id}")->assertOk();
+
+        $snapshot = AuditLog::where('action', 'Deleted software')->sole()->details['snapshot'];
+        $this->assertSame('Office', $snapshot['name']);
+        $this->assertArrayNotHasKey('product_key', $snapshot);
+        $this->assertStringNotContainsString('AAAAA', json_encode($snapshot));
+    }
+
+    public function test_a_delete_snapshot_names_its_foreign_keys(): void
+    {
+        $deleter = User::factory()->create(['role' => 'super', 'name' => 'Asset Deleter']);
+        $this->actingAs($deleter);
+        $asset = Asset::factory()->create(['status' => 'ready', 'contract_id' => null]);
+        $asset->load('category', 'model');
+
+        $this->deleteJson("/api/assets/{$asset->id}")->assertOk();
+
+        $snapshot = AuditLog::where('action', 'Deleted asset')->sole()->details['snapshot'];
+        $this->assertSame($asset->category->name, $snapshot['category_id']);
+        $this->assertSame($asset->model->name, $snapshot['model_id']);
+        $this->assertSame('Asset Deleter', $snapshot['created_by']);
+    }
 }
