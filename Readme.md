@@ -6272,3 +6272,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **ท้ายกระดาษทุกหน้า** (`PdfFooter`): ชื่อแอป, พิมพ์โดย…เมื่อ…, หน้า x / y — รวมใบทบทวนสมาชิก Access (เลิกใช้ชื่อบริษัทตัวอย่างด้วย)
 - **ช่องลงชื่อ** ผู้จัดทำ (ชื่อผู้พิมพ์) / ผู้ตรวจทาน / ผู้อนุมัติ ท้ายทุกรายงาน
 - เทส `PdfNumberFormatTest::test_tabular_pdf_prints_document_facts_tile_context_and_sign_off`; ยังเหลือรายตัว: ตารางสรุปที่ขาดของ Ticket ค้าง/พนักงาน, ป้าย "ไม่ขึ้นกับตัวกรอง", เงินในตารางสรุปทศนิยมไม่เท่ากัน, หน้านิยามตัวชี้วัด
+
+## Motion audit ทั้งระบบ และรอบ 1: มาตรฐานจังหวะ (2026-10-18)
+
+- รายงาน: https://claude.ai/artifact/Tn5dLzcDPQWGXoGMhNhoX5 (สูง 1, กลาง 12, ต่ำ 20, รอตัดสิน 4)
+- รอบ 1 `ae8c1594`: ค่าจังหวะกลาง `--motion-*` / `--ease-enter` / `--ease-exit` ใน app.css; ป๊อปอัป Radix `.motion-pop` เข้า 150 ออก 120ms; Dialog/Sheet `.motion-sheet` 240/180ms (Sheet เดิม 500/300); ป๊อปอัปทำมือ 3 ตัวมีขาออกผ่าน `usePresence` (shared/hooks/use-presence.ts); `.press` / `.press-icon` ให้ปุ่มทำมือยุบตอนกด; hover แถว/Toast เฉพาะอุปกรณ์ที่ hover ได้ (ไม่ค้างบน iPad); สวิตช์สิทธิ์ใช้ transform; ไม่มี `transition-all` เหลือ
+- ตรวจในหน้าจริง: FilterPopover ปิด 120ms แล้วถอดออก, เมนู ⋮ 150/120ms, Dialog 240/180ms ตาม easing มาตรฐาน
