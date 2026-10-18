@@ -2,6 +2,8 @@ import { useT } from '@/lang';
 import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { EmptyState } from '@/shared/components/empty-state';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { RecordMissing } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -22,7 +24,7 @@ import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Check, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
 
@@ -52,13 +54,17 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     // The open count sheet is in the URL (?count=<id>) so a reload or a shared link reopens it
     const countId = toRecordId(list.get('count') || null);
     const sheetOpen = countId !== null;
-    // Kept after close so the loaded session stays mounted during the close animation
-    const [selectedId, setSelectedId] = useState<number | null>(countId);
+    // The last id is kept after close so the loaded session stays mounted during the close animation
+    const [lastId, setLastId] = useState<number | null>(countId);
     useEffect(() => {
-        if (countId !== null) setSelectedId(countId);
+        if (countId !== null) setLastId(countId);
     }, [countId]);
-    const { data: session } = useStockCount(selectedId);
+    const shownId = countId ?? lastId;
+    const { data: session, isError: sessionFailed, error: sessionError, refetch: refetchSession } = useStockCount(shownId);
+    const sessionMissing = (sessionError as { response?: { status?: number } } | null)?.response?.status === 404;
     const openSheet = (id: number) => list.setParams({ count: String(id) });
+    // Counts typed since the sheet opened; a refetch must not overwrite them
+    const typedRef = useRef(false);
     const [creating, setCreating] = useState(false);
     const { data: allItems = [] } = useStockItems({}, creating);
     const [wh, setWh] = useState('all');
@@ -114,15 +120,21 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         useToastStore.getState().push(stockRefusalText(e, t), 'error');
     };
 
-    // Seed the inputs from the session's stored counts whenever it loads/changes or the sheet reopens.
+    // Seed the inputs from the session's stored counts whenever fresh data arrives, unless the user has typed
     useEffect(() => {
-        if (!session || !sheetOpen) return;
+        if (!session || !sheetOpen || typedRef.current) return;
         const seed: Record<number, string> = {};
         (session.lines ?? []).forEach((l) => {
             seed[l.id] = l.counted_qty === null ? '' : String(l.counted_qty);
         });
         setEntries(seed);
-    }, [session?.id, session?.status, sheetOpen]);
+    }, [session, sheetOpen]);
+
+    // Each count starts on Auto; a choice made on another count does not carry over
+    useEffect(() => {
+        setMode('auto');
+        typedRef.current = false;
+    }, [shownId]);
 
     // Reset the New count picker back to its defaults.
     const resetPicker = () => {
@@ -142,11 +154,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 category: cat === 'all' ? null : cat,
                 stock_item_ids: selectedSkus,
             });
+            resetPicker();
             openSheet(created.id);
         } catch (e) {
+            // A refused start keeps the picker and its selection
             onError(e);
-        } finally {
-            resetPicker();
         }
     };
 
@@ -211,7 +223,32 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             return (raw === '' ? null : Math.max(0, parseInt(raw, 10) || 0)) !== l.counted_qty;
         });
     const guardSheetClose = useDiscardGuard(sheetOpen && sheetDirty);
-    const closeSheet = () => list.setParams({ count: null });
+    const closingRef = useRef(false);
+    const closeSheet = () => {
+        closingRef.current = true;
+        typedRef.current = false;
+        list.setParams({ count: null });
+    };
+    // Back (or any link) dropped ?count while counts were typed: reopen and ask before throwing them away
+    const dirtyRef = useRef(false);
+    dirtyRef.current = sheetDirty;
+    const prevCountRef = useRef(countId);
+    useEffect(() => {
+        const prev = prevCountRef.current;
+        prevCountRef.current = countId;
+        if (prev !== null && countId === null && !closingRef.current && dirtyRef.current) {
+            list.setParams({ count: String(prev) });
+            setBackedOut(true);
+        }
+        closingRef.current = false;
+    }, [countId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Ask once the sheet is back open, so the guard sees it as open and dirty
+    const [backedOut, setBackedOut] = useState(false);
+    useEffect(() => {
+        if (!backedOut || !sheetOpen) return;
+        setBackedOut(false);
+        guardSheetClose(closeSheet);
+    }, [backedOut, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Live audit summary for the open sheet: draft reads the typed entries, committed reads stored values.
     const countSummary = (() => {
@@ -495,7 +532,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
             <Dialog open={sheetOpen} onOpenChange={(o) => !o && guardSheetClose(closeSheet)}>
-                <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl">
+                <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                     {session ? (
                         <>
                             <DialogHeader>
@@ -522,7 +559,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             </DialogHeader>
 
                             {/* Audit summary — counted progress, discrepancy count, net variance. */}
-                            <div className="border-border grid grid-cols-3 gap-px overflow-hidden rounded-lg border">
+                            <div className="border-border grid shrink-0 grid-cols-3 gap-px overflow-hidden rounded-lg border">
                                 <div className="bg-card px-3 py-2 text-center">
                                     <div className={EYEBROW}>{t('stock_count_sum_progress')}</div>
                                     <div className="mt-0.5 text-sm font-semibold tabular-nums">
@@ -558,11 +595,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 </div>
                             </div>
 
-                            <div className="max-h-[60vh] overflow-auto overscroll-contain">
-                                <table className="w-full text-sm">
+                            <div className="min-h-[8rem] flex-1 overflow-auto overscroll-contain">
+                                <table className="w-full table-fixed text-sm">
                                     <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10 backdrop-blur')}>
                                         <tr className="border-border text-muted-foreground border-b text-left text-xs font-semibold">
-                                            <th scope="col" className="w-full px-3 py-2">
+                                            <th scope="col" className="px-3 py-2">
                                                 {t('stock_item')}
                                             </th>
                                             <th scope="col" className="w-24 px-3 py-2 text-right whitespace-nowrap">
@@ -613,7 +650,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                 )}
                                                             />
                                                             <div className="min-w-0">
-                                                                <div className="text-xs font-medium">{l.sku}</div>
+                                                                <div className="truncate text-xs font-medium">{l.sku}</div>
                                                                 <div className="text-muted-foreground truncate text-xs">{l.name}</div>
                                                             </div>
                                                         </div>
@@ -629,9 +666,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                                 aria-label={`${t('stock_count_counted')} ${l.sku ?? ''}`}
                                                                 value={entered}
                                                                 placeholder="0"
-                                                                onChange={(e) =>
-                                                                    setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))
-                                                                }
+                                                                onChange={(e) => {
+                                                                    typedRef.current = true;
+                                                                    setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }));
+                                                                }}
                                                                 className={cn(
                                                                     'ml-auto h-8 w-20 scroll-mt-10 text-right tabular-nums',
                                                                     variance !== null && variance !== 0 && 'border-primary/50',
@@ -674,72 +712,79 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                         </p>
                                     )}
                                     {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
-                                    <div className="border-border space-y-2.5 rounded-lg border p-3">
-                                        <div className={EYEBROW}>{t('stock_count_mode_label')}</div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {(['auto', 'manual'] as const).map((m) => {
-                                                const active = mode === m;
-                                                const disabled = m === 'manual' && hasSerial;
-                                                const Icon = m === 'auto' ? Zap : FileText;
-                                                return (
-                                                    <button
-                                                        key={m}
-                                                        type="button"
-                                                        disabled={disabled}
-                                                        onClick={() => !disabled && setMode(m)}
-                                                        aria-pressed={active}
-                                                        className={cn(
-                                                            'flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-semibold transition',
-                                                            disabled
-                                                                ? 'border-border text-muted-foreground/40 cursor-not-allowed'
-                                                                : active
-                                                                  ? m === 'manual'
-                                                                      ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-950/30 dark:text-amber-400'
-                                                                      : 'border-brand bg-brand/5 text-brand'
-                                                                  : 'border-border text-muted-foreground hover:bg-muted/50',
-                                                        )}
-                                                    >
-                                                        <Icon className="h-4 w-4" aria-hidden />
-                                                        {t(m === 'auto' ? 'stock_count_mode_auto_name' : 'stock_count_mode_manual_name')}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                        {hasSerial && <div className="text-muted-foreground text-[11px]">{t('stock_count_serial_only_auto')}</div>}
-                                        {/* Hint stays mounted so selecting Manual never shifts the layout. */}
-                                        <div
-                                            className={cn(
-                                                'flex items-start gap-2 text-[11px] leading-snug transition-colors',
-                                                mode === 'manual' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                                    {isDraft && (
+                                        <div className="border-border space-y-2.5 rounded-lg border p-3">
+                                            <div className={EYEBROW}>{t('stock_count_mode_label')}</div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {(['auto', 'manual'] as const).map((m) => {
+                                                    const active = mode === m;
+                                                    const disabled = m === 'manual' && hasSerial;
+                                                    const Icon = m === 'auto' ? Zap : FileText;
+                                                    return (
+                                                        <button
+                                                            key={m}
+                                                            type="button"
+                                                            disabled={disabled}
+                                                            onClick={() => !disabled && setMode(m)}
+                                                            aria-pressed={active}
+                                                            className={cn(
+                                                                'flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-semibold transition',
+                                                                disabled
+                                                                    ? 'border-border text-muted-foreground/40 cursor-not-allowed'
+                                                                    : active
+                                                                      ? m === 'manual'
+                                                                          ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-950/30 dark:text-amber-400'
+                                                                          : 'border-brand bg-brand/5 text-brand'
+                                                                      : 'border-border text-muted-foreground hover:bg-muted/50',
+                                                            )}
+                                                        >
+                                                            <Icon className="h-4 w-4" aria-hidden />
+                                                            {t(m === 'auto' ? 'stock_count_mode_auto_name' : 'stock_count_mode_manual_name')}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {hasSerial && (
+                                                <div className="text-muted-foreground text-[11px]">{t('stock_count_serial_only_auto')}</div>
                                             )}
-                                        >
-                                            {mode === 'manual' ? (
-                                                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                                            ) : (
-                                                <Zap className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                                            )}
-                                            <span>{mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}</span>
+                                            {/* Hint stays mounted so selecting Manual never shifts the layout. */}
+                                            <div
+                                                className={cn(
+                                                    'flex items-start gap-2 text-[11px] leading-snug transition-colors',
+                                                    mode === 'manual' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                                                )}
+                                            >
+                                                {mode === 'manual' ? (
+                                                    <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                ) : (
+                                                    <Zap className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                )}
+                                                <span>{mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}</span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                     <DialogFooter className="sm:justify-between">
+                                        {isDraft && (
+                                            <Button
+                                                variant="outline"
+                                                disabled={savingDraft || committing}
+                                                onClick={async () => {
+                                                    setSavingDraft(true);
+                                                    try {
+                                                        await save.mutateAsync({ id: session.id, counts: countsPayload() });
+                                                    } catch (e) {
+                                                        onError(e);
+                                                    } finally {
+                                                        setSavingDraft(false);
+                                                    }
+                                                }}
+                                            >
+                                                {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                                                {savingDraft ? t('saving') : t('stock_count_save')}
+                                            </Button>
+                                        )}
                                         <Button
-                                            variant="outline"
-                                            disabled={savingDraft || committing}
-                                            onClick={async () => {
-                                                setSavingDraft(true);
-                                                try {
-                                                    await save.mutateAsync({ id: session.id, counts: countsPayload() });
-                                                } catch (e) {
-                                                    onError(e);
-                                                } finally {
-                                                    setSavingDraft(false);
-                                                }
-                                            }}
-                                        >
-                                            {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
-                                            {savingDraft ? t('saving') : t('stock_count_save')}
-                                        </Button>
-                                        <Button
+                                            className="sm:ml-auto"
                                             disabled={!anyCounted || savingDraft || committing || committedFlash}
                                             onClick={async () => {
                                                 // Serialized lines that came up short must have their missing units ticked first.
@@ -804,10 +849,19 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <DialogTitle className="text-base font-semibold">{t('stock_count_sheet_title')}</DialogTitle>
                                 <DialogDescription className="sr-only">{t('loading')}</DialogDescription>
                             </DialogHeader>
-                            <div role="status" className="flex items-center justify-center py-16">
-                                <div className="border-muted-foreground/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2" aria-hidden />
-                                <span className="sr-only">{t('loading')}</span>
-                            </div>
+                            {sessionMissing ? (
+                                <RecordMissing onClose={closeSheet} />
+                            ) : sessionFailed ? (
+                                <LoadFailedPanel onRetry={() => void refetchSession()} />
+                            ) : (
+                                <div role="status" className="flex items-center justify-center py-16">
+                                    <div
+                                        className="border-muted-foreground/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2"
+                                        aria-hidden
+                                    />
+                                    <span className="sr-only">{t('loading')}</span>
+                                </div>
+                            )}
                         </>
                     )}
                 </DialogContent>
