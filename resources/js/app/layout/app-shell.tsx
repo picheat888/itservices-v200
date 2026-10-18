@@ -48,6 +48,14 @@ export function AppShell() {
     const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
     const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered);
     const [notifOpen, setNotifOpen] = useState(false);
+    // The tray stays mounted for its 100ms close animation
+    const [notifMounted, setNotifMounted] = useState(false);
+    if (notifOpen && !notifMounted) setNotifMounted(true);
+    useEffect(() => {
+        if (notifOpen || !notifMounted) return;
+        const timer = setTimeout(() => setNotifMounted(false), 100);
+        return () => clearTimeout(timer);
+    }, [notifOpen, notifMounted]);
     // My Profile and Change password live in the URL (?dialog=), so Back closes them.
     const [shellDialog, setShellDialog, shellDialogUnder] = useDialogParam(SHELL_DIALOGS, SHELL_DIALOG_COMPANIONS);
     // Set your password is raised by the account itself, so the URL only follows it.
@@ -76,7 +84,7 @@ export function AppShell() {
                     e.preventDefault();
                     document.getElementById('main-content')?.focus();
                 }}
-                className="bg-background text-foreground ring-ring sr-only rounded-md text-sm font-medium shadow-lg focus:not-sr-only focus:px-3 focus:py-2 focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:ring-2"
+                className="bg-background text-foreground ring-ring sr-only rounded-md text-sm font-medium shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:px-3 focus:py-2 focus:ring-2"
             >
                 {t('skip_to_content')}
             </a>
@@ -85,7 +93,9 @@ export function AppShell() {
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">
                     <Topbar notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((v) => !v)} />
-                    {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} onChangePassword={openChangePassword} />}
+                    {notifMounted && (
+                        <NotificationsDropdown closing={!notifOpen} onClose={() => setNotifOpen(false)} onChangePassword={openChangePassword} />
+                    )}
                 </div>
 
                 <main
