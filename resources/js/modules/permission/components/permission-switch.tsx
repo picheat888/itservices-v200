@@ -9,6 +9,7 @@ export function PermissionSwitch({
     locked,
     onClick,
     describedBy,
+    ...focusEvents
 }: {
     id?: string;
     label: string;
@@ -16,7 +17,7 @@ export function PermissionSwitch({
     locked: boolean;
     onClick: () => void;
     describedBy?: string;
-}) {
+} & Pick<React.ComponentProps<'button'>, 'onFocus' | 'onBlur' | 'onKeyDown'>) {
     return (
         <button
             id={id}
@@ -26,12 +27,13 @@ export function PermissionSwitch({
             aria-label={label}
             aria-disabled={locked || undefined}
             aria-describedby={describedBy}
+            {...focusEvents}
             onClick={() => {
                 if (!locked) onClick();
             }}
             className={cn(
-                // 44x28 hit area around the 36x20 track
-                "relative h-5 w-9 shrink-0 rounded-full transition-colors before:absolute before:-inset-1 before:content-['']",
+                // 36x28 hit area: taller, never wider, so it stays off the (i)
+                "relative h-5 w-9 shrink-0 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
                 locked && 'cursor-not-allowed opacity-50',
                 on ? 'bg-brand' : 'bg-muted-foreground/75',
             )}

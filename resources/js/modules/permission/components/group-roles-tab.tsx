@@ -31,6 +31,8 @@ type Sort = (typeof SORTS)[number];
 const isSort = (v: string): v is Sort => (SORTS as readonly string[]).includes(v);
 const ALL = '__all__';
 const NONE = '__none__';
+// Focus after an alert whose opener is gone: the default-group picker
+const defaultGroupTrigger = () => document.getElementById('gr-default');
 
 type DefaultStep = { to: number | null; step: 'confirm' | 'saving' | 'done'; error: unknown };
 
@@ -293,6 +295,7 @@ export function GroupRolesTab() {
 
             <CenteredAlert
                 open={defaultChange !== null}
+                returnFocus={defaultGroupTrigger}
                 icon={Users}
                 title={t('gr_default_confirm_title')}
                 busy={defaultChange?.step === 'saving' || defaultChange?.step === 'done'}
@@ -335,6 +338,7 @@ export function GroupRolesTab() {
 
             <CenteredAlert
                 open={defaultSaved !== undefined}
+                returnFocus={defaultGroupTrigger}
                 icon={ShieldCheck}
                 title={t('gr_default_saved_title')}
                 onClose={() => setDefaultSaved(undefined)}
@@ -349,6 +353,7 @@ export function GroupRolesTab() {
 
             <CenteredAlert
                 open={saved !== null}
+                returnFocus={defaultGroupTrigger}
                 icon={ShieldCheck}
                 title={t('gr_saved_title')}
                 onClose={() => setSaved(null)}

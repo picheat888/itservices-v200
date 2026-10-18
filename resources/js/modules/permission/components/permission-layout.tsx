@@ -4,7 +4,7 @@ import { InfoHint } from '@/shared/components/info-hint';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
-import { createContext, useContext, useId, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { PermissionCardHeader } from './permission-card-header';
 import { PermissionSwitch } from './permission-switch';
 
@@ -40,9 +40,17 @@ function useSwitchWiring(s: SwitchProps, extraDescribedBy?: string) {
     const id = useId();
     const reason = !s.locked ? null : superRole ? t('perm_super_locked') : s.lockedBy ? t('perm_lock_needs').replace('{name}', s.lockedBy) : null;
     const hintId = s.info ? `${id}-hint` : undefined;
+    // Keyboard focus on the switch shows its hint, as hover does for the (i)
+    const [hintShown, setHintShown] = useState(false);
     const reasonId = reason ? `${id}-reason` : undefined;
     return {
         switchId: `${id}-switch`,
+        hintShown,
+        focusEvents: {
+            onFocus: (event: React.FocusEvent<HTMLButtonElement>) => setHintShown(event.currentTarget.matches(':focus-visible')),
+            onBlur: () => setHintShown(false),
+            onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => event.key === 'Escape' && setHintShown(false),
+        },
         describedBy: [hintId, reasonId, extraDescribedBy].filter(Boolean).join(' ') || undefined,
         notes: (
             <>
@@ -138,7 +146,7 @@ function MasterBand({
             <div className="min-w-0">
                 <div className="flex items-center gap-1 text-sm font-semibold">
                     <SwitchLabel htmlFor={wiring.switchId} s={master} />
-                    {master.info && <InfoHint text={master.info} tabbable={false} />}
+                    {master.info && <InfoHint text={master.info} tabbable={false} shown={wiring.hintShown} />}
                 </div>
                 <div id={subId} className="text-muted-foreground text-xs">
                     {masterSub(master, hidden, lang)}
@@ -152,6 +160,7 @@ function MasterBand({
                     locked={master.locked}
                     onClick={master.onToggle}
                     describedBy={wiring.describedBy}
+                    {...wiring.focusEvents}
                 />
                 {wiring.notes}
             </div>
@@ -171,7 +180,7 @@ export function GroupHead({ chip, lang, ...s }: SwitchProps & { chip?: boolean; 
         <div className="bg-muted -mx-2 mb-1 flex min-h-[34px] items-center gap-2 rounded-md px-2">
             <span className="flex min-w-0 items-center gap-1 text-sm font-medium">
                 <SwitchLabel htmlFor={wiring.switchId} s={s} />
-                {s.info && <InfoHint text={s.info} tabbable={false} />}
+                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} />}
             </span>
             <span className="ml-auto flex items-center gap-2">
                 {chip && <span className="bg-brand/10 text-brand-ink rounded px-1.5 text-xs font-semibold">{translate(lang, 'perm_ui_view')}</span>}
@@ -182,6 +191,7 @@ export function GroupHead({ chip, lang, ...s }: SwitchProps & { chip?: boolean; 
                     locked={s.locked}
                     onClick={s.onToggle}
                     describedBy={wiring.describedBy}
+                    {...wiring.focusEvents}
                 />
                 {wiring.notes}
             </span>
@@ -224,7 +234,7 @@ export function ChildRow({ aria, ...s }: SwitchProps & { aria?: string }) {
         <div className="flex min-h-[30px] items-center gap-2">
             <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-[13px]">
                 <SwitchLabel htmlFor={wiring.switchId} s={s} />
-                {s.info && <InfoHint text={s.info} tabbable={false} />}
+                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} />}
             </span>
             <span className="ml-auto">
                 <PermissionSwitch
@@ -234,6 +244,7 @@ export function ChildRow({ aria, ...s }: SwitchProps & { aria?: string }) {
                     locked={s.locked}
                     onClick={s.onToggle}
                     describedBy={wiring.describedBy}
+                    {...wiring.focusEvents}
                 />
                 {wiring.notes}
             </span>
@@ -251,7 +262,7 @@ export function PlainRow({ dimOff, comingSoon, lang, ...s }: SwitchProps & { dim
                 className={cn('flex min-w-0 items-center gap-1 text-sm', dimOff && !s.on ? 'text-muted-foreground' : 'text-foreground font-medium')}
             >
                 <SwitchLabel htmlFor={wiring.switchId} s={s} />
-                {s.info && <InfoHint text={s.info} tabbable={false} />}
+                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} />}
                 {comingSoon && (
                     <span id={tagId} className="ml-1 text-xs italic opacity-70">
                         ({translate(lang, 'coming_soon_tag')})
@@ -266,6 +277,7 @@ export function PlainRow({ dimOff, comingSoon, lang, ...s }: SwitchProps & { dim
                     locked={s.locked}
                     onClick={s.onToggle}
                     describedBy={wiring.describedBy}
+                    {...wiring.focusEvents}
                 />
                 {wiring.notes}
             </span>
