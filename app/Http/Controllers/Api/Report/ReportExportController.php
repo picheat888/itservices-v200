@@ -32,14 +32,20 @@ class ReportExportController extends Controller
     public function download(Request $request, int $export): StreamedResponse
     {
         $this->mayReadExports($request);
-        $row = $this->owned($request, $export);
-        abort_unless(
-            ReportCatalogue::allows($request->user(), $row->report_key)
-            && $row->status === ReportExport::READY && $row->file_path !== null && Storage::disk('local')->exists($row->file_path),
-            404
-        );
+        $file = $this->exports->fileFor($this->owned($request, $export), $request->user(), 'app');
+        abort_if($file === null, 404);
 
-        return Storage::disk('local')->download($row->file_path, $row->file_name);
+        return Storage::disk('local')->download($file['path'], $file['name']);
+    }
+
+    /** The link in the "file ready" email: signed, and only for the signed-in owner. */
+    public function downloadFromEmail(Request $request, int $export): StreamedResponse
+    {
+        $this->mayReadExports($request);
+        $file = $this->exports->fileFor($this->owned($request, $export), $request->user(), 'email');
+        abort_if($file === null, 404);
+
+        return Storage::disk('local')->download($file['path'], $file['name']);
     }
 
     public function retry(Request $request, int $export): JsonResponse

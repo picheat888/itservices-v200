@@ -174,6 +174,8 @@ export const email: Dict = {
     email_to_stock_alert_digest: 'ผู้ใช้งานคลังอะไหล่',
     email_when_report_scheduled: 'ถึงเวลาตามตารางส่งรายงาน',
     email_to_report_scheduled: 'อีเมลที่ระบุในตารางส่ง',
+    email_when_report_export_ready: 'ไฟล์รายงานที่สั่งส่งออกสร้างเสร็จ',
+    email_to_report_export_ready: 'ผู้ที่สั่งส่งออกไฟล์',
 
     // pages/index.tsx — editor link text and HTML check
     email_link_text: 'ข้อความลิงก์',

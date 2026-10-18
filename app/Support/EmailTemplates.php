@@ -762,6 +762,23 @@ This report summarizes all items that currently require attention:</p>
                 'enabled' => true,
                 'cadence' => 'scheduled',
             ],
+            [
+                // A file the reader exported from the Report Center is ready (ReportExportService::build()).
+                'key' => 'report.export_ready',
+                'name' => 'Report file ready (ไฟล์รายงานพร้อมดาวน์โหลด)',
+                'subject' => '{{report.name}} - your {{report.format}} file is ready',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>The report file you asked for in {{app.name}} is ready.</p>
+<br>
+<p><strong style="color:#64748b">Report:</strong> {{report.name}}<br>
+<strong style="color:#64748b">File:</strong> {{report.file}}<br>
+<strong style="color:#64748b">Rows:</strong> {{report.rows}}<br>
+<strong style="color:#64748b">Available until:</strong> {{report.expires}}</p>
+<br>
+<p>Use the button below to download it. You will be asked to sign in first if you are not signed in. The link works for you only and stops working on {{report.expires}}.</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
         ];
     }
 

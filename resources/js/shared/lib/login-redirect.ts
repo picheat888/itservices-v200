@@ -41,3 +41,9 @@ export function redirectToLogin(reason: SignedOutReason, options?: { announce?: 
     shared ??= createLoginRedirect(window.location, announceLogout);
     shared(reason, options);
 }
+
+/** A server file link (/files/…, /pdf/…) to reopen after sign-in, from ?next=; anything else is ignored so the login page never sends people off-site. */
+export function serverFileTarget(next: string | null): string | null {
+    if (!next || !/^\/(files|pdf)\/[^/]/.test(next) || next.includes('//') || next.includes('\\')) return null;
+    return next;
+}

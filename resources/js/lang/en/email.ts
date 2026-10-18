@@ -174,6 +174,8 @@ export const email: Dict = {
     email_to_stock_alert_digest: 'Stock users',
     email_when_report_scheduled: 'A report schedule comes due',
     email_to_report_scheduled: 'The addresses in the schedule',
+    email_when_report_export_ready: 'A report file someone exported is ready',
+    email_to_report_export_ready: 'The person who exported it',
 
     // pages/index.tsx — editor link text and HTML check
     email_link_text: 'link text',

@@ -3,15 +3,19 @@
 namespace App\Services\Report;
 
 use App\Jobs\GenerateReportExport;
+use App\Models\AuditLog;
 use App\Models\Report\ReportExport;
 use App\Models\User;
 use App\Notifications\ReportExportNotification;
+use App\Services\Email\EmailNotificationService;
 use App\Services\Report\Tabular\TabularReportExporter;
+use App\Support\DateDisplay;
 use App\Support\Refusal;
 use App\Support\ReportCatalogue;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Throwable;
 
 /**
@@ -34,6 +38,7 @@ class ReportExportService
     public function __construct(
         private TabularReportExporter $tabular,
         private TicketOverviewExporter $ticketOverview,
+        private EmailNotificationService $mail,
     ) {}
 
     /**
@@ -104,6 +109,54 @@ class ReportExportService
         ]);
 
         $user->notify(new ReportExportNotification($export, ReportExportNotification::READY));
+        $this->emailReady($export, $user);
+    }
+
+    /** The requester's mail: what was built and a sign-in-protected link that works until the file expires. */
+    private function emailReady(ReportExport $export, User $user): void
+    {
+        $this->mail->sendTemplate('report.export_ready', $user->email, [
+            'user.first_name' => e(strtok((string) $user->name, ' ') ?: 'there'),
+            'report.name' => e(ReportCatalogue::title($export->report_key)),
+            'report.format' => $export->format === 'xlsx' ? 'Excel' : 'PDF',
+            'report.file' => e((string) $export->file_name),
+            'report.rows' => number_format((int) $export->rows_count),
+            'report.expires' => DateDisplay::date($export->expires_at, null, 'en'),
+        ], $this->downloadUrl($export), 'Download file', $user->name);
+    }
+
+    /**
+     * The ready file of an export, for its owner while they may still open the report; null
+     * otherwise. Every download is written to the audit log with where it came from.
+     *
+     * @return array{path: string, name: string}|null
+     */
+    public function fileFor(ReportExport $export, User $user, string $via): ?array
+    {
+        $ready = $export->user_id === $user->id
+            && ReportCatalogue::allows($user, $export->report_key)
+            && $export->status === ReportExport::READY
+            && $export->file_path !== null
+            && Storage::disk('local')->exists($export->file_path);
+        if (! $ready) {
+            return null;
+        }
+
+        AuditLog::record('Downloaded report export', ReportCatalogue::title($export->report_key).' ('.$export->file_name.')', [
+            'export_id' => $export->id,
+            'format' => $export->format,
+            'rows' => $export->rows_count,
+            'via' => $via,
+        ]);
+
+        return ['path' => $export->file_path, 'name' => (string) $export->file_name];
+    }
+
+    /** A signed link to the file for its owner, valid until the file expires. */
+    public function downloadUrl(ReportExport $export): string
+    {
+        // Signed on the path alone, so the link holds whichever host or scheme the app is reached by.
+        return url(URL::temporarySignedRoute('files.report-export', $export->expires_at, ['export' => $export->id], absolute: false));
     }
 
     /**

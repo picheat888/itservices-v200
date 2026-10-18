@@ -76,7 +76,7 @@ class ReportExportQueueTest extends TestCase
         $this->assertSame('Report_assets-overview_2026-09-25.pdf', $export->file_name);
         $this->assertSame(1, $export->rows_count);
         $this->assertGreaterThan(0, $export->size_bytes);
-        $this->assertSame('2026-10-02 10:00:00', $export->expires_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-10-25 10:00:00', $export->expires_at->format('Y-m-d H:i:s'));
         Storage::disk('local')->assertExists($export->file_path);
 
         $this->actingAs($user)->getJson('/api/reports/exports')
@@ -234,12 +234,12 @@ class ReportExportQueueTest extends TestCase
         $expired = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
         $expiredPath = ReportExport::findOrFail($expired)->file_path;
 
-        $this->travelTo('2026-10-01 10:00:00');
+        $this->travelTo('2026-10-24 10:00:00');
         $current = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
         Queue::fake();
         $stalled = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
 
-        $this->travelTo('2026-10-02 10:30:00');
+        $this->travelTo('2026-10-25 10:30:00');
         $waiting = $this->actingAs($user)->postJson(self::OVERVIEW)->json('data.id');
 
         // Before the prune, an expired file is no longer offered or served.

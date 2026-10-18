@@ -2,7 +2,8 @@ import { useT } from '@/lang';
 import type { Lang } from '@/lang/types';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import type { SignedOutReason } from '@/shared/lib/login-redirect';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { serverFileTarget, type SignedOutReason } from '@/shared/lib/login-redirect';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -12,7 +13,6 @@ import { useUiStore } from '@/stores/ui';
 import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, LogOut, Moon, Sun, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'en', label: 'EN' },
@@ -80,7 +80,13 @@ export default function LoginPage() {
         );
     }, [searchParams, setSearchParams, location.state]);
 
-    if (!isLoading && isAuthenticated) return <Navigate to={target} replace />;
+    // A server file link (an emailed report file) opened while signed out: reopen it after sign-in
+    const fileTarget = serverFileTarget(searchParams.get('next'));
+    useEffect(() => {
+        if (!isLoading && isAuthenticated && fileTarget) window.location.replace(fileTarget);
+    }, [isLoading, isAuthenticated, fileTarget]);
+
+    if (!isLoading && isAuthenticated) return fileTarget ? null : <Navigate to={target} replace />;
 
     /**
      * What actually went wrong, in the user's language. The API answers 429 with

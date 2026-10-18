@@ -6254,3 +6254,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **Summary = บัญชีคุม**: คงเหลือ, มูลค่า FIFO, กระทบยอด (รับ + คืน + ปรับเพิ่ม − เบิก − ปรับลด = คงเหลือ, โอนไม่เปลี่ยนยอด) บอก "Reconciled / Off by n", คงเหลือแยกคลัง, ล็อตต้นทุนที่ยังเหลือพร้อมมูลค่า; หน้าเว็บแสดงชุดเดียวกัน (`components/history-summary.tsx`)
 - PDF คงภาษาอังกฤษ (ผู้ใช้เลือก) ใช้สีตามหน้าเว็บ: รับเข้าเขียว เบิกแดง คืน teal ปรับเหลืองอำพัน โอนน้ำเงิน
 - ย้ายการสร้างประวัติออกจาก controller ไป `App\Services\Stock\StockHistoryService`; เทส `StockItemHistoryPdfTest` (มุมมอง return, กระทบยอด, หัวกระดาษไม่มีชื่อตัวอย่าง)
+
+## รายงาน: คิวแยก, เก็บไฟล์ 30 วัน, อีเมลพร้อมลิงก์ดาวน์โหลด (2026-10-18)
+- **คิวแยก** `ReportExport::QUEUE = 'reports'`: `GenerateReportExport` และ `SendScheduledReport` สร้างไฟล์บนคิว reports อีเมล/การแจ้งเตือนอยู่คิว default ไม่ต้องรอไฟล์ใหญ่อีก; `composer run dev` / `composer run demo` เพิ่ม worker `queue:listen --queue=reports` (**เซิร์ฟเวอร์จริงต้องรัน worker คิว reports เพิ่มอีกตัว** ไม่อย่างนั้นไฟล์จะค้าง "รอคิว")
+- **เก็บไฟล์ 30 วัน** (`KEEP_DAYS` 7 → 30) ข้อความในหน้าต่างส่งออกบอก 30 วันและอีเมล
+- **อีเมลเมื่อไฟล์เสร็จ** เทมเพลตใหม่ `report.export_ready` (แก้/ปิด/รีเซ็ตได้ที่หน้า Email Templates, มีคำ "ส่งเมื่อ / ส่งถึง" และค่าตัวอย่างในพรีวิว) ปุ่ม Download file เป็นลิงก์ลงลายเซ็น (`URL::temporarySignedRoute`, ลงลายเซ็นเฉพาะ path จึงใช้ได้ทุก host) หมดอายุพร้อมไฟล์
+- **ลิงก์ใช้ได้เฉพาะเจ้าของ**: `/files/report-exports/{id}` ต้อง signed + ล็อกอินเป็นเจ้าของ + ยังมีสิทธิ์รายงาน; ยังไม่ล็อกอิน → `/login?next=` แล้วโหลดต่อให้ (`redirectGuestsTo` ใน bootstrap, `serverFileTarget()` รับเฉพาะ `/files/…` `/pdf/…` กัน open redirect); อีเมลถูกส่งต่อ คนอื่นกดก็ไม่ได้ไฟล์
+- **บันทึก Audit Log ทุกการดาวน์โหลด** ("Downloaded report export" + via app/email) ทั้งจากหน้า "ไฟล์ส่งออกของฉัน" และจากอีเมล
+- เพิ่มเทมเพลตลง `itservices_perf` ด้วย `EmailTemplateSeeder` (firstOrCreate เพิ่มเฉพาะที่ขาด); เทส `ReportExportEmailTest`, `tests/js/login-redirect.test.ts`; แก้ `PdfNumberFormatTest` ให้ตรงกับหน้า PDF ประวัติ SKU ใหม่ (พังตั้งแต่ `fd7459ae`)
