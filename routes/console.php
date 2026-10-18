@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchedulerHeartbeat;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -56,3 +57,7 @@ Schedule::command('reports:prune-exports')->dailyAt('02:15');
 // Scheduled report emails. Every five minutes so a schedule set for 07:00 goes out at 07:00,
 // not at the next hour; a sweep with nothing due is one indexed query.
 Schedule::command('reports:send-scheduled')->everyFiveMinutes();
+
+// Log digest for analysis (logs/digest), and a heartbeat the digest reads to tell the scheduler is alive.
+Schedule::command('logs:digest')->weeklyOn(1, '07:00');
+Schedule::call(fn () => SchedulerHeartbeat::beat())->everyMinute()->name('scheduler-heartbeat');

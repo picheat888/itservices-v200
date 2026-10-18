@@ -18,7 +18,9 @@ import { ItemHistoryPage, StockPage } from '@/modules/stock';
 import { TicketsPage } from '@/modules/ticket';
 import { WorkflowsPage } from '@/modules/workflow';
 import { AppErrorScreen } from '@/shared/components/app-error-screen';
+import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
+import { installClientErrorReporting } from '@/shared/lib/client-error-report';
 import { queryClient } from '@/shared/lib/query-client';
 import type { Role } from '@/shared/types';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
@@ -220,10 +222,14 @@ function App() {
     );
 }
 
+installClientErrorReporting();
+
 createRoot(document.getElementById('app')!).render(
     <QueryClientProvider client={queryClient}>
         <ConfirmProvider>
-            <App />
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
             <AppErrorScreen />
             {/* The app's one toast region — ad-hoc messages and server notifications
                 share this queue, so they can never render over each other. */}

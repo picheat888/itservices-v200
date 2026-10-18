@@ -218,6 +218,9 @@ export const common: Dict = {
     err_throttle_body: 'มีการส่งคำขอหลายครั้งในเวลาสั้น ๆ กรุณารอสักครู่แล้วลองใหม่',
     err_retry_after: 'ลองใหม่ได้ในอีกประมาณ {n} วินาที',
     err_throttle_toast: 'ใช้งานถี่เกินไป กรุณารอประมาณ {n} วินาทีแล้วลองใหม่',
+    err_reference: 'รหัสอ้างอิงสำหรับแจ้ง IT: {id}',
+    err_render_title: 'หน้าจอนี้แสดงผลไม่ได้',
+    err_render_body: 'ระบบบันทึกปัญหาไว้ให้ทีม IT แล้ว กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'น้ำเงิน',

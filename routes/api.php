@@ -53,6 +53,7 @@ use App\Http\Controllers\Api\Request\RequestOptionsController;
 use App\Http\Controllers\Api\Settings\AssetModelController;
 use App\Http\Controllers\Api\Settings\BrandController;
 use App\Http\Controllers\Api\Settings\CategoryController;
+use App\Http\Controllers\Api\Settings\ClientErrorController;
 use App\Http\Controllers\Api\Settings\LocationController;
 use App\Http\Controllers\Api\Settings\RequestOptionController;
 use App\Http\Controllers\Api\Settings\SettingsController;
@@ -76,6 +77,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthController::class, 'login'])->name('api.login');
 Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.show');
+// Browser errors from the SPA, guests included (logs/frontend)
+Route::post('client-errors', [ClientErrorController::class, 'store'])
+    ->middleware('throttle:client-errors')->name('api.client-errors.store');
 
 /**
  * CheckPasswordExpiry answers 403 password_expired while an account still owes a
