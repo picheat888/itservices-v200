@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
+import { AlertButton, type AlertTone } from '@/shared/components/alert-button';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FilterPopover } from '@/shared/components/filter-popover';
@@ -20,7 +21,7 @@ import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair, nameSearch } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
-import { cn, toRecordId } from '@/shared/lib/utils';
+import { toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -121,62 +122,6 @@ const applyParams = (params: URLSearchParams, patch: ListParamPatch) => {
         }
     }
 };
-
-/** Alert banner shown when any items are in a warning state, with a count per type. */
-function AlertCard({
-    summary,
-    t,
-    onViewItems,
-}: {
-    summary: import('@/shared/types').StockSummary;
-    t: ReturnType<typeof useT>;
-    onViewItems: () => void;
-}) {
-    const fmtN = useNumberFormat();
-    const hasCritical = summary.out_count > 0 || summary.low_count > 0;
-    const counts = [
-        { key: 'out', count: summary.out_count, label: t('stock_alert_out'), className: 'text-destructive' },
-        { key: 'low', count: summary.low_count, label: t('stock_alert_low'), className: 'text-amber-700 dark:text-amber-400' },
-        { key: 'over', count: summary.over_count, label: t('stock_alert_over'), className: 'text-blue-700 dark:text-blue-400' },
-        { key: 'dead', count: summary.dead_count, label: t('stock_alert_dead'), className: 'text-muted-foreground' },
-    ].filter((c) => c.count > 0);
-    return (
-        <Card className={cn('border p-4', hasCritical ? 'border-destructive/40 bg-destructive/5' : 'border-amber-500/40 bg-amber-500/5')}>
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <span
-                        className={cn(
-                            'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                            hasCritical
-                                ? 'bg-destructive/10 dark:text-destructive text-red-700'
-                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-                        )}
-                        aria-hidden
-                    >
-                        <AlertTriangle className={cn(ALERT_BLINK, 'h-5 w-5')} />
-                    </span>
-                    <div>
-                        <div className="font-semibold">{t('stock_minmax_alerts')}</div>
-                        <ul className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                            {counts.map((c) => (
-                                <li
-                                    key={c.key}
-                                    className={cn('bg-background/60 rounded-full border px-2 py-0.5 font-medium tabular-nums', c.className)}
-                                >
-                                    {fmtN(c.count)} {c.label}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-                <Button variant="outline" size="sm" className="shrink-0" onClick={onViewItems}>
-                    {t('stock_view_items')}
-                </Button>
-            </div>
-        </Card>
-    );
-}
 
 export default function StockPage() {
     const t = useT();
@@ -525,7 +470,20 @@ export default function StockPage() {
         { label: t('stock_kpi_value'), value: summary ? formatCompact(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
     ];
 
-    const hasAlerts = !!summary && (summary.out_count > 0 || summary.low_count > 0 || summary.over_count > 0 || summary.dead_count > 0);
+    // One header alert for every item in a warning state: named by its kind when there is one kind, red when any is out or low
+    const stockAlert = (() => {
+        if (!summary) return null;
+        const kinds = (['out', 'low', 'over', 'dead'] as const).filter((k) => summary[`${k}_count`] > 0);
+        if (kinds.length === 0) return null;
+        const total = kinds.reduce((n, k) => n + summary[`${k}_count`], 0);
+        const label =
+            kinds.length === 1
+                ? t('stock_alert_button')
+                      .replace('{label}', t(`stock_alert_${kinds[0]}`))
+                      .replace('{n}', fmtN(total))
+                : t('stock_alert_button_all').replace('{n}', fmtN(total));
+        return { label, tone: (summary.out_count > 0 || summary.low_count > 0 ? 'red' : 'amber') as AlertTone };
+    })();
     // Items-tab badge: total stock alerts (out of stock + below min + overstock).
     const itemAlerts = summary ? summary.out_count + summary.low_count + summary.over_count : 0;
 
@@ -564,6 +522,17 @@ export default function StockPage() {
                     <p className="text-muted-foreground text-sm">{t('stock_subtitle')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    {stockAlert && (
+                        <AlertButton
+                            tone={stockAlert.tone}
+                            icon={AlertTriangle}
+                            iconClassName={ALERT_BLINK}
+                            pressed={tab === 'items' && statusFilter === 'alerts'}
+                            onClick={statusFilter === 'alerts' && tab === 'items' ? () => openItems({ status: 'all' }) : viewAlerts}
+                        >
+                            {stockAlert.label}
+                        </AlertButton>
+                    )}
                     {can('request') && (
                         <Button onClick={() => setReqOpen(true)}>
                             <FilePlus2 className="h-4 w-4" aria-hidden />
@@ -572,8 +541,6 @@ export default function StockPage() {
                     )}
                 </div>
             </div>
-
-            {hasAlerts && summary && <AlertCard summary={summary} t={t} onViewItems={viewAlerts} />}
 
             <Card className="overflow-clip">
                 {/* Outstanding work and stock alerts: red pills. */}

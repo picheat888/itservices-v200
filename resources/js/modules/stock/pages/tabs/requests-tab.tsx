@@ -306,7 +306,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     return (
         <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <div className="relative w-full max-w-xs">
                         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" aria-hidden />
                         <Input

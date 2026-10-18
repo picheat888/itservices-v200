@@ -78,7 +78,7 @@ import { AssetRowMenu } from '../components/asset-row-menu';
 import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
-import { PendingReturnStrip } from '../components/pending-return-strip';
+import { PendingReturnButton } from '../components/pending-return-button';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
@@ -637,7 +637,15 @@ export default function AssetsPage() {
                     <h1 className="text-2xl font-bold">{t('assets_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('assets_sub')}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    {canReceive && (
+                        <PendingReturnButton
+                            count={pendingReturnCount}
+                            active={tab === 'inventory' && statusFilter === 'pending_return'}
+                            onToggle={showPendingReturns}
+                            t={t}
+                        />
+                    )}
                     {canCreate && (
                         <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
@@ -646,15 +654,6 @@ export default function AssetsPage() {
                     )}
                 </div>
             </div>
-
-            {canReceive && (
-                <PendingReturnStrip
-                    count={pendingReturnCount}
-                    active={tab === 'inventory' && statusFilter === 'pending_return'}
-                    onToggle={showPendingReturns}
-                    t={t}
-                />
-            )}
 
             <Card className="overflow-clip">
                 <PageTabs
