@@ -374,6 +374,18 @@ export const permission: Dict = {
     perm_ui_group_workflows: 'Workflows',
     perm_ui_minutes_short: '{n}m',
     perm_ui_hours_short: '{n}h',
+    perm_ui_master_off: 'Off. Turn it on to choose {n} more',
+    perm_ui_general: 'General',
+    perm_ui_unsaved: 'Unsaved',
+    perm_ui_ok: 'OK',
+    perm_search_ph: 'Search permissions, e.g. delete, approve…',
+    perm_search_none: 'No permission matches “{q}”',
+    perm_confirm_title: 'Confirm save',
+    perm_confirm_role: 'Change permissions of {name}',
+    perm_confirm_count: '{n} permissions changed',
+    perm_saved_title: 'Permissions saved',
+    perm_saved_desc: 'Saved {name}. It applies to {n} people.',
+    perm_saved_desc_none: 'Saved {name}.',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'You have no access to this page yet',

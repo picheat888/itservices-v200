@@ -1,15 +1,10 @@
-import { translate } from '@/lang';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
-import { PermissionCardHeader } from './permission-card-header';
-import { PermissionSwitch } from './permission-switch';
+import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
 // Mirrors App\Support\Permissions::stockHierarchy() — keep in sync.
 const MASTER = 'stock.module';
-// `chip: false` hides the "View" tag — used for single-switch groups (Counting,
-// Event) that gate their whole feature rather than a view/management split.
+// `chip: false` hides the "View" tag on single-switch groups.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'stock.view_dashboard', children: [] },
     { view: 'stock.view', children: ['stock.manage_items', 'stock.delete', 'stock.receive', 'stock.return', 'stock.transfer'] },
@@ -34,11 +29,7 @@ function hasAncestors(key: string, has: (k: string) => boolean): boolean {
     return true;
 }
 
-/**
- * Renders the Stock permission card as a master → view → management tree with
- * cascade: turning a parent off clears + locks its children; turning a child on
- * implies its ancestors. Super is read-only (everything shown on + locked).
- */
+/** Stock card: master → view → management, with cascade; super is read-only. */
 export function StockPermissionTree({
     draft,
     setDraft,
@@ -84,70 +75,59 @@ export function StockPermissionTree({
     };
 
     const activeCount = masterOn ? ALL_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const view = (key: string) => ({
+        pkey: key,
+        label: label(key, lang),
+        info: info(key, lang),
+        on: has(key) && masterOn,
+        locked: isSuper || !masterOn,
+        onToggle: () => toggle(key),
+    });
 
     return (
-        <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="stock" on={activeCount} total={ALL_KEYS.length} lang={lang} />
-
-            <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
-                <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-sm font-semibold">
-                        {label(MASTER, lang)}
-                        {info(MASTER, lang) && <InfoHint text={info(MASTER, lang)} />}
-                    </div>
-                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
-                </div>
-                <div className="ml-auto">
-                    <PermissionSwitch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
-                </div>
-            </div>
-
-            <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
-                {GROUPS.map((group) => {
-                    const viewOn = has(group.view) && masterOn;
-                    const viewInfo = info(group.view, lang);
-                    return (
-                        <div key={group.view} className="py-0.5">
-                            <div className="flex min-h-[34px] items-center gap-2">
-                                <span className="flex items-center gap-1 text-sm font-medium">
-                                    {label(group.view, lang)}
-                                    {viewInfo && <InfoHint text={viewInfo} />}
-                                </span>
-                                <span className="ml-auto flex items-center gap-2">
-                                    {group.chip !== false && (
-                                        <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                            {translate(lang, 'perm_ui_view')}
-                                        </span>
-                                    )}
-                                    <PermissionSwitch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
-                                </span>
-                            </div>
-                            {group.children.length > 0 && (
-                                <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                                    {group.children.map((child) => {
-                                        const childInfo = info(child, lang);
-                                        return (
-                                            <div key={child} className="flex min-h-[30px] items-center gap-2">
-                                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                                                    {label(child, lang)}
-                                                    {childInfo && <InfoHint text={childInfo} />}
-                                                </span>
-                                                <span className="ml-auto">
-                                                    <PermissionSwitch
-                                                        on={has(child) && viewOn}
-                                                        locked={isSuper || !viewOn}
-                                                        onClick={() => toggle(child)}
-                                                    />
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+        <PermissionCard
+            module="stock"
+            on={activeCount}
+            total={ALL_KEYS.length}
+            lang={lang}
+            keys={ALL_KEYS}
+            master={{
+                pkey: MASTER,
+                label: label(MASTER, lang),
+                info: info(MASTER, lang),
+                on: masterOn,
+                locked: isSuper,
+                onToggle: () => toggle(MASTER),
+                rest: ALL_KEYS.length - 1,
+            }}
+        >
+            {masterOn && (
+                <>
+                    <GeneralCell lang={lang} rows={GROUPS.filter((g) => g.children.length === 0).map((g) => ({ key: g.view, ...view(g.view) }))} />
+                    {GROUPS.filter((g) => g.children.length > 0).map((group) => {
+                        const viewOn = has(group.view) && masterOn;
+                        return (
+                            <PermissionCell key={group.view} wide={group.children.length > WIDE_CHILDREN}>
+                                <GroupHead chip={group.chip !== false} lang={lang} {...view(group.view)} />
+                                <ChildList wide={group.children.length > WIDE_CHILDREN}>
+                                    {group.children.map((child) => (
+                                        <ChildRow
+                                            key={child}
+                                            pkey={child}
+                                            label={label(child, lang)}
+                                            aria={`${label(group.view, lang)} ${label(child, lang)}`}
+                                            info={info(child, lang)}
+                                            on={has(child) && viewOn}
+                                            locked={isSuper || !viewOn}
+                                            onToggle={() => toggle(child)}
+                                        />
+                                    ))}
+                                </ChildList>
+                            </PermissionCell>
+                        );
+                    })}
+                </>
+            )}
+        </PermissionCard>
     );
 }

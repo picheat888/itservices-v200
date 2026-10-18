@@ -1,12 +1,9 @@
 // My Profile permission card: independent switches (no master) for what a person may do in their own profile drawer.
 
 import { translate } from '@/lang';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
-import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
-import { PermissionCardHeader } from './permission-card-header';
+import { PermissionCard, PermissionCell, PlainRow, spreadRows } from './permission-layout';
 
 const label = (key: string, lang: Lang) => {
     const [module, action] = key.split('.');
@@ -16,33 +13,6 @@ const info = (key: string, lang: Lang) => {
     const [module, action] = key.split('.');
     return actionDescription(module, action, lang);
 };
-
-/** A single toggle, matching the matrix switch (h-5 w-9). */
-function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            disabled={locked}
-            onClick={onClick}
-            className={cn(
-                'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
-                on ? 'bg-brand' : 'bg-muted',
-                locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
-            )}
-        >
-            <span
-                className={cn(
-                    'bg-background flex h-4 w-4 items-center justify-center rounded-full shadow transition-transform',
-                    on ? 'translate-x-[18px]' : 'translate-x-0.5',
-                )}
-            >
-                {locked ? <Lock className="text-muted-foreground h-2.5 w-2.5" /> : on && <Check className="text-brand h-2.5 w-2.5" />}
-            </span>
-        </button>
-    );
-}
 
 export function ProfilePermissionTree({
     keys,
@@ -77,29 +47,30 @@ export function ProfilePermissionTree({
     const activeCount = keys.filter(has).length;
 
     return (
-        <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="profile" on={activeCount} total={keys.length} lang={lang} />
-
-            <div className="bg-brand/5 border-border border-b px-3.5 py-2">
-                <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_service_all')}</div>
-            </div>
-
-            <div className="px-3.5 py-1">
-                {keys.map((key) => {
-                    const description = info(key, lang);
-                    return (
-                        <div key={key} className="flex min-h-[34px] items-center gap-2">
-                            <span className="flex items-center gap-1 text-sm font-medium">
-                                {label(key, lang)}
-                                {description && <InfoHint text={description} />}
-                            </span>
-                            <span className="ml-auto">
-                                <Switch on={has(key)} locked={isSuper} onClick={() => toggle(key)} />
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+        <PermissionCard
+            module="profile"
+            on={activeCount}
+            total={keys.length}
+            keys={keys}
+            lang={lang}
+            note={translate(lang, 'perm_ui_self_service_all')}
+        >
+            {spreadRows(keys).map((cell) => (
+                <PermissionCell key={cell[0]}>
+                    {cell.map((key) => (
+                        <PlainRow
+                            key={key}
+                            pkey={key}
+                            lang={lang}
+                            label={label(key, lang)}
+                            info={info(key, lang)}
+                            on={has(key)}
+                            locked={isSuper}
+                            onToggle={() => toggle(key)}
+                        />
+                    ))}
+                </PermissionCell>
+            ))}
+        </PermissionCard>
     );
 }

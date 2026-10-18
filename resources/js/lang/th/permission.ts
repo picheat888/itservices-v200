@@ -367,6 +367,18 @@ export const permission: Dict = {
     perm_ui_group_workflows: 'Workflow',
     perm_ui_minutes_short: '{n} น.',
     perm_ui_hours_short: '{n} ชม.',
+    perm_ui_master_off: 'ปิดอยู่ เปิดเพื่อเลือกสิทธิ์อีก {n} รายการ',
+    perm_ui_general: 'ทั่วไป',
+    perm_ui_unsaved: 'ยังไม่บันทึก',
+    perm_ui_ok: 'ตกลง',
+    perm_search_ph: 'ค้นหาสิทธิ์ เช่น ลบ, อนุมัติ…',
+    perm_search_none: 'ไม่พบสิทธิ์ที่มีคำว่า “{q}”',
+    perm_confirm_title: 'ยืนยันบันทึกข้อมูล',
+    perm_confirm_role: 'ปรับเปลี่ยนสิทธิ์ {name}',
+    perm_confirm_count: 'เปลี่ยนแปลงทั้ง {n} สิทธิ์',
+    perm_saved_title: 'บันทึกสิทธิ์แล้ว',
+    perm_saved_desc: 'บันทึกสิทธิ์ของ {name} แล้ว มีผลกับ {n} คน',
+    perm_saved_desc_none: 'บันทึกสิทธิ์ของ {name} แล้ว',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้',

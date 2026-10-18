@@ -1,15 +1,11 @@
 import { translate } from '@/lang';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
-import { PermissionCardHeader } from './permission-card-header';
-import { PermissionSwitch } from './permission-switch';
+import { ChildList, ChildRow, GeneralCell, GroupHead, GroupNote, PermissionCard, PermissionCell, PlainRow, SetHead } from './permission-layout';
 
 // Mirrors App\Support\Permissions::ticketHierarchy() — keep in sync.
 const MASTER = 'tickets.module';
-// Self-service pair: `create` opens cases; `edit_own` is its child. `my` (My Tickets
-// tab) is a solo standalone switch. All three survive without the master.
+// Self-service: `create` (+ its child `edit_own`) and `my` survive without the master.
 const STANDALONE = { view: 'tickets.create', children: ['tickets.edit_own'] };
 const STANDALONE_SOLO = 'tickets.my';
 // Ticket Level keys — scope which categories a staff member sees / takes / gets alerts for.
@@ -44,14 +40,7 @@ function hasAncestors(key: string, has: (k: string) => boolean): boolean {
     return true;
 }
 
-/**
- * Renders the Tickets permission card as a master → group → management tree with
- * cascade (mirrors AssetPermissionTree): turning a parent off clears + locks its
- * children; turning a child on implies its ancestors. The Ticket Level cluster
- * scopes categories under the master. The self-service keys (`create` + `edit_own`,
- * and the `my` tab) are standalone — the master never locks them. Super is
- * read-only (everything shown on + locked).
- */
+/** Tickets card: master → group → management with cascade; the self-service keys stand outside the master. */
 export function TicketPermissionTree({
     draft,
     setDraft,
@@ -109,125 +98,110 @@ export function TicketPermissionTree({
     const gatedActive = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
     const activeCount = gatedActive + standaloneActive;
     const totalCount = GATED_KEYS.length + 1 + STANDALONE.children.length + 1; // + create + its children + my
+    const view = (key: string) => ({
+        pkey: key,
+        label: label(key, lang),
+        info: info(key, lang),
+        on: has(key) && masterOn,
+        locked: isSuper || !masterOn,
+        onToggle: () => toggle(key),
+    });
 
     return (
-        <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="tickets" on={activeCount} total={totalCount} lang={lang} />
-
-            <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
-                <div className="min-w-0">
-                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
-                </div>
-                <div className="ml-auto">
-                    <PermissionSwitch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
-                </div>
-            </div>
-
-            <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
-                {GROUPS.map((group) => {
-                    const viewOn = has(group.view) && masterOn;
-                    const viewInfo = info(group.view, lang);
-                    return (
-                        <div key={group.view} className="py-0.5">
-                            <div className="flex min-h-[34px] items-center gap-2">
-                                <span className="flex items-center gap-1 text-sm font-medium">
-                                    {label(group.view, lang)}
-                                    {viewInfo && <InfoHint text={viewInfo} />}
-                                </span>
-                                <span className="ml-auto flex items-center gap-2">
-                                    {group.chip !== false && (
-                                        <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                            {translate(lang, 'perm_ui_view')}
-                                        </span>
-                                    )}
-                                    <PermissionSwitch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
-                                </span>
-                            </div>
-                            {group.children.length > 0 && (
-                                <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                                    {group.children.map((child) => {
-                                        const childInfo = info(child, lang);
-                                        return (
-                                            <div key={child} className="flex min-h-[30px] items-center gap-2">
-                                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                                                    {label(child, lang)}
-                                                    {childInfo && <InfoHint text={childInfo} />}
-                                                </span>
-                                                <span className="ml-auto">
-                                                    <PermissionSwitch
-                                                        on={has(child) && viewOn}
-                                                        locked={isSuper || !viewOn}
-                                                        onClick={() => toggle(child)}
-                                                    />
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-
-                {/* Ticket Level cluster — which categories this role may see / take / be alerted about. */}
-                <div className="py-0.5">
-                    <div className="flex min-h-[34px] items-center gap-2">
-                        <span className="flex items-center gap-1 text-sm font-medium">
-                            {translate(lang, 'perm_ui_tickets_level')}
-                            <InfoHint text={translate(lang, 'perm_ui_tickets_level_hint')} />
-                        </span>
-                    </div>
-                    <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                        {LEVELS.map((level) => (
-                            <div key={level} className="flex min-h-[30px] items-center gap-2">
-                                <span className="text-muted-foreground text-[12.5px]">{label(level, lang)}</span>
-                                <span className="ml-auto">
-                                    <PermissionSwitch on={has(level) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(level)} />
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Standalone self-service keys — never locked by the master. */}
-            <div className="border-border border-t px-3.5 py-1.5">
-                <div className="flex min-h-[34px] items-center gap-2">
-                    <div className="min-w-0">
-                        <div className="text-sm font-medium">{label(STANDALONE.view, lang)}</div>
-                        <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_service')}</div>
-                    </div>
-                    <span className="ml-auto">
-                        <PermissionSwitch on={createOn} locked={isSuper} onClick={() => toggle(STANDALONE.view)} />
-                    </span>
-                </div>
-                <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                    {STANDALONE.children.map((child) => {
-                        const childInfo = info(child, lang);
+        <PermissionCard
+            module="tickets"
+            on={activeCount}
+            total={totalCount}
+            lang={lang}
+            keys={[...GATED_KEYS, STANDALONE.view, ...STANDALONE.children, STANDALONE_SOLO]}
+            master={{
+                pkey: MASTER,
+                label: label(MASTER, lang),
+                on: masterOn,
+                locked: isSuper,
+                onToggle: () => toggle(MASTER),
+                rest: GATED_KEYS.length - 1,
+            }}
+        >
+            {masterOn && (
+                <>
+                    <GeneralCell lang={lang} rows={GROUPS.filter((g) => g.children.length === 0).map((g) => ({ key: g.view, ...view(g.view) }))} />
+                    {GROUPS.filter((g) => g.children.length > 0).map((group) => {
+                        const viewOn = has(group.view) && masterOn;
                         return (
-                            <div key={child} className="flex min-h-[30px] items-center gap-2">
-                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                                    {label(child, lang)}
-                                    {childInfo && <InfoHint text={childInfo} />}
-                                </span>
-                                <span className="ml-auto">
-                                    <PermissionSwitch on={has(child) && createOn} locked={isSuper || !createOn} onClick={() => toggle(child)} />
-                                </span>
-                            </div>
+                            <PermissionCell key={group.view}>
+                                <GroupHead chip={group.chip !== false} lang={lang} {...view(group.view)} />
+                                <ChildList>
+                                    {group.children.map((child) => (
+                                        <ChildRow
+                                            key={child}
+                                            pkey={child}
+                                            label={label(child, lang)}
+                                            aria={`${label(group.view, lang)} ${label(child, lang)}`}
+                                            info={info(child, lang)}
+                                            on={has(child) && viewOn}
+                                            locked={isSuper || !viewOn}
+                                            onToggle={() => toggle(child)}
+                                        />
+                                    ))}
+                                </ChildList>
+                            </PermissionCell>
                         );
                     })}
-                </div>
-                <div className="flex min-h-[34px] items-center gap-2">
-                    <span className="flex items-center gap-1 text-sm font-medium">
-                        {label(STANDALONE_SOLO, lang)}
-                        {info(STANDALONE_SOLO, lang) && <InfoHint text={info(STANDALONE_SOLO, lang)} />}
-                    </span>
-                    <span className="ml-auto">
-                        <PermissionSwitch on={has(STANDALONE_SOLO)} locked={isSuper} onClick={() => toggle(STANDALONE_SOLO)} />
-                    </span>
-                </div>
-            </div>
-        </div>
+                    {/* Ticket Level cluster — which categories this role may see / take / be alerted about. */}
+                    <PermissionCell>
+                        <SetHead label={translate(lang, 'perm_ui_tickets_level')} info={translate(lang, 'perm_ui_tickets_level_hint')} />
+                        <ChildList>
+                            {LEVELS.map((level) => (
+                                <ChildRow
+                                    key={level}
+                                    pkey={level}
+                                    label={label(level, lang)}
+                                    on={has(level) && masterOn}
+                                    locked={isSuper || !masterOn}
+                                    onToggle={() => toggle(level)}
+                                />
+                            ))}
+                        </ChildList>
+                    </PermissionCell>
+                </>
+            )}
+
+            {/* Standalone self-service keys — never locked by the master. */}
+            <PermissionCell>
+                <GroupHead
+                    lang={lang}
+                    pkey={STANDALONE.view}
+                    label={label(STANDALONE.view, lang)}
+                    on={createOn}
+                    locked={isSuper}
+                    onToggle={() => toggle(STANDALONE.view)}
+                />
+                <GroupNote>{translate(lang, 'perm_ui_self_service')}</GroupNote>
+                <ChildList>
+                    {STANDALONE.children.map((child) => (
+                        <ChildRow
+                            key={child}
+                            pkey={child}
+                            label={label(child, lang)}
+                            aria={`${label(STANDALONE.view, lang)} ${label(child, lang)}`}
+                            info={info(child, lang)}
+                            on={has(child) && createOn}
+                            locked={isSuper || !createOn}
+                            onToggle={() => toggle(child)}
+                        />
+                    ))}
+                </ChildList>
+                <PlainRow
+                    lang={lang}
+                    pkey={STANDALONE_SOLO}
+                    label={label(STANDALONE_SOLO, lang)}
+                    info={info(STANDALONE_SOLO, lang)}
+                    on={has(STANDALONE_SOLO)}
+                    locked={isSuper}
+                    onToggle={() => toggle(STANDALONE_SOLO)}
+                />
+            </PermissionCell>
+        </PermissionCard>
     );
 }

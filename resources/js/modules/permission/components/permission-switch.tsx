@@ -2,15 +2,16 @@
 import { cn } from '@/shared/lib/utils';
 import { Check, Lock } from 'lucide-react';
 
-export function PermissionSwitch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick: () => void }) {
+export function PermissionSwitch({ label, on, locked, onClick }: { label: string; on: boolean; locked: boolean; onClick: () => void }) {
     return (
         <button
             type="button"
             role="switch"
             aria-checked={on}
+            aria-label={label}
             disabled={locked}
             onClick={onClick}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted')}
+            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted-foreground/75')}
         >
             <span
                 className={cn(

@@ -21,11 +21,7 @@ import {
 } from 'lucide-react';
 import { moduleLabel } from '../lib/permission-labels';
 
-/**
- * The same icon the sidebar gives each module, so a card and the menu entry it governs are
- * recognisably the same thing. Keys match the module ids the matrix renders — the four
- * Administration cards included, which map to sidebar entries rather than permission modules.
- */
+/** The same icon the sidebar gives each module, keyed by the ids the matrix renders. */
 const MODULE_ICON: Record<string, LucideIcon> = {
     dashboard: LayoutDashboard,
     tickets: Wrench,
@@ -43,15 +39,20 @@ const MODULE_ICON: Record<string, LucideIcon> = {
     profile: UserRound,
 };
 
-/**
- * Header strip shared by every permission card: module identity on the left, how many of its
- * keys are granted on the right.
- *
- * The icon stays muted even when the module is granted. The counter already carries that
- * state (it turns brand-coloured above zero), and a second signal for the same fact would
- * make the card louder without saying anything new — the icon is identity, not status.
- */
-export function PermissionCardHeader({ module, on, total, lang }: { module: string; on: number; total: number; lang: Lang }) {
+/** Header strip of every permission card: module identity left, granted count right (orange while unsaved). */
+export function PermissionCardHeader({
+    module,
+    on,
+    total,
+    changed,
+    lang,
+}: {
+    module: string;
+    on: number;
+    total: number;
+    changed?: boolean;
+    lang: Lang;
+}) {
     const Icon = MODULE_ICON[module];
 
     return (
@@ -60,7 +61,12 @@ export function PermissionCardHeader({ module, on, total, lang }: { module: stri
                 {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
                 <span className="truncate">{moduleLabel(module, lang)}</span>
             </span>
-            <span className={cn('shrink-0 text-[10.5px] font-bold', on === 0 ? 'text-muted-foreground' : 'text-brand')}>
+            <span
+                className={cn(
+                    'shrink-0 text-xs font-bold tabular-nums',
+                    changed ? 'text-orange-700 dark:text-orange-400' : on === 0 ? 'text-muted-foreground' : 'text-brand',
+                )}
+            >
                 {formatNumber(on, lang)}/{formatNumber(total, lang)}
             </span>
         </div>

@@ -1,85 +1,11 @@
-import { useT } from '@/lang';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
-import { PermissionCardHeader } from './permission-card-header';
-import { PermissionSwitch } from './permission-switch';
+import { PermissionCard, PermissionCell, PlainRow, spreadRows } from './permission-layout';
 
-/**
- * Master-row behaviour for a card:
- * - `key`: a real permission key gates the card (and the sidebar). Turning it
- *   off clears + locks the remaining (child) keys; turning a child on implies it.
- * - `select-all`: a synthetic bulk toggle (the module has no single gate key —
- *   the sidebar shows when *any* child is on). Children stay independently
- *   editable; the master just flips them all on/off at once.
- */
+/** `key`: one permission key gates the card (cascade); `select-all`: a bulk toggle over independent children. */
 export type ModuleMaster = { mode: 'key'; key: string } | { mode: 'select-all' };
 
-/** Brand-tinted identity band: title + subtitle on the left, master switch on the right. */
-function MasterBand({
-    title,
-    subtitle,
-    on,
-    locked,
-    onToggle,
-}: {
-    title: string;
-    subtitle: string;
-    on: boolean;
-    locked: boolean;
-    onToggle: () => void;
-}) {
-    return (
-        <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
-            <div className="min-w-0">
-                <div className="text-sm font-semibold">{title}</div>
-                <div className="text-muted-foreground text-[10.5px]">{subtitle}</div>
-            </div>
-            <div className="ml-auto">
-                <PermissionSwitch on={on} locked={locked} onClick={onToggle} />
-            </div>
-        </div>
-    );
-}
-
-/** A single permission row (label + optional (i) info + coming-soon tag + switch). */
-function PermissionRow({
-    label,
-    info,
-    comingSoon,
-    on,
-    locked,
-    onToggle,
-}: {
-    label: string;
-    info?: string;
-    comingSoon: boolean;
-    on: boolean;
-    locked: boolean;
-    onToggle: () => void;
-}) {
-    const t = useT();
-    return (
-        <div className="flex min-h-[34px] items-center gap-2 py-0.5">
-            <span className={cn('flex items-center gap-1 text-sm', on ? 'text-foreground font-medium' : 'text-muted-foreground')}>
-                {label}
-                {info && <InfoHint text={info} />}
-                {comingSoon && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
-            </span>
-            <span className="ml-auto">
-                <PermissionSwitch on={on} locked={locked} onClick={onToggle} />
-            </span>
-        </div>
-    );
-}
-
-/**
- * A flat permission card styled to mirror the Stock module card: header strip,
- * a brand-tinted identity band with a master switch, then the permission list.
- * The master switch works in one of two modes (see {@link ModuleMaster}).
- * Super is read-only (live keys shown on + locked).
- */
+/** A flat permission card (Permissions, Settings): master band, then the switches spread over the cells. Super is read-only. */
 export function ModulePermissionCard({
     module,
     keys,
@@ -101,7 +27,6 @@ export function ModulePermissionCard({
     lang: Lang;
 }) {
     const has = (key: string) => isSuper || draft.has(key);
-    const sub = subtitle;
     const label = (key: string) => {
         const [mod, action] = key.split('.');
         return actionLabel(mod, action, lang);
@@ -152,26 +77,45 @@ export function ModulePermissionCard({
         };
 
         return (
-            <div className="border-border rounded-lg border">
-                <PermissionCardHeader module={module} on={activeCount} total={keys.length} lang={lang} />
-                <MasterBand title={label(masterKey)} subtitle={sub} on={masterOn} locked={isSuper} onToggle={toggleMaster} />
-                <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
-                    {children.map((key) => {
-                        const live = isLivePermission(key);
-                        return (
-                            <PermissionRow
-                                key={key}
-                                label={label(key)}
-                                info={desc(key)}
-                                comingSoon={!live}
-                                on={live && masterOn && has(key)}
-                                locked={isSuper || !masterOn || !live}
-                                onToggle={() => toggleChild(key)}
-                            />
-                        );
-                    })}
-                </div>
-            </div>
+            <PermissionCard
+                module={module}
+                on={activeCount}
+                total={keys.length}
+                keys={keys}
+                lang={lang}
+                master={{
+                    pkey: masterKey,
+                    label: label(masterKey),
+                    sub: subtitle,
+                    on: masterOn,
+                    locked: isSuper,
+                    onToggle: toggleMaster,
+                    rest: children.length,
+                }}
+            >
+                {masterOn &&
+                    spreadRows(children).map((cell) => (
+                        <PermissionCell key={cell[0]}>
+                            {cell.map((key) => {
+                                const live = isLivePermission(key);
+                                return (
+                                    <PlainRow
+                                        key={key}
+                                        pkey={key}
+                                        lang={lang}
+                                        dimOff
+                                        label={label(key)}
+                                        info={desc(key)}
+                                        comingSoon={!live}
+                                        on={live && has(key)}
+                                        locked={isSuper || !live}
+                                        onToggle={() => toggleChild(key)}
+                                    />
+                                );
+                            })}
+                        </PermissionCell>
+                    ))}
+            </PermissionCard>
         );
     }
 
@@ -211,25 +155,35 @@ export function ModulePermissionCard({
     };
 
     return (
-        <div className="border-border rounded-lg border">
-            <PermissionCardHeader module={module} on={onCount} total={keys.length} lang={lang} />
-            <MasterBand title={moduleLabel(module, lang)} subtitle={sub} on={allOn} locked={isSuper} onToggle={toggleAll} />
-            <div className="px-3.5 py-1">
-                {keys.map((key) => {
-                    const live = isLivePermission(key);
-                    return (
-                        <PermissionRow
-                            key={key}
-                            label={label(key)}
-                            info={desc(key)}
-                            comingSoon={!live}
-                            on={live && has(key)}
-                            locked={isSuper || !live}
-                            onToggle={() => toggleOne(key)}
-                        />
-                    );
-                })}
-            </div>
-        </div>
+        <PermissionCard
+            module={module}
+            on={onCount}
+            total={keys.length}
+            keys={keys}
+            lang={lang}
+            master={{ label: moduleLabel(module, lang), sub: subtitle, on: allOn, locked: isSuper, onToggle: toggleAll, rest: 0 }}
+        >
+            {spreadRows(keys).map((cell) => (
+                <PermissionCell key={cell[0]}>
+                    {cell.map((key) => {
+                        const live = isLivePermission(key);
+                        return (
+                            <PlainRow
+                                key={key}
+                                pkey={key}
+                                lang={lang}
+                                dimOff
+                                label={label(key)}
+                                info={desc(key)}
+                                comingSoon={!live}
+                                on={live && has(key)}
+                                locked={isSuper || !live}
+                                onToggle={() => toggleOne(key)}
+                            />
+                        );
+                    })}
+                </PermissionCell>
+            ))}
+        </PermissionCard>
     );
 }

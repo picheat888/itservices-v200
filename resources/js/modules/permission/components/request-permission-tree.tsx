@@ -1,10 +1,7 @@
 import { translate } from '@/lang';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
-import { PermissionCardHeader } from './permission-card-header';
-import { PermissionSwitch } from './permission-switch';
+import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, SetHead, WIDE_CHILDREN } from './permission-layout';
 
 // Mirrors App\Support\Permissions::requestHierarchy() — keep in sync.
 const MASTER = 'requests.module';
@@ -111,94 +108,74 @@ export function RequestPermissionTree({
 
     const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
     const totalCount = GATED_KEYS.length;
+    const view = (key: string) => ({
+        pkey: key,
+        label: label(key, lang),
+        info: info(key, lang),
+        on: has(key) && masterOn,
+        locked: isSuper || !masterOn,
+        onToggle: () => toggle(key),
+    });
 
     return (
-        <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="requests" on={activeCount} total={totalCount} lang={lang} />
-
-            <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
-                <div className="min-w-0">
-                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
-                </div>
-                <div className="ml-auto">
-                    <PermissionSwitch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
-                </div>
-            </div>
-
-            <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
-                {GROUPS.map((group) => {
-                    const viewOn = has(group.view) && masterOn;
-                    const viewInfo = info(group.view, lang);
-                    return (
-                        <div key={group.view} className="py-0.5">
-                            <div className="flex min-h-[34px] items-center gap-2">
-                                <span className="flex items-center gap-1 text-sm font-medium">
-                                    {label(group.view, lang)}
-                                    {viewInfo && <InfoHint text={viewInfo} />}
-                                </span>
-                                <span className="ml-auto">
-                                    <PermissionSwitch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
-                                </span>
-                            </div>
-                            {group.children.length > 0 && (
-                                <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                                    {group.cluster && (
-                                        <div className="flex min-h-[30px] items-center gap-1 text-[12.5px] font-medium">
-                                            {translate(lang, group.cluster.title)}
-                                            <InfoHint text={translate(lang, group.cluster.hint)} />
-                                        </div>
-                                    )}
-                                    {group.children.map((child) => {
-                                        const childInfo = info(child, lang);
-                                        return (
-                                            <div key={child} className="flex min-h-[30px] items-center gap-2">
-                                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                                                    {label(child, lang)}
-                                                    {childInfo && <InfoHint text={childInfo} />}
-                                                </span>
-                                                <span className="ml-auto">
-                                                    <PermissionSwitch
-                                                        on={has(child) && viewOn}
-                                                        locked={isSuper || !viewOn}
-                                                        onClick={() => toggle(child)}
-                                                    />
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-
-                {/* Notification cluster */}
-                <div className="py-0.5">
-                    <div className="flex min-h-[34px] items-center gap-2">
-                        <span className="flex items-center gap-1 text-sm font-medium">
-                            {translate(lang, 'perm_ui_notifications')}
-                            <InfoHint text={translate(lang, 'perm_ui_request_notify_hint')} />
-                        </span>
-                    </div>
-                    <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                        {NOTIFY.map((key) => {
-                            const keyInfo = info(key, lang);
-                            return (
-                                <div key={key} className="flex min-h-[30px] items-center gap-2">
-                                    <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                                        {label(key, lang)}
-                                        {keyInfo && <InfoHint text={keyInfo} />}
-                                    </span>
-                                    <span className="ml-auto">
-                                        <PermissionSwitch on={has(key) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(key)} />
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-        </div>
+        <PermissionCard
+            module="requests"
+            on={activeCount}
+            total={totalCount}
+            lang={lang}
+            keys={GATED_KEYS}
+            master={{ pkey: MASTER, label: label(MASTER, lang), on: masterOn, locked: isSuper, onToggle: () => toggle(MASTER), rest: totalCount - 1 }}
+        >
+            {masterOn && (
+                <>
+                    <GeneralCell lang={lang} rows={GROUPS.filter((g) => g.children.length === 0).map((g) => ({ key: g.view, ...view(g.view) }))} />
+                    {GROUPS.filter((g) => g.children.length > 0).map((group) => {
+                        const viewOn = has(group.view) && masterOn;
+                        const wide = group.children.length > WIDE_CHILDREN;
+                        return (
+                            <PermissionCell key={group.view} wide={wide}>
+                                <GroupHead lang={lang} {...view(group.view)} />
+                                <ChildList
+                                    wide={wide}
+                                    cluster={
+                                        group.cluster && { label: translate(lang, group.cluster.title), info: translate(lang, group.cluster.hint) }
+                                    }
+                                >
+                                    {group.children.map((child) => (
+                                        <ChildRow
+                                            key={child}
+                                            pkey={child}
+                                            label={label(child, lang)}
+                                            aria={`${label(group.view, lang)} ${label(child, lang)}`}
+                                            info={info(child, lang)}
+                                            on={has(child) && viewOn}
+                                            locked={isSuper || !viewOn}
+                                            onToggle={() => toggle(child)}
+                                        />
+                                    ))}
+                                </ChildList>
+                            </PermissionCell>
+                        );
+                    })}
+                    {/* Notification cluster */}
+                    <PermissionCell>
+                        <SetHead label={translate(lang, 'perm_ui_notifications')} info={translate(lang, 'perm_ui_request_notify_hint')} />
+                        <ChildList>
+                            {NOTIFY.map((key) => (
+                                <ChildRow
+                                    key={key}
+                                    pkey={key}
+                                    label={label(key, lang)}
+                                    info={info(key, lang)}
+                                    on={has(key) && masterOn}
+                                    locked={isSuper || !masterOn}
+                                    onToggle={() => toggle(key)}
+                                />
+                            ))}
+                        </ChildList>
+                    </PermissionCell>
+                </>
+            )}
+        </PermissionCard>
     );
 }
