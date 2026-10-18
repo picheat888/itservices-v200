@@ -197,14 +197,21 @@ export function ProductKeySection({
             {enabled && (
                 <>
                     <div className="relative">
+                        {/* type=text + CSS mask: a password field would pull in the user's saved login */}
                         <Input
-                            type={showKey ? 'text' : 'password'}
+                            name="product_key"
                             value={value}
                             onChange={(e) => onChange(e.target.value)}
                             placeholder={t('access_ph_product_key')}
                             aria-label={t('access_key_title')}
                             autoComplete="off"
-                            className="pr-11 tracking-wider"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            data-1p-ignore
+                            data-lpignore="true"
+                            data-bwignore
+                            className={cn('pr-11 tracking-wider', !showKey && value && '[-webkit-text-security:disc]')}
                         />
                         <button
                             type="button"

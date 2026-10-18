@@ -145,7 +145,7 @@ export function PasswordForm({
             }}
         >
             {/* Lets password managers save the new password against this account */}
-            <input type="text" name="username" autoComplete="username" value={user?.username ?? ''} readOnly hidden />
+            <input type="text" name="username" autoComplete="username" value={user?.username || user?.email || ''} readOnly hidden />
             <div className="space-y-3">
                 <FormErrorBanner message={formError} shakeKey={formErrorCount} />
                 {needsCurrent && input('current', t('pwd_current'))}

@@ -36,12 +36,12 @@ class AssetService
     private function assetVars(Asset $asset): array
     {
         return [
-            'asset.code' => (string) $asset->asset_code,
-            'asset.model' => (string) ($asset->model?->name ?? '-'),
+            'asset.code' => e((string) $asset->asset_code),
+            'asset.model' => e((string) ($asset->model?->name ?? '-')),
             // Category from Master Data, stored mixed TH/EN like the rest of it.
-            'asset.type' => (string) ($asset->category?->name ?: '-'),
-            'asset.tag' => (string) ($asset->tag ?: '-'),
-            'reference.id' => (string) $asset->asset_code,
+            'asset.type' => e((string) ($asset->category?->name ?: '-')),
+            'asset.tag' => e((string) ($asset->tag ?: '-')),
+            'reference.id' => e((string) $asset->asset_code),
         ];
     }
 
@@ -112,7 +112,7 @@ class AssetService
             $this->email->sendTemplate(
                 $templateKey,
                 $recipient->email,
-                $vars + ['user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there'],
+                $vars + ['user.first_name' => e(strtok((string) $recipient->name, ' ') ?: 'there')],
                 url('/').$path,
                 $actionLabel,
                 $recipient->name,
@@ -320,7 +320,7 @@ class AssetService
         if ($user) {
             $user->notify(new AssetAssignedNotification($asset, $from));
             $this->emailEach([$user], 'asset.assigned', $this->assetVars($asset) + [
-                'asset.from' => (string) ($fromLabel ?: $from ?: '-'),
+                'asset.from' => e((string) ($fromLabel ?: $from ?: '-')),
             ], '/?dialog=profile&section=assets', 'Accept the hand-over');
         }
     }
@@ -366,7 +366,7 @@ class AssetService
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AssetReturnRequestedNotification($asset, $holder));
             $this->emailEach($recipients, 'asset.return_requested', $this->assetVars($asset) + [
-                'asset.holder' => (string) ($holderLabel ?: '-'),
+                'asset.holder' => e((string) ($holderLabel ?: '-')),
             ], '/assets', 'Receive it back');
         }
 
@@ -407,8 +407,8 @@ class AssetService
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AssetOffboardingNotification($employee, $assets->count()));
             $this->emailEach($recipients, 'asset.offboarding', [
-                'employee.name' => (string) $employee->name,
-                'employee.code' => (string) $employee->code,
+                'employee.name' => e((string) $employee->name),
+                'employee.code' => e((string) $employee->code),
                 // Set by resign() before this runs, so the mail can state it. Nullable:
                 // a resignation may be recorded without a last day agreed yet.
                 'employee.last_working' => DateDisplay::emailDate($employee->last_day),

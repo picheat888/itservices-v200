@@ -66,7 +66,7 @@ class TicketDigestService
             $working = $mine->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::working(), true));
 
             $this->email->sendTemplate('ticket.weekly_digest', $user->email, [
-                'user.first_name' => strtok((string) $user->name, ' '),
+                'user.first_name' => e(strtok((string) $user->name, ' ')),
                 'digest.open_count' => number_format($open->count()),
                 'digest.open_table' => $this->openTable($open),
                 'digest.working_count' => number_format($working->count()),

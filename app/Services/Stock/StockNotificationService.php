@@ -124,7 +124,7 @@ class StockNotificationService
     {
         foreach ($recipients as $recipient) {
             $this->email->sendTemplate($templateKey, $recipient->email, $vars + [
-                'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
+                'user.first_name' => e(explode(' ', (string) $recipient->name)[0] ?: 'there'),
             ], $actionUrl, $actionLabel, $recipient->name);
         }
     }
@@ -160,7 +160,7 @@ class StockNotificationService
         Notification::send($owner, new StockRequestNotification($request, $outcome));
 
         $this->email->sendTemplate("stock.request_{$outcome}", $owner->email, $this->requestVars($request) + [
-            'user.first_name' => explode(' ', (string) $owner->name)[0] ?: 'there',
+            'user.first_name' => e(explode(' ', (string) $owner->name)[0] ?: 'there'),
         ], $this->stockUrl('requests'), 'View my request', $owner->name);
     }
 
@@ -177,18 +177,18 @@ class StockNotificationService
             // alerts above. Worth knowing before writing {{stock.qty}} into a request mail
             // next to {{stock.min}}, where it reads as a comparison and is not one.
             'stock.qty' => number_format((float) $request->qty),
-            'stock.request_no' => (string) $request->reference,
-            'stock.request_by' => (string) ($request->requester_name ?: '-'),
+            'stock.request_no' => e((string) $request->reference),
+            'stock.request_by' => e((string) ($request->requester_name ?: '-')),
             // Free text the requester typed, landing in an HTML email: escaped, and its line
             // breaks turned into <br> so a reason written over two lines is not one sentence.
             'stock.request_reason' => filled($request->reason) ? nl2br(e((string) $request->reason)) : '-',
             'stock.request_date' => DateDisplay::emailDate($request->created_at),
             // One name for both outcomes: the column records whoever DECIDED, and the label
             // in each template ("Approved By" / "Rejected By") says which it was.
-            'stock.approver' => (string) ($request->approver_name ?: '-'),
+            'stock.approver' => e((string) ($request->approver_name ?: '-')),
             // Not the same person: approving is a decision, fulfilling is handing the stock
             // over. Null on anything fulfilled before the column existed.
-            'stock.fulfilled_by' => (string) ($request->fulfilled_by ?: '-'),
+            'stock.fulfilled_by' => e((string) ($request->fulfilled_by ?: '-')),
             'stock.fulfilled_date' => DateDisplay::emailDate($request->fulfilled_at),
         ];
     }
@@ -212,8 +212,8 @@ class StockNotificationService
         }
 
         return [
-            'stock.sku' => (string) $item->sku,
-            'stock.name' => (string) $item->name,
+            'stock.sku' => e((string) $item->sku),
+            'stock.name' => e((string) $item->name),
             'stock.min' => number_format((float) $item->min_stock),
             'stock.max' => number_format((float) $item->max_stock),
         ];
