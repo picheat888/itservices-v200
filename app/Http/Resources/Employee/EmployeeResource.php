@@ -10,6 +10,7 @@ use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Pagination\AbstractPaginator;
 
 /** @mixin Employee */
 class EmployeeResource extends JsonResource
@@ -21,7 +22,8 @@ class EmployeeResource extends JsonResource
      */
     public static function collection($resource): AnonymousResourceCollection
     {
-        $employees = collect($resource)->filter(fn (mixed $item) => $item instanceof Employee);
+        $items = $resource instanceof AbstractPaginator ? $resource->getCollection() : $resource;
+        $employees = collect($items)->filter(fn (mixed $item) => $item instanceof Employee);
         $protectedIds = array_flip(SuperAdmins::protectedEmployeeIds($employees->pluck('id')->all()));
         $employees->each(fn (Employee $employee) => $employee->rememberSuperAdmin(isset($protectedIds[$employee->id])));
 
