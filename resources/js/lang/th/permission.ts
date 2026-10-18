@@ -723,6 +723,7 @@ export const permission: Dict = {
     audit_ev_reset_email_template_to_standard: 'รีเซ็ต Template อีเมลเป็นค่ามาตรฐาน',
     audit_ev_updated_bell: 'แก้ไขข้อความแจ้งเตือน',
     audit_ev_reset_bell_to_standard: 'คืนค่าข้อความแจ้งเตือนมาตรฐาน',
+    audit_ev_downloaded_report_export: 'ดาวน์โหลดไฟล์รายงาน',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้',
