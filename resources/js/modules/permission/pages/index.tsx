@@ -91,12 +91,7 @@ const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 // URL keys of the Logs list; cleared when the tab changes.
 const AUDIT_LIST_KEYS = ['search', 'category', 'user', 'page'];
 
-/**
- * The right each tab's own endpoints ask for. The page itself opens on
- * system.manage_permissions, so without this every tab was drawn for anyone who could open
- * it — and one this reader may not use either spun forever (Role Templates) or read as
- * empty and failed to save (Role Groups).
- */
+/** Permission each tab's own endpoints require. */
 const TAB_PERMISSION: Record<Tab, string> = {
     templates: 'system.manage_roles',
     groups: 'system.manage_groups',
@@ -109,10 +104,7 @@ export default function PermissionsPage() {
     const allowed = TABS.filter((id) => can(TAB_PERMISSION[id]));
     const isAllowedTab = (v: string | null): v is Tab => isTab(v) && allowed.includes(v);
 
-    // Active tab lives in the URL and nowhere else — the same as every other page with
-    // sub-tabs, so a reload or a shared link is exact, and each press is a history entry so
-    // Back steps through the tabs pressed (useTabParam). Validated rather than cast: a ?tab=
-    // this page does not have (or this reader may not open) falls back to the first allowed tab.
+    // Active tab in ?tab= (useTabParam); an unknown or forbidden tab falls back to the first allowed one
     const [allowedTab, setTab] = useTabParam(isAllowedTab, allowed[0] ?? 'templates');
     const tab: Tab | null = allowed.length > 0 ? allowedTab : null;
     // The Logs list keys go with the tab; rows-per-page stays.
@@ -159,20 +151,15 @@ export default function PermissionsPage() {
     );
 }
 
-// Groups the permission modules under the same sections as the sidebar nav
-// (Workspace / Administration) so the matrix mirrors the app's mental model.
-// Dashboard (Overview) carries no permissions, so it isn't represented here.
+// Permission modules grouped like the sidebar (Workspace / Administration)
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
     { label: 'nav_overview', icon: LayoutDashboard, modules: ['dashboard'] },
     { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access', 'profile'] },
-    // `workflows` is listed under ADMIN_GROUPS, not here — the sidebar puts the screen
-    // under Administration, and the matrix mirrors the sidebar.
+    // `workflows` sits under ADMIN_GROUPS, as in the sidebar
     { label: 'nav_admin', icon: Shield, modules: ['system'] },
 ];
 
-// Administration is presented as the design's four cards. Permission / Email /
-// Setting reuse the live `system.*` keys (toggleable + persisted); the remaining
-// rows are presentational "coming soon" placeholders for features not yet built.
+// Administration cards: live system.* keys plus "coming soon" placeholders
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     {
         module: 'reports',
@@ -220,9 +207,7 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     },
 ];
 
-// Administration modules rendered with the richer Stock-style card (identity
-// band + master switch). Modules without an entry fall back to the plain list
-// card. `master` controls how the top switch behaves (see ModuleMaster).
+// Administration modules drawn as the Stock-style card with a master switch
 const ADMIN_CARD_META: Record<string, { subtitleKey: string; master: ModuleMaster }> = {
     permissions: {
         subtitleKey: 'perm_ui_permissions_card_sub',
@@ -269,12 +254,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [role?.value, data]);
 
-    /**
-     * Delete a role template, or explain why it cannot be — the API refuses on three
-     * grounds and the page already holds the answer to all three, so asking first turns
-     * "please try again" into what to go and change. Same shape as the department and
-     * position deletes. The API still enforces it; this only reaches the reason sooner.
-     */
+    /** Delete a role template, or say up front why the API would refuse it. */
     const handleDeleteRole = (r: RoleRow) => {
         const blocked = r.is_system
             ? t('role_del_blocked_system')
@@ -314,7 +294,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         return () => onDirtyChange(false);
     }, [dirty, onDirtyChange]);
 
-    // A refused or failed load is said as such — it used to leave the skeleton up for good.
+    // A refused or failed load says so
     if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
 
     if (isLoading || !data || !role)
@@ -340,20 +320,16 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         });
     };
 
-    // Build the section list from the catalog, dropping empty sections and
-    // sweeping any unmapped module into a trailing "Other" section.
+    // Sections from the catalog; unmapped modules go to a trailing "Other"
     const sections = PERM_SECTIONS.map((s) => ({ label: s.label, icon: s.icon, modules: s.modules.filter((m) => data.catalog[m]) })).filter(
         (s) => s.modules.length > 0,
     );
-    // Modules surfaced by the fixed Administration cards (ADMIN_GROUPS) — e.g. the
-    // `settings` catalog module — are already presented under nav_admin, so exclude
-    // them from the trailing "Other" catch-all to avoid a duplicate card.
+    // Modules already in the Administration cards stay out of "Other"
     const knownModules = new Set([...PERM_SECTIONS.flatMap((s) => s.modules), ...ADMIN_GROUPS.map((g) => g.module)]);
     const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
     if (leftover.length > 0) sections.push({ label: 'perm_other', icon: Shield, modules: leftover });
 
-    // A toggle reads "on" only for live permissions the role actually holds
-    // (super holds every live permission). Used for the section/module counts.
+    // "On" = a live permission the role holds (super holds all); feeds the counts
     const isOn = (key: string) => isLivePermission(key) && (role.is_super || draft.has(key));
 
     const keyLabel = (key: string) => {
@@ -871,9 +847,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     {changeEntries.map(([field, { from, to }]) => {
                         const before = resolveAuditValue(field, from, lookups);
                         const after = resolveAuditValue(field, to, lookups);
-                        // An email body is an audited value like any other, and it does not fit on
-                        // a line. Long values stack and wrap in their own scroll box; short ones
-                        // keep the compact old → new row, which is most of this log.
+                        // Long values stack and wrap in a scroll box; short ones keep the old → new row
                         const long = String(before ?? '').length > 80 || String(after ?? '').length > 80;
 
                         return (
@@ -885,8 +859,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                                 <span
                                     className={cn(
                                         'bg-muted text-muted-foreground rounded px-2 py-0.5',
-                                        // Struck-through prose is fine for "Manager → Supervisor"; a struck-through
-                                        // email body is a page of unreadable text. Long values say "before" instead.
+                                        // Long values say "before" instead of being struck through
                                         long ? 'block max-h-32 overflow-auto text-xs break-all whitespace-pre-wrap' : 'line-through',
                                     )}
                                 >
@@ -961,8 +934,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                 </div>
             )}
             <AuditMemberChanges membersAdded={membersAdded} membersRemoved={membersRemoved} roleChanges={details.role_changes ?? []} />
-            {/* The records a bulk action touched. The row above says "5 assets"; this is which
-                five, so the log answers the question without opening five other screens. */}
+            {/* Records a bulk action touched */}
             {(details.items ?? []).length > 0 && (
                 <div>
                     <div className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase">{t('audit_records')}</div>
@@ -1014,17 +986,7 @@ function auditInitials(name: string | null): string {
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
-/**
- * How long ago an entry happened, but only while that is the more useful fact. Past a day it
- * gives the timestamp instead — and the switch is the point.
- *
- * "1d" for everything older than yesterday made whole pages of this log read identically: 16 of
- * the 20 rows on page one said "1d", in no discernible order, and the only way to tell two of
- * them apart was to hover each one. A log is read to reconstruct what happened in what order,
- * so past the recent window the exact time is the answer, not an approximation of it.
- *
- * The absolute form is passed in (system timezone) rather than derived from the browser's zone.
- */
+/** Relative time within a day, then the exact system-timezone time passed in. */
 function auditAgo(iso: string, lang: Lang, absolute: string): string {
     const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
     if (m < 1) return translate(lang, 'perm_ui_just_now');
@@ -1037,8 +999,7 @@ function auditAgo(iso: string, lang: Lang, absolute: string): string {
 /** One-line diff summary shown under the action in the table. */
 function auditDiffSummary(d: AuditDetails | null, fmt: DateFormatter): string | null {
     if (!d) return null;
-    // Clipped hard, because an audited value can be an entire email body. The row is a
-    // summary; the whole value is one click away in the panel below it.
+    // Clipped hard: a value can be a whole email body; the panel shows all of it
     const val = (v: unknown) => {
         if (v === null || v === undefined || v === '') return '—';
         if (isDateString(v)) return storedDateText(v, fmt);
@@ -1055,8 +1016,7 @@ function auditDiffSummary(d: AuditDetails | null, fmt: DateFormatter): string | 
     const removed = d.removed?.length ?? 0;
     if (added || removed) return [added ? `+${added}` : null, removed ? `−${removed}` : null].filter(Boolean).join(' / ');
     if (d.from !== undefined || d.to !== undefined) return `${val(d.from)} → ${val(d.to)}`;
-    // Name the first record and count the rest, so a bulk action says something before it is
-    // expanded — "5 assets" in the target line never said which.
+    // Name the first record and count the rest
     const items = d.items ?? [];
     if (items.length > 0) return items.length > 1 ? `${items[0]}  +${items.length - 1}` : items[0];
     const facts = Object.entries(d.facts ?? {});
@@ -1082,8 +1042,7 @@ function AuditTab() {
     const hasSearchOrFilter = search !== '' || category !== 'all' || user !== 'all';
 
     const { data, isLoading } = useAuditLogs(page, pageSize, filters);
-    // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
-    // header stick while the table fits its width.
+    // Steady pager height while loading; sticky header while the table fits its width
     const tableBoxRef = useRef<HTMLDivElement>(null);
     const heldTableHeight = useHeldHeight(tableBoxRef, isLoading);
     const tableFitsWidth = useTableFitsWidth(tableBoxRef);
@@ -1139,9 +1098,7 @@ function AuditTab() {
         ...users.map((u) => ({ value: u, label: u, search: u })),
     ];
 
-    // Every shape the detail panel can draw. A shape missing from this list is worse than
-    // unsupported: the row renders with no expand affordance at all, so what was recorded is
-    // there in the database and unreachable on screen.
+    // Every shape the detail panel can draw; a shape left out gets no expand control
     const hasDetails = (d: AuditDetails | null): boolean => {
         if (!d) return false;
         return (
@@ -1249,9 +1206,7 @@ function AuditTab() {
                                                     >
                                                         <AIcon className="h-4 w-4" />
                                                     </span>
-                                                    {/* Capped width, not just `truncate`: the table sizes its columns to the
-                                                        widest cell, so one entry carrying an email body stretched this column
-                                                        until User, Target and Time were pushed off the screen entirely. */}
+                                                    {/* Capped width so a long value can't push the other columns off screen */}
                                                     <div className="max-w-[36rem] min-w-0">
                                                         <div className="font-medium">{l.action}</div>
                                                         {summary && <div className="text-muted-foreground truncate text-xs">{summary}</div>}
