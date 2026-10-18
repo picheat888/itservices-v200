@@ -14,24 +14,11 @@ import { useUiStore } from '@/stores/ui';
 import { Loader2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketAssetPicker, useTicketMutations, useTicketRequesterAssets } from '../hooks/use-tickets';
-import { TICKET_PRIORITY_META } from './ticket-meta';
+import { PriorityPicker } from './priority-picker';
 
-const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
+// An IT staff takes an open case: note, related asset, and a priority only on a directly reported case.
 
-/**
- * An IT staff takes an open case: optional note, (for hardware) a related asset, and — only
- * for a case somebody reported directly — a priority.
- *
- * A case opened from an approved request is not given one. Its target was settled by what was
- * asked for, before anybody looked at it, and the endpoint refuses a priority on such a case;
- * offering the control would be offering a choice that cannot be saved.
- */
-/**
- * Categories whose cases are about a physical thing on the asset register, so taking one offers
- * the tag it is about. Not hardware alone: a camera and a desk phone are as much registered
- * equipment as a laptop, and a repair logged against neither is a repair nobody can trace back
- * to the device it was done on.
- */
+// Categories whose cases are about a device on the asset register
 const ASSET_BACKED: TicketCategory[] = ['hardware', 'cctv', 'telephone'];
 
 export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
@@ -39,8 +26,6 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     const lang = useUiStore((s) => s.lang);
     const { take } = useTicketMutations();
     const [priority, setPriority] = useState<TicketPriority>('medium');
-    // null on a case nobody reported directly — see the note on Ticket['from_request'].
-    const fromRequest = !!ticket?.from_request;
     const [note, setNote] = useState('');
     const [assetId, setAssetId] = useState('');
     const [formError, setFormError] = useState('');
@@ -51,11 +36,12 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
         if (ticket) setShown(ticket);
     }, [ticket]);
     const view = ticket ?? shown;
+    // Read from the retained copy so the priority row does not appear while the dialog fades out
+    const fromRequest = !!view?.from_request;
 
     const isAssetBacked = view != null && ASSET_BACKED.includes(view.category);
     const { assets: foundAssets, pickerProps: assetPickerProps } = useTicketAssetPicker(isAssetBacked);
-    // The requester's own devices — offered as one-click chips, and merged to the
-    // top of the search select so a chip-picked asset always renders its label.
+    // The requester's own devices: one-click chips, also first in the select so a chip pick shows its label
     const { data: ownAssets } = useTicketRequesterAssets(isAssetBacked ? view?.id : null);
     const assetOptions = useMemo(() => {
         const own = (ownAssets ?? []).map((a) => ({
@@ -99,16 +85,13 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
         try {
             await take.mutateAsync({
                 id: ticket.id,
-                // Omitted entirely rather than sent as null: the endpoint rejects the key outright
-                // on a request-born case, which is what keeps the rule true for anything posting
-                // at the API and not only for this dialog.
+                // Omitted, not null: the endpoint refuses the key on a request-born case
                 ...(fromRequest ? {} : { priority }),
                 note: note.trim() || null,
                 related_asset_id: assetId ? Number(assetId) : null,
             });
             onClose();
         } catch (e: unknown) {
-            // Two people pressing Take at once is the usual cause — the second one is told the case is gone.
             setFormError(refusalText(e, t, 'ticket_refusal_'));
         }
     };
@@ -119,7 +102,14 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent
+                className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0"
+                // Every field is optional, so don't raise the iPad keyboard on open
+                onOpenAutoFocus={(e) => {
+                    e.preventDefault();
+                    (e.currentTarget as HTMLElement | null)?.focus();
+                }}
+            >
                 <FocusDialogHeader
                     icon={Zap}
                     eyebrow={view?.ticket_no}
@@ -141,23 +131,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
 
                     {!fromRequest && (
                         <Field label={t('ticket_priority')} required>
-                            <div className="flex flex-wrap gap-2">
-                                {PRIORITIES.map((p) => (
-                                    <button
-                                        key={p}
-                                        type="button"
-                                        onClick={() => setPriority(p)}
-                                        className={cn(
-                                            'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                                            priority === p
-                                                ? 'bg-brand text-brand-foreground'
-                                                : 'bg-muted text-muted-foreground hover:text-foreground',
-                                        )}
-                                    >
-                                        {t(TICKET_PRIORITY_META[p].key)}
-                                    </button>
-                                ))}
-                            </div>
+                            <PriorityPicker value={priority} onChange={setPriority} label={t('ticket_priority')} />
                         </Field>
                     )}
 
@@ -179,6 +153,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                                     <button
                                                         key={a.id}
                                                         type="button"
+                                                        aria-pressed={selected}
                                                         onClick={() => setAssetId(selected ? '' : String(a.id))}
                                                         className={cn(
                                                             'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
@@ -209,7 +184,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     )}
 
                     <Field label={t('ticket_initial_notes')}>
-                        <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
+                        <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} />
                     </Field>
                 </div>
 

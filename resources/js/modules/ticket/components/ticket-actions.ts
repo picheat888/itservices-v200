@@ -4,6 +4,8 @@ import type { Ticket } from '@/shared/types';
 export interface TicketActionGates {
     /** tickets.resolve plus the matching Ticket Level. */
     canTake: boolean;
+    /** tickets.resolve — updating and closing your own case */
+    canResolve: boolean;
     /** tickets.assign */
     canAssign: boolean;
     /** tickets.forward */
@@ -22,6 +24,6 @@ export function ticketActionFlags(ticket: Ticket, gates: TicketActionGates) {
     const showTake = isOpenUnassigned && gates.canTake && !isMyOwnRequest;
     const showAssign = isOpenUnassigned && gates.canAssign && !isMyOwnRequest;
     const showForward = isWorking && gates.canForward && (isMine || (gates.canAssign && !isMyOwnRequest));
-    const showWork = isWorking && isMine;
+    const showWork = isWorking && isMine && gates.canResolve;
     return { isMine, isWorking, showTake, showAssign, showForward, showWork, hasDeskActions: showTake || showAssign || showForward || showWork };
 }

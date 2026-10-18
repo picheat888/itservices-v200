@@ -216,14 +216,14 @@ interface ProgressEntry {
     body?: string | null;
 }
 
-/**
- * The whole path of a case in one list: taken → what happened along the way → closed.
- *
- * The two ends are NOT ticket_updates rows. They are the ticket's own responded_at/take_note and
- * resolved_at/resolution, which existed long before the middle did — read from there rather than
- * backfilled as rows, so one fact stays in one place and every case closed before progress notes
- * shipped still reads as a complete story instead of starting halfway through.
- */
+/** Who first held the case: a forward moves the assignee, so the earliest hand-over names them. */
+function firstHolderName(ticket: Ticket, lang: string): string {
+    const firstForward = (ticket.updates ?? []).find((u) => u.kind === 'forwarded');
+    if (firstForward?.meta?.from) return localPair(firstForward.meta.from, firstForward.meta.from_th, lang) ?? firstForward.meta.from;
+    return localPair(ticket.assignee_name, ticket.assignee_name_th, lang) ?? '';
+}
+
+/** The case's path in one list; the two ends come from the ticket itself, the middle from ticket_updates. */
 function progressEntries(ticket: Ticket, t: (key: string) => string, lang: string): ProgressEntry[] {
     const entries: ProgressEntry[] = [];
 
@@ -232,7 +232,7 @@ function progressEntries(ticket: Ticket, t: (key: string) => string, lang: strin
         entries.push({
             key: 'taken',
             kind: 'taken',
-            title: `${t('ticket_taken_by')} ${localPair(ticket.assignee_name, ticket.assignee_name_th, lang) ?? ''}`.trim(),
+            title: `${t('ticket_taken_by')} ${firstHolderName(ticket, lang)}`.trim(),
             when: ticket.responded_at,
             body: ticket.take_note,
         });
@@ -244,15 +244,21 @@ function progressEntries(ticket: Ticket, t: (key: string) => string, lang: strin
                 key: `update-${u.id}`,
                 kind: 'forwarded',
                 title: t('ticket_forwarded_event')
-                    .replace('{from}', u.meta?.from || '—')
-                    .replace('{to}', u.meta?.to || '—'),
+                    .replace('{from}', localPair(u.meta?.from, u.meta?.from_th, lang) || '—')
+                    .replace('{to}', localPair(u.meta?.to, u.meta?.to_th, lang) || '—'),
                 when: u.created_at,
                 // Who moved it, when that was a dispatcher rather than the person it left.
                 body: u.author_name && u.author_name !== u.meta?.from ? t('ticket_forwarded_by').replace('{name}', u.author_name) : null,
             });
             continue;
         }
-        entries.push({ key: `update-${u.id}`, kind: 'note', title: u.author_name, when: u.created_at, body: u.body });
+        entries.push({
+            key: `update-${u.id}`,
+            kind: 'note',
+            title: localPair(u.author_name, u.author_name_th, lang) ?? u.author_name,
+            when: u.created_at,
+            body: u.body,
+        });
     }
 
     if (ticket.resolved_at != null) {
@@ -294,6 +300,7 @@ export function TicketDetailDrawer({
     ticket,
     onClose,
     canTake,
+    canResolve,
     canAssign,
     canForward,
     meId,
@@ -308,16 +315,14 @@ export function TicketDetailDrawer({
 }: {
     ticket: Ticket | null;
     onClose: () => void;
-    /** May take an open case — mirrors the backend gate (tickets.resolve). */
+    /** tickets.resolve plus the case's Ticket Level */
     canTake: boolean;
-    /** May assign a case to another staff member — mirrors the backend gate (tickets.assign). */
+    /** tickets.resolve */
+    canResolve: boolean;
+    /** tickets.assign */
     canAssign: boolean;
-    /** May forward an in-progress case — mirrors the backend gate (tickets.forward). */
+    /** tickets.forward */
     canForward: boolean;
-    /** May classify this case's kind of work — mirrors the backend gate (tickets.set_work_class).
-     *  Combined below with "is the assignee" and "is in progress" — the same three gates the
-     *  server checks, in the same order, because a button that would get a 403 back is a button
-     *  that should never have been drawn. */
     meId: number | undefined;
     /** The viewer's employee id — a case they filed themselves can never be taken by them. */
     meEmployeeId: number | null | undefined;
@@ -354,8 +359,9 @@ export function TicketDetailDrawer({
     if (!view) return null;
 
     const progress = progressEntries(view, t, lang);
-    const { isMine, showTake, showAssign, showForward, showWork, hasDeskActions } = ticketActionFlags(view, {
+    const { showTake, showAssign, showForward, showWork, hasDeskActions } = ticketActionFlags(view, {
         canTake,
+        canResolve,
         canAssign,
         canForward,
         meId,
@@ -370,11 +376,13 @@ export function TicketDetailDrawer({
         <>
             <Dialog open={!!ticket} onOpenChange={(o) => !o && onClose()}>
                 <DialogContent
-                    // Height follows the content (a finished case with no footer no longer
-                    // leaves a large empty band) but is still capped at the shared focus-dialog
-                    // size; the floor only stops a tab switch collapsing the box, and sits low
-                    // enough that a requester's short case is not mostly empty space.
+                    // Height follows the content, capped at the focus-dialog size; the floor stops a tab switch collapsing it
                     className={cn(focusDialogContentClass, 'h-auto max-h-[min(860px,calc(100vh-72px))] min-h-[380px]')}
+                    // Focus the dialog itself so no button opens with a focus ring (and no field raises the iPad keyboard)
+                    onOpenAutoFocus={(e) => {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement | null)?.focus();
+                    }}
                 >
                     {/* ---- header: shared focus-dialog header (icon tile + eyebrow + title + code chip) ---- */}
                     <FocusDialogHeader
@@ -409,23 +417,17 @@ export function TicketDetailDrawer({
                         }
                     />
 
-                    {/* ---- full-width status banner under the header ---- */}
+                    {/* Status banner; its action lives in the footer */}
                     {showTake && (
                         <div className="bg-brand/10 text-brand border-border/60 flex items-center gap-2.5 border-b px-6 py-2 text-[12.5px]">
                             <Zap className="h-3.5 w-3.5 shrink-0" />
                             <span className="flex-1">{t('ticket_unassigned_hint')}</span>
-                            <Button size="sm" className="h-7 px-2.5 text-xs" onClick={() => onTake(view)}>
-                                {t('ticket_take_case')}
-                            </Button>
                         </div>
                     )}
-                    {view.status === 'in_progress' && isMine && (
+                    {showWork && (
                         <div className="border-border/60 flex items-center gap-2.5 border-b bg-violet-500/10 px-6 py-2 text-[12.5px] text-violet-600 dark:text-violet-400">
                             <RefreshCcw className="h-3.5 w-3.5 shrink-0" />
                             <span className="flex-1">{t('ticket_working_hint')}</span>
-                            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={() => onUpdate(view)}>
-                                {t('ticket_update_action')}
-                            </Button>
                         </div>
                     )}
 
@@ -647,7 +649,7 @@ export function TicketDetailDrawer({
                                     index={2}
                                     title={
                                         view.status !== 'open' && wasTaken
-                                            ? `${t('ticket_taken_by')} ${localPair(view.assignee_name, view.assignee_name_th, lang) ?? ''}`
+                                            ? `${t('ticket_taken_by')} ${firstHolderName(view, lang)}`.trim()
                                             : t('ticket_waiting')
                                     }
                                     when={fmtWhen(view.responded_at)}

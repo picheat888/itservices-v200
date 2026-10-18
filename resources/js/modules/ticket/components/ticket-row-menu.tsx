@@ -31,7 +31,7 @@ export function TicketRowMenu({
 }) {
     const t = useT();
     const { showTake, showAssign, showForward, showWork } = ticketActionFlags(ticket, gates);
-    const hasMore = canEdit || showTake || showAssign || showForward || showWork;
+    const hasDeskItems = showTake || showAssign || showForward || showWork;
     return (
         <div onClick={(e) => e.stopPropagation()} className="flex justify-end">
             <DropdownMenu>
@@ -55,7 +55,7 @@ export function TicketRowMenu({
                             {t('edit')}
                         </DropdownMenuItem>
                     )}
-                    {hasMore && <DropdownMenuSeparator />}
+                    {hasDeskItems && <DropdownMenuSeparator />}
                     {showTake && (
                         <DropdownMenuItem onClick={() => onTake(ticket)}>
                             <Zap className="h-4 w-4" />
@@ -82,6 +82,7 @@ export function TicketRowMenu({
                     )}
                     {showWork && (
                         <>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => onResolve(ticket, 'complete')}>
                                 <Check className="h-4 w-4" />
                                 {t('ticket_mark_complete')}

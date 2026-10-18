@@ -5,32 +5,25 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { refusalText } from '@/shared/lib/api-errors';
-import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Check, Info, Loader2, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
-import { TICKET_PRIORITY_META } from './ticket-meta';
+import { PriorityPicker } from './priority-picker';
 
-const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
-
-/**
- * A dispatcher assigns an open case to a chosen IT staff — with a priority, unless the case was
- * opened from an approved request. Such a case already carries its target, the endpoint refuses a
- * priority on it, and offering one would make every assignment of it fail (same rule as Take Case).
- */
+// A dispatcher assigns an open case to another IT staff, with a priority unless it came from a request.
 export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
     const { assign } = useTicketMutations();
-    // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
+    // Retained copy so the content doesn't blank during the exit animation
     const [shown, setShown] = useState<Ticket | null>(null);
     useEffect(() => {
         if (ticket) setShown(ticket);
     }, [ticket]);
     const view = ticket ?? shown;
-    // Only staff whose Ticket Level covers this case's category can receive it.
+    // Only staff whose Ticket Level covers this case's category can receive it
     const { data: staff = [] } = useTicketStaff(!!view, view?.category);
     const { user: me } = useAuth();
     const [assigneeId, setAssigneeId] = useState('');
@@ -38,9 +31,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
     const [formError, setFormError] = useState('');
     const fromRequest = !!view?.from_request;
 
-    // Assign hands a case to someone ELSE — the dispatcher takes via Take Case instead
-    // (the API rejects self-assign too) — and never to the person who filed it, which the
-    // API rejects as well. Offering either is offering a choice that answers 422.
+    // Never yourself (that is Take case) nor the person who filed it; the API refuses both
     const staffOptions = useMemo(
         () =>
             staff
@@ -65,7 +56,6 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
             await assign.mutateAsync({ id: ticket.id, assignee_id: Number(assigneeId), priority: fromRequest ? undefined : priority });
             onClose();
         } catch (e: unknown) {
-            // Most often somebody acted on the case first — say so rather than failing silently.
             setFormError(refusalText(e, t, 'ticket_refusal_'));
         }
     };
@@ -76,7 +66,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0">
                 <FocusDialogHeader
                     icon={UserPlus}
                     eyebrow={view?.ticket_no}
@@ -96,28 +86,12 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                     )}
 
                     <Field label={t('ticket_select_staff')} required>
-                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} />
+                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} preferDown />
                     </Field>
 
                     {!fromRequest && (
                         <Field label={t('ticket_priority')} required>
-                            <div className="flex flex-wrap gap-2">
-                                {PRIORITIES.map((p) => (
-                                    <button
-                                        key={p}
-                                        type="button"
-                                        onClick={() => setPriority(p)}
-                                        className={cn(
-                                            'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                                            priority === p
-                                                ? 'bg-brand text-brand-foreground'
-                                                : 'bg-muted text-muted-foreground hover:text-foreground',
-                                        )}
-                                    >
-                                        {t(TICKET_PRIORITY_META[p].key)}
-                                    </button>
-                                ))}
-                            </div>
+                            <PriorityPicker value={priority} onChange={setPriority} label={t('ticket_priority')} />
                         </Field>
                     )}
 
@@ -127,7 +101,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                     </div>
                 </div>
 
-                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 rounded-b-lg border-t px-6 py-3.5">
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>

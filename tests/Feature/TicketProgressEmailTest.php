@@ -136,6 +136,7 @@ class TicketProgressEmailTest extends TestCase
     {
         Bus::fake();
         $ticket = $this->ticket();
+        $ticket->update(['status' => 'in_progress']);
         $staff = User::factory()->create(['name' => 'Anong Wattana', 'email' => 'anong@inaba.co.th']);
 
         // Nobody held it before, so "Previously:" has nothing to name.

@@ -19,6 +19,7 @@ use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 class TicketService
@@ -121,19 +122,24 @@ class TicketService
      */
     public function take(Ticket $ticket, User $staff, ?TicketPriority $priority, ?string $note, ?int $relatedAssetId): Ticket
     {
-        $respondedAt = $ticket->responded_at ?? now();
+        $this->updateUnlessMoved(
+            $ticket,
+            fn (Ticket $locked): ?string => $locked->status === TicketStatus::Open && $locked->isUnassigned() ? null : 'not_open_for_taking',
+            function (Ticket $locked) use ($staff, $priority, $note, $relatedAssetId): array {
+                $respondedAt = $locked->responded_at ?? now();
 
-        $ticket->update([
-            'assignee_id' => $staff->id,
-            'priority' => $priority,
-            'take_note' => $note,
-            'related_asset_id' => $relatedAssetId,
-            'status' => TicketStatus::InProgress,
-            'responded_at' => $respondedAt,
-            // Taking the case starts the resolution clock and fixes its target — any
-            // alert sent against the provisional deadline no longer applies.
-            ...$this->deadlineOnResponse($ticket, $priority, $respondedAt),
-        ]);
+                return [
+                    'assignee_id' => $staff->id,
+                    'priority' => $priority,
+                    'take_note' => $note,
+                    'related_asset_id' => $relatedAssetId,
+                    'status' => TicketStatus::InProgress,
+                    'responded_at' => $respondedAt,
+                    // Taking the case starts the resolution clock and fixes its target
+                    ...$this->deadlineOnResponse($locked, $priority, $respondedAt),
+                ];
+            },
+        );
 
         // Tell the owner their case is now in someone's hands — by bell and by mail. The
         // requester used to hear nothing between filing and closing: the two mails they got
@@ -154,17 +160,22 @@ class TicketService
      */
     public function assign(Ticket $ticket, User $staff, ?TicketPriority $priority, ?User $assignedBy = null): Ticket
     {
-        $respondedAt = $ticket->responded_at ?? now();
+        $this->updateUnlessMoved(
+            $ticket,
+            fn (Ticket $locked): ?string => $locked->status === TicketStatus::Open ? null : 'not_open',
+            function (Ticket $locked) use ($staff, $priority): array {
+                $respondedAt = $locked->responded_at ?? now();
 
-        $ticket->update([
-            'assignee_id' => $staff->id,
-            'priority' => $priority,
-            'status' => TicketStatus::InProgress,
-            'responded_at' => $respondedAt,
-            // Taking the case starts the resolution clock and fixes its target — any
-            // alert sent against the provisional deadline no longer applies.
-            ...$this->deadlineOnResponse($ticket, $priority, $respondedAt),
-        ]);
+                return [
+                    'assignee_id' => $staff->id,
+                    'priority' => $priority,
+                    'status' => TicketStatus::InProgress,
+                    'responded_at' => $respondedAt,
+                    // Assigning starts the resolution clock and fixes its target
+                    ...$this->deadlineOnResponse($locked, $priority, $respondedAt),
+                ];
+            },
+        );
 
         $staff->notify(new TicketAssignedNotification($ticket->fresh()));
         // The assigned staff also gets the templated email (bell alone is easy to miss).
@@ -191,7 +202,11 @@ class TicketService
     {
         $previous = $ticket->assignee;
         $fromName = $previous?->name;
-        $ticket->update(['assignee_id' => $staff->id]);
+        $this->updateUnlessMoved(
+            $ticket,
+            fn (Ticket $locked): ?string => $this->stillWorkedBy($locked, $ticket->assignee_id),
+            fn (): array => ['assignee_id' => $staff->id],
+        );
 
         // The hand-over goes on the case's own timeline, so whoever opens it later sees who
         // held it before — the audit log was the only trace, and only administrators read it.
@@ -200,7 +215,7 @@ class TicketService
             'author_name' => (string) ($actor?->name ?? $fromName ?? ''),
             'kind' => TicketUpdate::KIND_FORWARDED,
             'body' => '',
-            'meta' => ['from' => $fromName, 'to' => (string) $staff->name],
+            'meta' => ['from' => $fromName, 'from_th' => $previous?->name_th, 'to' => (string) $staff->name, 'to_th' => $staff->name_th],
         ]);
 
         // The technician it was taken from hears where it went — unless they passed it on
@@ -341,16 +356,17 @@ class TicketService
      */
     public function resolve(Ticket $ticket, bool $complete, string $resolution): Ticket
     {
-        $ticket->update([
-            'status' => $complete ? TicketStatus::Completed : TicketStatus::Canceled,
-            'resolution' => $resolution,
-            'resolved_at' => now(),
-        ]);
+        $this->updateUnlessMoved(
+            $ticket,
+            fn (Ticket $locked): ?string => $this->stillWorkedBy($locked, $ticket->assignee_id),
+            fn (): array => [
+                'status' => $complete ? TicketStatus::Completed : TicketStatus::Canceled,
+                'resolution' => $resolution,
+                'resolved_at' => now(),
+            ],
+        );
 
-        // Tell the owner their case is finished, whichever way it ended. A cancellation used
-        // to be bell-only, on the grounds that the reason showed in the drawer — but a case
-        // closed without being fixed is the one outcome the requester most needs told, and
-        // the reason now travels with the mail rather than waiting for them to go looking.
+        // Tell the owner their case is finished, whichever way it ended (with the reason when canceled)
         $ticket = $ticket->fresh();
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket, $complete ? 'resolved' : 'cancelled'));
         $this->email->sendTemplate(
@@ -363,6 +379,34 @@ class TicketService
         );
 
         return $ticket->fresh();
+    }
+
+    /**
+     * Re-reads the case under a row lock and writes $changes only when $refusalFor finds nothing
+     * wrong, so two desk actions racing on one case cannot both succeed.
+     *
+     * @param  callable(Ticket): ?string  $refusalFor
+     * @param  callable(Ticket): array<string, mixed>  $changes
+     */
+    private function updateUnlessMoved(Ticket $ticket, callable $refusalFor, callable $changes): void
+    {
+        DB::transaction(function () use ($ticket, $refusalFor, $changes): void {
+            $locked = Ticket::query()->whereKey($ticket->getKey())->lockForUpdate()->firstOrFail();
+            $refusal = $refusalFor($locked);
+            abort_if($refusal !== null, 422, (string) $refusal);
+            $locked->update($changes($locked));
+        });
+        $ticket->refresh();
+    }
+
+    /** Null while the case is still in progress with the same assignee, else the refusal code. */
+    private function stillWorkedBy(Ticket $locked, ?int $assigneeId): ?string
+    {
+        if (! in_array($locked->status, TicketStatus::working(), true)) {
+            return 'not_in_progress';
+        }
+
+        return $locked->assignee_id === $assigneeId ? null : 'case_moved';
     }
 
     /**

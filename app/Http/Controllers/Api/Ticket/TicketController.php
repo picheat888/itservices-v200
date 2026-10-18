@@ -423,7 +423,7 @@ class TicketController extends Controller
             403,
         );
 
-        return (new TicketResource($ticket->load(['requester', 'assignee.employee', 'relatedAsset', 'attachments', 'updates'])))->response();
+        return (new TicketResource($ticket->load(['requester', 'assignee.employee', 'relatedAsset', 'attachments', 'updates.author.employee'])))->response();
     }
 
     /** An IT staff takes an open, unassigned case for themselves (tickets.resolve). */
@@ -654,7 +654,7 @@ class TicketController extends Controller
             AuditLog::record('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}", subject: $ticket);
         }
 
-        return (new TicketResource($ticket->load(['requester', 'assignee.employee', 'relatedAsset', 'attachments', 'updates'])))
+        return (new TicketResource($ticket->load(['requester', 'assignee.employee', 'relatedAsset', 'attachments', 'updates.author.employee'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 

@@ -549,9 +549,10 @@ export interface Ticket {
 export interface TicketUpdate {
     id: number;
     author_name: string;
+    author_name_th?: string | null;
     /** 'note' = typed by someone; 'forwarded' = the case changed hands (`meta.from` → `meta.to`). */
     kind: 'note' | 'forwarded';
-    meta: { from?: string | null; to?: string | null } | null;
+    meta: { from?: string | null; from_th?: string | null; to?: string | null; to_th?: string | null } | null;
     body: string;
     created_at: string | null;
 }

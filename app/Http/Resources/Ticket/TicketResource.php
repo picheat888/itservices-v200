@@ -118,6 +118,7 @@ class TicketResource extends JsonResource
             'updates' => $this->whenLoaded('updates', fn () => $this->updates->map(fn ($u) => [
                 'id' => $u->id,
                 'author_name' => $u->author_name,
+                'author_name_th' => $u->relationLoaded('author') ? $u->author?->name_th : null,
                 // 'note' (typed) or an event the SPA words itself from `meta` ('forwarded').
                 'kind' => $u->kind ?? 'note',
                 'meta' => $u->meta,
