@@ -110,6 +110,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                         <Field label={t('md_category_name_en')} required error={nameError}>
                             <Input
                                 ref={nameRef}
+                                autoComplete="off"
                                 value={name}
                                 onChange={(e) => {
                                     setName(e.target.value);
@@ -121,14 +122,26 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                             />
                         </Field>
                         <Field label={t('md_category_name_th')}>
-                            <Input value={nameTh} onChange={(e) => setNameTh(e.target.value)} maxLength={120} onKeyDown={onEnter} />
+                            <Input
+                                autoComplete="off"
+                                value={nameTh}
+                                onChange={(e) => setNameTh(e.target.value)}
+                                maxLength={120}
+                                onKeyDown={onEnter}
+                            />
                         </Field>
                     </div>
                     <Field label={t('md_category_icon')} help={t('md_category_icon_help')} controlId="category-icon">
                         <IconPicker id="category-icon" value={icon} onChange={setIcon} placeholder={t('md_category_icon_pick')} />
                     </Field>
                     <Field label={t('md_description')}>
-                        <Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={255} onKeyDown={onEnter} />
+                        <Input
+                            autoComplete="off"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            maxLength={255}
+                            onKeyDown={onEnter}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

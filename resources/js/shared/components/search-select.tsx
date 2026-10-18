@@ -218,6 +218,8 @@ export function SearchSelect({ value, onChange, options, placeholder, className,
                             <Search className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
                             <input
                                 name="search"
+                                autoComplete="off"
+                                spellCheck={false}
                                 ref={searchRef}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}

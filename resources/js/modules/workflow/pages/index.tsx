@@ -148,6 +148,8 @@ export default function WorkflowsPage() {
                             aria-label={searchLabel(t('wf_search_ph'))}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
+                            autoComplete="off"
+                            spellCheck={false}
                         />
                     </div>
                     <p className="text-muted-foreground ml-auto hidden text-xs sm:block">{t('wf_search_hint')}</p>

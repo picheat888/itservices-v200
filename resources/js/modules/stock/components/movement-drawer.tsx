@@ -538,6 +538,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                         type="number"
                                         name="qty"
                                         inputMode="numeric"
+                                        autoComplete="off"
                                         min={1}
                                         max={sourceBalance}
                                         value={qty}
@@ -728,7 +729,15 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     {/* Quantity-only capture — receive/return */}
                     {selected && !isSerial && !isTransfer && !returnIsSerial && (
                         <Field label={isReceive ? t('stock_qty_received') : t('stock_qty')} required>
-                            <Input type="number" name="qty" inputMode="numeric" min={1} value={qty} onChange={(e) => setQty(+e.target.value)} />
+                            <Input
+                                type="number"
+                                name="qty"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                min={1}
+                                value={qty}
+                                onChange={(e) => setQty(+e.target.value)}
+                            />
                         </Field>
                     )}
 
@@ -854,6 +863,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                             type="number"
                                             name="serial_rows"
                                             inputMode="numeric"
+                                            autoComplete="off"
                                             min={1}
                                             value={serials.length}
                                             onChange={(e) => setSerialCount(+e.target.value)}
@@ -999,7 +1009,14 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     )}
 
                     <Field label={t('stock_notes')}>
-                        <Textarea name="notes" rows={2} className="min-h-0" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                        <Textarea
+                            name="notes"
+                            autoComplete="off"
+                            rows={2}
+                            className="min-h-0"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

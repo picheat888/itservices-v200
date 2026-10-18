@@ -81,6 +81,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
                 <Field label={t('loc_name')} required error={nameError}>
                     <Input
                         ref={nameRef}
+                        autoComplete="off"
                         value={name}
                         onChange={(e) => {
                             setName(e.target.value);

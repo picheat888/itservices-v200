@@ -420,6 +420,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                     type="number"
                                                     inputMode="numeric"
                                                     name={`alloc-${b.warehouse}`}
+                                                    autoComplete="off"
                                                     aria-label={b.warehouse}
                                                     min={0}
                                                     max={b.qty}

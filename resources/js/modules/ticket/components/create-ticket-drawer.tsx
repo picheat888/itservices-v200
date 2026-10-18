@@ -205,6 +205,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         }}
                                         disabled={created}
                                         maxLength={200}
+                                        autoComplete="off"
                                         placeholder={t('ticket_subject_ph')}
                                     />
                                 </Field>
@@ -233,6 +234,10 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                             </SectionLabel>
                             <Field label={t('ticket_callback_phone')} required error={errors.phone} help={t('ticket_callback_help')}>
                                 <Input
+                                    type="tel"
+                                    inputMode="tel"
+                                    autoComplete="tel"
+                                    name="callback_phone"
                                     value={phone}
                                     onChange={(e) => {
                                         setPhone(e.target.value);

@@ -111,6 +111,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                     <Field label={t('md_model_name')} required error={nameError}>
                         <Input
                             ref={nameRef}
+                            autoComplete="off"
                             value={name}
                             onChange={(e) => {
                                 setName(e.target.value);

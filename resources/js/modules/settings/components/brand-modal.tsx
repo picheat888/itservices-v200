@@ -91,6 +91,7 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                     <Field label={t('md_brand_name')} required error={nameError}>
                         <Input
                             ref={nameRef}
+                            autoComplete="off"
                             value={name}
                             onChange={(e) => {
                                 setName(e.target.value);
@@ -102,7 +103,13 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                         />
                     </Field>
                     <Field label={t('md_description')}>
-                        <Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={255} onKeyDown={onEnter} />
+                        <Input
+                            autoComplete="off"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            maxLength={255}
+                            onKeyDown={onEnter}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

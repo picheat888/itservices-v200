@@ -304,6 +304,12 @@ export function ScheduleReportDialog({
                             ))}
                             <Input
                                 id={recipientsInputId}
+                                autoComplete="off"
+                                inputMode="email"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                enterKeyHint="enter"
                                 value={draft}
                                 onChange={(e) => {
                                     setDraft(e.target.value);

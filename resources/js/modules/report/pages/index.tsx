@@ -89,6 +89,8 @@ export default function ReportsPage() {
                                         onChange={(e) => setQuery(e.target.value)}
                                         placeholder={t('rep_search_placeholder')}
                                         aria-label={t('rep_search_label')}
+                                        autoComplete="off"
+                                        spellCheck={false}
                                         className="pl-9 text-ellipsis"
                                     />
                                 </div>

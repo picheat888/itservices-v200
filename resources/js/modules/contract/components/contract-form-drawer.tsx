@@ -589,7 +589,15 @@ export function ContractFormDrawer({
                                     {/* Left — contract info */}
                                     <div className="space-y-5">
                                         <Field label={t('contract_code')} help={t('contract_code_hint')} required error={err.code} name="code">
-                                            <Input value={form.code} onChange={(e) => upd('code', e.target.value)} placeholder="CT-2026-001" />
+                                            <Input
+                                                value={form.code}
+                                                onChange={(e) => upd('code', e.target.value)}
+                                                placeholder="CT-2026-001"
+                                                autoComplete="off"
+                                                autoCorrect="off"
+                                                autoCapitalize="none"
+                                                spellCheck={false}
+                                            />
                                         </Field>
 
                                         <Field label={t('contract_details')} required error={err.details} name="details">
@@ -597,6 +605,7 @@ export function ContractFormDrawer({
                                                 value={form.details}
                                                 onChange={(e) => upd('details', e.target.value)}
                                                 placeholder={t('contract_details_ph')}
+                                                autoComplete="off"
                                             />
                                         </Field>
 
@@ -614,6 +623,7 @@ export function ContractFormDrawer({
                                                 value={form.name}
                                                 onChange={(e) => upd('name', e.target.value)}
                                                 placeholder={t('contract_name_ph')}
+                                                autoComplete="off"
                                             />
                                         </Field>
 
@@ -720,6 +730,7 @@ export function ContractFormDrawer({
                                             value={displayMoney(form.value, lang)}
                                             onChange={(e) => upd('value', sanitizeMoney(e.target.value))}
                                             placeholder="0.00"
+                                            autoComplete="off"
                                         />
                                     </Field>
                                     <Field label={t('contract_billing')}>
@@ -753,6 +764,7 @@ export function ContractFormDrawer({
                                                 value={displayMoney(form.total_value, lang)}
                                                 onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
                                                 placeholder="0.00"
+                                                autoComplete="off"
                                             />
                                             {totalValueEstimate != null && (
                                                 <button
@@ -822,6 +834,8 @@ export function ContractFormDrawer({
                                                     onChange={(e) => setAssetSearch(e.target.value)}
                                                     placeholder={t('contract_link_assets_search_ph')}
                                                     aria-label={searchLabel(t('contract_link_assets_search_ph'))}
+                                                    autoComplete="off"
+                                                    spellCheck={false}
                                                     className="border-0 pl-9 text-ellipsis focus-visible:ring-inset"
                                                 />
                                             </div>

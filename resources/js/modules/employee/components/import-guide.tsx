@@ -211,6 +211,8 @@ function ValidValues() {
                         onChange={(e) => setSearch(e.target.value)}
                         aria-label={t('import_values_search')}
                         placeholder={t('search_placeholder_short')}
+                        autoComplete="off"
+                        spellCheck={false}
                         className="h-8 pl-8 text-xs"
                     />
                 </div>

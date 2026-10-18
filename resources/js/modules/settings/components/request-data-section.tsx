@@ -386,6 +386,7 @@ function OptionModal({
                     <Field label={t('rd_label_en')} required error={err} name="label_en">
                         <Input
                             autoFocus
+                            autoComplete="off"
                             value={form.label_en}
                             onChange={(e) => {
                                 setForm((f) => ({ ...f, label_en: e.target.value }));
@@ -397,6 +398,7 @@ function OptionModal({
                     </Field>
                     <Field label={t('rd_label_th')} name="label_th">
                         <Input
+                            autoComplete="off"
                             value={form.label_th}
                             onChange={(e) => setForm((f) => ({ ...f, label_th: e.target.value }))}
                             onKeyDown={submitOnEnter}

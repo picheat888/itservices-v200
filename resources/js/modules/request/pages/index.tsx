@@ -602,6 +602,8 @@ export default function RequestsPage() {
                                     aria-label={searchLabel(t('req_search_ph'))}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
+                                    autoComplete="off"
+                                    spellCheck={false}
                                 />
                             </div>
                             <FilterPopover

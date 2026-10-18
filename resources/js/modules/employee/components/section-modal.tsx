@@ -107,10 +107,16 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                                     autoFocus
                                     aria-required
                                     placeholder={t('section_name_en_ph')}
+                                    autoComplete="off"
                                 />
                             </Field>
                             <Field label={t('section_name_th')}>
-                                <Input value={form.name_th} onChange={(e) => set('name_th', e.target.value)} placeholder={t('section_name_th_ph')} />
+                                <Input
+                                    value={form.name_th}
+                                    onChange={(e) => set('name_th', e.target.value)}
+                                    placeholder={t('section_name_th_ph')}
+                                    autoComplete="off"
+                                />
                             </Field>
                         </div>
                     </div>
