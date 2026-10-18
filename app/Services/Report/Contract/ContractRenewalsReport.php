@@ -506,6 +506,7 @@ class ContractRenewalsReport extends TabularReport
         return [
             [
                 'title' => 'สัญญาที่จะหมดในแต่ละเดือน',
+                'money' => [2],
                 'headings' => ['เดือน', 'จำนวนสัญญา', 'ค่าใช้จ่ายต่อปี'],
                 'rows' => array_map(fn (array $m) => [
                     CellDate::month($m['month']), count($m['items']), round(array_sum(array_column($m['items'], 'yearly')), 2),
@@ -513,11 +514,13 @@ class ContractRenewalsReport extends TabularReport
             ],
             [
                 'title' => 'สัญญาตามเวลาที่เหลือ',
+                'money' => [2],
                 'headings' => ['ช่วง', 'จำนวนสัญญา', 'ค่าใช้จ่ายต่อปี', ...$typeHeadings],
                 'rows' => array_map(fn (array $b) => [self::BAND_TH[$b['key']], $b['total'], $b['yearly'], ...array_values($b['types'])], $breakdown['bands']),
             ],
             [
                 'title' => 'สัญญาที่ปิดไปแล้ว ('.self::CLOSED_TH[$breakdown['closed']['range']].')',
+                'money' => [7],
                 'headings' => ['เลขที่สัญญา', 'ชื่อสัญญา', 'ผู้ขาย', 'ปิดแบบ', 'ปิดเมื่อ', 'วันที่สิ้นสุด', 'เทียบวันสิ้นสุด (วัน)', 'งวดที่ไม่ต้องจ่าย', 'เหตุผล', 'ผู้ยกเลิก'],
                 'rows' => array_map(fn (array $r) => [
                     $r['code'], $r['name'], $r['vendor'] ? ($r['vendor']['name_th'] ?: $r['vendor']['name']) : null,

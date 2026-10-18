@@ -11,9 +11,12 @@
     ]));
     // A section column whose heading says (%) prints its numbers as percents.
     $isPercent = fn (string $heading) => str_contains($heading, '%');
-    $sectionCell = function ($cell, string $heading) use ($num, $isPercent) {
+    $sectionCell = function ($cell, string $heading, bool $money = false) use ($num, $isPercent) {
         if ($cell instanceof \App\Services\Report\Tabular\CellDate) {
             return $cell->display();
+        }
+        if ($money && (is_int($cell) || is_float($cell))) {
+            return number_format($cell, 2);
         }
         if (is_int($cell) || is_float($cell)) {
             // Days left below zero read as overdue, as in the rows ("เลยมา 922 วัน").
@@ -86,9 +89,12 @@
         <div class="muted">{{ $section['empty'] }}</div>
         @continue
     @endif
+    @php
+        $headings = \App\Services\Report\Tabular\TabularReport::sectionHeadings($section);
+    @endphp
     <table class="data">
         <thead><tr>
-            @foreach ($section['headings'] as $i => $heading)
+            @foreach ($headings as $i => $heading)
                 <th class="{{ $i > 0 && collect($section['rows'])->every(fn ($r) => ! isset($r[$i]) || is_int($r[$i]) || is_float($r[$i])) ? 'r' : '' }}">{{ $heading }}</th>
             @endforeach
         </tr></thead>
@@ -96,7 +102,7 @@
         @foreach ($section['rows'] as $cells)
             <tr>
                 @foreach ($cells as $i => $cell)
-                    <td class="{{ is_int($cell) || is_float($cell) ? 'r nw' : '' }}{{ $i === 0 ? ' nw' : '' }}{{ (is_int($cell) || is_float($cell)) && $cell < 0 ? ' late' : '' }}">{{ $sectionCell($cell, $section['headings'][$i] ?? '') }}</td>
+                    <td class="{{ is_int($cell) || is_float($cell) ? 'r nw' : '' }}{{ $i === 0 ? ' nw' : '' }}{{ (is_int($cell) || is_float($cell)) && $cell < 0 ? ' late' : '' }}">{{ $sectionCell($cell, $headings[$i] ?? '', in_array($i, $section['money'] ?? [], true)) }}</td>
                 @endforeach
             </tr>
         @endforeach

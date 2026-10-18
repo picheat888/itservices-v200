@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Report;
 
+use App\Exports\Report\TabularSectionSheet;
 use App\Models\User;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportSummary;
@@ -147,6 +148,7 @@ class PdfNumberFormatTest extends TestCase
             'sections' => [
                 ['title' => 'S', 'headings' => ['เลขที่', 'เหลือ (วัน)', 'ทัน SLA (%)'], 'rows' => [['CT-1', -922, 81]], 'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่'],
                 ['title' => 'ตามคลัง', 'headings' => ['คลัง'], 'rows' => [], 'empty' => 'แยกตามคลังได้เฉพาะวันนี้'],
+                ['title' => 'ค่าเช่า', 'headings' => ['สัญญา', 'ต่อเดือน', 'ต่อปี'], 'rows' => [['CT-2', 4666.67, 392000.0]], 'money' => [1, 2]],
             ],
             'scope' => [['ตัวกรอง', 'ไม่ได้กรอง']], 'rows' => collect([$row]), 'truncated' => false, 'total' => 1,
             'company' => CompanyProfile::get(), 'documentNo' => 'RPT-261018-0042', 'printedBy' => 'Admin', 'printedAt' => '18 ต.ค. 2569 20:34',
@@ -164,6 +166,14 @@ class PdfNumberFormatTest extends TestCase
         $this->assertStringContainsString('1 รายการ', $html);
         $this->assertStringContainsString('ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่', $html);
         $this->assertStringContainsString('แยกตามคลังได้เฉพาะวันนี้', $html);
+        $this->assertStringContainsString('ต่อปี (บาท)', $html);
+        $this->assertStringContainsString('392,000.00', $html);
+        $this->assertStringContainsString('4,666.67', $html);
+
+        // The Excel sheet of the same section: the same headings, baht cells in a 2-decimal format.
+        $sheet = new TabularSectionSheet(['title' => 'ค่าเช่า', 'headings' => ['สัญญา', 'ต่อเดือน', 'ต่อปี'], 'rows' => [['CT-2', 4666.67, 392000.0]], 'money' => [1, 2]]);
+        $this->assertSame(['สัญญา', 'ต่อเดือน (บาท)', 'ต่อปี (บาท)'], $sheet->headings());
+        $this->assertSame([['CT-2', 4666.67, 392000.0]], $sheet->array());
         $this->assertStringContainsString('ผู้ตรวจทาน', $html);
         $this->assertStringContainsString('ผู้อนุมัติ', $html);
     }

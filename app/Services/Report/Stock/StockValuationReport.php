@@ -94,7 +94,7 @@ class StockValuationReport extends TabularReport
             ReportColumn::number('qty_on_hand', 'คงเหลือ', fn (StockItem $i) => $this->qtyAt($i)),
             ...array_values(array_filter($item, fn (ReportColumn $c) => $c->key === 'unit')),
             ReportColumn::money('avg_cost', 'ต้นทุนเฉลี่ย', fn (StockItem $i) => round($this->valueAt($i) / $this->qtyAt($i), 2)),
-            ReportColumn::money('stock_value', 'มูลค่าคงคลัง', fn (StockItem $i) => $this->valueAt($i)),
+            ReportColumn::money('stock_value', 'มูลค่าคงคลัง (FIFO)', fn (StockItem $i) => $this->valueAt($i)),
             ReportColumn::date('last_move', 'เคลื่อนไหวล่าสุดเมื่อ', fn (StockItem $i) => $this->lastMoveAt($i)),
         ];
     }
@@ -236,6 +236,7 @@ class StockValuationReport extends TabularReport
 
         $sections = [[
             'title' => 'มูลค่าตามหมวด',
+            'money' => [3],
             'headings' => ['หมวด', 'จำนวนรายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
             'rows' => array_map(fn (array $c) => [
                 ($c['name_th'] ?: $c['name']) ?? '—', $c['items'], $c['qty'], $c['value'], $categoryShare($c['value']),
@@ -246,6 +247,7 @@ class StockValuationReport extends TabularReport
             $warehouseShare = $shareOf($data['warehouses']);
             $sections[] = [
                 'title' => 'มูลค่าตามคลัง',
+                'money' => [3],
                 'headings' => ['คลัง', 'จำนวนรายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $w) => [
                     $w['name'] ?? self::NO_WAREHOUSE_TH, $w['items'], $w['qty'], $w['value'], $warehouseShare($w['value']),
@@ -254,6 +256,7 @@ class StockValuationReport extends TabularReport
         } else {
             $sections[] = [
                 'title' => 'มูลค่าตามคลัง',
+                'money' => [3],
                 'headings' => ['คลัง', 'จำนวนรายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
                 'rows' => [],
                 'empty' => 'แยกตามคลังได้เฉพาะวันนี้ วันที่ในอดีตมีเฉพาะยอดรวม',
@@ -262,6 +265,7 @@ class StockValuationReport extends TabularReport
 
         $sections[] = [
             'title' => 'ไม่เคลื่อนไหวเกิน 90 วัน',
+            'money' => [5],
             'headings' => ['SKU', 'ชื่อรายการ', 'หมวด', 'คงเหลือ', 'หน่วย', 'มูลค่า', 'เคลื่อนไหวล่าสุดเมื่อ', 'ไม่เคลื่อนไหว (วัน)'],
             'rows' => array_map(fn (array $d) => [
                 $d['sku'], $d['name'], ($d['category_th'] ?: $d['category']) ?? '—', $d['qty'], $d['unit'],

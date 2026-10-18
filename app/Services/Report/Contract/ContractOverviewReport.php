@@ -383,6 +383,7 @@ class ContractOverviewReport extends TabularReport
         return [
             [
                 'title' => 'เงินที่ต้องจ่ายตามรอบบิล',
+                'money' => [1, ...range(3, 2 + count($types))],
                 'headings' => ['เดือน', 'รวม', 'สัญญา', ...array_map(fn (string $type) => self::TYPE_TH[$type], $types)],
                 'rows' => array_map(function (array $m) use ($types) {
                     $items = collect($m['items']);
@@ -397,16 +398,19 @@ class ContractOverviewReport extends TabularReport
             ],
             [
                 'title' => 'ค่าใช้จ่ายต่อปีตามประเภท',
+                'money' => [2],
                 'headings' => ['ประเภท', 'สัญญา', 'ค่าใช้จ่ายต่อปี', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $t) => [self::TYPE_TH[$t['type']], $t['contracts'], $t['yearly'], $share($t['yearly'])], $data['types']),
             ],
             [
                 'title' => 'ตามรอบการเรียกเก็บ',
+                'money' => [2],
                 'headings' => ['รอบการเรียกเก็บ', 'สัญญา', 'ค่าใช้จ่ายต่อปี', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $c) => [self::CYCLE_TH[$c['cycle']], $c['contracts'], $c['yearly'], $share($c['yearly'])], $data['cycles']),
             ],
             [
                 'title' => 'ค่าใช้จ่ายตามผู้ขาย',
+                'money' => [2, 3, 5],
                 'headings' => ['ผู้ขาย', 'สัญญา', 'ค่าใช้จ่ายต่อเดือน', 'ค่าใช้จ่ายต่อปี', 'สัดส่วนต่อปี (%)', 'คงเหลือตามสัญญา', 'หมดใน 90 วัน (สัญญา)'],
                 'rows' => array_map(fn (array $v) => [
                     $v['vendor_id'] === null ? self::NO_VENDOR_TH : ($v['name_th'] ?: $v['name']),
