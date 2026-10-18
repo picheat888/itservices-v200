@@ -1,11 +1,8 @@
 // Report Center permission card: the master, one switch per report domain, then export and schedule.
 import { translate } from '@/lang';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
-import { PermissionCardHeader } from './permission-card-header';
-import { PermissionSwitch } from './permission-switch';
+import { ChildList, ChildRow, PermissionCard, PermissionCell, SetHead, WIDE_CHILDREN } from './permission-layout';
 
 // Mirrors App\Support\Permissions::reportHierarchy()
 const MASTER = 'reports.module';
@@ -23,22 +20,6 @@ const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => g.keys)];
 
 const label = (key: string, lang: Lang) => actionLabel('reports', key.replace('reports.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('reports', key.replace('reports.', ''), lang);
-
-function ChildRow({ keyName, on, locked, lang, onToggle }: { keyName: string; on: boolean; locked: boolean; lang: Lang; onToggle: () => void }) {
-    const hint = info(keyName, lang);
-
-    return (
-        <div className="flex min-h-[30px] items-center gap-2">
-            <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                {label(keyName, lang)}
-                {hint && <InfoHint text={hint} />}
-            </span>
-            <span className="ml-auto">
-                <PermissionSwitch on={on} locked={locked} onClick={onToggle} />
-            </span>
-        </div>
-    );
-}
 
 export function ReportPermissionTree({
     draft,
@@ -77,40 +58,44 @@ export function ReportPermissionTree({
     const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k)).length : 0;
 
     return (
-        <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="reports" on={activeCount} total={GATED_KEYS.length} lang={lang} />
-
-            <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
-                <div className="min-w-0">
-                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
-                </div>
-                <div className="ml-auto">
-                    <PermissionSwitch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
-                </div>
-            </div>
-
-            <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
-                {GROUPS.map((group) => (
-                    <div key={group.id} className="py-0.5">
-                        <div className="flex min-h-[34px] items-center gap-2">
-                            <span className="text-sm font-medium">{translate(lang, group.labelKey)}</span>
-                        </div>
-                        <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                            {group.keys.map((key) => (
-                                <ChildRow
-                                    key={key}
-                                    keyName={key}
-                                    on={has(key) && masterOn}
-                                    locked={isSuper || !masterOn}
-                                    lang={lang}
-                                    onToggle={() => toggle(key)}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+        <PermissionCard
+            module="reports"
+            on={activeCount}
+            total={GATED_KEYS.length}
+            lang={lang}
+            keys={GATED_KEYS}
+            master={{
+                pkey: MASTER,
+                label: label(MASTER, lang),
+                on: masterOn,
+                locked: isSuper,
+                onToggle: () => toggle(MASTER),
+                rest: GATED_KEYS.length - 1,
+            }}
+        >
+            {masterOn &&
+                GROUPS.map((group) => {
+                    const wide = group.keys.length > WIDE_CHILDREN;
+                    return (
+                        <PermissionCell key={group.id} wide={wide}>
+                            <SetHead label={translate(lang, group.labelKey)} />
+                            <ChildList wide={wide}>
+                                {group.keys.map((key) => (
+                                    <ChildRow
+                                        key={key}
+                                        pkey={key}
+                                        label={label(key, lang)}
+                                        aria={`${translate(lang, group.labelKey)} ${label(key, lang)}`}
+                                        info={info(key, lang)}
+                                        on={has(key) && masterOn}
+                                        locked={isSuper || !masterOn}
+                                        onToggle={() => toggle(key)}
+                                    />
+                                ))}
+                            </ChildList>
+                        </PermissionCell>
+                    );
+                })}
+        </PermissionCard>
     );
 }

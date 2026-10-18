@@ -4,7 +4,6 @@ import { useDepartments, useEmployeesByIds, usePositions, useSections } from '@/
 import { PAGE_SIZES } from '@/shared/components/data-table';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
-import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -37,13 +36,16 @@ import {
     ChevronRight,
     Eye,
     LayoutDashboard,
+    Loader2,
     Lock,
     LogIn,
     Pencil,
+    PencilLine,
     Plus,
     Save,
     Search,
     Shield,
+    ShieldCheck,
     Trash2,
     Users,
     X,
@@ -52,12 +54,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { AccessPermissionTree } from '../components/access-permission-tree';
 import { AssetPermissionTree } from '../components/asset-permission-tree';
+import { CenteredAlert } from '../components/centered-alert';
 import { ContractPermissionTree } from '../components/contract-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { GroupRoleModal } from '../components/group-role-modal';
 import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
 import { NotificationPermissionTree } from '../components/notification-permission-tree';
-import { PermissionCardHeader } from '../components/permission-card-header';
+import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, PlainRow, spreadRows } from '../components/permission-layout';
 import { ProfilePermissionTree } from '../components/profile-permission-tree';
 import { ReportPermissionTree } from '../components/report-permission-tree';
 import { RequestPermissionTree } from '../components/request-permission-tree';
@@ -239,6 +242,12 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const [selected, setSelected] = useState<string | null>(null);
     const [draft, setDraft] = useState<Set<string>>(new Set());
     const [roleModal, setRoleModal] = useState<{ open: boolean; role: RoleRow | null }>({ open: false, role: null });
+    const [query, setQuery] = useState('');
+    // Save flow: centred confirm (count frozen at open), ✓ flash, then the saved notice
+    const [saveStep, setSaveStep] = useState<'idle' | 'confirm' | 'saving' | 'done'>('idle');
+    const [pending, setPending] = useState(0);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saved, setSaved] = useState<{ label: string; members: number } | null>(null);
 
     const roles = data?.roles ?? [];
     const role: RoleRow | undefined = roles.find((r) => r.value === selected) ?? roles[0];
@@ -287,13 +296,15 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         void confirm({ variant: 'danger', entity: { name: r.label }, action: () => roleMut.remove.mutateAsync(r.value) });
     };
 
-    const dirty = useMemo(() => {
-        if (!role) return false;
-        const orig = new Set(role.permissions.filter((p) => catalogKeys.has(p)));
-        if (orig.size !== draft.size) return true;
-        for (const p of draft) if (!orig.has(p)) return true;
-        return false;
-    }, [draft, role, catalogKeys]);
+    const original = useMemo(() => new Set(role ? role.permissions.filter((p) => catalogKeys.has(p)) : []), [role, catalogKeys]);
+    // Keys whose saved state differs from the draft; drives the orange labels and the unsaved count.
+    const changedKeys = useMemo(() => {
+        const keys = new Set<string>();
+        for (const p of draft) if (!original.has(p)) keys.add(p);
+        for (const p of original) if (!draft.has(p)) keys.add(p);
+        return keys;
+    }, [draft, original]);
+    const dirty = changedKeys.size > 0;
     const guardRoleSwitch = useDiscardGuard(dirty);
     useEffect(() => {
         onDirtyChange(dirty);
@@ -342,8 +353,116 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     // (super holds every live permission). Used for the section/module counts.
     const isOn = (key: string) => isLivePermission(key) && (role.is_super || draft.has(key));
 
+    const keyLabel = (key: string) => {
+        const [mod, action] = key.split('.');
+        return actionLabel(mod, action, lang);
+    };
+    const q = query.trim().toLowerCase();
+    const matches = (module: string, keys: string[]) =>
+        !q || moduleLabel(module, lang).toLowerCase().includes(q) || keys.some((k) => keyLabel(k).toLowerCase().includes(q));
+    const searchPlaceholder = t('perm_search_ph');
+
+    const sectionViews = sections
+        .map((section) => {
+            // Workspace cards come from the backend catalog; Administration is the fixed card split.
+            const groups =
+                section.label === 'nav_admin'
+                    ? ADMIN_GROUPS
+                    : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
+            return { section, groups, shown: groups.filter((g) => matches(g.module, g.keys)) };
+        })
+        .filter((s) => s.shown.length > 0);
+
+    const openSave = () => {
+        setPending(changedKeys.size);
+        setSaveError(null);
+        setSaveStep('confirm');
+    };
+    const runSave = async () => {
+        setSaveError(null);
+        setSaveStep('saving');
+        try {
+            await update.mutateAsync({ role: role.value, permissions: [...draft] });
+        } catch {
+            setSaveError(t('cd_error'));
+            setSaveStep('confirm');
+            return;
+        }
+        // Same beat as the shared confirm's success check, then the saved notice
+        setSaveStep('done');
+        const savedRole = { label: role.label, members: role.members };
+        setTimeout(() => {
+            setSaveStep('idle');
+            setSaved(savedRole);
+        }, 850);
+    };
+
+    const renderCard = (group: { module: string; keys: string[] }) => {
+        const tree = { draft, setDraft, isSuper: role.is_super, lang };
+        if (group.module === 'stock') return <StockPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'employees') return <EmployeePermissionTree key={group.module} {...tree} />;
+        if (group.module === 'contracts') return <ContractPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'assets') return <AssetPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'profile') return <ProfilePermissionTree key={group.module} keys={group.keys} {...tree} />;
+        if (group.module === 'tickets') return <TicketPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'workflows') return <WorkflowPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'requests') return <RequestPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'notifications') return <NotificationPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'reports') return <ReportPermissionTree key={group.module} {...tree} />;
+        if (group.module === 'access') return <AccessPermissionTree key={group.module} {...tree} />;
+        const cardMeta = ADMIN_CARD_META[group.module];
+        if (cardMeta) {
+            return (
+                <ModulePermissionCard
+                    key={group.module}
+                    module={group.module}
+                    keys={group.keys}
+                    subtitle={translate(lang, cardMeta.subtitleKey)}
+                    master={cardMeta.master}
+                    {...tree}
+                />
+            );
+        }
+        // Plain card (Dashboard): every switch stands alone, spread over the cells
+        return (
+            <PermissionCard
+                key={group.module}
+                module={group.module}
+                on={group.keys.filter(isOn).length}
+                total={group.keys.length}
+                keys={group.keys}
+                lang={lang}
+            >
+                {spreadRows(group.keys).map((cell) => (
+                    <PermissionCell key={cell[0]}>
+                        {cell.map((key) => {
+                            const [mod, action] = key.split('.');
+                            const live = isLivePermission(key);
+                            return (
+                                <PlainRow
+                                    key={key}
+                                    pkey={key}
+                                    lang={lang}
+                                    dimOff
+                                    label={keyLabel(key)}
+                                    info={actionDescription(mod, action, lang)}
+                                    comingSoon={!live}
+                                    on={live && (role.is_super || draft.has(key))}
+                                    locked={role.is_super || !live}
+                                    onToggle={() => {
+                                        if (live) toggle(key);
+                                    }}
+                                />
+                            );
+                        })}
+                    </PermissionCell>
+                ))}
+            </PermissionCard>
+        );
+    };
+
     return (
-        <>
+        <PermissionViewProvider value={{ changed: (key) => changedKeys.has(key), query }}>
             <div className="border-border flex items-center justify-between border-b p-3">
                 <span className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_all_templates')}</span>
                 <Button onClick={() => setRoleModal({ open: true, role: null })}>
@@ -357,24 +476,25 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                     {roles.map((r) => (
                         <div
                             key={r.value}
-                            onClick={() => r.value !== role.value && guardRoleSwitch(() => setSelected(r.value))}
                             className={cn(
-                                'group border-border hover:bg-accent/50 flex cursor-pointer items-center justify-between border-b px-4 py-3.5 transition-colors',
+                                'group border-border hover:bg-accent/50 flex items-center justify-between border-b transition-colors',
                                 r.value === role.value && 'bg-brand/10',
                             )}
                         >
-                            <div className="flex flex-1 items-center gap-2 text-left">
+                            <button
+                                type="button"
+                                aria-current={r.value === role.value ? 'true' : undefined}
+                                onClick={() => r.value !== role.value && guardRoleSwitch(() => setSelected(r.value))}
+                                className="flex min-w-0 flex-1 items-center gap-2 py-3.5 pl-4 text-left"
+                            >
                                 <span className="h-6 w-1.5 shrink-0 rounded" style={{ background: r.color }} />
                                 <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand')}>{r.label}</span>
-                            </div>
+                            </button>
                             {!r.is_system && (
-                                <div className="pointer-events-none flex gap-0.5 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100">
+                                <div className="pointer-events-none flex gap-0.5 pr-4 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100">
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setRoleModal({ open: true, role: r });
-                                        }}
+                                        onClick={() => setRoleModal({ open: true, role: r })}
                                         title={`${t('edit')} ${r.label}`}
                                         aria-label={`${t('edit')} ${r.label}`}
                                         className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
@@ -383,10 +503,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteRole(r);
-                                        }}
+                                        onClick={() => handleDeleteRole(r)}
                                         title={`${t('delete')} ${r.label}`}
                                         aria-label={`${t('delete')} ${r.label}`}
                                         className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
@@ -399,50 +516,54 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                     ))}
                 </div>
 
-                <div className="p-5">
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                        <div>
+                <div className="min-w-0 px-5 pb-5">
+                    {/* Role header: sticks while the cards scroll, so Save is always in reach */}
+                    <div className="bg-card border-border sticky top-[var(--sticky-top,0px)] z-10 mb-4 flex flex-wrap items-center justify-between gap-3 border-b py-4">
+                        <div className="min-w-0">
                             <div className="text-lg font-bold">{role.label}</div>
                             <div className="text-muted-foreground text-xs">
-                                {role.is_super ? t('perm_super_locked') : `${draft.size} ${t('perm_enabled')}`}
+                                {role.is_super ? t('perm_super_locked') : `${fmtN(draft.size)} ${t('perm_enabled')}`}
                             </div>
                         </div>
-                        {/* Stands where the Save button stands on every other role, because
-                            that is where somebody looks to act — and here the answer is that
-                            they cannot. Amber, not red: the role is protected, not wrong. */}
-                        {role.is_super && (
-                            <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-300/70 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
-                                <Lock className="h-3.5 w-3.5 shrink-0" />
-                                {t('perm_super_readonly')}
-                            </span>
-                        )}
-                        {!role.is_super && (
-                            <Button
-                                disabled={!dirty || update.isPending}
-                                onClick={async () => {
-                                    await confirm({
-                                        variant: 'edit',
-                                        title: t('perm_save'),
-                                        entity: { name: role.label },
-                                        action: () => update.mutateAsync({ role: role.value, permissions: [...draft] }),
-                                    });
-                                }}
-                            >
-                                <Save className="h-4 w-4" />
-                                {t('perm_save')}
-                            </Button>
-                        )}
+                        <div className="flex flex-wrap items-end gap-2">
+                            <Input
+                                type="search"
+                                name="perm-search"
+                                autoComplete="off"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder={searchPlaceholder}
+                                aria-label={searchLabel(searchPlaceholder)}
+                                className="w-72 max-w-full text-ellipsis"
+                            />
+                            {/* Amber badge where Save stands: the role is protected, not wrong */}
+                            {role.is_super ? (
+                                <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-amber-300/70 bg-amber-50 px-2.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
+                                    <Lock className="h-3.5 w-3.5 shrink-0" />
+                                    {t('perm_super_readonly')}
+                                </span>
+                            ) : (
+                                <div className="flex flex-col items-end gap-1">
+                                    <span
+                                        role="status"
+                                        aria-live="polite"
+                                        className={cn('text-muted-foreground flex items-center gap-1.5 text-xs leading-4', !dirty && 'invisible')}
+                                    >
+                                        <span className="h-2 w-2 rounded-full bg-orange-600 dark:bg-orange-400" aria-hidden />
+                                        {t('perm_ui_unsaved')} <b className="text-foreground font-semibold tabular-nums">{fmtN(changedKeys.size)}</b>
+                                    </span>
+                                    <Button disabled={!dirty || update.isPending} onClick={openSave}>
+                                        <Save className="h-4 w-4" />
+                                        {t('perm_save')}
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-6">
-                        {sections.map((section) => {
+                        {sectionViews.map(({ section, groups, shown }) => {
                             const SectionIcon = section.icon;
-                            // Workspace cards come from the backend catalog; Administration is
-                            // presented as the design's fixed four-card split.
-                            const groups =
-                                section.label === 'nav_admin'
-                                    ? ADMIN_GROUPS
-                                    : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
                             const sectionActions = groups.flatMap((g) => g.keys);
                             const sectionOn = sectionActions.filter(isOn).length;
                             return (
@@ -450,218 +571,84 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                     <div className="border-border mb-3 flex items-center gap-2 border-b pb-1.5">
                                         <SectionIcon className="text-muted-foreground h-4 w-4" />
                                         <span className="text-foreground text-sm font-bold">{t(section.label)}</span>
-                                        <span className="text-muted-foreground ml-auto text-[11px]">
+                                        <span
+                                            className={cn(
+                                                'text-muted-foreground ml-auto text-xs tabular-nums',
+                                                sectionActions.some((k) => changedKeys.has(k)) && CHANGED_TEXT,
+                                            )}
+                                        >
                                             {fmtN(sectionOn)} / {fmtN(sectionActions.length)}
                                         </span>
                                     </div>
-
-                                    {/* Columns, not a grid, so each card keeps its own height */}
-                                    <div className="columns-1 gap-4 md:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
-                                        {groups.map((group) => {
-                                            if (group.module === 'stock') {
-                                                return (
-                                                    <StockPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'employees') {
-                                                return (
-                                                    <EmployeePermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'contracts') {
-                                                return (
-                                                    <ContractPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'assets') {
-                                                return (
-                                                    <AssetPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'profile') {
-                                                return (
-                                                    <ProfilePermissionTree
-                                                        key={group.module}
-                                                        keys={group.keys}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'tickets') {
-                                                return (
-                                                    <TicketPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'workflows') {
-                                                return (
-                                                    <WorkflowPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'requests') {
-                                                return (
-                                                    <RequestPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'notifications') {
-                                                return (
-                                                    <NotificationPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'reports') {
-                                                return (
-                                                    <ReportPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            if (group.module === 'access') {
-                                                return (
-                                                    <AccessPermissionTree
-                                                        key={group.module}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            const cardMeta = ADMIN_CARD_META[group.module];
-                                            if (cardMeta) {
-                                                return (
-                                                    <ModulePermissionCard
-                                                        key={group.module}
-                                                        module={group.module}
-                                                        keys={group.keys}
-                                                        subtitle={translate(lang, cardMeta.subtitleKey)}
-                                                        master={cardMeta.master}
-                                                        draft={draft}
-                                                        setDraft={setDraft}
-                                                        isSuper={role.is_super}
-                                                        lang={lang}
-                                                    />
-                                                );
-                                            }
-                                            const moduleOn = group.keys.filter(isOn).length;
-                                            return (
-                                                <div key={group.module} className="border-border rounded-lg border">
-                                                    <PermissionCardHeader module={group.module} on={moduleOn} total={group.keys.length} lang={lang} />
-                                                    <div className="space-y-2 p-3.5">
-                                                        {group.keys.map((key) => {
-                                                            const [mod, action] = key.split('.');
-                                                            const live = isLivePermission(key);
-                                                            const info = actionDescription(mod, action, lang);
-                                                            // Coming-soon permissions are shown off and locked — the
-                                                            // feature isn't built yet, so the switch can't be turned on.
-                                                            const on = live && (role.is_super || draft.has(key));
-                                                            const locked = role.is_super || !live;
-                                                            return (
-                                                                <div key={key} className="flex items-center justify-between gap-2">
-                                                                    <span
-                                                                        className={cn(
-                                                                            'flex items-center gap-1 text-sm',
-                                                                            on ? 'text-foreground' : 'text-muted-foreground',
-                                                                        )}
-                                                                    >
-                                                                        {actionLabel(mod, action, lang)}
-                                                                        {info && <InfoHint text={info} />}
-                                                                        {!live && (
-                                                                            <span className="ml-1 text-[11px] italic opacity-70">
-                                                                                ({t('coming_soon_tag')})
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            if (!locked) toggle(key);
-                                                                        }}
-                                                                        disabled={locked}
-                                                                        className={cn(
-                                                                            'relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60',
-                                                                            on ? 'bg-brand' : 'bg-muted',
-                                                                        )}
-                                                                    >
-                                                                        <span
-                                                                            className={cn(
-                                                                                'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                                                                                on ? 'left-[1.125rem]' : 'left-0.5',
-                                                                            )}
-                                                                        >
-                                                                            {on && <Check className="text-brand h-2.5 w-2.5" />}
-                                                                        </span>
-                                                                    </button>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                    {/* Full-width cards; each lays its switches in ruled cells */}
+                                    <div className="space-y-4">{shown.map(renderCard)}</div>
                                 </div>
                             );
                         })}
+                        {sectionViews.length === 0 && (
+                            <p className="text-muted-foreground py-6 text-center text-sm">{t('perm_search_none').replace('{q}', query.trim())}</p>
+                        )}
                     </div>
                 </div>
             </div>
 
             <RoleModal open={roleModal.open} onClose={() => setRoleModal({ open: false, role: null })} role={roleModal.role} />
-        </>
+
+            <CenteredAlert
+                open={saveStep !== 'idle'}
+                icon={PencilLine}
+                title={t('perm_confirm_title')}
+                busy={saveStep === 'saving' || saveStep === 'done'}
+                onClose={() => setSaveStep('idle')}
+                actions={
+                    <>
+                        <Button variant="outline" className="w-full" disabled={saveStep !== 'confirm'} onClick={() => setSaveStep('idle')}>
+                            {t('cancel')}
+                        </Button>
+                        <Button className="w-full font-semibold" disabled={saveStep !== 'confirm'} onClick={runSave}>
+                            {saveStep === 'saving' ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    {t('saving')}
+                                </>
+                            ) : saveStep === 'done' ? (
+                                <>
+                                    <Check className="h-4 w-4" />
+                                    {t('saved')}
+                                </>
+                            ) : (
+                                t('perm_save')
+                            )}
+                        </Button>
+                    </>
+                }
+            >
+                <span className="block">{t('perm_confirm_role').replace('{name}', role.label)}</span>
+                <span className="block">{t('perm_confirm_count').replace('{n}', fmtN(pending))}</span>
+                {saveError && (
+                    <span role="alert" className="text-destructive mt-2 block">
+                        {saveError}
+                    </span>
+                )}
+            </CenteredAlert>
+
+            <CenteredAlert
+                open={saved !== null}
+                icon={ShieldCheck}
+                title={t('perm_saved_title')}
+                onClose={() => setSaved(null)}
+                actions={
+                    <Button className="w-full font-semibold" onClick={() => setSaved(null)}>
+                        {t('perm_ui_ok')}
+                    </Button>
+                }
+            >
+                {saved &&
+                    (saved.members > 0
+                        ? t('perm_saved_desc').replace('{name}', saved.label).replace('{n}', fmtN(saved.members))
+                        : t('perm_saved_desc_none').replace('{name}', saved.label))}
+            </CenteredAlert>
+        </PermissionViewProvider>
     );
 }
 
