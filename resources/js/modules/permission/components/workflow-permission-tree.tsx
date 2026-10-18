@@ -1,15 +1,12 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { WORKFLOW_COUNT, WORKFLOW_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, PermissionCard, PermissionCell, SetHead } from './permission-layout';
 
-// Mirrors App\Support\Permissions::workflowHierarchy() — keep in sync.
-const MASTER = 'workflows.module';
-// The one right, under a heading naming the thing it is done to (no switch on the heading).
-const GROUP = { labelKey: 'perm_ui_group_workflows', keys: ['workflows.manage'] };
+const { master: MASTER, group: GROUP } = WORKFLOW_TREE;
 const GATED_KEYS = [MASTER, ...GROUP.keys];
-export const WORKFLOW_COUNT: CountSpec = { master: MASTER, gated: GROUP.keys };
 
 const label = (key: string, lang: Lang) => actionLabel('workflows', key.replace('workflows.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('workflows', key.replace('workflows.', ''), lang);
@@ -33,19 +30,7 @@ export function WorkflowPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-            } else {
-                next.add(key);
-                next.add(MASTER);
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, WORKFLOW_COUNT));
     };
 
     const activeCount = countGranted(WORKFLOW_COUNT, has).on;

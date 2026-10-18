@@ -1,43 +1,13 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { REQUEST_COUNT, REQUEST_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, SetHead, WIDE_CHILDREN } from './permission-layout';
 
-// Mirrors App\Support\Permissions::requestHierarchy() — keep in sync.
-const MASTER = 'requests.module';
-// Per-type filing keys, shown as a cluster under `submit`.
-const SUBMIT_TYPES = [
-    'requests.submit_computer',
-    'requests.submit_hardware',
-    'requests.submit_mobile',
-    'requests.submit_email',
-    'requests.submit_social',
-    'requests.submit_fileshare',
-    'requests.submit_software',
-    'requests.submit_recovery',
-    'requests.submit_mailgroup',
-    'requests.submit_telephone',
-    'requests.submit_network',
-    'requests.submit_cctv',
-    'requests.submit_other',
-];
-type Group = { view: string; children: string[]; cluster?: { title: string; hint: string }; fillOnGrant?: boolean };
-const GROUPS: Group[] = [
-    {
-        view: 'requests.submit',
-        children: SUBMIT_TYPES,
-        cluster: { title: 'perm_ui_request_types', hint: 'perm_ui_request_types_hint' },
-        fillOnGrant: true,
-    },
-    { view: 'requests.view_all', children: ['requests.cancel_any'] },
-    { view: 'requests.complete', children: [] },
-];
-// Notification keys, gated by the master only.
-const NOTIFY = ['requests.notify_approved', 'requests.notify_stalled'];
+const { master: MASTER, groups: GROUPS, notify: NOTIFY } = REQUEST_TREE;
 // Every gated key under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children]), ...NOTIFY];
-export const REQUEST_COUNT: CountSpec = { master: MASTER, groups: GROUPS, gated: NOTIFY };
 
 const label = (key: string, lang: Lang) => actionLabel('requests', key.replace('requests.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('requests', key.replace('requests.', ''), lang);
@@ -61,39 +31,7 @@ export function RequestPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-                // Last type off switches filing off too
-                const owner = GROUPS.find((g) => g.fillOnGrant && g.children.includes(key));
-                if (owner && !owner.children.some((c) => next.has(c))) {
-                    next.delete(owner.view);
-                }
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                    next.add(MASTER);
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    next.add(MASTER);
-                    if (group.fillOnGrant) {
-                        group.children.forEach((c) => next.add(c));
-                    }
-                }
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, REQUEST_COUNT));
     };
 
     const activeCount = countGranted(REQUEST_COUNT, has).on;

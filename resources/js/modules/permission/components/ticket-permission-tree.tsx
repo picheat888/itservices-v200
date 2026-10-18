@@ -1,31 +1,13 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { TICKET_COUNT, TICKET_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, GroupNote, PermissionCard, PermissionCell, PlainRow, SetHead } from './permission-layout';
 
-// Mirrors App\Support\Permissions::ticketHierarchy() — keep in sync.
-const MASTER = 'tickets.module';
-// Self-service: `create` (+ its child `edit_own`) and `my` survive without the master.
-const STANDALONE = { view: 'tickets.create', children: ['tickets.edit_own'] };
-const STANDALONE_SOLO = 'tickets.my';
-// Ticket Level keys — scope which categories a staff member sees / takes / gets alerts for.
-const LEVELS = [
-    'tickets.level_hardware',
-    'tickets.level_software',
-    'tickets.level_network',
-    'tickets.level_cctv',
-    'tickets.level_telephone',
-    'tickets.level_other',
-];
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'tickets.view_dashboard', children: [], chip: false },
-    { view: 'tickets.view_all', children: ['tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class'] },
-    { view: 'tickets.jobs', children: [], chip: false },
-];
+const { master: MASTER, groups: GROUPS, levels: LEVELS, standalone: STANDALONE, solo: STANDALONE_SOLO } = TICKET_TREE;
 // Every key that lives under the master (excludes the standalone keys).
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children]), ...LEVELS];
-export const TICKET_COUNT: CountSpec = { master: MASTER, groups: GROUPS, gated: LEVELS, standalone: [STANDALONE], free: [STANDALONE_SOLO] };
 
 const label = (key: string, lang: Lang) => actionLabel('tickets', key.replace('tickets.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('tickets', key.replace('tickets.', ''), lang);
@@ -49,38 +31,7 @@ export function TicketPermissionTree({
         if (isSuper) {
             return;
         }
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-                if (key === MASTER) {
-                    GATED_KEYS.forEach((k) => next.delete(k));
-                }
-                const group = GROUPS.find((g) => g.view === key);
-                if (group) {
-                    group.children.forEach((c) => next.delete(c));
-                }
-                // Turning off "Open Ticket" clears its edit child.
-                if (key === STANDALONE.view) {
-                    STANDALONE.children.forEach((c) => next.delete(c));
-                }
-            } else {
-                next.add(key);
-                const parent = GROUPS.find((g) => g.children.includes(key));
-                if (parent) {
-                    next.add(parent.view);
-                    next.add(MASTER);
-                }
-                if (GROUPS.some((g) => g.view === key) || LEVELS.includes(key)) {
-                    next.add(MASTER);
-                }
-                // A standalone child implies its self-service view (not the master).
-                if (STANDALONE.children.includes(key)) {
-                    next.add(STANDALONE.view);
-                }
-            }
-            return next;
-        });
+        setDraft((prev) => cascadeToggle(prev, key, TICKET_COUNT));
     };
 
     const createOn = has(STANDALONE.view);

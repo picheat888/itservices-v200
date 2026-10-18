@@ -1,15 +1,8 @@
 import type { Lang } from '@/shared/types';
-import { countGranted, type CountSpec } from '../lib/permission-count';
+import { cascadeToggle, countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { moduleCardSpec, type ModuleMaster } from '../lib/permission-specs';
 import { PermissionCard, PermissionCell, PlainRow, spreadRows } from './permission-layout';
-
-/** `key`: one permission key gates the card (cascade); `select-all`: a bulk toggle over independent children. */
-export type ModuleMaster = { mode: 'key'; key: string } | { mode: 'select-all' };
-
-/** The card's count spec; only live keys count (see liveHas). */
-export function moduleCardSpec(keys: string[], master: ModuleMaster): CountSpec {
-    return master.mode === 'key' ? { master: master.key, gated: keys.filter((k) => k !== master.key) } : { free: keys };
-}
 
 /** A flat permission card (Permissions, Settings): master band, then the switches spread over the cells. Super is read-only. */
 export function ModulePermissionCard({
@@ -50,37 +43,19 @@ export function ModulePermissionCard({
         const children = keys.filter((k) => k !== masterKey);
         const masterOn = has(masterKey);
 
+        const spec = moduleCardSpec(keys, master);
         const toggleMaster = () => {
             if (isSuper) {
                 return;
             }
-            setDraft((prev) => {
-                const next = new Set(prev);
-                if (next.has(masterKey)) {
-                    // Turning the gate off clears every child it was guarding.
-                    next.delete(masterKey);
-                    children.forEach((c) => next.delete(c));
-                } else {
-                    next.add(masterKey);
-                }
-                return next;
-            });
+            setDraft((prev) => cascadeToggle(prev, masterKey, spec));
         };
 
         const toggleChild = (key: string) => {
             if (isSuper || !masterOn || !isLivePermission(key)) {
                 return;
             }
-            setDraft((prev) => {
-                const next = new Set(prev);
-                if (next.has(key)) {
-                    next.delete(key);
-                } else {
-                    next.add(key);
-                    next.add(masterKey); // a child implies its gate
-                }
-                return next;
-            });
+            setDraft((prev) => cascadeToggle(prev, key, spec));
         };
 
         return (
