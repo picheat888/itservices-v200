@@ -142,12 +142,15 @@ export function ContractFormDrawer({
     editing,
     onClose,
     onCreated,
+    onSaved,
 }: {
     open: boolean;
     editing: Contract | null;
     onClose: () => void;
     /** Called after a new contract is successfully saved — receives the created contract. */
     onCreated?: (contract: Contract) => void;
+    /** Called instead of onClose once an edit is saved. */
+    onSaved?: (contract: Contract) => void;
 }) {
     const fmt = useDateFormat();
     const t = useT();
@@ -158,6 +161,12 @@ export function ContractFormDrawer({
     const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
+    // Kept through the exit animation so the header doesn't flip to "New contract" while closing
+    const [lastEditing, setLastEditing] = useState<Contract | null>(editing);
+    useEffect(() => {
+        if (open) setLastEditing(editing);
+    }, [open, editing]);
+    const shownEditing = open ? editing : lastEditing;
     const [step, setStep] = useState(0);
 
     // Rough auto-estimate of the whole-contract total (value/cycle × billing
@@ -412,7 +421,8 @@ export function ContractFormDrawer({
             if (!editing) onCreated?.(saved as Contract);
             setTimeout(() => {
                 setSaveState('idle');
-                onClose();
+                if (editing && onSaved) onSaved(saved as Contract);
+                else onClose();
             }, 700);
         } catch (e) {
             const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
@@ -470,9 +480,9 @@ export function ContractFormDrawer({
                 {/* Header */}
                 <FocusDialogHeader
                     icon={TypeIcon}
-                    eyebrow={editing ? t('contract_form_edit') : t('contract_form_new')}
-                    title={editing ? t('contract_form_edit') : t('new_contract')}
-                    code={editing ? editing.code : undefined}
+                    eyebrow={shownEditing ? t('contract_form_edit') : t('contract_form_new')}
+                    title={shownEditing ? t('contract_form_edit') : t('new_contract')}
+                    code={shownEditing ? shownEditing.code : undefined}
                     srDescription={t('contract_register_sub')}
                 />
 

@@ -17,6 +17,11 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
     const [error, setError] = useState<string | undefined>();
     const [serverError, setServerError] = useState('');
     const [serverErrorCount, setServerErrorCount] = useState(0);
+    // Kept through the exit animation so the name line doesn't vanish while closing
+    const [shown, setShown] = useState<Contract | null>(contract);
+    useEffect(() => {
+        if (contract) setShown(contract);
+    }, [contract]);
 
     // Reset the field each time a (different) contract opens the dialog.
     useEffect(() => {
@@ -53,10 +58,10 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                         <Ban className="text-destructive h-5 w-5" />
                         {t('contract_cancel_confirm_title')}
                     </DialogTitle>
-                    {contract && (
+                    {shown && (
                         <DialogDescription className="flex flex-wrap gap-x-3">
-                            <span>{contract.name}</span>
-                            <span>{contract.code}</span>
+                            <span>{shown.name}</span>
+                            <span>{shown.code}</span>
                         </DialogDescription>
                     )}
                 </DialogHeader>

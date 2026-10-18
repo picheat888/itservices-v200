@@ -151,7 +151,7 @@ export default function ContractsPage() {
         },
         tab === 'all',
     );
-    // The dialogs live in the URL (?view=<id>, ?edit=1 over it, ?add=1): reloads and shared links reopen them
+    // The dialogs live in the URL (?view=<id>, ?edit=<id>, ?add=1): reloads and shared links reopen them
     const [searchParams, setSearchParams] = useSearchParams();
     const writeDialogs = (change: (p: URLSearchParams) => void) =>
         setSearchParams(
@@ -174,13 +174,17 @@ export default function ContractsPage() {
             }
         });
     const { data: selected, isError: selectedMissing } = useContract(selectedId);
-    // Edit opens over the view of the same contract, from a copy taken on open so a refetch cannot reset the form
-    const editParam = searchParams.get('edit') != null;
+    // The form edits a copy taken on open, so a refetch cannot reset it
+    const editId = toRecordId(searchParams.get('edit'));
+    const { data: editSource, isError: editMissing, isFetching: editFetching } = useContract(editId);
     const [editing, setEditing] = useState<Contract | null>(null);
     useEffect(() => {
-        if (!editParam) setEditing(null);
-        else if (selected && editing?.id !== selected.id) setEditing(selected);
-    }, [editParam, selected, editing?.id]);
+        if (editId == null) setEditing(null);
+        // Seed only from a finished fetch, never from a stale cached copy
+        else if (editSource && !editFetching && editing?.id !== editSource.id) setEditing(editSource);
+    }, [editId, editSource, editFetching, editing?.id]);
+    // A link or reload cannot open a form the menus would not offer
+    const editRefused = editSource != null && (!canEdit || editSource.status === 'cancelled' || editSource.status === 'expired');
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
@@ -222,29 +226,35 @@ export default function ContractsPage() {
             },
         });
 
-    const adding = searchParams.get('add') != null;
+    const adding = searchParams.get('add') != null && canCreate;
     const openCreate = () => writeDialogs((p) => p.set('add', '1'));
     const closeForm = () =>
         writeDialogs((p) => {
             p.delete('add');
             p.delete('edit');
         });
-    // ?view stays, so closing the form returns to the refreshed detail dialog
-    const openEdit = (c: Contract) =>
+    // A new contract switches to the All tab once ?add is gone from this entry, so Back never reopens an empty form
+    const [justCreated, setJustCreated] = useState<Contract | null>(null);
+    useEffect(() => {
+        if (!justCreated || searchParams.get('add') != null) return;
+        setJustCreated(null);
+        showAllWithStatus('');
+        // Pin the new row at the top for 8 seconds
+        if (newlyCreatedTimer.current) clearTimeout(newlyCreatedTimer.current);
+        setNewlyCreated(justCreated);
+        newlyCreatedTimer.current = setTimeout(() => setNewlyCreated(null), 8000);
+    }, [justCreated, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+    // From the row menu the form opens alone; from the detail dialog ?view stays, so cancelling returns there
+    const openEdit = (c: Contract) => writeDialogs((p) => p.set('edit', String(c.id)));
+    // A saved edit always lands on the contract's detail dialog
+    const showSaved = (c: Contract) =>
         writeDialogs((p) => {
+            p.delete('edit');
             p.set('view', String(c.id));
-            p.set('edit', '1');
         });
 
     /** Called by ContractFormDrawer after a new contract is saved. */
-    const handleCreated = (contract: Contract) => {
-        // Switch to the "all" tab (with no status filter) and go to page 1 so the user can see the list.
-        showAllWithStatus('');
-        // Pin the new row at the top for 8 seconds.
-        if (newlyCreatedTimer.current) clearTimeout(newlyCreatedTimer.current);
-        setNewlyCreated(contract);
-        newlyCreatedTimer.current = setTimeout(() => setNewlyCreated(null), 8000);
-    };
+    const handleCreated = (contract: Contract) => setJustCreated(contract);
 
     const maxVendor = summary?.top_vendors?.[0]?.amount ?? 1;
 
@@ -471,7 +481,15 @@ export default function ContractsPage() {
 
             {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
                 render and said nothing. This says it instead. */}
-            <RecordMissingDialog open={selectedMissing} onClose={() => setSelectedId(null)} />
+            <RecordMissingDialog
+                open={selectedMissing || editMissing}
+                onClose={() =>
+                    writeDialogs((p) => {
+                        p.delete('view');
+                        p.delete('edit');
+                    })
+                }
+            />
             <ContractDetailDrawer
                 contract={selected ?? null}
                 onClose={() => setSelectedId(null)}
@@ -483,7 +501,13 @@ export default function ContractsPage() {
                 canDelete={canDelete}
             />
             {rowActions.cancelDialog}
-            <ContractFormDrawer open={adding || editing != null} editing={adding ? null : editing} onClose={closeForm} onCreated={handleCreated} />
+            <ContractFormDrawer
+                open={adding || (editing != null && !editRefused)}
+                editing={adding ? null : editing}
+                onClose={closeForm}
+                onCreated={handleCreated}
+                onSaved={showSaved}
+            />
         </div>
     );
 }
