@@ -159,8 +159,6 @@ class PermissionSecurityTest extends TestCase
         AppSetting::put('default_employee_group_id', (string) $superGroup->id);
         Role::create(['key' => 'user', 'name' => 'User', 'is_system' => false]);
 
-        User::factory()->create(['role' => 'super']);
-
         $employee = Employee::create(['first_name' => 'Olive', 'last_name' => 'Orphan', 'email' => 'olive@inaba.co.th']);
         $member = User::factory()->create(['role' => 'staff', 'employee_id' => $employee->id]);
         $ordinary->employees()->sync([$employee->id]);
@@ -422,5 +420,51 @@ class PermissionSecurityTest extends TestCase
         $this->assertTrue(User::where('employee_id', $newcomer->id)->first()->isSuper());
         $this->assertTrue($admin->fresh()->isSuper());
         $this->assertSame($auditBefore + 1, AuditLog::count());
+    }
+
+    public function test_group_writes_still_work_when_no_super_admin_exists(): void
+    {
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $staff = $this->staffEmployee('Sam', $ordinary);
+
+        $this->actingAs($this->userWith('system.manage_groups'))
+            ->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary Team', 'role' => 'staff', 'employee_ids' => [$staff->id]])
+            ->assertOk();
+
+        $this->assertSame('Ordinary Team', $ordinary->fresh()->name);
+    }
+
+    public function test_last_super_admin_cannot_be_moved_into_a_new_staff_group(): void
+    {
+        $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        [$adminEmployee, $admin] = $this->superAdminEmployee('Ada', $adminGroup);
+        $auditBefore = AuditLog::count();
+
+        $this->actingAs($admin)
+            ->postJson('/api/group-roles', ['name' => 'Staff', 'role' => 'staff', 'employee_ids' => [$adminEmployee->id]])
+            ->assertUnprocessable()
+            ->assertJsonPath('code', 'last_super_admin');
+
+        $this->assertDatabaseMissing('group_roles', ['name' => 'Staff']);
+        $this->assertTrue($this->isMember($adminGroup, $adminEmployee));
+        $this->assertTrue($admin->fresh()->isSuper());
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_non_super_cannot_move_a_super_group_member_who_has_no_login_account(): void
+    {
+        $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        $accountless = Employee::create(['first_name' => 'Nola', 'last_name' => 'Admin', 'email' => 'nola@inaba.co.th']);
+        $adminGroup->employees()->attach($accountless->id);
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $this->actingAs($this->userWith('system.manage_groups'));
+        $auditBefore = AuditLog::count();
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'employee_ids' => [$accountless->id]])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'admin_members_protected');
+
+        $this->assertTrue($this->isMember($adminGroup, $accountless));
+        $this->assertSame($auditBefore, AuditLog::count());
     }
 }
