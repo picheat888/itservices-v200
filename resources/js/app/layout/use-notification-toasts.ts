@@ -15,24 +15,13 @@ import {
     type NotificationTone,
 } from './notification-display';
 
-/** Asset query keys refreshed the instant an asset notification arrives, so the
- *  My Assets list (and the admin lists) update in step with the toast rather than
- *  lagging behind on their own separate poll cycle. */
+/** Asset lists refreshed the moment an asset notification arrives, in step with the toast. */
 const ASSET_QUERY_KEYS = [['assets-mine'], ['assets-list'], SIDEBAR_BADGES_KEY, ['assets-summary']] as const;
 
-/**
- * Notification toasts live as long as the old dedicated toaster gave them: long
- * enough to read a title, a line of detail, and decide whether to tap through.
- * They never sit and wait like an error does — the bell keeps every one of them,
- * so a toast that slips past costs nothing.
- */
+/** Long enough to read a title and a line of detail; the bell keeps every one, so none waits like an error. */
 const NOTIFICATION_LIFE_MS = 6000;
 
-/**
- * The badge colour is the notification's own (a breached SLA is red wherever it
- * appears), so the tone is read back off the icon meta the bell already uses
- * rather than invented here.
- */
+/** The tone follows the notification's own badge colour from the bell's icon meta. */
 function toneFor(tone: NotificationTone): ToastTone {
     if (tone === 'red') return 'error';
     if (tone === 'amber') return 'warning';
@@ -40,13 +29,7 @@ function toneFor(tone: NotificationTone): ToastTone {
     return 'info';
 }
 
-/**
- * Pops a toast whenever a new unread notification arrives during this session
- * (detected from the polling useNotifications query). Call once, inside the app
- * shell — it renders nothing; the toasts go into the app's one toast queue so
- * they share the corner, the three-at-once limit and the countdown behaviour
- * with every other toast instead of stacking a second region on top.
- */
+/** Pops a toast for each new unread notification this session, through the app's one toast queue. Call once in the app shell. */
 export function useNotificationToasts(openChangePassword: () => void): void {
     // Prefers the wording an administrator set on the Bell tab; falls through to the
     // bundled string for every other key, so this still serves the surrounding UI text.
@@ -56,28 +39,13 @@ export function useNotificationToasts(openChangePassword: () => void): void {
     const markRead = useMarkRead();
     const { data } = useNotifications();
     const qc = useQueryClient();
-    // Ids we've already reacted to. Seeded from the first fetch so pre-existing
-    // notifications never pop on page load — only genuinely new ones do.
+    // Ids already reacted to, seeded from the first fetch so nothing pops on page load
     const seen = useRef<Set<string> | null>(null);
 
-    /**
-     * The newest notification that already existed when this session started watching.
-     *
-     * The id set alone was not enough. `/notifications` returns a capped window of the most
-     * recent rows, so dismissing one pulls an older one in from behind it — an id the set has
-     * never seen, on a row that is months old. Dismissing a single alert popped four toasts
-     * for a backlog nobody had asked to hear about again.
-     *
-     * Compared against the server's own timestamps at both ends, so a browser clock that
-     * disagrees with the server cannot make old alerts look new (or hide real ones).
-     * Null means the tray was empty when watching began: there is no backlog to confuse, so
-     * anything that turns up genuinely arrived.
-     */
+    // Newest server timestamp seen at start: older rows pulled into the capped window are backlog, not news (null = tray was empty)
     const watermark = useRef<string | null>(null);
 
-    // The toast callbacks below are created once per arrival but read at click time,
-    // so they go through refs — otherwise a toast that outlives a re-render would
-    // navigate with a stale router.
+    // Read at click time through refs, so a toast that outlives a re-render uses the current router
     const navigateRef = useRef(navigate);
     navigateRef.current = navigate;
     const searchRef = useRef(location.search);
@@ -90,10 +58,7 @@ export function useNotificationToasts(openChangePassword: () => void): void {
     tRef.current = t;
 
     useEffect(() => {
-        // Wait for the first *successful* fetch before seeding. Seeding on the initial
-        // undefined (query still loading) would seed an empty set, and the real payload
-        // arriving next would then look entirely "new" — popping a toast for every
-        // unread notification on each page reload.
+        // Seed only from a successful fetch, or every unread row would look new
         if (!data) return;
         const items = data.data ?? [];
 
@@ -109,31 +74,27 @@ export function useNotificationToasts(openChangePassword: () => void): void {
         const unseen = items.filter((n) => !n.read && !seen.current!.has(n.id));
         if (unseen.length === 0) return;
 
-        // Mark them all seen, including the ones that will not toast: a backlog row that
-        // surfaces once must not be reconsidered every time the list refetches.
+        // Mark all seen, including backlog rows that will not toast
         unseen.forEach((n) => seen.current!.add(n.id));
 
-        // Toast only what was created after watching began. A row without a timestamp is an
-        // older payload shape, and is treated as backlog rather than risking a false alarm.
+        // Toast only rows created after watching began; a row without a timestamp counts as backlog
         const fresh = unseen.filter((n) => watermark.current === null || (n.created_at_iso != null && n.created_at_iso > watermark.current));
         if (fresh.length === 0) return;
 
-        // Oldest first, so a burst reads in the order it happened as slots free up.
+        // Oldest first, so a burst enters in the order it happened
         [...fresh].reverse().forEach((n: AppNotification) => {
             const { Icon, tone } = iconMeta(n);
             const target = notificationTarget(n);
 
             useToastStore.getState().push(notificationMessage(n, tRef.current), toneFor(tone), notificationTitle(n, tRef.current), undefined, {
-                // The notification id, not the text: two alerts can read alike without
-                // being the same alert, and the burst guard must not swallow one.
+                // By id, not text: two alerts can read alike without being the same alert
                 key: `notification:${n.id}`,
                 duration: NOTIFICATION_LIFE_MS,
                 group: target,
                 Icon,
                 onActivate: () => {
                     if (!n.read) markReadRef.current.mutate(n.id);
-                    // Same exception the tray makes: the password warning asks for a
-                    // dialog, not a page (see notifications-dropdown).
+                    // As in the tray, the password warning opens a dialog rather than a page
                     if (n.data.type === 'password_expiring') {
                         openChangePasswordRef.current();
                     } else {
@@ -143,8 +104,7 @@ export function useNotificationToasts(openChangePassword: () => void): void {
             });
         });
 
-        // A fresh asset hand-over / return alert means the asset lists just changed —
-        // refresh them now so they update alongside the toast, not on their own poll.
+        // Asset hand-over / return alerts: refresh the asset lists alongside the toast
         if (fresh.some((n) => n.data.type?.startsWith('asset'))) {
             ASSET_QUERY_KEYS.forEach((queryKey) => qc.invalidateQueries({ queryKey }));
         }
