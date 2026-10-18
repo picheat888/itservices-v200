@@ -1073,4 +1073,40 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame('Clerk', $audit->target);
         $this->assertSame(['added' => ['system.manage_groups'], 'removed' => ['system.view_audit']], $audit->details);
     }
+
+    public function test_role_change_of_an_account_linked_only_by_username_is_audited(): void
+    {
+        $this->roleWith('boss');
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = Employee::create(['first_name' => 'Sam', 'last_name' => 'Staff', 'email' => 'sam@inaba.co.th', 'username' => 'sam']);
+        $samAccount = User::factory()->create(['role' => 'staff', 'username' => 'sam']);
+        $ordinary->employees()->attach($sam->id);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'boss', 'employee_ids' => [$sam->id]])
+            ->assertOk();
+
+        $this->assertNull($samAccount->fresh()->employee_id);
+        $this->assertSame(
+            [['name' => $samAccount->name, 'from' => 'Staff', 'to' => 'Boss']],
+            $this->lastAuditFor('Updated role group')->details['role_changes'],
+        );
+    }
+
+    public function test_removing_a_member_with_no_default_group_audits_the_move_to_user(): void
+    {
+        $this->roleWith('user');
+        $ordinary = GroupRole::create(['name' => 'Ordinary', 'role' => 'staff']);
+        $sam = $this->staffEmployee('Sam', $ordinary);
+        $tom = $this->staffEmployee('Tom', $ordinary);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/group-roles/{$ordinary->id}", ['name' => 'Ordinary', 'role' => 'staff', 'employee_ids' => [$sam->id]])
+            ->assertOk();
+
+        $this->assertNull(GroupRole::defaultForNewEmployees());
+        $details = $this->lastAuditFor('Updated role group')->details;
+        $this->assertSame([$this->memberLabel($tom)], $details['removed']);
+        $this->assertSame([['name' => $this->accountOf($tom)->name, 'from' => 'Staff', 'to' => 'User']], $details['role_changes']);
+    }
 }
