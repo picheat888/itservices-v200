@@ -13,7 +13,7 @@ import { Check, Copy, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RoleRow } from '../api/permissionApi';
 import { useRoleMutations } from '../hooks/use-permissions';
-import { permissionRefusalText } from '../lib/refusal';
+import { permissionRefusalText, refusalCode } from '../lib/refusal';
 
 const DEFAULT_COLOR = DEFAULT_SWATCHES[0].hex;
 
@@ -77,7 +77,9 @@ export function RoleModal({
                 if (createdKey) onDuplicated(createdKey);
             }, 900);
         } catch (error) {
-            useToastStore.getState().push(permissionRefusalText(error, t), 'error');
+            const ceiling = source && refusalCode(error) === 'grant_ceiling';
+            const text = ceiling ? t('perm_duplicate_ceiling').replace('{name}', source.label) : permissionRefusalText(error, t);
+            useToastStore.getState().push(text, 'error');
         } finally {
             submitting.current = false;
         }

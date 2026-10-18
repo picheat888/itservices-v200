@@ -12,8 +12,17 @@ export function refusalKey(code: unknown): string | undefined {
     return typeof code === 'string' && Object.hasOwn(REFUSAL_KEYS, code) ? REFUSAL_KEYS[code] : undefined;
 }
 
+type RefusalBody = { code?: unknown; message?: unknown } | undefined;
+const refusalBody = (error: unknown): RefusalBody => (error as { response?: { data?: RefusalBody } } | undefined)?.response?.data;
+
+/** The server's refusal `code`, when it sent one. */
+export function refusalCode(error: unknown): string | undefined {
+    const code = refusalBody(error)?.code;
+    return typeof code === 'string' ? code : undefined;
+}
+
 export function permissionRefusalText(error: unknown, t: (key: string) => string): string {
-    const body = (error as { response?: { data?: { code?: unknown; message?: unknown } } } | undefined)?.response?.data;
+    const body = refusalBody(error);
     const key = refusalKey(body?.code);
     if (key) return t(key);
     return typeof body?.message === 'string' && body.message !== '' ? body.message : t('cd_error');

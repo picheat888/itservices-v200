@@ -26,6 +26,7 @@ export const permission: Dict = {
     perm_duplicate_name: '{name} (copy)',
     perm_duplicate_note:
         'Copies the {n} saved permissions of {name}, not its members.\nThe new template opens next so you can keep editing its permissions.',
+    perm_duplicate_ceiling: "Can't duplicate {name}. It has permissions you don't have.",
     role_del_blocked_title: 'Cannot delete this template',
     role_del_blocked_ack: 'Got it',
     role_del_blocked_system: 'This is a system template and cannot be deleted.',
