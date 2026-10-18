@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import * as React from 'react';
 
 import { useT } from '@/lang';
+import { useMenuReturnFocus } from '@/shared/hooks/use-menu-return-focus';
 import { cn } from '@/shared/lib/utils';
 
 const Sheet = SheetPrimitive.Root;
@@ -55,18 +56,27 @@ function SheetCloseLabel() {
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-    ({ side = 'right', className, children, ...props }, ref) => (
-        <SheetPortal>
-            <SheetOverlay />
-            <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-                {children}
-                <SheetPrimitive.Close className="ring-offset-background focus-visible:ring-ring data-[state=open]:bg-secondary absolute top-6 right-6 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none">
-                    <X className="h-4 w-4" />
-                    <SheetCloseLabel />
-                </SheetPrimitive.Close>
-            </SheetPrimitive.Content>
-        </SheetPortal>
-    ),
+    ({ side = 'right', className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+        const { handleOpen, handleClose } = useMenuReturnFocus(onOpenAutoFocus, onCloseAutoFocus);
+        return (
+            <SheetPortal>
+                <SheetOverlay />
+                <SheetPrimitive.Content
+                    ref={ref}
+                    className={cn(sheetVariants({ side }), className)}
+                    onOpenAutoFocus={handleOpen}
+                    onCloseAutoFocus={handleClose}
+                    {...props}
+                >
+                    {children}
+                    <SheetPrimitive.Close className="ring-offset-background focus-visible:ring-ring data-[state=open]:bg-secondary absolute top-6 right-6 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none">
+                        <X className="h-4 w-4" />
+                        <SheetCloseLabel />
+                    </SheetPrimitive.Close>
+                </SheetPrimitive.Content>
+            </SheetPortal>
+        );
+    },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 

@@ -4,11 +4,30 @@ import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 import * as React from 'react';
 
+import { markMenuItemPicked, rememberMenuTrigger } from '@/shared/lib/menu-return-focus';
 import { cn } from '@/shared/lib/utils';
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+// Remembers itself so a dialog opened from one of its items can return focus here
+const DropdownMenuTrigger = React.forwardRef<
+    React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+    React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ onPointerDown, onKeyDown, ...props }, ref) => (
+    <DropdownMenuPrimitive.Trigger
+        ref={ref}
+        onPointerDown={(e) => {
+            rememberMenuTrigger(e.currentTarget);
+            onPointerDown?.(e);
+        }}
+        onKeyDown={(e) => {
+            rememberMenuTrigger(e.currentTarget);
+            onKeyDown?.(e);
+        }}
+        {...props}
+    />
+));
+DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName;
 
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 
@@ -77,9 +96,13 @@ const DropdownMenuItem = React.forwardRef<
     React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
         inset?: boolean;
     }
->(({ className, inset, ...props }, ref) => (
+>(({ className, inset, onSelect, ...props }, ref) => (
     <DropdownMenuPrimitive.Item
         ref={ref}
+        onSelect={(e) => {
+            markMenuItemPicked();
+            onSelect?.(e);
+        }}
         className={cn(
             'focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
             inset && 'pl-8',
