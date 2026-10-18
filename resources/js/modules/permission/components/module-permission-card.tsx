@@ -1,9 +1,15 @@
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { PermissionCard, PermissionCell, PlainRow, spreadRows } from './permission-layout';
 
 /** `key`: one permission key gates the card (cascade); `select-all`: a bulk toggle over independent children. */
 export type ModuleMaster = { mode: 'key'; key: string } | { mode: 'select-all' };
+
+/** The card's count spec; only live keys count (see liveHas). */
+export function moduleCardSpec(keys: string[], master: ModuleMaster): CountSpec {
+    return master.mode === 'key' ? { master: master.key, gated: keys.filter((k) => k !== master.key) } : { free: keys };
+}
 
 /** A flat permission card (Permissions, Settings): master band, then the switches spread over the cells. Super is read-only. */
 export function ModulePermissionCard({
@@ -27,6 +33,8 @@ export function ModulePermissionCard({
     lang: Lang;
 }) {
     const has = (key: string) => isSuper || draft.has(key);
+    const liveHas = (key: string) => isLivePermission(key) && has(key);
+    const count = countGranted(moduleCardSpec(keys, master), liveHas).on;
     const label = (key: string) => {
         const [mod, action] = key.split('.');
         return actionLabel(mod, action, lang);
@@ -41,7 +49,6 @@ export function ModulePermissionCard({
         const masterKey = master.key;
         const children = keys.filter((k) => k !== masterKey);
         const masterOn = has(masterKey);
-        const activeCount = masterOn ? keys.filter((k) => isLivePermission(k) && has(k)).length : 0;
 
         const toggleMaster = () => {
             if (isSuper) {
@@ -79,7 +86,7 @@ export function ModulePermissionCard({
         return (
             <PermissionCard
                 module={module}
-                on={activeCount}
+                on={count}
                 total={keys.length}
                 keys={keys}
                 lang={lang}
@@ -122,7 +129,6 @@ export function ModulePermissionCard({
     // ── Select-all mode: synthetic bulk toggle, children stay independent ───────
     const liveKeys = keys.filter((k) => isLivePermission(k));
     const allOn = liveKeys.length > 0 && liveKeys.every((k) => has(k));
-    const onCount = keys.filter((k) => isLivePermission(k) && has(k)).length;
 
     const toggleAll = () => {
         if (isSuper) {
@@ -157,7 +163,7 @@ export function ModulePermissionCard({
     return (
         <PermissionCard
             module={module}
-            on={onCount}
+            on={count}
             total={keys.length}
             keys={keys}
             lang={lang}

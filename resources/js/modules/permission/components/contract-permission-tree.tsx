@@ -1,4 +1,5 @@
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
@@ -13,21 +14,10 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
 ];
 // Every gated key under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+export const CONTRACT_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('contracts', key.replace('contracts.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('contracts', key.replace('contracts.', ''), lang);
-
-/** True when every ancestor (master, and the group view for a child) is on. */
-function hasAncestors(key: string, has: (k: string) => boolean): boolean {
-    if (!has(MASTER)) {
-        return false;
-    }
-    const parent = GROUPS.find((g) => g.children.includes(key));
-    if (parent) {
-        return has(parent.view);
-    }
-    return true;
-}
 
 /** Contracts card: master → group → management, with cascade; super is read-only. */
 export function ContractPermissionTree({
@@ -74,7 +64,7 @@ export function ContractPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = countGranted(CONTRACT_COUNT, has).on;
     const totalCount = GATED_KEYS.length;
     const view = (key: string) => ({
         pkey: key,

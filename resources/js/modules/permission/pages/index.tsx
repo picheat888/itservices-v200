@@ -10,6 +10,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useNavigationGuard } from '@/shared/hooks/use-navigation-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
@@ -17,7 +18,7 @@ import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/d
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
-import { TABLE_HEAD } from '@/shared/lib/surface';
+import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -25,6 +26,7 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import {
     ArrowLeftRight,
@@ -47,30 +49,32 @@ import {
     Trash2,
     X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { AuditDetails, AuditFilters, RoleRow } from '../api/permissionApi';
-import { AccessPermissionTree } from '../components/access-permission-tree';
-import { AssetPermissionTree } from '../components/asset-permission-tree';
+import { ACCESS_COUNT, AccessPermissionTree } from '../components/access-permission-tree';
+import { ASSET_COUNT, AssetPermissionTree } from '../components/asset-permission-tree';
 import { AuditMemberChanges } from '../components/audit-member-changes';
 import { CenteredAlert } from '../components/centered-alert';
-import { ContractPermissionTree } from '../components/contract-permission-tree';
-import { EmployeePermissionTree } from '../components/employee-permission-tree';
+import { CONTRACT_COUNT, ContractPermissionTree } from '../components/contract-permission-tree';
+import { EMPLOYEE_COUNT, EmployeePermissionTree } from '../components/employee-permission-tree';
 import { GroupRolesTab } from '../components/group-roles-tab';
-import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
-import { NotificationPermissionTree } from '../components/notification-permission-tree';
+import { moduleCardSpec, ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
+import { NOTIFICATION_COUNT, NotificationPermissionTree } from '../components/notification-permission-tree';
 import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, PlainRow, spreadRows } from '../components/permission-layout';
 import { ProfilePermissionTree } from '../components/profile-permission-tree';
-import { ReportPermissionTree } from '../components/report-permission-tree';
-import { RequestPermissionTree } from '../components/request-permission-tree';
+import { REPORT_COUNT, ReportPermissionTree } from '../components/report-permission-tree';
+import { REQUEST_COUNT, RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleBar } from '../components/role-bar';
 import { RoleModal } from '../components/role-modal';
-import { StockPermissionTree } from '../components/stock-permission-tree';
-import { TicketPermissionTree } from '../components/ticket-permission-tree';
-import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
+import { STOCK_COUNT, StockPermissionTree } from '../components/stock-permission-tree';
+import { TICKET_COUNT, TicketPermissionTree } from '../components/ticket-permission-tree';
+import { WORKFLOW_COUNT, WorkflowPermissionTree } from '../components/workflow-permission-tree';
 import { useAuditLogs, usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
 import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
+import { countGranted, hiddenHitCount, specKeys, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { isRoleChanged, permissionRefusalText } from '../lib/refusal';
 
@@ -208,6 +212,29 @@ const ADMIN_CARD_META: Record<string, { subtitleKey: string; master: ModuleMaste
     },
 };
 
+// Cards drawn by their own tree component, with the tree's count spec
+const TREE_COUNT: Record<string, CountSpec> = {
+    stock: STOCK_COUNT,
+    employees: EMPLOYEE_COUNT,
+    contracts: CONTRACT_COUNT,
+    assets: ASSET_COUNT,
+    tickets: TICKET_COUNT,
+    workflows: WORKFLOW_COUNT,
+    requests: REQUEST_COUNT,
+    notifications: NOTIFICATION_COUNT,
+    reports: REPORT_COUNT,
+    access: ACCESS_COUNT,
+};
+
+/** The count spec a card is drawn with; flat cards count live keys only. */
+function cardSpec(group: { module: string; keys: string[] }): { spec: CountSpec; liveOnly: boolean } {
+    const tree = TREE_COUNT[group.module];
+    if (tree) return { spec: tree, liveOnly: false };
+    if (group.module === 'profile') return { spec: { free: group.keys }, liveOnly: false };
+    const meta = ADMIN_CARD_META[group.module];
+    return { spec: meta ? moduleCardSpec(group.keys, meta.master) : { free: group.keys }, liveOnly: true };
+}
+
 function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
@@ -216,7 +243,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const { data, isLoading, isError, refetch } = usePermissionMatrix();
     const update = useUpdateRolePermissions();
     const roleMut = useRoleMutations();
-    const [selected, setSelected] = useState<string | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
     const [draft, setDraft] = useState<Set<string>>(new Set());
     const [roleModal, setRoleModal] = useState<{ open: boolean; role: RoleRow | null }>({ open: false, role: null });
     const [query, setQuery] = useState('');
@@ -227,13 +254,22 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const [saved, setSaved] = useState<{ label: string; members: number } | null>(null);
 
     const roles = data?.roles ?? [];
-    const role: RoleRow | undefined = roles.find((r) => r.value === selected) ?? roles[0];
+    // Selected role in ?role= (the first role is the bare URL); an unknown key falls back to the first
+    const role: RoleRow | undefined = roles.find((r) => r.value === searchParams.get('role')) ?? roles[0];
+    const selectRole = (key: string) =>
+        setSearchParams((prev) => {
+            const params = new URLSearchParams(prev);
+            if (key === roles[0]?.value) params.delete('role');
+            else params.set('role', key);
+            return params;
+        });
 
     // Retired keys a role still holds stay out of the draft so the save passes server validation
     const catalogKeys = useMemo(
         () => new Set(Object.entries(data?.catalog ?? {}).flatMap(([module, actions]) => actions.map((action) => `${module}.${action}`))),
         [data],
     );
+    const heldKeys = (r: RoleRow) => new Set(r.permissions.filter((p) => catalogKeys.has(p)));
 
     /** Delete a role template, or say up front why the API would refuse it. */
     const handleDeleteRole = (r: RoleRow) => {
@@ -270,6 +306,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     }, [draft, original]);
     const dirty = changedKeys.size > 0;
     const guardRoleSwitch = useDiscardGuard(dirty);
+    // Links, Back and Forward that leave the page, the tab or the role ask first
+    useNavigationGuard(dirty, ['tab', 'role']);
     useEffect(() => {
         onDirtyChange(dirty);
         return () => onDirtyChange(false);
@@ -281,7 +319,6 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const adoptVersion = useRef(false);
     useEffect(() => {
         if (!role) return;
-        setSelected(role.value);
         if (seededFor.current === role.value && dirty) {
             // After a 409 the reload brings the stored side; the kept draft saves against it
             if (adoptVersion.current) draftVersion.current = role.version;
@@ -291,25 +328,19 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         seededFor.current = role.value;
         draftVersion.current = role.version;
         adoptVersion.current = false;
-        setDraft(new Set(role.permissions.filter((p) => catalogKeys.has(p))));
+        setDraft(heldKeys(role));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [role?.value, data]);
+
+    // The saved notice follows the ✓ beat; a tab left mid-beat drops it
+    const doneTimer = useRef<number | undefined>(undefined);
+    useEffect(() => () => window.clearTimeout(doneTimer.current), []);
+    const pickerId = useId();
 
     // A refused or failed load says so
     if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
 
-    if (isLoading || !data || !role)
-        return (
-            <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-                <div className="border-border border-b p-2 lg:border-r lg:border-b-0">
-                    <ListSkeleton rows={4} />
-                </div>
-                <div className="space-y-3 p-5">
-                    <TableSkeleton rows={6} cols={3} />
-                    <TableSkeleton rows={4} cols={3} />
-                </div>
-            </div>
-        );
+    if (isLoading || !data || !role) return <RolesSkeleton />;
 
     const toggle = (key: string) => {
         if (role.is_super) return;
@@ -330,16 +361,22 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
     if (leftover.length > 0) sections.push({ label: 'perm_other', icon: Shield, modules: leftover });
 
-    // "On" = a live permission the role holds (super holds all); feeds the counts
-    const isOn = (key: string) => isLivePermission(key) && (role.is_super || draft.has(key));
+    // Held = in the draft (super holds all); flat cards count only live keys
+    const has = (key: string) => role.is_super || draft.has(key);
+    const liveHas = (key: string) => isLivePermission(key) && has(key);
+    const tally = (group: { module: string; keys: string[] }) => {
+        const { spec, liveOnly } = cardSpec(group);
+        return countGranted(spec, liveOnly ? liveHas : has);
+    };
 
     const keyLabel = (key: string) => {
         const [mod, action] = key.split('.');
         return actionLabel(mod, action, lang);
     };
     const q = query.trim().toLowerCase();
-    const matches = (module: string, keys: string[]) =>
-        !q || moduleLabel(module, lang).toLowerCase().includes(q) || keys.some((k) => keyLabel(k).toLowerCase().includes(q));
+    const isHit = (key: string) => q !== '' && keyLabel(key).toLowerCase().includes(q);
+    const matches = (group: { module: string; keys: string[] }) =>
+        !q || moduleLabel(group.module, lang).toLowerCase().includes(q) || specKeys(cardSpec(group).spec).some(isHit);
     const searchPlaceholder = t('perm_search_ph');
 
     const sectionViews = sections
@@ -349,9 +386,24 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                 section.label === 'nav_admin'
                     ? ADMIN_GROUPS
                     : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
-            return { section, groups, shown: groups.filter((g) => matches(g.module, g.keys)) };
+            return { section, groups, shown: groups.filter(matches) };
         })
         .filter((s) => s.shown.length > 0);
+    // Hits each card keeps behind its off master, for the master band
+    const hiddenHits = new Map(
+        sectionViews.flatMap(({ shown }) =>
+            shown.map((g) => {
+                const { spec, liveOnly } = cardSpec(g);
+                return [g.module, hiddenHitCount(spec, liveOnly ? liveHas : has, isHit)] as const;
+            }),
+        ),
+    );
+
+    // Role list and tablet picker share one guarded switch; it pushes ?role= so Back steps through roles
+    const switchRole = (key: string) => {
+        if (key !== role.value) guardRoleSwitch(() => selectRole(key));
+    };
+    const roleOptions = roles.map((r) => ({ value: r.value, label: r.label, search: r.label, icon: <RoleBar color={r.color} className="h-4" /> }));
 
     const openSave = () => {
         setPending(changedKeys.size);
@@ -363,8 +415,12 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         setSaveStep('saving');
         try {
             const fresh = await update.mutateAsync({ role: role.value, permissions: [...draft], version: draftVersion.current });
+            // The draft takes the stored set, so the refetch guard sees nothing unsaved
             const stored = fresh.roles.find((r) => r.value === role.value);
-            if (stored) draftVersion.current = stored.version;
+            if (stored) {
+                draftVersion.current = stored.version;
+                setDraft(heldKeys(stored));
+            }
         } catch (err: unknown) {
             setSaveError(permissionRefusalText(err, t));
             setSaveStep('confirm');
@@ -378,7 +434,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         // Same beat as the shared confirm's success check, then the saved notice
         setSaveStep('done');
         const savedRole = { label: role.label, members: role.members };
-        setTimeout(() => {
+        doneTimer.current = window.setTimeout(() => {
             setSaveStep('idle');
             setSaved(savedRole);
         }, 850);
@@ -411,15 +467,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
             );
         }
         // Plain card (Dashboard): every switch stands alone, spread over the cells
+        const { on, total } = tally(group);
         return (
-            <PermissionCard
-                key={group.module}
-                module={group.module}
-                on={group.keys.filter(isOn).length}
-                total={group.keys.length}
-                keys={group.keys}
-                lang={lang}
-            >
+            <PermissionCard key={group.module} module={group.module} on={on} total={total} keys={group.keys} lang={lang}>
                 {spreadRows(group.keys).map((cell) => (
                     <PermissionCell key={cell[0]}>
                         {cell.map((key) => {
@@ -434,7 +484,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                     label={keyLabel(key)}
                                     info={actionDescription(mod, action, lang)}
                                     comingSoon={!live}
-                                    on={live && (role.is_super || draft.has(key))}
+                                    on={liveHas(key)}
                                     locked={role.is_super || !live}
                                     onToggle={() => {
                                         if (live) toggle(key);
@@ -449,7 +499,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     };
 
     return (
-        <PermissionViewProvider value={{ changed: (key) => changedKeys.has(key), query }}>
+        <PermissionViewProvider value={{ changed: (key) => changedKeys.has(key), query, hiddenHits: (module) => hiddenHits.get(module) ?? 0 }}>
             <div className="border-border flex items-center justify-between border-b p-3">
                 <span className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_all_templates')}</span>
                 <Button onClick={() => setRoleModal({ open: true, role: null })}>
@@ -459,7 +509,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-                <div className="border-border border-b lg:border-r lg:border-b-0">
+                {/* Role list; below lg the sticky header's picker stands in for it */}
+                <div className="border-border hidden border-r lg:block">
                     {roles.map((r) => (
                         <div
                             key={r.value}
@@ -471,33 +522,19 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                             <button
                                 type="button"
                                 aria-current={r.value === role.value ? 'true' : undefined}
-                                onClick={() => r.value !== role.value && guardRoleSwitch(() => setSelected(r.value))}
+                                onClick={() => switchRole(r.value)}
                                 className="flex min-w-0 flex-1 items-center gap-2 py-3.5 pl-4 text-left"
                             >
                                 <RoleBar color={r.color} className="h-6" />
                                 <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand')}>{r.label}</span>
                             </button>
                             {!r.is_system && (
-                                <div className="pointer-events-none flex gap-0.5 pr-4 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => setRoleModal({ open: true, role: r })}
-                                        title={`${t('edit')} ${r.label}`}
-                                        aria-label={`${t('edit')} ${r.label}`}
-                                        className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
-                                    >
-                                        <Pencil className="h-3.5 w-3.5" aria-hidden />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDeleteRole(r)}
-                                        title={`${t('delete')} ${r.label}`}
-                                        aria-label={`${t('delete')} ${r.label}`}
-                                        className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                                    </button>
-                                </div>
+                                <RoleRowActions
+                                    role={r}
+                                    onEdit={() => setRoleModal({ open: true, role: r })}
+                                    onDelete={() => handleDeleteRole(r)}
+                                    className="pointer-events-none pr-4 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100"
+                                />
                             )}
                         </div>
                     ))}
@@ -507,7 +544,29 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                     {/* Role header: sticks while the cards scroll, so Save is always in reach */}
                     <div className="bg-card border-border sticky top-[var(--sticky-top,0px)] z-10 mb-4 flex flex-wrap items-center justify-between gap-3 border-b py-4">
                         <div className="min-w-0">
-                            <div className="text-lg font-bold">{role.label}</div>
+                            <div className="hidden text-lg font-bold lg:block">{role.label}</div>
+                            {/* Below lg: the role list as a picker, with the chosen role's edit and delete */}
+                            <div className="mb-1 flex items-center gap-1 lg:hidden">
+                                <label htmlFor={pickerId} className="sr-only">
+                                    {t('perm_roles')}
+                                </label>
+                                <div className="w-64 max-w-full">
+                                    <SearchableSelect
+                                        id={pickerId}
+                                        value={role.value}
+                                        onChange={switchRole}
+                                        options={roleOptions}
+                                        searchPlaceholder={t('gr_role_search')}
+                                    />
+                                </div>
+                                {!role.is_system && (
+                                    <RoleRowActions
+                                        role={role}
+                                        onEdit={() => setRoleModal({ open: true, role })}
+                                        onDelete={() => handleDeleteRole(role)}
+                                    />
+                                )}
+                            </div>
                             <div className="text-muted-foreground text-xs">
                                 {role.is_super ? t('perm_super_locked') : `${fmtN(draft.size)} ${t('perm_enabled')}`}
                             </div>
@@ -557,8 +616,10 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                     <div className="space-y-6">
                         {sectionViews.map(({ section, groups, shown }) => {
                             const SectionIcon = section.icon;
-                            const sectionActions = groups.flatMap((g) => g.keys);
-                            const sectionOn = sectionActions.filter(isOn).length;
+                            const sectionActions = groups.flatMap((g) => specKeys(cardSpec(g).spec));
+                            const sectionCount = groups
+                                .map(tally)
+                                .reduce((sum, c) => ({ on: sum.on + c.on, total: sum.total + c.total }), { on: 0, total: 0 });
                             return (
                                 <div key={section.label}>
                                     <div className="border-border mb-3 flex items-center gap-2 border-b pb-1.5">
@@ -570,7 +631,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                                 sectionActions.some((k) => changedKeys.has(k)) && CHANGED_TEXT,
                                             )}
                                         >
-                                            {fmtN(sectionOn)} / {fmtN(sectionActions.length)}
+                                            {fmtN(sectionCount.on)} / {fmtN(sectionCount.total)}
                                         </span>
                                     </div>
                                     {/* Full-width cards; each lays its switches in ruled cells */}
@@ -578,9 +639,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 </div>
                             );
                         })}
-                        {sectionViews.length === 0 && (
-                            <p className="text-muted-foreground py-6 text-center text-sm">{t('perm_search_none').replace('{q}', query.trim())}</p>
-                        )}
+                        {sectionViews.length === 0 && <EmptyState kind="search" title={t('perm_search_none').replace('{q}', query.trim())} />}
                     </div>
                 </div>
             </div>
@@ -642,6 +701,80 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                         : t('perm_saved_desc_none').replace('{name}', saved.label))}
             </CenteredAlert>
         </PermissionViewProvider>
+    );
+}
+
+/** Edit and delete for a custom role, in the role list row and the tablet header. */
+function RoleRowActions({ role, onEdit, onDelete, className }: { role: RoleRow; onEdit: () => void; onDelete: () => void; className?: string }) {
+    const t = useT();
+    return (
+        <div className={cn('flex gap-0.5', className)}>
+            <button
+                type="button"
+                onClick={onEdit}
+                title={`${t('edit')} ${role.label}`}
+                aria-label={`${t('edit')} ${role.label}`}
+                className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
+            >
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            <button
+                type="button"
+                onClick={onDelete}
+                title={`${t('delete')} ${role.label}`}
+                aria-label={`${t('delete')} ${role.label}`}
+                className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
+            >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            </button>
+        </div>
+    );
+}
+
+/** Loading Role Templates: role list, sticky header, then cards with a heading strip, master band and ruled cells. */
+function RolesSkeleton() {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]" aria-busy>
+            <div className="border-border hidden border-r lg:block">
+                <ListSkeleton rows={4} />
+            </div>
+            <div className="min-w-0 px-5 pb-5">
+                <div className="border-border mb-4 flex flex-wrap items-center justify-between gap-3 border-b py-4">
+                    <div className="space-y-2">
+                        <Skeleton className="h-5 w-40" />
+                        <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-10 w-72 max-w-full" />
+                </div>
+                <div className="space-y-4">
+                    <Skeleton className="h-4 w-32" />
+                    {[3, 2].map((cells, i) => (
+                        <div key={i} className="border-border @container overflow-clip rounded-lg border">
+                            <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3.5 py-3')}>
+                                <Skeleton className="h-3 w-28" />
+                                <Skeleton className="h-3 w-10" />
+                            </div>
+                            <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-3">
+                                <div className="space-y-1.5">
+                                    <Skeleton className="h-3.5 w-36" />
+                                    <Skeleton className="h-3 w-56 max-w-full" />
+                                </div>
+                                <Skeleton className="ml-auto h-5 w-9 rounded-full" />
+                            </div>
+                            <div className="grid grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3">
+                                {Array.from({ length: cells }).map((_, j) => (
+                                    <div key={j} className="border-border -mt-px -ml-px space-y-3 border-t border-l px-4 pt-3 pb-4">
+                                        <Skeleton className="h-6 w-full" />
+                                        <Skeleton className="h-3 w-3/4" />
+                                        <Skeleton className="h-3 w-2/3" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
     );
 }
 

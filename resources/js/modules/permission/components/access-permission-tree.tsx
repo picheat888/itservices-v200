@@ -1,4 +1,5 @@
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
@@ -13,21 +14,10 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'access.software_view', children: ['access.software_add', 'access.software_edit', 'access.software_delete'] },
 ];
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+export const ACCESS_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('access', key.replace('access.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('access', key.replace('access.', ''), lang);
-
-/** True when every ancestor (master, and the group view for a child) is on. */
-function hasAncestors(key: string, has: (k: string) => boolean): boolean {
-    if (!has(MASTER)) {
-        return false;
-    }
-    const parent = GROUPS.find((g) => g.children.includes(key));
-    if (parent) {
-        return has(parent.view);
-    }
-    return true;
-}
 
 /** Access Directory card: master → registry → action, with cascade; super is read-only. */
 export function AccessPermissionTree({
@@ -71,7 +61,7 @@ export function AccessPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = countGranted(ACCESS_COUNT, has).on;
     const totalCount = GATED_KEYS.length;
     const view = (key: string) => ({
         pkey: key,

@@ -1,5 +1,6 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, SetHead, WIDE_CHILDREN } from './permission-layout';
 
@@ -36,21 +37,10 @@ const GROUPS: Group[] = [
 const NOTIFY = ['requests.notify_approved', 'requests.notify_stalled'];
 // Every gated key under the master.
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children]), ...NOTIFY];
+export const REQUEST_COUNT: CountSpec = { master: MASTER, groups: GROUPS, gated: NOTIFY };
 
 const label = (key: string, lang: Lang) => actionLabel('requests', key.replace('requests.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('requests', key.replace('requests.', ''), lang);
-
-/** True when every ancestor (master, and the group view for a child) is on. */
-function hasAncestors(key: string, has: (k: string) => boolean): boolean {
-    if (!has(MASTER)) {
-        return false;
-    }
-    const parent = GROUPS.find((g) => g.children.includes(key));
-    if (parent) {
-        return has(parent.view);
-    }
-    return true;
-}
 
 /** Requests permission card: master → group → child tree with cascade; super is read-only. */
 export function RequestPermissionTree({
@@ -106,7 +96,7 @@ export function RequestPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = countGranted(REQUEST_COUNT, has).on;
     const totalCount = GATED_KEYS.length;
     const view = (key: string) => ({
         pkey: key,

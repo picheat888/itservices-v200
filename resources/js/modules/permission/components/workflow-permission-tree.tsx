@@ -1,5 +1,6 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, PermissionCard, PermissionCell, SetHead } from './permission-layout';
 
@@ -8,6 +9,7 @@ const MASTER = 'workflows.module';
 // The one right, under a heading naming the thing it is done to (no switch on the heading).
 const GROUP = { labelKey: 'perm_ui_group_workflows', keys: ['workflows.manage'] };
 const GATED_KEYS = [MASTER, ...GROUP.keys];
+export const WORKFLOW_COUNT: CountSpec = { master: MASTER, gated: GROUP.keys };
 
 const label = (key: string, lang: Lang) => actionLabel('workflows', key.replace('workflows.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('workflows', key.replace('workflows.', ''), lang);
@@ -46,7 +48,7 @@ export function WorkflowPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? GATED_KEYS.filter(has).length : 0;
+    const activeCount = countGranted(WORKFLOW_COUNT, has).on;
     const totalCount = GATED_KEYS.length;
 
     return (

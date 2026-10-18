@@ -1,5 +1,6 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, GeneralCell, GroupHead, GroupNote, PermissionCard, PermissionCell, PlainRow, SetHead } from './permission-layout';
 
@@ -24,21 +25,10 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
 ];
 // Every key that lives under the master (excludes the standalone keys).
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children]), ...LEVELS];
+export const TICKET_COUNT: CountSpec = { master: MASTER, groups: GROUPS, gated: LEVELS, standalone: [STANDALONE], free: [STANDALONE_SOLO] };
 
 const label = (key: string, lang: Lang) => actionLabel('tickets', key.replace('tickets.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('tickets', key.replace('tickets.', ''), lang);
-
-/** True when every ancestor (master, and the group view for a child) is on. */
-function hasAncestors(key: string, has: (k: string) => boolean): boolean {
-    if (!has(MASTER)) {
-        return false;
-    }
-    const parent = GROUPS.find((g) => g.children.includes(key));
-    if (parent) {
-        return has(parent.view);
-    }
-    return true;
-}
 
 /** Tickets card: master → group → management with cascade; the self-service keys stand outside the master. */
 export function TicketPermissionTree({
@@ -94,10 +84,7 @@ export function TicketPermissionTree({
     };
 
     const createOn = has(STANDALONE.view);
-    const standaloneActive = (createOn ? 1 : 0) + STANDALONE.children.filter((c) => has(c) && createOn).length + (has(STANDALONE_SOLO) ? 1 : 0);
-    const gatedActive = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
-    const activeCount = gatedActive + standaloneActive;
-    const totalCount = GATED_KEYS.length + 1 + STANDALONE.children.length + 1; // + create + its children + my
+    const { on: activeCount, total: totalCount } = countGranted(TICKET_COUNT, has);
     const view = (key: string) => ({
         pkey: key,
         label: label(key, lang),

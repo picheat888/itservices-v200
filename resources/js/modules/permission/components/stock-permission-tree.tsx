@@ -1,4 +1,5 @@
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
@@ -13,21 +14,10 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'stock.view_events', children: [], chip: false },
 ];
 const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+export const STOCK_COUNT: CountSpec = { master: MASTER, groups: GROUPS };
 
 const label = (key: string, lang: Lang) => actionLabel('stock', key.replace('stock.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('stock', key.replace('stock.', ''), lang);
-
-/** True when every ancestor (master, and the group view for a child) is on. */
-function hasAncestors(key: string, has: (k: string) => boolean): boolean {
-    if (!has(MASTER)) {
-        return false;
-    }
-    const parent = GROUPS.find((g) => g.children.includes(key));
-    if (parent) {
-        return has(parent.view);
-    }
-    return true;
-}
 
 /** Stock card: master → view → management, with cascade; super is read-only. */
 export function StockPermissionTree({
@@ -74,7 +64,7 @@ export function StockPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? ALL_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = countGranted(STOCK_COUNT, has).on;
     const view = (key: string) => ({
         pkey: key,
         label: label(key, lang),
