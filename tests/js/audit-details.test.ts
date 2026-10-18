@@ -3,11 +3,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { access as enAccess } from '../../resources/js/lang/en/access.ts';
 import { asset as enAsset } from '../../resources/js/lang/en/asset.ts';
+import { common as enCommon } from '../../resources/js/lang/en/common.ts';
 import { contract as enContract } from '../../resources/js/lang/en/contract.ts';
 import { employee as enEmployee } from '../../resources/js/lang/en/employee.ts';
 import { requests as enRequests } from '../../resources/js/lang/en/requests.ts';
+import { common as thCommon } from '../../resources/js/lang/th/common.ts';
 import {
+    auditBooleanKey,
     auditDiffSummary,
+    auditFacts,
     auditSubjectName,
     auditValueKey,
     decimalPlaces,
@@ -74,11 +78,44 @@ test('stored enum values map to words the owning module already has', () => {
     assert.equal(auditValueKey('type', 'toString', 'App\\Models\\Contract\\Contract'), undefined);
 });
 
-test('only stored decimals count their places', () => {
-    assert.equal(decimalPlaces('1500.00'), 2);
-    assert.equal(decimalPlaces('-3.5'), 1);
-    assert.equal(decimalPlaces('2026'), null);
-    assert.equal(decimalPlaces('1.2.3'), null);
-    assert.equal(decimalPlaces(1.5), null);
-    assert.equal(decimalPlaces('0812345678'), null);
+test('only known decimal columns count their places', () => {
+    assert.equal(decimalPlaces('value', '1500.00'), 2);
+    assert.equal(decimalPlaces('unit_cost', '-3.5'), 1);
+    assert.equal(decimalPlaces('total_value', '12.345'), 3);
+    assert.equal(decimalPlaces('value', '2026'), null);
+    assert.equal(decimalPlaces('value', '1.2.3'), null);
+    assert.equal(decimalPlaces('value', 1.5), null);
+    // A dotted value in any other column stays as stored
+    assert.equal(decimalPlaces('version', '1.10'), null);
+    assert.equal(decimalPlaces('ip_address', '10.0'), null);
+    assert.equal(decimalPlaces('serial', '12.50'), null);
+});
+
+test('known boolean columns read yes / no, other 0 / 1 values do not', () => {
+    assert.equal(auditBooleanKey('is_system', true), 'yes');
+    assert.equal(auditBooleanKey('notify_30', 1), 'yes');
+    assert.equal(auditBooleanKey('active', '0'), 'no');
+    assert.equal(auditBooleanKey('warranty_lifetime', false), 'no');
+    assert.equal(auditBooleanKey('track_serial', 0), 'no');
+    assert.equal(auditBooleanKey('allow_special_position', 'yes'), undefined);
+    assert.equal(auditBooleanKey('seats', 1), undefined);
+    assert.equal(auditBooleanKey('position_id', 0), undefined);
+    for (const dict of [enCommon, thCommon]) assert.ok(dict.yes && dict.no);
+});
+
+test('a from with no to, and stray scalar keys, are facts', () => {
+    const copy = { from: 'Admin', permissions: 12 } as Record<string, unknown>;
+    assert.deepEqual(auditFacts(copy), [
+        ['from', 'Admin'],
+        ['permissions', '12'],
+    ]);
+    assert.equal(hasAuditDetails(copy), true);
+    assert.equal(auditDiffSummary(copy, words), '[from]: Admin  [permissions]: 12');
+    // A real before → after stays an arrow, and facts keep their order
+    assert.equal(auditDiffSummary({ from: 'Staff', to: 'Manager' }, words), 'Staff → Manager');
+    assert.deepEqual(auditFacts({ facts: { note: 'x' }, ticket: 'T-1' } as Record<string, unknown>), [
+        ['note', 'x'],
+        ['ticket', 'T-1'],
+    ]);
+    assert.deepEqual(auditFacts({ from: '', added: ['a'], returned: true } as Record<string, unknown>), []);
 });

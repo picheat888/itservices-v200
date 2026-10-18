@@ -1,6 +1,23 @@
 // Audit entry details: whether a row has a detail panel, its one-line summary, and the words for stored enum values.
 import type { AuditDetails } from '../api/permissionApi';
 
+// Detail keys with a shape of their own; any other scalar key is a fact
+const SHAPE_KEYS = new Set(['added', 'removed', 'role_changes', 'from', 'to', 'changes', 'items', 'facts', 'snapshot']);
+
+/** Facts as key and text: details.facts, a `from` with no `to` (where a copy came from), then stray scalar keys (its permission count). */
+export function auditFacts(d: AuditDetails | null): [string, string][] {
+    if (!d) return [];
+    const facts: [string, string][] = Object.entries(d.facts ?? {}).map(([key, value]) => [key, String(value)]);
+    if (d.from !== undefined && d.to === undefined && !isBlankAuditValue(d.from)) facts.push(['from', String(d.from)]);
+    for (const [key, value] of Object.entries(d as Record<string, unknown>)) {
+        if (!SHAPE_KEYS.has(key) && (typeof value === 'string' || typeof value === 'number') && value !== '') facts.push([key, String(value)]);
+    }
+    return facts;
+}
+
+/** A before → after pair; a `from` alone is a fact. */
+export const hasAuditMove = (d: AuditDetails | null): boolean => d?.to !== undefined;
+
 /** Every shape the detail panel can draw; a shape left out gets no expand control. */
 export function hasAuditDetails(d: AuditDetails | null): boolean {
     if (!d) return false;
@@ -8,16 +25,17 @@ export function hasAuditDetails(d: AuditDetails | null): boolean {
         (d.added?.length ?? 0) > 0 ||
         (d.removed?.length ?? 0) > 0 ||
         (d.role_changes?.length ?? 0) > 0 ||
-        d.from !== undefined ||
-        d.to !== undefined ||
+        hasAuditMove(d) ||
         Object.keys(d.changes ?? {}).length > 0 ||
         (d.items?.length ?? 0) > 0 ||
-        Object.keys(d.facts ?? {}).length > 0 ||
+        auditFacts(d).length > 0 ||
         Object.keys(d.snapshot ?? {}).length > 0
     );
 }
 
-export const isBlankAuditValue = (v: unknown): boolean => v === null || v === undefined || v === '';
+export function isBlankAuditValue(v: unknown): boolean {
+    return v === null || v === undefined || v === '';
+}
 
 /** How the summary names a field and writes a value that is not blank. */
 export type SummaryWords = { label: (field: string) => string; value: (field: string, v: unknown) => string };
@@ -42,12 +60,12 @@ export function auditDiffSummary(d: AuditDetails | null, words: SummaryWords): s
     const added = d.added?.length ?? 0;
     const removed = d.removed?.length ?? 0;
     if (added || removed) return [added ? `+${added}` : null, removed ? `−${removed}` : null].filter(Boolean).join(' / ');
-    if (d.from !== undefined || d.to !== undefined) return `${val('', d.from)} → ${val('', d.to)}`;
+    if (hasAuditMove(d)) return `${val('', d.from)} → ${val('', d.to)}`;
     // Name the first record and count the rest
     const items = d.items ?? [];
     if (items.length > 0) return items.length > 1 ? `${items[0]}  +${items.length - 1}` : items[0];
-    const facts = Object.entries(d.facts ?? {});
-    if (facts.length > 0) return facts.map(([key, value]) => `${words.label(key)}: ${value}`).join('  ');
+    const facts = auditFacts(d);
+    if (facts.length > 0) return facts.map(([key, value]) => `${words.label(key)}: ${val(key, value)}`).join('  ');
     return null;
 }
 
@@ -117,8 +135,39 @@ export function auditValueKey(field: string, value: unknown, subjectType: string
     return words && Object.hasOwn(words, value) ? words[value] : undefined;
 }
 
-/** A stored decimal ("1500.00"); its digits after the point, else null. */
-export function decimalPlaces(value: unknown): number | null {
-    if (typeof value !== 'string' || !/^-?\d+\.\d+$/.test(value)) return null;
+// Boolean columns of the audited tables
+const BOOLEAN_FIELDS = new Set([
+    'active',
+    'allow_special_position',
+    'allowed',
+    'auto_ticket',
+    'enabled',
+    'is_system',
+    'must_change_password',
+    'notify_7',
+    'notify_30',
+    'notify_45',
+    'notify_60',
+    'notify_90',
+    'notify_120',
+    'notify_150',
+    'track_serial',
+    'warranty_lifetime',
+]);
+
+/** `yes` / `no` for a known boolean column stored as true/false, 1/0 or "1"/"0"; anything else undefined. */
+export function auditBooleanKey(field: string, value: unknown): 'yes' | 'no' | undefined {
+    if (!BOOLEAN_FIELDS.has(field)) return undefined;
+    if (value === true || value === 1 || value === '1') return 'yes';
+    if (value === false || value === 0 || value === '0') return 'no';
+    return undefined;
+}
+
+// Money and quantity columns stored as decimals
+const DECIMAL_FIELDS = new Set(['value', 'total_value', 'cost', 'unit_cost', 'price', 'amount']);
+
+/** A known decimal column's stored value ("1500.00"): its digits after the point, else null. */
+export function decimalPlaces(field: string, value: unknown): number | null {
+    if (!DECIMAL_FIELDS.has(field) || typeof value !== 'string' || !/^-?\d+\.\d+$/.test(value)) return null;
     return value.split('.')[1].length;
 }

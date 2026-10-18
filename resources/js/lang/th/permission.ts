@@ -673,6 +673,7 @@ export const permission: Dict = {
     audit_ev_created_role: 'เพิ่มบทบาท',
     audit_ev_updated_role: 'แก้ไขบทบาท',
     audit_ev_deleted_role: 'ลบบทบาท',
+    audit_ev_duplicated_role: 'ทำสำเนาบทบาท',
     audit_ev_updated_permissions: 'แก้ไขสิทธิ์ของบทบาท',
     audit_ev_created_role_group: 'เพิ่มกลุ่มบทบาท',
     audit_ev_updated_role_group: 'แก้ไขกลุ่มบทบาท',
