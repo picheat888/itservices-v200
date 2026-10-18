@@ -243,7 +243,7 @@ class StockValuationReport extends TabularReport
         }
 
         $sections[] = [
-            'title' => 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน',
+            'title' => 'ไม่เคลื่อนไหวเกิน 90 วัน',
             'headings' => ['SKU', 'รายการ', 'หมวด', 'คงเหลือ', 'หน่วย', 'มูลค่า', 'เคลื่อนไหวล่าสุด', 'ไม่เคลื่อนไหว (วัน)'],
             'rows' => array_map(fn (array $d) => [
                 $d['sku'], $d['name'], ($d['category_th'] ?: $d['category']) ?? '—', $d['qty'], $d['unit'],

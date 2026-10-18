@@ -160,7 +160,7 @@ class TicketOverviewReportService
 
     private function withRowRelations(Builder $query): Builder
     {
-        return $query->with(['requester.department:id,name,name_th', 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th']);
+        return $query->with(['requester.department:id,code,name,name_th', 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th']);
     }
 
     /**

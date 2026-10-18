@@ -47,7 +47,7 @@ class AssetReportsTest extends TestCase
 
     public function test_overview_list_lists_every_asset_with_holder_and_department(): void
     {
-        $department = Department::create(['name' => 'IT', 'name_th' => 'ไอที']);
+        $department = Department::create(['code' => 'D-IT', 'name' => 'IT', 'name_th' => 'ไอที']);
         $employee = Employee::create([
             'code' => 'EMP-9001', 'first_name' => 'Somchai', 'last_name' => 'Deploy', 'department_id' => $department->id,
         ]);
@@ -63,7 +63,7 @@ class AssetReportsTest extends TestCase
 
         $deployedRow = collect($body['data'])->firstWhere('id', $deployed->id);
         $this->assertStringContainsString($employee->code, $deployedRow['holder']);
-        $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที'], $deployedRow['department']);
+        $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที', 'code' => 'D-IT'], $deployedRow['department']);
         $this->assertSame('deployed', $deployedRow['status']);
 
         $summary = collect($body['summary'])->keyBy('key');

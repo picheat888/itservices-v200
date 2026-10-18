@@ -47,6 +47,6 @@ trait AssetColumns
     {
         $department = $asset->ownerEmployee?->department;
 
-        return $department ? ['name' => $department->name, 'name_th' => $department->name_th] : null;
+        return $department ? ['name' => $department->name, 'name_th' => $department->name_th, 'code' => $department->code] : null;
     }
 }

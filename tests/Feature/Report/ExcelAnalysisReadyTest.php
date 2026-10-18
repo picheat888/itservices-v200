@@ -7,10 +7,15 @@ namespace Tests\Feature\Report;
 
 use App\Exports\Report\TabularSectionSheet;
 use App\Models\Asset\Asset;
+use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Report\Asset\AssetOverviewReport;
+use App\Services\Report\Asset\AssetTransferHistoryReport;
+use App\Services\Report\Request\RequestApprovalsReport;
+use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\TabularReportExporter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -138,6 +143,50 @@ class ExcelAnalysisReadyTest extends TestCase
         $this->assertSame('วันที่ (ปี ค.ศ. yyyy-mm-dd)', $glossary['วันที่ซื้อ'][2]);
         $this->assertSame('จำนวนเงิน (บาท)', $glossary['มูลค่า'][2]);
         $this->assertStringStartsWith('ค่าใดค่าหนึ่งใน: ', $glossary['สถานะ'][2]);
+    }
+
+    public function test_codes_sit_beside_names_and_nobody_is_an_empty_cell_not_a_dash(): void
+    {
+        $department = Department::create(['code' => 'D-IT', 'name' => 'IT', 'name_th' => 'ไอที']);
+        $employee = Employee::create(['code' => 'EMP-5', 'first_name' => 'Anan', 'last_name' => 'Tech', 'department_id' => $department->id]);
+        Asset::query()->update(['owner_employee_id' => null, 'owner' => null]);
+        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $employee->id, 'owner' => null]);
+
+        $rows = collect($this->workbook()->getSheetByName('ข้อมูลดิบ')->toArray(null, false, false));
+        $headings = $rows->first();
+        $byHolderCode = $rows->slice(1)->map(fn (array $row) => array_combine($headings, $row))->keyBy(fn (array $row) => $row['รหัสพนักงานผู้ถือ'] ?? 'none');
+
+        $this->assertSame(array_search('ผู้ถือ', $headings, true) + 1, array_search('รหัสพนักงานผู้ถือ', $headings, true));
+        $this->assertSame(array_search('แผนก', $headings, true) + 1, array_search('รหัสแผนก', $headings, true));
+        $this->assertSame('D-IT', $byHolderCode['EMP-5']['รหัสแผนก']);
+        $this->assertNull($byHolderCode['none']['ผู้ถือ']);
+    }
+
+    public function test_a_display_only_mix_stays_off_the_sheet_and_its_parts_stay_on(): void
+    {
+        $headings = array_map(fn ($c) => $c->heading, app(StockBelowMinReport::class)->sheetColumns());
+
+        $this->assertNotContains('Min – Max', $headings);
+        $this->assertContains('Min', $headings);
+        $this->assertContains('Max', $headings);
+        $this->assertContains('Min – Max', array_map(fn ($c) => $c->heading, app(StockBelowMinReport::class)->screenColumns()));
+    }
+
+    public function test_rows_without_a_number_of_their_own_end_with_the_record_id(): void
+    {
+        $last = fn ($report) => last($report->sheetColumns())->heading;
+
+        $this->assertSame('เลขที่รายการในระบบ', $last(app(AssetTransferHistoryReport::class)));
+        $this->assertSame('เลขที่รายการในระบบ', $last(app(RequestApprovalsReport::class)));
+        $this->assertNotSame('เลขที่รายการในระบบ', $last(app(AssetOverviewReport::class)));
+    }
+
+    public function test_approver_kinds_read_in_thai_on_the_sheet(): void
+    {
+        $keys = array_map(fn ($c) => $c->key, app(RequestApprovalsReport::class)->sheetColumns());
+
+        $this->assertContains('approver_kind_th', $keys);
+        $this->assertNotContains('approver_kind', $keys);
     }
 
     public function test_a_section_sheet_writes_dates_as_dates_and_keeps_zeros(): void

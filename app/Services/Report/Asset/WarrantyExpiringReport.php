@@ -103,7 +103,7 @@ class WarrantyExpiringReport extends TabularReport
     public function query(User $viewer, array $filters): Builder
     {
         $query = $this->bought($filters)
-            ->with(['category:id,name,name_th', 'brand:id,name', 'model:id,name', 'ownerEmployee.department:id,name,name_th', 'vendor:id,name,name_th'])
+            ->with(['category:id,name,name_th', 'brand:id,name', 'model:id,name', 'ownerEmployee.department:id,code,name,name_th', 'vendor:id,name,name_th'])
             ->whereNotNull('assets.warranty_end');
 
         if ($filters['state'] === 'expired') {
@@ -127,7 +127,8 @@ class WarrantyExpiringReport extends TabularReport
             ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->hiddenByDefault(),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name),
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),
-            ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a)),
+            ReportColumn::text('holder_code', 'รหัสพนักงานผู้ถือ', fn (Asset $a) => $a->ownerEmployee?->code)->sheetOnly()->describe('รหัสพนักงานที่ถือทรัพย์สินอยู่ ใช้เชื่อมกับตารางพนักงาน (ว่าง = ไม่มีพนักงานถือ เช่น อยู่ในคลังหรือเป็นส่วนกลาง)'),
+            ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::localized('vendor', 'ผู้ขาย', fn (Asset $a) => $a->vendor ? ['name' => $a->vendor->name, 'name_th' => $a->vendor->name_th] : null),
             ReportColumn::enum('status', 'สถานะ', fn (Asset $a) => $a->status, self::STATUS_KEYS, self::STATUS_TH)->hiddenByDefault(),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date)->hiddenByDefault(),

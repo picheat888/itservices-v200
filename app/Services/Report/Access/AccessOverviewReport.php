@@ -93,6 +93,11 @@ class AccessOverviewReport extends TabularReport
             ->orderBy('access_memberships.resource_type')->orderBy('access_memberships.id');
     }
 
+    protected function hasRowId(): bool
+    {
+        return true;
+    }
+
     public function columns(): array
     {
         return [
@@ -100,7 +105,7 @@ class AccessOverviewReport extends TabularReport
                 ->labelKey('rep_c_ac_employee')->linkTo('/employees', fn (AccessMembership $m) => $m->employee_id),
             // Drawn under the name, the resource and the status on the page.
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (AccessMembership $m) => $m->employee?->code)->hiddenByDefault(),
-            ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee)),
+            ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('resource_type', 'ประเภท', fn (AccessMembership $m) => $m->resource_type, AccessFacts::TYPE_KEYS, AccessFacts::TYPE_TH)
                 ->labelKey('rep_c_ac_type'),
             ReportColumn::text('resource', 'Resource', fn (AccessMembership $m) => $m->resource?->getAttribute('name'))->labelKey('rep_c_ac_resource'),

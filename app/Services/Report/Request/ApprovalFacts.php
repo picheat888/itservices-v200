@@ -82,8 +82,8 @@ final class ApprovalFacts
     {
         return $query->with([
             self::REQUEST_COLUMNS,
-            'approver:id,code,first_name,last_name,status,last_day,department_id', 'approver.department:id,name,name_th', 'approver.user:id,employee_id',
-            'actedBy:id,employee_id', 'actedBy.employee:id,code,department_id', 'actedBy.employee.department:id,name,name_th',
+            'approver:id,code,first_name,last_name,status,last_day,department_id', 'approver.department:id,code,name,name_th', 'approver.user:id,employee_id',
+            'actedBy:id,employee_id', 'actedBy.employee:id,code,department_id', 'actedBy.employee.department:id,code,name,name_th',
         ]);
     }
 
@@ -365,7 +365,7 @@ final class ApprovalFacts
         return [
             'name' => $key,
             'code' => $employee?->code,
-            'department' => $employee?->department ? ['name' => $employee->department->name, 'name_th' => $employee->department->name_th] : null,
+            'department' => $employee?->department ? ['name' => $employee->department->name, 'name_th' => $employee->department->name_th, 'code' => $employee->department->code] : null,
             'kind' => $kind,
         ];
     }

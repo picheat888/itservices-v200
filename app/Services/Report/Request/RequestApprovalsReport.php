@@ -26,6 +26,10 @@ use Illuminate\Validation\Rule;
  */
 class RequestApprovalsReport extends TabularReport
 {
+    private const APPROVER_KIND_TH = ['person' => 'พนักงาน', 'unlinked_account' => 'บัญชีที่ไม่ได้ผูกพนักงาน', 'group_step' => 'ขั้นของแผนก ยังไม่มีใครรับ'];
+
+    private const APPROVER_FLAG_TH = ['left' => 'ลาออก', 'no_account' => 'ยังไม่มีบัญชี'];
+
     use RequestLabels;
 
     private const ROW_STATUS_KEYS = [
@@ -146,6 +150,11 @@ class RequestApprovalsReport extends TabularReport
             ->orderBy('request_approvals.position');
     }
 
+    protected function hasRowId(): bool
+    {
+        return true;
+    }
+
     public function columns(): array
     {
         $notSkipped = fn (RequestApproval $s) => $s->status->value !== 'skipped';
@@ -161,11 +170,15 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::text('approver_code', 'รหัสผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['code'] : null)
                 ->labelKey('rep_c_rqa_approver_code')->hiddenByDefault(),
             ReportColumn::localized('approver_department', 'แผนกผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['department'] : null)
-                ->labelKey('rep_c_rqa_approver_department')->hiddenByDefault(),
+                ->labelKey('rep_c_rqa_approver_department')->hiddenByDefault()->withCode('รหัสแผนกผู้อนุมัติ', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::text('approver_kind', 'ชนิดผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['kind'] : null)
-                ->labelKey('rep_c_rqa_approver_kind')->hiddenByDefault(),
+                ->labelKey('rep_c_rqa_approver_kind')->hiddenByDefault()->screenOnly(),
+            ReportColumn::text('approver_kind_th', 'ชนิดผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? self::APPROVER_KIND_TH[ApprovalFacts::person($s)['kind']] ?? null : null)
+                ->sheetOnly()->describe('ผู้ที่อยู่ในขั้นนี้: พนักงาน, บัญชีที่ไม่ได้ผูกพนักงาน หรือขั้นของแผนกที่ยังไม่มีใครรับ (ว่าง = ขั้นที่ระบบข้าม)'),
             ReportColumn::text('approver_flag', 'สถานะผู้อนุมัติ', fn (RequestApproval $s) => ApprovalFacts::isWaiting($s) ? ApprovalFacts::blockedBecause($s) : null)
-                ->labelKey('rep_c_rqa_approver_flag')->hiddenByDefault(),
+                ->labelKey('rep_c_rqa_approver_flag')->hiddenByDefault()->screenOnly(),
+            ReportColumn::text('approver_flag_th', 'สถานะผู้อนุมัติ', fn (RequestApproval $s) => ApprovalFacts::isWaiting($s) ? self::APPROVER_FLAG_TH[ApprovalFacts::blockedBecause($s)] ?? null : null)
+                ->sheetOnly()->describe('เหตุที่ผู้อนุมัติของขั้นที่รออยู่อนุมัติไม่ได้: ลาออก หรือยังไม่มีบัญชี (ว่าง = อนุมัติได้ตามปกติ)'),
             ReportColumn::dateTime('became_current_at', 'ถึงคิว', fn (RequestApproval $s) => $s->became_current_at)->labelKey('rep_c_rqa_became_current'),
             ReportColumn::dateTime('acted_at', 'ตัดสิน', fn (RequestApproval $s) => $s->acted_at)->labelKey('rep_c_rqa_acted_at'),
             ReportColumn::number('days', 'วัน', fn (RequestApproval $s) => ApprovalFacts::days($s))->labelKey('rep_c_rqa_days'),
@@ -174,7 +187,7 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::enum('skip_reason', 'เหตุผลที่ข้าม', fn (RequestApproval $s) => $s->skip_reason?->value, self::SKIP_KEYS, self::SKIP_TH)
                 ->labelKey('rep_c_rqa_skip_reason')->hiddenByDefault(),
             ReportColumn::text('requester', 'ผู้ขอ', fn (RequestApproval $s) => $s->request?->requester_name)->sheetOnly(),
-            ReportColumn::localized('department', 'แผนกผู้ขอ', fn (RequestApproval $s) => $this->requesterDepartment($s->request))->sheetOnly(),
+            ReportColumn::localized('department', 'แผนกผู้ขอ', fn (RequestApproval $s) => $this->requesterDepartment($s->request))->sheetOnly()->withCode('รหัสแผนกผู้ขอ', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('request_status', 'สถานะคำขอ', fn (RequestApproval $s) => $s->request?->status, self::STATUS_KEYS, self::STATUS_TH)->sheetOnly(),
         ];
     }
@@ -184,7 +197,7 @@ class RequestApprovalsReport extends TabularReport
     {
         $department = $request?->employee?->department;
         if ($department) {
-            return ['name' => $department->name, 'name_th' => $department->name_th];
+            return ['name' => $department->name, 'name_th' => $department->name_th, 'code' => $department->code];
         }
 
         return $request?->department_name ? ['name' => $request->department_name, 'name_th' => null] : null;
@@ -362,9 +375,9 @@ class RequestApprovalsReport extends TabularReport
         $approverIds = array_values(array_unique(array_filter(array_column($reached, 'approver_employee_id'))));
         $userIds = array_values(array_unique(array_filter(array_column($reached, 'acted_by_user_id'))));
         $approvers = Employee::query()->select(['id', 'code', 'first_name', 'last_name', 'status', 'last_day', 'department_id'])
-            ->with(['department:id,name,name_th', 'user:id,employee_id'])->whereIn('id', $approverIds)->get()->keyBy('id');
+            ->with(['department:id,code,name,name_th', 'user:id,employee_id'])->whereIn('id', $approverIds)->get()->keyBy('id');
         $actors = User::query()->select(['id', 'employee_id'])
-            ->with(['employee:id,code,department_id', 'employee.department:id,name,name_th'])->whereIn('id', $userIds)->get()->keyBy('id');
+            ->with(['employee:id,code,department_id', 'employee.department:id,code,name,name_th'])->whereIn('id', $userIds)->get()->keyBy('id');
         $employeeOf = fn (array $r): ?Employee => $r['acted_by_user_id'] !== null ? $actors->get($r['acted_by_user_id'])?->employee : $approvers->get($r['approver_employee_id']);
         $personOf = fn (array $r): array => ApprovalFacts::personOf($employeeOf($r), $r['acted_by_user_id'] !== null || $r['acted_by_name'] !== null, $r['key']);
 

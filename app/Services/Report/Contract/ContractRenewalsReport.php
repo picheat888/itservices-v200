@@ -26,6 +26,8 @@ use Illuminate\Support\Collection;
  */
 class ContractRenewalsReport extends TabularReport
 {
+    private const ALERT_STATE_TH = ['off' => 'ไม่ได้เปิด', 'waiting' => 'ยังไม่ถึงรอบ', 'sent' => 'ส่งแล้ว', 'missed' => 'ยังไม่ได้ส่ง'];
+
     use ContractLabels;
 
     private const WINDOWS = [30, 60, 90, 180, 365];
@@ -124,6 +126,14 @@ class ContractRenewalsReport extends TabularReport
             ReportColumn::enum('billing_cycle', 'รอบบิล', fn (Contract $c) => $c->billing_cycle, self::CYCLE_KEYS, self::CYCLE_TH)->hiddenByDefault(),
             ReportColumn::text('alerts', 'แจ้งเตือน', fn (Contract $c) => self::alertText($this->rowFigures[$c->id]['alert'] ?? null))->labelKey('rep_cren_c_alerts'),
             ReportColumn::text('todo', 'สิ่งที่ต้องทำ', fn (Contract $c) => self::todoText($this->rowFigures[$c->id] ?? null))->labelKey('rep_cren_c_todo'),
+            ReportColumn::text('alert_state', 'สถานะแจ้งเตือน', fn (Contract $c) => self::ALERT_STATE_TH[$this->rowFigures[$c->id]['alert']['state'] ?? ''] ?? null)->sheetOnly()
+                ->describe('การแจ้งเตือนวันหมดสัญญา: ไม่ได้เปิด, ยังไม่ถึงรอบ, ส่งแล้ว หรือถึงรอบแล้วแต่ยังไม่ได้ส่ง'),
+            ReportColumn::date('alert_sent_at', 'แจ้งเตือนล่าสุดเมื่อ', fn (Contract $c) => ($at = $this->rowFigures[$c->id]['alert']['sent_at'] ?? null) ? CarbonImmutable::parse($at) : null)->sheetOnly()
+                ->describe('วันที่ระบบส่งอีเมลแจ้งเตือนครั้งล่าสุด (ว่าง = ยังไม่เคยส่ง)'),
+            ReportColumn::number('rented_assets', 'ทรัพย์สินเช่าในสัญญา', fn (Contract $c) => $this->rowFigures[$c->id]['todo']['rented'] ?? null)->sheetOnly()
+                ->describe('จำนวนทรัพย์สินเช่าที่ผูกกับสัญญานี้และยังไม่ได้ตัดจำหน่าย ต้องคืนผู้ให้เช่าเมื่อสัญญาสิ้นสุด'),
+            ReportColumn::number('rented_in_use', 'ทรัพย์สินเช่าที่พนักงานใช้อยู่', fn (Contract $c) => $this->rowFigures[$c->id]['todo']['held'] ?? null)->sheetOnly()
+                ->describe('จำนวนทรัพย์สินเช่าของสัญญานี้ที่ยังอยู่กับพนักงาน ต้องเรียกคืนก่อนคืนผู้ให้เช่า'),
         ];
     }
 

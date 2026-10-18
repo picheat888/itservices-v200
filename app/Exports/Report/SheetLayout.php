@@ -27,12 +27,12 @@ final class SheetLayout
     }
 
     /**
-     * Turn CellDate values into Excel serials; returns the rows plus each date cell's format.
+     * Sheet cells of a section's rows: CellDate as an Excel date, the page's "—" as empty; returns the rows plus each date cell's format.
      *
      * @param  list<list<mixed>>  $rows
      * @return array{0: list<list<mixed>>, 1: array<string, string>} rows, cell → number format
      */
-    public static function withDates(array $rows, int $firstRow): array
+    public static function sheetCells(array $rows, int $firstRow): array
     {
         $formats = [];
         foreach ($rows as $r => $cells) {
@@ -40,6 +40,8 @@ final class SheetLayout
                 if ($cell instanceof CellDate) {
                     $rows[$r][$c] = $cell->excelValue();
                     $formats[Coordinate::stringFromColumnIndex($c + 1).($firstRow + $r)] = $cell->excelFormat();
+                } elseif ($cell === '—') {
+                    $rows[$r][$c] = null;
                 }
             }
         }

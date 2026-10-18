@@ -109,7 +109,7 @@ class ItPendingRequestReportTest extends TestCase
         $this->assertSame('mobile', $row['request_type']);
         $this->assertSame('onboarding', $row['origin']);
         $this->assertSame('EMP-7', $row['requester_code']);
-        $this->assertSame(['name' => 'Information Technology', 'name_th' => 'ฝ่ายไอที'], $row['department']);
+        $this->assertSame(['name' => 'Information Technology', 'name_th' => 'ฝ่ายไอที', 'code' => $it->code], $row['department']);
         $this->assertEquals(15, $row['waiting_days']);
         $this->assertSame($oldest->ticket->ticket_no, $row['ticket_no']);
         $this->assertSame('in_progress', $row['ticket_status']);

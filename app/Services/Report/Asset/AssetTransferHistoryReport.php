@@ -102,6 +102,11 @@ class AssetTransferHistoryReport extends TabularReport
         return $this->filtered($filters)->with('performer.employee:id,first_name_th,last_name_th')->orderByDesc('created_at')->orderByDesc('id');
     }
 
+    protected function hasRowId(): bool
+    {
+        return true;
+    }
+
     public function columns(): array
     {
         return [
@@ -145,9 +150,11 @@ class AssetTransferHistoryReport extends TabularReport
                 : ['name' => $t->getAttribute($column), 'name_th' => null])->hiddenByDefault(),
             ReportColumn::text("{$end}_code", $end === 'from' ? 'จาก (รหัสพนักงาน)' : 'ไปยัง (รหัสพนักงาน)', fn (AssetTransfer $t) => $person($t) ? $t->getAttribute($column) : null)->hiddenByDefault(),
             ReportColumn::localized("{$end}_department", $end === 'from' ? 'จาก (แผนก)' : 'ไปยัง (แผนก)', fn (AssetTransfer $t) => isset($person($t)['department'])
-                ? ['name' => $person($t)['department']['name'], 'name_th' => $person($t)['department']['name_th']]
-                : null)->hiddenByDefault(),
-            ReportColumn::number("{$end}_resigned", $end === 'from' ? 'จาก (ลาออกแล้ว)' : 'ไปยัง (ลาออกแล้ว)', fn (AssetTransfer $t) => $person($t) === null ? null : (int) $person($t)['resigned'])->hiddenByDefault(),
+                ? ['name' => $person($t)['department']['name'], 'name_th' => $person($t)['department']['name_th'], 'code' => $person($t)['department']['code'] ?? null]
+                : null)->hiddenByDefault()->withCode($end === 'from' ? 'จาก (รหัสแผนก)' : 'ไปยัง (รหัสแผนก)', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::number("{$end}_resigned", $end === 'from' ? 'จาก (ลาออกแล้ว)' : 'ไปยัง (ลาออกแล้ว)', fn (AssetTransfer $t) => $person($t) === null ? null : (int) $person($t)['resigned'])->hiddenByDefault()->screenOnly(),
+            ReportColumn::text("{$end}_resigned_th", $end === 'from' ? 'จาก (ลาออกแล้ว)' : 'ไปยัง (ลาออกแล้ว)', fn (AssetTransfer $t) => $person($t) === null ? null : ($person($t)['resigned'] ? 'ใช่' : 'ไม่ใช่'))
+                ->sheetOnly()->describe('พนักงานคนนี้ลาออกแล้วหรือยัง ณ วันที่ส่งออก (ว่าง = ปลายทางไม่ใช่พนักงาน)'),
         ];
     }
 

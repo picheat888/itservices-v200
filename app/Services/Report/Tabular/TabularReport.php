@@ -90,21 +90,65 @@ abstract class TabularReport
     public function sheetColumns(): array
     {
         $picked = array_map(fn (ReportColumn $c) => $c->key, $this->exportColumns());
+        $all = $this->columns();
         $columns = array_values(array_filter(
-            $this->columns(),
-            fn (ReportColumn $c) => $c->isSheetOnly() || $c->isHiddenByDefault() || in_array($c->key, $picked, true),
+            $all,
+            fn (ReportColumn $c) => ! $c->isScreenOnly() && ($c->isSheetOnly() || $c->isHiddenByDefault() || in_array($c->key, $picked, true)),
         ));
 
         $order = array_flip($this->sheetOrder());
-        if ($order === []) {
-            return $columns;
+        if ($order !== []) {
+            // Listed keys first, in the listed order; any column the list leaves out keeps its place after them.
+            $rank = fn (ReportColumn $c, int $i) => $order[$c->key] ?? count($order) + $i;
+            $ranked = array_map(fn (ReportColumn $c, int $i) => [$rank($c, $i), $c], $columns, array_keys($columns));
+            usort($ranked, fn (array $a, array $b) => $a[0] <=> $b[0]);
+            $columns = array_column($ranked, 1);
         }
-        // Listed keys first, in the listed order; any column the list leaves out keeps its place after them.
-        $rank = fn (ReportColumn $c, int $i) => $order[$c->key] ?? count($order) + $i;
-        $ranked = array_map(fn (ReportColumn $c, int $i) => [$rank($c, $i), $c], $columns, array_keys($columns));
-        usort($ranked, fn (array $a, array $b) => $a[0] <=> $b[0]);
 
-        return array_column($ranked, 1);
+        // Each master-data code sits right after its name (or at the end when the picker dropped the name)
+        $withCodes = [];
+        foreach ($columns as $column) {
+            $withCodes[] = $column;
+            if ($column->codeColumn() !== null) {
+                $withCodes[] = $column->codeColumn();
+            }
+        }
+        $placed = array_map(fn (ReportColumn $c) => $c->key, $withCodes);
+        foreach ($all as $column) {
+            $code = $column->codeColumn();
+            if ($code !== null && ! in_array($code->key, $placed, true)) {
+                $withCodes[] = $code;
+            }
+        }
+
+        if ($this->hasRowId()) {
+            $withCodes[] = ReportColumn::number('row_id', 'เลขที่รายการในระบบ', fn (Model $row) => $row->getKey())
+                ->describe('เลขอ้างอิงของแถวนี้ในระบบ ไม่ซ้ำกัน ใช้เป็นคีย์ของแถวเมื่อนำไปวิเคราะห์หรือตรวจสอบ');
+        }
+
+        return $withCodes;
+    }
+
+    /** What a column holds, for the glossary sheet: its own describe(), else the report's meanings(). */
+    public function columnMeaning(ReportColumn $column): string
+    {
+        return $column->meaning() ?? $this->meanings()[$column->key] ?? '';
+    }
+
+    /**
+     * Column key → what it holds and how it is counted, for the glossary sheet.
+     *
+     * @return array<string, string>
+     */
+    protected function meanings(): array
+    {
+        return [];
+    }
+
+    /** Whether the sheet ends with the record id: for rows with no number of their own (a movement, a grant, an approval step). */
+    protected function hasRowId(): bool
+    {
+        return false;
     }
 
     /** The Excel rows sheet's tab name, the same in every workbook so Power BI finds the table by name. */

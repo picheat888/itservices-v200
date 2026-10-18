@@ -71,7 +71,7 @@ class TicketBacklogReport extends TabularReport
         $soon = self::soonSql();
 
         return $this->scopedTickets($viewer, $filters['category'])
-            ->with(['requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,name,name_th', 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th'])
+            ->with(['requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,code,name,name_th', 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th'])
             ->whereIn('status', ['open', 'in_progress'])
             ->when($filters['priority'], fn (Builder $q, string $priority) => $q->where('priority', $priority))
             ->when($filters['assignee'] ?? null, fn (Builder $q, string|int $assignee) => $assignee === 'none'
@@ -109,9 +109,9 @@ class TicketBacklogReport extends TabularReport
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
             ReportColumn::enum('source', 'ที่มา', fn (Ticket $t) => $t->source, self::SOURCE_KEYS, ['manual' => TicketLabels::source('manual'), 'auto_request' => TicketLabels::source('auto_request')]),
             ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
-            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)
-                ->labelKey('rep_c_ticket_requester'),
-            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
+            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th, 'code' => $t->requester->code] : null)
+                ->labelKey('rep_c_ticket_requester')->withCode('รหัสพนักงานผู้แจ้ง', 'รหัสพนักงานของผู้แจ้ง ใช้เชื่อมกับตารางพนักงาน'),
+            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th, 'code' => $d->code] : null)->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::number('age_days', 'ค้างมา (วัน)', fn (Ticket $t) => $t->created_at === null ? null : round($t->created_at->diffInHours(now(), true) / 24, 1), 1),
             // The Excel sheet only — for working the backlog over in a spreadsheet.
