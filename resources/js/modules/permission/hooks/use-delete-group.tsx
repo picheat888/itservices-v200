@@ -4,7 +4,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import type { GroupRole } from '../api/permissionApi';
 import { permissionRefusalText } from '../lib/refusal';
-import { useGroupRoleMutations, usePermissionMatrix } from './use-permissions';
+import { useBaseRoleLabel, useGroupRoleMutations } from './use-permissions';
 
 /** Resolves true once the group is gone. */
 export function useDeleteGroup(defaultGroup: GroupRole | null): (group: GroupRole) => Promise<boolean> {
@@ -12,8 +12,7 @@ export function useDeleteGroup(defaultGroup: GroupRole | null): (group: GroupRol
     const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const { remove } = useGroupRoleMutations();
-    const { data: matrix } = usePermissionMatrix();
-    const baseRole = matrix?.roles.find((r) => r.value === 'user')?.label ?? 'Staff';
+    const baseRole = useBaseRoleLabel();
 
     return (group) => {
         const lines = [
@@ -27,7 +26,7 @@ export function useDeleteGroup(defaultGroup: GroupRole | null): (group: GroupRol
                             : t('gr_where_none').replace('{role}', baseRole),
                     ),
             defaultGroup?.id === group.id && t('gr_delete_default'),
-            t('cd_delete_desc'),
+            t('gr_delete_desc'),
         ].filter((line): line is string => !!line);
 
         return confirm({

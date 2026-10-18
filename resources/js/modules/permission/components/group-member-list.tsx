@@ -1,7 +1,7 @@
 // "Current members" pane of the Role Group dialog: saved members a page at a time, people staged to join on top, leavers struck through.
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
-import { InfoHint } from '@/shared/components/info-hint';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
@@ -11,7 +11,8 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 import type { GroupMember } from '../api/permissionApi';
 import { useGroupMembers } from '../hooks/use-permissions';
-import { PaneHeader, PanePager, PaneRow, PaneSearch, PaneSkeleton } from './group-pane';
+import { countKey } from '../lib/group-rules';
+import { LockHint, PaneHeader, PanePager, PaneRow, PaneSearch, PaneSkeleton } from './group-pane';
 
 export function GroupMemberList({
     groupId,
@@ -21,8 +22,6 @@ export function GroupMemberList({
     onRemove,
     onUndo,
     leaveNote,
-    selfEmployeeId,
-    isSuper,
     readOnly,
 }: {
     groupId: number | null;
@@ -35,8 +34,6 @@ export function GroupMemberList({
     onUndo: (person: GroupMember) => void;
     /** Where a leaver ends up, e.g. "Moves to User". */
     leaveNote: string;
-    selfEmployeeId: number | null;
-    isSuper: boolean;
     readOnly: boolean;
 }) {
     const t = useT();
@@ -45,7 +42,9 @@ export function GroupMemberList({
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading } = useGroupMembers(groupId, debounced, page);
+    const { data, isLoading, isError, isPlaceholderData, refetch } = useGroupMembers(groupId, debounced, page);
+    const busy = groupId !== null && (isLoading || isPlaceholderData);
+    const failed = groupId !== null && isError && !data;
 
     const name = (p: GroupMember) => localName(p, lang) ?? p.name;
     const department = (p: GroupMember) => localName(p.department ? { name: p.department, name_th: p.department_th } : null, lang);
@@ -58,8 +57,7 @@ export function GroupMemberList({
             : [];
     const saved = data?.data ?? [];
     const total = data?.meta.total ?? 0;
-    const lockReason = (p: GroupMember) =>
-        !isSuper && p.id === selfEmployeeId ? t('perm_refusal_own_access') : p.protected ? t('perm_refusal_admin_members_protected') : null;
+    const lockReason = (p: GroupMember) => (p.is_me ? t('perm_refusal_own_access') : p.protected ? t('perm_refusal_admin_members_protected') : null);
 
     const removeButton = (p: GroupMember) => (
         <button
@@ -75,20 +73,29 @@ export function GroupMemberList({
         if (readOnly) return null;
         if (leaving) {
             return (
-                <button type="button" onClick={() => onUndo(p)} className="text-brand text-[13px] font-medium underline-offset-[3px] hover:underline">
+                <button
+                    type="button"
+                    onClick={() => onUndo(p)}
+                    aria-label={`${t('gr_undo')} ${name(p)}`}
+                    className="text-brand inline-flex min-h-6 items-center px-1 text-[13px] font-medium underline-offset-[3px] hover:underline"
+                >
                     {t('gr_undo')}
                 </button>
             );
         }
         const locked = lockReason(p);
-        return locked ? <InfoHint text={locked} /> : removeButton(p);
+        return locked ? <LockHint text={locked} /> : removeButton(p);
     };
 
-    const empty = !isLoading && staged.length === 0 && saved.length === 0;
+    const empty = !busy && !failed && staged.length === 0 && saved.length === 0;
 
     return (
         <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="gr-members-title">
-            <PaneHeader id="gr-members-title" title={t('gr_members_title')} meta={t('gr_people').replace('{n}', fmtN(memberCount))}>
+            <PaneHeader
+                id="gr-members-title"
+                title={t('gr_members_title')}
+                meta={t(countKey('gr_people', memberCount)).replace('{n}', fmtN(memberCount))}
+            >
                 <PaneSearch
                     name="group-member-search"
                     value={search}
@@ -100,7 +107,7 @@ export function GroupMemberList({
                 />
             </PaneHeader>
 
-            <div className="border-border flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border-t">
+            <div aria-busy={busy} className="border-border flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border-t">
                 {staged.map((p) => (
                     <PaneRow
                         key={`new-${p.id}`}
@@ -112,8 +119,9 @@ export function GroupMemberList({
                         end={readOnly ? null : removeButton(p)}
                     />
                 ))}
-                {isLoading && groupId !== null && <PaneSkeleton />}
-                {!isLoading &&
+                {busy && <PaneSkeleton />}
+                {failed && <LoadFailedPanel onRetry={() => void refetch()} />}
+                {!busy &&
                     saved.map((p) => {
                         const leaving = removed.has(p.id);
                         return (

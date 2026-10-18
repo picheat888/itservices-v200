@@ -1,11 +1,13 @@
-// Pieces both panes of the Role Group dialog share, so "Add members" and "Current members" line up row for row.
+// Pieces both panes of the Role Group dialog share, so "Add members" and "Current members" line up row for row; the groups table uses LockHint too.
 import { useT } from '@/lang';
+import { InfoPopover } from '@/shared/components/info-popover';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 /** Title line, then one line of controls. */
@@ -50,6 +52,23 @@ export function PaneSearch({
     );
 }
 
+/** Lock icon whose reason opens on hover, tap or Enter; Enter and clicks stay off the row underneath. */
+export function LockHint({ text }: { text: string }) {
+    return (
+        <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} className="flex">
+            <InfoPopover
+                openOnFocus
+                label={text}
+                content={text}
+                contentClassName="max-w-[240px]"
+                className="text-muted-foreground/70 hover:text-brand focus-visible:text-brand relative inline-flex rounded-full before:absolute before:-inset-1.5 before:content-['']"
+            >
+                <Lock className="h-3.5 w-3.5" aria-hidden />
+            </InfoPopover>
+        </span>
+    );
+}
+
 /** Name over code and department; `lead` sits before (a checkbox), `note` and `end` after. */
 export function PaneRow({
     as: Tag = 'div',
@@ -58,6 +77,7 @@ export function PaneRow({
     department,
     lead,
     note,
+    locked,
     end,
     changed,
     gone,
@@ -70,6 +90,8 @@ export function PaneRow({
     department: string | null;
     lead?: ReactNode;
     note?: string | null;
+    /** The note is why the row is locked: a lock leads it. */
+    locked?: boolean;
     end?: ReactNode;
     /** Joined or leaving before the save: orange name and note. */
     changed?: boolean;
@@ -104,8 +126,14 @@ export function PaneRow({
                 </span>
             </span>
             {note && (
-                <span className={cn('ml-auto shrink-0 text-xs', changed ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground')}>
-                    {note}
+                <span
+                    className={cn(
+                        'ml-auto flex max-w-[45%] min-w-0 shrink-0 items-center gap-1 text-xs',
+                        changed ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground',
+                    )}
+                >
+                    {locked && <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+                    <TruncText text={note} />
                 </span>
             )}
             {end && <span className={cn('flex min-w-14 shrink-0 items-center justify-end', !note && 'ml-auto')}>{end}</span>}
@@ -119,7 +147,7 @@ export function PaneSkeleton({ rows = 6 }: { rows?: number }) {
         <div aria-hidden>
             {Array.from({ length: rows }).map((_, i) => (
                 <div key={i} className="border-border/60 flex min-h-[52px] items-center gap-3 border-b px-5">
-                    <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                    <Skeleton className="size-5 shrink-0 rounded" />
                     <span className="grid gap-1.5">
                         <Skeleton className="h-3.5 w-40" />
                         <Skeleton className="h-3 w-28" />

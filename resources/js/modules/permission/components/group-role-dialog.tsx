@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { InfoHint } from '@/shared/components/info-hint';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
@@ -12,19 +13,21 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Check, Loader2, Lock, PencilLine, Trash2, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { GroupMember, GroupRole, RoleRow } from '../api/permissionApi';
+import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
-import { useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
+import { useBaseRoleLabel, useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
+import { isOverCeiling } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
 import { GroupMemberPicker } from './group-member-picker';
+import { RoleBar } from './role-bar';
 
 type SaveStep = 'idle' | 'confirm' | 'saving' | 'done';
 
 export function GroupRoleDialog({
     open,
-    group,
+    group: liveGroup,
     groups,
     defaultGroup,
     onClose,
@@ -42,6 +45,7 @@ export function GroupRoleDialog({
     const fmtN = useNumberFormat();
     const { user, isSuper } = useAuth();
     const { data: matrix } = usePermissionMatrix();
+    const baseRole = useBaseRoleLabel();
     const { create, update } = useGroupRoleMutations();
     const deleteGroup = useDeleteGroup(defaultGroup);
 
@@ -54,28 +58,33 @@ export function GroupRoleDialog({
     const [saveStep, setSaveStep] = useState<SaveStep>('idle');
     const [saveError, setSaveError] = useState<string | null>(null);
     const nameRef = useRef<HTMLInputElement>(null);
+    const roleRef = useRef<HTMLButtonElement>(null);
 
-    // Fresh state each time the dialog opens; closing keeps it so the exit animation shows the same content
+    // Keep the last group while the dialog plays its exit animation
+    const [shown, setShown] = useState<GroupRole | null>(liveGroup);
+    useEffect(() => {
+        if (open) setShown(liveGroup);
+    }, [open, liveGroup]);
+    const group = open ? liveGroup : shown;
+
+    // Fresh state when the dialog opens or switches group; a refetch of the same group keeps it
     useEffect(() => {
         if (!open) return;
         setName(group?.name ?? '');
         setRole(group?.role ?? '');
         setAdded(new Map());
         setRemoved(new Map());
-        setTab('members');
+        setTab(group ? 'members' : 'pick');
         setTried(false);
         setSaveStep('idle');
         setSaveError(null);
-    }, [open, group]);
+    }, [open, group?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const roles = matrix?.roles ?? [];
     const myPermissions = new Set(user?.permissions ?? []);
-    // A non-super user may only hand out a role whose permissions they hold
-    const overCeiling = (r: RoleRow) => !isSuper && (r.is_super || r.permissions.some((key) => !myPermissions.has(key)));
     const readOnly = group !== null && group.role === SUPER_ROLE && !isSuper;
-    const roleLocked = readOnly || (!isSuper && !!group?.includes_me);
+    const roleLocked = readOnly || !!group?.includes_me;
     const chosenRole = roles.find((r) => r.value === role);
-    const baseRole = roles.find((r) => r.value === 'user')?.label ?? 'Staff';
 
     const nameChanged = group !== null && name.trim() !== group.name;
     const roleChanged = group !== null && role !== (group.role ?? '');
@@ -130,7 +139,7 @@ export function GroupRoleDialog({
     const openSave = () => {
         if (nameError || roleError) {
             setTried(true);
-            nameRef.current?.focus();
+            (nameError ? nameRef : roleRef).current?.focus();
             return;
         }
         setSaveError(null);
@@ -192,6 +201,7 @@ export function GroupRoleDialog({
     const showNameError = tried && nameError !== null;
     const showRoleError = tried && roleError !== null;
     const roleHelp = roleLocked && !readOnly ? t('perm_refusal_own_access') : !isSuper ? t('gr_role_ceiling') : null;
+    const deleteBlocked = group?.includes_me ? t('perm_refusal_own_access') : null;
 
     return (
         <>
@@ -206,7 +216,7 @@ export function GroupRoleDialog({
                 >
                     <FocusDialogHeader
                         icon={Users}
-                        eyebrow={group === null ? t('gr_add') : readOnly ? t('perm_groups') : t('gr_edit')}
+                        eyebrow={group === null ? t('gr_add') : readOnly ? t('gr_view') : t('gr_edit')}
                         title={name.trim() || group?.name || t('gr_new_title')}
                     />
 
@@ -227,7 +237,7 @@ export function GroupRoleDialog({
                                 name="group-name"
                                 autoComplete="off"
                                 value={name}
-                                disabled={readOnly}
+                                readOnly={readOnly}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder={t('gr_name_ph')}
                                 aria-invalid={showNameError || undefined}
@@ -241,33 +251,42 @@ export function GroupRoleDialog({
                             )}
                         </div>
                         <div className="grid content-start gap-1.5">
-                            <div className="flex min-w-0 items-baseline gap-1.5">
+                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
                                 {fieldLabel('gr-role', t('gr_role'), roleChanged)}
-                                <span id="gr-role-help" className="text-muted-foreground truncate text-xs">
+                                <span id="gr-role-help" className="text-muted-foreground text-xs">
                                     {roleHelp ?? (chosenRole ? t('gr_role_help').replace('{role}', chosenRole.label) : t('gr_role_help_none'))}
                                 </span>
                             </div>
                             <Select value={role || undefined} onValueChange={setRole} disabled={roleLocked}>
                                 <SelectTrigger
+                                    ref={roleRef}
                                     id="gr-role"
                                     aria-invalid={showRoleError || undefined}
-                                    aria-describedby="gr-role-help"
+                                    aria-describedby={showRoleError ? 'gr-role-help gr-role-error' : 'gr-role-help'}
                                     className={cn(showRoleError && 'border-destructive')}
                                 >
                                     <SelectValue placeholder={t('select_placeholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {roles.map((r) => (
-                                        <SelectItem key={r.value} value={r.value} disabled={r.value !== role && overCeiling(r)}>
+                                        <SelectItem
+                                            key={r.value}
+                                            value={r.value}
+                                            disabled={r.value !== role && isOverCeiling(r, isSuper, myPermissions)}
+                                        >
                                             <span className="flex items-center gap-2">
-                                                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.color }} aria-hidden />
+                                                <RoleBar color={r.color} />
                                                 {r.label}
                                             </span>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {showRoleError && <p className="text-destructive text-xs">{roleError}</p>}
+                            {showRoleError && (
+                                <p id="gr-role-error" className="text-destructive text-xs">
+                                    {roleError}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -301,8 +320,6 @@ export function GroupRoleDialog({
                                     onToggle={toggleStaged}
                                     onAddMany={addMany}
                                     onRemoveMany={removeMany}
-                                    selfEmployeeId={user?.employee_id ?? null}
-                                    isSuper={isSuper}
                                 />
                             </div>
                         )}
@@ -315,8 +332,6 @@ export function GroupRoleDialog({
                                 onRemove={takeOut}
                                 onUndo={undoTakeOut}
                                 leaveNote={leaveNote}
-                                selfEmployeeId={user?.employee_id ?? null}
-                                isSuper={isSuper}
                                 readOnly={readOnly}
                             />
                         </div>
@@ -324,14 +339,26 @@ export function GroupRoleDialog({
 
                     <div className="border-border bg-muted/30 flex items-center justify-end gap-2 border-t px-6 py-3">
                         {group !== null && !readOnly && (
-                            <Button
-                                variant="ghost"
-                                onClick={() => void askDelete()}
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive mr-auto"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                {t('gr_delete')}
-                            </Button>
+                            <span className="mr-auto flex items-center gap-1">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => void askDelete()}
+                                    disabled={deleteBlocked !== null}
+                                    aria-describedby={deleteBlocked ? 'gr-delete-blocked' : undefined}
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('gr_delete')}
+                                </Button>
+                                {deleteBlocked && (
+                                    <>
+                                        <span id="gr-delete-blocked" className="sr-only">
+                                            {deleteBlocked}
+                                        </span>
+                                        <InfoHint text={deleteBlocked} />
+                                    </>
+                                )}
+                            </span>
                         )}
                         {!readOnly && (
                             <span
@@ -393,7 +420,11 @@ export function GroupRoleDialog({
                         {line}
                     </span>
                 ))}
-                {saveError && <span className="text-destructive mt-2 block">{saveError}</span>}
+                {saveError && (
+                    <span role="alert" className="text-destructive mt-2 block">
+                        {saveError}
+                    </span>
+                )}
             </CenteredAlert>
         </>
     );
