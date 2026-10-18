@@ -545,7 +545,7 @@
     pointer-events: auto;
 }
 
-/* ── Sidebar below 1280px: icon rail ⇄ menu over the page (data-nav / data-narrow on the app shell) ── */
+/* ── Sidebar: icon rail ⇄ menu (data-nav / data-narrow on the app shell); below 1280px it opens over the page ── */
 [data-nav] {
     --nav-dur: 180ms;
     --nav-ease: cubic-bezier(0.3, 0, 0.8, 0.15);
@@ -560,18 +560,26 @@
     --nav-label-delay: 80ms;
     --nav-mark-delay: 0ms;
 }
-[data-narrow] .nav-label {
+.nav-label {
     opacity: 0;
     transition: opacity var(--nav-label-dur) ease var(--nav-label-delay);
 }
-[data-narrow] .nav-mark {
+.nav-mark {
     transition: opacity 80ms ease var(--nav-mark-delay);
 }
-[data-narrow][data-nav='open'] .nav-label {
+[data-nav='open'] .nav-label {
     opacity: 1;
 }
-[data-narrow][data-nav='open'] .nav-mark {
+[data-nav='open'] .nav-mark {
     opacity: 0;
+}
+/* 1280px and up: the sidebar pushes the page while its width animates */
+.nav-push {
+    width: 4rem;
+    transition: width var(--nav-dur) var(--nav-ease);
+}
+[data-nav='open'] .nav-push {
+    width: 16rem;
 }
 .nav-drawer {
     clip-path: inset(0 12rem 0 0);
@@ -589,13 +597,13 @@
 [data-nav='open'] .nav-drawer-shadow {
     clip-path: inset(0 -2.5rem 0 0);
 }
-[data-narrow] .nav-row-bg {
+.nav-row-bg {
     clip-path: inset(0 12rem 0 0 round 0.375rem);
     transition:
         clip-path var(--nav-dur) var(--nav-ease),
         background-color 120ms ease;
 }
-[data-narrow][data-nav='open'] .nav-row-bg {
+[data-nav='open'] .nav-row-bg {
     clip-path: inset(0 0 0 0 round 0.375rem);
 }
 .nav-scrim {
@@ -643,6 +651,7 @@
     transform: translateY(-6px) rotate(-45deg);
 }
 @media (prefers-reduced-motion: reduce) {
+    .nav-push,
     .nav-drawer,
     .nav-drawer-shadow,
     .nav-row-bg,
@@ -650,8 +659,8 @@
     .nav-burger path {
         transition: none !important;
     }
-    [data-narrow] .nav-label,
-    [data-narrow] .nav-mark,
+    .nav-label,
+    .nav-mark,
     .nav-scrim {
         transition: opacity 120ms linear;
     }
