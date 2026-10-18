@@ -125,28 +125,30 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeNotifications($granted);
         $granted = Permissions::normalizeReports($granted);
 
-        // Current keys, for the ceiling and the audit diff
-        $before = $roleModel->allowedKeys();
-        $added = array_values(array_diff($granted, $before));
-        $this->guardGrantCeiling($request, $added);
+        DB::transaction(function () use ($request, $roleId, $granted) {
+            $lockedRole = Role::whereKey($roleId)->lockForUpdate()->first();
 
-        // Bulk upsert
-        $grantedSet = array_flip($granted);
-        $upsertRows = array_map(fn ($key) => [
-            'role_id' => $roleId,
-            'permission' => $key,
-            'allowed' => isset($grantedSet[$key]),
-        ], Permissions::all());
+            // Current keys, for the ceiling and the audit diff
+            $before = $lockedRole->allowedKeys();
+            $added = array_values(array_diff($granted, $before));
+            $this->guardGrantCeiling($request, $added);
 
-        RolePermission::upsert($upsertRows, ['role_id', 'permission'], ['allowed']);
+            // Bulk upsert
+            $grantedSet = array_flip($granted);
+            $upsertRows = array_map(fn ($key) => [
+                'role_id' => $roleId,
+                'permission' => $key,
+                'allowed' => isset($grantedSet[$key]),
+            ], Permissions::all());
 
-        $removed = array_values(array_diff($before, $granted));
+            RolePermission::upsert($upsertRows, ['role_id', 'permission'], ['allowed']);
 
-        AuditLog::record(
-            'Updated permissions',
-            $roleModel->name ?? $roleModel->key,
-            ['added' => $added, 'removed' => $removed],
-        );
+            AuditLog::record(
+                'Updated permissions',
+                $lockedRole->name ?? $lockedRole->key,
+                ['added' => $added, 'removed' => array_values(array_diff($before, $granted))],
+            );
+        });
 
         return $this->index($request);
     }

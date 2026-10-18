@@ -100,6 +100,67 @@ class GroupRoleController extends Controller
     }
 
     /**
+     * The role id of every login account tied to the employees (same match as syncUserRoles).
+     *
+     * @param  array<int>  $employeeIds
+     * @return array<int, int|null> user id => role id
+     */
+    private function accountRoles(array $employeeIds): array
+    {
+        if ($employeeIds === []) {
+            return [];
+        }
+
+        $usernames = Employee::whereIn('id', $employeeIds)->pluck('username')->filter();
+
+        return User::where(function ($q) use ($employeeIds, $usernames) {
+            $q->whereIn('employee_id', $employeeIds)
+                ->orWhereIn('username', $usernames);
+        })
+            ->pluck('role_id', 'id')
+            ->map(fn ($roleId) => $roleId === null ? null : (int) $roleId)
+            ->all();
+    }
+
+    /**
+     * Audit details for a membership write: who joined, who left, and every account whose role moved.
+     *
+     * @param  array<int>  $addedEmployeeIds
+     * @param  array<int>  $removedEmployeeIds
+     * @param  array<int, int|null>  $rolesBefore  accountRoles() taken before the writes
+     * @return array{added?: list<string>, removed?: list<string>, role_changes?: list<array{name: string, from: string|null, to: string|null}>}
+     */
+    private function membershipDetails(array $addedEmployeeIds, array $removedEmployeeIds, array $rolesBefore): array
+    {
+        $memberLabels = Employee::whereIn('id', [...$addedEmployeeIds, ...$removedEmployeeIds])
+            ->get()
+            ->mapWithKeys(fn (Employee $employee) => [$employee->id => "{$employee->name} ({$employee->code})"]);
+        $labelsOf = fn (array $employeeIds) => $memberLabels->only($employeeIds)->sort()->values()->all();
+
+        $changedAccounts = User::whereIn('id', array_keys($rolesBefore))
+            ->get(['id', 'name', 'role_id'])
+            ->filter(fn (User $account) => ($account->role_id === null ? null : (int) $account->role_id) !== $rolesBefore[$account->id]);
+        $roleIds = $changedAccounts->flatMap(fn (User $account) => [$account->role_id, $rolesBefore[$account->id]])->filter()->unique();
+        $roleNames = Role::whereIn('id', $roleIds)->get()->mapWithKeys(fn (Role $role) => [$role->id => $role->name ?? $role->key]);
+
+        $roleChanges = $changedAccounts
+            ->map(fn (User $account) => [
+                'name' => $account->name,
+                'from' => $roleNames->get($rolesBefore[$account->id]),
+                'to' => $roleNames->get($account->role_id),
+            ])
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        return array_filter([
+            'added' => $labelsOf($addedEmployeeIds),
+            'removed' => $labelsOf($removedEmployeeIds),
+            'role_changes' => $roleChanges,
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     private function guardRole(array $data, ?Role $role): void
@@ -273,14 +334,16 @@ class GroupRoleController extends Controller
         $this->guardGrantCeiling($request, $role, $employeeIds !== []);
 
         $group = SuperAdmins::keepAtLeastOne(function () use ($data, $role, $employeeIds) {
+            $rolesBefore = $this->accountRoles($employeeIds);
             $group = GroupRole::create(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($group, $employeeIds);
             $this->syncUserRoles($group, $employeeIds);
 
+            $details = $this->membershipDetails($employeeIds, [], $rolesBefore);
+            AuditLog::record('Created role group', $group->name, $details ?: null, subject: $group);
+
             return $group;
         });
-
-        AuditLog::record('Created role group', $group->name, subject: $group);
 
         return response()->json(['data' => $this->present($group), 'message' => 'success'], 201);
     }
@@ -304,10 +367,9 @@ class GroupRoleController extends Controller
         $isDefaultGroup = GroupRole::defaultForNewEmployees()?->id === $groupRole->id;
         $this->guardGrantCeiling($request, $role, $addedEmployeeIds !== [] || ($roleChanges && ($newEmployeeIds !== [] || $isDefaultGroup)));
 
-        $before = [];
-
-        SuperAdmins::keepAtLeastOne(function () use ($groupRole, $data, $role, $newEmployeeIds, $removedEmployeeIds, &$before) {
+        SuperAdmins::keepAtLeastOne(function () use ($groupRole, $data, $role, $newEmployeeIds, $addedEmployeeIds, $removedEmployeeIds) {
             $before = $groupRole->getOriginal();
+            $rolesBefore = $this->accountRoles([...$newEmployeeIds, ...$removedEmployeeIds]);
             $groupRole->update(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($groupRole, $newEmployeeIds);
             $this->syncUserRoles($groupRole, $newEmployeeIds);
@@ -315,9 +377,13 @@ class GroupRoleController extends Controller
             if (count($removedEmployeeIds) > 0) {
                 $this->fallbackOrphansToDefault($groupRole, $removedEmployeeIds);
             }
-        });
 
-        AuditLog::record('Updated role group', $groupRole->name, AuditLog::changes($before, $groupRole), subject: $groupRole);
+            $details = [
+                ...(AuditLog::changes($before, $groupRole) ?? []),
+                ...$this->membershipDetails($addedEmployeeIds, $removedEmployeeIds, $rolesBefore),
+            ];
+            AuditLog::record('Updated role group', $groupRole->name, $details ?: null, subject: $groupRole);
+        });
 
         return response()->json(['data' => $this->present($groupRole->load(['employees'])), 'message' => 'success']);
     }
@@ -332,7 +398,9 @@ class GroupRoleController extends Controller
         $this->guardProtectedMembers($request, $memberIds);
         $name = $groupRole->name;
 
-        SuperAdmins::keepAtLeastOne(function () use ($groupRole, $memberIds) {
+        SuperAdmins::keepAtLeastOne(function () use ($groupRole, $memberIds, $name) {
+            $rolesBefore = $this->accountRoles($memberIds);
+
             // Unset default group if this one is being deleted
             if ((int) AppSetting::get('default_employee_group_id', 0) === $groupRole->id) {
                 AppSetting::put('default_employee_group_id', null);
@@ -340,9 +408,9 @@ class GroupRoleController extends Controller
 
             $groupRole->delete();
             $this->fallbackOrphansToDefault($groupRole, $memberIds);
-        });
 
-        AuditLog::recordDeleted('Deleted role group', $name, $groupRole);
+            AuditLog::recordDeleted('Deleted role group', $name, $groupRole, $this->membershipDetails([], $memberIds, $rolesBefore));
+        });
 
         return response()->json(['message' => 'success']);
     }
