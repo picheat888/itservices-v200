@@ -185,6 +185,8 @@ export const roleApi = {
     create: (payload: { name: string; color: string }) => send<RoleRow>('post', '/roles', payload),
     update: (key: string, payload: { name: string; color: string }) => send<RoleRow>('put', `/roles/${key}`, payload),
     remove: (key: string) => send<void>('delete', `/roles/${key}`),
+    duplicate: (key: string, payload: { name: string; color: string }) =>
+        send<{ key: string; name: string }>('post', `/roles/${key}/duplicate`, payload),
 };
 
 export const groupRoleApi = {
