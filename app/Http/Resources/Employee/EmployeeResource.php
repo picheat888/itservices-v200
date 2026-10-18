@@ -5,13 +5,29 @@ namespace App\Http\Resources\Employee;
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Employee;
 use App\Services\Employee\EmployeeService;
+use App\Support\SuperAdmins;
 use App\Support\SystemTime;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /** @mixin Employee */
 class EmployeeResource extends JsonResource
 {
+    /**
+     * Reads the Super admin flag for the whole list in one go, see Employee::rememberSuperAdmin().
+     *
+     * @param  mixed  $resource
+     */
+    public static function collection($resource): AnonymousResourceCollection
+    {
+        $employees = collect($resource)->filter(fn (mixed $item) => $item instanceof Employee);
+        $protectedIds = array_flip(SuperAdmins::protectedEmployeeIds($employees->pluck('id')->all()));
+        $employees->each(fn (Employee $employee) => $employee->rememberSuperAdmin(isset($protectedIds[$employee->id])));
+
+        return parent::collection($resource);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -19,9 +35,7 @@ class EmployeeResource extends JsonResource
     {
         $status = $this->status instanceof EmployeeStatus ? $this->status : EmployeeStatus::tryFrom((string) $this->status);
 
-        // Resolve the linked login account once via the FK relation: drives both
-        // has_account and the is_super_admin flag (used to lock down editing
-        // Administrator records).
+        // Linked login account, read once
         $linkedUser = $this->user;
 
         // Contact details, login name, joining date and why someone left are Employee-module
@@ -62,7 +76,7 @@ class EmployeeResource extends JsonResource
             'resign_reason' => $personal($this->resign_reason),
             'last_day' => $personal($this->last_day?->toDateString()),
             'has_account' => (bool) $linkedUser,
-            'is_super_admin' => (bool) $linkedUser?->isSuper(),
+            'is_super_admin' => $this->resource->isSuperAdmin(),
             // When and by whom it was added / last changed. The names ride on the single-record endpoint only.
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),

@@ -5,6 +5,7 @@
 namespace App\Support;
 
 use App\Enums\UserRole;
+use App\Models\Employee\Employee;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -24,6 +25,41 @@ class SuperAdmins
         $roleId = self::roleId();
 
         return $roleId !== null && User::where('role_id', $roleId)->exists();
+    }
+
+    /** Whether only a Super admin may manage this employee, see protectedEmployeeIds(). */
+    public static function protectsEmployee(Employee $employee): bool
+    {
+        return self::protectedEmployeeIds([$employee->id]) !== [];
+    }
+
+    /**
+     * The ids among these employees that sit in a super-role group or have a super login (by employee_id or username).
+     *
+     * @param  array<int>  $employeeIds
+     * @return array<int>
+     */
+    public static function protectedEmployeeIds(array $employeeIds): array
+    {
+        $roleId = self::roleId();
+        if ($roleId === null || $employeeIds === []) {
+            return [];
+        }
+
+        $inSuperGroup = DB::table('group_role_employee')
+            ->join('group_roles', 'group_roles.id', '=', 'group_role_employee.group_role_id')
+            ->where('group_roles.role_id', $roleId)
+            ->whereIn('group_role_employee.employee_id', $employeeIds)
+            ->pluck('group_role_employee.employee_id');
+
+        // Same account match as GroupRoleController::syncUserRoles
+        $withSuperAccount = DB::table('employees')
+            ->join('users', fn ($join) => $join->on('users.employee_id', '=', 'employees.id')->orOn('users.username', '=', 'employees.username'))
+            ->where('users.role_id', $roleId)
+            ->whereIn('employees.id', $employeeIds)
+            ->pluck('employees.id');
+
+        return $inSuperGroup->merge($withSuperAccount)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     /**

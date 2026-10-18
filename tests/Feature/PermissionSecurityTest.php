@@ -580,6 +580,104 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame($auditBefore, AuditLog::count());
     }
 
+    /** An Administrator-group member who has no login account yet. */
+    private function accountlessAdmin(): Employee
+    {
+        $adminGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        $accountless = Employee::create(['first_name' => 'Nola', 'last_name' => 'Admin', 'email' => 'nola@inaba.co.th']);
+        $adminGroup->employees()->attach($accountless->id);
+
+        return $accountless;
+    }
+
+    /** @return array<string, mixed> */
+    private function newCredentials(): array
+    {
+        return ['username' => 'nola', 'password' => 'Zq8!rTw#4mPx9vLk', 'password_confirmation' => 'Zq8!rTw#4mPx9vLk'];
+    }
+
+    public function test_non_super_cannot_give_a_login_to_an_administrator_group_member(): void
+    {
+        User::factory()->create(['role' => 'super']);
+        $accountless = $this->accountlessAdmin();
+        $this->actingAs($this->userWith('employees.set_credentials'));
+        $auditBefore = AuditLog::count();
+
+        $this->postJson("/api/employees/{$accountless->id}/credentials", $this->newCredentials())
+            ->assertForbidden()
+            ->assertJsonPath('message', 'super_account');
+
+        $this->assertDatabaseMissing('users', ['username' => 'nola']);
+        $this->assertNull($accountless->fresh()->username);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_super_caller_can_give_a_login_to_an_administrator_group_member(): void
+    {
+        $accountless = $this->accountlessAdmin();
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->postJson("/api/employees/{$accountless->id}/credentials", $this->newCredentials())->assertCreated();
+
+        $this->assertTrue(User::where('username', 'nola')->firstOrFail()->isSuper());
+    }
+
+    public function test_non_super_cannot_delete_an_administrator_group_member_without_a_login(): void
+    {
+        User::factory()->create(['role' => 'super']);
+        $accountless = $this->accountlessAdmin();
+        $this->actingAs($this->userWith('employees.delete'));
+        $auditBefore = AuditLog::count();
+
+        $this->deleteJson("/api/employees/{$accountless->id}")
+            ->assertForbidden()
+            ->assertJsonPath('message', 'super_account');
+
+        $this->assertDatabaseHas('employees', ['id' => $accountless->id]);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_non_super_cannot_resign_or_edit_an_administrator_group_member_without_a_login(): void
+    {
+        User::factory()->create(['role' => 'super']);
+        $accountless = $this->accountlessAdmin();
+        $this->actingAs($this->userWith('employees.resign', 'employees.edit'));
+        $auditBefore = AuditLog::count();
+
+        $this->postJson("/api/employees/{$accountless->id}/resign", ['reason' => 'Left'])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'super_account');
+        $this->putJson("/api/employees/{$accountless->id}", ['first_name' => 'Renamed', 'last_name' => 'Admin'])
+            ->assertForbidden();
+
+        $fresh = $accountless->fresh();
+        $this->assertSame('Nola', $fresh->first_name);
+        $this->assertSame('active', $fresh->status->value);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_super_caller_can_edit_an_administrator_group_member_without_a_login(): void
+    {
+        $accountless = $this->accountlessAdmin();
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson("/api/employees/{$accountless->id}", ['first_name' => 'Renamed', 'last_name' => 'Admin'])->assertOk();
+
+        $this->assertSame('Renamed', $accountless->fresh()->first_name);
+    }
+
+    public function test_an_administrator_group_member_without_a_login_is_flagged_for_the_spa(): void
+    {
+        $accountless = $this->accountlessAdmin();
+        $ordinary = Employee::create(['first_name' => 'Otto', 'last_name' => 'Staff', 'email' => 'otto@inaba.co.th']);
+        $this->actingAs($this->userWith('employees.view'));
+
+        $this->getJson("/api/employees/{$accountless->id}")->assertOk()->assertJsonPath('data.is_super_admin', true);
+        $flags = collect($this->getJson('/api/employees')->assertOk()->json('data'))->pluck('is_super_admin', 'id');
+        $this->assertTrue($flags[$accountless->id]);
+        $this->assertFalse($flags[$ordinary->id]);
+    }
+
     public function test_role_manager_cannot_edit_their_own_role(): void
     {
         $this->actingAs($this->userWith('system.manage_roles'));
