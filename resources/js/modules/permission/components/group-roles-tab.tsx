@@ -130,6 +130,7 @@ export function GroupRolesTab() {
         },
         {
             key: 'actions',
+            sticky: 'right',
             header: <span className="sr-only">{t('actions')}</span>,
             width: '64px',
             align: 'right',
@@ -227,8 +228,9 @@ export function GroupRolesTab() {
           ]
         : [t('gr_default_none'), t('gr_default_none_hint')];
 
-    const actions = (
-        <div className="flex flex-wrap items-center gap-2 max-lg:w-full">
+    // Narrow: [search, filter, add] then the default picker on its own row; 52rem and up: one row, add last
+    const defaultPicker = (
+        <div className="order-2 flex items-center gap-2 @max-[52rem]:w-full @min-[52rem]:order-1">
             <span className="text-muted-foreground flex items-center gap-1 text-sm">
                 <label htmlFor="gr-default">{t('gr_default_short')}</label>
                 <InfoHint text={t('perm_default_group_desc')} />
@@ -263,17 +265,23 @@ export function GroupRolesTab() {
                     })}
                 </SelectContent>
             </Select>
-            <Button onClick={openNew} className="ml-auto">
+        </div>
+    );
+    // A fragment: both items sit directly in the DataTable toolbar row, so `order` can place them
+    const actions = (
+        <>
+            {defaultPicker}
+            <Button onClick={openNew} className="order-1 @min-[52rem]:order-2">
                 <Plus className="h-4 w-4" />
                 {t('gr_add')}
             </Button>
-        </div>
+        </>
     );
 
     const searched = list.get('search') !== '' || !!roleFilter;
 
     return (
-        <div className="p-5">
+        <div className="@container p-5">
             <DataTable
                 columns={columns}
                 rows={rows}
