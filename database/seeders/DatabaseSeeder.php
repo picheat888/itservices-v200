@@ -60,12 +60,12 @@ class DatabaseSeeder extends Seeder
     private function seedRolesAndPermissions(): void
     {
         $roles = [
-            ['key' => UserRole::SuperAdmin->value, 'name' => 'Administrator', 'color' => '#2563eb', 'is_system' => true],
-            ['key' => UserRole::ITStaff->value, 'name' => 'IT Support', 'color' => '#2563eb', 'is_system' => false],
+            ['key' => UserRole::SuperAdmin->value, 'name' => 'Administrator', 'color' => '#8b5cf6', 'is_system' => true],
+            ['key' => UserRole::ITStaff->value, 'name' => 'IT Support', 'color' => '#3b82f6', 'is_system' => false],
             ['key' => UserRole::HR->value, 'name' => 'HR Recruit', 'color' => '#059669', 'is_system' => false],
             ['key' => UserRole::Employee->value, 'name' => 'Staff', 'color' => '#64748b', 'is_system' => false],
-            ['key' => 'it_supervisorleader', 'name' => 'IT Supervisor/Leader', 'color' => '#2563eb', 'is_system' => false],
-            ['key' => 'it_stock', 'name' => 'IT Admin & Document', 'color' => '#2563eb', 'is_system' => false],
+            ['key' => 'it_supervisorleader', 'name' => 'IT Supervisor/Leader', 'color' => '#ea580c', 'is_system' => false],
+            ['key' => 'it_stock', 'name' => 'IT Admin & Document', 'color' => '#ec4899', 'is_system' => false],
         ];
         foreach ($roles as $role) {
             Role::firstOrCreate(['key' => $role['key']], $role);
