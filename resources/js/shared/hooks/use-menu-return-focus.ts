@@ -1,5 +1,5 @@
 // Dialog/sheet focus handlers: a layer opened from a dropdown item returns focus to the menu button on close.
-import { claimMenuTrigger, lastInputWasKeyboard } from '@/shared/lib/menu-return-focus';
+import { claimMenuTrigger, followRowOnRemoval, lastInputWasKeyboard, rowSpotOf, type RowSpot } from '@/shared/lib/menu-return-focus';
 import { useRef } from 'react';
 
 type AutoFocusHandler = (event: Event) => void;
@@ -9,16 +9,22 @@ const focusBack = (target: HTMLElement) => target.focus({ focusVisible: lastInpu
 
 export function useMenuReturnFocus(onOpenAutoFocus?: AutoFocusHandler, onCloseAutoFocus?: AutoFocusHandler) {
     const returnTo = useRef<HTMLElement | null>(null);
+    // The button's row position, read while the row exists, in case the action removes it
+    const spot = useRef<RowSpot | null>(null);
 
     const handleOpen: AutoFocusHandler = (event) => {
         returnTo.current = claimMenuTrigger();
+        spot.current = returnTo.current ? rowSpotOf(returnTo.current) : null;
         onOpenAutoFocus?.(event);
     };
 
     const handleClose: AutoFocusHandler = (event) => {
         onCloseAutoFocus?.(event);
         const target = returnTo.current;
+        const rowSpot = spot.current;
         returnTo.current = null;
+        spot.current = null;
+        if (target && rowSpot) followRowOnRemoval(target, rowSpot);
         if (!target?.isConnected) {
             return;
         }
