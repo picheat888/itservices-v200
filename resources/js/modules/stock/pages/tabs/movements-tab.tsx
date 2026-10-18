@@ -67,14 +67,14 @@ export function MovementsTab() {
         {
             key: 'moved_at',
             header: t('audit_time'),
-            width: '140px',
+            width: '130px',
             className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs">{fmt.dateTime(m.moved_at)}</span>,
         },
         {
             key: 'type',
             header: t('stock_mv_type'),
-            width: '120px',
+            width: '114px',
             className: 'whitespace-nowrap',
             render: (m) => {
                 const meta = MV_META[m.type];
@@ -109,7 +109,7 @@ export function MovementsTab() {
             key: 'unit_cost',
             header: t('stock_unit_cost_short'),
             align: 'right',
-            width: '110px',
+            width: '100px',
             className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost) : '—'}</span>,
         },
@@ -117,7 +117,7 @@ export function MovementsTab() {
             key: 'value',
             header: t('stock_value'),
             align: 'right',
-            width: '120px',
+            width: '110px',
             className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost * m.qty) : '—'}</span>,
         },
@@ -126,7 +126,7 @@ export function MovementsTab() {
         {
             key: 'reference',
             header: t('stock_reference'),
-            width: '140px',
+            width: '120px',
             render: (m) => <TruncText text={m.reference} className="text-muted-foreground text-xs" />,
         },
         {
@@ -138,7 +138,7 @@ export function MovementsTab() {
         {
             key: 'notes',
             header: t('stock_notes'),
-            minWidth: '12rem',
+            minWidth: '10rem',
             render: (m) => <TruncText text={m.notes} className="text-muted-foreground text-xs" />,
         },
     ];
