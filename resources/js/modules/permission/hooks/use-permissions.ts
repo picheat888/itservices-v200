@@ -1,3 +1,4 @@
+import type { Role } from '@/shared/types';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     groupRoleApi,
@@ -11,8 +12,15 @@ import {
 
 const KEY = ['permissions-matrix'] as const;
 const GROUPS = ['group-roles'] as const;
+const BASE_ROLE: Role = 'user';
 
 export const usePermissionMatrix = () => useQuery({ queryKey: KEY, queryFn: permissionApi.matrix });
+
+/** Label of the role a person falls back to when they leave every group. */
+export function useBaseRoleLabel(): string {
+    const { data } = usePermissionMatrix();
+    return data?.roles.find((r) => r.value === BASE_ROLE)?.label ?? '';
+}
 
 export function useUpdateRolePermissions() {
     const qc = useQueryClient();

@@ -103,7 +103,7 @@ export interface GroupRolePayload {
     remove_ids?: number[];
 }
 
-/** A person in the Role Group dialog; `group` is the group they sit in now, `protected` = only a Super admin may move them. */
+/** A person in the Role Group dialog; `group` is the group they sit in now, `protected` = only a Super admin may move them, `is_me` = the caller's own employee. */
 export interface GroupMember {
     id: number;
     code: string;
@@ -114,6 +114,7 @@ export interface GroupMember {
     group_id: number | null;
     group: string | null;
     protected: boolean;
+    is_me?: boolean;
 }
 
 export interface GroupMemberPage {
@@ -170,24 +171,15 @@ export const groupRoleApi = {
                 params: { group_id: p.groupId ?? undefined, search: p.search || undefined, department_id: p.departmentId ?? undefined, page: p.page },
             })
             .then((r) => r.data),
-    /** Everyone a department can add at once (capped on the server). */
+    /** Everyone in a department at once; the answer may or may not carry `meta`. */
     departmentCandidates: (groupId: number | null, departmentId: number) =>
         http
-            .get<
-                ApiEnvelope<GroupMember[]>
-            >('/group-roles-candidates', { params: { group_id: groupId ?? undefined, department_id: departmentId, all: 1 } })
+            .get<{
+                data: GroupMember[];
+                meta?: GroupMemberPage['meta'];
+            }>('/group-roles-candidates', { params: { group_id: groupId ?? undefined, department_id: departmentId, all: 1 } })
             .then((r) => r.data.data),
-    /**
-     * Answers with the whole list (the endpoint returns index()), and that answer is
-     * written straight into the list cache — so it must keep the list's shape.
-     *
-     * NOT send(): that helper unwraps the envelope's `data`, which here IS the array of
-     * groups. The cache then held an array where the page reads `data.data`, so saving a
-     * default emptied the screen until the next fetch — the response was right, the
-     * unwrapping was one layer too deep. `send<GroupRoleListResponse>` could not catch it
-     * either: it returns T by assertion, so the type said envelope while the value was an
-     * array.
-     */
+    /** Returns the whole list in the list cache's shape; not send(), which would unwrap its `data`. */
     setDefault: async (groupId: number | null): Promise<GroupRoleListResponse> => {
         await ensureCsrf();
         const { data } = await http.put<GroupRoleListResponse>('/group-roles-default', { group_id: groupId });

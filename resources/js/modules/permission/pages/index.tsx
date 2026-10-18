@@ -62,6 +62,7 @@ import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, P
 import { ProfilePermissionTree } from '../components/profile-permission-tree';
 import { ReportPermissionTree } from '../components/report-permission-tree';
 import { RequestPermissionTree } from '../components/request-permission-tree';
+import { RoleBar } from '../components/role-bar';
 import { RoleModal } from '../components/role-modal';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { TicketPermissionTree } from '../components/ticket-permission-tree';
@@ -78,7 +79,7 @@ const TABS = ['templates', 'groups', 'logs'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 // URL keys of the Logs and Role Groups lists; cleared when the tab changes.
-const AUDIT_LIST_KEYS = ['search', 'category', 'user', 'page', 'role', 'sort', 'view', 'add'];
+const TAB_LIST_KEYS = ['search', 'category', 'user', 'page', 'role', 'sort', 'view', 'add'];
 
 /** Permission each tab's own endpoints require. */
 const TAB_PERMISSION: Record<Tab, string> = {
@@ -96,13 +97,12 @@ export default function PermissionsPage() {
     // Active tab in ?tab= (useTabParam); an unknown or forbidden tab falls back to the first allowed one
     const [allowedTab, setTab] = useTabParam(isAllowedTab, allowed[0] ?? 'templates');
     const tab: Tab | null = allowed.length > 0 ? allowedTab : null;
-    // The Logs list keys go with the tab; rows-per-page stays.
     // Unsaved role-permission draft; leaving the matrix tab asks first.
     const [rolesDirty, setRolesDirty] = useState(false);
     const guardTabSwitch = useDiscardGuard(tab === 'templates' && rolesDirty);
     const changeTab = (next: Tab) => {
         if (next === tab) return;
-        guardTabSwitch(() => setTab(next, { extra: (params) => AUDIT_LIST_KEYS.forEach((key) => params.delete(key)) }));
+        guardTabSwitch(() => setTab(next, { extra: (params) => TAB_LIST_KEYS.forEach((key) => params.delete(key)) }));
     };
 
     const labels: Record<Tab, string> = { templates: t('perm_roles'), groups: t('perm_groups'), logs: t('perm_audit') };
@@ -455,7 +455,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 onClick={() => r.value !== role.value && guardRoleSwitch(() => setSelected(r.value))}
                                 className="flex min-w-0 flex-1 items-center gap-2 py-3.5 pl-4 text-left"
                             >
-                                <span className="h-6 w-1.5 shrink-0 rounded" style={{ background: r.color }} />
+                                <RoleBar color={r.color} className="h-6" />
                                 <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand')}>{r.label}</span>
                             </button>
                             {!r.is_system && (
