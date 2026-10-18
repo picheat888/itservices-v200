@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ResolveMode } from './resolve-ticket-modal';
+import { ticketActionFlags } from './ticket-actions';
 import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
 
 /**
@@ -352,35 +353,14 @@ export function TicketDetailDrawer({
 
     if (!view) return null;
 
-    // Mirrors the server's three gates exactly (permission -> assignee -> status, in that
-    // order) — a button that would come back 403 is a button that should not have been drawn.
-    const isMine = view.assignee_id != null && view.assignee_id === meId;
-    const isWorking = view.status === 'in_progress';
     const progress = progressEntries(view, t, lang);
-    const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
-    // Anti case-pumping: the person who filed a case can never take it (backend enforces too).
-    const isMyOwnRequest = meEmployeeId != null && view.requester_id === meEmployeeId;
-    const showTake = isOpenUnassigned && canTake && !isMyOwnRequest;
-    /**
-     * Routing a case — handing an open one to somebody (Assign), or moving one already in
-     * progress (Forward). Both are the dispatcher's job, and neither is offered on a case
-     * you filed yourself, even holding tickets.assign.
-     *
-     * Reading your own ticket you are the person waiting on IT, not IT: you cannot take it
-     * (anti case-pumping) and you are the one person it cannot be routed to, so deciding who
-     * works it is not yours to do from here. Somebody else's case is unaffected — that is
-     * the dispatcher wearing the right hat.
-     *
-     * These two buttons are the ONLY way into either dialog (the list has no row action), so
-     * hiding them really does close the door: your own case goes to whoever takes it, or to
-     * another dispatcher. The backend gates are untouched.
-     */
-    const canRouteThis = !isMyOwnRequest;
-    const showAssign = isOpenUnassigned && canAssign && canRouteThis;
-    const showForward = canForward && (isMine || (canAssign && canRouteThis));
-    // Everything the desk does to a case, as opposed to what its owner can do to it. When a
-    // reader has none of it the footer is theirs, and Close is the only thing left to offer.
-    const hasDeskActions = showTake || showAssign || (isWorking && (isMine || showForward));
+    const { isMine, showTake, showAssign, showForward, showWork, hasDeskActions } = ticketActionFlags(view, {
+        canTake,
+        canAssign,
+        canForward,
+        meId,
+        meEmployeeId,
+    });
     const files = view.attachments ?? [];
     const [s1, s2, s3] = spineTones(view.status);
     // A ticket canceled before anyone took it never reached step 2.
@@ -840,7 +820,7 @@ export function TicketDetailDrawer({
                                 {t('ticket_take_case')}
                             </Button>
                         )}
-                        {isWorking && showForward && (
+                        {showForward && (
                             <Button variant="outline" onClick={() => onForward(view)}>
                                 <ArrowRightLeft className="h-4 w-4" />
                                 {t('ticket_forward')}
@@ -851,7 +831,7 @@ export function TicketDetailDrawer({
                                 {t('close')}
                             </Button>
                         )}
-                        {isWorking && isMine && (
+                        {showWork && (
                             <>
                                 {/* Between taking and closing: the third thing an assignee can do. */}
                                 <Button variant="outline" onClick={() => onUpdate(view)}>

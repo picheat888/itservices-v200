@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Ban, Check, ClipboardList, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
+import { AlertTriangle, Check, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
@@ -339,7 +339,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         title={t('stock_count_cancel_draft')}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
-                        <Ban className="h-4 w-4" aria-hidden />
+                        <ClipboardX className="h-4 w-4" aria-hidden />
                     </button>
                 ) : null,
         },

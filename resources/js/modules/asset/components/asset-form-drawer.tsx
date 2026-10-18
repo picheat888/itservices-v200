@@ -17,7 +17,7 @@ import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag } from 'lucide-react';
+import { Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
@@ -367,7 +367,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         </div>
                                     </Field>
                                 )}
-                                <Field label={t('asset_nickname')} help={t('asset_nickname_help')}>
+                                <Field label={t('asset_nickname')} icon={Tag} help={t('asset_nickname_help')}>
                                     <Input value={form.tag} onChange={(e) => upd('tag', e.target.value)} placeholder={t('asset_nickname_ph')} />
                                 </Field>
                             </div>
