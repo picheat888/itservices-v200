@@ -43,7 +43,7 @@ class TabularSectionSheet implements FromArray, ShouldAutoSize, WithEvents, With
      */
     public function array(): array
     {
-        [$rows, $this->dateFormats] = SheetLayout::withDates($this->section['rows'], 2);
+        [$rows, $this->dateFormats] = SheetLayout::sheetCells($this->section['rows'], 2);
 
         return $rows;
     }

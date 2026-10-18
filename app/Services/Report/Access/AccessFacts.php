@@ -114,7 +114,7 @@ final class AccessFacts
     {
         $department = $owner?->getRelationValue('department');
 
-        return $department ? ['name' => $department->name, 'name_th' => $department->name_th] : null;
+        return $department ? ['name' => $department->name, 'name_th' => $department->name_th, 'code' => $department->code] : null;
     }
 
     /** Whole days since a leaver's last day; null when none was recorded. */

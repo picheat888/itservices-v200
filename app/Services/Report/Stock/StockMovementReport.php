@@ -117,6 +117,11 @@ class StockMovementReport extends TabularReport
         $this->rowBook = StockCostBook::forItems($rows->pluck('stock_item_id'));
     }
 
+    protected function hasRowId(): bool
+    {
+        return true;
+    }
+
     public function columns(): array
     {
         return [
@@ -310,7 +315,7 @@ class StockMovementReport extends TabularReport
         return StockRequest::query()
             ->whereBetween('fulfilled_at', [$from, $to])
             ->when($filters['category_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('item', fn (Builder $i) => $i->where('category_id', (int) $id)))
-            ->with(['user:id,name,employee_id', 'user.employee:id,department_id,first_name_th,last_name_th', 'user.employee.department:id,name,name_th'])
+            ->with(['user:id,name,employee_id', 'user.employee:id,department_id,first_name_th,last_name_th', 'user.employee.department:id,code,name,name_th'])
             ->get(['id', 'stock_item_id', 'user_id', 'requester_name', 'qty', 'fulfilled_at']);
     }
 

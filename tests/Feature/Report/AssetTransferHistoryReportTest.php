@@ -214,7 +214,7 @@ class AssetTransferHistoryReportTest extends TestCase
         $this->assertSame('employee', $a1['to_type']);
         $this->assertSame(['name' => 'Anan Tech', 'name_th' => 'อนันต์ เทค'], $a1['to_name']);
         $this->assertSame('EMP-1', $a1['to_code']);
-        $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที'], $a1['to_department']);
+        $this->assertSame(['name' => 'IT', 'name_th' => 'ไอที', 'code' => $this->it->code], $a1['to_department']);
         $this->assertSame(['name' => 'Anan Tech (EMP-1)', 'name_th' => 'อนันต์ เทค (EMP-1)'], $a1['to_label']);
         $this->assertSame(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'], $a1['category']);
         $this->assertEquals(1, $a1['asset_moves']);

@@ -92,7 +92,7 @@ class EmployeeOverviewReport extends TabularReport
             ->selectSub($onboarding(true), 'onboarding_open')
             ->selectSub(Asset::query()->selectRaw('COUNT(*)')->whereColumn('assets.owner_employee_id', 'employees.id'), 'assets_held')
             ->selectSub(AccessMembership::query()->selectRaw('COUNT(*)')->whereColumn('access_memberships.employee_id', 'employees.id')->whereNull('revoked_at'), 'open_grants')
-            ->with(['department:id,name,name_th', 'section:id,name,name_th', 'position:id,title'])
+            ->with(['department:id,code,name,name_th', 'section:id,name,name_th', 'position:id,title'])
             ->orderBy('movement_date')
             ->orderBy('code')
             ->orderBy('movement_kind');
@@ -115,12 +115,16 @@ class EmployeeOverviewReport extends TabularReport
             ReportColumn::localized('employee', 'พนักงาน', fn (Employee $e) => ['name' => $e->name, 'name_th' => $e->name_th])
                 ->labelKey('rep_c_eo_employee')->linkTo('/employees', fn (Employee $e) => $e->id),
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (Employee $e) => $e->code),
-            ReportColumn::localized('department', 'แผนก', fn (Employee $e) => $e->department ? ['name' => $e->department->name, 'name_th' => $e->department->name_th] : null),
+            ReportColumn::localized('department', 'แผนก', fn (Employee $e) => $e->department ? ['name' => $e->department->name, 'name_th' => $e->department->name_th, 'code' => $e->department->code] : null)->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::localized('section', 'หน่วยงาน', fn (Employee $e) => $e->section ? ['name' => $e->section->name, 'name_th' => $e->section->name_th] : null)
                 ->labelKey('rep_c_eo_section'),
             ReportColumn::text('position', 'ตำแหน่ง', fn (Employee $e) => $e->position?->title),
             ReportColumn::enum('prep_status', 'เตรียมเครื่อง', fn (Employee $e) => $this->prepStatus($e), self::PREP_KEYS, self::PREP_TH),
-            ReportColumn::text('onboarding', 'คำขอเตรียมเครื่อง (เสร็จ/ทั้งหมด)', fn (Employee $e) => $this->onboardingProgress($e)),
+            ReportColumn::text('onboarding', 'คำขอเตรียมเครื่อง (เสร็จ/ทั้งหมด)', fn (Employee $e) => $this->onboardingProgress($e))->screenOnly(),
+            ReportColumn::number('onboarding_done', 'คำขอเตรียมเครื่องที่เสร็จ', fn (Employee $e) => $this->onboardingCount($e, 'done'))->sheetOnly()
+                ->describe('จำนวนคำขอเตรียมเครื่องของพนักงานใหม่ที่ส่งมอบแล้ว (ว่าง = ไม่ใช่พนักงานเข้าใหม่ หรือไม่มีคำขอ)'),
+            ReportColumn::number('onboarding_total', 'คำขอเตรียมเครื่องทั้งหมด', fn (Employee $e) => $this->onboardingCount($e, 'total'))->sheetOnly()
+                ->describe('จำนวนคำขอเตรียมเครื่องทั้งหมดของพนักงานใหม่ (ว่าง = ไม่ใช่พนักงานเข้าใหม่ หรือไม่มีคำขอ)'),
             ReportColumn::number('upcoming_days', 'เริ่มงานอีก (วัน)', fn (Employee $e) => $left($e) || ! $e->joined_at ? null : (int) today()->diffInDays($e->joined_at, false))
                 ->labelKey('rep_c_eo_upcoming_days'),
             ReportColumn::number('assets_held', 'ทรัพย์สินที่ถือ', fn (Employee $e) => $left($e) ? (int) $e->getAttribute('assets_held') : null),
@@ -626,11 +630,19 @@ class EmployeeOverviewReport extends TabularReport
     /** "done/total" for joiners with onboarding requests, where done = completed. */
     private function onboardingProgress(Employee $employee): ?string
     {
+        $total = $this->onboardingCount($employee, 'total');
+
+        return $total === null ? null : $this->onboardingCount($employee, 'done')."/{$total}";
+    }
+
+    /** A joiner's onboarding requests: 'done' or 'total'; null when not a joiner or none were filed. */
+    private function onboardingCount(Employee $employee, string $which): ?int
+    {
         $total = (int) $employee->getAttribute('onboarding_total');
         if ($employee->getAttribute('movement_kind') !== 'joined' || $total === 0) {
             return null;
         }
 
-        return ($total - (int) $employee->getAttribute('onboarding_open'))."/{$total}";
+        return $which === 'total' ? $total : $total - (int) $employee->getAttribute('onboarding_open');
     }
 }

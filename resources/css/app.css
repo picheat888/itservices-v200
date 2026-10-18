@@ -575,13 +575,19 @@
 }
 .nav-drawer {
     clip-path: inset(0 12rem 0 0);
-    transition:
-        clip-path var(--nav-dur) var(--nav-ease),
-        box-shadow var(--nav-dur) var(--nav-ease);
+    transition: clip-path var(--nav-dur) var(--nav-ease);
 }
 [data-nav='open'] .nav-drawer {
-    clip-path: inset(0 -2.5rem 0 0);
+    clip-path: inset(0 0 0 0);
+}
+/* Shadow on its own layer so the menu edge travels exactly 64→256px, in step with ≡ */
+.nav-drawer-shadow {
     box-shadow: 0 10px 30px rgb(15 23 42 / 0.25);
+    clip-path: inset(0 12rem 0 0);
+    transition: clip-path var(--nav-dur) var(--nav-ease);
+}
+[data-nav='open'] .nav-drawer-shadow {
+    clip-path: inset(0 -2.5rem 0 0);
 }
 [data-narrow] .nav-row-bg {
     clip-path: inset(0 12rem 0 0 round 0.375rem);
@@ -636,6 +642,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .nav-drawer,
+    .nav-drawer-shadow,
     .nav-row-bg,
     .nav-toggle,
     .nav-burger path {

@@ -137,7 +137,7 @@ class RequestOverviewReport extends TabularReport
             ReportColumn::text('requester', 'ผู้ขอ', fn (ServiceRequest $r) => $r->requester_name),
             // Drawn under the name on the page.
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (ServiceRequest $r) => $r->employee?->code)->hiddenByDefault(),
-            ReportColumn::localized('department', 'แผนก', fn (ServiceRequest $r) => self::department($r))->hiddenByDefault(),
+            ReportColumn::localized('department', 'แผนก', fn (ServiceRequest $r) => self::department($r))->hiddenByDefault()->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('status', 'สถานะ', fn (ServiceRequest $r) => $r->status, self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::date('approved_at', 'อนุมัติครบ', fn (ServiceRequest $r) => $r->approved_at)->labelKey('rep_c_rqo_approved_at'),
             ReportColumn::date('completed_at', 'เสร็จสิ้น', fn (ServiceRequest $r) => $r->completed_at)->labelKey('rep_c_rqo_completed_at'),
@@ -177,7 +177,7 @@ class RequestOverviewReport extends TabularReport
     {
         $department = $r->employee?->department;
         if ($department) {
-            return ['name' => $department->name, 'name_th' => $department->name_th];
+            return ['name' => $department->name, 'name_th' => $department->name_th, 'code' => $department->code];
         }
 
         return $r->department_name ? ['name' => $r->department_name, 'name_th' => null] : null;

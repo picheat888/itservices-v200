@@ -80,7 +80,7 @@ class EmployeeOpenItemsReport extends TabularReport
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (OpenItemRow $r) => $r->employee?->code)
                 ->linkTo('/employees', fn (OpenItemRow $r) => $r->employee_id),
             ReportColumn::text('employee', 'พนักงาน', fn (OpenItemRow $r) => $r->employee?->name),
-            ReportColumn::localized('department', 'แผนก', fn (OpenItemRow $r) => AccessFacts::department($r->employee)),
+            ReportColumn::localized('department', 'แผนก', fn (OpenItemRow $r) => AccessFacts::department($r->employee))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::text('item', 'รายการ', fn (OpenItemRow $r) => $this->item($r))
                 ->linkTo('/assets', fn (OpenItemRow $r) => $r->grp === 'asset' ? (int) $r->ref_id : null),
             ReportColumn::text('detail', 'รายละเอียด', fn (OpenItemRow $r) => $this->detail($r)),

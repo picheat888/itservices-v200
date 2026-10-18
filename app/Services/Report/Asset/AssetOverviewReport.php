@@ -127,7 +127,7 @@ class AssetOverviewReport extends TabularReport
                 SearchTerms::related('ownerEmployee', ['code', ...SearchTerms::personName()]),
             ]))
             ->with([
-                'category:id,name,name_th', 'brand:id,name', 'model:id,name', 'ownerEmployee.department:id,name,name_th',
+                'category:id,name,name_th', 'brand:id,name', 'model:id,name', 'ownerEmployee.department:id,code,name,name_th',
                 'location:id,name', 'warehouse:id,name', 'contract:id,end_date,value', 'creator:id,name',
             ])
             ->orderBy('asset_code');
@@ -146,7 +146,8 @@ class AssetOverviewReport extends TabularReport
             ReportColumn::enum('status', 'สถานะ', fn (Asset $a) => $a->status, self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::enum('source', 'ที่มา', fn (Asset $a) => $a->source, self::SOURCE_KEYS, self::SOURCE_TH),
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),
-            ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a)),
+            ReportColumn::text('holder_code', 'รหัสพนักงานผู้ถือ', fn (Asset $a) => $a->ownerEmployee?->code)->sheetOnly()->describe('รหัสพนักงานที่ถือทรัพย์สินอยู่ ใช้เชื่อมกับตารางพนักงาน (ว่าง = ไม่มีพนักงานถือ เช่น อยู่ในคลังหรือเป็นส่วนกลาง)'),
+            ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name),
             ReportColumn::text('location', 'สถานที่', fn (Asset $a) => $a->location?->name),
             // Rented assets don't store their own value (fee lives on the linked contract —

@@ -91,7 +91,7 @@ class TicketManualSlaReport extends TabularReport
         return $this->scopedTickets($viewer, $set('category'))
             ->with([
                 'assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th',
-                'requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,name,name_th',
+                'requester:id,code,first_name,last_name,first_name_th,last_name_th,department_id', 'requester.department:id,code,name,name_th',
             ])
             ->where('tickets.source', TicketSource::Manual->value)
             ->whereBetween('tickets.created_at', [$from, $to])
@@ -107,10 +107,10 @@ class TicketManualSlaReport extends TabularReport
             // Opened first, as the Ticket & SLA page's list reads.
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),
             ReportColumn::text('subject', 'เรื่อง', fn (Ticket $t) => $t->subject),
-            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null)
+            ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th, 'code' => $t->requester->code] : null)
                 // "ผู้แจ้ง", as the Ticket & SLA page's list heads it (the shared rep_c_requester reads "ผู้ขอ").
-                ->labelKey('rep_col_requester'),
-            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th] : null),
+                ->labelKey('rep_col_requester')->withCode('รหัสพนักงานผู้แจ้ง', 'รหัสพนักงานของผู้แจ้ง ใช้เชื่อมกับตารางพนักงาน'),
+            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th, 'code' => $d->code] : null)->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, self::priorityKeys(), self::priorityTh()),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),

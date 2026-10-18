@@ -936,7 +936,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -957,7 +958,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -978,7 +980,8 @@
                     "code": "E3",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -999,7 +1002,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -1038,7 +1042,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -1059,7 +1064,8 @@
                     "code": "E2",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -2916,7 +2922,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -2937,7 +2944,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -2958,7 +2966,8 @@
                     "code": "E3",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -2979,7 +2988,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -3018,7 +3028,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -3039,7 +3050,8 @@
                     "code": "E2",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -4553,7 +4565,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -4574,7 +4587,8 @@
                     "code": "E3",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -4595,7 +4609,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -4634,7 +4649,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -4655,7 +4671,8 @@
                     "code": "E2",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -4676,7 +4693,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -5867,7 +5885,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -5888,7 +5907,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -5909,7 +5929,8 @@
                     "code": "E3",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -5948,7 +5969,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -5969,7 +5991,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -5990,7 +6013,8 @@
                     "code": "E2",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -8470,7 +8494,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -8491,7 +8516,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -8512,7 +8538,8 @@
                     "code": "E3",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -8533,7 +8560,8 @@
                     "code": "E2",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -8554,7 +8582,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -8575,7 +8604,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -9238,7 +9268,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -9530,7 +9561,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -10155,7 +10187,8 @@
                     "code": "E1",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -10361,7 +10394,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -10382,7 +10416,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -10403,7 +10438,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -11032,7 +11068,8 @@
                     "code": "E6",
                     "department": {
                         "name": "Production",
-                        "name_th": "ฝ่ายผลิต"
+                        "name_th": "ฝ่ายผลิต",
+                        "code": "DEP-0001"
                     },
                     "kind": "person",
                     "apart": false,
@@ -11071,7 +11108,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,
@@ -11092,7 +11130,8 @@
                     "code": "E4",
                     "department": {
                         "name": "Safety",
-                        "name_th": null
+                        "name_th": null,
+                        "code": "DEP-0002"
                     },
                     "kind": "person",
                     "apart": false,

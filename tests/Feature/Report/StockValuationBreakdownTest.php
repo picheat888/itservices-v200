@@ -341,14 +341,14 @@ class StockValuationBreakdownTest extends TestCase
         $user = $this->userWith([...$this->reportRights('stock')]);
 
         $today = collect($report->exportSections($user, $report->resolveFilters([])))->keyBy('title');
-        $this->assertSame(['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน'], $today->keys()->all());
+        $this->assertSame(['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'ไม่เคลื่อนไหวเกิน 90 วัน'], $today->keys()->all());
         $this->assertSame(['อะไหล่', 'สาย'], array_column($today['มูลค่าตามหมวด']['rows'], 0));
         $this->assertSame(['Main', 'Branch'], array_column($today['มูลค่าตามคลัง']['rows'], 0));
         $this->assertSame([87.6, 12.4], array_column($today['มูลค่าตามหมวด']['rows'], 4));
-        $this->assertSame(['HDD 2TB', 'LAN cable'], array_column($today['รายการที่ไม่เคลื่อนไหวเกิน 90 วัน']['rows'], 1));
+        $this->assertSame(['HDD 2TB', 'LAN cable'], array_column($today['ไม่เคลื่อนไหวเกิน 90 วัน']['rows'], 1));
 
         $past = array_column((new StockValuationReport)->exportSections($user, $report->resolveFilters(['as_of' => '2026-09-15'])), 'title');
-        $this->assertSame(['มูลค่าตามหมวด', 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน'], $past);
+        $this->assertSame(['มูลค่าตามหมวด', 'ไม่เคลื่อนไหวเกิน 90 วัน'], $past);
 
         // HDD off the shelves: the warehouse share is of the warehouses' 1,050, not the 1,210 in the tile.
         StockBalance::query()->where('stock_item_id', $this->s['hdd']->id)->delete();
@@ -367,7 +367,7 @@ class StockValuationBreakdownTest extends TestCase
         $this->assertExportStored('Report_stock-valuation_2026-09-25.xlsx', function (TabularReportExport $export) {
             $rows = collect($export->sheets())->first(fn (object $s) => $s instanceof TabularRowsSheet);
 
-            return array_column($export->sections, 'title') === ['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'รายการที่ไม่เคลื่อนไหวเกิน 90 วัน']
+            return array_column($export->sections, 'title') === ['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'ไม่เคลื่อนไหวเกิน 90 วัน']
                 && $rows !== null
                 && in_array('เคลื่อนไหวล่าสุด', $rows->headings(), true);
         });

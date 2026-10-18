@@ -119,7 +119,7 @@ final class OpenItems
         }
 
         $employees = Employee::query()
-            ->with(['department:id,name,name_th', 'section:id,name,name_th', 'position:id,title', 'manager:id,first_name,last_name,first_name_th,last_name_th,last_day'])
+            ->with(['department:id,code,name,name_th', 'section:id,name,name_th', 'position:id,title', 'manager:id,first_name,last_name,first_name_th,last_name_th,last_day'])
             ->whereIn('id', $rows->pluck('employee_id')->filter()->unique()->all())->get()->keyBy('id');
         $refs = fn (string $grp) => $rows->where('grp', $grp)->pluck('ref_id')->filter()->unique()->all();
         $subjects = [

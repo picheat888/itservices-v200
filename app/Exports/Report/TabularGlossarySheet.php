@@ -39,7 +39,7 @@ class TabularGlossarySheet implements FromArray, WithColumnWidths, WithEvents, W
         $sheet = $this->report->sheetTitle();
 
         return array_map(
-            fn (ReportColumn $c) => [$sheet, $c->heading, $c->typeLabel(), $c->meaning() ?? ''],
+            fn (ReportColumn $c) => [$sheet, $c->heading, $c->typeLabel(), $this->report->columnMeaning($c)],
             $this->report->sheetColumns(),
         );
     }

@@ -271,6 +271,11 @@ class AccessResourceMembersReport extends TabularReport
             ->each(fn (AccessMembership $m) => $m->setAttribute('kind', $m->resource ? $this->kindOf($m, $m->resource, $m->resource_type) : 'open'));
     }
 
+    protected function hasRowId(): bool
+    {
+        return true;
+    }
+
     public function columns(): array
     {
         return [
@@ -285,10 +290,11 @@ class AccessResourceMembersReport extends TabularReport
             ReportColumn::localized('resource_department', 'แผนกของ Resource', fn (AccessMembership $m) => in_array($m->resource_type, AccessFacts::OWNABLE, true) ? AccessFacts::department($m->resource) : null)
                 ->labelKey('rep_c_ac_resource_department')->hiddenByDefault(),
             ReportColumn::text('owner', 'เจ้าของ', fn (AccessMembership $m) => $this->ownerLabel($m))->labelKey('rep_c_ar_owner')->sheetOnly(),
+            ReportColumn::text('owner_code', 'รหัสพนักงานเจ้าของ', fn (AccessMembership $m) => $this->owner($m)?->code)->sheetOnly()->describe('รหัสพนักงานเจ้าของ Resource ใช้เชื่อมกับตารางพนักงาน (ว่าง = ยังไม่มีเจ้าของ)'),
             ReportColumn::text('employee', 'พนักงาน', fn (AccessMembership $m) => $m->employee?->name)
                 ->labelKey('rep_c_ac_employee')->linkTo('/employees', fn (AccessMembership $m) => $m->employee_id),
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (AccessMembership $m) => $m->employee?->code)->hiddenByDefault(),
-            ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee)),
+            ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('level', 'ระดับ', fn (AccessMembership $m) => AccessFacts::level($m), AccessFacts::LEVEL_KEYS, AccessFacts::LEVEL_TH)
                 ->labelKey('rep_c_ac_level'),
             ReportColumn::text('purpose', 'วัตถุประสงค์', fn (AccessMembership $m) => $m->purpose)->labelKey('rep_c_ac_purpose')->hiddenByDefault(),
@@ -302,9 +308,14 @@ class AccessResourceMembersReport extends TabularReport
         ];
     }
 
+    private function owner(AccessMembership $m): ?Model
+    {
+        return in_array($m->resource_type, AccessFacts::OWNABLE, true) ? $m->resource?->getRelationValue('owner') : null;
+    }
+
     private function ownerLabel(AccessMembership $m): ?string
     {
-        $owner = in_array($m->resource_type, AccessFacts::OWNABLE, true) ? $m->resource?->getRelationValue('owner') : null;
+        $owner = $this->owner($m);
 
         return $owner ? "{$owner->name} ({$owner->code})" : null;
     }

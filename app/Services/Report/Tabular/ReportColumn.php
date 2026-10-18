@@ -55,6 +55,15 @@ final class ReportColumn
 
     private ?string $meaning = null;
 
+    /** Whether the Excel sheet leaves this column out (a display-only mix such as "1 – 5", split into its own columns there). */
+    private bool $screenOnly = false;
+
+    /** Sheet-only column holding the code of this column's master data (the department code beside its name). */
+    private ?self $codeColumn = null;
+
+    /** Placeholder the page shows for "nobody"; the sheet leaves the cell empty instead. */
+    private const NONE = '—';
+
     public function decimals(): int
     {
         return $this->decimals;
@@ -198,7 +207,7 @@ final class ReportColumn
         };
     }
 
-    /** The Excel sheet's cell: dates as real Excel dates (sheetFormat() shows them as ISO), the rest as exportValue(). */
+    /** The Excel sheet's cell: dates as real Excel dates (sheetFormat() shows them as ISO), "—" as empty, the rest as exportValue(). */
     public function sheetValue(Model $row): string|int|float|null
     {
         if ($this->type === 'date' || $this->type === 'datetime') {
@@ -206,8 +215,41 @@ final class ReportColumn
 
             return $raw instanceof CarbonInterface ? CellDate::serial($raw, $this->type === 'datetime') : null;
         }
+        $value = $this->exportValue($row);
 
-        return $this->exportValue($row);
+        return $value === self::NONE ? null : $value;
+    }
+
+    /** Keep this column off the Excel sheet. */
+    public function screenOnly(): self
+    {
+        $this->screenOnly = true;
+
+        return $this;
+    }
+
+    public function isScreenOnly(): bool
+    {
+        return $this->screenOnly;
+    }
+
+    /**
+     * Add a sheet-only code column right after this one, read from the resolver's `code` key
+     * (a localized column whose resolver returns ['name' => …, 'name_th' => …, 'code' => …]).
+     */
+    public function withCode(string $heading, string $meaning): self
+    {
+        $resolve = $this->resolve;
+        $this->codeColumn = self::text("{$this->key}_code", $heading, fn (Model $row) => (($resolve)($row))['code'] ?? null)
+            ->sheetOnly()
+            ->describe($meaning);
+
+        return $this;
+    }
+
+    public function codeColumn(): ?self
+    {
+        return $this->codeColumn;
     }
 
     /** The Excel number format of this column's cells, or null for General. */

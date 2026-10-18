@@ -92,7 +92,7 @@ class StockBelowMinReport extends TabularReport
         return [
             ...array_values(array_filter($item, fn (ReportColumn $c) => $c->key !== 'unit')),
             ReportColumn::enum('status', 'สถานะ', fn (StockItem $i) => $i->status(), self::STATUS_KEYS, self::STATUS_TH),
-            ReportColumn::text('level', 'Min – Max', fn (StockItem $i) => $i->min_stock.' – '.$i->max_stock)->labelKey('rep_slv_c_level'),
+            ReportColumn::text('level', 'Min – Max', fn (StockItem $i) => $i->min_stock.' – '.$i->max_stock)->labelKey('rep_slv_c_level')->screenOnly(),
             ReportColumn::number('qty_on_hand', 'จำนวน (ปัจจุบัน)', fn (StockItem $i) => $i->current_stock)->labelKey('stock_current'),
             ReportColumn::number('min_stock', 'Min', fn (StockItem $i) => $i->min_stock)->hiddenByDefault(),
             ReportColumn::number('max_stock', 'Max', fn (StockItem $i) => $i->max_stock)->hiddenByDefault(),
