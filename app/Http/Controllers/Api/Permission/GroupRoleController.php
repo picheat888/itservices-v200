@@ -10,6 +10,7 @@ use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\RoleKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,12 +43,7 @@ class GroupRoleController extends Controller
         })->update(['role_id' => $group->role_id]);
     }
 
-    /**
-     * Sets the login account's role for a single employee. Resolves the account by
-     * the users.employee_id FK first, then by username as a fallback — the same
-     * matching the bulk syncUserRoles() uses, so the role follows the employee on
-     * move-out/fallback. Email is intentionally not matched (login is by username).
-     */
+    /** Sets the login account's role for a single employee. */
     private function setUserRole(Employee $employee, ?string $roleKey): void
     {
         $roleId = Role::where('key', $roleKey ?: 'user')->value('id');
@@ -118,10 +114,7 @@ class GroupRoleController extends Controller
     }
 
     /**
-     * Blocks non-super users from touching any group tied to the super
-     * (Administrator) role. This covers both demoting an admin (removing them
-     * from a super group resets their role) and escalating to admin (assigning
-     * a group the super role pushes that role onto its members).
+     * Blocks non-super users from touching any group tied to the super role.
      *
      * @param  string|null  $incomingRole  the role the request is trying to set, if any
      */
@@ -173,11 +166,12 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
         $data = $this->validateData($request);
-        $this->guardSuperGroup($request, null, $data['role'] ?? null);
+        $role = RoleKeys::find($data['role'] ?? null);
+        $this->guardSuperGroup($request, null, $role?->key);
 
         $employeeIds = $data['employee_ids'] ?? [];
-        $group = DB::transaction(function () use ($data, $employeeIds) {
-            $group = GroupRole::create(['name' => $data['name'], 'role' => $data['role'] ?? null]);
+        $group = DB::transaction(function () use ($data, $role, $employeeIds) {
+            $group = GroupRole::create(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($group, $employeeIds);
             $this->syncUserRoles($group, $employeeIds);
 
@@ -193,16 +187,17 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
         $data = $this->validateData($request);
-        $this->guardSuperGroup($request, $groupRole->role?->key, $data['role'] ?? null);
+        $role = RoleKeys::find($data['role'] ?? null);
+        $this->guardSuperGroup($request, $groupRole->role?->key, $role?->key);
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
 
         $before = [];
 
-        DB::transaction(function () use ($groupRole, $data, $oldEmployeeIds, $newEmployeeIds, &$before) {
+        DB::transaction(function () use ($groupRole, $data, $role, $oldEmployeeIds, $newEmployeeIds, &$before) {
             $before = $groupRole->getOriginal();
-            $groupRole->update(['name' => $data['name'], 'role' => $data['role'] ?? null]);
+            $groupRole->update(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($groupRole, $newEmployeeIds);
             $this->syncUserRoles($groupRole, $newEmployeeIds);
 
@@ -262,7 +257,7 @@ class GroupRoleController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'role' => ['nullable', 'string', Rule::exists('roles', 'key')],
+            'role' => ['nullable', 'string', Rule::in(RoleKeys::all())],
             'employee_ids' => ['array'],
             'employee_ids.*' => ['exists:employees,id'],
         ]);
