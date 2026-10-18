@@ -2,16 +2,39 @@
 import { cn } from '@/shared/lib/utils';
 import { Check, Lock } from 'lucide-react';
 
-export function PermissionSwitch({ label, on, locked, onClick }: { label: string; on: boolean; locked: boolean; onClick: () => void }) {
+export function PermissionSwitch({
+    id,
+    label,
+    on,
+    locked,
+    onClick,
+    describedBy,
+}: {
+    id?: string;
+    label: string;
+    on: boolean;
+    locked: boolean;
+    onClick: () => void;
+    describedBy?: string;
+}) {
     return (
         <button
+            id={id}
             type="button"
             role="switch"
             aria-checked={on}
             aria-label={label}
-            disabled={locked}
-            onClick={onClick}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted-foreground/75')}
+            aria-disabled={locked || undefined}
+            aria-describedby={describedBy}
+            onClick={() => {
+                if (!locked) onClick();
+            }}
+            className={cn(
+                // 44x28 hit area around the 36x20 track
+                "relative h-5 w-9 shrink-0 rounded-full transition-colors before:absolute before:-inset-1 before:content-['']",
+                locked && 'cursor-not-allowed opacity-50',
+                on ? 'bg-brand' : 'bg-muted-foreground/75',
+            )}
         >
             <span
                 className={cn(

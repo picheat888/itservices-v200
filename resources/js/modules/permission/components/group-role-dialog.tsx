@@ -16,7 +16,6 @@ import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useBaseRoleLabel, useGroupRoleMutations, useGroupRoleOptions } from '../hooks/use-permissions';
 import { countKey, findRole, isOverCeiling, removeLine, roleLabel } from '../lib/group-rules';
-import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
 import { GroupMemberPicker } from './group-member-picker';
@@ -56,7 +55,7 @@ export function GroupRoleDialog({
     const [tab, setTab] = useState<'pick' | 'members'>('members');
     const [tried, setTried] = useState(false);
     const [saveStep, setSaveStep] = useState<SaveStep>('idle');
-    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveError, setSaveError] = useState<unknown>(null);
     const nameRef = useRef<HTMLInputElement>(null);
     const roleRef = useRef<HTMLButtonElement>(null);
 
@@ -167,7 +166,7 @@ export function GroupRoleDialog({
                 await create.mutateAsync({ name: name.trim(), role: role || null, employee_ids: [...added.keys()] });
             }
         } catch (err: unknown) {
-            setSaveError(permissionRefusalText(err, t));
+            setSaveError(err);
             setSaveStep('confirm');
             return;
         }
@@ -396,6 +395,7 @@ export function GroupRoleDialog({
                 icon={PencilLine}
                 title={group === null ? t('gr_confirm_create_title') : t('perm_confirm_title')}
                 busy={saveStep === 'saving' || saveStep === 'done'}
+                error={saveError}
                 onClose={() => setSaveStep('idle')}
                 actions={
                     <>
@@ -425,11 +425,6 @@ export function GroupRoleDialog({
                         {line}
                     </span>
                 ))}
-                {saveError && (
-                    <span role="alert" className="text-destructive mt-2 block">
-                        {saveError}
-                    </span>
-                )}
             </CenteredAlert>
         </>
     );

@@ -20,7 +20,6 @@ import type { GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useGroupRoles, useSetDefaultGroup } from '../hooks/use-permissions';
 import { countKey, defaultOffReasonKey, findRole, roleLabel } from '../lib/group-rules';
-import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { LockHint } from './group-pane';
 import { GroupRoleDialog } from './group-role-dialog';
@@ -33,7 +32,7 @@ const isSort = (v: string): v is Sort => (SORTS as readonly string[]).includes(v
 const ALL = '__all__';
 const NONE = '__none__';
 
-type DefaultStep = { to: number | null; step: 'confirm' | 'saving' | 'done'; error: string | null };
+type DefaultStep = { to: number | null; step: 'confirm' | 'saving' | 'done'; error: unknown };
 
 export function GroupRolesTab() {
     const t = useT();
@@ -205,7 +204,7 @@ export function GroupRolesTab() {
         try {
             await setDefaultGroup.mutateAsync(to);
         } catch (err: unknown) {
-            setDefaultChange({ to, step: 'confirm', error: permissionRefusalText(err, t) });
+            setDefaultChange({ to, step: 'confirm', error: err });
             return;
         }
         setDefaultChange({ to, step: 'done', error: null });
@@ -297,6 +296,7 @@ export function GroupRolesTab() {
                 icon={Users}
                 title={t('gr_default_confirm_title')}
                 busy={defaultChange?.step === 'saving' || defaultChange?.step === 'done'}
+                error={defaultChange?.error}
                 onClose={() => setDefaultChange(null)}
                 actions={
                     <>
@@ -331,11 +331,6 @@ export function GroupRolesTab() {
                         {line}
                     </span>
                 ))}
-                {defaultChange?.error && (
-                    <span role="alert" className="text-destructive mt-2 block">
-                        {defaultChange.error}
-                    </span>
-                )}
             </CenteredAlert>
 
             <CenteredAlert

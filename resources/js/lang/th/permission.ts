@@ -515,8 +515,6 @@ export const permission: Dict = {
     perm_ui_log_workflow: 'อนุมัติและสต็อก',
     perm_ui_log_auth: 'เข้าระบบ',
     perm_ui_all_users: 'ทุกคน',
-    perm_ui_rows_per_page: 'แสดง',
-    perm_ui_of: 'จาก',
     perm_ui_request_notify_hint: 'ใครได้รับแจ้งเรื่องคิวดำเนินการ แยกจากใครมีสิทธิ์ปิดงาน หัวหน้าที่อยากรู้ว่ามีงานเข้าเปิดไว้ได้โดยไม่ต้องทำเอง',
     perm_ui_request_types: 'ประเภทคำขอที่ยื่นได้',
     perm_ui_request_types_hint: 'ประเภทคำขอที่ role นี้ยื่นได้ ฟอร์มสร้างคำขอแสดงเฉพาะประเภทที่เปิดไว้',
@@ -559,7 +557,7 @@ export const permission: Dict = {
     perm_lock_needs: 'เปิด {name} ก่อน',
     perm_search_none_hint: 'ลองค้นด้วยคำอื่น',
 
-    // modules/permission/lib/audit-format.ts — ชื่อการกระทำใน Audit log
+    // modules/permission/lib/audit-words.ts — ชื่อการกระทำใน Audit log
     audit_ev_signed_in: 'เข้าสู่ระบบ',
     audit_ev_signed_out: 'ออกจากระบบ',
     audit_ev_updated_own_profile: 'แก้ไขข้อมูลส่วนตัว',
