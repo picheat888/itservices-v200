@@ -300,18 +300,12 @@ class EmployeeService
             || DB::table('notifications')->where('notifiable_id', $user->id)->exists();
     }
 
-    /**
-     * Remove a mis-entered employee for good. Call only after `deletionBlockers()` comes back
-     * empty — this does no checking of its own.
-     *
-     * The login goes with them: `users.employee_id` is nullOnDelete, so a kept account would
-     * become a sign-in that still works but no longer appears anywhere in the Employee module,
-     * and nothing else in the system can delete an account.
-     */
+    /** Removes a mis-entered employee and their login; call only after deletionBlockers() is empty. */
     public function delete(Employee $employee): void
     {
-        if ($employee->photo_path) {
-            Storage::disk('local')->delete($employee->photo_path);
+        $photoPath = $employee->photo_path;
+        if ($photoPath) {
+            DB::afterCommit(fn () => Storage::disk('local')->delete($photoPath));
         }
 
         $employee->user?->delete();

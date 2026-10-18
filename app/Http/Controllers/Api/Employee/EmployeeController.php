@@ -32,6 +32,7 @@ use App\Support\CsvReader;
 use App\Support\OverviewPeriod;
 use App\Support\RequestSchemas;
 use App\Support\SearchTerms;
+use App\Support\SuperAdmins;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -882,31 +883,26 @@ class EmployeeController extends Controller
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Delete an employee typed in by mistake — a duplicate, a test row, the wrong person
-     * entered twice. Never the way to record a departure: that is `resign`, which keeps the
-     * record so their name still reads correctly everywhere they appear.
-     *
-     * Allowed only while nothing in the system refers to them (see
-     * EmployeeService::deletionBlockers) — tickets and access grants cascade at the database
-     * level, so a delete past that point would take real history with it silently.
-     */
+    /** Deletes an employee entered by mistake, with their login; a departure is resign, not this. */
     public function destroy(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.delete'), 403);
+        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
+            return response()->json(['message' => 'super_account'], 403);
+        }
 
+        // Refused while anything refers to them, see EmployeeService::deletionBlockers
         $blockers = $this->service->deletionBlockers($employee);
         if ($blockers) {
             return response()->json(['message' => 'has_activity', 'blockers' => $blockers], 422);
         }
 
-        // Read before the row is gone — the audit entry is all that survives it.
+        // Read before the row is gone
         $label = "{$employee->name} ({$employee->code})";
         $deletedAccount = $employee->user?->username;
 
-        $this->service->delete($employee);
-        // Name the login that went with them: it is the part nobody expects, and after the
-        // delete there is nothing else left to read it from.
+        SuperAdmins::keepAtLeastOne(fn () => $this->service->delete($employee));
+        // Audit names the login that went with them
         AuditLog::recordDeleted('Deleted employee', $label, $employee, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
 
         return response()->json(['message' => 'success']);

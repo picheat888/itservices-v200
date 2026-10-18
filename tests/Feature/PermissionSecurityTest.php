@@ -18,6 +18,7 @@ use App\Services\Employee\EmployeeImportService;
 use App\Services\Employee\EmployeeService;
 use App\Support\RoleKeys;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PermissionSecurityTest extends TestCase
@@ -466,5 +467,56 @@ class PermissionSecurityTest extends TestCase
 
         $this->assertTrue($this->isMember($adminGroup, $accountless));
         $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_non_super_cannot_delete_a_super_admins_employee(): void
+    {
+        [$adminEmployee, $admin] = $this->superAdminEmployee('Ada');
+        $this->actingAs($this->userWith('employees.delete'));
+        $auditBefore = AuditLog::count();
+
+        $this->deleteJson("/api/employees/{$adminEmployee->id}")
+            ->assertForbidden()
+            ->assertJsonPath('message', 'super_account');
+
+        $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id]);
+        $this->assertDatabaseHas('users', ['id' => $admin->id]);
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_the_last_super_admins_employee_cannot_be_deleted(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('employees/ada.png', 'bytes');
+        [$adminEmployee, $admin] = $this->superAdminEmployee('Ada');
+        $adminEmployee->update(['photo_path' => 'employees/ada.png']);
+        $auditBefore = AuditLog::count();
+
+        $this->actingAs($admin)
+            ->deleteJson("/api/employees/{$adminEmployee->id}")
+            ->assertUnprocessable()
+            ->assertJsonPath('code', 'last_super_admin');
+
+        $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id]);
+        $this->assertTrue($admin->fresh()->isSuper());
+        Storage::disk('local')->assertExists('employees/ada.png');
+        $this->assertSame($auditBefore, AuditLog::count());
+    }
+
+    public function test_a_super_admins_employee_can_be_deleted_while_another_super_admin_remains(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('employees/ada.png', 'bytes');
+        [$adminEmployee, $admin] = $this->superAdminEmployee('Ada');
+        $adminEmployee->update(['photo_path' => 'employees/ada.png']);
+        $otherSuper = User::factory()->create(['role' => 'super']);
+
+        $this->actingAs($otherSuper)
+            ->deleteJson("/api/employees/{$adminEmployee->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('employees', ['id' => $adminEmployee->id]);
+        $this->assertDatabaseMissing('users', ['id' => $admin->id]);
+        Storage::disk('local')->assertMissing('employees/ada.png');
     }
 }
