@@ -494,8 +494,8 @@ class PermissionSecurityTest extends TestCase
 
         $this->actingAs($admin)
             ->deleteJson("/api/employees/{$adminEmployee->id}")
-            ->assertUnprocessable()
-            ->assertJsonPath('code', 'last_super_admin');
+            ->assertForbidden()
+            ->assertJsonPath('code', 'own_account_delete');
 
         $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id]);
         $this->assertTrue($admin->fresh()->isSuper());
@@ -518,5 +518,31 @@ class PermissionSecurityTest extends TestCase
         $this->assertDatabaseMissing('employees', ['id' => $adminEmployee->id]);
         $this->assertDatabaseMissing('users', ['id' => $admin->id]);
         Storage::disk('local')->assertMissing('employees/ada.png');
+    }
+
+    public function test_nobody_can_delete_their_own_employee(): void
+    {
+        [$adminEmployee, $admin] = $this->superAdminEmployee('Ada');
+        User::factory()->create(['role' => 'super']);
+        $usernameEmployee = Employee::create(['first_name' => 'Uma', 'last_name' => 'User', 'email' => 'uma@inaba.co.th', 'username' => 'uma']);
+        $usernameCaller = $this->userWith('employees.delete');
+        $usernameCaller->update(['username' => 'uma']);
+        $idEmployee = Employee::create(['first_name' => 'Ida', 'last_name' => 'Id', 'email' => 'ida@inaba.co.th']);
+        $idCaller = $this->userWith();
+        $idCaller->update(['employee_id' => $idEmployee->id]);
+        $auditBefore = AuditLog::count();
+
+        foreach ([[$admin, $adminEmployee], [$usernameCaller, $usernameEmployee], [$idCaller, $idEmployee]] as [$caller, $own]) {
+            $this->actingAs($caller)
+                ->deleteJson("/api/employees/{$own->id}")
+                ->assertForbidden()
+                ->assertJsonPath('message', 'own_account')
+                ->assertJsonPath('code', 'own_account_delete');
+
+            $this->assertDatabaseHas('employees', ['id' => $own->id]);
+            $this->assertDatabaseHas('users', ['id' => $caller->id]);
+        }
+
+        $this->assertSame($auditBefore, AuditLog::count());
     }
 }

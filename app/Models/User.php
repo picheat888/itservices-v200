@@ -307,6 +307,21 @@ class User extends Authenticatable
         return $this->employee;
     }
 
+    /**
+     * Ids of the employees this account belongs to, by employee_id or by username (the GroupRoleController link).
+     *
+     * @return array<int, int>
+     */
+    public function linkedEmployeeIds(): array
+    {
+        $ids = $this->username ? Employee::where('username', $this->username)->pluck('id')->all() : [];
+        if ($this->employee_id) {
+            $ids[] = $this->employee_id;
+        }
+
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
+
     /** Resolves the profile photo URL from the linked Employee record. */
     public function employeePhotoUrl(): ?string
     {
