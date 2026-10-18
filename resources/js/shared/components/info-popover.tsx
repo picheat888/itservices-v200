@@ -57,7 +57,7 @@ export function InfoPopover({
     inactive?: boolean;
     /** Span mode only: tell assistive tech the wrapped control is unavailable. */
     disabled?: boolean;
-    /** Inside a clickable row ([data-row-click]): a tap opens the row, a double tap shows the note. */
+    /** Inside a clickable row ([data-row-click]): a tap shows the note, a double tap opens the row. */
     doubleTapInRow?: boolean;
 }) {
     const [openState, setOpen] = useState(false);
@@ -117,19 +117,17 @@ export function InfoPopover({
             pressedBy.current = null;
             const row = doubleTapInRow && by === 'touch' ? trigger.current?.closest<HTMLElement>('[data-row-click]') : null;
             if (row) {
-                // Wait for a second tap before handing the tap to the row
+                // First tap shows the note; a second one within DOUBLE_TAP_MS opens the row
                 event.preventDefault();
                 if (tapTimer.current) {
                     window.clearTimeout(tapTimer.current);
                     tapTimer.current = null;
-                    setOpen(true);
-                    return;
-                }
-                tapTimer.current = window.setTimeout(() => {
-                    tapTimer.current = null;
                     setOpen(false);
                     row.click();
-                }, DOUBLE_TAP_MS);
+                    return;
+                }
+                setOpen(true);
+                tapTimer.current = window.setTimeout(() => (tapTimer.current = null), DOUBLE_TAP_MS);
                 return;
             }
             if (onActivate && by !== 'touch') {
