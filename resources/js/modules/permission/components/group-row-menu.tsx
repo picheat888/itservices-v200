@@ -1,4 +1,4 @@
-// Kebab menu of one Role Group row: open it, or delete it (not offered on a group the user may only view; greyed with the reason on their own group).
+// Kebab menu of one Role Group row: open it, or delete it (not offered on a group the user may only view; on their own group it stays focusable but inert, with the reason).
 import { useT } from '@/lang';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import { Eye, MoreVertical, SquarePen, Trash2 } from 'lucide-react';
@@ -40,7 +40,11 @@ export function GroupRowMenu({
                         <>
                             <DropdownMenuSeparator />
                             {deleteBlocked ? (
-                                <DropdownMenuItem disabled className="text-muted-foreground items-start data-disabled:opacity-100">
+                                <DropdownMenuItem
+                                    aria-disabled
+                                    onSelect={(e) => e.preventDefault()}
+                                    className="text-muted-foreground focus:text-muted-foreground items-start"
+                                >
                                     <Trash2 className="mt-0.5 h-4 w-4" />
                                     <span className="flex min-w-0 flex-col">
                                         {t('gr_delete')}

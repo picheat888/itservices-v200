@@ -19,7 +19,7 @@ import { useMemo, useState } from 'react';
 import type { GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useGroupRoles, usePermissionMatrix, useSetDefaultGroup } from '../hooks/use-permissions';
-import { countKey, isOverCeiling } from '../lib/group-rules';
+import { countKey, defaultOffReasonKey } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { LockHint } from './group-pane';
@@ -39,7 +39,7 @@ export function GroupRolesTab() {
     const t = useT();
     const fmtN = useNumberFormat();
     const { user, isSuper } = useAuth();
-    const { data, isLoading, isError, refetch } = useGroupRoles();
+    const { data, isLoading, isFetching, isError, refetch } = useGroupRoles();
     const { data: matrix } = usePermissionMatrix();
     const setDefaultGroup = useSetDefaultGroup();
     const list = useListParams();
@@ -53,12 +53,9 @@ export function GroupRolesTab() {
     const deleteGroup = useDeleteGroup(defaultGroup);
     const roleOf = (key: string | null) => matrix?.roles.find((r) => r.value === key);
     const myPermissions = new Set(user?.permissions ?? []);
-    // Why a group cannot become the default: the Super admin role, or a role above the caller's own permissions
     const defaultOffReason = (g: GroupRole) => {
-        if (g.id === defaultGroupId) return null;
-        if (g.role === SUPER_ROLE) return t('gr_default_super_off');
-        const role = roleOf(g.role);
-        return role && isOverCeiling(role, isSuper, myPermissions) ? t('perm_refusal_grant_ceiling') : null;
+        const key = defaultOffReasonKey(g, defaultGroupId, roleOf(g.role), isSuper, myPermissions);
+        return key ? t(key) : null;
     };
 
     // List state in the URL: ?search, ?role, ?sort, ?page, ?per; the dialog is ?view=<id> or ?add=1
@@ -184,7 +181,13 @@ export function GroupRolesTab() {
         </FilterPopover>
     );
 
-    const askDefault = (value: string) => setDefaultChange({ to: value === NONE ? null : Number(value), step: 'confirm', error: null });
+    const askDefault = (value: string) => {
+        const to = value === NONE ? null : Number(value);
+        // Greyed groups stay focusable so their reason is read out; choosing one does nothing
+        const target = groups.find((g) => g.id === to);
+        if (target && defaultOffReason(target)) return;
+        setDefaultChange({ to, step: 'confirm', error: null });
+    };
     const runDefault = async () => {
         if (!defaultChange) return;
         const to = defaultChange.to;
@@ -227,12 +230,7 @@ export function GroupRolesTab() {
                     {groups.map((g) => {
                         const offReason = defaultOffReason(g);
                         return offReason ? (
-                            <SelectItem
-                                key={g.id}
-                                value={String(g.id)}
-                                disabled
-                                className="text-muted-foreground items-start data-disabled:opacity-100"
-                            >
+                            <SelectItem key={g.id} value={String(g.id)} aria-disabled className="text-muted-foreground items-start">
                                 <span className="flex min-w-0 flex-col">
                                     {g.name}
                                     <span className="max-w-56 text-xs">{offReason}</span>
@@ -264,7 +262,7 @@ export function GroupRolesTab() {
                 searchPlaceholder={t('gr_search_ph')}
                 searchable={(g) => `${g.name} ${g.role_label ?? ''}`}
                 onRowClick={openGroup}
-                loading={isLoading}
+                loading={isLoading || (isError && !data && isFetching)}
                 emptyState={isError && !data ? <LoadFailed onRetry={() => void refetch()} /> : undefined}
                 filters={filters}
                 actions={actions}
@@ -318,7 +316,11 @@ export function GroupRolesTab() {
                         {line}
                     </span>
                 ))}
-                {defaultChange?.error && <span className="text-destructive mt-2 block">{defaultChange.error}</span>}
+                {defaultChange?.error && (
+                    <span role="alert" className="text-destructive mt-2 block">
+                        {defaultChange.error}
+                    </span>
+                )}
             </CenteredAlert>
 
             <CenteredAlert

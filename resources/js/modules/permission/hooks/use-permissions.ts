@@ -6,8 +6,9 @@ import {
     roleApi,
     type AuditFilters,
     type GroupCandidateParams,
+    type GroupRoleCreatePayload,
     type GroupRoleListResponse,
-    type GroupRolePayload,
+    type GroupRoleUpdatePayload,
 } from '../api/permissionApi';
 
 const KEY = ['permissions-matrix'] as const;
@@ -69,13 +70,16 @@ export const useGroupCandidates = (params: GroupCandidateParams, enabled: boolea
 export function useGroupRoleMutations() {
     const qc = useQueryClient();
     const invalidate = () => qc.invalidateQueries({ queryKey: GROUPS });
+    // A dialog save only marks the group queries stale, so its confirm holds still; refreshList runs once it has closed
+    const markStale = () => qc.invalidateQueries({ queryKey: GROUPS, refetchType: 'none' });
     return {
-        create: useMutation({ mutationFn: (p: GroupRolePayload) => groupRoleApi.create(p), onSuccess: invalidate }),
+        create: useMutation({ mutationFn: (p: GroupRoleCreatePayload) => groupRoleApi.create(p), onSuccess: markStale }),
         update: useMutation({
-            mutationFn: (v: { id: number; payload: GroupRolePayload }) => groupRoleApi.update(v.id, v.payload),
-            onSuccess: invalidate,
+            mutationFn: (v: { id: number; payload: GroupRoleUpdatePayload }) => groupRoleApi.update(v.id, v.payload),
+            onSuccess: markStale,
         }),
         remove: useMutation({ mutationFn: (id: number) => groupRoleApi.remove(id), onSuccess: invalidate }),
+        refreshList: () => qc.refetchQueries({ queryKey: GROUPS, exact: true }),
     };
 }
 

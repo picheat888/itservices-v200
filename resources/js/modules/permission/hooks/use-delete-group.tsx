@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import type { GroupRole } from '../api/permissionApi';
+import { leaversWhere } from '../lib/group-rules';
 import { permissionRefusalText } from '../lib/refusal';
 import { useBaseRoleLabel, useGroupRoleMutations } from './use-permissions';
 
@@ -15,16 +16,9 @@ export function useDeleteGroup(defaultGroup: GroupRole | null): (group: GroupRol
     const baseRole = useBaseRoleLabel();
 
     return (group) => {
+        const where = leaversWhere(t, defaultGroup && defaultGroup.id !== group.id ? defaultGroup.name : null, baseRole);
         const lines = [
-            group.member_count > 0 &&
-                t('gr_delete_members')
-                    .replace('{n}', fmtN(group.member_count))
-                    .replace(
-                        '{where}',
-                        defaultGroup && defaultGroup.id !== group.id
-                            ? t('gr_where_group').replace('{name}', defaultGroup.name)
-                            : t('gr_where_none').replace('{role}', baseRole),
-                    ),
+            group.member_count > 0 && where !== null && t('gr_delete_members').replace('{n}', fmtN(group.member_count)).replace('{where}', where),
             defaultGroup?.id === group.id && t('gr_delete_default'),
             t('gr_delete_desc'),
         ].filter((line): line is string => !!line);
