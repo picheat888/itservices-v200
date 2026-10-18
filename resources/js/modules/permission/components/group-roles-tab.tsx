@@ -13,13 +13,15 @@ import { toRecordId } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { ArrowUpDown, Check, ChevronRight, Loader2, Lock, Plus, Shield, ShieldCheck, Users } from 'lucide-react';
+import { ArrowUpDown, Check, Loader2, Lock, Plus, Shield, ShieldCheck, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { GroupRole } from '../api/permissionApi';
+import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useGroupRoles, usePermissionMatrix, useSetDefaultGroup } from '../hooks/use-permissions';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
 import { GroupRoleDialog } from './group-role-dialog';
+import { GroupRowMenu } from './group-row-menu';
 
 const SORTS = ['default_first', 'name_asc', 'name_desc', 'members_desc', 'members_asc'] as const;
 type Sort = (typeof SORTS)[number];
@@ -44,6 +46,7 @@ export function GroupRolesTab() {
     const groups = useMemo(() => data?.data ?? [], [data]);
     const defaultGroupId = data?.default_group_id ?? null;
     const defaultGroup = groups.find((g) => g.id === defaultGroupId) ?? null;
+    const deleteGroup = useDeleteGroup(defaultGroup);
     const roleColor = (key: string | null) => matrix?.roles.find((r) => r.value === key)?.color ?? '#64748b';
 
     // List state in the URL: ?search, ?role, ?sort, ?page, ?per; the dialog is ?view=<id> or ?add=1
@@ -125,11 +128,13 @@ export function GroupRolesTab() {
                 ),
         },
         {
-            key: 'open',
+            key: 'actions',
             header: <span className="sr-only">{t('actions')}</span>,
-            width: '52px',
+            width: '64px',
             align: 'right',
-            render: () => <ChevronRight className="text-muted-foreground group-hover:text-brand ml-auto h-4 w-4" aria-hidden />,
+            render: (g) => (
+                <GroupRowMenu group={g} locked={g.role === SUPER_ROLE && !isSuper} onOpen={() => openGroup(g)} onDelete={() => void deleteGroup(g)} />
+            ),
         },
     ];
 

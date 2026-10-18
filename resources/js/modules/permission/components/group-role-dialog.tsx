@@ -7,14 +7,13 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Check, Loader2, Lock, MoreVertical, PencilLine, Trash2, Users } from 'lucide-react';
+import { Check, Loader2, Lock, PencilLine, Trash2, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole, RoleRow } from '../api/permissionApi';
+import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
 import { permissionRefusalText } from '../lib/refusal';
 import { CenteredAlert } from './centered-alert';
@@ -41,10 +40,10 @@ export function GroupRoleDialog({
 }) {
     const t = useT();
     const fmtN = useNumberFormat();
-    const confirm = useConfirm();
     const { user, isSuper } = useAuth();
     const { data: matrix } = usePermissionMatrix();
-    const { create, update, remove } = useGroupRoleMutations();
+    const { create, update } = useGroupRoleMutations();
+    const deleteGroup = useDeleteGroup(defaultGroup);
 
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
@@ -166,36 +165,7 @@ export function GroupRoleDialog({
     };
 
     const askDelete = async () => {
-        if (!group) return;
-        const lines = [
-            group.member_count > 0 &&
-                t('gr_delete_members')
-                    .replace('{n}', fmtN(group.member_count))
-                    .replace(
-                        '{where}',
-                        defaultGroup && defaultGroup.id !== group.id
-                            ? t('gr_where_group').replace('{name}', defaultGroup.name)
-                            : t('gr_where_none').replace('{role}', baseRole),
-                    ),
-            defaultGroup?.id === group.id && t('gr_delete_default'),
-            t('cd_delete_desc'),
-        ].filter((line): line is string => !!line);
-        const ok = await confirm({
-            variant: 'danger',
-            title: t('gr_delete_title').replace('{name}', group.name),
-            description: (
-                <>
-                    {lines.map((line) => (
-                        <span key={line} className="block">
-                            {line}
-                        </span>
-                    ))}
-                </>
-            ),
-            action: () => remove.mutateAsync(group.id),
-            errorMessage: (err) => permissionRefusalText(err, t),
-        });
-        if (ok) onClose();
+        if (group && (await deleteGroup(group))) onClose();
     };
 
     const movedIn = [...added.values()].filter((p) => p.group_id !== null).length;
@@ -228,7 +198,7 @@ export function GroupRoleDialog({
             <Dialog open={open} onOpenChange={(o) => !o && close()}>
                 <DialogContent
                     className={focusDialogContentClass}
-                    // Focus the dialog itself: the first control is the ⋮ menu, and a field would raise the iPad keyboard
+                    // Focus the dialog itself: a field would raise the iPad keyboard
                     onOpenAutoFocus={(e) => {
                         e.preventDefault();
                         (e.currentTarget as HTMLElement | null)?.focus();
@@ -238,28 +208,6 @@ export function GroupRoleDialog({
                         icon={Users}
                         eyebrow={group === null ? t('gr_add') : readOnly ? t('perm_groups') : t('gr_edit')}
                         title={name.trim() || group?.name || t('gr_new_title')}
-                        headerRight={
-                            group !== null &&
-                            !readOnly && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            type="button"
-                                            aria-label={t('actions')}
-                                            className="hover:bg-accent focus-visible:ring-ring data-[state=open]:bg-accent flex h-8 w-8 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
-                                        >
-                                            <MoreVertical className="h-4 w-4" aria-hidden />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => void askDelete()} className="text-destructive focus:text-destructive">
-                                            <Trash2 className="h-4 w-4" />
-                                            {t('gr_delete')}
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )
-                        }
                     />
 
                     {readOnly && (
@@ -375,11 +323,25 @@ export function GroupRoleDialog({
                     </div>
 
                     <div className="border-border bg-muted/30 flex items-center justify-end gap-2 border-t px-6 py-3">
+                        {group !== null && !readOnly && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => void askDelete()}
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive mr-auto"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                {t('gr_delete')}
+                            </Button>
+                        )}
                         {!readOnly && (
                             <span
                                 role="status"
                                 aria-live="polite"
-                                className={cn('text-muted-foreground mr-auto flex items-center gap-1.5 text-xs', changes === 0 && 'invisible')}
+                                className={cn(
+                                    'text-muted-foreground mr-2 flex items-center gap-1.5 text-xs',
+                                    changes === 0 && 'invisible',
+                                    group === null && 'mr-auto',
+                                )}
                             >
                                 <span className="h-2 w-2 rounded-full bg-orange-600 dark:bg-orange-400" aria-hidden />
                                 {t('perm_ui_unsaved')} <b className="text-foreground font-semibold tabular-nums">{fmtN(changes)}</b>
