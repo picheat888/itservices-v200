@@ -802,7 +802,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
                                                     {/* Fields indented under the service they belong to */}
                                                     {on && fields.length > 0 && (
-                                                        <div className="animate-in fade-in-0 slide-in-from-top-1 px-3 pb-3 pl-14 duration-200 motion-reduce:animate-none">
+                                                        <div className="px-3 pb-3 pl-14">
                                                             <div className="border-brand/30 space-y-3 border-l pl-4">
                                                                 {fields.map((field) => (
                                                                     <ServiceField
@@ -860,7 +860,10 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                         {STEPS.map((s, i) => (
                             <span
                                 key={s.titleKey}
-                                className={cn('h-1.5 rounded-full transition-[width,background-color] duration-150 motion-reduce:transition-none', i + 1 === step ? 'bg-brand w-5' : 'bg-border w-1.5')}
+                                className={cn(
+                                    'h-1.5 rounded-full transition-[width,background-color] duration-150 motion-reduce:transition-none',
+                                    i + 1 === step ? 'bg-brand w-5' : 'bg-border w-1.5',
+                                )}
                             />
                         ))}
                     </div>

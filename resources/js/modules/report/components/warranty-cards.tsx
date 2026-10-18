@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useAssetWarrantyBreakdown } from '../hooks/use-reports';
 import type { AssetWarrantyBreakdown, ChartTone, TabularFilters, WarrantyGroupFigures, WarrantyStatus } from '../types';
+import { CardsUpdating } from './cards-updating';
 import { type BarPiece, barTop, CardTitle, CODE_LINK, CountBar, CardEmpty as Empty, monthLabel, shortYear, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { formatLiveNumber } from './report-scope';
@@ -633,13 +634,13 @@ function CardsSkeleton() {
 
 export function WarrantyCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useAssetWarrantyBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useAssetWarrantyBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthCard months={data.months} />
@@ -647,6 +648,6 @@ export function WarrantyCards({ filters, patch }: { filters: TabularFilters; pat
             </div>
             <CategoryCard data={data} patch={patch} />
             <VendorCard data={data} />
-        </div>
+        </CardsUpdating>
     );
 }

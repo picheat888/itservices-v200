@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useStockValuationBreakdown } from '../hooks/use-reports';
 import type { StockValuationBreakdown, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardPager, CardTitle, fold, FoldToggle } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
@@ -424,17 +425,17 @@ function CardsSkeleton() {
 
 export function StockValuationCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useStockValuationBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useStockValuationBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <ValueTiles tiles={data.tiles} categories={data.categories} asOf={data.as_of} />
             {/* A new day or category starts both share cards on page 1. */}
             <ShareCards key={`${filters.as_of ?? ''}|${filters.category_id ?? ''}`} data={data} />
             <DeadCard dead={data.dead} filters={filters} patch={patch} />
-        </div>
+        </CardsUpdating>
     );
 }

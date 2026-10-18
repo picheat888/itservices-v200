@@ -122,26 +122,27 @@ function SpineStep({
     return (
         <li className="flex gap-3">
             <div className="flex flex-col items-center">
-                <span
-                    className={cn(
-                        'relative grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-bold',
-                        tone === 'done' && 'bg-brand text-brand-foreground',
-                        tone === 'ok' && 'bg-emerald-600 text-white',
-                        tone === 'canceled' && 'bg-muted-foreground text-background',
-                        tone === 'current' && 'border-brand text-brand bg-background border-2',
-                        tone === 'working' && 'bg-background border-2 border-violet-500 text-violet-600 dark:text-violet-400',
-                        tone === 'future' && 'border-border text-muted-foreground bg-background border-2',
-                    )}
-                >
+                <span className="relative shrink-0 rounded-full">
+                    {/* Live step halo */}
                     {(tone === 'current' || tone === 'working') && (
                         <span
-                            className={cn(
-                                'absolute inset-0 animate-ping rounded-full motion-reduce:hidden',
-                                tone === 'current' ? 'bg-brand/30' : 'bg-violet-500/30',
-                            )}
+                            aria-hidden
+                            className={cn('trail-live absolute inset-0 rounded-full', tone === 'current' ? 'bg-brand/30' : 'bg-violet-500/30')}
                         />
                     )}
-                    {done ? tone === 'canceled' ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" /> : index}
+                    <span
+                        className={cn(
+                            'relative grid h-[22px] w-[22px] place-items-center rounded-full text-[10px] font-bold',
+                            tone === 'done' && 'bg-brand text-brand-foreground',
+                            tone === 'ok' && 'bg-emerald-600 text-white',
+                            tone === 'canceled' && 'bg-muted-foreground text-background',
+                            tone === 'current' && 'border-brand text-brand bg-background border-2',
+                            tone === 'working' && 'bg-background border-2 border-violet-500 text-violet-600 dark:text-violet-400',
+                            tone === 'future' && 'border-border text-muted-foreground bg-background border-2',
+                        )}
+                    >
+                        {done ? tone === 'canceled' ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" /> : index}
+                    </span>
                 </span>
                 {!last && <div className={cn('my-1 w-0.5 flex-1 rounded-full', tone === 'done' ? 'bg-brand' : 'bg-border')} />}
             </div>

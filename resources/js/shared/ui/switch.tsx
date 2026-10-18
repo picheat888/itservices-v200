@@ -24,7 +24,7 @@ export function Switch({
             disabled={disabled}
             onClick={() => onChange(!checked)}
             className={cn(
-                'focus-visible:ring-brand/40 relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden disabled:opacity-50',
+                'focus-visible:ring-brand/40 relative h-5 w-9 shrink-0 rounded-full transition-[background-color,filter] focus-visible:ring-[3px] focus-visible:outline-hidden enabled:hover:brightness-95 disabled:opacity-50 dark:enabled:hover:brightness-125',
                 // Off track kept at 3:1 against card and muted surfaces in both themes
                 checked ? 'bg-brand' : 'bg-muted-foreground/80 dark:bg-muted-foreground/60',
             )}

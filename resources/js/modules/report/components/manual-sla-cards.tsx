@@ -28,6 +28,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useManualSlaBreakdown } from '../hooks/use-reports';
 import type { ManualSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
+import { CardsUpdating } from './cards-updating';
 import { CountCells, GROUP, hoursText, shortMoment, SlaCells, spanText, targetText, TD, TH, type T } from './request-sla-cards';
 
 type By = ManualSlaBreakdown['by'];
@@ -391,7 +392,7 @@ function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
 
 /** The cards between the summary tiles and the table; a press on a group line filters the page. */
 export function ManualSlaCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading } = useManualSlaBreakdown(filters);
+    const { data, isLoading, isFetching } = useManualSlaBreakdown(filters);
 
     if (isLoading || !data) {
         return (
@@ -411,12 +412,12 @@ export function ManualSlaCards({ filters, patch }: { filters: TabularFilters; pa
     }
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <GroupsCard data={data} filters={filters} patch={patch} />
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                 <LateAndOpenCard data={data} />
                 <RulesCard rules={data.rules} />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }

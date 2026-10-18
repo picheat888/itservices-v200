@@ -5,6 +5,7 @@
  * (being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin.
  */
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -16,7 +17,6 @@ import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { periodRange } from './report-scope';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * A report's page address: its key with every "." and "_" made a "-" — "assets.warranty_expiring"
@@ -110,7 +110,7 @@ function PinButton({ report }: { report: ReportDefinition }) {
             )}
         >
             {/* Pinned stands upright and filled; not pinned leans, outlined — the usual "pin" read. */}
-            <Pin className={cn('h-4 w-4 transition-transform', report.pinned ? 'fill-current' : 'rotate-45')} />
+            <Pin className={cn('h-4 w-4 transition-transform motion-reduce:transition-none', report.pinned ? 'fill-current' : 'rotate-45')} />
         </button>
     );
 }

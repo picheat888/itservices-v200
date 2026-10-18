@@ -616,9 +616,9 @@ export function AccessOverview({
                                 const width = `${(r.grants / (data.top_resources[0]?.grants || 1)) * 100}%`;
                                 return (
                                     <tr
-                                        key={`${r.kind}-${r.name}-${i}`}
+                                        key={`${r.kind}-${r.id}`}
                                         onClick={() => onOpenResource(r.kind, r.id)}
-                                        className="row-in border-border/60 hover:bg-muted/40 cursor-pointer border-b last:border-0"
+                                        className="row-in row-hover border-border/60 cursor-pointer border-b last:border-0"
                                         style={rowDelay(i)}
                                     >
                                         <td className="px-5 py-2.5">

@@ -181,7 +181,7 @@ export default function WorkflowsPage() {
                             <div
                                 key={wf.id}
                                 className={cn(
-                                    'border-border hover:border-brand/40 cursor-pointer rounded-md border px-4 pt-3.5 pb-4 transition-colors',
+                                    'border-border hover:border-brand/40 focus-within:border-brand/40 cursor-pointer rounded-md border px-4 pt-3.5 pb-4 transition-colors',
                                     !wf.active && 'bg-muted/30 border-dashed',
                                 )}
                                 onClick={() => open('view', wf.id)}

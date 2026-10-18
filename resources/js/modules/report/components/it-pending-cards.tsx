@@ -16,6 +16,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useItPendingBreakdown } from '../hooks/use-reports';
 import type { ChartSeries, ItPendingBreakdown, ItPendingGroup, ItPendingJoiner, RequestAgeBand, TabularFilters } from '../types';
 import { Segments, TH } from './access-overview-cards';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardTitle, CODE_LINK, fold, FoldToggle, StackBar, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { BarRowsSkeleton, CardHeadingSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -31,7 +32,7 @@ const BANDS: { key: RequestAgeBand; label: string; tone: ChartSeries['tone']; to
         tone: 'soft-red',
         top: 'border-t-red-400',
         tint: 'bg-red-500/[0.07] dark:bg-red-500/10',
-        hover: 'hover:ring-red-400/70',
+        hover: 'hover:ring-red-400/70 data-[state=open]:ring-red-400/70',
         ink: 'text-red-700 dark:text-red-300',
     },
     {
@@ -40,7 +41,7 @@ const BANDS: { key: RequestAgeBand; label: string; tone: ChartSeries['tone']; to
         tone: 'soft-amber',
         top: 'border-t-amber-400',
         tint: 'bg-amber-500/[0.07] dark:bg-amber-500/10',
-        hover: 'hover:ring-amber-400/70',
+        hover: 'hover:ring-amber-400/70 data-[state=open]:ring-amber-400/70',
         ink: 'text-amber-700 dark:text-amber-300',
     },
     {
@@ -49,7 +50,7 @@ const BANDS: { key: RequestAgeBand; label: string; tone: ChartSeries['tone']; to
         tone: 'gray',
         top: 'border-t-slate-400 dark:border-t-slate-500',
         tint: 'bg-slate-500/[0.07] dark:bg-slate-500/10',
-        hover: 'hover:ring-slate-400/70',
+        hover: 'hover:ring-slate-400/70 data-[state=open]:ring-slate-400/70',
         ink: 'text-slate-700 dark:text-slate-300',
     },
 ];
@@ -88,7 +89,7 @@ export function ItPendingAsOf({ filters }: { filters: TabularFilters }) {
 
 export function ItPendingCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useItPendingBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useItPendingBreakdown(filters);
     const [open, setOpen] = useState<Record<By, boolean>>({ owner: false, type: false });
     const [held, setHeld] = useState<Record<By, number | null>>({ owner: null, type: null });
     const ageRef = useRef<HTMLDivElement>(null);
@@ -104,13 +105,13 @@ export function ItPendingCards({ filters, patch }: { filters: TabularFilters; pa
     };
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <div className={cn(PAIR, open[by] && 'xl:items-start')}>
                 <AgeCard data={data} cardRef={ageRef} heldHeight={open[by] ? held[by] : null} />
                 <HoldersCard data={data} filters={filters} patch={patch} by={by} open={open} onToggle={toggle} />
             </div>
             <JoinersCard joiners={data.joiners} />
-        </div>
+        </CardsUpdating>
     );
 }
 
@@ -238,7 +239,7 @@ function WaitingBucket({ band, figures }: { band: (typeof BANDS)[number]; figure
     return (
         <InfoPopover
             label={t('rep_rqi_bucket_label').replace('{band}', t(band.label)).replace('{n}', f.number(figures.total))}
-            className={cn(BUCKET, band.top, band.tint, band.hover, 'cursor-pointer ring-1 ring-transparent transition-shadow')}
+            className={cn(BUCKET, band.top, band.tint, band.hover, 'press cursor-pointer ring-1 ring-transparent transition-shadow')}
             content={
                 <div className="min-w-44">
                     <div className="mb-1 font-semibold">{heading}</div>

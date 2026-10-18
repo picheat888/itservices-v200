@@ -17,6 +17,7 @@ import { useEmployeeOverviewBreakdown } from '../hooks/use-reports';
 import type { AccessType, EmployeeOverviewBreakdown, EmployeeOverviewCounts, TabularFilters } from '../types';
 import { ACCESS_TYPES, DaysOut, GroupRow, heldStyle, NUM, Segments, TD, TH, TypeDot, TypeLabel, useFoldRow } from './access-overview-cards';
 import { count, type Lang } from './access-parts';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardTitle, fold, FoldToggle } from './chart-parts';
 import { BASIS_PCT, pct } from './percent-classes';
 import { CardHeadingSkeleton, ChartSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -991,14 +992,14 @@ const BOTTOM_FOLDS = ['dept', 'holding'] as const;
 
 export function EmployeeOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useEmployeeOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useEmployeeOverviewBreakdown(filters);
     const row = useFoldRow(BOTTOM_FOLDS);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <HeadcountCard data={data} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             {/* Same height while both are folded; opening one keeps that height and the other stays in view. */}
@@ -1019,6 +1020,6 @@ export function EmployeeOverviewCards({ filters }: { filters: TabularFilters }) 
                     onToggle={() => row.toggle('holding')}
                 />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }

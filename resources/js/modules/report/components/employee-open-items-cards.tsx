@@ -9,6 +9,7 @@ import { useEmployeeOpenItemsBreakdown } from '../hooks/use-reports';
 import type { DataIssueKey, EmployeeOpenItemsBreakdown, OpenItemsAccountKind, OpenItemsGroup, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
 import { count } from './access-parts';
+import { CardsUpdating } from './cards-updating';
 import { KpiTile } from './kpi-tile';
 import { AccessCard, AccountCard, AssetCard, DataCard } from './open-items-tables';
 import { CardHeadingSkeleton, DataTableSkeleton, KpiRowSkeleton } from './report-skeletons';
@@ -294,7 +295,7 @@ function CardsSkeleton() {
 /** The tiles, then the topic cards the topic segment picks. */
 export function EmployeeOpenItemsCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useEmployeeOpenItemsBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useEmployeeOpenItemsBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
@@ -305,12 +306,12 @@ export function EmployeeOpenItemsCards({ filters }: { filters: TabularFilters })
     const narrowed = Boolean(filters.department_id || filters.search);
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <OpenItemsTiles data={data} />
             {shows('asset') && <AssetCard group={data.asset} narrowed={narrowed} />}
             {shows('access') && <AccessCard group={data.access} narrowed={narrowed} />}
             {shows('acct') && <AccountCard group={data.acct} narrowed={narrowed} />}
             {shows('data') && <DataCard group={data.data} narrowed={narrowed} />}
-        </div>
+        </CardsUpdating>
     );
 }

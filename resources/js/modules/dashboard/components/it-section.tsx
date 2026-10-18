@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { slaLevel, useFoldRow } from '@/modules/report';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { CircleCheck, CirclePlus, Layers, Target, Timer, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,7 +11,6 @@ import { useDashLinks } from '../hooks/use-dash-links';
 import { DashTile, Delta, PAIR_GRID, SectionHeading, SparkFooter, TILE_GRID } from './dash-parts';
 import { OpenedPerDayCard } from './opened-per-day-card';
 import { WorkloadCard } from './workload-card';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const FOLDS = ['workload'] as const;
 
@@ -114,11 +114,12 @@ export function ItSection({ it }: { it: DashboardIt }) {
 
 /** The backlog's over-SLA badge, its own link to exactly those tickets (the tile itself counts every live one). */
 function OverSlaBadge({ to, label }: { to: string | null; label: string }) {
-    const badge = <StatusBadge tone="red">{label}</StatusBadge>;
-    if (!to) return badge;
+    if (!to) return <StatusBadge tone="red">{label}</StatusBadge>;
     return (
-        <Link to={to} className="focus-visible:ring-ring rounded-md hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none">
-            {badge}
+        <Link to={to} className="group press focus-visible:ring-ring rounded-md focus-visible:ring-2 focus-visible:outline-none">
+            <StatusBadge tone="red" className="group-hover:underline">
+                {label}
+            </StatusBadge>
         </Link>
     );
 }

@@ -75,7 +75,7 @@ export function DateInput({
                     aria-describedby={ariaDescribedBy}
                     disabled={disabled}
                     className={cn(
-                        'border-input bg-background flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors',
+                        'border-input bg-background flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-sm transition-[color,background-color,border-color,box-shadow]',
                         'hover:border-brand/50 focus:border-brand focus:ring-brand/15 focus:ring-[3px] focus:outline-hidden',
                         'data-[state=open]:border-brand data-[state=open]:ring-brand/15 data-[state=open]:ring-[3px]',
                         'disabled:hover:border-input disabled:cursor-not-allowed disabled:opacity-50',

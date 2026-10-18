@@ -1,7 +1,7 @@
 /**
- * Server-paginated ticket rows under the report charts (DataTable `server` mode, shimmer on
- * isLoading || isFetching — the app's server-table standard). Two-line cells keep the subject
- * wide: the ticket number sits under the subject, the employee code and department under the requester.
+ * Server-paginated ticket rows under the report charts (DataTable `server` mode, skeleton rows only
+ * while a new page/filter loads). Two-line cells keep the subject wide: the ticket number sits
+ * under the subject, the employee code and department under the requester.
  */
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
@@ -23,7 +23,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
     const lang = useUiStore((s) => s.lang);
     // Page and rows-per-page live in the URL (?page, ?per); a filter change drops ?page
     const list = useListParams();
-    const { data, isLoading, isFetching } = useTicketOverviewRows(filters, list.page, list.perPage);
+    const { data, isLoading, isFetching, isPlaceholderData } = useTicketOverviewRows(filters, list.page, list.perPage);
     const canOpenTickets = useCanOpen()('/tickets');
 
     const columns: Column<TicketReportRow>[] = [
@@ -133,7 +133,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             columns={columns}
             rows={data?.data ?? []}
             rowKey={(r) => r.id}
-            loading={isLoading || isFetching}
+            loading={isLoading || (isFetching && isPlaceholderData)}
             empty={{ kind: 'search', title: t('rep_empty_tickets_overview_rows'), hint: t('rep_empty_tickets_overview_rows_hint') }}
             // Fixed columns 1,200px + a ~230px subject; narrower screens scroll sideways
             tableClassName="min-w-[1430px]"

@@ -367,7 +367,7 @@ export function StockItemDetailModal({
                                                                         >
                                                                             <ChevronDown
                                                                                 className={cn(
-                                                                                    'h-3.5 w-3.5 shrink-0 transition-transform',
+                                                                                    'h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none',
                                                                                     expanded && 'rotate-180',
                                                                                 )}
                                                                                 aria-hidden

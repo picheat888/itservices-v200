@@ -622,7 +622,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                         <div className="bg-muted/50 rounded-md p-2.5">
                                             <div className="bg-muted h-1.5 overflow-hidden rounded-full">
                                                 <span
-                                                    className="bg-brand block h-full rounded-full transition-[width]"
+                                                    className="bg-brand block h-full rounded-full"
                                                     style={{
                                                         width: `${availableTransferSerials.length ? (transferSerialIds.size / availableTransferSerials.length) * 100 : 0}%`,
                                                     }}
@@ -968,7 +968,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             <div className="bg-muted/50 rounded-md p-2.5">
                                 <div className="bg-muted h-1.5 overflow-hidden rounded-full">
                                     <span
-                                        className={cn('block h-full rounded-full transition-[width]', dupCount ? 'bg-destructive' : 'bg-emerald-500')}
+                                        className={cn('block h-full rounded-full', dupCount ? 'bg-destructive' : 'bg-emerald-500')}
                                         style={{ width: `${serials.length ? (okCount / serials.length) * 100 : 0}%` }}
                                     />
                                 </div>

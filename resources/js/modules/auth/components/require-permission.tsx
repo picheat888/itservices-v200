@@ -70,7 +70,10 @@ export function NoAccess({ title, hint }: { title?: string; hint?: string }) {
                         <span className="tabular-nums">{count}s</span>
                     </div>
                     <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
-                        <div className="bg-brand h-full rounded-full transition-[width] duration-1000 ease-linear" style={{ width: `${pct}%` }} />
+                        <div
+                            className="bg-brand h-full rounded-full transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
+                            style={{ width: `${pct}%` }}
+                        />
                     </div>
                 </div>
 

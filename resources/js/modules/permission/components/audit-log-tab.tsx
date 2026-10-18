@@ -171,7 +171,7 @@ export function AuditLogTab() {
     const filters: AuditFilters = { search: sentSearch, category, user };
     const hasSearchOrFilter = search !== '' || category !== 'all' || user !== 'all';
 
-    const { data, isLoading, isFetching, isError, refetch } = useAuditLogs(page, perPage, filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useAuditLogs(page, perPage, filters);
     const logs = isError ? [] : (data?.data ?? []);
     const meta = data?.meta;
 
@@ -305,7 +305,7 @@ export function AuditLogTab() {
                 columns={columns}
                 rows={logs}
                 rowKey={(l) => l.id}
-                loading={isLoading || isFetching}
+                loading={isLoading || (isFetching && isPlaceholderData)}
                 searchable={() => ''}
                 searchPlaceholder={t('perm_audit_search')}
                 search={{ value: search, onChange: (value) => setFilter('search', value) }}

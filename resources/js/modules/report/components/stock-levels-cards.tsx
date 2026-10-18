@@ -9,6 +9,7 @@ import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
 import { useStockLevelsBreakdown } from '../hooks/use-reports';
 import type { ChartTone, StockLevelsBreakdown, TabularFilters } from '../types';
+import { CardsUpdating } from './cards-updating';
 import { CardEmpty, CardPager, CardTitle, CountBar, InfoMark, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
@@ -89,11 +90,15 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
 
 export function StockLevelsTiles({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isError, error } = useStockLevelsBreakdown(filters);
+    const { data, isLoading, isFetching, isError, error } = useStockLevelsBreakdown(filters);
 
     if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <KpiRowSkeleton count={5} className={summaryColumns(5)} />;
-    return <LevelTiles tiles={data.tiles} />;
+    return (
+        <CardsUpdating updating={isFetching && !isLoading}>
+            <LevelTiles tiles={data.tiles} />
+        </CardsUpdating>
+    );
 }
 
 /* ─────────────────────────── rows legend ─────────────────────────── */
@@ -196,7 +201,7 @@ function CategoryCard({ categories }: { categories: StockLevelsBreakdown['catego
 }
 
 export function StockLevelsCategoryCard({ filters }: { filters: TabularFilters }) {
-    const { data, isLoading, isError } = useStockLevelsBreakdown(filters);
+    const { data, isLoading, isFetching, isError } = useStockLevelsBreakdown(filters);
 
     // The tiles above already say when the breakdown failed.
     if (isError) return null;
@@ -210,8 +215,10 @@ export function StockLevelsCategoryCard({ filters }: { filters: TabularFilters }
                     <BarRowsSkeleton rows={5} />
                 </Card>
             ) : (
-                // A new category starts the card on page 1.
-                <CategoryCard key={String(filters.category_id ?? '')} categories={data.categories} />
+                <CardsUpdating updating={isFetching && !isLoading}>
+                    {/* A new category starts the card on page 1. */}
+                    <CategoryCard key={String(filters.category_id ?? '')} categories={data.categories} />
+                </CardsUpdating>
             )}
         </div>
     );

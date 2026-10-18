@@ -28,6 +28,7 @@ import { useCanOpen } from '../hooks/use-can-open';
 import { useRequestSlaBreakdown } from '../hooks/use-reports';
 import type { RequestSlaBreakdown, RequestSlaTally, TabularFilters } from '../types';
 import { Heading, Swatch } from './backlog-board';
+import { CardsUpdating } from './cards-updating';
 import { reportDates } from './chart-parts';
 import { formatLiveNumber } from './report-scope';
 
@@ -386,7 +387,7 @@ function RulesCard({ rules }: { rules: RequestSlaBreakdown['rules'] }) {
 
 /** The three cards between the summary tiles and the table; a press on a type line filters the page. */
 export function RequestSlaCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading } = useRequestSlaBreakdown(filters);
+    const { data, isLoading, isFetching } = useRequestSlaBreakdown(filters);
 
     if (isLoading || !data) {
         return (
@@ -406,12 +407,12 @@ export function RequestSlaCards({ filters, patch }: { filters: TabularFilters; p
     }
 
     return (
-        <div className="space-y-4">
+        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
             <TypesCard data={data} filters={filters} patch={patch} />
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                 <OpenCard data={data} />
                 <RulesCard rules={data.rules} />
             </div>
-        </div>
+        </CardsUpdating>
     );
 }

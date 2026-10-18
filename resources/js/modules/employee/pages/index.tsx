@@ -725,7 +725,7 @@ function DirectoryTab({
     const { page, perPage } = list;
     const sentSearch = useDebouncedSearch(search);
 
-    const { data, isLoading, isFetching } = useEmployeeDirectory({
+    const { data, isLoading, isFetching, isPlaceholderData } = useEmployeeDirectory({
         page,
         per_page: perPage,
         search: sentSearch,
@@ -923,7 +923,7 @@ function DirectoryTab({
                 rows={rows}
                 rowKey={(e) => e.id}
                 onRowClick={onView}
-                loading={isLoading || isFetching}
+                loading={isLoading || (isFetching && isPlaceholderData)}
                 server={{ ...list.table.paging, total }}
                 empty={
                     search || activeFilterCount > 0

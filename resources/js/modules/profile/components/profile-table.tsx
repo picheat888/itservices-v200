@@ -1,9 +1,9 @@
 // Table pieces shared by the My Profile tabs: card, header row, section heading, show-all row, loading rows.
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { ChevronDown } from 'lucide-react';
 
 // Rows shown before "show all"
 export const PAGE = 5;
@@ -70,7 +70,6 @@ export function ShowAllRow({ total, expanded, onToggle }: { total: number; expan
     const t = useT();
     const fmtN = useNumberFormat();
     if (total <= PAGE) return null;
-    const Icon = expanded ? ChevronUp : ChevronDown;
     return (
         <button
             type="button"
@@ -78,7 +77,10 @@ export function ShowAllRow({ total, expanded, onToggle }: { total: number; expan
             aria-expanded={expanded}
             className="border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold transition-colors"
         >
-            <Icon className="h-3.5 w-3.5" aria-hidden />
+            <ChevronDown
+                className={cn('h-3.5 w-3.5 transition-transform duration-150 motion-reduce:transition-none', expanded && 'rotate-180')}
+                aria-hidden
+            />
             {expanded ? t('profile_assets_show_less') : t('profile_assets_show_all').replace('{n}', fmtN(total - PAGE))}
         </button>
     );
