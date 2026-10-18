@@ -26,7 +26,6 @@ export const access: Dict = {
     access_pick_employee: 'Select employee…',
     access_url: 'URL',
     access_color: 'Color',
-    access_color_hex: 'Hex color code',
     access_size_unit: 'Size unit',
 
     access_email: 'Email',
@@ -94,7 +93,6 @@ export const access: Dict = {
     access_ph_path: '\\\\server\\share',
     access_ph_size: '120',
     access_ph_url: 'https://example.com',
-    access_ph_color: '#6366f1',
     access_ph_group_name: 'e.g. Sales team',
     access_ph_share_name: 'e.g. Accounting',
     access_ph_platform_name: 'e.g. LINE',

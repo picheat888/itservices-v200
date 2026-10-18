@@ -209,6 +209,14 @@ export const common: Dict = {
     err_retry_after: 'ลองใหม่ได้ในอีกประมาณ {n} วินาที',
     err_throttle_toast: 'ใช้งานถี่เกินไป กรุณารอประมาณ {n} วินาทีแล้วลองใหม่',
 
+    // color-swatch-picker.tsx — colour names and the custom colour button
+    color_blue: 'น้ำเงิน',
+    color_green: 'เขียว',
+    color_orange: 'ส้ม',
+    color_violet: 'ม่วง',
+    color_pink: 'ชมพู',
+    color_custom: 'สีอื่น',
+
     // calendar.tsx — month navigation
     cal_prev: 'ก่อนหน้า',
     cal_next: 'ถัดไป',

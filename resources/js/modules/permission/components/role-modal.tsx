@@ -1,7 +1,7 @@
 import { translate, useT } from '@/lang';
+import { ColorSwatchPicker, DEFAULT_SWATCHES } from '@/shared/components/color-swatch-picker';
 import { Field } from '@/shared/components/field';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { RoleRow } from '../api/permissionApi';
 import { useRoleMutations } from '../hooks/use-permissions';
 
-const COLORS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
+const DEFAULT_COLOR = DEFAULT_SWATCHES[0].hex;
 
 export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () => void; role: RoleRow | null }) {
     const t = useT();
@@ -21,19 +21,19 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
     const confirmEdit = useConfirmEdit();
     const { create, update } = useRoleMutations();
     const [name, setName] = useState('');
-    const [color, setColor] = useState(COLORS[0]);
+    const [color, setColor] = useState(DEFAULT_COLOR);
     // Brief "Saved" success state shown on the save button before the modal closes.
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         if (open) {
             setName(role?.label ?? '');
-            setColor(role?.color ?? COLORS[0]);
+            setColor(role?.color ?? DEFAULT_COLOR);
             setSaved(false);
         }
     }, [open, role]);
 
-    const isDirty = name !== (role?.label ?? '') || color.toLowerCase() !== (role?.color ?? COLORS[0]).toLowerCase();
+    const isDirty = name !== (role?.label ?? '') || color.toLowerCase() !== (role?.color ?? DEFAULT_COLOR).toLowerCase();
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     // Set before the first await, so a second click in the same frame is ignored
@@ -90,23 +90,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
                     <Field label={t('perm_role_name')}>
                         <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('perm_role_name_ph')} />
                     </Field>
-                    <div>
-                        <div className="mb-2 text-sm font-medium">{t('perm_role_color')}</div>
-                        <div className="flex gap-2">
-                            {COLORS.map((c) => (
-                                <button
-                                    key={c}
-                                    onClick={() => setColor(c)}
-                                    className={cn(
-                                        'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
-                                        color.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
-                                    )}
-                                    style={{ background: c }}
-                                    aria-label={c}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                    <ColorSwatchPicker label={t('perm_role_color')} showLabel value={color} onChange={setColor} />
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving || saved}>
