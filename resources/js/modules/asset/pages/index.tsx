@@ -396,8 +396,24 @@ export default function AssetsPage() {
             { replace: true },
         );
 
-    const [formOpen, setFormOpen] = useState(false);
+    // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the detail ?view stays under it
+    const editId = toRecordId(searchParams.get('edit'));
+    const {
+        data: editSource,
+        isError: editMissing,
+        isFetching: editFetching,
+    } = useQuery({
+        queryKey: ['asset', 'view', editId],
+        queryFn: () => assetApi.get(editId as number),
+        enabled: editId != null,
+    });
     const [editing, setEditing] = useState<Asset | null>(null);
+    useEffect(() => {
+        if (editId == null) setEditing(null);
+        else if (editSource && !editFetching && editing?.id !== editId) setEditing(editSource);
+    }, [editId, editSource, editFetching, editing?.id]);
+    // A link or reload cannot open a form the menus would not offer
+    const editOpen = editing != null && editing.id === editId && canEdit && editing.status !== 'writeoff';
     const [transferAsset, setTransferAsset] = useState<Asset | null>(null);
     const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
@@ -484,23 +500,31 @@ export default function AssetsPage() {
             },
             { replace: true },
         );
-    const openEdit = (a: Asset) => {
-        // Keep ?view so closing the edit form returns to the detail drawer (bounce-back, like Access).
-        setEditing(a);
-        setFormOpen(true);
-    };
-    const closeForm = () => {
-        setEditing(null);
-        setFormOpen(false);
+    const writeForm = (change: (p: URLSearchParams) => void) =>
         setSearchParams(
             (sp) => {
                 const p = new URLSearchParams(sp);
-                p.delete('add');
+                change(p);
                 return p;
             },
             { replace: true },
         );
+    // The clicked row opens the form at once; a link or reload fetches it
+    const openEdit = (a: Asset) => {
+        setEditing(a);
+        writeForm((p) => p.set('edit', String(a.id)));
     };
+    const closeForm = () =>
+        writeForm((p) => {
+            p.delete('add');
+            p.delete('edit');
+        });
+    // A saved edit always lands on the asset's detail
+    const showSaved = () =>
+        writeForm((p) => {
+            p.delete('edit');
+            if (editId != null) p.set('view', String(editId));
+        });
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
     const bulkActionFor = useCallback(
@@ -1484,7 +1508,15 @@ export default function AssetsPage() {
 
             {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
                 render and said nothing. This says it instead. */}
-            <RecordMissingDialog open={detailMissing} onClose={() => closeAsset()} />
+            <RecordMissingDialog
+                open={detailMissing || editMissing}
+                onClose={() =>
+                    writeForm((p) => {
+                        p.delete('view');
+                        p.delete('edit');
+                    })
+                }
+            />
             <AssetDetailDrawer
                 asset={detail ?? null}
                 onClose={() => closeAsset()}
@@ -1517,7 +1549,7 @@ export default function AssetsPage() {
                 canCancelWriteoff={canCancelWriteoff}
                 canDelete={canDelete}
             />
-            <AssetFormDrawer open={adding || formOpen} editing={adding ? null : editing} onClose={closeForm} />
+            <AssetFormDrawer open={adding || editOpen} editing={adding ? null : editing} onClose={closeForm} onSaved={showSaved} />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />

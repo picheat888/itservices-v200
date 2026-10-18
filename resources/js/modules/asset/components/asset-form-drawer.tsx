@@ -67,7 +67,18 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  * assigned later through Transfer. Rented assets derive fee / vendor / lease period
  * from their linked contract, so only the contract is picked here.
  */
-export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; editing: Asset | null; onClose: () => void }) {
+export function AssetFormDrawer({
+    open,
+    editing,
+    onClose,
+    onSaved,
+}: {
+    open: boolean;
+    editing: Asset | null;
+    onClose: () => void;
+    /** Called instead of onClose once an edit is saved. */
+    onSaved?: () => void;
+}) {
     const t = useT();
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
@@ -233,7 +244,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             setSaveState('done');
             setTimeout(() => {
                 setSaveState('idle');
-                onClose();
+                if (editing && onSaved) onSaved();
+                else onClose();
             }, 600);
         } catch {
             setErr({ model: t('asset_could_not_save') });

@@ -256,6 +256,45 @@ export default function TicketsPage() {
     const canEditTicket = (tk: Ticket) =>
         has('tickets.edit_own') && tk.status === 'open' && tk.requester_id === user?.employee_id && !tk.from_request;
     const canEditDetail = !!shownTicket && canEditTicket(shownTicket);
+
+    // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the detail ?view stays under it
+    const editId = toRecordId(searchParams.get('edit'));
+    const {
+        data: editSource,
+        isError: editMissing,
+        isFetching: editFetching,
+    } = useQuery({
+        queryKey: ['ticket', 'view', editId],
+        queryFn: () => ticketApi.get(editId as number),
+        enabled: editId != null,
+    });
+    useEffect(() => {
+        if (editId == null) setEditTicket(null);
+        else if (editSource && !editFetching && editTicket?.id !== editId) setEditTicket(editSource);
+    }, [editId, editSource, editFetching, editTicket?.id]);
+    // A link or reload cannot open a form the menus would not offer
+    const editOpen = editTicket != null && editTicket.id === editId && canEditTicket(editTicket);
+    const writeEdit = (change: (p: URLSearchParams) => void) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                change(p);
+                return p;
+            },
+            { replace: true },
+        );
+    // The clicked row opens the form at once; a link or reload fetches it
+    const openEditTicket = (tk: Ticket) => {
+        setEditTicket(tk);
+        writeEdit((p) => p.set('edit', String(tk.id)));
+    };
+    const closeEditTicket = () => writeEdit((p) => p.delete('edit'));
+    // A saved edit always lands on the ticket's detail
+    const showSavedTicket = () =>
+        writeEdit((p) => {
+            p.delete('edit');
+            if (editId != null) p.set('view', String(editId));
+        });
     // Desk gates of one ticket, for the row menu
     const gatesFor = (tk: Ticket) => ({
         canTake: canTake && hasLevel(tk.category),
@@ -445,7 +484,7 @@ export default function TicketsPage() {
                     gates={gatesFor(tk)}
                     canEdit={canEditTicket(tk)}
                     onView={openDetail}
-                    onEdit={setEditTicket}
+                    onEdit={openEditTicket}
                     onTake={setTakeTicket}
                     onAssign={setAssignTicket}
                     onForward={setForwardTicket}
@@ -725,7 +764,15 @@ export default function TicketsPage() {
             <CreateTicketDrawer open={adding} onClose={closeCreate} />
             {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
                 render and said nothing. This says it instead. */}
-            <RecordMissingDialog open={detailMissing} onClose={() => closeDetail()} />
+            <RecordMissingDialog
+                open={detailMissing || editMissing}
+                onClose={() =>
+                    writeEdit((p) => {
+                        p.delete('view');
+                        p.delete('edit');
+                    })
+                }
+            />
             <TicketDetailDrawer
                 ticket={detail ?? null}
                 onClose={() => closeDetail()}
@@ -736,14 +783,14 @@ export default function TicketsPage() {
                 meId={user?.id}
                 meEmployeeId={user?.employee_id}
                 canEdit={canEditDetail}
-                onEdit={(tk) => setEditTicket(tk)}
+                onEdit={openEditTicket}
                 onTake={(tk) => setTakeTicket(tk)}
                 onAssign={(tk) => setAssignTicket(tk)}
                 onForward={(tk) => setForwardTicket(tk)}
                 onResolve={startResolve}
                 onUpdate={startUpdateFromList}
             />
-            <EditTicketDrawer ticket={editTicket} onClose={() => setEditTicket(null)} />
+            <EditTicketDrawer ticket={editOpen ? editTicket : null} onClose={closeEditTicket} onSaved={showSavedTicket} />
             <TakeCaseModal ticket={takeTicket} onClose={() => setTakeTicket(null)} />
             <AssignTicketModal ticket={assignTicket} onClose={() => setAssignTicket(null)} />
             <ForwardTicketModal ticket={forwardTicket} onClose={() => setForwardTicket(null)} />
