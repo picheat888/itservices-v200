@@ -41,8 +41,11 @@ class SuperAdmins
      */
     public static function protectedEmployeeIds(array $employeeIds): array
     {
+        if ($employeeIds === []) {
+            return [];
+        }
         $roleId = self::roleId();
-        if ($roleId === null || $employeeIds === []) {
+        if ($roleId === null) {
             return [];
         }
 
@@ -62,6 +65,12 @@ class SuperAdmins
         return $inSuperGroup->merge($withSuperAccount)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
+    /** Locks the super accounts and says whether any is left; a locking read sees a concurrent removal's commit. */
+    private static function lockedSuperAdminsRemain(?int $roleId): bool
+    {
+        return $roleId !== null && User::where('role_id', $roleId)->lockForUpdate()->pluck('id')->isNotEmpty();
+    }
+
     /**
      * Runs the writes in one transaction and rolls back with a 422 when they removed the last Super admin.
      *
@@ -74,16 +83,11 @@ class SuperAdmins
     {
         try {
             return DB::transaction(function () use ($writes) {
-                // Concurrent removals wait here
                 $roleId = self::roleId();
-                if ($roleId !== null) {
-                    User::where('role_id', $roleId)->lockForUpdate()->pluck('id');
-                }
-
-                $hadSuperAdmin = self::exists();
+                $hadSuperAdmin = self::lockedSuperAdminsRemain($roleId);
                 $result = $writes();
 
-                if ($hadSuperAdmin && ! self::exists()) {
+                if ($hadSuperAdmin && ! self::lockedSuperAdminsRemain($roleId)) {
                     throw new HttpResponseException(response()->json([
                         'message' => 'At least one Administrator account must remain.',
                         'code' => 'last_super_admin',

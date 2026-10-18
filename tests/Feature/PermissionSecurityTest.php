@@ -4,6 +4,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
@@ -18,6 +19,7 @@ use App\Services\Employee\EmployeeImportService;
 use App\Services\Employee\EmployeeService;
 use App\Support\RoleKeys;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -674,6 +676,22 @@ class PermissionSecurityTest extends TestCase
 
         $this->getJson("/api/employees/{$accountless->id}")->assertOk()->assertJsonPath('data.is_super_admin', true);
         $flags = collect($this->getJson('/api/employees')->assertOk()->json('data'))->pluck('is_super_admin', 'id');
+        $this->assertTrue($flags[$accountless->id]);
+        $this->assertFalse($flags[$ordinary->id]);
+    }
+
+    public function test_a_paginated_employee_collection_reads_the_super_admin_flags_in_one_batch(): void
+    {
+        $accountless = $this->accountlessAdmin();
+        $ordinary = Employee::create(['first_name' => 'Otto', 'last_name' => 'Staff', 'email' => 'otto@inaba.co.th']);
+        $page = Employee::query()->orderBy('id')->paginate(10);
+        $employees = $page->getCollection();
+
+        EmployeeResource::collection($page);
+        DB::enableQueryLog();
+        $flags = $employees->mapWithKeys(fn (Employee $employee) => [$employee->id => $employee->isSuperAdmin()]);
+
+        $this->assertSame([], DB::getQueryLog());
         $this->assertTrue($flags[$accountless->id]);
         $this->assertFalse($flags[$ordinary->id]);
     }
