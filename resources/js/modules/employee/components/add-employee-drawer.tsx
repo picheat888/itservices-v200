@@ -860,7 +860,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                         {STEPS.map((s, i) => (
                             <span
                                 key={s.titleKey}
-                                className={cn('h-1.5 rounded-full transition-all', i + 1 === step ? 'bg-brand w-5' : 'bg-border w-1.5')}
+                                className={cn('h-1.5 rounded-full transition-[width,background-color] duration-150 motion-reduce:transition-none', i + 1 === step ? 'bg-brand w-5' : 'bg-border w-1.5')}
                             />
                         ))}
                     </div>

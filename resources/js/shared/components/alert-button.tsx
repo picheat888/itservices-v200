@@ -36,7 +36,7 @@ export function AlertButton({
             onClick={onClick}
             aria-pressed={pressed}
             className={cn(
-                'bg-card focus-visible:ring-ring focus-visible:ring-offset-background inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border pr-2.5 pl-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+                'press bg-card focus-visible:ring-ring focus-visible:ring-offset-background inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border pr-2.5 pl-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
                 TONE[tone],
             )}
         >

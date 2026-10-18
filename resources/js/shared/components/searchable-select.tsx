@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { usePresence } from '@/shared/hooks/use-presence';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
@@ -82,6 +83,7 @@ export function SearchableSelect({
     const t = useT();
     const listId = useId();
     const [open, setOpen] = useState(false);
+    const { mounted, closing } = usePresence(open);
     const [q, setQ] = useState('');
     // Keyboard-highlighted option; shown only after an arrow key so mouse use looks unchanged
     const [activeIndex, setActiveIndex] = useState(0);
@@ -444,7 +446,7 @@ export function SearchableSelect({
                     <X className="h-3.5 w-3.5" />
                 </button>
             )}
-            {open &&
+            {mounted &&
                 (dialogEl ? (
                     // Portaled into the dialog content: escapes the body's overflow clip, stays in Radix's layer
                     createPortal(
@@ -461,7 +463,11 @@ export function SearchableSelect({
                                 bottom: coords.bottom,
                                 zIndex: 50,
                             }}
-                            className="border-border bg-popover overflow-hidden rounded-md border shadow-md"
+                            className={cn(
+                                'border-border bg-popover overflow-hidden rounded-md border shadow-md',
+                                coords.bottom !== undefined ? 'origin-bottom' : 'origin-top',
+                                closing ? 'motion-pop-out' : 'motion-pop-in',
+                            )}
                         >
                             {menu}
                         </div>,
@@ -472,7 +478,8 @@ export function SearchableSelect({
                         ref={menuRef}
                         className={cn(
                             'border-border bg-popover absolute z-50 w-max max-w-[320px] min-w-full overflow-hidden rounded-md border shadow-md',
-                            dropUp ? 'bottom-full mb-1' : 'top-full mt-1',
+                            dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
+                            closing ? 'motion-pop-out' : 'motion-pop-in',
                         )}
                     >
                         {menu}

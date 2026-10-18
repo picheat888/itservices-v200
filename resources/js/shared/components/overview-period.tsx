@@ -28,7 +28,7 @@ export function useOverviewPeriod(options?: PeriodOptions): [OverviewPeriod, (ne
     return [period, setPeriod];
 }
 
-const SEGMENT = 'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2';
+const SEGMENT = 'press rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2';
 const segmentTone = (active: boolean) => (active ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground');
 
 /** Period buttons. "กำหนดเอง" opens the shared range calendar, which applies only on "นำไปใช้". */

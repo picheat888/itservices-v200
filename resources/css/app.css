@@ -124,6 +124,14 @@
     --asset-soft: 72%;
     --asset-ink: 100%;
 
+    /* Motion: one set of timings for the whole app (hover, pop-ups, dialogs and the sidebar) */
+    --motion-hover: 150ms;
+    --motion-pop-in: 150ms;
+    --motion-pop-out: 120ms;
+    --motion-open: 240ms;
+    --motion-close: 180ms;
+    --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
     /* Blue brand accent (overridable from Settings → Branding via JS) */
     --brand: #2563eb;
     --brand-foreground: #ffffff;
@@ -372,11 +380,13 @@
         inset 0 1px 0 var(--toast-top);
     transition: box-shadow 0.18s ease;
 }
-.toast-card:hover {
-    box-shadow:
-        0 0 0 1px var(--toast-ring),
-        var(--shadow-toast-hover),
-        inset 0 1px 0 var(--toast-top);
+@media (hover: hover) {
+    .toast-card:hover {
+        box-shadow:
+            0 0 0 1px var(--toast-ring),
+            var(--shadow-toast-hover),
+            inset 0 1px 0 var(--toast-top);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -460,10 +470,16 @@
 }
 
 /* Table rows: a clickable row tints on hover / keyboard focus through --row-tint */
-.row-hover:hover,
 .row-hover:focus-visible {
     --row-tint: var(--row-hover);
     background-color: var(--row-tint);
+}
+/* Hover only where a pointer can hover, so a tapped row on iPad does not stay tinted */
+@media (hover: hover) {
+    .row-hover:hover {
+        --row-tint: var(--row-hover);
+        background-color: var(--row-tint);
+    }
 }
 
 /* Pinned table cell: solid card so scrolled cells do not show through, with its row's tint on top */
@@ -547,15 +563,15 @@
 
 /* ── Sidebar: icon rail ⇄ menu (data-nav / data-narrow on the app shell); below 1280px it opens over the page ── */
 [data-nav] {
-    --nav-dur: 180ms;
-    --nav-ease: cubic-bezier(0.3, 0, 0.8, 0.15);
+    --nav-dur: var(--motion-close);
+    --nav-ease: var(--ease-exit);
     --nav-label-dur: 80ms;
     --nav-label-delay: 0ms;
     --nav-mark-delay: 100ms;
 }
 [data-nav='open'] {
-    --nav-dur: 240ms;
-    --nav-ease: cubic-bezier(0.2, 0, 0, 1);
+    --nav-dur: var(--motion-open);
+    --nav-ease: var(--ease-enter);
     --nav-label-dur: 160ms;
     --nav-label-delay: 80ms;
     --nav-mark-delay: 0ms;
@@ -580,6 +596,17 @@
 }
 [data-nav='open'] .nav-foot {
     height: 69px;
+}
+/* Menu group name (20px); in the rail a rule with 12px below it, none above the first group */
+.nav-head {
+    height: 0.8125rem;
+    transition: height var(--nav-dur) var(--nav-ease);
+}
+.nav-head-first {
+    height: 0;
+}
+[data-nav='open'] .nav-head {
+    height: 1.25rem;
 }
 /* 1280px and up: the sidebar pushes the page while its width animates */
 .nav-push {
@@ -660,6 +687,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .nav-push,
+    .nav-head,
     .nav-foot,
     .nav-drawer,
     .nav-drawer-shadow,
@@ -707,5 +735,80 @@
     .theme-icon-in,
     .badge-pop {
         animation: none;
+    }
+}
+
+/* ── Shared motion: pop-ups, dialogs and press feedback (timings from the --motion-* tokens) ── */
+@keyframes pop-in {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@keyframes pop-out {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+}
+@keyframes fade-in-only {
+    from {
+        opacity: 0;
+    }
+}
+@keyframes fade-out-only {
+    to {
+        opacity: 0;
+    }
+}
+/* Hand-built pop-ups (FilterPopover, SearchSelect, SearchableSelect) with usePresence */
+.motion-pop-in {
+    animation: pop-in var(--motion-pop-in) var(--ease-enter);
+}
+.motion-pop-out {
+    animation: pop-out var(--motion-pop-out) var(--ease-exit) forwards;
+    pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+    /* Radix pop-ups (Popover, Select, DropdownMenu, Tooltip): the exit is shorter than the entry */
+    .motion-pop:not([data-state='closed']) {
+        animation-duration: var(--motion-pop-in);
+        animation-timing-function: var(--ease-enter);
+    }
+    .motion-pop[data-state='closed'] {
+        animation-duration: var(--motion-pop-out);
+        animation-timing-function: var(--ease-exit);
+    }
+    /* Dialog and Sheet, with their backdrops: the same timings as the sidebar menu */
+    .motion-sheet:not([data-state='closed']) {
+        animation-duration: var(--motion-open);
+        animation-timing-function: var(--ease-enter);
+    }
+    .motion-sheet[data-state='closed'] {
+        animation-duration: var(--motion-close);
+        animation-timing-function: var(--ease-exit);
+    }
+    /* Press: hand-built buttons shrink a touch while held (0.92 for icon-only buttons) */
+    .press:active:not(:disabled) {
+        scale: 0.97;
+    }
+    .press-icon:active:not(:disabled) {
+        scale: 0.92;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .motion-pop-in {
+        animation: fade-in-only 120ms linear;
+    }
+    .motion-pop-out {
+        animation: fade-out-only 120ms linear forwards;
     }
 }

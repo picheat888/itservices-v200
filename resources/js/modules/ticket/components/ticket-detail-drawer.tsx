@@ -757,7 +757,7 @@ export function TicketDetailDrawer({
                                                         {running && (
                                                             <div className="bg-muted h-1 overflow-hidden rounded-full" role="presentation">
                                                                 <div
-                                                                    className={cn('h-full rounded-full transition-all', SLA_BAR_TONE[view.sla.state])}
+                                                                    className={cn('h-full rounded-full', SLA_BAR_TONE[view.sla.state])}
                                                                     style={{ width: `${Math.min(100, Math.max(0, view.sla.pct_elapsed))}%` }}
                                                                 />
                                                             </div>

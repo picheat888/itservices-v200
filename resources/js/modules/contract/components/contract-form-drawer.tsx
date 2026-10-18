@@ -972,7 +972,7 @@ export function ContractFormDrawer({
                     {/* Step dots */}
                     <div className="mx-auto flex gap-1.5">
                         {steps.map((_, i) => (
-                            <span key={i} className={cn('h-1.5 rounded-full transition-all', i === step ? 'bg-brand w-5' : 'bg-border w-1.5')} />
+                            <span key={i} className={cn('h-1.5 rounded-full transition-[width,background-color] duration-150 motion-reduce:transition-none', i === step ? 'bg-brand w-5' : 'bg-border w-1.5')} />
                         ))}
                     </div>
 

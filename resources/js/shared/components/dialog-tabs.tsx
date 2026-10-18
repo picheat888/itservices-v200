@@ -86,7 +86,7 @@ export function DialogTabs<T extends string>({
                         onClick={() => onChange(tb.id)}
                         onKeyDown={onKeyDown}
                         className={cn(
-                            'focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
+                            'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
                             selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                         )}
                     >
