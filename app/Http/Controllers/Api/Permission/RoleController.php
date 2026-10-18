@@ -3,84 +3,41 @@
 namespace App\Http\Controllers\Api\Permission;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
-use App\Models\Permission\GroupRole;
-use App\Models\Permission\Role;
+use App\Http\Requests\Permission\DuplicateRoleRequest;
+use App\Http\Requests\Permission\ManageRolesRequest;
+use App\Http\Requests\Permission\StoreRoleRequest;
+use App\Http\Requests\Permission\UpdateRoleRequest;
 use App\Services\Permission\RoleDuplicateService;
+use App\Services\Permission\RoleService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class RoleController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(StoreRoleRequest $request, RoleService $roles): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:60'],
-            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ]);
-
-        $role = Role::create([
-            'key' => Role::uniqueKeyFor($data['name']),
-            'name' => $data['name'],
-            'color' => $data['color'] ?? '#64748b',
-            'is_system' => false,
-        ]);
-
-        AuditLog::record('Created role', $role->name, subject: $role);
+        $role = $roles->create($request->validated());
 
         return response()->json(['data' => $role, 'message' => 'success'], 201);
     }
 
     /** A new custom role with the source's saved permissions; members are not copied. */
-    public function duplicate(Request $request, string $key, RoleDuplicateService $service): JsonResponse
+    public function duplicate(DuplicateRoleRequest $request, RoleDuplicateService $service): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-        $source = Role::where('key', $key)->firstOrFail();
-
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:60'],
-            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ]);
-
-        $role = $service->duplicate($source, $data['name'], $data['color'] ?? null, $request->user());
+        $role = $service->duplicate($request->sourceRole(), $request->validated('name'), $request->validated('color'), $request->user());
 
         return response()->json(['data' => $role, 'message' => 'success'], 201);
     }
 
-    public function update(Request $request, string $key): JsonResponse
+    public function update(UpdateRoleRequest $request, RoleService $roles): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-        $role = Role::where('key', $key)->firstOrFail();
-        abort_if($role->is_system, 422, 'System role cannot be edited.');
-
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:60'],
-            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ]);
-
-        $before = $role->getOriginal();
-        $role->update($data);
-
-        AuditLog::record('Updated role', $role->name, AuditLog::changes($before, $role), subject: $role);
+        $role = $roles->update($request->editedRole(), $request->validated());
 
         return response()->json(['data' => $role, 'message' => 'success']);
     }
 
-    public function destroy(Request $request, string $key): JsonResponse
+    public function destroy(ManageRolesRequest $request, string $key, RoleService $roles): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-        $role = Role::where('key', $key)->firstOrFail();
-        abort_if($role->is_system, 422, 'System role cannot be deleted.');
-        abort_if($role->members() > 0, 422, 'Role still has members. Reassign them first.');
-        abort_if(GroupRole::where('role_id', $role->id)->exists(), 422, 'Role is still used by a Role Group. Reassign it first.');
-
-        // role_permissions rows cascade-delete via the role_id FK.
-        $name = $role->name;
-        $role->delete();
-
-        AuditLog::recordDeleted('Deleted role', $name, $role);
+        $roles->delete($key);
 
         return response()->json(['message' => 'success']);
     }
