@@ -50,6 +50,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { ContractRowMenu } from '../components/contract-row-menu';
+import { useContractActions } from '../hooks/use-contract-actions';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 import { CONTRACT_TYPE_TONE } from '../tones';
 
@@ -183,12 +184,21 @@ export default function ContractsPage() {
     const meta = listData?.meta;
     const totalRows = meta?.total ?? 0;
     usePageInRange(list, meta?.last_page);
-    const columns = useContractColumns(
-        newlyCreated?.id ?? null,
-        canEdit,
-        (c) => setSelectedId(c.id),
-        (c) => openEdit(c),
-    );
+    // Lifecycle actions from the row menu; a pinned new row that was just removed or closed stops being pinned
+    const rowActions = useContractActions(() => setNewlyCreated(null));
+    const rowPermissions = { canEdit, canCancel, canExpire, canReactivate, canDelete };
+    const columns = useContractColumns(newlyCreated?.id ?? null, (c) => (
+        <ContractRowMenu
+            contract={c}
+            can={rowPermissions}
+            onView={() => setSelectedId(c.id)}
+            onEdit={() => openEdit(c)}
+            onCancel={() => rowActions.startCancel(c)}
+            onExpire={() => rowActions.startExpire(c)}
+            onReactivate={() => rowActions.startReactivate(c)}
+            onDelete={() => rowActions.startDelete(c)}
+        />
+    ));
     const tableRows = newlyCreated ? [newlyCreated, ...rows.filter((r) => r.id !== newlyCreated.id)] : rows;
 
     // Switch tab and mirror it in the URL (?tab=); the All tab's list keys are cleared in the same write.
@@ -510,6 +520,7 @@ export default function ContractsPage() {
                 canReactivate={canReactivate}
                 canDelete={canDelete}
             />
+            {rowActions.cancelDialog}
             <ContractFormDrawer open={adding || editing != null} editing={adding ? null : editing} onClose={closeForm} onCreated={handleCreated} />
         </div>
     );
@@ -542,12 +553,7 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
 const NEW_ROW = 'animate-in fade-in bg-(--row-tint) duration-500 [--row-tint:color-mix(in_oklab,var(--color-emerald-500)_8%,transparent)]';
 
 /** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
-function useContractColumns(
-    newId: number | null,
-    canEdit: boolean,
-    onView: (c: Contract) => void,
-    onEdit: (c: Contract) => void,
-): Column<Contract>[] {
+function useContractColumns(newId: number | null, rowMenu: (c: Contract) => React.ReactNode): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
@@ -627,7 +633,7 @@ function useContractColumns(
             header: <span className="sr-only">{t('actions')}</span>,
             width: '60px',
             align: 'right',
-            render: (c) => <ContractRowMenu contract={c} canEdit={canEdit} onView={() => onView(c)} onEdit={() => onEdit(c)} />,
+            render: rowMenu,
         },
     ];
 }

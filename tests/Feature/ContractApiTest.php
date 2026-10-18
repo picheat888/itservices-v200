@@ -107,6 +107,24 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.0.assets_count', 1);
     }
 
+    /** The row menu warns before cancel / expire from the list, so the list counts the assets not yet written off. */
+    public function test_the_list_counts_linked_assets_not_yet_written_off(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create([
+            'code' => 'CT-OPEN-1', 'vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware',
+            'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100000, 'billing_cycle' => 'yearly',
+        ]);
+        Asset::create(['asset_code' => 'INB-LT-11', 'type' => 'laptop', 'status' => 'deployed', 'contract_id' => $contract->id]);
+        Asset::create(['asset_code' => 'INB-LT-12', 'type' => 'laptop', 'status' => 'ready', 'contract_id' => $contract->id]);
+        Asset::create(['asset_code' => 'INB-LT-13', 'type' => 'laptop', 'status' => 'writeoff', 'contract_id' => $contract->id]);
+
+        $this->getJson('/api/contracts')
+            ->assertOk()
+            ->assertJsonPath('data.0.assets_count', 3)
+            ->assertJsonPath('data.0.open_assets_count', 2);
+    }
+
     /** The timeline axis runs from two months back to nine months ahead; nothing outside it may be sent. */
     public function test_summary_timeline_holds_only_contracts_ending_inside_the_axis(): void
     {
