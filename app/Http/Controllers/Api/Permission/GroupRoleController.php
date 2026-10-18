@@ -8,7 +8,6 @@ use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
-use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\RoleKeys;
@@ -219,8 +218,7 @@ class GroupRoleController extends Controller
             return;
         }
 
-        $roleKeys = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
-        if (array_diff($roleKeys, $caller->permissions()) === []) {
+        if (array_diff($role->allowedKeys(), $caller->permissions()) === []) {
             return;
         }
 
@@ -303,7 +301,8 @@ class GroupRoleController extends Controller
 
         $this->guardOwnAccess($request, [...$addedEmployeeIds, ...$removedEmployeeIds], $oldEmployeeIds, $roleChanges);
         $this->guardProtectedMembers($request, array_values(array_unique([...$newEmployeeIds, ...$removedEmployeeIds])));
-        $this->guardGrantCeiling($request, $role, $addedEmployeeIds !== [] || ($roleChanges && $newEmployeeIds !== []));
+        $isDefaultGroup = GroupRole::defaultForNewEmployees()?->id === $groupRole->id;
+        $this->guardGrantCeiling($request, $role, $addedEmployeeIds !== [] || ($roleChanges && ($newEmployeeIds !== [] || $isDefaultGroup)));
 
         $before = [];
 
@@ -366,6 +365,7 @@ class GroupRoleController extends Controller
                 'code' => 'default_group_super',
             ], 422));
         }
+
         $this->guardGrantCeiling($request, $group?->role, true);
 
         AppSetting::put('default_employee_group_id', $groupId);

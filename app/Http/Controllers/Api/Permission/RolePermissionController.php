@@ -126,7 +126,7 @@ class RolePermissionController extends Controller
         $granted = Permissions::normalizeReports($granted);
 
         // Current keys, for the ceiling and the audit diff
-        $before = RolePermission::where('role_id', $roleId)->where('allowed', true)->pluck('permission')->all();
+        $before = $roleModel->allowedKeys();
         $added = array_values(array_diff($granted, $before));
         $this->guardGrantCeiling($request, $added);
 
