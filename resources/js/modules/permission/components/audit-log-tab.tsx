@@ -9,7 +9,6 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
-import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/datetime';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
@@ -17,16 +16,19 @@ import type { Lang } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { ArrowLeftRight, Check, ChevronRight, Eye, LogIn, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { AuditDetails, AuditEntry, AuditFilters } from '../api/permissionApi';
+import type { AuditEntry, AuditFilters } from '../api/permissionApi';
 import { useAuditLogs } from '../hooks/use-permissions';
+import { auditDiffSummary, hasAuditDetails, isBlankAuditValue } from '../lib/audit-details';
 import { auditEmployeeIds } from '../lib/audit-employee-ids';
-import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
+import { auditFieldLabel, auditValueText, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
 import { auditEventLabel } from '../lib/audit-words';
 import { actionLabel, moduleLabel } from '../lib/permission-labels';
 import { AuditMemberChanges } from './audit-member-changes';
 
 const AUDIT_CATEGORIES = ['created', 'updated', 'deleted', 'workflow', 'auth'];
+
+const detailRowId = (entry: AuditEntry) => `audit-detail-${entry.id}`;
 
 const HEADING = 'text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase';
 const ADDED_WORD = 'text-emerald-700 dark:text-emerald-400';
@@ -54,54 +56,6 @@ function auditAgo(iso: string, lang: Lang, absolute: string): string {
     return absolute;
 }
 
-/** Every shape the detail panel can draw; a shape left out gets no expand control. */
-function hasDetails(d: AuditDetails | null): boolean {
-    if (!d) return false;
-    return (
-        (d.added?.length ?? 0) > 0 ||
-        (d.removed?.length ?? 0) > 0 ||
-        (d.role_changes?.length ?? 0) > 0 ||
-        d.from !== undefined ||
-        d.to !== undefined ||
-        Object.keys(d.changes ?? {}).length > 0 ||
-        (d.items?.length ?? 0) > 0 ||
-        Object.keys(d.facts ?? {}).length > 0 ||
-        Object.keys(d.snapshot ?? {}).length > 0
-    );
-}
-
-const isBlank = (v: unknown) => v === null || v === undefined || v === '';
-
-type FieldWords = { label: (field: string) => string; value: (field: string, v: unknown) => unknown };
-
-/** One-line summary under the event, with field labels and resolved names. */
-function auditDiffSummary(d: AuditDetails | null, fmt: DateFormatter, words: FieldWords): string | null {
-    if (!d) return null;
-    // Clipped hard: a value can be a whole email body; the panel shows all of it
-    const val = (v: unknown) => {
-        if (isBlank(v)) return '—';
-        if (isDateString(v)) return storedDateText(v, fmt);
-        const s = String(v).replace(/\s+/g, ' ').trim();
-        return s.length > 60 ? `${s.slice(0, 60)}…` : s;
-    };
-    const changes = Object.entries(d.changes ?? {});
-    if (changes.length > 0) {
-        const [field, { from, to }] = changes[0];
-        const head = `${words.label(field)}: ${val(words.value(field, from))} → ${val(words.value(field, to))}`;
-        return changes.length > 1 ? `${head}  +${changes.length - 1}` : head;
-    }
-    const added = d.added?.length ?? 0;
-    const removed = d.removed?.length ?? 0;
-    if (added || removed) return [added ? `+${added}` : null, removed ? `−${removed}` : null].filter(Boolean).join(' / ');
-    if (d.from !== undefined || d.to !== undefined) return `${val(d.from)} → ${val(d.to)}`;
-    // Name the first record and count the rest
-    const items = d.items ?? [];
-    if (items.length > 0) return items.length > 1 ? `${items[0]}  +${items.length - 1}` : items[0];
-    const facts = Object.entries(d.facts ?? {});
-    if (facts.length > 0) return facts.map(([key, value]) => `${words.label(key)}: ${value}`).join('  ');
-    return null;
-}
-
 /** A word heading over a plain comma list (added, removed, records). */
 function WordList({ heading, tone, items }: { heading: string; tone?: string; items: ReactNode[] }) {
     return (
@@ -127,25 +81,26 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
     const label = (field: string) => auditFieldLabel(field, lang, entry.subject_type);
     const { permissionsAdded, permissionsRemoved, membersAdded, membersRemoved } = splitAuditEntries(details);
     const changeEntries = Object.entries(details.changes ?? {});
-    const snapshotEntries = Object.entries(details.snapshot ?? {}).filter(([, v]) => !isBlank(v));
+    const snapshotEntries = Object.entries(details.snapshot ?? {}).filter(([, v]) => !isBlankAuditValue(v));
     const permName = (key: string) => {
         const [mod, act] = key.split('.');
         return `${moduleLabel(mod, lang)} / ${actionLabel(mod, act, lang)}`;
     };
 
-    // A value as text: blank is a muted dash, a date follows the date setting
-    const shown = (v: unknown) =>
-        isBlank(v) ? <span className="text-muted-foreground">—</span> : isDateString(v) ? storedDateText(v, fmt) : String(v);
+    const text = (field: string, v: unknown) => auditValueText(field, v, { subjectType: entry.subject_type, lookups, lang, fmt });
+    // Blank is a muted dash
+    const shown = (value: string | null) => value ?? <span className="text-muted-foreground">—</span>;
 
     return (
-        <div className="bg-accent/20 space-y-3 px-5 py-3">
+        <div className="border-border/60 mx-5 space-y-3 border-t py-3">
+            <div className={HEADING}>{t('audit_details')}</div>
             {changeEntries.length > 0 && (
                 <div className="space-y-1.5">
                     {changeEntries.map(([field, { from, to }]) => {
-                        const before = resolveAuditValue(field, from, lookups);
-                        const after = resolveAuditValue(field, to, lookups);
+                        const before = text(field, from);
+                        const after = text(field, to);
                         // Long values stack in a ruled scroll box; short ones keep the old → new row
-                        const long = String(before ?? '').length > 80 || String(after ?? '').length > 80;
+                        const long = (before ?? '').length > 80 || (after ?? '').length > 80;
                         const box = 'border-border block max-h-32 overflow-auto rounded border px-2 py-1 text-xs break-all whitespace-pre-wrap';
                         return (
                             <div key={field} className={cn('gap-2 text-sm', long ? 'space-y-1' : 'flex items-center')}>
@@ -162,9 +117,9 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
             )}
             {(details.from !== undefined || details.to !== undefined) && (
                 <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground line-through">{shown(details.from)}</span>
+                    <span className="text-muted-foreground line-through">{shown(text('', details.from))}</span>
                     <ChevronRight aria-hidden className="text-muted-foreground h-3.5 w-3.5" />
-                    <span className="font-medium">{shown(details.to)}</span>
+                    <span className="font-medium">{shown(text('', details.to))}</span>
                 </div>
             )}
             {(permissionsAdded.length > 0 || permissionsRemoved.length > 0) && (
@@ -191,7 +146,7 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
                     {snapshotEntries.map(([field, value]) => (
                         <div key={field} className="border-border/60 flex items-baseline gap-2 border-b py-1 text-sm">
                             <dt className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{label(field)}</dt>
-                            <dd className="min-w-0 break-words">{shown(resolveAuditValue(field, value, lookups))}</dd>
+                            <dd className="min-w-0 break-words">{shown(text(field, value))}</dd>
                         </div>
                     ))}
                 </dl>
@@ -248,6 +203,7 @@ export function AuditLogTab() {
         setExpandedId(null);
     };
     const paging = list.table.paging;
+    const toggleRow = (id: number) => setExpandedId((open) => (open === id ? null : id));
 
     const categoryOptions = [
         { value: 'all', label: translate(lang, 'perm_ui_all_actions') },
@@ -269,11 +225,10 @@ export function AuditLogTab() {
             minWidth: '13rem',
             render: (l) => {
                 const Icon = auditIcon(l.action);
-                const words: FieldWords = {
+                const summary = auditDiffSummary(l.details, {
                     label: (field) => auditFieldLabel(field, lang, l.subject_type),
-                    value: (field, v) => resolveAuditValue(field, v, lookups),
-                };
-                const summary = auditDiffSummary(l.details, fmt, words);
+                    value: (field, v) => auditValueText(field, v, { subjectType: l.subject_type, lookups, lang, fmt }) ?? '',
+                });
                 return (
                     <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-2">
@@ -322,14 +277,19 @@ export function AuditLogTab() {
             width: '52px',
             align: 'center',
             render: (l) =>
-                hasDetails(l.details) && (
-                    // The row opens it; the button names the control and its state
+                hasAuditDetails(l.details) && (
+                    // The Tab stop of the row; a click anywhere on the row toggles too
                     <button
                         type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            toggleRow(l.id);
+                        }}
                         aria-expanded={expandedId === l.id}
+                        aria-controls={expandedId === l.id ? detailRowId(l) : undefined}
                         aria-label={t('asset_open_detail')}
                         className={cn(
-                            'mx-auto flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+                            'mx-auto flex h-7 w-7 items-center justify-center rounded-md transition-colors [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9',
                             expandedId === l.id ? 'text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                         )}
                     >
@@ -389,9 +349,11 @@ export function AuditLogTab() {
                         </div>
                     </>
                 }
-                onRowClick={(l) => setExpandedId(expandedId === l.id ? null : l.id)}
-                isRowClickable={(l) => hasDetails(l.details)}
-                rowClassName={(l) => (expandedId === l.id ? 'bg-accent/30' : undefined)}
+                onRowClick={(l) => toggleRow(l.id)}
+                isRowClickable={(l) => hasAuditDetails(l.details)}
+                focusableRows={false}
+                rowClassName={(l) => (expandedId === l.id ? 'border-b-0' : undefined)}
+                expandedRowId={detailRowId}
                 renderExpanded={(l) => (expandedId === l.id && l.details ? <AuditDetailPanel entry={l} lang={lang} lookups={lookups} /> : null)}
                 emptyState={isError ? <LoadFailed onRetry={() => void refetch()} /> : undefined}
                 empty={
