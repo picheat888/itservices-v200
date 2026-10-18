@@ -371,8 +371,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     return (
         <div className="space-y-3">
             {can('view_count') && (
-                <div className="flex justify-end">
-                    <Button onClick={() => setCreating(true)}>
+                <div className="flex items-center justify-end gap-3">
+                    <p id="stock-count-start-hint" className="text-muted-foreground text-sm">
+                        {t('stock_count_start_hint')}
+                    </p>
+                    <Button onClick={() => setCreating(true)} aria-describedby="stock-count-start-hint">
                         <ClipboardList className="h-4 w-4" aria-hidden />
                         {t('stock_count_start_new')}
                     </Button>

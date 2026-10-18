@@ -12,7 +12,7 @@ import type { NavItem, Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { Loader2, LogOut } from 'lucide-react';
 import { useEffect, useRef, type RefObject } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { nextFocusIndex } from './menu-focus';
 import { useSidebarStyle } from './use-sidebar-style';
 
@@ -164,24 +164,37 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
 
     return (
         <>
-            <div className={cn('flex h-16 shrink-0 items-center gap-3 pl-4', toggleSlot ? 'pr-14' : 'pr-4')}>
-                {/* Custom uploaded logo, else the bundled default (public/logo.svg). */}
-                <img src={logoUrl || '/logo.svg'} alt={brandName} className="h-9 w-9 shrink-0 rounded-lg object-contain" />
-                <div className="nav-label min-w-0">
-                    <div className="text-sidebar-foreground truncate text-sm font-bold">{brandName}</div>
-                    <div className="text-muted-foreground truncate text-xs">{brandSub}</div>
-                </div>
+            <div className={cn('flex h-16 shrink-0 items-center pl-2', toggleSlot ? 'pr-14' : 'pr-2')}>
+                {/* Logo and names lead to the Dashboard */}
+                <Link
+                    to="/"
+                    title={t('overall')}
+                    onClick={onPick}
+                    className="group flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1.5 focus-visible:outline-none"
+                >
+                    {/* Custom uploaded logo, else the bundled default (public/logo.svg). */}
+                    <img
+                        src={logoUrl || '/logo.svg'}
+                        alt=""
+                        className="group-focus-visible:ring-ring group-focus-visible:ring-offset-sidebar h-9 w-9 shrink-0 rounded-lg object-contain group-focus-visible:ring-2 group-focus-visible:ring-offset-2"
+                    />
+                    <div className="nav-label min-w-0">
+                        <div className="text-sidebar-foreground truncate text-sm font-bold">{brandName}</div>
+                        <div className="text-muted-foreground truncate text-xs">{brandSub}</div>
+                    </div>
+                </Link>
             </div>
 
             <nav className="flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-2 py-3">
                 {groups.map((group, idx) => (
                     <div key={group.label}>
-                        <div className="relative h-5">
+                        {/* Rail: a short rule in place of the group name (app.css .nav-head) */}
+                        <div className={cn('nav-head relative overflow-hidden', idx === 0 && 'nav-head-first')}>
                             <div className="nav-label text-muted-foreground px-3 text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase">
                                 {t(group.label)}
                             </div>
                             {idx > 0 && (
-                                <span aria-hidden="true" className="nav-mark bg-sidebar-border absolute top-[9px] left-3 h-px w-6 rounded-full" />
+                                <span aria-hidden="true" className="nav-mark bg-sidebar-border absolute top-0 left-3 h-px w-6 rounded-full" />
                             )}
                         </div>
                         <div className="space-y-0.5">

@@ -255,9 +255,10 @@ export function DataTable<T>({
         <div className={cn(fillHeight ? 'flex h-full flex-col gap-3' : 'space-y-3')}>
             {(searchable || actions || filters) && (
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-1 flex-wrap items-center gap-2">
+                    {/* Search and filters keep 22rem; past that the actions drop to their own row */}
+                    <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-2', (searchable || filters) && 'basis-[22rem]')}>
                         {searchable ? (
-                            <div className="relative w-full max-w-xs">
+                            <div className="relative max-w-xs min-w-48 flex-1">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={query}

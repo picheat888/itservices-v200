@@ -32,6 +32,7 @@ import {
 } from '../components/report-skeletons';
 import { ticketFilterChips } from '../components/schedule-filter-summary';
 import { ScheduleReportDialog } from '../components/schedule-report-dialog';
+import { summaryColumns } from '../components/summary-strip';
 import { DepartmentStacksCard, StaffPerformanceCard } from '../components/ticket-breakdown-cards';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
@@ -184,7 +185,7 @@ export default function TicketOverviewReportPage() {
                 // The page's own shape — tiles, chart + SLA/age/category card, the department and
                 // staff cards, the ticket table — so each piece lands where its bars were.
                 <div className="space-y-4" aria-hidden="true">
-                    <KpiRowSkeleton count={5} className="lg:grid-cols-5" />
+                    <KpiRowSkeleton count={5} className={summaryColumns(5)} />
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                         {/* As the loaded chart does, the placeholder grows into the row the card beside it sets. */}
                         <Card className="flex flex-col overflow-hidden">
@@ -220,7 +221,7 @@ export default function TicketOverviewReportPage() {
                 </div>
             ) : (
                 <>
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                    <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
                         <KpiTile
                             label={t('rep_kpi_total')}
                             value={String(data.kpi.total)}

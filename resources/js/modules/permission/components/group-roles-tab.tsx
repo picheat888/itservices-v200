@@ -228,7 +228,7 @@ export function GroupRolesTab() {
         : [t('gr_default_none'), t('gr_default_none_hint')];
 
     const actions = (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 max-lg:w-full">
             <span className="text-muted-foreground flex items-center gap-1 text-sm">
                 <label htmlFor="gr-default">{t('gr_default_short')}</label>
                 <InfoHint text={t('perm_default_group_desc')} />
@@ -263,7 +263,7 @@ export function GroupRolesTab() {
                     })}
                 </SelectContent>
             </Select>
-            <Button onClick={openNew}>
+            <Button onClick={openNew} className="ml-auto">
                 <Plus className="h-4 w-4" />
                 {t('gr_add')}
             </Button>

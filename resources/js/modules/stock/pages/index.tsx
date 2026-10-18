@@ -491,7 +491,7 @@ export default function StockPage() {
 
     return (
         <div className="space-y-6">
-            <div className="mb-3 flex items-start justify-between gap-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">{t('stock_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('stock_subtitle')}</p>
@@ -539,7 +539,7 @@ export default function StockPage() {
                     {tab === 'items' && (
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center gap-2">
-                                <div className="relative w-full max-w-xs">
+                                <div className="relative max-w-xs min-w-48 flex-1">
                                     <Search
                                         className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
                                         aria-hidden
@@ -689,7 +689,8 @@ export default function StockPage() {
                                         {t('reset_filters')}
                                     </button>
                                 )}
-                                <div className="ml-auto flex flex-wrap items-center gap-2">
+                                {/* Below lg the actions take their own row: movements left, New SKU at the right edge */}
+                                <div className="ml-auto flex flex-wrap items-center gap-2 max-lg:w-full">
                                     {can('receive') && (
                                         <Button variant="outline" onClick={() => setMoveKind('receive')}>
                                             <ArrowDownToLine className="h-4 w-4" aria-hidden />
@@ -709,7 +710,7 @@ export default function StockPage() {
                                         </Button>
                                     )}
                                     {canManage && (
-                                        <Button onClick={openAdd}>
+                                        <Button onClick={openAdd} className="ml-auto">
                                             <Plus className="h-4 w-4" aria-hidden />
                                             {t('stock_new_sku')}
                                         </Button>

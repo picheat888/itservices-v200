@@ -474,11 +474,11 @@ export function MembersDrawer({
                                                     .replace('{seats}', fmtN(tgt.seats ?? 0))}
                                             </p>
                                         ) : mayEdit ? (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex min-w-0 grow basis-[34rem] items-center gap-2">
                                                 <label htmlFor="add-member-employee" className="text-muted-foreground shrink-0 text-sm font-medium">
                                                     {t('access_add_member')}
                                                 </label>
-                                                <div className="w-96">
+                                                <div className="min-w-0 flex-1">
                                                     <SearchableSelect
                                                         id="add-member-employee"
                                                         value={empId}

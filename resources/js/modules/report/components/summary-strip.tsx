@@ -3,6 +3,7 @@
 import { useT } from '@/lang';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
@@ -11,15 +12,12 @@ import type { SummaryItem } from '../types';
 import { reportDates, Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
+import { formatLiveNumber } from './report-scope';
+import { summaryColumns } from './summary-columns';
 import { TileChart } from './tile-chart';
 import { YearsTip } from './years-tip';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { formatLiveNumber } from './report-scope';
 
-/** Columns on wide screens by tile count — static classes, so Tailwind sees each one. */
-const WIDE_COLUMNS: Record<number, string> = { 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 5: 'lg:grid-cols-3 xl:grid-cols-5' };
-
-export const summaryColumns = (tiles: number) => WIDE_COLUMNS[tiles] ?? 'lg:grid-cols-4';
+export { summaryColumns };
 
 /** "38 วัน" / "5 ชม." — the same rule as HoursLeftBadge. */
 function duration(t: (key: string) => string, hours: number): string {
