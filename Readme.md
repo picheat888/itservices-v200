@@ -6196,6 +6196,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   - CSS `.nav-*` ใน `app.css` (ผูก `data-nav` / `data-narrow` ที่ AppShell), `menu-focus.ts` + `tests/js/menu-focus.test.ts`
 - WCAG / Tablet — `a757920b`: ลิงก์ "ข้ามไปที่เนื้อหา", ปุ่มแถบบนและปุ่มออกจากระบบ 40px บนจอ < 1280px, ตัวเลขเมนูจอแคบคั่นหลักพัน + ข้อความ screen reader ("พนักงาน, รอดำเนินการ 651 รายการ"), ปุ่มภาษามี `lang` และข้อความอยู่ใน `lang/`
 - จอ ≥ 1280px: Sidebar คงเดิมทุกอย่าง (ผู้ใช้ตัดสิน); ไม่ทำปัดเพื่อปิด; ข้อความ © คง 10px
+- Topbar micro-interactions — `b7122b3a`, `8a5011cf`: ขอบเมนูกับปุ่ม ≡ ขยับพร้อมกันทุกเฟรม (เงาแยกชั้น); ปุ่มแถบบนทุกตัว hover จาง 150ms + ยุบตอนกด; ไอคอน ☾/☀ หมุนเข้า 200ms (keyframe เพราะการสลับโหมดหยุด transition 1 เฟรม); ถาดแจ้งเตือนมี animation ตอนปิด 100ms และรับ focus ตอนเปิด; ตัวเลขกระดิ่งเป็น pill กว้างตามข้อความ และเด้งเมื่อมีแจ้งเตือนใหม่ (`count-rise.ts`) — ทั้งหมดปิดเมื่อลดการเคลื่อนไหว
 
 ## ช่องกรอกทุกช่องมี id หรือ name (Chrome Issues: "A form field element should have an id or name attribute") (2026-10-18)
 - Chrome แนะนำให้ `<input>` / `<textarea>` / `<select>` มี `id` หรือ `name` เพื่อให้ autofill ทำงานถูกต้อง (ไม่ใช่ error)
