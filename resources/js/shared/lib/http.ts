@@ -1,6 +1,6 @@
 import { translate } from '@/lang';
-import { formatNumber } from '@/shared/lib/number';
 import { redirectToLogin } from '@/shared/lib/login-redirect';
+import { formatNumber } from '@/shared/lib/number';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useToastStore } from '@/stores/toast';
@@ -105,7 +105,18 @@ http.interceptors.response.use(
             const loggedIn = !!queryClient.getQueryData(ME_KEY);
             if (loggedIn) {
                 const wait = retryAfter ?? 5;
-                useToastStore.getState().push(translate(useUiStore.getState().lang, 'err_throttle_toast').replace('{n}', formatNumber(wait, useUiStore.getState().lang)), 'warning');
+                // One key for every throttled call, so parallel 429s with different waits collapse into one toast
+                useToastStore
+                    .getState()
+                    .push(
+                        translate(useUiStore.getState().lang, 'err_throttle_toast').replace('{n}', formatNumber(wait, useUiStore.getState().lang)),
+                        'warning',
+                        undefined,
+                        undefined,
+                        {
+                            key: 'http-throttle',
+                        },
+                    );
             } else {
                 showError('rate-limit', retryAfter);
             }
