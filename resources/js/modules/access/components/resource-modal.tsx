@@ -421,7 +421,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent
-                className={cn('gap-0 overflow-hidden p-0', curKind === 'software' ? 'sm:max-w-[600px]' : 'sm:max-w-[540px]')}
+                className={cn('gap-0 p-0', curKind === 'software' ? 'sm:max-w-[600px]' : 'sm:max-w-[540px]')}
                 // Start on the first text field (the name), not the logo picker that sits before it.
                 onOpenAutoFocus={(e) => {
                     const first = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('input:not([type=file]):not([type=color])');
@@ -691,7 +691,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     )}
                 </div>
 
-                <div className="border-border/60 bg-muted/30 flex items-center justify-between gap-2 border-t px-6 py-3">
+                <div className="border-border/60 bg-muted/30 flex items-center justify-between gap-2 border-t px-6 py-3 sm:rounded-b-lg">
                     <span className="text-muted-foreground text-[12.5px]">
                         <span className="text-destructive">*</span> {t('access_required_note')}
                     </span>

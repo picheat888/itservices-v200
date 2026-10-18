@@ -1,7 +1,15 @@
-// Shared colour swatch picker helpers: hex normalising and palette lookup.
+// Shared colour swatch picker helpers: hex normalising, palette lookup, contrast and the custom grid.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_SWATCHES, findSwatch, normalizeHex } from '../../resources/js/shared/lib/color-swatch.ts';
+import {
+    CARD_GROUNDS,
+    CUSTOM_COLOR_GRID,
+    DEFAULT_SWATCHES,
+    findSwatch,
+    hexContrastRatio,
+    meetsCardContrast,
+    normalizeHex,
+} from '../../resources/js/shared/lib/color-swatch.ts';
 
 test('the default palette has the five approved colours in order', () => {
     assert.deepEqual(
@@ -18,8 +26,12 @@ test('a hex is trimmed and lowercased', () => {
     assert.equal(normalizeHex(' #3B82F6 '), '#3b82f6');
 });
 
-test('anything but #rrggbb is not a colour', () => {
-    for (const bad of ['', '3b82f6', '#fff', '#3b82f', '#3b82f6aa', '#zzzzzz', 'red']) {
+test('a hex typed without the leading # gets one', () => {
+    assert.equal(normalizeHex('3B82F6'), '#3b82f6');
+});
+
+test('anything but rrggbb is not a colour', () => {
+    for (const bad of ['', '#', '#fff', '#3b82f', '#3b82f6aa', '##3b82f6', '#zzzzzz', 'red']) {
         assert.equal(normalizeHex(bad), null, bad);
     }
 });
@@ -37,4 +49,43 @@ test('a colour outside the palette is not found', () => {
 test('a custom palette can be searched', () => {
     const palette = [{ hex: '#64748B', nameKey: 'x' }];
     assert.equal(findSwatch('#64748b', palette)?.nameKey, 'x');
+});
+
+test('contrast ratio follows WCAG', () => {
+    assert.equal(hexContrastRatio('#000000', '#ffffff'), 21);
+    assert.equal(hexContrastRatio('#ffffff', '#ffffff'), 1);
+    assert.equal(hexContrastRatio('#ffffff', '#000000'), 21);
+    assert.equal(hexContrastRatio('#767676', '#ffffff').toFixed(2), '4.54');
+});
+
+test('the card grounds are the light and dark --card colours', () => {
+    assert.deepEqual(CARD_GROUNDS, ['#ffffff', '#131720']);
+});
+
+test('every default swatch reaches 3:1 on both cards', () => {
+    for (const s of DEFAULT_SWATCHES) {
+        assert.ok(meetsCardContrast(s.hex), s.hex);
+    }
+});
+
+test('a pale or a very dark colour fails the card check', () => {
+    assert.equal(meetsCardContrast('#fbbf24'), false);
+    assert.equal(meetsCardContrast('#334155'), false);
+});
+
+test('every custom grid colour reaches 3:1 on both cards', () => {
+    for (const hex of CUSTOM_COLOR_GRID.flat()) {
+        if (hex === null) continue;
+        for (const ground of CARD_GROUNDS) {
+            assert.ok(hexContrastRatio(hex, ground) >= 3, `${hex} on ${ground}`);
+        }
+    }
+});
+
+test('the custom grid is a rectangle of 10 columns with lowercase unique hexes', () => {
+    assert.ok(CUSTOM_COLOR_GRID.length >= 1 && CUSTOM_COLOR_GRID.length <= 4);
+    for (const row of CUSTOM_COLOR_GRID) assert.equal(row.length, 10);
+    const hexes = CUSTOM_COLOR_GRID.flat().filter((h) => h !== null);
+    assert.equal(new Set(hexes).size, hexes.length);
+    for (const hex of hexes) assert.equal(normalizeHex(hex), hex);
 });

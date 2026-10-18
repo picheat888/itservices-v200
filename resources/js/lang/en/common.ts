@@ -209,13 +209,18 @@ export const common: Dict = {
     err_retry_after: 'Try again in about {n} seconds.',
     err_throttle_toast: 'Too many requests. Wait about {n} seconds and try again.',
 
-    // color-swatch-picker.tsx — colour names and the custom colour button
+    // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'Blue',
     color_green: 'Green',
     color_orange: 'Orange',
     color_violet: 'Violet',
     color_pink: 'Pink',
     color_custom: 'Custom colour',
+    color_custom_title: 'Choose a colour',
+    color_hex_label: 'Hex code',
+    color_preview: 'Preview',
+    color_hex_invalid: 'Enter a colour like #3b82f6',
+    color_contrast_warning: 'This colour may be hard to see in light or dark mode',
 
     // calendar.tsx — month navigation
     cal_prev: 'Previous',
