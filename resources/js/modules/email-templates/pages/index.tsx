@@ -240,13 +240,22 @@ function TagText({ text }: { text: string }) {
 }
 
 /** One fixed-height line under the body editor: HTML sound or not; the full list opens on click. */
-function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: number }) {
+function HtmlStatusBar({ issues, lineCount, openAt }: { issues: HtmlIssue[]; lineCount: number; openAt?: { line: number } | null }) {
     const t = useT();
     const fmtN = useNumberFormat();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
+    const [focusLine, setFocusLine] = useState<number | null>(null);
     // The list portals into the dialog, or its clicks are dead.
     const [container, setContainer] = useState<HTMLElement | null>(null);
+
+    // A tap on a red line number opens this list on that line
+    useEffect(() => {
+        if (!openAt) return;
+        setContainer((triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? null);
+        setFocusLine(openAt.line);
+        setOpen(true);
+    }, [openAt]);
     const total = (
         <span className="text-muted-foreground ml-auto text-xs tabular-nums">{t('email_html_line_count').replace('{count}', fmtN(lineCount))}</span>
     );
@@ -271,7 +280,10 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
             <Popover
                 open={open}
                 onOpenChange={(next) => {
-                    if (next) setContainer((triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? null);
+                    if (next) {
+                        setContainer((triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? null);
+                        setFocusLine(null);
+                    }
                     setOpen(next);
                 }}
             >
@@ -307,7 +319,7 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
                         </span>
                     </div>
                     <div className="max-h-60 overflow-y-auto px-3">
-                        <HtmlIssueList issues={issues} limit={issues.length} />
+                        <HtmlIssueList issues={issues} limit={issues.length} focusLine={focusLine} />
                     </div>
                     <p className="text-muted-foreground border-border border-t px-3 py-2 leading-relaxed">{t('email_html_hint')}</p>
                 </PopoverContent>
@@ -318,7 +330,7 @@ function HtmlStatusBar({ issues, lineCount }: { issues: HtmlIssue[]; lineCount: 
 }
 
 /** The first few HTML mistakes, one per line; "and N more" shows the rest. */
-function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: number }) {
+function HtmlIssueList({ issues, limit = 3, focusLine = null }: { issues: HtmlIssue[]; limit?: number; focusLine?: number | null }) {
     const t = useT();
     const fmtN = useNumberFormat();
     const [showAll, setShowAll] = useState(false);
@@ -328,7 +340,15 @@ function HtmlIssueList({ issues, limit = 3 }: { issues: HtmlIssue[]; limit?: num
     return (
         <ul className="divide-border divide-y">
             {shown.map((issue, i) => (
-                <li key={i} className="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-2 py-1.5">
+                <li
+                    key={i}
+                    ref={
+                        issue.line === focusLine && shown.findIndex((x) => x.line === focusLine) === i
+                            ? (el) => el?.scrollIntoView({ block: 'nearest' })
+                            : undefined
+                    }
+                    className={cn('grid grid-cols-[3.75rem_minmax(0,1fr)] gap-2 py-1.5', issue.line === focusLine && '-mx-3 bg-red-500/10 px-3')}
+                >
                     <span className="text-xs text-red-700 tabular-nums dark:text-red-400">
                         {t('email_html_line').replace('{line}', fmtN(issue.line))}
                     </span>
@@ -477,7 +497,17 @@ function highlightLine(text: string, from: number, marks: HtmlIssue[]): string {
 }
 
 /** The body editor's colour layer, one numbered line per row; a red number shows its problems on hover. */
-function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlIssue[]; layerRef: RefObject<HTMLDivElement | null> }) {
+function BodyHighlight({
+    value,
+    marks,
+    layerRef,
+    onLineClick,
+}: {
+    value: string;
+    marks: HtmlIssue[];
+    layerRef: RefObject<HTMLDivElement | null>;
+    onLineClick?: (line: number) => void;
+}) {
     const t = useT();
     let offset = 0;
     const rows = value.split('\n').map((text, i) => {
@@ -498,6 +528,7 @@ function BodyHighlight({ value, marks, layerRef }: { value: string; marks: HtmlI
                 return (
                     <div key={row.number} className="relative pl-11">
                         <span
+                            onClick={lineIssues.length > 0 ? () => onLineClick?.(row.number) : undefined}
                             className={cn(
                                 'absolute left-0 w-8 text-right select-none',
                                 lineIssues.length > 0
@@ -927,6 +958,7 @@ function BodyEditor({
     const t = useT();
     const ref = useRef<HTMLTextAreaElement>(null);
     const hlRef = useRef<HTMLDivElement>(null);
+    const [issueAt, setIssueAt] = useState<{ line: number } | null>(null);
 
     const editBody = (build: (selected: string) => { text: string; selStart: number; selEnd: number }) => {
         const el = ref.current;
@@ -1019,7 +1051,7 @@ function BodyEditor({
                 {/* Coloured layer under a transparent, scroll-synced textarea */}
                 <div className="relative min-h-[10rem] flex-1">
                     <div aria-hidden="true" className="bg-muted/40 border-border pointer-events-none absolute inset-y-0 left-0 w-9 border-r" />
-                    <BodyHighlight value={value} marks={htmlIssues} layerRef={hlRef} />
+                    <BodyHighlight value={value} marks={htmlIssues} layerRef={hlRef} onLineClick={(line) => setIssueAt({ line })} />
                     <textarea
                         {...control}
                         ref={ref}
@@ -1038,7 +1070,7 @@ function BodyEditor({
                         className="caret-foreground absolute inset-y-0 right-0 left-9 block h-full resize-none overflow-auto bg-transparent py-2 pr-3 pl-2 text-xs break-words whitespace-pre-wrap text-transparent outline-none [scrollbar-gutter:stable]"
                     />
                 </div>
-                <HtmlStatusBar issues={htmlIssues} lineCount={value.split('\n').length} />
+                <HtmlStatusBar issues={htmlIssues} lineCount={value.split('\n').length} openAt={issueAt} />
             </div>
 
             {tokens.length > 0 && (
