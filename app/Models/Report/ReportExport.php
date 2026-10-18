@@ -29,7 +29,7 @@ class ReportExport extends Model
     public const QUEUE = 'reports';
 
     protected $fillable = [
-        'user_id', 'report_key', 'format', 'filters', 'columns', 'status',
+        'user_id', 'report_key', 'format', 'filters', 'columns', 'shared_with', 'status',
         'file_name', 'file_path', 'rows_count', 'size_bytes', 'error',
         'started_at', 'finished_at', 'expires_at',
     ];
@@ -40,6 +40,7 @@ class ReportExport extends Model
         return [
             'filters' => 'array',
             'columns' => 'array',
+            'shared_with' => 'array',
             'rows_count' => 'integer',
             'size_bytes' => 'integer',
             'started_at' => 'datetime',
@@ -52,6 +53,12 @@ class ReportExport extends Model
     public function documentNo(): string
     {
         return sprintf('RPT-%s-%04d', $this->created_at->format('ymd'), $this->id);
+    }
+
+    /** Whether this is a scheduled run's file mailed to the user's account (shared_with holds the emails). */
+    public function isSharedWith(User $user): bool
+    {
+        return $user->email !== null && in_array(mb_strtolower($user->email), $this->shared_with ?? [], true);
     }
 
     /** @return BelongsTo<User, $this> */

@@ -7,6 +7,7 @@ use App\Jobs\SendScheduledReport;
 use App\Mail\TemplatedMail;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
+use App\Models\AuditLog;
 use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Employee\Employee;
@@ -336,6 +337,68 @@ class ReportScheduleTest extends TestCase
         Storage::disk('local')->assertExists($export->file_path);
         $this->assertSame('ready', $this->bells($owner, 'report_export')[0]['subtype']);
         $this->assertSame(ReportSchedule::SENT, $schedule->refresh()->last_status);
+    }
+
+    public function test_each_run_is_kept_30_days_and_recipients_with_an_account_get_a_download_link(): void
+    {
+        Asset::factory()->create(['status' => 'ready']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
+        $colleague = $this->userWith([...$this->reportRights('assets')]);
+        $colleague->update(['email' => 'Colleague@Example.com']);
+        $noRights = $this->userWith([]);
+        $noRights->update(['email' => 'norights@example.com']);
+        $this->schedule($owner, ['recipients' => ['colleague@example.com', 'norights@example.com', 'auditor@partner.co.th'], 'next_run_at' => '2026-09-30 07:00:00']);
+
+        $this->artisan('reports:send-scheduled')->assertSuccessful();
+
+        $export = ReportExport::sole();
+        $this->assertSame([$owner->id, ['colleague@example.com']], [$export->user_id, $export->shared_with]);
+        $this->assertSame('2026-10-30', $export->expires_at->format('Y-m-d'));
+        Storage::disk('local')->assertExists($export->file_path);
+
+        $link = null;
+        Mail::assertSent(TemplatedMail::class, function (TemplatedMail $mail) use (&$link) {
+            if ($mail->hasTo('colleague@example.com')) {
+                $link = $mail->actionUrl;
+            }
+
+            return $mail->hasTo('colleague@example.com') && $mail->attachmentPath !== null
+                && str_contains($mail->bodyHtml, 'download it with the button below');
+        });
+        // An address with no account, or an account that may not open the report, gets the file only
+        foreach (['auditor@partner.co.th', 'norights@example.com'] as $address) {
+            Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo($address)
+                && $mail->actionUrl === null && $mail->attachmentPath !== null
+                && ! str_contains($mail->bodyHtml, 'button below'));
+        }
+
+        $this->actingAs($colleague)->get($link)->assertOk();
+        $this->assertSame('email', AuditLog::query()->where('action', 'Downloaded report export')->sole()->details['via']);
+        $this->actingAs($noRights)->get($link)->assertNotFound();
+        $this->actingAs($owner)->get($link)->assertOk();
+
+        $this->travel(31)->days();
+        $this->actingAs($colleague)->get($link)->assertForbidden();
+    }
+
+    public function test_a_file_too_large_to_attach_reaches_account_holders_by_link_and_others_by_the_owner(): void
+    {
+        Asset::factory()->create(['status' => 'ready']);
+        $owner = $this->userWith([...$this->reportRights('assets')]);
+        $colleague = $this->userWith([...$this->reportRights('assets')]);
+        $colleague->update(['email' => 'colleague@example.com']);
+        $schedule = $this->schedule($owner, ['recipients' => ['colleague@example.com', 'auditor@partner.co.th']]);
+        $service = app(ReportScheduleService::class);
+        $service->attachmentLimitBytes = 1;
+
+        (new SendScheduledReport($schedule->id, '2026-09-30T07:00:00+07:00'))->handle($service);
+
+        Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('colleague@example.com')
+            && $mail->attachmentPath === null && $mail->actionUrl !== null
+            && str_contains($mail->bodyHtml, 'too large to attach. Download it with the button below'));
+        Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('auditor@partner.co.th')
+            && $mail->attachmentPath === null && $mail->actionUrl === null
+            && str_contains($mail->bodyHtml, 'Please ask '));
     }
 
     // ── managing ────────────────────────────────────────────────────────────────────
