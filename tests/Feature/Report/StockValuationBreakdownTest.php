@@ -369,7 +369,7 @@ class StockValuationBreakdownTest extends TestCase
 
             return array_column($export->sections, 'title') === ['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'ไม่เคลื่อนไหวเกิน 90 วัน']
                 && $rows !== null
-                && in_array('เคลื่อนไหวล่าสุด', $rows->headings(), true);
+                && in_array('เคลื่อนไหวล่าสุดเมื่อ', $rows->headings(), true);
         });
     }
 }

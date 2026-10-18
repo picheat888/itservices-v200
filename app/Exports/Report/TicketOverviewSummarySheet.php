@@ -68,15 +68,15 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvent
             ['Ticket ทั้งหมด', $k['total']],
             ['ปิดสำเร็จ', $k['completed']],
             ['ยกเลิก', $k['canceled']],
-            ['ปิดตาม SLA (%)', $k['sla_rate']],
+            ['ปิดทัน SLA (%)', $k['sla_rate']],
             ['Ticket ที่วัด SLA ได้', $k['sla_measured']],
-            ['Ticket ที่ตรง SLA', $k['sla_met']],
-            ['เวลาแก้ไขโดยเฉลี่ย (ชม.)', $k['avg_resolve_hours']],
-            ['90% ปิดได้ไม่เกิน (ชม.)', $k['p90_resolve_hours']],
+            ['Ticket ที่ทัน SLA', $k['sla_met']],
+            ['เวลาปิดเคสเฉลี่ย (ชม.)', $k['avg_resolve_hours']],
+            ['90% ของเคสปิดได้ภายใน (ชม.)', $k['p90_resolve_hours']],
             ['ค้างอยู่ตอนนี้', $s['backlog']['open'] + $s['backlog']['in_progress']],
             ['ค้างเกิน SLA', $s['backlog']['over_sla']],
             [],
-            ['SLA ตามความสำคัญ', 'วัดได้', 'ตรง SLA', '%'],
+            ['SLA ตามความสำคัญ', 'วัดได้', 'ทัน SLA', 'ทัน SLA (%)'],
         ];
         foreach ($s['sla_by_priority'] as $p) {
             $rows[] = [TicketLabels::priority($p['priority']), $p['measured'], $p['met'], $p['rate']];
@@ -88,7 +88,7 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvent
         }
         $categories = TicketCategory::cases();
         $rows[] = [];
-        $rows[] = ['แผนก', 'Ticket', ...array_map(fn (TicketCategory $c) => TicketLabels::category($c->value), $categories), 'ยังไม่ปิด', 'ทัน SLA %'];
+        $rows[] = ['แผนก', 'Ticket', ...array_map(fn (TicketCategory $c) => TicketLabels::category($c->value), $categories), 'ยังไม่ปิด', 'ทัน SLA (%)'];
         foreach ($s['by_department'] as $d) {
             $rows[] = [
                 $d['name_th'] ?: ($d['name'] ?? 'ไม่ระบุแผนก'),
@@ -100,7 +100,7 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithEvent
         }
         $rows[] = [];
         $rows[] = ['ผลงานเจ้าหน้าที่ IT (นับเคสที่ปิดในช่วงวันที่)'];
-        $rows[] = ['ผู้รับผิดชอบ', 'ทั้งหมด', 'ปิดสำเร็จ', 'ยกเลิก', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', 'ทัน SLA %'];
+        $rows[] = ['ผู้รับผิดชอบ', 'ทั้งหมด', 'ปิดสำเร็จ', 'ยกเลิก', 'เวลาปิดเคสเฉลี่ย (ชม.)', 'ทัน SLA (%)'];
         foreach ($s['by_assignee'] as $a) {
             $rows[] = [$a['name'], $a['total'], $a['completed'], $a['canceled'], $a['avg_resolve_hours'], $a['sla_rate']];
         }

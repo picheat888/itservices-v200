@@ -508,7 +508,7 @@ class AssetWriteoffReport extends TabularReport
 
         return [
             [
-                'title' => 'แยกตามเดือน',
+                'title' => 'ตามเดือน',
                 'headings' => ['เดือน', 'ทั้งหมด', 'ซื้อ', 'เช่าที่คืนผู้ให้เช่า', 'เช่าที่ตัดด้วยเหตุผลอื่น'],
                 'rows' => array_map(
                     fn (array $m) => [CellDate::month($m['month']), $m['total'], $m['bought'], $m['returned'], $m['rented_other']],
@@ -516,7 +516,7 @@ class AssetWriteoffReport extends TabularReport
                 ),
             ],
             [
-                'title' => 'แยกตามเหตุผล',
+                'title' => 'ตามเหตุผล',
                 'headings' => ['เหตุผล', 'ทั้งหมด', 'ซื้อ', 'เช่า'],
                 'rows' => array_map(
                     fn (array $r) => [match ($r['key']) {
@@ -528,7 +528,7 @@ class AssetWriteoffReport extends TabularReport
                 ),
             ],
             [
-                'title' => 'แยกตามหมวดหมู่',
+                'title' => 'ตามหมวดหมู่',
                 'headings' => ['หมวดหมู่', 'ทั้งหมด', 'ซื้อ', 'เช่า', 'มูลค่าซื้อ', 'อายุใช้งานเฉลี่ย (ปี)', 'ไม่ถึง 3 ปี', '3-5 ปี', 'เกิน 5 ปี', 'ยังมีประกัน'],
                 'rows' => array_map(
                     fn (array $c) => [

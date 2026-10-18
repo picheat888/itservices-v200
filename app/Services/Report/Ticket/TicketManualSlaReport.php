@@ -109,7 +109,7 @@ class TicketManualSlaReport extends TabularReport
             'take_hours' => 'ชั่วโมงตามปฏิทินจากเวลาที่แจ้งถึงเวลารับเคส รวมนอกเวลาทำการ ทศนิยม 1 ตำแหน่ง ว่าง = ยังไม่มีผู้รับเคส',
             'close_sla' => 'ผลการปิดเคสเทียบกับวันที่ครบกำหนด SLA ปิดเคส (เริ่มนับจากเวลารับเคส ตามนาฬิกาของกฎ SLA ที่เคสเข้าเงื่อนไข): ทัน = เสร็จสิ้นภายในกำหนด, ไม่ทัน = เสร็จสิ้นหลังกำหนด, เกิน SLA = รับแล้วยังไม่เสร็จและเลยกำหนดแล้ว ว่าง = ยกเลิก ยังไม่มีผู้รับ ยังไม่ถึงกำหนด หรือไม่มีกำหนด',
             'fix_hours' => 'ชั่วโมงตามปฏิทินจากเวลาที่แจ้งถึงเวลาปิดเคส ทศนิยม 1 ตำแหน่ง มีค่าเฉพาะเคสสถานะเสร็จสิ้น ว่าง = ยังไม่เสร็จหรือยกเลิก',
-            'late_hours' => 'ชั่วโมงตามปฏิทินจากวันที่ครบกำหนด SLA ปิดเคสถึงเวลาปิดเคสจริง ทศนิยม 1 ตำแหน่ง มีค่าเฉพาะเคสที่ปิดทัน SLA เป็นไม่ทัน ว่าง = ปิดทัน ยังไม่เสร็จ หรือยกเลิก',
+            'late_hours' => 'ชั่วโมงตามปฏิทินจากวันที่ครบกำหนด SLA ปิดเคสถึงเวลาปิดเคสจริง ทศนิยม 1 ตำแหน่ง มีค่าเฉพาะเคสที่ปิดไม่ทัน SLA ว่าง = ปิดทัน ยังไม่เสร็จ หรือยกเลิก',
         ];
     }
 
@@ -132,7 +132,7 @@ class TicketManualSlaReport extends TabularReport
             ReportColumn::enum('take_sla', 'รับเคสทัน SLA', fn (Ticket $t) => self::takeState($t), self::SLA_KEYS, self::SLA_TH),
             ReportColumn::dateTime('closed_at', 'ปิดเคสเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Completed ? $t->resolved_at : null),
             ReportColumn::enum('close_sla', 'ปิดทัน SLA', fn (Ticket $t) => self::closeState($t), self::SLA_KEYS, self::SLA_TH),
-            ReportColumn::number('fix_hours', 'เวลาแก้ไข (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null, 1),
+            ReportColumn::number('fix_hours', 'เวลาปิดเคส (ชม.)', fn (Ticket $t) => $t->status === TicketStatus::Completed ? TicketMetrics::resolveHours($t) : null, 1),
             // The Excel sheet only ("ข้อมูลดิบ") — every field for working the cases over in a spreadsheet.
             ReportColumn::text('description', 'รายละเอียด', fn (Ticket $t) => $t->description === null ? null : trim($t->description))->sheetOnly(),
             ReportColumn::enum('work_class', 'ลักษณะงาน', fn (Ticket $t) => $t->work_class, [], self::workClassTh())->sheetOnly(),
@@ -177,7 +177,7 @@ class TicketManualSlaReport extends TabularReport
                 ->withNote(['label_key' => 'rep_rs_note_take', 'values' => ['met' => $tally['take_met'], 'n' => $tally['take_total']]]),
             // Where the average time went, as the request report splits it: waiting to be taken (the
             // table's "เวลารับเคสโดยเฉลี่ย", over every case taken), then taking to closing (completed cases).
-            ReportSummary::make('ms_fix_avg', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
+            ReportSummary::make('ms_fix_avg', 'เวลาปิดเคสเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
                 ->withSplit($tally['take_avg_hours'] === null || $tally['work_avg_hours'] === null ? [] : [
                     ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'soft-amber', 'value' => round($tally['take_avg_hours'], 1)],
                     ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'soft-blue', 'value' => $tally['work_avg_hours']],
@@ -266,7 +266,7 @@ class TicketManualSlaReport extends TabularReport
             'headings' => [
                 $heading, 'ทั้งหมด', 'เสร็จสิ้น', 'ยกเลิก', 'ยังเปิด',
                 'รับเคสทัน SLA (ทัน/รับแล้ว)', 'รับเคสทัน SLA (%)', 'ปิดทัน SLA (ทัน/เสร็จสิ้น)', 'ปิดทัน SLA (%)',
-                'เวลารับเคสโดยเฉลี่ย (ชม.)', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)',
+                'เวลารอรับเคสเฉลี่ย (ชม.)', 'เวลาปิดเคสเฉลี่ย (ชม.)',
             ],
             'rows' => $rows,
         ]];

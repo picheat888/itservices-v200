@@ -94,7 +94,7 @@ class TicketRequestSlaReport extends TabularReport
             'take_sla' => 'ผลการรับเคสเทียบกับวันที่ครบกำหนด SLA รับเคส (นับเฉพาะเวลาทำการตั้งแต่เวลาที่แจ้ง): ทัน = รับภายในกำหนด, ไม่ทัน = รับหลังกำหนด, เกิน SLA = ยังไม่มีใครรับและเลยกำหนดแล้ว ว่าง = ยังไม่ถึงกำหนด ไม่มีกำหนด หรือยกเลิกก่อนมีคนรับ',
             'take_hours' => 'ชั่วโมงตามปฏิทินจากเวลาที่แจ้งถึงเวลารับเคส รวมนอกเวลาทำการ ทศนิยม 2 ตำแหน่ง ว่าง = ยังไม่มีผู้รับเคส',
             'close_sla' => 'ผลการปิดเคสเทียบกับวันที่ครบกำหนด SLA ปิดเคส (เริ่มนับจากเวลารับเคส ตามนาฬิกาของกฎ SLA ที่เคสเข้าเงื่อนไข): ทัน = เสร็จสิ้นภายในกำหนด, ไม่ทัน = เสร็จสิ้นหลังกำหนด, เกิน SLA = รับแล้วยังไม่เสร็จและเลยกำหนดแล้ว ว่าง = ยกเลิก ยังไม่มีผู้รับ ยังไม่ถึงกำหนด หรือไม่มีกำหนด',
-            'work_hours' => 'ชั่วโมงตามปฏิทินจากเวลารับเคสถึงเวลาปิดเคส ทศนิยม 2 ตำแหน่ง มีค่าเฉพาะเคสสถานะเสร็จสิ้น รวมกับรอคนรับ (ชม.) แล้วได้ประมาณเวลาปิดเคส (ชม.)',
+            'work_hours' => 'ชั่วโมงตามปฏิทินจากเวลารับเคสถึงเวลาปิดเคส ทศนิยม 2 ตำแหน่ง มีค่าเฉพาะเคสสถานะเสร็จสิ้น รวมกับเวลารอรับเคส (ชม.) แล้วได้ประมาณเวลาปิดเคส (ชม.)',
             'fix_hours' => 'ชั่วโมงตามปฏิทินจากเวลาที่แจ้งถึงเวลาปิดเคส ทศนิยม 1 ตำแหน่ง มีค่าเฉพาะเคสสถานะเสร็จสิ้น ว่าง = ยังไม่เสร็จหรือยกเลิก',
         ];
     }
@@ -126,7 +126,7 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::text('opened_month', 'เดือนที่แจ้ง', fn (Ticket $t) => $t->created_at?->format('Y-m'))->sheetOnly(),
             ReportColumn::dateTime('canceled_at', 'ยกเลิกเมื่อ', fn (Ticket $t) => $t->status === TicketStatus::Canceled ? $t->resolved_at : null)->sheetOnly(),
             ReportColumn::dateTime('response_due_at', 'วันที่ครบกำหนด SLA รับเคส', fn (Ticket $t) => $t->sla_response_due_at)->sheetOnly(),
-            ReportColumn::number('take_hours', 'รอคนรับ (ชม.)', fn (Ticket $t) => $t->responded_at === null || $t->created_at === null
+            ReportColumn::number('take_hours', 'เวลารอรับเคส (ชม.)', fn (Ticket $t) => $t->responded_at === null || $t->created_at === null
                 ? null
                 : round($t->created_at->diffInMinutes($t->responded_at, true) / 60, 2), 2)->sheetOnly(),
             ReportColumn::dateTime('resolve_due_at', 'วันที่ครบกำหนด SLA ปิดเคส', fn (Ticket $t) => $t->sla_resolve_due_at)->sheetOnly(),
@@ -254,7 +254,7 @@ class TicketRequestSlaReport extends TabularReport
             'headings' => [
                 'ประเภทคำขอ', 'ทั้งหมด', 'เสร็จสิ้น', 'ยกเลิก', 'ยังเปิด',
                 'รับเคสทัน SLA (ทัน/รับแล้ว)', 'รับเคสทัน SLA (%)', 'ปิดทัน SLA (ทัน/เสร็จสิ้น)', 'ปิดทัน SLA (%)',
-                'รอคนรับเฉลี่ย (ชม.)', 'ปิดเคสเฉลี่ย (ชม.)',
+                'เวลารอรับเคสเฉลี่ย (ชม.)', 'เวลาปิดเคสเฉลี่ย (ชม.)',
             ],
             'rows' => $rows,
         ]];

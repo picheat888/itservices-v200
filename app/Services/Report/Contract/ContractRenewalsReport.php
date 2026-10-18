@@ -116,8 +116,8 @@ class ContractRenewalsReport extends TabularReport
     {
         return [
             'days_left' => 'จำนวนวันจากวันที่ส่งออกถึงวันสิ้นสุด ติดลบ = เลยวันสิ้นสุดมาแล้วแต่ยังไม่ได้กดสิ้นสุดหรือยกเลิกสัญญา',
-            'yearly' => 'มูลค่าต่องวดคูณจำนวนรอบบิลใน 1 ปี: รายเดือน คูณ 12, รายไตรมาส คูณ 4, รายปี คูณ 1',
-            'value_per_period' => 'จำนวนเงินที่เรียกเก็บต่อหนึ่งรอบบิลตามที่บันทึกในสัญญา',
+            'yearly' => 'ค่างวดคูณจำนวนรอบการเรียกเก็บใน 1 ปี: รายเดือน คูณ 12, รายไตรมาส คูณ 4, รายปี คูณ 1',
+            'value_per_period' => 'จำนวนเงินที่เรียกเก็บต่อหนึ่งรอบการเรียกเก็บตามที่บันทึกในสัญญา',
             'alerts' => 'รอบแจ้งเตือนที่เปิดไว้ (จำนวนวันก่อนหมดสัญญา) ตามด้วยผล: ส่งแล้ว = รอบล่าสุดที่ระบบส่งอีเมลพร้อมวันที่ส่งครั้งล่าสุด (วันหมด = อีเมลแจ้งวันสิ้นสุด), ยังไม่ได้ส่ง = ถึงรอบแล้วแต่ไม่พบประวัติการส่ง, เริ่มเตือนอีก N วัน = ยังไม่ถึงรอบแรก, ไม่ได้เปิดแจ้งเตือน ค่าเดียวกันแยกเป็นคอลัมน์สถานะแจ้งเตือนและแจ้งเตือนล่าสุดเมื่อ',
             'todo' => 'สิ่งที่ต้องทำตามกฎของระบบ เลือกข้อแรกที่เข้าเงื่อนไขตามลำดับ: เกินกำหนด, ครบกำหนดวันนี้, มีเครื่องเช่าต้องคืน, มีเครื่องซื้อต้องตัดสินใจต่อ MA, อยู่ในช่วงแจ้งเตือนหรือไม่ได้เปิดแจ้งเตือนให้ติดต่อผู้ขาย, นอกนั้นยังไม่ถึงช่วงแจ้งเตือน จำนวนเครื่องนับเฉพาะทรัพย์สินที่ผูกกับสัญญาและยังไม่ตัดจำหน่าย ข้อเพิ่มเติมคั่นด้วยเครื่องหมาย ;',
         ];
@@ -131,11 +131,11 @@ class ContractRenewalsReport extends TabularReport
             ReportColumn::localized('vendor', 'ผู้ขาย', fn (Contract $c) => $c->vendor ? ['name' => $c->vendor->name, 'name_th' => $c->vendor->name_th] : null),
             ReportColumn::enum('type', 'ประเภท', fn (Contract $c) => $c->type, self::TYPE_KEYS, self::TYPE_TH),
             ReportColumn::date('start_date', 'วันที่เริ่ม', fn (Contract $c) => $c->start_date)->hiddenByDefault(),
-            ReportColumn::date('end_date', 'วันสิ้นสุด', fn (Contract $c) => $c->end_date)->labelKey('rep_cren_c_end'),
+            ReportColumn::date('end_date', 'วันที่สิ้นสุด', fn (Contract $c) => $c->end_date)->labelKey('rep_cren_c_end'),
             ReportColumn::daysLeft('days_left', 'เหลือ (วัน)', fn (Contract $c) => $c->end_date),
-            ReportColumn::money('yearly', 'ต่อปี', fn (Contract $c) => ContractBilling::yearlyCost($c))->labelKey('rep_cren_c_yearly'),
-            ReportColumn::money('value_per_period', 'มูลค่าต่องวด', fn (Contract $c) => $c->value)->hiddenByDefault(),
-            ReportColumn::enum('billing_cycle', 'รอบบิล', fn (Contract $c) => $c->billing_cycle, self::CYCLE_KEYS, self::CYCLE_TH)->hiddenByDefault(),
+            ReportColumn::money('yearly', 'ค่าใช้จ่ายต่อปี', fn (Contract $c) => ContractBilling::yearlyCost($c))->labelKey('rep_cren_c_yearly'),
+            ReportColumn::money('value_per_period', 'ค่างวด', fn (Contract $c) => $c->value)->hiddenByDefault(),
+            ReportColumn::enum('billing_cycle', 'รอบการเรียกเก็บ', fn (Contract $c) => $c->billing_cycle, self::CYCLE_KEYS, self::CYCLE_TH)->hiddenByDefault(),
             ReportColumn::text('alerts', 'แจ้งเตือน', fn (Contract $c) => self::alertText($this->rowFigures[$c->id]['alert'] ?? null))->labelKey('rep_cren_c_alerts'),
             ReportColumn::text('todo', 'สิ่งที่ต้องทำ', fn (Contract $c) => self::todoText($this->rowFigures[$c->id] ?? null))->labelKey('rep_cren_c_todo'),
             ReportColumn::text('alert_state', 'สถานะแจ้งเตือน', fn (Contract $c) => self::ALERT_STATE_TH[$this->rowFigures[$c->id]['alert']['state'] ?? ''] ?? null)->sheetOnly()
@@ -506,19 +506,19 @@ class ContractRenewalsReport extends TabularReport
         return [
             [
                 'title' => 'สัญญาที่จะหมดในแต่ละเดือน',
-                'headings' => ['เดือน', 'จำนวนสัญญา', 'ต่อปี'],
+                'headings' => ['เดือน', 'จำนวนสัญญา', 'ค่าใช้จ่ายต่อปี'],
                 'rows' => array_map(fn (array $m) => [
                     CellDate::month($m['month']), count($m['items']), round(array_sum(array_column($m['items'], 'yearly')), 2),
                 ], $breakdown['months']),
             ],
             [
                 'title' => 'สัญญาตามเวลาที่เหลือ',
-                'headings' => ['ช่วง', 'จำนวนสัญญา', 'ต่อปี', ...$typeHeadings],
+                'headings' => ['ช่วง', 'จำนวนสัญญา', 'ค่าใช้จ่ายต่อปี', ...$typeHeadings],
                 'rows' => array_map(fn (array $b) => [self::BAND_TH[$b['key']], $b['total'], $b['yearly'], ...array_values($b['types'])], $breakdown['bands']),
             ],
             [
                 'title' => 'สัญญาที่ปิดไปแล้ว ('.self::CLOSED_TH[$breakdown['closed']['range']].')',
-                'headings' => ['เลขที่สัญญา', 'ชื่อสัญญา', 'ผู้ขาย', 'ปิดแบบ', 'ปิดเมื่อ', 'วันสิ้นสุด', 'เทียบวันสิ้นสุด (วัน)', 'งวดที่ไม่ต้องจ่าย', 'เหตุผล', 'ผู้ยกเลิก'],
+                'headings' => ['เลขที่สัญญา', 'ชื่อสัญญา', 'ผู้ขาย', 'ปิดแบบ', 'ปิดเมื่อ', 'วันที่สิ้นสุด', 'เทียบวันสิ้นสุด (วัน)', 'งวดที่ไม่ต้องจ่าย', 'เหตุผล', 'ผู้ยกเลิก'],
                 'rows' => array_map(fn (array $r) => [
                     $r['code'], $r['name'], $r['vendor'] ? ($r['vendor']['name_th'] ?: $r['vendor']['name']) : null,
                     $r['kind'] === 'cancelled' ? 'ยกเลิกแล้ว' : 'สิ้นสุดแล้ว',

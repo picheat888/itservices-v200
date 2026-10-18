@@ -95,7 +95,7 @@ class StockValuationReport extends TabularReport
             ...array_values(array_filter($item, fn (ReportColumn $c) => $c->key === 'unit')),
             ReportColumn::money('avg_cost', 'ต้นทุนเฉลี่ย', fn (StockItem $i) => round($this->valueAt($i) / $this->qtyAt($i), 2)),
             ReportColumn::money('stock_value', 'มูลค่าคงคลัง', fn (StockItem $i) => $this->valueAt($i)),
-            ReportColumn::date('last_move', 'เคลื่อนไหวล่าสุด', fn (StockItem $i) => $this->lastMoveAt($i)),
+            ReportColumn::date('last_move', 'เคลื่อนไหวล่าสุดเมื่อ', fn (StockItem $i) => $this->lastMoveAt($i)),
         ];
     }
 
@@ -236,7 +236,7 @@ class StockValuationReport extends TabularReport
 
         $sections = [[
             'title' => 'มูลค่าตามหมวด',
-            'headings' => ['หมวด', 'รายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
+            'headings' => ['หมวด', 'จำนวนรายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
             'rows' => array_map(fn (array $c) => [
                 ($c['name_th'] ?: $c['name']) ?? '—', $c['items'], $c['qty'], $c['value'], $categoryShare($c['value']),
             ], $data['categories']),
@@ -246,7 +246,7 @@ class StockValuationReport extends TabularReport
             $warehouseShare = $shareOf($data['warehouses']);
             $sections[] = [
                 'title' => 'มูลค่าตามคลัง',
-                'headings' => ['คลัง', 'รายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
+                'headings' => ['คลัง', 'จำนวนรายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
                 'rows' => array_map(fn (array $w) => [
                     $w['name'] ?? self::NO_WAREHOUSE_TH, $w['items'], $w['qty'], $w['value'], $warehouseShare($w['value']),
                 ], $data['warehouses']),
@@ -255,7 +255,7 @@ class StockValuationReport extends TabularReport
 
         $sections[] = [
             'title' => 'ไม่เคลื่อนไหวเกิน 90 วัน',
-            'headings' => ['SKU', 'รายการ', 'หมวด', 'คงเหลือ', 'หน่วย', 'มูลค่า', 'เคลื่อนไหวล่าสุด', 'ไม่เคลื่อนไหว (วัน)'],
+            'headings' => ['SKU', 'ชื่อรายการ', 'หมวด', 'คงเหลือ', 'หน่วย', 'มูลค่า', 'เคลื่อนไหวล่าสุดเมื่อ', 'ไม่เคลื่อนไหว (วัน)'],
             'rows' => array_map(fn (array $d) => [
                 $d['sku'], $d['name'], ($d['category_th'] ?: $d['category']) ?? '—', $d['qty'], $d['unit'],
                 $d['value'], CellDate::date($d['last_move']), $d['days'],

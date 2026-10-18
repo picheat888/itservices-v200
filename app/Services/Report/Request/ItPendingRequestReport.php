@@ -132,7 +132,7 @@ class ItPendingRequestReport extends TabularReport
             ReportColumn::text('title', 'เรื่อง', fn (ServiceRequest $r) => $r->title)->hiddenByDefault(),
             ReportColumn::text('requester', 'ผู้ขอ', fn (ServiceRequest $r) => $r->requester_name),
             // Drawn under the requester's name on the page.
-            ReportColumn::text('requester_code', 'รหัสพนักงาน', fn (ServiceRequest $r) => $r->employee?->code)->labelKey('rep_c_rqi_requester_code')->hiddenByDefault(),
+            ReportColumn::text('requester_code', 'รหัสพนักงานผู้ขอ', fn (ServiceRequest $r) => $r->employee?->code)->labelKey('rep_c_rqi_requester_code')->hiddenByDefault(),
             ReportColumn::localized('department', 'แผนก', fn (ServiceRequest $r) => $this->department($r))->hiddenByDefault()->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::date('approved_at', 'อนุมัติเมื่อ', fn (ServiceRequest $r) => $r->approved_at),
             ReportColumn::number('waiting_days', 'รอมาแล้ว (วัน)', fn (ServiceRequest $r) => $this->waitingDays($r)),
@@ -427,7 +427,7 @@ class ItPendingRequestReport extends TabularReport
 
         return [
             'title' => 'พนักงานใหม่',
-            'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันเริ่มงาน', 'ผล', ...array_map(fn (string $t) => $typeTh[$t], $readiness['types'])],
+            'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันเริ่มงาน', 'ผลการเตรียมเครื่อง', ...array_map(fn (string $t) => $typeTh[$t], $readiness['types'])],
             'rows' => [
                 ...array_map(fn (array $row) => $line($row, $verdictTh[$row['verdict']].($row['verdict'] === 'late' ? " {$row['late_days']} วัน" : '')), $readiness['rows']),
                 ...array_map(fn (array $row) => $line($row, 'ลาออกแล้ว ('.DateDisplay::date($row['last_day']).") คำขอค้าง {$row['open']}"), $readiness['left_early']),

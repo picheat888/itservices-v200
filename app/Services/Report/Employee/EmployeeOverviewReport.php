@@ -121,7 +121,7 @@ class EmployeeOverviewReport extends TabularReport
         $left = fn (Employee $e) => $e->getAttribute('movement_kind') === 'left';
 
         return [
-            ReportColumn::enum('movement_kind', 'รายการ', fn (Employee $e) => $e->getAttribute('movement_kind'), self::KIND_KEYS, self::KIND_TH),
+            ReportColumn::enum('movement_kind', 'เข้าหรือออก', fn (Employee $e) => $e->getAttribute('movement_kind'), self::KIND_KEYS, self::KIND_TH),
             ReportColumn::date('joined_at', 'วันเริ่มงาน', fn (Employee $e) => $e->joined_at)->labelKey('rep_c_eo_joined_at'),
             ReportColumn::date('last_day', 'วันทำงานวันสุดท้าย', fn (Employee $e) => $left($e) ? $e->last_day : null)->labelKey('rep_c_eo_last_day'),
             ReportColumn::localized('employee', 'พนักงาน', fn (Employee $e) => ['name' => $e->name, 'name_th' => $e->name_th])

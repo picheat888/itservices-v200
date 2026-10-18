@@ -155,7 +155,7 @@ class RequestApprovalsReport extends TabularReport
     {
         return [
             'step' => 'ชื่อขั้นอนุมัติตามที่ตั้งไว้ใน Workflow ของประเภทคำขอ',
-            'position' => 'ลำดับของขั้นในสายอนุมัติของคำขอนั้น เริ่มที่ 1 ใช้คู่กับเลขที่คำขอเป็นคีย์ของแถวได้',
+            'position' => 'ลำดับของขั้นในสายอนุมัติของคำขอนั้น เริ่มที่ 1',
             'days' => 'จำนวนวันตามปฏิทินที่ขั้นนี้ใช้ตั้งแต่ถึงคิว (วันเดียวกัน = 0) ไปจนถึงวันที่ตัดสิน วันที่ผู้ขอยกเลิก หรือวันที่ส่งออกถ้ายังรออยู่ ว่าง = ขั้นที่ระบบข้าม',
             'status' => 'อนุมัติแล้ว, ไม่อนุมัติ, รออนุมัติ = ตอนนี้ยังรอผู้อนุมัติขั้นนี้, ข้ามขั้นนี้ = ระบบข้ามตอนยื่นเพราะไม่มีผู้อนุมัติที่เข้าเงื่อนไข, ยกเลิก = ผู้ขอยกเลิกคำขอขณะรอขั้นนี้',
             'skip_reason' => 'ข้ามเพราะผู้ขอไม่มีหัวหน้า, ข้ามเพราะในสายของผู้ขอไม่มีใครอยู่ตำแหน่งนี้, ข้ามเพราะฝ่ายนี้ไม่มีคนในตำแหน่งที่กำหนด, ข้ามเพราะรายการนี้ไม่มีเจ้าของ, ข้ามเพราะผู้ขอเป็นเจ้าของรายการนี้เอง ว่าง = ไม่ได้ข้าม',
@@ -177,11 +177,11 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::text('request_no', 'เลขที่คำขอ', fn (RequestApproval $s) => $s->request?->reference)
                 ->linkTo('/requests', fn (RequestApproval $s) => $s->service_request_id),
             ReportColumn::enum('request_type', 'ประเภทคำขอ', fn (RequestApproval $s) => $s->request?->type, self::typeKeys(), self::typeTh()),
-            ReportColumn::text('step', 'ขั้น', fn (RequestApproval $s) => $s->label)->labelKey('rep_c_rqa_step'),
-            ReportColumn::number('position', 'ขั้นที่', fn (RequestApproval $s) => $s->position)->labelKey('rep_c_rqa_position')->hiddenByDefault(),
+            ReportColumn::text('step', 'ชื่อขั้น', fn (RequestApproval $s) => $s->label)->labelKey('rep_c_rqa_step'),
+            ReportColumn::number('position', 'ลำดับขั้น', fn (RequestApproval $s) => $s->position)->labelKey('rep_c_rqa_position')->hiddenByDefault(),
             ReportColumn::text('approver', 'ผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::key($s) : null),
             // Drawn under the approver's name on the page.
-            ReportColumn::text('approver_code', 'รหัสผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['code'] : null)
+            ReportColumn::text('approver_code', 'รหัสพนักงานผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['code'] : null)
                 ->labelKey('rep_c_rqa_approver_code')->hiddenByDefault(),
             ReportColumn::localized('approver_department', 'แผนกผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['department'] : null)
                 ->labelKey('rep_c_rqa_approver_department')->hiddenByDefault()->withCode('รหัสแผนกผู้อนุมัติ', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
@@ -193,9 +193,9 @@ class RequestApprovalsReport extends TabularReport
                 ->labelKey('rep_c_rqa_approver_flag')->hiddenByDefault()->screenOnly(),
             ReportColumn::text('approver_flag_th', 'สถานะผู้อนุมัติ', fn (RequestApproval $s) => ApprovalFacts::isWaiting($s) ? self::APPROVER_FLAG_TH[ApprovalFacts::blockedBecause($s)] ?? null : null)
                 ->sheetOnly()->describe('เหตุที่ผู้อนุมัติของขั้นที่รออยู่อนุมัติไม่ได้: ลาออก หรือยังไม่มีบัญชี (ว่าง = อนุมัติได้ตามปกติ)'),
-            ReportColumn::dateTime('became_current_at', 'ถึงคิว', fn (RequestApproval $s) => $s->became_current_at)->labelKey('rep_c_rqa_became_current'),
-            ReportColumn::dateTime('acted_at', 'ตัดสิน', fn (RequestApproval $s) => $s->acted_at)->labelKey('rep_c_rqa_acted_at'),
-            ReportColumn::number('days', 'วัน', fn (RequestApproval $s) => ApprovalFacts::days($s))->labelKey('rep_c_rqa_days'),
+            ReportColumn::dateTime('became_current_at', 'ถึงคิวเมื่อ', fn (RequestApproval $s) => $s->became_current_at)->labelKey('rep_c_rqa_became_current'),
+            ReportColumn::dateTime('acted_at', 'ตัดสินเมื่อ', fn (RequestApproval $s) => $s->acted_at)->labelKey('rep_c_rqa_acted_at'),
+            ReportColumn::number('days', 'ใช้เวลา (วัน)', fn (RequestApproval $s) => ApprovalFacts::days($s))->labelKey('rep_c_rqa_days'),
             ReportColumn::enum('status', 'สถานะ', fn (RequestApproval $s) => $s->status->value === 'waiting' ? 'withdrawn' : $s->status->value, self::ROW_STATUS_KEYS, self::ROW_STATUS_TH),
             ReportColumn::text('note', 'หมายเหตุ', fn (RequestApproval $s) => $s->note)->labelKey('rep_c_rqa_note'),
             ReportColumn::enum('skip_reason', 'เหตุผลที่ข้าม', fn (RequestApproval $s) => $s->skip_reason?->value, self::SKIP_KEYS, self::SKIP_TH)
@@ -571,7 +571,7 @@ class RequestApprovalsReport extends TabularReport
         return [
             [
                 'title' => 'รออนุมัติตอนนี้',
-                'headings' => ['สาเหตุ', 'เลขที่คำขอ', 'ประเภทคำขอ', 'ขั้น', 'รอใคร', 'รหัส', 'ผู้ขอ', 'ถึงคิว', 'รอมาแล้ว (วัน)', 'กลุ่ม'],
+                'headings' => ['สาเหตุ', 'เลขที่คำขอ', 'ประเภทคำขอ', 'ชื่อขั้น', 'ผู้อนุมัติที่รอ', 'รหัสพนักงานผู้อนุมัติ', 'ผู้ขอ', 'ถึงคิวเมื่อ', 'รอมาแล้ว (วัน)', 'กลุ่ม'],
                 'rows' => $stuck,
             ],
             [
@@ -583,7 +583,7 @@ class RequestApprovalsReport extends TabularReport
             ],
             [
                 'title' => 'คำขอที่ไม่อนุมัติและยกเลิก',
-                'headings' => ['เลขที่คำขอ', 'ประเภทคำขอ', 'ผล', 'หยุดที่', 'ใคร', 'เหตุผล', 'วันที่'],
+                'headings' => ['เลขที่คำขอ', 'ประเภทคำขอ', 'ผลการพิจารณา', 'ขั้นที่หยุด', 'ผู้ไม่อนุมัติหรือผู้ยกเลิก', 'เหตุผล', 'วันที่'],
                 'rows' => array_map(fn (array $r) => [
                     $r['reference'], $type($r['type']), self::OUTCOME_TH[$r['outcome']], $r['stop_label'] ?? 'ทีม IT', $r['decided_by'],
                     $r['reason'] ?? 'ไม่ได้บันทึกเหตุผล', CellDate::dateTime($r['at']),
@@ -591,7 +591,7 @@ class RequestApprovalsReport extends TabularReport
             ],
             [
                 'title' => 'ขั้นอนุมัติที่ระบบข้าม',
-                'headings' => ['เหตุผลที่ข้าม', 'ขั้น', 'คำขอ', 'ไม่มีใครอนุมัติเลย', 'ขั้นที่ถูกข้าม'],
+                'headings' => ['เหตุผลที่ข้าม', 'จำนวนขั้น', 'จำนวนคำขอ', 'ไม่มีใครอนุมัติเลย', 'ขั้นที่ถูกข้าม'],
                 'rows' => array_map(fn (array $s) => [
                     self::SKIP_TH[$s['reason']], $s['steps'], $s['requests'], $s['unapproved_requests'],
                     implode(', ', array_map(fn (string $label, int $n) => "{$label} {$n}", array_keys($s['labels']), $s['labels'])),

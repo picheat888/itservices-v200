@@ -151,7 +151,7 @@ class RequestOverviewReport extends TabularReport
             ReportColumn::enum('origin', 'ที่มา', fn (ServiceRequest $r) => $r->origin, self::ORIGIN_KEYS, self::ORIGIN_TH)->hiddenByDefault(),
             ReportColumn::text('requester', 'ผู้ขอ', fn (ServiceRequest $r) => $r->requester_name),
             // Drawn under the name on the page.
-            ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (ServiceRequest $r) => $r->employee?->code)->hiddenByDefault(),
+            ReportColumn::text('employee_code', 'รหัสพนักงานผู้ขอ', fn (ServiceRequest $r) => $r->employee?->code)->hiddenByDefault(),
             ReportColumn::localized('department', 'แผนก', fn (ServiceRequest $r) => self::department($r))->hiddenByDefault()->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('status', 'สถานะ', fn (ServiceRequest $r) => $r->status, self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::date('approved_at', 'อนุมัติครบ', fn (ServiceRequest $r) => $r->approved_at)->labelKey('rep_c_rqo_approved_at'),

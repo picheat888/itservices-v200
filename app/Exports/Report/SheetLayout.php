@@ -72,7 +72,7 @@ final class SheetLayout
             ["จำนวนแถวในชีต \"{$dataSheet}\"", $rowCount],
         ];
         if ($omittedColumns !== []) {
-            $facts[] = ['คอลัมน์ที่ผู้ส่งออกเลือกไม่แสดง', implode(', ', $omittedColumns)];
+            $facts[] = ['คอลัมน์ที่ซ่อนไว้ตอนส่งออก', implode(', ', $omittedColumns)];
         }
 
         return $facts;

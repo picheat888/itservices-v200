@@ -110,7 +110,7 @@ class ExcelNumberFormatTest extends TestCase
         $this->assertCellFormat($worksheet, 'Ticket ทั้งหมด', '#,##0');
         $this->assertSame(1500, $worksheet->getCell('B'.$this->rowOf($worksheet, 'ค้างอยู่ตอนนี้'))->getValue());
         $this->assertCellFormat($worksheet, 'ค้างอยู่ตอนนี้', '#,##0');
-        $this->assertSame('General', $worksheet->getStyle('B'.$this->rowOf($worksheet, 'เวลาแก้ไขโดยเฉลี่ย (ชม.)'))->getNumberFormat()->getFormatCode());
+        $this->assertSame('General', $worksheet->getStyle('B'.$this->rowOf($worksheet, 'เวลาปิดเคสเฉลี่ย (ชม.)'))->getNumberFormat()->getFormatCode());
     }
 
     private function rowOf(Worksheet $worksheet, string $label): int

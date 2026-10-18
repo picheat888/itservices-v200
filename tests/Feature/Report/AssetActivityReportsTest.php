@@ -262,7 +262,7 @@ class AssetActivityReportsTest extends TestCase
             $titles = array_map(fn ($sheet) => $sheet->title(), array_slice($export->sheets(), 1, 4));
             $warehouseRows = $export->sheets()[2]->array();
 
-            return $titles === ['ทรัพย์สินแยกตามแผนก', 'ทรัพย์สินในคลัง (พร้อมใช้งาน)', 'ทรัพย์สินในส่วนกลาง', 'ตัดจำหน่าย']
+            return $titles === ['ตามแผนก', 'ทรัพย์สินในคลัง (พร้อมส่งมอบ)', 'ทรัพย์สินในส่วนกลาง', 'ตัดจำหน่าย']
                 && $warehouseRows === [['Main store', 1, 1, 0]]
                 && $export->sheets()[4]->array()[0][5] === 'Broken'
                 && count($export->sheets()) === 7;

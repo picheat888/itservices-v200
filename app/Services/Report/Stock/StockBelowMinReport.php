@@ -89,11 +89,11 @@ class StockBelowMinReport extends TabularReport
         return [
             'status' => 'หมดสต็อก = คงเหลือ 0, ต่ำกว่า Min = คงเหลือน้อยกว่า Min (เฉพาะ SKU ที่ตั้ง Min มากกว่า 0), เกิน Max = คงเหลือมากกว่า Max',
             'gap' => 'หมดสต็อกและต่ำกว่า Min = Min ลบคงเหลือ (จำนวนที่ขาดถึง Min) เกิน Max = คงเหลือลบ Max (จำนวนที่เกิน) หน่วยตามคอลัมน์หน่วย',
-            'reorder_qty' => 'จำนวนที่ควรสั่งให้ถึงระดับสูงสุด = ค่าที่มากกว่าระหว่าง Max กับ Min ลบคงเหลือ เป็น 0 สำหรับรายการเกิน Max',
+            'reorder_qty' => 'จำนวนที่ต้องสั่งเพื่อให้คงเหลือถึง Max (ถ้า Max น้อยกว่า Min ใช้ Min) เป็น 0 สำหรับรายการที่เกิน Max',
             'unit_cost' => 'ราคาต่อหน่วยที่ใช้คำนวณมูลค่า ปัดทศนิยม 2 ตำแหน่ง ดูที่มาได้จากคอลัมน์ที่มาของราคา ว่าง = ไม่มีราคาที่มากกว่า 0',
             'unit_cost_basis' => 'ราคารับเข้าล่าสุด = ราคาต่อหน่วยของการรับเข้าครั้งล่าสุดที่มีราคามากกว่า 0, ต้นทุนที่ตั้งไว้ = ต้นทุนในข้อมูล SKU เมื่อไม่มีราคารับเข้า, ต้นทุนเฉลี่ย = มูลค่า Lot คงเหลือหารจำนวนคงเหลือ (ใช้กับเกิน Max), ไม่มีราคา',
             'value' => 'ที่ควรสั่ง = ควรสั่งคูณต้นทุน/หน่วย ส่วนที่เกิน Max = จำนวนที่เกินคูณต้นทุน/หน่วย ปัดทศนิยม 2 ตำแหน่ง ว่าง = ไม่มีราคา',
-            'value_kind' => 'บอกว่ามูลค่าของแถวนี้คืออะไร: ที่ควรสั่ง (หมดสต็อกหรือต่ำกว่า Min) หรือส่วนที่เกิน Max',
+            'value_kind' => 'มูลค่าในแถวนี้เป็นมูลค่าที่ควรสั่ง (หมดสต็อกหรือต่ำกว่า Min) หรือมูลค่าส่วนที่เกิน Max',
         ];
     }
 
@@ -107,7 +107,7 @@ class StockBelowMinReport extends TabularReport
             ...array_values(array_filter($item, fn (ReportColumn $c) => $c->key !== 'unit')),
             ReportColumn::enum('status', 'สถานะ', fn (StockItem $i) => $i->status(), self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::text('level', 'Min – Max', fn (StockItem $i) => $i->min_stock.' – '.$i->max_stock)->labelKey('rep_slv_c_level')->screenOnly(),
-            ReportColumn::number('qty_on_hand', 'จำนวน (ปัจจุบัน)', fn (StockItem $i) => $i->current_stock)->labelKey('stock_current'),
+            ReportColumn::number('qty_on_hand', 'คงเหลือ', fn (StockItem $i) => $i->current_stock)->labelKey('stock_current'),
             ReportColumn::number('min_stock', 'Min', fn (StockItem $i) => $i->min_stock)->hiddenByDefault(),
             ReportColumn::number('max_stock', 'Max', fn (StockItem $i) => $i->max_stock)->hiddenByDefault(),
             ReportColumn::number('gap', 'ขาด / เกิน', fn (StockItem $i) => self::figures($i)['gap']),
@@ -119,7 +119,7 @@ class StockBelowMinReport extends TabularReport
             ReportColumn::money('value', 'มูลค่า', fn (StockItem $i) => self::rounded(self::figures($i)['value'])),
             ReportColumn::enum('value_kind', 'ชนิดมูลค่า', fn (StockItem $i) => self::figures($i)['kind'], self::KIND_KEYS, self::KIND_TH)
                 ->hiddenByDefault(),
-            ReportColumn::date('last_move', 'เคลื่อนไหวล่าสุด', fn (StockItem $i) => $i->last_move_at),
+            ReportColumn::date('last_move', 'เคลื่อนไหวล่าสุดเมื่อ', fn (StockItem $i) => $i->last_move_at),
         ];
     }
 

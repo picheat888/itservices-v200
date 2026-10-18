@@ -126,8 +126,8 @@ class StockMovementReport extends TabularReport
             'qty' => 'จำนวนหน่วยของรายการ เป็นค่าบวกเสมอ ทิศทางดูจากประเภท: รับเข้า คืนของ ปรับเพิ่ม = เพิ่มสต็อก, เบิกออก ปรับลด = ลดสต็อก, ย้ายคลัง = ยอดรวมไม่เปลี่ยน',
             'unit_cost' => 'ราคาต่อหน่วยที่กรอกตอนรับเข้า ว่าง = รายการประเภทอื่นหรือรับเข้าโดยไม่กรอกราคา',
             'line_value' => 'รับเข้าที่มีราคา = จำนวนคูณต้นทุน/หน่วย ประเภทอื่น = จำนวนคูณต้นทุนเฉลี่ยถ่วงน้ำหนักของทุก Lot ที่รับเข้าถึงสิ้นวันของรายการ (ยังไม่มี Lot ใช้ราคา Lot แรก ถ้าไม่มีเลยใช้ต้นทุนที่ตั้งไว้ของ SKU) ปัดทศนิยม 2 ตำแหน่ง',
-            'from_label' => 'ต้นทาง: รับเข้า = ผู้ขายที่กรอก, เบิกออก ย้ายคลัง ปรับลด = ชื่อคลังที่ของออก (Unassigned = ไม่ระบุคลัง), คืนของและปรับเพิ่ม = ว่าง',
-            'to_label' => 'ปลายทาง: รับเข้า คืนของ ย้ายคลัง ปรับเพิ่ม = ชื่อคลังที่ของเข้า (Unassigned = ไม่ระบุคลัง), เบิกออก = ชื่อผู้ขอเบิก, ปรับลด = ว่าง',
+            'from_label_th' => 'ต้นทาง: รับเข้า = ผู้ขายที่กรอก, เบิกออก ย้ายคลัง ปรับลด = ชื่อคลังที่ของออก (ไม่ระบุคลัง = ไม่ได้เลือกคลัง), คืนของและปรับเพิ่ม = ว่าง',
+            'to_label_th' => 'ปลายทาง: รับเข้า คืนของ ย้ายคลัง ปรับเพิ่ม = ชื่อคลังที่ของเข้า (ไม่ระบุคลัง = ไม่ได้เลือกคลัง), เบิกออก = ชื่อผู้ขอเบิก, ปรับลด = ว่าง',
             'reference' => 'เลขอ้างอิง: เบิกออก = เลขที่คำขอเบิก, ปรับเพิ่มและปรับลด = เลขที่ใบตรวจนับ, รับเข้าและย้ายคลัง = เลขที่ผู้บันทึกกรอกเอง (ไม่บังคับ), คืนของ = ว่าง',
         ];
     }
@@ -135,6 +135,12 @@ class StockMovementReport extends TabularReport
     protected function hasRowId(): bool
     {
         return true;
+    }
+
+    // A movement's end as the sheet reads it: the "no warehouse" sentinel in Thai
+    private static function warehouseLabel(?string $label): ?string
+    {
+        return $label === 'Unassigned' ? 'ไม่ระบุคลัง' : $label;
     }
 
     public function columns(): array
@@ -147,8 +153,10 @@ class StockMovementReport extends TabularReport
             ReportColumn::number('qty', 'จำนวน', fn (StockMovement $m) => $m->qty),
             ReportColumn::money('unit_cost', 'ต้นทุน/หน่วย', fn (StockMovement $m) => $m->unit_cost),
             ReportColumn::money('line_value', 'มูลค่า', fn (StockMovement $m) => $this->lineValue($m)),
-            ReportColumn::text('from_label', 'จาก', fn (StockMovement $m) => $m->from_label),
-            ReportColumn::text('to_label', 'ไปยัง', fn (StockMovement $m) => $m->to_label),
+            ReportColumn::text('from_label', 'จาก', fn (StockMovement $m) => $m->from_label)->screenOnly(),
+            ReportColumn::text('from_label_th', 'จาก', fn (StockMovement $m) => self::warehouseLabel($m->from_label))->sheetOnly(),
+            ReportColumn::text('to_label', 'ไปยัง', fn (StockMovement $m) => $m->to_label)->screenOnly(),
+            ReportColumn::text('to_label_th', 'ไปยัง', fn (StockMovement $m) => self::warehouseLabel($m->to_label))->sheetOnly(),
             ReportColumn::text('reference', 'อ้างอิง', fn (StockMovement $m) => $m->reference),
             ReportColumn::text('recorded_by', 'ผู้บันทึก', fn (StockMovement $m) => $m->recorded_by),
         ];
@@ -477,7 +485,7 @@ class StockMovementReport extends TabularReport
 
         $sections[] = [
             'title' => 'คำขอเบิกที่ค้าง',
-            'headings' => ['เลขที่', 'รายการ', 'SKU', 'จำนวน', 'ผู้ขอ', 'สถานะ', 'รอตั้งแต่'],
+            'headings' => ['เลขที่', 'ชื่อรายการ', 'SKU', 'จำนวน', 'ผู้ขอ', 'สถานะ', 'รอตั้งแต่'],
             'rows' => array_map(fn (array $r) => [
                 $r['reference'], $r['item_name'], $r['sku'], $r['qty'], $r['requester_th'] ?: $r['requester'],
                 $r['status'] === 'approved' ? 'อนุมัติแล้ว รอจ่าย' : 'รออนุมัติ', CellDate::dateTime($r['waiting_since']),
