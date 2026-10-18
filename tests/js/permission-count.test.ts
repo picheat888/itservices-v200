@@ -2,47 +2,30 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { countGranted, hiddenHitCount, specKeys, type CountSpec } from '../../resources/js/modules/permission/lib/permission-count.ts';
-
-const TICKETS: CountSpec = {
-    master: 'tickets.module',
-    groups: [
-        { view: 'tickets.view_dashboard', children: [] },
-        { view: 'tickets.view_all', children: ['tickets.resolve', 'tickets.assign'] },
-    ],
-    gated: ['tickets.level_hardware', 'tickets.level_network'],
-    standalone: [{ view: 'tickets.create', children: ['tickets.edit_own'] }],
-    free: ['tickets.my'],
-};
+import { TICKET_COUNT as TICKETS } from '../../resources/js/modules/permission/lib/permission-specs.ts';
 const holds =
     (...keys: string[]) =>
     (key: string) =>
         keys.includes(key);
 
-test('every key the card shows, master first', () => {
-    assert.deepEqual(specKeys(TICKETS), [
-        'tickets.module',
-        'tickets.view_dashboard',
-        'tickets.view_all',
-        'tickets.resolve',
-        'tickets.assign',
-        'tickets.level_hardware',
-        'tickets.level_network',
-        'tickets.create',
-        'tickets.edit_own',
-        'tickets.my',
-    ]);
+test('every key the card shows, master first, each once', () => {
+    const keys = specKeys(TICKETS);
+    assert.equal(keys[0], 'tickets.module');
+    assert.deepEqual(keys.slice(-3), ['tickets.create', 'tickets.edit_own', 'tickets.my']);
+    assert.equal(new Set(keys).size, keys.length);
+    assert.equal(keys.length, 17);
 });
 
 test('a role holding everything reads full', () => {
     assert.deepEqual(
         countGranted(TICKETS, () => true),
-        { on: 10, total: 10 },
+        { on: 17, total: 17 },
     );
 });
 
 test('nothing under an off master counts; the keys outside it still do', () => {
     const has = holds('tickets.view_all', 'tickets.resolve', 'tickets.level_network', 'tickets.create', 'tickets.my');
-    assert.deepEqual(countGranted(TICKETS, has), { on: 2, total: 10 });
+    assert.deepEqual(countGranted(TICKETS, has), { on: 2, total: 17 });
 });
 
 test('a child counts only while its view is on', () => {
@@ -65,7 +48,8 @@ test('a flat card counts only the keys its has() accepts (live keys)', () => {
 
 test('hidden hits are the matching keys under an off master', () => {
     const isHit = (key: string) => key.includes('resolve') || key.includes('my') || key.includes('level');
-    assert.equal(hiddenHitCount(TICKETS, holds(), isHit), 3);
+    // resolve and the six levels; "my" stands outside the master
+    assert.equal(hiddenHitCount(TICKETS, holds(), isHit), 7);
     assert.equal(hiddenHitCount(TICKETS, holds('tickets.module'), isHit), 0);
     assert.equal(
         hiddenHitCount({ free: ['profile.edit'] }, holds(), () => true),

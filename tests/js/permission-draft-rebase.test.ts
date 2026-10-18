@@ -2,31 +2,26 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { rebaseDraft, specEdges } from '../../resources/js/modules/permission/lib/draft-rebase.ts';
-import type { CountSpec } from '../../resources/js/modules/permission/lib/permission-count.ts';
+import { STOCK_COUNT, TICKET_COUNT } from '../../resources/js/modules/permission/lib/permission-specs.ts';
 
-const STOCK: CountSpec = {
-    master: 'stock.module',
-    groups: [
-        { view: 'stock.view', children: ['stock.receive', 'stock.delete'] },
-        { view: 'stock.view_count', children: [] },
-    ],
-};
-const TICKETS: CountSpec = {
-    master: 'tickets.module',
-    gated: ['tickets.level_hardware'],
-    standalone: [{ view: 'tickets.create', children: ['tickets.edit_own'] }],
-    free: ['tickets.my'],
-};
-const EDGES = [...specEdges(STOCK), ...specEdges(TICKETS)];
+const EDGES = [...specEdges(STOCK_COUNT), ...specEdges(TICKET_COUNT)];
 
 const set = (...keys: string[]) => new Set(keys);
 const sorted = (s: Set<string>) => [...s].sort();
 
 test('specEdges: the master over everything under it, each view over its children, standalone views outside the master', () => {
-    const edges = specEdges(TICKETS).map((e) => `${e.parent}>${e.child}`);
-    assert.deepEqual(edges.sort(), ['tickets.create>tickets.edit_own', 'tickets.module>tickets.level_hardware']);
-    assert.ok(specEdges(STOCK).some((e) => e.parent === 'stock.module' && e.child === 'stock.receive'));
-    assert.ok(specEdges(STOCK).some((e) => e.parent === 'stock.view' && e.child === 'stock.delete'));
+    const edges = specEdges(TICKET_COUNT).map((e) => `${e.parent}>${e.child}`);
+    for (const edge of [
+        'tickets.create>tickets.edit_own',
+        'tickets.module>tickets.level_hardware',
+        'tickets.view_all>tickets.resolve',
+        'tickets.module>tickets.resolve',
+    ]) {
+        assert.ok(edges.includes(edge), edge);
+    }
+    assert.ok(!edges.some((e) => /^tickets.module>tickets.(create|edit_own|my)$/.test(e)), 'self-service keys stand outside the master');
+    assert.ok(specEdges(STOCK_COUNT).some((e) => e.parent === 'stock.module' && e.child === 'stock.receive'));
+    assert.ok(specEdges(STOCK_COUNT).some((e) => e.parent === 'stock.view' && e.child === 'stock.delete'));
     assert.deepEqual(specEdges({ free: ['dashboard.view'] }), []);
 });
 
