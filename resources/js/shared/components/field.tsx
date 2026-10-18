@@ -112,7 +112,7 @@ export function Field({
                 {body}
             </div>
             {error ? (
-                <p id={msgId} className="text-destructive flex items-center gap-1.5 text-xs">
+                <p id={msgId} className="text-destructive animate-in fade-in-0 slide-in-from-top-1 flex items-center gap-1.5 text-xs duration-150">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {error}
                 </p>
