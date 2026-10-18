@@ -1,8 +1,8 @@
 import type { AppNotification } from '@/modules/notification';
 import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
-import { formatNumber } from '@/shared/lib/number';
 import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
+import { formatNumber } from '@/shared/lib/number';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -348,7 +348,7 @@ export function notificationTarget(n: AppNotification): string {
     if (mod === 'contracts') return `/contracts?view=${n.data.contract_id}`;
     if (mod === 'stock') {
         if (n.data.type === 'stock_request') return '/stock?tab=requests';
-        if (n.data.type === 'stock_count') return '/stock?tab=audit';
+        if (n.data.type === 'stock_count') return n.data.stock_count_id ? `/stock?tab=audit&count=${n.data.stock_count_id}` : '/stock?tab=audit';
         return '/stock?tab=items';
     }
     return `/employees?highlight=${n.data.employee_id}`;

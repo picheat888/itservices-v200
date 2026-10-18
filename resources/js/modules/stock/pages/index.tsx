@@ -72,8 +72,8 @@ const STOCK_FILTER_KEY = 'stock.item-filters';
 const DEFAULT_ITEM_SORT = 'name_asc';
 const ITEM_SORTS = ['name_asc', 'name_desc', 'stock_desc', 'stock_asc', 'value_desc', 'value_asc'];
 const ITEM_STATUSES = ['alerts', 'ok', 'low', 'out', 'over', 'dead'];
-// Every tab's list keys in the URL; a tab switch clears them (rows-per-page stays).
-const LIST_KEYS = ['search', 'cat', 'wh', 'status', 'sort', 'type', 'page'];
+// Every tab's list keys and the open count sheet (?count) in the URL; a tab switch clears them (rows-per-page stays).
+const LIST_KEYS = ['search', 'cat', 'wh', 'status', 'sort', 'type', 'page', 'count'];
 const ITEM_LIST_KEYS = ['search', 'cat', 'wh', 'status', 'sort', 'page', 'per'];
 
 type ItemFilters = { search: string; cat: string; wh: string; status: string; sort: string };
