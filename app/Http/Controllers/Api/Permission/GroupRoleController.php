@@ -11,6 +11,7 @@ use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\RoleKeys;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,6 +133,107 @@ class GroupRoleController extends Controller
     }
 
     /**
+     * Employees among the given ids who sit in a super-role group or whose login account is super.
+     *
+     * @param  array<int>  $employeeIds
+     * @return array<int>
+     */
+    private function protectedEmployeeIds(array $employeeIds): array
+    {
+        if (count($employeeIds) === 0) {
+            return [];
+        }
+
+        $employees = Employee::with('groupRoles.role')->whereIn('id', $employeeIds)->get();
+        $usernames = $employees->pluck('username')->filter();
+
+        $superAccounts = User::with('role')
+            ->where(function ($q) use ($employeeIds, $usernames) {
+                $q->whereIn('employee_id', $employeeIds)
+                    ->orWhereIn('username', $usernames);
+            })
+            ->get()
+            ->filter(fn (User $user) => $user->isSuper());
+
+        return $employees
+            ->filter(function (Employee $employee) use ($superAccounts) {
+                $inSuperGroup = $employee->groupRoles->contains(fn (GroupRole $group) => UserRole::isSuperKey($group->role?->key));
+
+                return $inSuperGroup || $superAccounts->contains(fn (User $user) => $this->accountBelongsTo($user, $employee));
+            })
+            ->pluck('id')
+            ->all();
+    }
+
+    /** Matches a login account to an employee the same way syncUserRoles does. */
+    private function accountBelongsTo(User $user, Employee $employee): bool
+    {
+        if ((int) $user->employee_id === (int) $employee->id) {
+            return true;
+        }
+
+        return $employee->username !== null
+            && $user->username !== null
+            && mb_strtolower($user->username) === mb_strtolower($employee->username);
+    }
+
+    /**
+     * Blocks non-super users from moving, removing or re-saving a Super admin.
+     *
+     * @param  array<int>  $touchedEmployeeIds
+     */
+    private function guardProtectedMembers(Request $request, array $touchedEmployeeIds): void
+    {
+        if ($request->user()?->isSuper() || count($this->protectedEmployeeIds($touchedEmployeeIds)) === 0) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'Only an Administrator can add, remove or move an Administrator account.',
+            'code' => 'admin_members_protected',
+        ], 403));
+    }
+
+    /** Throws a 422 that rolls back the surrounding transaction when no Super admin account is left. */
+    private function assertSuperAdminRemains(): void
+    {
+        $superRoleId = RoleKeys::find(UserRole::SuperAdmin->value)?->id;
+
+        if ($superRoleId !== null && User::where('role_id', $superRoleId)->exists()) {
+            return;
+        }
+
+        throw new HttpResponseException(response()->json([
+            'message' => 'At least one Administrator account must remain.',
+            'code' => 'last_super_admin',
+        ], 422));
+    }
+
+    /**
+     * Runs the writes in one transaction that rolls back when no Super admin would remain.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $writes
+     * @return T
+     */
+    private function writeKeepingASuperAdmin(callable $writes): mixed
+    {
+        try {
+            return DB::transaction(function () use ($writes) {
+                $result = $writes();
+                $this->assertSuperAdminRemains();
+
+                return $result;
+            });
+        } catch (HttpResponseException $refusal) {
+            AppSetting::flushCache();
+
+            throw $refusal;
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function present(GroupRole $g): array
@@ -171,7 +273,9 @@ class GroupRoleController extends Controller
         $this->guardSuperGroup($request, null, $role?->key);
 
         $employeeIds = $data['employee_ids'] ?? [];
-        $group = DB::transaction(function () use ($data, $role, $employeeIds) {
+        $this->guardProtectedMembers($request, $employeeIds);
+
+        $group = $this->writeKeepingASuperAdmin(function () use ($data, $role, $employeeIds) {
             $group = GroupRole::create(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($group, $employeeIds);
             $this->syncUserRoles($group, $employeeIds);
@@ -194,18 +298,19 @@ class GroupRoleController extends Controller
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
+        $removedEmployeeIds = array_values(array_diff($oldEmployeeIds, $newEmployeeIds));
+        $this->guardProtectedMembers($request, array_values(array_unique([...$newEmployeeIds, ...$removedEmployeeIds])));
 
         $before = [];
 
-        DB::transaction(function () use ($groupRole, $data, $role, $oldEmployeeIds, $newEmployeeIds, &$before) {
+        $this->writeKeepingASuperAdmin(function () use ($groupRole, $data, $role, $newEmployeeIds, $removedEmployeeIds, &$before) {
             $before = $groupRole->getOriginal();
             $groupRole->update(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($groupRole, $newEmployeeIds);
             $this->syncUserRoles($groupRole, $newEmployeeIds);
 
-            $removed = array_diff($oldEmployeeIds, $newEmployeeIds);
-            if (count($removed) > 0) {
-                $this->fallbackOrphansToDefault($groupRole, array_values($removed));
+            if (count($removedEmployeeIds) > 0) {
+                $this->fallbackOrphansToDefault($groupRole, $removedEmployeeIds);
             }
         });
 
@@ -219,15 +324,19 @@ class GroupRoleController extends Controller
         $this->gate($request);
         $this->guardSuperGroup($request, $groupRole->role?->key);
 
-        // Unset default group if this one is being deleted
-        if ((int) AppSetting::get('default_employee_group_id', 0) === $groupRole->id) {
-            AppSetting::put('default_employee_group_id', null);
-        }
-
         $memberIds = $groupRole->employees->pluck('id')->all();
+        $this->guardProtectedMembers($request, $memberIds);
         $name = $groupRole->name;
-        $groupRole->delete();
-        $this->fallbackOrphansToDefault($groupRole, $memberIds);
+
+        $this->writeKeepingASuperAdmin(function () use ($groupRole, $memberIds) {
+            // Unset default group if this one is being deleted
+            if ((int) AppSetting::get('default_employee_group_id', 0) === $groupRole->id) {
+                AppSetting::put('default_employee_group_id', null);
+            }
+
+            $groupRole->delete();
+            $this->fallbackOrphansToDefault($groupRole, $memberIds);
+        });
 
         AuditLog::recordDeleted('Deleted role group', $name, $groupRole);
 
