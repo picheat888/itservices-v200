@@ -10,7 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Notifications\TicketSlaAlertNotification;
-use App\Services\Ticket\TicketService;
+use App\Services\Ticket\TicketClosureService;
 use App\Services\Ticket\TicketSlaAlertService;
 use App\Support\EmailTemplates;
 use Database\Seeders\EmailTemplateSeeder;
@@ -62,7 +62,7 @@ class TicketClosureEmailTest extends TestCase
     private function close(Ticket $ticket, bool $complete, string $resolution): void
     {
         $ticket->update(['status' => 'in_progress']);
-        app(TicketService::class)->resolve($ticket, $complete, $resolution);
+        app(TicketClosureService::class)->close($ticket, User::factory()->create(), $complete, $resolution);
     }
 
     /** @return array{key: string, html: string, subject: string, url: string, label: string}|null the closure mail queued */

@@ -58,7 +58,7 @@ class TicketActionRaceTest extends TestCase
         $service = app(TicketService::class);
 
         $service->forward($ticket, $next, $next);
-        $this->assertRefused('case_moved', fn () => $service->resolve($stale, true, 'Closing a case I no longer hold.'));
+        $this->assertRefused('case_moved', fn () => $service->closeRow($stale, true, 'Closing a case I no longer hold.'));
 
         $this->assertSame('in_progress', $ticket->fresh()->status->value);
         $this->assertSame($next->id, $ticket->fresh()->assignee_id);
@@ -72,7 +72,7 @@ class TicketActionRaceTest extends TestCase
         $stale = Ticket::find($ticket->id);
         $service = app(TicketService::class);
 
-        $service->resolve($ticket, true, 'Fixed the cable and tested.');
+        $service->closeRow($ticket, true, 'Fixed the cable and tested.');
         $this->assertRefused('not_in_progress', fn () => $service->forward($stale, $next, $holder));
 
         $this->assertSame($holder->id, $ticket->fresh()->assignee_id);
