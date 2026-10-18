@@ -241,7 +241,7 @@ class TicketManualSlaReportTest extends TestCase
 
         $this->assertExportStored('Report_tickets-manual_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
-            $this->assertCount(3, $sheets);
+            $this->assertCount(4, $sheets);
             $this->assertSame('สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง', $sheets[0]->array()[0][0]);
             $this->assertInstanceOf(TabularSectionSheet::class, $sheets[1]);
             $this->assertSame('ตามความสำคัญ', $sheets[1]->title());

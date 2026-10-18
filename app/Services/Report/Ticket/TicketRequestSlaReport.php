@@ -124,12 +124,6 @@ class TicketRequestSlaReport extends TabularReport
         ];
     }
 
-    /** The rows sheet carries every field, so it is the raw data. */
-    public function sheetTitle(): string
-    {
-        return 'ข้อมูลดิบ';
-    }
-
     /**
      * The raw-data sheet grouped for analysis: the case and its request, who, where it stands and
      * when, then each SLA — taking (its deadline, the verdict, the hours it waited) and closing (its

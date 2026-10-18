@@ -40,6 +40,8 @@ class ExcelNumberFormatTest extends TestCase
             $expected = match ($column->type) {
                 'money' => '#,##0.00',
                 'number', 'days_left', 'hours_left' => '#,##0',
+                'date' => 'yyyy-mm-dd',
+                'datetime' => 'yyyy-mm-dd hh:mm',
                 default => null,
             };
             $this->assertSame($expected, $formats[$letter] ?? null, $column->key);

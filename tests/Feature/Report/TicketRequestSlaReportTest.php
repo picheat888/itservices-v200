@@ -283,7 +283,7 @@ class TicketRequestSlaReportTest extends TestCase
 
         $this->assertExportStored('Report_tickets-request_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
-            $this->assertCount(3, $sheets);
+            $this->assertCount(4, $sheets);
             $this->assertSame('สรุปผล SLA ของ Ticket จากคำขอ', $sheets[0]->array()[0][0]);
             $this->assertInstanceOf(TabularSectionSheet::class, $sheets[1]);
             $this->assertSame('ตามประเภทคำขอ', $sheets[1]->title());
@@ -315,7 +315,7 @@ class TicketRequestSlaReportTest extends TestCase
         $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.request_sla/export?format=xlsx&'.self::RANGE)->assertAccepted();
 
         $this->assertExportStored('Report_tickets-request_sla_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheet = last($export->sheets());
+            $sheet = $this->rowsSheet($export);
             $this->assertSame('ข้อมูลดิบ', $sheet->title());
             $headings = $sheet->headings();
             $this->assertSame([
@@ -334,13 +334,13 @@ class TicketRequestSlaReportTest extends TestCase
             // Taken the 6th 09:00, closed the 10th 10:00: 97 h of work; with the 23 h wait, the 120 h to close.
             $this->assertEquals(97.0, $t2['ลงมือแก้ (ชม.)']);
             $this->assertEquals(120.0, $t2['เวลาปิดเคส (ชม.)']);
-            $this->assertSame('08/09/2026 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
+            $this->assertSame('2026-09-08 10:00', $this->excelDate($t2['วันที่ครบกำหนด SLA ปิดเคส']));
             $this->assertSame('ไม่ทัน', $t2['ปิดทัน SLA']);
             $this->assertSame('งานปกติ', $t2['ลักษณะงาน']);
             $this->assertSame(trim($this->set['t2']->description), $t2['รายละเอียด']);
             // t4 was canceled the 4th: it has a cancel time and no close time.
             $t4 = $rows[$this->set['t4']->ticket_no];
-            $this->assertSame('04/09/2026 10:00', $t4['ยกเลิกเมื่อ']);
+            $this->assertSame('2026-09-04 10:00', $this->excelDate($t4['ยกเลิกเมื่อ']));
             $this->assertNull($t4['ปิดเคสเมื่อ']);
 
             return true;

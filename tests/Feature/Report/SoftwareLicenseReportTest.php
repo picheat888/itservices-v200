@@ -194,7 +194,7 @@ class SoftwareLicenseReportTest extends TestCase
 
         $this->assertSame(['การใช้ License ต่อซอฟต์แวร์', 'เรียกคืนได้จากผู้ลาออก', 'คำขอที่รอ License'], array_column($sections, 'title'));
         $this->assertSame(['Adobe', 2, 3, -1, 150, 'ใช้เกิน'], [$sections[0]['rows'][0][1], ...array_slice($sections[0]['rows'][0], 4, 5)]);
-        $this->assertSame('ผู้ถือ License', $report->sheetTitle());
+        $this->assertSame('ข้อมูลดิบ', $report->sheetTitle());
     }
 
     public function test_searching_a_holder_lists_that_holder_not_every_holder_of_their_software(): void

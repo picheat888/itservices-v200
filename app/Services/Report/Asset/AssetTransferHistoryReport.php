@@ -8,12 +8,12 @@ use App\Models\Asset\AssetTransfer;
 use App\Models\Employee\Employee;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -457,7 +457,7 @@ class AssetTransferHistoryReport extends TabularReport
             [
                 'title' => 'แยกตามเดือน',
                 'headings' => ['เดือน', 'ส่งมอบ', 'รับคืน', 'เรียกคืน', 'ย้ายที่ตั้ง'],
-                'rows' => array_map(fn (array $m) => [DateDisplay::monthYear($m['month']), $m['handover'], $m['return'], $m['recall'], $m['relocate']], $b['months']),
+                'rows' => array_map(fn (array $m) => [CellDate::month($m['month']), $m['handover'], $m['return'], $m['recall'], $m['relocate']], $b['months']),
             ],
             [
                 'title' => 'การกดรับมอบ',
@@ -491,7 +491,7 @@ class AssetTransferHistoryReport extends TabularReport
                     $w['code'], $w['brand'], $w['model'], $w['status'] === 'pending_acceptance' ? 'รอกดรับ' : 'รอรับคืน',
                     $w['holder'] ? $name($w['holder']['name'], $w['holder']['name_th'], '')." ({$w['holder']['code']})" : $w['owner_label'],
                     isset($w['holder']['department']) ? $name($w['holder']['department']['name'], $w['holder']['department']['name_th'], '') : null,
-                    DateDisplay::cellDateTime($w['since']),
+                    CellDate::dateTime($w['since']),
                     match ($w['cause']) {
                         'handover' => 'ส่งมอบ', 'request' => 'แจ้งคืน', 'resign' => 'ลาออก', default => null,
                     },
@@ -501,7 +501,7 @@ class AssetTransferHistoryReport extends TabularReport
             [
                 'title' => 'อัปเดตสถานที่',
                 'headings' => ['วันที่', 'รหัสทรัพย์สิน', 'ยี่ห้อ', 'รุ่น', 'จาก', 'ไปยัง', 'เหตุผล', 'ผู้ดำเนินการ'],
-                'rows' => array_map(fn (array $r) => [DateDisplay::cellDateTime($r['at']), $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by_th'] ?: $r['by']], $b['relocations']),
+                'rows' => array_map(fn (array $r) => [CellDate::dateTime($r['at']), $r['code'], $r['brand'], $r['model'], $r['from'], $r['to'], $r['reason'], $r['by_th'] ?: $r['by']], $b['relocations']),
             ],
         ];
     }

@@ -107,10 +107,10 @@ abstract class TabularReport
         return array_column($ranked, 1);
     }
 
-    /** The Excel rows sheet's tab name. A report whose sheet carries every field for analysis calls it "ข้อมูลดิบ". */
+    /** The Excel rows sheet's tab name, the same in every workbook so Power BI finds the table by name. */
     public function sheetTitle(): string
     {
-        return 'รายการ';
+        return 'ข้อมูลดิบ';
     }
 
     /**

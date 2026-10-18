@@ -6,12 +6,12 @@ use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -418,7 +418,7 @@ class WarrantyExpiringReport extends TabularReport
             [
                 'title' => 'ประกันหมดรายเดือน',
                 'headings' => ['เดือน', 'ทั้งหมด', ...$statusHeadings],
-                'rows' => array_map(fn (array $m) => [DateDisplay::monthYear($m['month']), $m['total'], ...array_values($m['statuses'])], $breakdown['months']),
+                'rows' => array_map(fn (array $m) => [CellDate::month($m['month']), $m['total'], ...array_values($m['statuses'])], $breakdown['months']),
             ],
             [
                 'title' => 'ประกันเหลืออีกเท่าไร',

@@ -4,12 +4,12 @@ namespace App\Services\Report\Contract;
 
 use App\Models\Contract\Contract;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -371,7 +371,7 @@ class ContractOverviewReport extends TabularReport
                     $items = collect($m['items']);
 
                     return [
-                        DateDisplay::monthYear($m['month']),
+                        CellDate::month($m['month']),
                         round((float) $items->sum('amount'), 2),
                         $items->count(),
                         ...array_map(fn (string $type) => round((float) $items->where('type', $type)->sum('amount'), 2), $types),

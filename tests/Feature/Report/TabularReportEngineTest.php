@@ -168,8 +168,7 @@ class TabularReportEngineTest extends TestCase
             ->exportReport('/api/reports/tabular/contracts.renewals/export?format=xlsx')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-renewals_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheets = $export->sheets();
-            $sheet = end($sheets);
+            $sheet = $this->rowsSheet($export);
             $row = $sheet->map($export->rows->first());
 
             return in_array('วันสิ้นสุด', $sheet->headings(), true)

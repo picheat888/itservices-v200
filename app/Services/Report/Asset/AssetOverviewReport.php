@@ -5,12 +5,12 @@ namespace App\Services\Report\Asset;
 use App\Enums\Asset\AssetSource;
 use App\Models\Asset\Asset;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -530,7 +530,7 @@ class AssetOverviewReport extends TabularReport
                 'title' => 'ตัดจำหน่าย',
                 'headings' => ['วันที่ตัดจำหน่าย', 'รหัสทรัพย์สิน', 'หมวดหมู่', 'รุ่น', 'คลัง', 'เหตุผล'],
                 'rows' => $this->writtenOff($filters)->map(fn (Asset $a) => [
-                    DateDisplay::cellDateTime($a->written_off_at),
+                    CellDate::dateTime($a->written_off_at),
                     $a->asset_code,
                     $a->category ? ($a->category->name_th ?: $a->category->name) : null,
                     $a->model?->name,

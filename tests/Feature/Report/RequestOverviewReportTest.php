@@ -399,13 +399,13 @@ class RequestOverviewReportTest extends TestCase
 
         $this->assertExportStored('Report_requests-overview_2026-09-25.xlsx', function (TabularReportExport $export) use ($notDelivered) {
             $sheets = $export->sheets();
-            $rows = end($sheets);
+            $rows = $this->rowsSheet($export);
             $headings = $rows->headings();
             $byReference = $export->rows->keyBy('reference');
             $cell = fn (ServiceRequest $r, string $heading) => $rows->map($byReference[$r->reference])[array_search($heading, $headings, true)];
             $cancel = fn (ServiceRequest $r) => [$cell($r, 'ผู้ยกเลิก'), $cell($r, 'เหตุผลที่ยกเลิก')];
 
-            return count($sheets) === 7
+            return count($sheets) === 8
                 && in_array('คอมพิวเตอร์', $rows->map($byReference[$this->r['done']->reference]), true)
                 && $cancel($this->r['cancel_reason']) === ['Somchai', 'ไม่ต้องใช้แล้ว']
                 && $cancel($this->r['cancel_plain']) === [null, null]

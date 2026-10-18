@@ -358,8 +358,7 @@ class ContractRentalsReportTest extends TestCase
             ->exportReport('/api/reports/tabular/contracts.rentals/export?format=xlsx&list=return')->assertAccepted();
 
         $this->assertExportStored('Report_contracts-rentals_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheets = $export->sheets();
-            $rows = end($sheets);
+            $rows = $this->rowsSheet($export);
             $line = $rows->map($export->rows->first());
 
             return $export->rows->count() === 3

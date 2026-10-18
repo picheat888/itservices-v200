@@ -53,6 +53,8 @@ final class ReportColumn
     /** Decimal places a number shows on the page, in the PDF and in Excel (0 = whole numbers). */
     private int $decimals = 0;
 
+    private ?string $meaning = null;
+
     public function decimals(): int
     {
         return $this->decimals;
@@ -193,6 +195,59 @@ final class ReportColumn
                 : null,
             'enum' => $raw instanceof \BackedEnum ? $raw->value : $raw,
             default => $raw,
+        };
+    }
+
+    /** The Excel sheet's cell: dates as real Excel dates (sheetFormat() shows them as ISO), the rest as exportValue(). */
+    public function sheetValue(Model $row): string|int|float|null
+    {
+        if ($this->type === 'date' || $this->type === 'datetime') {
+            $raw = ($this->resolve)($row);
+
+            return $raw instanceof CarbonInterface ? CellDate::serial($raw, $this->type === 'datetime') : null;
+        }
+
+        return $this->exportValue($row);
+    }
+
+    /** The Excel number format of this column's cells, or null for General. */
+    public function sheetFormat(): ?string
+    {
+        return match ($this->type) {
+            'money' => '#,##0.00',
+            'number', 'days_left', 'hours_left' => $this->decimals > 0 ? '#,##0.'.str_repeat('0', $this->decimals) : '#,##0',
+            'date' => CellDate::DATE_FORMAT,
+            'datetime' => CellDate::DATETIME_FORMAT,
+            default => null,
+        };
+    }
+
+    /** What the column holds, for the workbook's "คำอธิบายคอลัมน์" sheet. */
+    public function describe(string $meaning): self
+    {
+        $this->meaning = $meaning;
+
+        return $this;
+    }
+
+    public function meaning(): ?string
+    {
+        return $this->meaning;
+    }
+
+    /** The column's kind of data in Thai, for the glossary sheet. */
+    public function typeLabel(): string
+    {
+        return match ($this->type) {
+            'number' => $this->decimals > 0 ? "ตัวเลข (ทศนิยม {$this->decimals} ตำแหน่ง)" : 'ตัวเลข',
+            'money' => 'จำนวนเงิน (บาท)',
+            'date' => 'วันที่ (ปี ค.ศ. yyyy-mm-dd)',
+            'datetime' => 'วันเวลา (ปี ค.ศ. yyyy-mm-dd hh:mm)',
+            'days_left' => 'จำนวนวันนับจากวันที่ส่งออก (ติดลบ = เลยมาแล้ว)',
+            'hours_left' => 'จำนวนชั่วโมงถึงกำหนด (ติดลบ = เกินกำหนดแล้ว)',
+            'enum' => 'ค่าใดค่าหนึ่งใน: '.implode(', ', array_values(array_unique($this->exportLabels))),
+            'localized' => 'ข้อความ (ชื่อภาษาไทย ถ้าไม่มีใช้ชื่ออังกฤษ)',
+            default => 'ข้อความ',
         };
     }
 

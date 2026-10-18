@@ -219,7 +219,7 @@ class TicketOverviewExportTest extends TestCase
                 && $row['ลักษณะงาน'] === 'งานซ่อม (ช่างภายนอก)'
                 && $row['ทรัพย์สินที่เกี่ยวข้อง'] === $asset->asset_code
                 && $row['เบอร์ติดต่อกลับ'] === '0812345678'
-                && $row['รับเคสเมื่อ'] === '05/09/2026 10:00'
+                && $this->excelDate($row['รับเคสเมื่อ']) === '2026-09-05 10:00'
                 && $row['เวลาที่ใช้รับเคส (ชม.)'] === 2.0
                 && $row['ผลการรับเคสตาม SLA'] === 'เกิน SLA' // taken an hour after its response deadline
                 && $row['ผลการแก้ไขตาม SLA'] === 'ทัน SLA'
@@ -287,16 +287,21 @@ class TicketOverviewExportTest extends TestCase
         $opener = $quiet->requester->name_th ?: $quiet->requester->name;
         $this->assertExportStored('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) use ($logged, $quiet, $opener) {
             $sheet = new TicketOverviewHistorySheet($export->history);
-            $lines = $export->history->map(fn (array $e) => implode(' | ', $sheet->map($e)))->all();
+            $lines = $export->history->map(function (array $e) use ($sheet) {
+                $cells = $sheet->map($e);
+                $cells[1] = $this->excelDate($cells[1]);
+
+                return implode(' | ', $cells);
+            })->all();
 
             // Tickets in the workbook's order (the later one first), each story oldest first.
             return $lines === [
-                "{$quiet->ticket_no} | 04/09/2026 08:00 | เปิด Ticket | {$opener} | Mouse broken",
-                "{$logged->ticket_no} | 05/09/2026 08:00 | เปิด Ticket | Somchai | VPN down",
-                "{$logged->ticket_no} | 05/09/2026 09:00 | รับเคส | Tech One | ผู้รับผิดชอบ: Tech One",
-                "{$logged->ticket_no} | 05/09/2026 10:00 | บันทึกความคืบหน้า | Tech One | Restarted the gateway",
-                "{$logged->ticket_no} | 05/09/2026 11:00 | ส่งต่องาน | Tech One | จาก Tech One ให้ Tech Two",
-                "{$logged->ticket_no} | 05/09/2026 12:00 | ปิดเคส | Tech Two | สถานะ: เสร็จสิ้น",
+                "{$quiet->ticket_no} | 2026-09-04 08:00 | เปิด Ticket | {$opener} | Mouse broken",
+                "{$logged->ticket_no} | 2026-09-05 08:00 | เปิด Ticket | Somchai | VPN down",
+                "{$logged->ticket_no} | 2026-09-05 09:00 | รับเคส | Tech One | ผู้รับผิดชอบ: Tech One",
+                "{$logged->ticket_no} | 2026-09-05 10:00 | บันทึกความคืบหน้า | Tech One | Restarted the gateway",
+                "{$logged->ticket_no} | 2026-09-05 11:00 | ส่งต่องาน | Tech One | จาก Tech One ให้ Tech Two",
+                "{$logged->ticket_no} | 2026-09-05 12:00 | ปิดเคส | Tech Two | สถานะ: เสร็จสิ้น",
             ];
         });
     }

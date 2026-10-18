@@ -9,6 +9,7 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAlertLog;
 use App\Models\Contract\ContractAttachment;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
@@ -485,7 +486,7 @@ class ContractRenewalsReport extends TabularReport
                 'title' => 'สัญญาที่จะหมดในแต่ละเดือน',
                 'headings' => ['เดือน', 'จำนวนสัญญา', 'ต่อปี'],
                 'rows' => array_map(fn (array $m) => [
-                    DateDisplay::monthYear($m['month']), count($m['items']), round(array_sum(array_column($m['items'], 'yearly')), 2),
+                    CellDate::month($m['month']), count($m['items']), round(array_sum(array_column($m['items'], 'yearly')), 2),
                 ], $breakdown['months']),
             ],
             [
@@ -499,7 +500,7 @@ class ContractRenewalsReport extends TabularReport
                 'rows' => array_map(fn (array $r) => [
                     $r['code'], $r['name'], $r['vendor'] ? ($r['vendor']['name_th'] ?: $r['vendor']['name']) : null,
                     $r['kind'] === 'cancelled' ? 'ยกเลิกแล้ว' : 'สิ้นสุดแล้ว',
-                    DateDisplay::cellDate($r['closed_at']), DateDisplay::cellDate($r['end_date']), $r['gap'], $r['unpaid'], $r['reason'], $r['by'],
+                    CellDate::date($r['closed_at']), CellDate::date($r['end_date']), $r['gap'], $r['unpaid'], $r['reason'], $r['by'],
                 ], $breakdown['closed']['rows']),
             ],
         ];

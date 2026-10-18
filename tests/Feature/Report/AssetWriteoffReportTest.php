@@ -412,7 +412,8 @@ class AssetWriteoffReportTest extends TestCase
             ->assertAccepted();
 
         $this->assertExportStored('Report_assets-writeoffs_2026-09-25.xlsx', function (TabularReportExport $export) {
-            return $export->sheets()[1]->array()[0][0] === 'ส.ค. 2569';
+            // The sheet holds a real month whatever the date setting; the PDF follows the setting
+            return $this->excelDate($export->sheets()[1]->array()[0][0], 'Y-m') === '2026-08';
         });
     }
 
@@ -428,17 +429,20 @@ class AssetWriteoffReportTest extends TestCase
 
         $this->assertExportStored('Report_assets-writeoffs_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheets = $export->sheets();
-            $rows = last($sheets);
+            $rows = $this->rowsSheet($export);
+            $months = $sheets[1]->array();
+            $contract = $sheets[4]->array()[0];
 
             return $sheets[1]->title() === 'แยกตามเดือน'
-                && $sheets[1]->array() === [['ส.ค. 2026', 2, 1, 1, 0], ['ก.ย. 2026', 5, 3, 1, 1]]
+                && array_map(fn (array $m) => [$this->excelDate($m[0], 'Y-m'), ...array_slice($m, 1)], $months) === [['2026-08', 2, 1, 1, 0], ['2026-09', 5, 3, 1, 1]]
                 && $sheets[2]->title() === 'แยกตามเหตุผล'
                 && in_array(['คืนผู้ให้เช่า', 2, 0, 2], $sheets[2]->array(), true)
                 && in_array(['ไม่ระบุเหตุผล', 1, 1, 0], $sheets[2]->array(), true)
                 && $sheets[3]->title() === 'แยกตามหมวดหมู่'
                 && $sheets[3]->array()[0] === ['แล็ปท็อป', 5, 2, 3, 38000.0, 2.3, 1, 1, 0, 0]
                 && $sheets[4]->title() === 'เครื่องเช่าตามสัญญา'
-                && $sheets[4]->array()[0] === ['CT-2026-901', 'Lease CT-2026-901', 'Lease Vendor', '31/08/2026', 3, 1, 1, 1, -25, 1, 'หมดสัญญาแล้ว ต้องตามคืน']
+                && $this->excelDate($contract[3], 'Y-m-d') === '2026-08-31'
+                && [...array_slice($contract, 0, 3), ...array_slice($contract, 4)] === ['CT-2026-901', 'Lease CT-2026-901', 'Lease Vendor', 3, 1, 1, 1, -25, 1, 'หมดสัญญาแล้ว ต้องตามคืน']
                 && in_array('สัญญา', $rows->headings(), true)
                 && in_array('ประกันตอนตัดจำหน่าย', $rows->headings(), true)
                 && in_array('Serial', $rows->headings(), true);

@@ -13,12 +13,12 @@ use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
-use App\Support\DateDisplay;
 use App\Support\SearchTerms;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -578,7 +578,7 @@ class RequestOverviewReport extends TabularReport
             [
                 'title' => 'รายเดือน',
                 'headings' => ['เดือน', 'ยื่นคำขอ', 'เสร็จสิ้น'],
-                'rows' => array_map(fn (array $m) => [DateDisplay::monthYear($m['month']), $m['submitted'], $m['completed']], $b['months']),
+                'rows' => array_map(fn (array $m) => [CellDate::month($m['month']), $m['submitted'], $m['completed']], $b['months']),
             ],
             [
                 'title' => 'คำขอตามประเภทและสถานะ',

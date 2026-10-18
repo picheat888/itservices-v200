@@ -4,6 +4,7 @@ namespace App\Services\Report\Request;
 
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
+use App\Services\Report\Tabular\CellDate;
 use App\Services\Report\Tabular\Options;
 use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
@@ -410,7 +411,7 @@ class ItPendingRequestReport extends TabularReport
         };
         $line = fn (array $row, string $result) => [
             $row['code'], $row['name'], $row['department'] ? ($row['department']['name_th'] ?: $row['department']['name']) : null,
-            DateDisplay::cellDate($row['joined_at']), $result, ...array_map(fn (string $t) => $cell($row, $t), $readiness['types']),
+            CellDate::date($row['joined_at']), $result, ...array_map(fn (string $t) => $cell($row, $t), $readiness['types']),
         ];
 
         return [

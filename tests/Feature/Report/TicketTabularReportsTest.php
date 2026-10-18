@@ -282,7 +282,7 @@ class TicketTabularReportsTest extends TestCase
         // A column picked down to two still exports the sheet-only ones.
         $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.backlog/export?format=xlsx&columns[]=ticket_no&columns[]=hours_left')->assertAccepted();
         $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', function (TabularReportExport $export) {
-            $sheet = last($export->sheets());
+            $sheet = $this->rowsSheet($export);
             $headings = $sheet->headings();
             $this->assertSame(['เลขที่ Ticket', 'รายละเอียด', 'ลักษณะงาน', 'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เหลือ (ชม.)', 'สถานะ SLA'], $headings);
 
@@ -291,9 +291,9 @@ class TicketTabularReportsTest extends TestCase
             $t2 = $rows[$this->set['t2']->ticket_no];
             $t5 = $rows[$this->set['t5']->ticket_no];
             $this->assertSame('เกิน SLA', $t2['สถานะ SLA']);
-            $this->assertSame('20/09/2026 10:00', $t2['วันที่ครบกำหนด SLA ปิดเคส']);
+            $this->assertSame('2026-09-20 10:00', $this->excelDate($t2['วันที่ครบกำหนด SLA ปิดเคส']));
             $this->assertSame('ใกล้ครบ (ภายใน 24 ชม.)', $t5['สถานะ SLA']);
-            $this->assertSame('26/09/2026 10:00', $t5['วันที่ครบกำหนด SLA รับเคส']);
+            $this->assertSame('2026-09-26 10:00', $this->excelDate($t5['วันที่ครบกำหนด SLA รับเคส']));
             $this->assertSame(trim($this->set['t5']->description), $t5['รายละเอียด']);
             $this->assertSame('งานปกติ', $t5['ลักษณะงาน']);
 
@@ -302,7 +302,7 @@ class TicketTabularReportsTest extends TestCase
 
         // Every column: the case, who, where it stands, then its SLA.
         $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.backlog/export?format=xlsx')->assertAccepted();
-        $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', fn (TabularReportExport $export) => last($export->sheets())->headings() === [
+        $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', fn (TabularReportExport $export) => $this->rowsSheet($export)->headings() === [
             'เลขที่ Ticket', 'เรื่อง', 'รายละเอียด', 'หมวด', 'ลักษณะงาน', 'ความสำคัญ', 'ที่มา',
             'ผู้แจ้ง', 'แผนก', 'ผู้รับผิดชอบ',
             'สถานะ', 'วันที่แจ้ง', 'ค้างมา (วัน)',

@@ -9,24 +9,27 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 /**
- * "รายการ" sheet of any tabular report workbook: one line per row, columns straight from the
+ * "ข้อมูลดิบ" sheet of any tabular report workbook: one line per row, columns straight from the
  * report's own column definitions so the sheet can never drift from the on-screen table — plus
  * any sheet-only columns, in the report's sheet order (TabularReport::sheetColumns()).
  */
-class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnFormatting, WithHeadings, WithMapping, WithTitle
+class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnFormatting, WithEvents, WithHeadings, WithMapping, WithStrictNullComparison, WithTitle
 {
     /** @param Collection<int, Model> $rows */
     public function __construct(private TabularReport $report, private Collection $rows) {}
 
     public function title(): string
     {
-        return $this->report->sheetTitle();
+        return SheetLayout::title($this->report->sheetTitle());
     }
 
     public function collection(): Collection
@@ -35,7 +38,7 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnForm
     }
 
     /**
-     * Counts, days and hours group thousands and keep the column's decimals; money shows two. Cells stay numeric.
+     * Counts, days and hours group thousands and keep the column's decimals; money shows two; dates read as ISO. Cells stay numeric.
      *
      * @return array<string, string>
      */
@@ -43,17 +46,21 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnForm
     {
         $formats = [];
         foreach ($this->report->sheetColumns() as $i => $column) {
-            $format = match ($column->type) {
-                'money' => '#,##0.00',
-                'number', 'days_left', 'hours_left' => $column->decimals() > 0 ? '#,##0.'.str_repeat('0', $column->decimals()) : '#,##0',
-                default => null,
-            };
+            $format = $column->sheetFormat();
             if ($format !== null) {
                 $formats[Coordinate::stringFromColumnIndex($i + 1)] = $format;
             }
         }
 
         return $formats;
+    }
+
+    /**
+     * @return array<class-string, callable>
+     */
+    public function registerEvents(): array
+    {
+        return [AfterSheet::class => fn (AfterSheet $event) => SheetLayout::table($event->sheet->getDelegate())];
     }
 
     /**
@@ -70,6 +77,6 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithColumnForm
      */
     public function map($model): array
     {
-        return array_map(fn (ReportColumn $c) => $c->exportValue($model), $this->report->sheetColumns());
+        return array_map(fn (ReportColumn $c) => $c->sheetValue($model), $this->report->sheetColumns());
     }
 }
