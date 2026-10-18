@@ -83,8 +83,8 @@ export function GroupRolesTab() {
             minWidth: '14rem',
             render: (g) => (
                 <div className="flex min-w-0 items-center gap-2.5">
-                    <Users className="text-muted-foreground group-hover:text-brand h-4 w-4 shrink-0" aria-hidden />
-                    <span className="group-hover:text-brand truncate font-medium underline-offset-[3px] group-hover:underline">{g.name}</span>
+                    <Users className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
+                    <span className="truncate font-medium">{g.name}</span>
                     {g.id === defaultGroupId && (
                         <StatusBadge tone="blue" dot={false}>
                             {t('gr_default_badge')}
@@ -241,7 +241,6 @@ export function GroupRolesTab() {
                 columns={columns}
                 rows={rows}
                 rowKey={(g) => g.id}
-                rowClassName={() => 'group'}
                 searchPlaceholder={t('gr_search_ph')}
                 searchable={(g) => `${g.name} ${g.role_label ?? ''}`}
                 onRowClick={openGroup}
