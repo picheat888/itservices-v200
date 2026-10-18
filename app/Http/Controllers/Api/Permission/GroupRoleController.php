@@ -13,6 +13,7 @@ use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Permission\GroupMembershipChange;
 use App\Services\Permission\GroupRoleMemberService;
+use App\Services\Permission\RoleOptionService;
 use App\Support\RoleKeys;
 use App\Support\SuperAdmins;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -25,35 +26,37 @@ use Illuminate\Validation\ValidationException;
 class GroupRoleController extends Controller
 {
     /**
-     * Sets the group's role on the login accounts of its employees (by employee_id, then username).
+     * Sets the group's role, or the base 'user' role for a group without one, on its employees' login accounts.
      *
      * @param  array<int>  $newEmployeeIds
      */
     private function syncUserRoles(GroupRole $group, array $newEmployeeIds): void
     {
-        if (! $group->role_id || count($newEmployeeIds) === 0) {
+        $this->setAccountRoles($newEmployeeIds, $group->role_id ? (int) $group->role_id : $this->baseRoleId());
+    }
+
+    /** The base role given to anyone whose group has no role, or who has no group. */
+    private function baseRoleId(): ?int
+    {
+        return RoleKeys::find('user')?->id;
+    }
+
+    /**
+     * Sets one role on the login accounts of the employees (by employee_id, then username).
+     *
+     * @param  array<int>  $employeeIds
+     */
+    private function setAccountRoles(array $employeeIds, ?int $roleId): void
+    {
+        if ($employeeIds === []) {
             return;
         }
 
-        $usernames = Employee::whereIn('id', $newEmployeeIds)->pluck('username')->filter();
+        $usernames = Employee::whereIn('id', $employeeIds)->pluck('username')->filter();
 
-        User::where(function ($q) use ($newEmployeeIds, $usernames) {
-            $q->whereIn('employee_id', $newEmployeeIds)
+        User::where(function ($q) use ($employeeIds, $usernames) {
+            $q->whereIn('employee_id', $employeeIds)
                 ->orWhereIn('username', $usernames);
-        })->update(['role_id' => $group->role_id]);
-    }
-
-    /** Sets the login account's role for a single employee. */
-    private function setUserRole(Employee $employee, ?string $roleKey): void
-    {
-        $roleId = Role::where('key', $roleKey ?: 'user')->value('id');
-
-        User::where(function ($q) use ($employee) {
-            $q->where('employee_id', $employee->id);
-
-            if ($employee->username) {
-                $q->orWhere('username', $employee->username);
-            }
         })->update(['role_id' => $roleId]);
     }
 
@@ -125,25 +128,22 @@ class GroupRoleController extends Controller
      */
     private function fallbackOrphansToDefault(GroupRole $fromGroup, array $removedEmployeeIds): void
     {
+        // Still in another group means a move, not an orphaning
+        $orphanIds = Employee::whereIn('id', $removedEmployeeIds)
+            ->whereDoesntHave('groupRoles')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        if ($orphanIds === []) {
+            return;
+        }
+
         $defaultGroup = GroupRole::defaultForNewEmployees();
-
-        foreach ($removedEmployeeIds as $empId) {
-            $employee = Employee::find($empId);
-            if (! $employee) {
-                continue;
-            }
-
-            // Still in another group? Then this was a move, not an orphaning.
-            if ($employee->groupRoles()->exists()) {
-                continue;
-            }
-
-            if ($defaultGroup && $defaultGroup->id !== $fromGroup->id) {
-                $defaultGroup->employees()->syncWithoutDetaching([$empId]);
-                $this->setUserRole($employee, $defaultGroup->role?->key);
-            } else {
-                $this->setUserRole($employee, 'user');
-            }
+        if ($defaultGroup && $defaultGroup->id !== $fromGroup->id) {
+            $defaultGroup->employees()->attach($orphanIds);
+            $this->syncUserRoles($defaultGroup, $orphanIds);
+        } else {
+            $this->setAccountRoles($orphanIds, $this->baseRoleId());
         }
     }
 
@@ -324,15 +324,25 @@ class GroupRoleController extends Controller
         ];
     }
 
-    public function index(Request $request): JsonResponse
+    /**
+     * Ids of the groups holding the caller's own employee.
+     *
+     * @return array<int>
+     */
+    private function myGroupIds(Request $request): array
     {
-        $this->gate($request);
-
-        $mine = DB::table('group_role_employee')
+        return DB::table('group_role_employee')
             ->whereIn('employee_id', $request->user()->linkedEmployeeIds())
             ->pluck('group_role_id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    public function index(Request $request, RoleOptionService $roleOptions): JsonResponse
+    {
+        $this->gate($request);
+
+        $mine = $this->myGroupIds($request);
         $groups = GroupRole::with('role')
             ->withCount('employees')
             ->orderBy('name')
@@ -342,6 +352,8 @@ class GroupRoleController extends Controller
         return response()->json([
             'data' => $groups,
             'default_group_id' => GroupRole::defaultForNewEmployees()?->id,
+            // The roles a group can be given, for the group dialog
+            'roles' => $roleOptions->options(),
         ]);
     }
 
@@ -373,7 +385,7 @@ class GroupRoleController extends Controller
             return $group;
         }, attempts: 3);
 
-        return response()->json(['data' => $this->present($group), 'message' => 'success'], 201);
+        return response()->json(['data' => $this->present($group->load('role'), $this->myGroupIds($request)), 'message' => 'success'], 201);
     }
 
     public function update(Request $request, GroupRole $groupRole): JsonResponse
@@ -417,7 +429,10 @@ class GroupRoleController extends Controller
             return $group;
         }, attempts: 3);
 
-        return response()->json(['data' => $this->present($groupRole->load('role')->loadCount('employees')), 'message' => 'success']);
+        return response()->json([
+            'data' => $this->present($groupRole->load('role')->loadCount('employees'), $this->myGroupIds($request)),
+            'message' => 'success',
+        ]);
     }
 
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
@@ -448,7 +463,7 @@ class GroupRoleController extends Controller
     }
 
     /** Sets the default Role Group for new employees. */
-    public function setDefaultGroup(Request $request): JsonResponse
+    public function setDefaultGroup(Request $request, RoleOptionService $roleOptions): JsonResponse
     {
         $this->gate($request);
 
@@ -471,7 +486,7 @@ class GroupRoleController extends Controller
         AppSetting::put('default_employee_group_id', $groupId);
         AuditLog::record('Set default role group', $group?->name ?? '(none)', subject: $group);
 
-        return $this->index($request);
+        return $this->index($request, $roleOptions);
     }
 
     /**
@@ -525,10 +540,19 @@ class GroupRoleController extends Controller
         $all = $request->boolean('all') && $departmentId !== null;
         $perPage = max(10, min(100, (int) ($params['per_page'] ?? 20)));
 
-        return $this->memberPage($request, $service->candidates($group, $params['search'] ?? null, $departmentId, $all, $perPage));
+        $page = $service->candidates($group, $params['search'] ?? null, $departmentId, $all, $perPage);
+        // For "Everyone in {dept} (n)": who this caller may actually add
+        $extraMeta = $departmentId !== null
+            ? ['addable' => $service->addableCount($group, $params['search'] ?? null, $departmentId, $request->user())]
+            : [];
+
+        return $this->memberPage($request, $page, $extraMeta);
     }
 
-    private function memberPage(Request $request, LengthAwarePaginator $page): JsonResponse
+    /**
+     * @param  array<string, mixed>  $extraMeta
+     */
+    private function memberPage(Request $request, LengthAwarePaginator $page, array $extraMeta = []): JsonResponse
     {
         $this->flagCallerRows($request, collect($page->items())->pluck('id')->all());
 
@@ -539,6 +563,7 @@ class GroupRoleController extends Controller
                 'per_page' => $page->perPage(),
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
+                ...$extraMeta,
             ],
         ]);
     }
