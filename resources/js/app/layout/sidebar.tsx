@@ -249,6 +249,7 @@ function NarrowSidebar({ onProfile }: SidebarProps) {
     return (
         <>
             <div className="relative w-16 shrink-0">
+                <span aria-hidden="true" className="nav-drawer-shadow pointer-events-none absolute inset-y-0 left-0 z-40 w-64" />
                 <aside
                     id="app-sidebar"
                     ref={asideRef}
