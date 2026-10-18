@@ -24,7 +24,7 @@ export const permission: Dict = {
     perm_duplicate_title: 'ทำสำเนาบทบาท',
     perm_duplicate_from: 'จาก {name}',
     perm_duplicate_name: '{name} (สำเนา)',
-    perm_duplicate_note: 'คัดลอกสิทธิ์ {n} รายการที่บันทึกไว้ของ {name} ไม่รวมสมาชิก สร้างแล้วจะเปิดบทบาทใหม่ให้แก้สิทธิ์ต่อได้ทันที',
+    perm_duplicate_note: 'คัดลอกสิทธิ์ {n} รายการที่บันทึกไว้ของ {name} ไม่รวมสมาชิก\nสร้างแล้วจะเปิดบทบาทใหม่ให้แก้สิทธิ์ต่อได้ทันที',
     role_del_blocked_title: 'ลบ Template นี้ไม่ได้',
     role_del_blocked_ack: 'เข้าใจแล้ว',
     role_del_blocked_system: 'เป็น Template ของระบบ ลบไม่ได้',

@@ -129,7 +129,7 @@ export function RoleModal({
                     </Field>
                     <ColorSwatchPicker label={t('perm_role_color')} showLabel value={color} onChange={setColor} />
                     {source && (
-                        <p className="text-muted-foreground border-border border-t pt-3 text-[13px] text-pretty">
+                        <p className="text-muted-foreground border-border mt-4 border-t pt-3 text-[13px] whitespace-pre-line">
                             {t('perm_duplicate_note')
                                 .replace('{n}', fmtN(mode.kind === 'duplicate' ? mode.savedCount : 0))
                                 .replace('{name}', source.label)}
