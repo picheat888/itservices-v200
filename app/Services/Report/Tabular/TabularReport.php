@@ -323,6 +323,33 @@ abstract class TabularReport
     }
 
     /**
+     * What each summary tile counts, by tile key, for the PDF's explanation page — the page's own
+     * ⓘ text where it has one. None by default.
+     *
+     * @return array<string, string>
+     */
+    public function summaryMeanings(): array
+    {
+        return [];
+    }
+
+    /**
+     * How this report counts, as short lines for the PDF's explanation page. Reports add their own
+     * rules (an SLA goal, a valuation method) after these.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<string>
+     */
+    public function countingNotes(array $filters): array
+    {
+        return [
+            'เวลาทั้งหมดเป็นเวลาประเทศไทย',
+            '"ข้อมูล ณ" คือเวลาที่ระบบดึงข้อมูลมาสร้างไฟล์นี้ ตัวเลขที่บอกว่า "ตอนนี้" นับ ณ เวลานั้น',
+            'รายการใน PDF แสดงไม่เกิน '.number_format(TabularReportExporter::PDF_ROW_LIMIT).' แถว รายการครบทุกแถวอยู่ในไฟล์ Excel ของรายงานเดียวกัน',
+        ];
+    }
+
+    /**
      * A section's headings as both files print them: money columns end in "(บาท)".
      *
      * @param  array{headings: list<string>, money?: list<int>}  $section

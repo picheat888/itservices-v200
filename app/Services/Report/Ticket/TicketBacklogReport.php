@@ -160,6 +160,11 @@ class TicketBacklogReport extends TabularReport
         return TicketMetrics::liveSlaState($ticket, now());
     }
 
+    public function countingNotes(array $filters): array
+    {
+        return [...parent::countingNotes($filters), 'เกิน SLA = Ticket ที่ยังไม่ปิดและเลยกำหนดแล้ว ถ้ายังไม่มีคนรับเคสนับจากกำหนดรับเคส ถ้ารับแล้วนับจากกำหนดปิดเคส'];
+    }
+
     public function summary(Builder $query, array $filters): array
     {
         $bare = fn () => (clone $query)->setEagerLoads([])->reorder();

@@ -90,6 +90,7 @@ class TabularReportExporter
             'total' => $total,
             'company' => $company,
             'documentNo' => $documentNo,
+            'countingNotes' => $report->countingNotes($filters),
             'printedBy' => $viewer->name,
             'printedAt' => $printedAt,
         ])->setPaper('a4', $report->pdfOrientation());
