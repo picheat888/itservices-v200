@@ -9,7 +9,7 @@ import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface Column<T> {
     key: string;
@@ -55,8 +55,12 @@ interface DataTableProps<T> {
     searchPlaceholder?: string;
     rowKey: (row: T) => string | number;
     onRowClick?: (row: T) => void;
+    /** With onRowClick: which rows open on click (default all); the rest are plain rows. */
+    isRowClickable?: (row: T) => boolean;
     /** Extra classes for a single row — for marking rows that need to stand out (e.g. a left accent). */
     rowClassName?: (row: T) => string | undefined;
+    /** Detail drawn in a full-width row under a row (an expanded row); null or undefined draws nothing. */
+    renderExpanded?: (row: T) => React.ReactNode;
     /** Hide the built-in pagination bar — use when the parent handles server-side pagination */
     hidePagination?: boolean;
     /** Content rendered on the right of the search row (e.g. an Add button). */
@@ -126,7 +130,9 @@ export function DataTable<T>({
     searchPlaceholder,
     rowKey,
     onRowClick,
+    isRowClickable,
     rowClassName,
+    renderExpanded,
     hidePagination,
     actions,
     filters,
@@ -382,40 +388,53 @@ export function DataTable<T>({
                             </tr>
                         )}
                         {!loading &&
-                            pageRows.map((row) => (
-                                <tr
-                                    key={rowKey(row)}
-                                    onClick={() => onRowClick?.(row)}
-                                    data-row-click={onRowClick ? '' : undefined}
-                                    // Clickable rows are reachable by Tab and open on Enter / Space.
-                                    tabIndex={onRowClick ? 0 : undefined}
-                                    onKeyDown={onRowClick ? (e) => onRowKeyDown(e, row) : undefined}
-                                    className={cn(
-                                        // border-b-0 on the last row, NOT border-0: the latter zeroes every
-                                        // side, which silently ate the left accent a rowClassName had set.
-                                        'border-border/60 border-b last:border-b-0',
-                                        onRowClick &&
-                                            'row-hover focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
-                                        rowClassName?.(row),
-                                    )}
-                                >
-                                    {columns.map((c) => (
-                                        <td
-                                            key={c.key}
-                                            style={stickyStyle(c)}
+                            pageRows.map((row) => {
+                                const clickable = !!onRowClick && (isRowClickable?.(row) ?? true);
+                                const expanded = renderExpanded?.(row);
+                                return (
+                                    <Fragment key={rowKey(row)}>
+                                        <tr
+                                            onClick={clickable ? () => onRowClick?.(row) : undefined}
+                                            data-row-click={clickable ? '' : undefined}
+                                            // Clickable rows are reachable by Tab and open on Enter / Space.
+                                            tabIndex={clickable ? 0 : undefined}
+                                            onKeyDown={clickable ? (e) => onRowKeyDown(e, row) : undefined}
                                             className={cn(
-                                                'px-[var(--row-px)] py-[var(--row-py)]',
-                                                alignClass(c.align),
-                                                c.className,
-                                                hideClass(c),
-                                                stickyClass(c, false),
+                                                // border-b-0 on the last row, NOT border-0: the latter zeroes every
+                                                // side, which silently ate the left accent a rowClassName had set.
+                                                'border-border/60 border-b last:border-b-0',
+                                                clickable &&
+                                                    'row-hover focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
+                                                rowClassName?.(row),
                                             )}
                                         >
-                                            {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
+                                            {columns.map((c) => (
+                                                <td
+                                                    key={c.key}
+                                                    style={stickyStyle(c)}
+                                                    className={cn(
+                                                        'px-[var(--row-px)] py-[var(--row-py)]',
+                                                        alignClass(c.align),
+                                                        c.className,
+                                                        hideClass(c),
+                                                        stickyClass(c, false),
+                                                    )}
+                                                >
+                                                    {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                        {expanded != null && expanded !== false && (
+                                            <tr className="border-border/60 border-b last:border-b-0">
+                                                <td colSpan={columns.length} className="p-0">
+                                                    {/* Pinned to the visible scroller width, like the empty state */}
+                                                    <div className="sticky left-0 box-border w-[100cqw] max-w-full">{expanded}</div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
                         {/* Fixed / fill height: pad short pages with empty rows so the table height
                             (and the pagination bar below it) never shifts between pages, and the last
                             page doesn't leave a big gap under the final row. In fillHeight mode each
