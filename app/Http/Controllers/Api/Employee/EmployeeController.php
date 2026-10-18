@@ -887,6 +887,9 @@ class EmployeeController extends Controller
     public function destroy(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.delete'), 403);
+        if (in_array($employee->id, $request->user()->linkedEmployeeIds(), true)) {
+            return response()->json(['message' => 'own_account', 'code' => 'own_account_delete'], 403);
+        }
         if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
             return response()->json(['message' => 'super_account'], 403);
         }
