@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { create } from 'zustand';
 
-// The app's one toast queue (bottom-right). Callable outside React via useToastStore.getState().push().
+// The app's one toast queue (top-right). Callable outside React via useToastStore.getState().push().
 
 export type ToastTone = 'success' | 'error' | 'warning' | 'info';
 
