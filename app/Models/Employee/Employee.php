@@ -6,6 +6,7 @@ use App\Enums\Employee\EmployeeStatus;
 use App\Models\Concerns\RecordsActors;
 use App\Models\Permission\GroupRole;
 use App\Models\User;
+use App\Support\SuperAdmins;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Storage;
 class Employee extends Model
 {
     use RecordsActors;
+
+    // Set by rememberSuperAdmin()
+    private ?bool $superAdminFlag = null;
 
     protected $fillable = [
         'code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'photo_path',
@@ -165,10 +169,16 @@ class Employee extends Model
         return $this->user;
     }
 
-    /** True when this employee's linked login account holds the super (Administrator) role. */
+    /** True when only a Super admin may manage this employee, see SuperAdmins::protectsEmployee(). */
     public function isSuperAdmin(): bool
     {
-        return $this->user?->isSuper() ?? false;
+        return $this->superAdminFlag ?? SuperAdmins::protectsEmployee($this);
+    }
+
+    /** Stores a flag read in bulk by SuperAdmins::protectedEmployeeIds(), so lists skip the per-row query. */
+    public function rememberSuperAdmin(bool $isSuperAdmin): void
+    {
+        $this->superAdminFlag = $isSuperAdmin;
     }
 
     /**

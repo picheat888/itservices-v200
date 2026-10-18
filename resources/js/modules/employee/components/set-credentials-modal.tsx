@@ -158,6 +158,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
             } else if (data?.errors?.role?.[0] === 'no_role_configured') {
                 // A code, not a sentence (see EmployeeService::NO_ROLE_CONFIGURED)
                 showFormError(t('cred_err_no_role'));
+            } else if (data?.message === 'super_account') {
+                showFormError(t('cred_err_super_account'));
             } else {
                 showFormError(data?.message ?? t('cred_err_generic'));
             }

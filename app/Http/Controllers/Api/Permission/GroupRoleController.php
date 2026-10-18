@@ -200,32 +200,7 @@ class GroupRoleController extends Controller
      */
     private function touchesASuperAdmin(array $employeeIds): bool
     {
-        if (count($employeeIds) === 0) {
-            return false;
-        }
-
-        $employees = Employee::with('groupRoles.role')->whereIn('id', $employeeIds)->get();
-        $inSuperGroup = $employees->contains(
-            fn (Employee $employee) => $employee->groupRoles->contains(fn (GroupRole $group) => UserRole::isSuperKey($group->role?->key))
-        );
-        if ($inSuperGroup) {
-            return true;
-        }
-
-        $superRoleId = SuperAdmins::roleId();
-        if ($superRoleId === null) {
-            return false;
-        }
-
-        // Same account match as syncUserRoles
-        $usernames = $employees->pluck('username')->filter();
-
-        return User::where('role_id', $superRoleId)
-            ->where(function ($q) use ($employeeIds, $usernames) {
-                $q->whereIn('employee_id', $employeeIds)
-                    ->orWhereIn('username', $usernames);
-            })
-            ->exists();
+        return SuperAdmins::protectedEmployeeIds($employeeIds) !== [];
     }
 
     /**

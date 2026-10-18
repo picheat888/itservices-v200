@@ -763,7 +763,7 @@ class EmployeeController extends Controller
 
     public function update(StoreEmployeeRequest $request, Employee $employee): JsonResponse
     {
-        // Only a super admin may edit an employee whose login account is a super admin.
+        // Super admin employees are edited by a Super admin only
         abort_if(
             $employee->isSuperAdmin() && ! $request->user()?->isSuper(),
             403,
@@ -777,19 +777,14 @@ class EmployeeController extends Controller
         return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->additional(['message' => 'success'])->response();
     }
 
-    /** Resets the linked system account password to the employee's code. Returns the new password. */
-    /**
-     * Manage an existing login account: change the username and/or reset the password.
-     * Field-level permissions — username requires employees.set_credentials, password
-     * reset requires employees.reset_password. Replaces the old reset-password endpoint.
-     */
+    /** Renames an existing login (employees.set_credentials) and/or resets its password (employees.reset_password). */
     public function updateCredentials(Request $request, Employee $employee): JsonResponse
     {
         $user = $employee->user;
         if (! $user) {
             return response()->json(['message' => 'no_account'], 422);
         }
-        if ($user->isSuper() && ! $request->user()->isSuper()) {
+        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
             return response()->json(['message' => 'super_account'], 403);
         }
 
@@ -834,17 +829,17 @@ class EmployeeController extends Controller
         return response()->json(array_filter(['message' => 'success', 'new_password' => $newPassword]));
     }
 
-    /**
-     * Provisions a login account (username + password) for an employee who
-     * does not have one yet. Only accessible to users with the
-     * employees.set_credentials permission.
-     */
+    /** Provisions a login account for an employee who has none yet (employees.set_credentials). */
     public function credentials(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.set_credentials'), 403);
 
         if ($employee->user()->exists()) {
             return response()->json(['message' => 'Employee already has a login account.'], 422);
+        }
+        // An Administrator-group member's new login would be super
+        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
+            return response()->json(['message' => 'super_account'], 403);
         }
 
         $this->normalizeUsername($request);
@@ -904,9 +899,11 @@ class EmployeeController extends Controller
         $label = "{$employee->name} ({$employee->code})";
         $deletedAccount = $employee->user?->username;
 
-        SuperAdmins::keepAtLeastOne(fn () => $this->service->delete($employee));
-        // Audit names the login that went with them
-        AuditLog::recordDeleted('Deleted employee', $label, $employee, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
+        SuperAdmins::keepAtLeastOne(function () use ($employee, $label, $deletedAccount) {
+            $this->service->delete($employee);
+            // Audit names the login that went with them
+            AuditLog::recordDeleted('Deleted employee', $label, $employee, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
+        });
 
         return response()->json(['message' => 'success']);
     }
