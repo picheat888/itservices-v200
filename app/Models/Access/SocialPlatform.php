@@ -25,7 +25,7 @@ class SocialPlatform extends Model
             return null;
         }
 
-        return route('files.social-logo', ['socialPlatform' => $this, 'v' => substr(sha1($this->logo_path), 0, 8)]);
+        return route('files.social-logo', ['socialPlatform' => $this, 'v' => substr(sha1($this->logo_path), 0, 8)], false);
     }
 
     protected static function booted(): void

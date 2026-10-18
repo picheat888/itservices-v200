@@ -31,6 +31,6 @@ class RequestAttachment extends Model
     /** Authenticated URL the browser can open/download the file from. */
     public function url(): string
     {
-        return route('files.request-attachment', $this);
+        return route('files.request-attachment', $this, false);
     }
 }
