@@ -88,7 +88,34 @@ class GroupRoleController extends Controller
     /** Re-reads the group under a row lock, so two saves of one group run one after the other. */
     private function lockGroup(GroupRole $group): GroupRole
     {
-        return GroupRole::with('role')->lockForUpdate()->findOrFail($group->id);
+        return GroupRole::lockForUpdate()->findOrFail($group->id);
+    }
+
+    /**
+     * The group's members, read under lock.
+     *
+     * @return array<int>
+     */
+    private function lockMembers(GroupRole $group): array
+    {
+        return DB::table('group_role_employee')
+            ->where('group_role_id', $group->id)
+            ->lockForUpdate()
+            ->pluck('employee_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Locks the group rows these employees sit in now, before the write moves them out.
+     *
+     * @param  array<int>  $employeeIds
+     */
+    private function lockMemberships(array $employeeIds): void
+    {
+        if ($employeeIds !== []) {
+            DB::table('group_role_employee')->whereIn('employee_id', $employeeIds)->lockForUpdate()->pluck('group_role_id');
+        }
     }
 
     /**
@@ -332,6 +359,8 @@ class GroupRoleController extends Controller
         $this->guardGrantCeiling($request, $role, $employeeIds !== []);
 
         $group = SuperAdmins::keepAtLeastOne(function () use ($data, $role, $employeeIds) {
+            $this->lockMemberships($employeeIds);
+
             $rolesBefore = $this->accountRoles($employeeIds);
             $group = GroupRole::create(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($group, $employeeIds);
@@ -341,7 +370,7 @@ class GroupRoleController extends Controller
             AuditLog::record('Created role group', $group->name, $details ?: null, subject: $group);
 
             return $group;
-        });
+        }, attempts: 3);
 
         return response()->json(['data' => $this->present($group), 'message' => 'success'], 201);
     }
@@ -354,8 +383,10 @@ class GroupRoleController extends Controller
         $this->guardRole($data, $role);
 
         $groupRole = SuperAdmins::keepAtLeastOne(function () use ($request, $groupRole, $data, $role) {
+            // Locks before any plain read
             $group = $this->lockGroup($groupRole);
-            $change = GroupMembershipChange::from($data, $this->memberIds($group));
+            $change = GroupMembershipChange::from($data, $this->lockMembers($group));
+            $this->lockMemberships($change->added);
             $roleChanges = (int) $group->role_id !== (int) $role?->id;
 
             $this->guardSuperGroup($request, $group->role?->key, $role?->key);
@@ -369,7 +400,8 @@ class GroupRoleController extends Controller
             $rolesBefore = $this->accountRoles($change->touched());
             $group->update(['name' => $data['name'], 'role_id' => $role?->id]);
             $this->moveEmployeesInto($group, $change->added, $change->removed);
-            $this->syncUserRoles($group, $this->memberIds($group));
+            // A role change re-applies to everyone, else only newcomers
+            $this->syncUserRoles($group, $roleChanges ? $this->memberIds($group) : $change->added);
 
             if ($change->removed !== []) {
                 $this->fallbackOrphansToDefault($group, $change->removed);
@@ -382,7 +414,7 @@ class GroupRoleController extends Controller
             AuditLog::record('Updated role group', $group->name, $details ?: null, subject: $group);
 
             return $group;
-        });
+        }, attempts: 3);
 
         return response()->json(['data' => $this->present($groupRole->load('role')->loadCount('employees')), 'message' => 'success']);
     }
@@ -393,7 +425,7 @@ class GroupRoleController extends Controller
 
         SuperAdmins::keepAtLeastOne(function () use ($request, $groupRole) {
             $group = $this->lockGroup($groupRole);
-            $memberIds = $this->memberIds($group);
+            $memberIds = $this->lockMembers($group);
             $this->guardSuperGroup($request, $group->role?->key);
             $this->guardOwnAccess($request, $memberIds);
             $this->guardProtectedMembers($request, $memberIds);
@@ -409,7 +441,7 @@ class GroupRoleController extends Controller
             $this->fallbackOrphansToDefault($group, $memberIds);
 
             AuditLog::recordDeleted('Deleted role group', $group->name, $group, $this->membershipDetails([], $memberIds, $rolesBefore));
-        });
+        }, attempts: 3);
 
         return response()->json(['message' => 'success']);
     }

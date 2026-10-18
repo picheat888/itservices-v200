@@ -73,17 +73,22 @@ class SuperAdmins
 
     /**
      * Runs the writes in one transaction and rolls back with a 422 when they removed the last Super admin.
+     * The transaction opens with locking reads only; the writes must take their own locks before any plain read.
+     * $attempts > 1 retries on a deadlock or a changed record, for writes that re-read everything they use.
      *
      * @template T
      *
      * @param  callable(): T  $writes
      * @return T
      */
-    public static function keepAtLeastOne(callable $writes): mixed
+    public static function keepAtLeastOne(callable $writes, int $attempts = 1): mixed
     {
+        $roleId = self::roleId();
+
         try {
-            return DB::transaction(function () use ($writes) {
-                $roleId = self::roleId();
+            return DB::transaction(function () use ($writes, $roleId) {
+                // A retried attempt must not see settings cached by the rolled-back one
+                AppSetting::flushCache();
                 $hadSuperAdmin = self::lockedSuperAdminsRemain($roleId);
                 $result = $writes();
 
@@ -95,7 +100,7 @@ class SuperAdmins
                 }
 
                 return $result;
-            });
+            }, $attempts);
         } catch (Throwable $failure) {
             // Settings read inside the rolled-back writes
             AppSetting::flushCache();
