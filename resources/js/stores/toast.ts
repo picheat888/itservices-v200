@@ -20,7 +20,7 @@ export const TOAST_DURATION: Record<ToastTone, number | null> = {
 export const TOAST_MAX_TIMED = 5;
 
 /** Gap between two timed toasts entering the screen. */
-export const TOAST_STAGGER_MS = 2500;
+export const TOAST_STAGGER_MS = 1500;
 
 // Identical toasts (same key) within this window collapse into one
 const DEDUPE_MS = 1000;
