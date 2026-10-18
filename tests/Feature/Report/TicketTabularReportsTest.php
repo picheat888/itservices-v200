@@ -9,6 +9,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
@@ -253,6 +254,25 @@ class TicketTabularReportsTest extends TestCase
             $this->actingAs($user)->getJson('/api/reports/tickets/backlog/board?category=software')->assertOk()->json('data'), 'id'));
         $this->actingAs($this->userWith(['tickets.module', 'tickets.view_all', 'tickets.resolve', 'tickets.level_hardware', ...$this->reportRights('assets')]))
             ->getJson('/api/reports/tickets/backlog/board')->assertForbidden();
+    }
+
+    public function test_backlog_file_carries_the_board_cards_as_tables(): void
+    {
+        $this->seedTickets();
+        $user = $this->reader();
+        $report = ReportCatalogue::tabular('tickets.backlog');
+        $board = $report->board($user, $report->resolveFilters([]));
+
+        $sections = $report->exportSections($user, $report->resolveFilters(['sla' => 'over_sla']));
+
+        $this->assertCount(3, $sections);
+        $this->assertSame(['รวม', count($board), 100], end($sections[0]['rows']));
+        $this->assertSame(count($board), array_sum(array_column(array_slice($sections[0]['rows'], 0, -1), 1)));
+        $owners = array_column($sections[1]['rows'], 0);
+        $this->assertContains('Kankanok', $owners);
+        $this->assertContains('ยังไม่มีผู้รับ', $owners);
+        $this->assertSame(count($board), array_sum(array_column($sections[1]['rows'], 4)));
+        $this->assertSame('รวม', end($sections[2]['rows'])[0]);
     }
 
     // ── access & export ─────────────────────────────────────────────────────────────

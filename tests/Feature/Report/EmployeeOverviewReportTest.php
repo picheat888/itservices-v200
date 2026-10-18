@@ -11,6 +11,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
+use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
@@ -126,6 +127,23 @@ class EmployeeOverviewReportTest extends TestCase
         $this->assertSame('1/2', $rows['joined']['onboarding']);
         $this->assertSame(-12, $rows['joined']['upcoming_days']);
         $this->assertNull($rows['joined']['open_grants']);
+    }
+
+    public function test_file_carries_periods_departments_and_access_holders(): void
+    {
+        $this->employee('OneDay', ['joined_at' => '2026-06-01', 'status' => 'resigned', 'last_day' => '2026-06-01']);
+        $report = ReportCatalogue::tabular('employees.overview');
+        $filters = $report->resolveFilters(['from' => '2026-01-01', 'to' => '2026-10-31']);
+
+        $sections = $report->exportSections($this->userWith([...$this->reportRights('employees')]), $filters);
+
+        $this->assertCount(3, $sections);
+        $this->assertSame(1, array_sum(array_column($sections[0]['rows'], 3)));
+        $this->assertSame(1, array_sum(array_column($sections[0]['rows'], 4)));
+        $total = end($sections[1]['rows']);
+        $this->assertSame('รวม', $total[0]);
+        $this->assertSame($total[1] + $total[2] - $total[3], $total[4]);
+        $this->assertStringContainsString('ไม่ขึ้นกับช่วงวันที่', $sections[2]['title']);
     }
 
     public function test_same_day_join_and_leave_is_two_rows_and_counts_in_both(): void
