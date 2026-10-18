@@ -251,6 +251,13 @@ class StockValuationReport extends TabularReport
                     $w['name'] ?? self::NO_WAREHOUSE_TH, $w['items'], $w['qty'], $w['value'], $warehouseShare($w['value']),
                 ], $data['warehouses']),
             ];
+        } else {
+            $sections[] = [
+                'title' => 'มูลค่าตามคลัง',
+                'headings' => ['คลัง', 'จำนวนรายการ', 'ชิ้น', 'มูลค่า', 'สัดส่วน (%)'],
+                'rows' => [],
+                'empty' => 'แยกตามคลังได้เฉพาะวันนี้ วันที่ในอดีตมีเฉพาะยอดรวม',
+            ];
         }
 
         $sections[] = [

@@ -101,7 +101,7 @@
             <tr><td>{{ $L::priority($p['priority']) }}</td><td class="r">{{ $num($p['measured']) }}</td><td class="r">{{ $num($p['met']) }}</td><td class="r" style="color: {{ $slaTone($p['rate']) }}">{{ $pct($p['rate']) }}</td></tr>
         @endforeach
         </tbody></table>
-        <h2>Ticket ที่ค้าง ตามอายุ <span class="count">ณ ตอนพิมพ์</span></h2>
+        <h2>Ticket ที่ค้าง ตามอายุ <span class="count">ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่</span></h2>
         <table class="data"><thead><tr><th>อายุ</th><th class="r">Ticket</th></tr></thead><tbody>
             @foreach (['d1' => 'ไม่เกิน 1 วัน', 'd3' => '1–3 วัน', 'd7' => '3–7 วัน', 'older' => 'เกิน 7 วัน'] as $bucket => $text)
                 <tr><td>{{ $text }}</td><td class="r" @if ($bucket === 'older' && $backlog['aging'][$bucket] > 0) style="color: #dc2626" @endif>{{ $num($backlog['aging'][$bucket]) }}</td></tr>

@@ -176,13 +176,12 @@ class StockMovementReport extends TabularReport
         return $type === 'receive' && $unitCost !== null ? $qty * $unitCost : $qty * $book->averageAt($itemId, $at);
     }
 
-    /** The file headline repeats the page tiles (range, warehouse, category), plus the rows the file holds. */
+    /** The file headline repeats the page tiles (range, warehouse, category); the row count stays with the rows, which also follow type and search. */
     public function summary(Builder $query, array $filters): array
     {
         $tiles = $this->breakdown(null, $filters)['tiles'];
 
         return [
-            ReportSummary::make('total', 'ทั้งหมด', (clone $query)->setEagerLoads([])->reorder()->count()),
             ReportSummary::make('receive_qty', 'รับเข้า (ชิ้น)', $tiles['receive']['qty'], 'green'),
             ReportSummary::make('receive_value', 'มูลค่ารับเข้า', $tiles['receive']['value'], format: 'money'),
             ReportSummary::make('issue_qty', 'เบิกออก (ชิ้น)', $tiles['issue']['qty']),
@@ -485,6 +484,7 @@ class StockMovementReport extends TabularReport
 
         $sections[] = [
             'title' => 'คำขอเบิกที่ค้าง',
+            'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่และตัวกรองคลัง',
             'headings' => ['เลขที่', 'ชื่อรายการ', 'SKU', 'จำนวน', 'ผู้ขอ', 'สถานะ', 'รอตั้งแต่'],
             'rows' => array_map(fn (array $r) => [
                 $r['reference'], $r['item_name'], $r['sku'], $r['qty'], $r['requester_th'] ?: $r['requester'],

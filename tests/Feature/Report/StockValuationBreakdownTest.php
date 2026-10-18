@@ -347,8 +347,11 @@ class StockValuationBreakdownTest extends TestCase
         $this->assertSame([87.6, 12.4], array_column($today['มูลค่าตามหมวด']['rows'], 4));
         $this->assertSame(['HDD 2TB', 'LAN cable'], array_column($today['ไม่เคลื่อนไหวเกิน 90 วัน']['rows'], 1));
 
-        $past = array_column((new StockValuationReport)->exportSections($user, $report->resolveFilters(['as_of' => '2026-09-15'])), 'title');
-        $this->assertSame(['มูลค่าตามหมวด', 'ไม่เคลื่อนไหวเกิน 90 วัน'], $past);
+        // A past date keeps the warehouse block in the PDF as one line saying why it has no table.
+        $past = collect((new StockValuationReport)->exportSections($user, $report->resolveFilters(['as_of' => '2026-09-15'])))->keyBy('title');
+        $this->assertSame(['มูลค่าตามหมวด', 'มูลค่าตามคลัง', 'ไม่เคลื่อนไหวเกิน 90 วัน'], $past->keys()->all());
+        $this->assertSame([], $past['มูลค่าตามคลัง']['rows']);
+        $this->assertSame('แยกตามคลังได้เฉพาะวันนี้ วันที่ในอดีตมีเฉพาะยอดรวม', $past['มูลค่าตามคลัง']['empty']);
 
         // HDD off the shelves: the warehouse share is of the warehouses' 1,050, not the 1,210 in the tile.
         StockBalance::query()->where('stock_item_id', $this->s['hdd']->id)->delete();

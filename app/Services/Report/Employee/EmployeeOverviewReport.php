@@ -264,7 +264,8 @@ class EmployeeOverviewReport extends TabularReport
                 'rows' => $departments,
             ],
             [
-                'title' => 'ผู้ลาออกที่ยังถือสิทธิ์ ('.$f['holding']['people'].' คน '.$f['holding']['grants'].' สิทธิ์ ไม่ขึ้นกับช่วงวันที่)',
+                'title' => 'ผู้ลาออกที่ยังถือสิทธิ์ ('.$f['holding']['people'].' คน '.$f['holding']['grants'].' สิทธิ์)',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่',
                 'headings' => ['รหัสพนักงาน', 'พนักงาน', 'แผนก', 'วันทำงานวันสุดท้าย', 'ออกมาแล้ว (วัน)', 'จำนวนสิทธิ์', 'สิทธิ์ที่ยังถือ'],
                 'rows' => $holding,
             ],

@@ -86,7 +86,8 @@ class EmployeeOpenItemsReport extends TabularReport
 
         return [
             [
-                'title' => 'สรุปตามเรื่อง (ณ วันที่ส่งออก รวม '.$b['people_total'].' คน/บัญชี)',
+                'title' => 'สรุปตามเรื่อง (รวม '.$b['people_total'].' คน/บัญชี)',
+                'note' => 'ตามสถานะตอนนี้',
                 'headings' => ['เรื่อง', 'พนักงาน (คน)', 'จำนวนรายการ', 'หน่วย', 'ค้างนานสุด (วัน)'],
                 'rows' => $topics,
             ],

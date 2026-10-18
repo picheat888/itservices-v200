@@ -144,7 +144,10 @@ class PdfNumberFormatTest extends TestCase
 
         $html = view('pdf.reports.tabular', [
             'report' => $report, 'summary' => $summary,
-            'sections' => [['title' => 'S', 'headings' => ['เลขที่', 'เหลือ (วัน)', 'ทัน SLA (%)'], 'rows' => [['CT-1', -922, 81]]]],
+            'sections' => [
+                ['title' => 'S', 'headings' => ['เลขที่', 'เหลือ (วัน)', 'ทัน SLA (%)'], 'rows' => [['CT-1', -922, 81]], 'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่'],
+                ['title' => 'ตามคลัง', 'headings' => ['คลัง'], 'rows' => [], 'empty' => 'แยกตามคลังได้เฉพาะวันนี้'],
+            ],
             'scope' => [['ตัวกรอง', 'ไม่ได้กรอง']], 'rows' => collect([$row]), 'truncated' => false, 'total' => 1,
             'company' => CompanyProfile::get(), 'documentNo' => 'RPT-261018-0042', 'printedBy' => 'Admin', 'printedAt' => '18 ต.ค. 2569 20:34',
         ])->render();
@@ -159,6 +162,8 @@ class PdfNumberFormatTest extends TestCase
         $this->assertStringContainsString('81%', $html);
         $this->assertStringContainsString('เลยมา 12 วัน', $html);
         $this->assertStringContainsString('1 รายการ', $html);
+        $this->assertStringContainsString('ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่', $html);
+        $this->assertStringContainsString('แยกตามคลังได้เฉพาะวันนี้', $html);
         $this->assertStringContainsString('ผู้ตรวจทาน', $html);
         $this->assertStringContainsString('ผู้อนุมัติ', $html);
     }

@@ -1589,6 +1589,8 @@ export const report: Dict = {
     rep_cov_k_remaining_hint: 'ค่างวดที่เหลือจนถึงวันสิ้นสุดของทุกสัญญาที่ยังไม่ปิด',
     rep_cov_k_remaining_foot: 'สัญญายาวสุดถึง {month}',
     rep_cov_k_remaining_none: 'ไม่มีงวดที่เหลือ',
+    rep_cov_k_next12_file: 'จาก {n} งวด รวมสัญญาที่ยังไม่เริ่ม {waiting} สัญญา',
+    rep_cov_k_remaining_file: 'รวมสัญญาที่ยังไม่เริ่ม {waiting} สัญญา',
     rep_cov_k_top_vendor: 'ผู้ขายรายใหญ่สุด',
     rep_cov_k_top_vendor_unit: 'ของต่อปี',
     rep_cov_k_top_vendor_this: 'ผู้ขายรายนี้',

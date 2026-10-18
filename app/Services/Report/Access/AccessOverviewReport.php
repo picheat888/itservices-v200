@@ -465,6 +465,7 @@ class AccessOverviewReport extends TabularReport
             ],
             [
                 'title' => 'ผู้ลาออกที่ยังถือสิทธิ์',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่',
                 'headings' => ['รหัสพนักงาน', 'ชื่อ', 'แผนก', 'วันสุดท้าย', 'ลาออกมาแล้ว (วัน)', 'จำนวนสิทธิ์', 'สิทธิ์ที่ยังถือ'],
                 'rows' => array_map(fn (array $p) => [
                     $p['code'], $p['name'], $name($p['department'], '—'), CellDate::date($p['last_day']), $p['days'], count($p['grants']),
@@ -473,6 +474,7 @@ class AccessOverviewReport extends TabularReport
             ],
             [
                 'title' => 'Resource ที่ต้องดูแล',
+                'note' => 'ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่และตัวกรองแผนก',
                 'headings' => ['เรื่อง', 'ประเภท', 'รหัส', 'ชื่อ', 'อีเมล / Path / URL', 'แผนก', 'เจ้าของ'],
                 'rows' => [
                     ...array_map(fn (array $r) => $resourceRow($r, 'เจ้าของลาออกแล้ว'), $b['care']['owner_gone']),

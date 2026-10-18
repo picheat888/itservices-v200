@@ -34,7 +34,8 @@ class TabularReportExport implements WithMultipleSheets, WithProperties
 
         return [
             new TabularSummarySheet($this->report, $this->summary, $this->scope, $facts),
-            ...array_map(fn (array $section) => new TabularSectionSheet($section), $this->sections),
+            // A section the PDF replaces with an "empty" line has no table to give a sheet.
+            ...array_map(fn (array $section) => new TabularSectionSheet($section), array_filter($this->sections, fn (array $section) => empty($section['empty']))),
             new TabularRowsSheet($this->report, $this->rows),
             new TabularGlossarySheet($this->report),
         ];

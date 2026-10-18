@@ -147,8 +147,11 @@ class ContractOverviewReport extends TabularReport
             ReportSummary::make('cov_in_reminder', 'ใกล้หมดอายุ (สัญญา)', $tiles['in_reminder']),
             ReportSummary::make('monthly_total', 'ค่าใช้จ่ายต่อเดือน', $tiles['monthly'], format: 'money'),
             ReportSummary::make('yearly_total', 'ค่าใช้จ่ายต่อปี', $tiles['yearly'], format: 'money'),
-            ReportSummary::make('cov_next_12', 'ต้องจ่ายใน 12 เดือน', $tiles['next_12'], format: 'money'),
-            ReportSummary::make('cov_remaining', 'คงเหลือตามสัญญา', $tiles['remaining'], format: 'money'),
+            // These two count contracts not started yet, which the rows (live contracts) leave out.
+            ReportSummary::make('cov_next_12', 'ต้องจ่ายใน 12 เดือน', $tiles['next_12'], format: 'money')
+                ->withNote(['label_key' => 'rep_cov_k_next12_file', 'values' => ['n' => $tiles['next_12_bills'], 'waiting' => $tiles['not_started']]]),
+            ReportSummary::make('cov_remaining', 'คงเหลือตามสัญญา', $tiles['remaining'], format: 'money')
+                ->withNote(['label_key' => 'rep_cov_k_remaining_file', 'values' => ['waiting' => $tiles['not_started']]]),
         ];
     }
 
@@ -223,7 +226,7 @@ class ContractOverviewReport extends TabularReport
      * @param  Collection<int, array<string, mixed>>  $all
      * @param  Collection<int, array<string, mixed>>  $live
      * @param  array<string, mixed>|null  $topVendor
-     * @return array{active: int, in_reminder: int, monthly: float, yearly: float, next_12: float, next_12_bills: int, remaining: float, longest_end: ?string, top_vendor: ?array{vendor_id: ?int, name: ?string, name_th: ?string, yearly: float, share: float}}
+     * @return array{active: int, in_reminder: int, monthly: float, yearly: float, next_12: float, next_12_bills: int, not_started: int, remaining: float, longest_end: ?string, top_vendor: ?array{vendor_id: ?int, name: ?string, name_th: ?string, yearly: float, share: float}}
      */
     private static function tiles(Collection $all, Collection $live, float $yearlyTotal, ?array $topVendor): array
     {
@@ -237,6 +240,7 @@ class ContractOverviewReport extends TabularReport
             'yearly' => round($monthly * 12, 2),
             'next_12' => round((float) $all->sum(fn (array $c) => $c['upcoming'] * $c['value']), 2),
             'next_12_bills' => (int) $all->sum('upcoming'),
+            'not_started' => $all->filter(fn (array $c) => $c['contract']->start_date->gt(today()))->count(),
             'remaining' => round((float) $all->sum('remaining'), 2),
             'longest_end' => $longest ? $longest['contract']->end_date->format('Y-m-d') : null,
             'top_vendor' => $topVendor === null || $yearlyTotal <= 0 ? null : [

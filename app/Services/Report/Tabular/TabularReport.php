@@ -310,9 +310,11 @@ abstract class TabularReport
      * Extra tables the file export carries between the summary and the rows — each one its own
      * sheet in Excel and its own block in the PDF. For a report whose page draws a breakdown the
      * rows do not (one line per request type above a list of tickets). None by default.
+     * `note` (PDF only) says what the table does not follow, in the page's words ("ตามสถานะตอนนี้
+     * ไม่ขึ้นกับช่วงวันที่"); `empty` (PDF only) replaces the table with one line when it cannot be drawn.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>}>
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>, note?: string, empty?: string}>
      */
     public function exportSections(User $viewer, array $filters): array
     {

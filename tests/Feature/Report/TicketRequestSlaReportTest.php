@@ -11,6 +11,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Support\ReportCatalogue;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
@@ -345,6 +346,19 @@ class TicketRequestSlaReportTest extends TestCase
 
             return true;
         });
+    }
+
+    public function test_the_per_type_table_says_so_when_a_request_type_is_filtered(): void
+    {
+        $this->seedTickets();
+        $report = ReportCatalogue::tabular('tickets.request_sla');
+
+        $plain = $report->exportSections($this->reader(), $report->resolveFilters([]));
+        $filtered = $report->exportSections($this->reader(), $report->resolveFilters(['request_type' => 'access']));
+
+        $this->assertArrayNotHasKey('note', $plain[0]);
+        $this->assertSame('ทุกประเภทคำขอ ไม่ขึ้นกับตัวกรองประเภทคำขอ', $filtered[0]['note']);
+        $this->assertSame($plain[0]['rows'], $filtered[0]['rows']);
     }
 
     public function test_pdf_export_streams_a_pdf(): void
