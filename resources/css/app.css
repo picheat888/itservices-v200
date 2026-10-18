@@ -573,6 +573,14 @@
 [data-nav='open'] .nav-mark {
     opacity: 0;
 }
+/* Account footer: avatar over sign-out in the rail (104px), one row in the menu (69px) */
+.nav-foot {
+    height: 104px;
+    transition: height var(--nav-dur) var(--nav-ease);
+}
+[data-nav='open'] .nav-foot {
+    height: 69px;
+}
 /* 1280px and up: the sidebar pushes the page while its width animates */
 .nav-push {
     width: 4rem;
@@ -652,6 +660,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .nav-push,
+    .nav-foot,
     .nav-drawer,
     .nav-drawer-shadow,
     .nav-row-bg,

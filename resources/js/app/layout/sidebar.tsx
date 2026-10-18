@@ -193,7 +193,16 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                 ))}
             </nav>
 
-            <div className="border-sidebar-border relative h-[104px] shrink-0 border-t">
+            {settings?.company_name && (
+                <div inert={!open} className="nav-label px-4 pt-1 pb-2 text-center">
+                    <p className="text-muted-foreground truncate text-[10px]">
+                        &copy; {new Date().getFullYear()} {settings.company_name}
+                    </p>
+                </div>
+            )}
+
+            {/* Rail footer is taller (avatar over sign-out); its height animates with the menu (app.css .nav-foot) */}
+            <div className="nav-foot border-sidebar-border relative shrink-0 overflow-hidden border-t">
                 {/* Rail: avatar over sign-out */}
                 <div inert={open} className="nav-mark absolute top-3 left-3 flex flex-col items-center gap-1">
                     <button
@@ -208,8 +217,8 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                     </button>
                     <SignOutButton pending={logout.isPending} onClick={() => logout.mutate()} className="h-10 w-10" />
                 </div>
-                {/* Menu: name row, company line below */}
-                <div inert={!open} className="nav-label absolute inset-x-3 top-3 flex flex-col gap-2">
+                {/* Menu: name row */}
+                <div inert={!open} className="nav-label absolute inset-x-3 top-3">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={openProfile}
@@ -236,11 +245,6 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                             className="h-8 w-8 shrink-0 max-xl:h-10 max-xl:w-10"
                         />
                     </div>
-                    {settings?.company_name && (
-                        <p className="text-muted-foreground truncate text-center text-[10px]">
-                            &copy; {new Date().getFullYear()} {settings.company_name}
-                        </p>
-                    )}
                 </div>
             </div>
         </>
