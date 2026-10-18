@@ -240,7 +240,13 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                                 {opts?.cancelText ?? t('cancel')}
                             </Button>
                         )}
-                        <Button variant={v.btn} onClick={handleConfirm} disabled={loading || done} className="min-w-24">
+                        <Button
+                            variant={v.btn}
+                            onClick={handleConfirm}
+                            disabled={loading || done}
+                            aria-busy={loading || undefined}
+                            className="min-w-24 disabled:opacity-100"
+                        >
                             {loading ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -248,7 +254,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                                 </>
                             ) : done ? (
                                 <>
-                                    <Check className="h-4 w-4" />
+                                    <Check className="animate-in zoom-in-50 fade-in h-4 w-4 duration-300" />
                                     {defaults.done}
                                 </>
                             ) : (

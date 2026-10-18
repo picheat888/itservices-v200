@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { cn } from '@/shared/lib/utils';
 import { Button, type ButtonProps } from '@/shared/ui/button';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -8,6 +9,8 @@ interface SaveButtonProps extends ButtonProps {
     loading?: boolean;
     /** Animated check + "Saved" once it succeeds. */
     success?: boolean;
+    /** Busy label when the action is not a save (e.g. "Sending…"); defaults to "Saving…". */
+    loadingLabel?: React.ReactNode;
 }
 
 /** How long the success checkmark stays before reverting to the idle label. */
@@ -23,7 +26,7 @@ const SUCCESS_DURATION_MS = 2000;
  * save the server refused: the button said "Saved" over a failed save. A spinner
  * stopping says the request ended, not how.
  */
-export function SaveButton({ loading, success, disabled, children, ...props }: SaveButtonProps) {
+export function SaveButton({ loading, success, loadingLabel, disabled, children, className, ...props }: SaveButtonProps) {
     const t = useT();
     const [showSuccess, setShowSuccess] = useState(false);
     const wasSuccess = useRef(false);
@@ -42,13 +45,18 @@ export function SaveButton({ loading, success, disabled, children, ...props }: S
     }, [success]);
 
     return (
-        <Button disabled={loading || disabled} {...props}>
+        <Button
+            disabled={loading || disabled}
+            aria-busy={loading || undefined}
+            className={cn(loading && 'disabled:opacity-100', className)}
+            {...props}
+        >
             {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
             ) : showSuccess ? (
                 <Check className="animate-in zoom-in-50 fade-in h-4 w-4 duration-300" />
             ) : null}
-            {loading ? t('cred_saving') : showSuccess ? t('settings_saved') : (children ?? t('save'))}
+            {loading ? (loadingLabel ?? t('cred_saving')) : showSuccess ? t('settings_saved') : (children ?? t('save'))}
         </Button>
     );
 }
