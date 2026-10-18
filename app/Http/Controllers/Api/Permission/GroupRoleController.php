@@ -158,7 +158,7 @@ class GroupRoleController extends Controller
 
         return response()->json([
             'data' => $groups,
-            'default_group_id' => (int) AppSetting::get('default_employee_group_id', 0) ?: null,
+            'default_group_id' => GroupRole::defaultForNewEmployees()?->id,
         ]);
     }
 

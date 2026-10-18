@@ -356,12 +356,7 @@ class EmployeeImportService
     {
         $group = GroupRole::defaultForNewEmployees();
 
-        // Codes for the blank rows are minted here rather than row by row by the model,
-        // because the generator counts from max(id) and cannot see the codes THIS file
-        // types in by hand: left to itself it hands a blank row a code another row of
-        // the same file already claims, and the import dies on the unique key with
-        // nothing to blame it on. Reserving the file's own codes first makes that
-        // impossible instead of merely unlikely.
+        // Reserve the file's own codes before minting codes for blank rows
         $reserved = [];
         foreach ($prepared as $entry) {
             if ($entry['code'] !== '') {

@@ -166,6 +166,51 @@ class PermissionSecurityTest extends TestCase
         $this->assertSame(0, $superGroup->employees()->count());
     }
 
+    public function test_index_reports_no_default_when_a_legacy_super_group_is_stored(): void
+    {
+        $superGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        AppSetting::put('default_employee_group_id', (string) $superGroup->id);
+
+        $this->actingAs($this->userWith('system.manage_groups'))
+            ->getJson('/api/group-roles')
+            ->assertOk()
+            ->assertJsonPath('default_group_id', null);
+    }
+
+    public function test_login_account_is_refused_rather_than_given_a_legacy_super_default(): void
+    {
+        $superGroup = GroupRole::create(['name' => 'Administrators', 'role' => 'super']);
+        AppSetting::put('default_employee_group_id', (string) $superGroup->id);
+        $employee = Employee::create(['first_name' => 'Gina', 'last_name' => 'Groupless', 'email' => 'gina@inaba.co.th']);
+
+        $this->actingAs(User::factory()->create(['role' => 'super']))
+            ->postJson("/api/employees/{$employee->id}/credentials", ['username' => 'gina_g', 'password' => 'Str0ng!Passw0rd#1', 'password_confirmation' => 'Str0ng!Passw0rd#1'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.role.0', 'no_role_configured');
+
+        $this->assertDatabaseMissing('users', ['username' => 'gina_g']);
+    }
+
+    public function test_orphan_does_not_land_in_a_default_group_that_later_became_super(): void
+    {
+        Role::create(['key' => 'user', 'name' => 'User', 'is_system' => false]);
+        $defaultGroup = GroupRole::create(['name' => 'Everyone', 'role' => 'staff']);
+        $other = GroupRole::create(['name' => 'Other', 'role' => 'staff']);
+        $superCaller = User::factory()->create(['role' => 'super']);
+        $this->actingAs($superCaller)->putJson('/api/group-roles-default', ['group_id' => $defaultGroup->id])->assertOk();
+
+        $this->putJson("/api/group-roles/{$defaultGroup->id}", ['name' => 'Everyone', 'role' => 'super', 'employee_ids' => []])->assertOk();
+
+        $employee = Employee::create(['first_name' => 'Pat', 'last_name' => 'Orphan', 'email' => 'pat@inaba.co.th']);
+        $member = User::factory()->create(['role' => 'staff', 'employee_id' => $employee->id]);
+        $other->employees()->sync([$employee->id]);
+
+        $this->putJson("/api/group-roles/{$other->id}", ['name' => 'Other', 'role' => 'staff', 'employee_ids' => []])->assertOk();
+
+        $this->assertFalse($defaultGroup->employees()->where('employees.id', $employee->id)->exists());
+        $this->assertFalse($member->fresh()->isSuper());
+    }
+
     public function test_permission_save_needs_the_exact_role_key(): void
     {
         $this->actingAs($this->userWith('system.manage_roles'));

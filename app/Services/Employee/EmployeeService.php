@@ -339,29 +339,14 @@ class EmployeeService
         return GroupRole::defaultForNewEmployees();
     }
 
-    /**
-     * The role a brand-new employee ends up with — whatever sits behind the default
-     * Role Group, and nothing else. Null when no default group is set.
-     *
-     * There is deliberately no fallback to a role key. An install is entitled to define
-     * its own Role Templates and delete the seeded ones, so any key named in code is a
-     * guess about somebody else's configuration; a system that has not been told which
-     * role new people get should say so, not pick one.
-     */
+    /** The role behind the default Role Group, or null when none is usable. */
     public function defaultRoleForNewEmployee(): ?Role
     {
         return $this->defaultGroupForNewEmployee()?->role;
     }
 
     /**
-     * The role_id for this employee's login account: their own Role Group's role, else
-     * the default group's — the same answer the Add Employee form showed.
-     *
-     * Refuses when neither exists. This used to firstOrCreate a role keyed `user`, which
-     * on an install that configures its own templates conjured up a "Staff" role holding
-     * no permissions at all: an account that can sign in and reach nothing, carrying a
-     * role its administrator never made. Refusing puts the choice back with the person
-     * provisioning accounts, who is the one who can go and make it.
+     * The role_id for this employee's login account: their own Role Group's role, else the default's.
      *
      * @throws ValidationException when no Role Group answers for this employee
      */
@@ -371,8 +356,7 @@ class EmployeeService
             ?? $this->defaultGroupForNewEmployee()?->role_id;
 
         if ($roleId === null) {
-            // Code first so the SPA can translate it, English sentence second for any
-            // client that does not — the shape ChainBlockReason established.
+            // Code first for the SPA, English sentence second
             throw ValidationException::withMessages(['role' => [
                 self::NO_ROLE_CONFIGURED,
                 'This employee is in no Role Group, and no default Role Group is set. Create one on the Permissions page and mark it the default before creating login accounts.',
