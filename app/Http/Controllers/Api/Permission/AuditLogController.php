@@ -15,7 +15,7 @@ class AuditLogController extends Controller
     /** Action verb prefixes per category, matched in this order: an action belongs to the first category it matches. */
     private const CATEGORY_VERBS = [
         'auth' => ['Signed', 'Changed own', 'Updated own'],
-        'created' => ['Created', 'Registered', 'Submitted', 'Opened', 'Uploaded', 'Imported'],
+        'created' => ['Created', 'Duplicated', 'Registered', 'Submitted', 'Opened', 'Uploaded', 'Imported'],
         'updated' => ['Updated', 'Renewed', 'Set', 'Changed', 'Reset', 'Recorded', 'Transferred', 'Took', 'Assigned', 'Cancelled'],
         'deleted' => ['Deleted', 'Removed'],
         'workflow' => ['Approved', 'Rejected', 'Accepted', 'Received', 'Committed', 'Fulfilled', 'Completed', 'Resolved', 'Stock'],

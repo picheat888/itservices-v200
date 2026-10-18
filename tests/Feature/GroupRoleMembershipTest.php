@@ -77,6 +77,17 @@ class GroupRoleMembershipTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_a_default_group_id_must_be_an_integer(): void
+    {
+        GroupRole::create(['name' => 'All Staff', 'role' => 'admin']);
+
+        $this->actingAs($this->super())
+            ->putJson('/api/group-roles-default', ['group_id' => '1abc'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('group_id');
+        $this->assertNull(AppSetting::get('default_employee_group_id'));
+    }
+
     public function test_a_new_employee_ends_up_on_the_default_groups_role(): void
     {
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'admin']);

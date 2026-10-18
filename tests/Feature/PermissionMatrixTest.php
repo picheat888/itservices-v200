@@ -37,8 +37,10 @@ class PermissionMatrixTest extends TestCase
             // hasPermission('x.y') and permission:x.y (route middleware, one key per string)
             preg_match_all("/hasPermission\(\s*'([a-z_]+\.[a-z_]+)'/", $src, $calls);
             preg_match_all("/'permission:([a-z_]+\.[a-z_]+)'/", $src, $middleware);
+            // Form Request gate(): return 'x.y'
+            preg_match_all("/function\s+gate\(\)\s*:\s*string\s*\{\s*return\s+'([a-z_]+\.[a-z_]+)'/", $src, $gates);
 
-            foreach ([...$calls[1], ...$middleware[1]] as $key) {
+            foreach ([...$calls[1], ...$middleware[1], ...$gates[1]] as $key) {
                 $found[$key] ??= $short;
             }
         }
@@ -110,6 +112,8 @@ class PermissionMatrixTest extends TestCase
     {
         $enforced = $this->enforcedKeys();
         $this->assertNotEmpty($enforced, 'the scan found no permission checks at all — it has stopped working');
+        $this->assertArrayHasKey('system.manage_roles', $enforced, 'the scan no longer reads Form Request gate() keys');
+        $this->assertArrayHasKey('system.manage_groups', $enforced, 'the scan no longer reads Form Request gate() keys');
 
         $exempt = $this->modulesWithOwnTree();
         $live = $this->liveKeys();

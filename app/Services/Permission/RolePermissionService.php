@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Support\GrantCeiling;
 use App\Support\Permissions;
 use App\Support\RoleKeys;
 use Illuminate\Support\Facades\DB;
@@ -91,10 +92,7 @@ class RolePermissionService
             return;
         }
 
-        abort(response()->json([
-            'message' => 'You can only grant permissions you hold yourself.',
-            'code' => 'grant_ceiling',
-        ], 403));
+        GrantCeiling::refuse();
     }
 
     /**

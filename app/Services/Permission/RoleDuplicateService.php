@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Support\GrantCeiling;
 use App\Support\Permissions;
 use Illuminate\Support\Facades\DB;
 
@@ -21,10 +22,7 @@ class RoleDuplicateService
 
         // The same ceiling as saving a role: grant only what you hold
         if (! $caller->isSuper() && array_diff($keys, $caller->permissions()) !== []) {
-            abort(response()->json([
-                'message' => 'You can only grant permissions you hold yourself.',
-                'code' => 'grant_ceiling',
-            ], 403));
+            GrantCeiling::refuse();
         }
 
         return DB::transaction(function () use ($source, $name, $color, $keys) {

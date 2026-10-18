@@ -34,4 +34,15 @@ class AuditLogCategoryTest extends TestCase
         $this->assertSame(['Changed username', 'Updated brand'], $this->actionsIn('updated'));
         $this->assertSame(['Created brand'], $this->actionsIn('created'));
     }
+
+    public function test_a_duplicated_role_counts_as_created(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        foreach (['Duplicated role', 'Updated role'] as $action) {
+            AuditLog::create(['user_name' => 'Boss', 'action' => $action]);
+        }
+
+        $this->assertSame(['Duplicated role'], $this->actionsIn('created'));
+        $this->assertSame(['Updated role'], $this->actionsIn('updated'));
+    }
 }

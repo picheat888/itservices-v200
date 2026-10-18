@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\User;
+use App\Support\GrantCeiling;
 use App\Support\RoleKeys;
 use App\Support\SuperAdmins;
 use Illuminate\Validation\ValidationException;
@@ -99,10 +100,7 @@ class GroupRoleGuards
             return;
         }
 
-        abort(response()->json([
-            'message' => 'You can only hand out a role whose permissions you hold yourself.',
-            'code' => 'grant_ceiling',
-        ], 403));
+        GrantCeiling::refuse(GrantCeiling::HAND_OUT_MESSAGE);
     }
 
     /** Refuses a super-role group as the default group for new employees. */
