@@ -354,12 +354,13 @@ class GroupRoleController extends Controller
         $this->guardSuperGroup($request, null, $role?->key);
 
         $employeeIds = GroupMembershipChange::from($data, [])->next;
-        $this->guardOwnAccess($request, $employeeIds);
-        $this->guardProtectedMembers($request, $employeeIds);
-        $this->guardGrantCeiling($request, $role, $employeeIds !== []);
 
-        $group = SuperAdmins::keepAtLeastOne(function () use ($data, $role, $employeeIds) {
+        $group = SuperAdmins::keepAtLeastOne(function () use ($request, $data, $role, $employeeIds) {
             $this->lockMemberships($employeeIds);
+
+            $this->guardOwnAccess($request, $employeeIds);
+            $this->guardProtectedMembers($request, $employeeIds);
+            $this->guardGrantCeiling($request, $role, $employeeIds !== []);
 
             $rolesBefore = $this->accountRoles($employeeIds);
             $group = GroupRole::create(['name' => $data['name'], 'role_id' => $role?->id]);
