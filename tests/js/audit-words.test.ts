@@ -119,9 +119,15 @@ test('an action waiting for words leaves the list once both languages have one',
 });
 
 test('detail keys with no field word read with existing words', () => {
-    const words: Record<string, string> = { asset_hist_from: 'จาก', permissions: 'สิทธิ์การใช้งาน', audit_field_owner: 'ผู้ถือครอง' };
+    const words: Record<string, string> = {
+        asset_hist_from: 'จาก',
+        permissions: 'สิทธิ์การใช้งาน',
+        transfer_mode_employee: 'พนักงาน',
+        audit_field_owner: 'ผู้ถือครอง',
+    };
     const tr = (key: string) => words[key] ?? key;
     assert.equal(auditFieldText('from', tr), 'จาก');
     assert.equal(auditFieldText('permissions', tr), 'สิทธิ์การใช้งาน');
+    assert.equal(auditFieldText('employee', tr), 'พนักงาน');
     assert.equal(auditFieldText('toString', tr), 'toString');
 });
