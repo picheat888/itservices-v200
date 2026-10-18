@@ -1,5 +1,6 @@
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, GeneralCell, PermissionCard, PermissionCell, SetHead } from './permission-layout';
 
@@ -24,6 +25,7 @@ const GROUPS: { id: string; labelKey: string; keys: string[] }[] = [
 const LOGS = 'notifications.logs';
 
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => g.keys), LOGS];
+export const NOTIFICATION_COUNT: CountSpec = { master: MASTER, gated: [...GROUPS.flatMap((g) => g.keys), LOGS] };
 
 const label = (key: string, lang: Lang) => actionLabel('notifications', key.replace('notifications.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('notifications', key.replace('notifications.', ''), lang);
@@ -64,7 +66,7 @@ export function NotificationPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k)).length : 0;
+    const activeCount = countGranted(NOTIFICATION_COUNT, has).on;
     const row = (key: string) => ({
         pkey: key,
         label: label(key, lang),

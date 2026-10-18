@@ -1,6 +1,7 @@
 // Report Center permission card: the master, one switch per report domain, then export and schedule.
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { countGranted, type CountSpec } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { ChildList, ChildRow, PermissionCard, PermissionCell, SetHead, WIDE_CHILDREN } from './permission-layout';
 
@@ -17,6 +18,7 @@ const GROUPS: { id: string; labelKey: string; keys: string[] }[] = [
 ];
 
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => g.keys)];
+export const REPORT_COUNT: CountSpec = { master: MASTER, gated: GROUPS.flatMap((g) => g.keys) };
 
 const label = (key: string, lang: Lang) => actionLabel('reports', key.replace('reports.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('reports', key.replace('reports.', ''), lang);
@@ -55,7 +57,7 @@ export function ReportPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k)).length : 0;
+    const activeCount = countGranted(REPORT_COUNT, has).on;
 
     return (
         <PermissionCard

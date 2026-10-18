@@ -2,6 +2,7 @@
 
 import { translate } from '@/lang';
 import type { Lang } from '@/shared/types';
+import { countGranted } from '../lib/permission-count';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { PermissionCard, PermissionCell, PlainRow, spreadRows } from './permission-layout';
 
@@ -44,7 +45,7 @@ export function ProfilePermissionTree({
         });
     };
 
-    const activeCount = keys.filter(has).length;
+    const activeCount = countGranted({ free: keys }, has).on;
 
     return (
         <PermissionCard
