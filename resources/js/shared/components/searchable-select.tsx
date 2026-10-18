@@ -297,6 +297,7 @@ export function SearchableSelect({
         <>
             <div className="border-border border-b p-2">
                 <input
+                    name="search"
                     autoFocus
                     value={q}
                     onChange={(e) => {

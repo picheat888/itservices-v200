@@ -504,6 +504,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                         )}
                                                     >
                                                         <input
+                                                            name="issue_serials"
                                                             type="checkbox"
                                                             className="accent-brand h-4 w-4 shrink-0 rounded"
                                                             checked={checked}

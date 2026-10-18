@@ -584,6 +584,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                                         )}
                                                     >
                                                         <input
+                                                            name="transfer_serials"
                                                             type="checkbox"
                                                             className="accent-brand h-4 w-4 shrink-0 rounded"
                                                             checked={checked}
@@ -768,6 +769,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                                 )}
                                             >
                                                 <input
+                                                    name="return_serials"
                                                     type="checkbox"
                                                     className="accent-brand h-4 w-4 shrink-0 rounded"
                                                     checked={checked}

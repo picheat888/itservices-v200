@@ -43,6 +43,7 @@ export function LogoPicker({
                         <Camera className="h-3.5 w-3.5" aria-hidden />
                     </span>
                     <input
+                        name="logo"
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
                         className="sr-only"

@@ -504,6 +504,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                     )}
                                 >
                                     <input
+                                        name="size_value"
                                         ref={sizeInputRef}
                                         type="text"
                                         inputMode="decimal"

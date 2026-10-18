@@ -4,6 +4,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localLabel, localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { EmployeeOption } from '@/shared/types';
@@ -39,7 +40,6 @@ import { useOnboardingServices } from '../hooks/use-onboarding-services';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const empty = {
     firstName: '',
@@ -541,6 +541,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                             <Upload className="h-4 w-4" aria-hidden />
                                             {photo ? t('emp_photo_change') : t('emp_photo')}
                                             <input
+                                                name="photo"
                                                 type="file"
                                                 accept="image/png,image/jpeg"
                                                 className="sr-only"

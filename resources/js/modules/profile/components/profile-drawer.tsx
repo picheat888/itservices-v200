@@ -296,6 +296,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             </button>
                         )}
                         <input
+                            name="photo"
                             ref={inputRef}
                             type="file"
                             accept="image/png,image/jpeg"
