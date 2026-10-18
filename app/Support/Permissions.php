@@ -12,6 +12,12 @@ use App\Models\User;
  */
 class Permissions
 {
+    /** Master key gating the Settings module; the settings.* section keys require it. */
+    public const SETTINGS_MASTER = 'settings.access';
+
+    /** Master key gating the Permissions screen; the other system.* keys require it. */
+    public const SYSTEM_MASTER = 'system.manage_permissions';
+
     /**
      * @return array<string, list<string>>
      */
@@ -716,12 +722,6 @@ class Permissions
     }
 
     /**
-     * Master key gating the Settings module (and its sidebar entry). The
-     * per-section keys (settings.company, …) require it — like stock.module.
-     */
-    public const SETTINGS_MASTER = 'settings.access';
-
-    /**
      * Enforce the settings gate: with the master off, every per-section key is
      * dropped (a section can't be granted without access to the module). Non-
      * settings keys pass through untouched. Returns the normalized list.
@@ -737,9 +737,6 @@ class Permissions
 
         return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'settings.')));
     }
-
-    /** Master key gating the Permissions screen; the other system.* keys require it. */
-    public const SYSTEM_MASTER = 'system.manage_permissions';
 
     /**
      * Without the master every system key is dropped. Other keys pass through.

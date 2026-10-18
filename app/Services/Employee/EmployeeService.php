@@ -30,7 +30,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeService
@@ -303,11 +302,6 @@ class EmployeeService
     /** Removes a mis-entered employee and their login; call only after deletionBlockers() is empty. */
     public function delete(Employee $employee): void
     {
-        $photoPath = $employee->photo_path;
-        if ($photoPath) {
-            DB::afterCommit(fn () => Storage::disk('local')->delete($photoPath));
-        }
-
         $employee->user?->delete();
         $employee->delete();
     }

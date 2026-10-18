@@ -8,7 +8,6 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
-use App\Models\Settings\AppSetting;
 use App\Services\Employee\EmployeeService;
 use Database\Seeders\DemoSeeder;
 use RuntimeException;
@@ -156,7 +155,7 @@ final class DemoOrg implements DemoStep
     /** Puts each person into an existing Role Group; the default group for everyone else. */
     private function groups(DemoContext $ctx): void
     {
-        $default = GroupRole::find((int) AppSetting::get('default_employee_group_id', '0'))
+        $default = GroupRole::defaultForNewEmployees()
             ?? throw new RuntimeException('No default Role Group for new employees - run `php artisan db:seed` first.');
 
         foreach ($ctx->employees as $key => $employee) {
