@@ -6278,6 +6278,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - รายงาน: https://claude.ai/artifact/Tn5dLzcDPQWGXoGMhNhoX5 (สูง 1, กลาง 12, ต่ำ 20, รอตัดสิน 4)
 - รอบ 1 `ae8c1594`: ค่าจังหวะกลาง `--motion-*` / `--ease-enter` / `--ease-exit` ใน app.css; ป๊อปอัป Radix `.motion-pop` เข้า 150 ออก 120ms; Dialog/Sheet `.motion-sheet` 240/180ms (Sheet เดิม 500/300); ป๊อปอัปทำมือ 3 ตัวมีขาออกผ่าน `usePresence` (shared/hooks/use-presence.ts); `.press` / `.press-icon` ให้ปุ่มทำมือยุบตอนกด; hover แถว/Toast เฉพาะอุปกรณ์ที่ hover ได้ (ไม่ค้างบน iPad); สวิตช์สิทธิ์ใช้ transform; ไม่มี `transition-all` เหลือ
 - ตรวจในหน้าจริง: FilterPopover ปิด 120ms แล้วถอดออก, เมนู ⋮ 150/120ms, Dialog 240/180ms ตาม easing มาตรฐาน
+- รอบ 2 ฟอร์ม `95f500d3`, `7cf02b62`: `useFormError` + `FormErrorBanner` (สั่นทุกครั้งที่ส่งไม่ผ่าน) แทน toast / ข้อความที่ปักผิดช่อง / แถบทำมือ ใน 31 ฟอร์ม (ทรัพย์สิน 6, การแจ้งเตือน, สิทธิ์ 2, ตั้งค่า master data 6, พนักงาน 4, Access, Ticket 7, คำขอ 3); ปุ่มบันทึกเป็น `SaveButton` (spinner + "กำลังบันทึก…", ไม่จาง, aria-busy); error ใต้ช่องค่อย ๆ ขึ้น; ไม่มีแถบสรุป "กรอกไม่ครบ" ตามกติกาเดิม — หน้าต่างรับคืนทรัพย์สินไม่ปิดเองเมื่อพลาดแล้ว
 
 ## iPad: Sidebar ชิดขึ้น, โลโก้กลับหน้าแรก, ตัวกรองกับปุ่มเรียงใหม่, การ์ด KPI รายงานไม่มีช่องว่าง (2026-10-18)
 
