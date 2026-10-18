@@ -2,24 +2,43 @@
 
 namespace Tests;
 
+use App\Support\LogSource;
 use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\File;
 
 abstract class TestCase extends BaseTestCase
 {
-    /**
-     * Clear the notification switch cache between tests.
-     *
-     * NotificationCatalogue holds which notifications are on in a static, which is right for a request or an
-     * artisan command — both short-lived processes — but wrong for a test suite, where one
-     * process runs every test. Without this, a test that switches a notification off leaves it off
-     * for every later test in the run, and the failure lands somewhere unrelated and depends
-     * on test order.
-     */
+    /** Throwaway folder the test's log files go to, never storage/logs. */
+    protected string $logRoot = '';
+
+    /** Clears per-process statics that would leak between tests, and points logs at a temp folder. */
     protected function setUp(): void
     {
         parent::setUp();
 
         NotificationCatalogue::forgetSwitches();
+        $this->useTemporaryLogRoot();
+    }
+
+    protected function tearDown(): void
+    {
+        File::deleteDirectory($this->logRoot);
+
+        parent::tearDown();
+    }
+
+    private function useTemporaryLogRoot(): void
+    {
+        $this->logRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'itsd-test-logs-'.bin2hex(random_bytes(4));
+
+        config(['logging.root' => $this->logRoot]);
+        foreach ([LogSource::BACKEND, LogSource::QUEUE, LogSource::SCHEDULE, LogSource::FRONTEND] as $folder) {
+            config(["logging.channels.{$folder}.path" => "{$this->logRoot}/{$folder}/{$folder}.log"]);
+        }
+        config([
+            'logging.channels.single.path' => "{$this->logRoot}/laravel.log",
+            'logging.channels.emergency.path' => "{$this->logRoot}/backend/emergency.log",
+        ]);
     }
 }

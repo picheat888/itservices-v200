@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Foundation\Application;
@@ -15,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prepend(AssignRequestId::class);
         $middleware->statefulApi();
         // Apply the standard 'api' rate limiter (60/min) to every API route.
         $middleware->api(append: ['throttle:api', SetRequestLocale::class]);

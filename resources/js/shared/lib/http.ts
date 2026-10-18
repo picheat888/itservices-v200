@@ -1,4 +1,5 @@
 import { translate } from '@/lang';
+import { rememberRequestId } from '@/shared/lib/client-error-report';
 import { redirectToLogin } from '@/shared/lib/login-redirect';
 import { formatNumber } from '@/shared/lib/number';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
@@ -39,6 +40,8 @@ http.interceptors.response.use(
     (response) => response,
     (error) => {
         const status = error?.response?.status as number | undefined;
+        const requestId = (error?.response?.headers?.['x-request-id'] as string | undefined) ?? null;
+        rememberRequestId(requestId);
 
         // Idle timeout (CheckSessionTimeout)
         if (status === 401 && error.response.data?.message === 'session_expired' && !window.location.pathname.startsWith('/login')) {
@@ -121,7 +124,7 @@ http.interceptors.response.use(
                 showError('rate-limit', retryAfter);
             }
         } else if (status !== undefined && status >= 500 && !error.config?.quietServerError) {
-            showError('server');
+            showError('server', null, requestId);
         }
 
         return Promise.reject(error);

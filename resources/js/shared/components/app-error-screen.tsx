@@ -1,5 +1,5 @@
-import { formatNumber } from '@/shared/lib/number';
 import { translate } from '@/lang';
+import { formatNumber } from '@/shared/lib/number';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore, type AppErrorKind } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
@@ -20,6 +20,7 @@ const COPY: Record<AppErrorKind, { icon: ComponentType<{ className?: string }>; 
 export function AppErrorScreen() {
     const kind = useAppErrorStore((s) => s.kind);
     const retryAfter = useAppErrorStore((s) => s.retryAfter);
+    const reference = useAppErrorStore((s) => s.reference);
     const lang = useUiStore((s) => s.lang);
 
     if (!kind) return null;
@@ -36,6 +37,7 @@ export function AppErrorScreen() {
                 <h1 className="text-2xl font-bold tracking-tight">{translate(lang, title)}</h1>
                 <p className="text-muted-foreground max-w-md text-sm">{translate(lang, message)}</p>
                 {detail && <p className="text-foreground text-sm font-medium">{detail}</p>}
+                {reference && <p className="text-muted-foreground pt-1 text-xs">{translate(lang, 'err_reference').replace('{id}', reference)}</p>}
             </div>
             <Button onClick={() => window.location.reload()}>
                 <RotateCw className="h-4 w-4" />

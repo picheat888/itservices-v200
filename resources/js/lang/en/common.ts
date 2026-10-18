@@ -218,6 +218,9 @@ export const common: Dict = {
     err_throttle_body: "You've made too many requests in a short time. Please wait a moment and try again.",
     err_retry_after: 'Try again in about {n} seconds.',
     err_throttle_toast: 'Too many requests. Wait about {n} seconds and try again.',
+    err_reference: 'Reference for IT: {id}',
+    err_render_title: "This screen couldn't be shown",
+    err_render_body: 'The problem has been recorded for the IT team. Reload the page and try again.',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'Blue',

@@ -1,9 +1,22 @@
 <?php
 
+use App\Support\LogSource;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+
+$logRoot = storage_path('logs');
+$retentionDays = (int) env('LOG_DAILY_DAYS', 90);
+
+// One daily file per day in its own folder, e.g. logs/backend/backend-2026-10-18.log
+$dailyIn = fn (string $folder): array => [
+    'driver' => 'daily',
+    'path' => "{$logRoot}/{$folder}/{$folder}.log",
+    'level' => env('LOG_LEVEL', 'debug'),
+    'days' => $retentionDays,
+    'replace_placeholders' => true,
+];
 
 return [
 
@@ -31,6 +44,10 @@ return [
     |
     */
 
+    // Folders under `root` and how many days of files logs:prune keeps
+    'root' => $logRoot,
+    'retention_days' => $retentionDays,
+
     'deprecations' => [
         'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
@@ -54,9 +71,20 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single')),
+            'channels' => explode(',', env('LOG_STACK', 'source')),
             'ignore_exceptions' => false,
         ],
+
+        // Picks backend / queue / schedule by what the running process is
+        'source' => [
+            'driver' => 'custom',
+            'via' => LogSource::class,
+        ],
+
+        'backend' => $dailyIn(LogSource::BACKEND),
+        'queue' => $dailyIn(LogSource::QUEUE),
+        'schedule' => $dailyIn(LogSource::SCHEDULE),
+        'frontend' => $dailyIn(LogSource::FRONTEND),
 
         'single' => [
             'driver' => 'single',
@@ -69,7 +97,7 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            'days' => $retentionDays,
             'replace_placeholders' => true,
         ],
 
@@ -124,7 +152,7 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'path' => "{$logRoot}/backend/emergency.log",
         ],
 
     ],

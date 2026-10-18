@@ -6291,3 +6291,14 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - คลัง › นับสต็อก: คำอธิบายสั้นชิดซ้ายของแถว ปุ่ม "เริ่มนับสต็อก" ชิดขวา (`stock_count_start_hint`, ผูก `aria-describedby`)
 - การ์ด KPI ทั้ง 22 รายงาน (`summary-columns.ts`, ใช้กับ Ticket ภาพรวมด้วย): 5 ใบ แนวตั้ง 2+2+1 ใบสุดท้ายเต็มแถว, แนวนอน 3+2 ใบล่างกว้างขึ้น, ≥ 1280px 5 ใบแถวเดียวเหมือนเดิม; 3 ใบแนวตั้ง 2+1 เต็มแถว — ลองแบบ 5 ใบแถวเดียวที่ 1024px แล้วข้อความถูกตัดมากที่สุดจึงไม่ใช้; เทส `tests/js/summary-columns.test.ts`
 - ตรวจด้วยตาใน iframe 768 / 1024 (และ 1920) ทุกหน้าที่แก้ + วัด DOM ทั้ง 22 รายงานทั้งสองแนว
+
+## ระบบ log หลังขึ้น prod: แยกโฟลเดอร์ รหัสอ้างอิง error หน้าเว็บ และไฟล์สรุปให้ Claude (2026-10-18)
+
+- **โฟลเดอร์** `storage/logs/` ไฟล์รายวัน `<โฟลเดอร์>-YYYY-MM-DD.log`: `backend/` (request), `queue/` (queue worker), `schedule/` (งานตั้งเวลา + คำสั่ง artisan), `frontend/` (error หน้าเว็บ), `digest/` (ไฟล์สรุป) — channel `source` (`App\Support\LogSource`) เลือกโฟลเดอร์ตอนรัน; `backend/emergency.log` ใช้เมื่อระบบ log เองพัง; `laravel.log` เดิมไม่แตะ
+- **รหัสอ้างอิง** middleware `AssignRequestId` (global): `request_id` + method + path (ไม่เก็บ query string) ติดทุกบรรทัดผ่าน `Context` (งาน queue ได้รหัสของ request ต้นทาง), header `X-Request-Id`; หน้า error เต็มจอแสดง "รหัสอ้างอิงสำหรับแจ้ง IT"
+- **error หน้าเว็บ** `shared/lib/client-error-report.ts`: `window.onerror`, `unhandledrejection`, `vite:preloadError` (reload เองได้ 1 ครั้งใน 60 วิ), `ErrorBoundary` ครอบ `<App />` (หน้าจอ "หน้าจอนี้แสดงผลไม่ได้") → `POST /api/client-errors` (คนยังไม่ login ส่งได้, 20 ครั้ง/นาที/IP, message ≤ 1000 stack ≤ 5000, ซ้ำในหน้าเดียวส่งครั้งเดียว ไม่เกิน 10 ครั้งต่อการโหลดหน้า, ข้าม error ของ API เพราะมีใน backend แล้ว)
+- **ไฟล์สรุป** `php artisan logs:digest --days=7` (ตั้งเวลาทุกจันทร์ 07:00) → `storage/logs/digest/digest-YYYY-MM-DD.md`: จัดกลุ่ม warning ขึ้นไปต่อโฟลเดอร์ (class + file:line หรือข้อความที่แทนตัวเลข/ค่าในเครื่องหมายคำพูด), จำนวน, แรก/ล่าสุด, request id ล่าสุด, trace 12 บรรทัด; ปิดบังอีเมล ค่าใน SQL ค่า query string และ path ที่ติดตั้ง; สุขภาพระบบ (jobs ค้าง + อายุ, failed_jobs, เมลที่ส่งไม่ออก, scheduler — heartbeat ทุกนาที `SchedulerHeartbeat`, ขนาดโฟลเดอร์); การใช้งานจาก audit_logs
+- **ลบไฟล์** `logs:prune` (02:00) ลบไฟล์ที่วันที่ในชื่อเก่ากว่า `LOG_DAILY_DAYS` (ค่าเริ่มต้น 90, 0 = เก็บตลอด) ทั้ง 5 โฟลเดอร์ (`LogFileRetentionService`)
+- **เทส** เขียน log ลงโฟลเดอร์ชั่วคราว (`tests/TestCase.php`) ไม่แตะ `storage/logs`; `ClientErrorReportTest`, `LogDigestTest`, `LogFileRetentionTest`
+- **ค่า .env บน prod**: `APP_DEBUG=false`, `LOG_STACK=source`, `LOG_LEVEL=warning`, `LOG_DAILY_DAYS=90` และต้องรัน scheduler + queue worker
+- วิธีส่งให้ Claude: รัน `php artisan logs:digest` บนเครื่อง prod แล้วแนบไฟล์ `.md` จาก `storage/logs/digest/` (ไม่มี API ดึง log โดยตั้งใจ)
