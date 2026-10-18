@@ -358,6 +358,7 @@ export function EditEmployeeDialog({
                     {/* "Change" whenever a photo is on screen */}
                     {photoUrl ? t('emp_photo_change') : t('emp_photo')}
                     <input
+                        name="photo"
                         type="file"
                         accept="image/png,image/jpeg"
                         className="sr-only"

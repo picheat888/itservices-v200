@@ -1,12 +1,12 @@
 // Settings → Ticket & SLA: the tab's small parts (summary card, clock and day pickers, number field, error list, section head).
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { AlertCircle, CornerDownRight } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { TicketSlaClock } from '../api/settingsApi';
 import { SegmentedRadio } from './segmented-radio';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 export const SLA_LABEL = 'mb-1.5 block text-sm leading-none font-medium';
 export const SLA_ERROR_BORDER = 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25';
@@ -156,6 +156,7 @@ export function DayPicker({ id, days, onToggle, error }: { id: string; days: num
                 {WEEK.map((day) => (
                     <label key={day} className="relative">
                         <input
+                            name="sla_days"
                             type="checkbox"
                             checked={days.includes(day)}
                             onChange={() => onToggle(day)}

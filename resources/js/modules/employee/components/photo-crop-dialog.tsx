@@ -116,6 +116,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                 <div className="border-border flex items-center gap-2 border-t px-4 py-3">
                     <ZoomOut className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
                     <input
+                        name="zoom"
                         type="range"
                         min={1}
                         max={3}

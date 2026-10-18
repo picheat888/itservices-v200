@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -6,7 +7,6 @@ import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { OrgDir } from '../../lib/org-tree';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 interface OrgStats {
     total: number;
@@ -82,6 +82,7 @@ export function OrgChartToolbar({
                     <div className="border-border bg-card hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 transition-colors focus-within:ring-[3px]">
                         <Search className="text-muted-foreground h-3.5 w-3.5" />
                         <input
+                            name="search"
                             value={query}
                             onChange={(e) => {
                                 onQueryChange(e.target.value);

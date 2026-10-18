@@ -74,6 +74,7 @@ export function IconPicker({
                     <button type="button" aria-hidden className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
                     <div className="bg-popover absolute z-50 mt-1 w-full rounded-md border p-2 shadow-md">
                         <input
+                            name="icon_search"
                             autoFocus
                             value={q}
                             onChange={(e) => setQ(e.target.value)}

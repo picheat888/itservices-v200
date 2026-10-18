@@ -997,6 +997,7 @@ function BodyEditor({
                         <Link2 className="h-3.5 w-3.5" aria-hidden />
                     </ToolBtn>
                     <select
+                        name="insert_variable"
                         value=""
                         onChange={(e) => {
                             if (e.target.value) insertVar(e.target.value);

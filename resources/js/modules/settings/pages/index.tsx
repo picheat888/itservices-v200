@@ -1914,7 +1914,14 @@ function BrandingSection({
                                 <img src={previewUrl} alt="" className="h-full w-full object-contain" />
                             </div>
                             <div>
-                                <input ref={inputRef} type="file" accept="image/png" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+                                <input
+                                    name="logo"
+                                    ref={inputRef}
+                                    type="file"
+                                    accept="image/png"
+                                    className="hidden"
+                                    onChange={(e) => pick(e.target.files?.[0])}
+                                />
                                 <div className="flex items-center gap-2">
                                     <Button
                                         id={control.id}

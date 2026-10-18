@@ -6196,3 +6196,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
   - CSS `.nav-*` ใน `app.css` (ผูก `data-nav` / `data-narrow` ที่ AppShell), `menu-focus.ts` + `tests/js/menu-focus.test.ts`
 - WCAG / Tablet — `a757920b`: ลิงก์ "ข้ามไปที่เนื้อหา", ปุ่มแถบบนและปุ่มออกจากระบบ 40px บนจอ < 1280px, ตัวเลขเมนูจอแคบคั่นหลักพัน + ข้อความ screen reader ("พนักงาน, รอดำเนินการ 651 รายการ"), ปุ่มภาษามี `lang` และข้อความอยู่ใน `lang/`
 - จอ ≥ 1280px: Sidebar คงเดิมทุกอย่าง (ผู้ใช้ตัดสิน); ไม่ทำปัดเพื่อปิด; ข้อความ © คง 10px
+
+## ช่องกรอกทุกช่องมี id หรือ name (Chrome Issues: "A form field element should have an id or name attribute") (2026-10-18)
+- Chrome แนะนำให้ `<input>` / `<textarea>` / `<select>` มี `id` หรือ `name` เพื่อให้ autofill ทำงานถูกต้อง (ไม่ใช่ error)
+- `Input` และ `Textarea` กลางใส่ id อัตโนมัติ (`useId`) เมื่อผู้เรียกไม่ได้ส่ง `id` หรือ `name` (ตั้งหลัง props จึงชนะ `id={undefined}`); ช่องที่อยู่ใน `Field` ได้ id จาก Field เหมือนเดิม
+- ช่องที่เขียน `<input>` ตรง 17 จุดได้ `name` ที่สื่อความหมาย: ไฟล์รูป / โลโก้ / ไฟล์แนบ (`photo`, `logo`, `files`), ช่องค้นหาใน SearchableSelect / SearchSelect / ผังองค์กร / icon picker (`search`, `icon_search`), ตัวเลือกวัน SLA, serial ที่ติ๊กในคลัง, ขนาดพื้นที่ Access, ตัวแทรกตัวแปรอีเมล, zoom ตัดรูป
+- ตรวจใน Chrome: ฟอร์มสร้าง Ticket / ทรัพย์สิน / พนักงาน / สัญญา / คำขอ / สินค้าคลัง / Software (Access), หน้า Role Templates, ตั้งค่า (+ SLA), อีเมลและการแจ้งเตือน, รายงาน, Workflow — ไม่เหลือช่องที่ไม่มีทั้ง id และ name

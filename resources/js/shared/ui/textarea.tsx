@@ -4,6 +4,8 @@ import { cn } from '@/shared/lib/utils';
 
 /** Shared multi-line text field. Same rest/hover/focus language as <Input>. */
 const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(({ className, ...props }, ref) => {
+    // Neither id nor name: give it an id (set after the spread) so the browser can autofill it
+    const autoId = React.useId();
     return (
         <textarea
             ref={ref}
@@ -12,6 +14,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'tex
                 className,
             )}
             {...props}
+            id={props.id ?? (props.name ? undefined : autoId)}
         />
     );
 });

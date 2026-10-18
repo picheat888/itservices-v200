@@ -1,8 +1,8 @@
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Download, FileImage, FileText, Paperclip, UploadCloud, X } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * The file picker every upload form in the app shares: a drag-and-drop box, the
@@ -92,6 +92,7 @@ export function FileDropZone({
             <span className="text-foreground font-medium">{t('attachment_drop')}</span>
             <span className="text-muted-foreground text-[11px]">{hint}</span>
             <input
+                name="files"
                 ref={inputRef}
                 type="file"
                 multiple

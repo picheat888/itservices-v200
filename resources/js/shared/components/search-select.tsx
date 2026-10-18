@@ -212,6 +212,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className,
                         <div className="flex shrink-0 items-center border-b px-3">
                             <Search className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
                             <input
+                                name="search"
                                 ref={searchRef}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
