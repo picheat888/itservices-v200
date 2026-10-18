@@ -737,4 +737,22 @@ class Permissions
 
         return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'settings.')));
     }
+
+    /** Master key gating the Permissions screen; the other system.* keys require it. */
+    public const SYSTEM_MASTER = 'system.manage_permissions';
+
+    /**
+     * Without the master every system key is dropped. Other keys pass through.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeSystem(array $granted): array
+    {
+        if (in_array(self::SYSTEM_MASTER, $granted, true)) {
+            return $granted;
+        }
+
+        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'system.')));
+    }
 }

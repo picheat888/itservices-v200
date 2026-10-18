@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AuditLogController extends Controller
 {
@@ -23,16 +24,22 @@ class AuditLogController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('system.view_audit'), 403);
 
-        $perPage = (int) $request->query('per_page', 20);
-        $perPage = max(10, min(100, $perPage)); // clamp 10–100
+        $filters = $request->validate([
+            'search' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', Rule::in(array_keys(self::CATEGORY_VERBS))],
+            'user' => ['nullable', 'string', 'max:255'],
+            'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $perPage = (int) ($filters['per_page'] ?? 20);
 
         // Newest first; id breaks ties between entries written in the same second.
         $query = AuditLog::query()->latest()->latest('id');
 
-        SearchTerms::apply($query, $request->query('search'), ['action', 'target', 'user_name']);
+        SearchTerms::apply($query, $filters['search'] ?? null, ['action', 'target', 'user_name']);
 
         // Category filter (created / updated / deleted / workflow / auth).
-        $verbs = self::CATEGORY_VERBS[$request->query('category')] ?? null;
+        $verbs = self::CATEGORY_VERBS[$filters['category'] ?? ''] ?? null;
         if ($verbs) {
             $query->where(function ($w) use ($verbs) {
                 foreach ($verbs as $verb) {
@@ -42,7 +49,7 @@ class AuditLogController extends Controller
         }
 
         // Actor filter.
-        if ($user = $request->query('user')) {
+        if ($user = $filters['user'] ?? null) {
             $query->where('user_name', $user);
         }
 
