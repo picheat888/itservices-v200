@@ -7,7 +7,9 @@ namespace App\Services\Permission;
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
+use App\Models\User;
 use App\Support\SearchTerms;
+use App\Support\SuperAdmins;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator as Page;
@@ -26,9 +28,33 @@ class GroupRoleMemberService
     /** Active employees who are not in the group yet, with the group they sit in now; $all sends every match as one page. */
     public function candidates(?GroupRole $group, ?string $search, ?int $departmentId, bool $all, int $perPage): LengthAwarePaginator
     {
-        $query = $this->baseQuery()
-            ->with('groupRoles:id,name')
-            ->where('status', EmployeeStatus::Active->value);
+        $query = $this->candidateQuery($group, $search, $departmentId)->with('groupRoles:id,name');
+
+        if (! $all) {
+            return $query->paginate($perPage);
+        }
+
+        $everyone = $query->get();
+
+        return new Page($everyone, $everyone->count(), max(1, $everyone->count()), 1);
+    }
+
+    /** How many candidates the caller may add: never their own employee, and no Super admin unless they are one. */
+    public function addableCount(?GroupRole $group, ?string $search, ?int $departmentId, User $caller): int
+    {
+        $ids = $this->candidateQuery($group, $search, $departmentId)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $ids = array_values(array_diff($ids, $caller->linkedEmployeeIds()));
+
+        if (! $caller->isSuper()) {
+            $ids = array_diff($ids, SuperAdmins::protectedEmployeeIds($ids));
+        }
+
+        return count($ids);
+    }
+
+    private function candidateQuery(?GroupRole $group, ?string $search, ?int $departmentId): Builder
+    {
+        $query = $this->baseQuery()->where('status', EmployeeStatus::Active->value);
 
         if ($group) {
             $query->whereDoesntHave('groupRoles', fn (Builder $q) => $q->whereKey($group->id));
@@ -38,13 +64,7 @@ class GroupRoleMemberService
         }
         $this->search($query, $search, withDepartment: false);
 
-        if (! $all) {
-            return $query->paginate($perPage);
-        }
-
-        $everyone = $query->get();
-
-        return new Page($everyone, $everyone->count(), max(1, $everyone->count()), 1);
+        return $query;
     }
 
     private function baseQuery(): Builder
