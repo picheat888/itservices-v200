@@ -22,6 +22,8 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
     useEffect(() => {
         if (contract) setShown(contract);
     }, [contract]);
+    // The open contract first: the kept copy only lands a render later, and the description must be there on open
+    const named = contract ?? shown;
 
     // Reset the field each time a (different) contract opens the dialog.
     useEffect(() => {
@@ -58,10 +60,10 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                         <Ban className="text-destructive h-5 w-5" />
                         {t('contract_cancel_confirm_title')}
                     </DialogTitle>
-                    {shown && (
+                    {named && (
                         <DialogDescription className="flex flex-wrap gap-x-3">
-                            <span>{shown.name}</span>
-                            <span>{shown.code}</span>
+                            <span>{named.name}</span>
+                            <span>{named.code}</span>
                         </DialogDescription>
                     )}
                 </DialogHeader>

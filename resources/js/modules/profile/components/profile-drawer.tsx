@@ -16,7 +16,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { AtSign, Box, Briefcase, Building2, Camera, Hash, Inbox, KeyRound, Phone, Shield, Ticket, UserCheck, UserRound, Users } from 'lucide-react';
@@ -255,6 +255,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                 }}
             >
                 <DialogTitle className="sr-only">{t('profile')}</DialogTitle>
+                <DialogDescription className="sr-only">{displayName}</DialogDescription>
                 <span role="status" aria-live="polite" className="sr-only">
                     {copied ? t('cred_copied') : ''}
                 </span>

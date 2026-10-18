@@ -78,7 +78,8 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
+            <DialogContent aria-describedby={undefined}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {section ? t('edit_section') : t('add_section')}

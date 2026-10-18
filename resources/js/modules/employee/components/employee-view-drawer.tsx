@@ -7,12 +7,13 @@ import { RecordStamps } from '@/shared/components/record-stamps';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName, localPair, otherName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import {
     Briefcase,
@@ -52,7 +53,6 @@ import {
 import { accountDeleteBlockers } from '../lib/delete-account';
 import { deptColor, deptFill } from '../lib/org-tree';
 import { AccessPane, AssetsPane, IdChip, RAIL_HEADING, RailRow, RequestsPane, TicketsPane } from './employee-panes';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type DrawerTab = 'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access';
 
@@ -187,6 +187,9 @@ export function EmployeeViewDrawer({
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="flex h-[88vh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
                 <DialogTitle className="sr-only">{name}</DialogTitle>
+                <DialogDescription className="sr-only">
+                    {[emp.position, localPair(emp.department, emp.department_th, lang)].filter(Boolean).join(', ')}
+                </DialogDescription>
                 <span role="status" aria-live="polite" className="sr-only">
                     {copied ? t('cred_copied') : ''}
                 </span>

@@ -120,7 +120,8 @@ export function RoleModal({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            {/* Only a duplicate has something to describe; otherwise no description, stated explicitly */}
+            <DialogContent {...(!source && { 'aria-describedby': undefined })}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     {source && <DialogDescription>{t('perm_duplicate_from').replace('{name}', source.label)}</DialogDescription>}

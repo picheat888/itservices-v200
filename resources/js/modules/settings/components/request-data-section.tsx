@@ -371,7 +371,7 @@ function OptionModal({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            <DialogContent {...(!list && { 'aria-describedby': undefined })}>
                 <DialogHeader>
                     <DialogTitle>{option ? t('rd_edit') : t('rd_add')}</DialogTitle>
                     {list && (

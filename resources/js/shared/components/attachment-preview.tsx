@@ -87,7 +87,8 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
 
     return (
         <Dialog open={!!file} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
+            {/* The title is the file name and the body is the file: no description, stated explicitly */}
+            <DialogContent aria-describedby={undefined} className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
                 <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
                     <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{pv?.name}</DialogTitle>
                     {pv && isImage && (
