@@ -546,10 +546,10 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
             key: 'code',
             sticky: 'left',
             header: t('contract_code'),
-            width: '150px',
+            width: '104px',
             className: 'whitespace-nowrap',
             render: (c) => (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-start gap-0.5">
                     <span className="text-muted-foreground text-xs">{c.code}</span>
                     {c.id === newId && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
                 </div>
@@ -558,7 +558,7 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
         {
             key: 'name',
             header: t('contract_name'),
-            minWidth: '16rem',
+            minWidth: '15rem',
             render: (c) => (
                 <div className="min-w-0">
                     <TruncText text={c.name} className="font-medium" />
@@ -569,18 +569,18 @@ function useContractColumns(newId: number | null): Column<Contract>[] {
         {
             key: 'vendor',
             header: t('contract_vendor'),
-            width: '260px',
+            width: '220px',
             render: (c) => <TruncText text={localPair(c.vendor, c.vendor_th, lang)} />,
         },
         {
             key: 'type',
             header: t('contract_type'),
-            width: '130px',
+            width: '110px',
             className: 'whitespace-nowrap',
             render: (c) => <StatusBadge tone={CONTRACT_TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
         },
-        { key: 'start', header: t('contract_start'), width: '110px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.start) },
-        { key: 'end', header: t('contract_end'), width: '110px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.end) },
+        { key: 'start', header: t('contract_start'), width: '100px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.start) },
+        { key: 'end', header: t('contract_end'), width: '100px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.end) },
         {
             key: 'days',
             header: t('contract_days_remaining'),
