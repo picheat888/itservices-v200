@@ -340,7 +340,8 @@ class GroupRoleController extends Controller
         $this->guardOwnAccess($request, [...$addedEmployeeIds, ...$removedEmployeeIds], $oldEmployeeIds, $roleChanges);
         $this->guardProtectedMembers($request, array_values(array_unique([...$newEmployeeIds, ...$removedEmployeeIds])));
         $isDefaultGroup = GroupRole::defaultForNewEmployees()?->id === $groupRole->id;
-        $this->guardGrantCeiling($request, $role, $addedEmployeeIds !== [] || ($roleChanges && ($newEmployeeIds !== [] || $isDefaultGroup)));
+        $handsRoleOut = $addedEmployeeIds !== [] || ($roleChanges && ($newEmployeeIds !== [] || $isDefaultGroup));
+        $this->guardGrantCeiling($request, $role, $handsRoleOut);
 
         SuperAdmins::keepAtLeastOne(function () use ($groupRole, $data, $role, $newEmployeeIds, $addedEmployeeIds, $removedEmployeeIds) {
             $before = $groupRole->getOriginal();

@@ -74,6 +74,12 @@ class SuperAdmins
     {
         try {
             return DB::transaction(function () use ($writes) {
+                // Concurrent removals wait here
+                $roleId = self::roleId();
+                if ($roleId !== null) {
+                    User::where('role_id', $roleId)->lockForUpdate()->pluck('id');
+                }
+
                 $hadSuperAdmin = self::exists();
                 $result = $writes();
 
