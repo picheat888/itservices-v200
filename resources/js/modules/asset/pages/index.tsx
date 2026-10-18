@@ -19,6 +19,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
@@ -365,36 +366,15 @@ export default function AssetsPage() {
         queryFn: () => assetApi.get(openId as number),
         enabled: openId != null,
     });
+    // Opening pushes a history entry so Back closes the drawer
+    const dialogs = usePageDialogs();
     /** Open the drawer for an id alone — the transfer log knows the id, not the record. */
-    const openAssetId = (id: number) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('view', String(id));
-                return p;
-            },
-            { replace: true },
-        );
+    const openAssetId = (id: number) => dialogs.open({ view: String(id) });
     const openAsset = (a: Asset) => {
         qc.setQueryData(['asset', 'view', a.id], a);
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('view', String(a.id));
-                return p;
-            },
-            { replace: true },
-        );
+        dialogs.open({ view: String(a.id) });
     };
-    const closeAsset = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('view');
-                return p;
-            },
-            { replace: true },
-        );
+    const closeAsset = () => dialogs.close(['view']);
 
     // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the detail ?view stays under it
     const editId = toRecordId(searchParams.get('edit'));
@@ -491,40 +471,27 @@ export default function AssetsPage() {
 
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
-    const openCreate = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('add', '1');
-                return p;
-            },
-            { replace: true },
-        );
-    const writeForm = (change: (p: URLSearchParams) => void) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                change(p);
-                return p;
-            },
-            { replace: true },
-        );
+    const openCreate = () => dialogs.open({ add: '1' });
     // The clicked row opens the form at once; a link or reload fetches it
     const openEdit = (a: Asset) => {
         setEditing(a);
-        writeForm((p) => p.set('edit', String(a.id)));
+        dialogs.open({ edit: String(a.id) });
     };
-    const closeForm = () =>
-        writeForm((p) => {
-            p.delete('add');
-            p.delete('edit');
-        });
-    // A saved edit always lands on the asset's detail
-    const showSaved = () =>
-        writeForm((p) => {
-            p.delete('edit');
-            if (editId != null) p.set('view', String(editId));
-        });
+    const closeForm = () => dialogs.close(['add', 'edit']);
+    // A saved edit always lands on the asset's detail: back to it when it is underneath, else in place
+    const showSaved = () => {
+        if (editId != null && searchParams.get('view') === String(editId)) {
+            dialogs.close(['edit']);
+            return;
+        }
+        dialogs.replace(
+            (p) => {
+                p.delete('edit');
+                if (editId != null) p.set('view', String(editId));
+            },
+            ['view'],
+        );
+    };
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
     const bulkActionFor = useCallback(
@@ -1508,15 +1475,7 @@ export default function AssetsPage() {
 
             {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
                 render and said nothing. This says it instead. */}
-            <RecordMissingDialog
-                open={detailMissing || editMissing}
-                onClose={() =>
-                    writeForm((p) => {
-                        p.delete('view');
-                        p.delete('edit');
-                    })
-                }
-            />
+            <RecordMissingDialog open={detailMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <AssetDetailDrawer
                 asset={detail ?? null}
                 onClose={() => closeAsset()}

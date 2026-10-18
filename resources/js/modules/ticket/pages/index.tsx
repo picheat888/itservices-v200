@@ -15,6 +15,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -161,7 +162,7 @@ export default function TicketsPage() {
         ...(canMyTickets ? (['my'] as Tab[]) : []),
     ];
 
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     // Only a tab this reader can see counts; otherwise the first visible one (a role with no
     // ticket tabs at all still lands somewhere harmless).
@@ -199,36 +200,14 @@ export default function TicketsPage() {
         queryFn: () => ticketApi.get(openId as number),
         enabled: openId != null,
     });
-    const closeDetail = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('view');
-                return p;
-            },
-            { replace: true },
-        );
+    // Opening pushes a history entry so Back closes the dialog
+    const dialogs = usePageDialogs();
+    const closeDetail = () => dialogs.close(['view']);
 
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it.
     const adding = searchParams.get('add') != null;
-    const openCreate = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('add', '1');
-                return p;
-            },
-            { replace: true },
-        );
-    const closeCreate = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('add');
-                return p;
-            },
-            { replace: true },
-        );
+    const openCreate = () => dialogs.open({ add: '1' });
+    const closeCreate = () => dialogs.close(['add']);
 
     const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
     const [editTicket, setEditTicket] = useState<Ticket | null>(null);
@@ -274,27 +253,26 @@ export default function TicketsPage() {
     }, [editId, editSource, editFetching, editTicket?.id]);
     // A link or reload cannot open a form the menus would not offer
     const editOpen = editTicket != null && editTicket.id === editId && canEditTicket(editTicket);
-    const writeEdit = (change: (p: URLSearchParams) => void) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                change(p);
-                return p;
-            },
-            { replace: true },
-        );
     // The clicked row opens the form at once; a link or reload fetches it
     const openEditTicket = (tk: Ticket) => {
         setEditTicket(tk);
-        writeEdit((p) => p.set('edit', String(tk.id)));
+        dialogs.open({ edit: String(tk.id) });
     };
-    const closeEditTicket = () => writeEdit((p) => p.delete('edit'));
-    // A saved edit always lands on the ticket's detail
-    const showSavedTicket = () =>
-        writeEdit((p) => {
-            p.delete('edit');
-            if (editId != null) p.set('view', String(editId));
-        });
+    const closeEditTicket = () => dialogs.close(['edit']);
+    // A saved edit always lands on the ticket's detail: back to it when it is underneath, else in place
+    const showSavedTicket = () => {
+        if (editId != null && searchParams.get('view') === String(editId)) {
+            dialogs.close(['edit']);
+            return;
+        }
+        dialogs.replace(
+            (p) => {
+                p.delete('edit');
+                if (editId != null) p.set('view', String(editId));
+            },
+            ['view'],
+        );
+    };
     // Desk gates of one ticket, for the row menu
     const gatesFor = (tk: Ticket) => ({
         canTake: canTake && hasLevel(tk.category),
@@ -348,14 +326,7 @@ export default function TicketsPage() {
 
     const openDetail = (tk: Ticket) => {
         qc.setQueryData(['ticket', 'view', tk.id], tk);
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('view', String(tk.id));
-                return p;
-            },
-            { replace: true },
-        );
+        dialogs.open({ view: String(tk.id) });
     };
     // Workflow modals stack over the still-open detail drawer (kept via ?view=) and bounce
     // back to it on save/close — matching the edit-over-detail pattern of the sibling modules.
@@ -764,15 +735,7 @@ export default function TicketsPage() {
             <CreateTicketDrawer open={adding} onClose={closeCreate} />
             {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
                 render and said nothing. This says it instead. */}
-            <RecordMissingDialog
-                open={detailMissing || editMissing}
-                onClose={() =>
-                    writeEdit((p) => {
-                        p.delete('view');
-                        p.delete('edit');
-                    })
-                }
-            />
+            <RecordMissingDialog open={detailMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <TicketDetailDrawer
                 ticket={detail ?? null}
                 onClose={() => closeDetail()}

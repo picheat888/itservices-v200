@@ -16,6 +16,7 @@ import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -168,27 +169,19 @@ export default function EmployeesPage() {
     // View drawer in ?view=<id>; row clicks seed the cache for an instant open
     const qc = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
+    // Opening pushes a history entry so Back closes the drawer
+    const dialogs = usePageDialogs();
     // Only a real record id opens the drawer (never NaN)
     const openId = toRecordId(searchParams.get('view'));
     const { data: viewEmp, isError: viewEmpMissing } = useEmployee(openId);
-    const setView = (id: number | null) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                if (id == null) {
-                    p.delete('view');
-                } else {
-                    p.set('view', String(id));
-                }
-                return p;
-            },
-            { replace: true },
-        );
+    const setView = (id: number | null) => (id == null ? dialogs.close(['view', 'edit']) : dialogs.open({ view: String(id) }));
     const openEmp = (emp: Employee) => {
         qc.setQueryData(['employee', emp.id], emp);
         setView(emp.id);
     };
     const closeEmp = () => setView(null);
+    // A profile link inside the drawer swaps the person in place, so its close button still closes the drawer
+    const swapView = (id: number) => dialogs.replace((p) => p.set('view', String(id)));
 
     // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the view ?view stays under it
     const editId = toRecordId(searchParams.get('edit'));
@@ -199,48 +192,31 @@ export default function EmployeesPage() {
     }, [editId, editSource, editFetching, editEmp?.id]);
     // A link or reload cannot open a form the menus would not offer
     const editOpen = editEmp != null && editEmp.id === editId && canEdit && editEmp.status !== 'resigned' && (!editEmp.is_super_admin || isSuper);
-    const writeEdit = (change: (p: URLSearchParams) => void) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                change(p);
-                return p;
-            },
-            { replace: true },
-        );
     // The clicked row opens the form at once; a link or reload fetches it
     const openEditEmp = (emp: Employee) => {
         setEditEmp(emp);
-        writeEdit((p) => p.set('edit', String(emp.id)));
+        dialogs.open({ edit: String(emp.id) });
     };
-    const closeEditEmp = () => writeEdit((p) => p.delete('edit'));
-    // A saved edit always lands on the employee's view
-    const showSavedEmp = () =>
-        writeEdit((p) => {
-            p.delete('edit');
-            if (editId != null) p.set('view', String(editId));
-        });
+    const closeEditEmp = () => dialogs.close(['edit']);
+    // A saved edit always lands on the employee's view: back to it when it is underneath, else in place
+    const showSavedEmp = () => {
+        if (editId != null && searchParams.get('view') === String(editId)) {
+            dialogs.close(['edit']);
+            return;
+        }
+        dialogs.replace(
+            (p) => {
+                p.delete('edit');
+                if (editId != null) p.set('view', String(editId));
+            },
+            ['view'],
+        );
+    };
 
     // The add-employee drawer is URL-driven (?add=1) so a reload / shared link reopens it.
     const adding = searchParams.get('add') != null;
-    const openAdd = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.set('add', '1');
-                return p;
-            },
-            { replace: true },
-        );
-    const closeAdd = () =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                p.delete('add');
-                return p;
-            },
-            { replace: true },
-        );
+    const openAdd = () => dialogs.open({ add: '1' });
+    const closeAdd = () => dialogs.close(['add']);
 
     // Legacy deep-link ?highlight=<id> → convert once to ?view=<id> on the Directory tab.
     const highlightId = searchParams.get('highlight');
@@ -648,15 +624,7 @@ export default function EmployeesPage() {
             <EditEmployeeDialog open={editOpen} onClose={closeEditEmp} onSaved={showSavedEmp} employee={editEmp} />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
             {/* A dead ?view= link says so */}
-            <RecordMissingDialog
-                open={viewEmpMissing || editMissing}
-                onClose={() =>
-                    writeEdit((p) => {
-                        p.delete('view');
-                        p.delete('edit');
-                    })
-                }
-            />
+            <RecordMissingDialog open={viewEmpMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <EmployeeViewDrawer
                 employee={viewEmp ?? null}
                 onClose={() => closeEmp()}
@@ -684,7 +652,7 @@ export default function EmployeesPage() {
                 onSetCredentials={(e) => setCredEmp(e)}
                 // Keep the view dialog open so the edit dialog stacks on top (closing it returns here).
                 onEdit={openEditEmp}
-                onViewProfile={setView}
+                onViewProfile={swapView}
             />
             <ResignModal
                 employee={resignEmp}

@@ -16,9 +16,9 @@ import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
-import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -152,28 +152,12 @@ export default function ContractsPage() {
         },
         tab === 'all',
     );
-    // The dialogs live in the URL (?view=<id>, ?edit=<id>, ?add=1): reloads and shared links reopen them
-    const [searchParams, setSearchParams] = useSearchParams();
-    const writeDialogs = (change: (p: URLSearchParams) => void) =>
-        setSearchParams(
-            (sp) => {
-                const p = new URLSearchParams(sp);
-                change(p);
-                return p;
-            },
-            { replace: true, state: keepDialogState() },
-        );
+    // The dialogs live in the URL (?view=<id>, ?edit=<id>, ?add=1): reloads and shared links reopen them, Back closes them
+    const [searchParams] = useSearchParams();
+    const dialogs = usePageDialogs();
     // Only a real record id opens the drawer (Number('abc') is NaN)
     const selectedId = toRecordId(searchParams.get('view'));
-    const setSelectedId = (id: number | null) =>
-        writeDialogs((p) => {
-            if (id == null) {
-                p.delete('view');
-                p.delete('edit');
-            } else {
-                p.set('view', String(id));
-            }
-        });
+    const setSelectedId = (id: number | null) => (id == null ? dialogs.close(['view', 'edit']) : dialogs.open({ view: String(id) }));
     const { data: selected, isError: selectedMissing } = useContract(selectedId);
     // The form edits a copy taken on open, so a refetch cannot reset it
     const editId = toRecordId(searchParams.get('edit'));
@@ -228,12 +212,8 @@ export default function ContractsPage() {
         });
 
     const adding = searchParams.get('add') != null && canCreate;
-    const openCreate = () => writeDialogs((p) => p.set('add', '1'));
-    const closeForm = () =>
-        writeDialogs((p) => {
-            p.delete('add');
-            p.delete('edit');
-        });
+    const openCreate = () => dialogs.open({ add: '1' });
+    const closeForm = () => dialogs.close(['add', 'edit']);
     // A new contract switches to the All tab once ?add is gone from this entry, so Back never reopens an empty form
     const [justCreated, setJustCreated] = useState<Contract | null>(null);
     useEffect(() => {
@@ -246,13 +226,21 @@ export default function ContractsPage() {
         newlyCreatedTimer.current = setTimeout(() => setNewlyCreated(null), 8000);
     }, [justCreated, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
     // From the row menu the form opens alone; from the detail dialog ?view stays, so cancelling returns there
-    const openEdit = (c: Contract) => writeDialogs((p) => p.set('edit', String(c.id)));
-    // A saved edit always lands on the contract's detail dialog
-    const showSaved = (c: Contract) =>
-        writeDialogs((p) => {
-            p.delete('edit');
-            p.set('view', String(c.id));
-        });
+    const openEdit = (c: Contract) => dialogs.open({ edit: String(c.id) });
+    // A saved edit always lands on the contract's detail dialog: back to it when it is underneath, else in place
+    const showSaved = (c: Contract) => {
+        if (searchParams.get('view') === String(c.id)) {
+            dialogs.close(['edit']);
+            return;
+        }
+        dialogs.replace(
+            (p) => {
+                p.delete('edit');
+                p.set('view', String(c.id));
+            },
+            ['view'],
+        );
+    };
 
     /** Called by ContractFormDrawer after a new contract is saved. */
     const handleCreated = (contract: Contract) => setJustCreated(contract);
@@ -482,15 +470,7 @@ export default function ContractsPage() {
 
             {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
                 render and said nothing. This says it instead. */}
-            <RecordMissingDialog
-                open={selectedMissing || editMissing}
-                onClose={() =>
-                    writeDialogs((p) => {
-                        p.delete('view');
-                        p.delete('edit');
-                    })
-                }
-            />
+            <RecordMissingDialog open={selectedMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <ContractDetailDrawer
                 contract={selected ?? null}
                 onClose={() => setSelectedId(null)}
