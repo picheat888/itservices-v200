@@ -48,7 +48,7 @@ class AssetWriteoffReport extends TabularReport
         'unknown' => 'rep_wo_warranty_unknown',
     ];
 
-    private const WARRANTY_TH = ['remaining' => 'ยังมีประกัน', 'lifetime' => 'ประกันตลอดอายุ', 'expired' => 'หมดประกันแล้ว', 'unknown' => '—'];
+    private const WARRANTY_TH = ['remaining' => 'ยังมีประกัน', 'lifetime' => 'ประกันตลอดอายุ', 'expired' => 'หมดประกันแล้ว', 'unknown' => 'ไม่ได้บันทึก'];
 
     /** A contract's state for the "rented by contract" card, most urgent first. */
     private const CONTRACT_FLAGS = ['overdue', 'ending_soon', 'running', 'all_returned'];
@@ -111,6 +111,21 @@ class AssetWriteoffReport extends TabularReport
             ->with(['category:id,name,name_th', 'brand:id,name', 'model:id,name', 'warehouse:id,name', 'contract:id,code', 'writeoffReason:id,name', 'writtenOffBy:id,name'])
             ->orderByDesc('assets.written_off_at')
             ->orderBy('assets.asset_code');
+    }
+
+    /** @return array<string, string> */
+    protected function meanings(): array
+    {
+        return [
+            'outcome' => 'ตัดจำหน่าย = ออกจากทะเบียนด้วยการตัดจำหน่าย (ทรัพย์สินที่ซื้อ หรือเครื่องเช่าที่สูญหายหรือเสียหาย), คืนผู้ให้เช่า = เครื่องเช่าที่ส่งคืนผู้ให้เช่าแล้ว',
+            'contract' => 'เลขที่สัญญาที่ทรัพย์สินผูกอยู่ ว่าง = ไม่ได้ผูกสัญญา',
+            'age_years' => 'จำนวนวันจากวันที่ซื้อถึงวันที่ตัดจำหน่ายหารด้วย 365 ทศนิยม 1 ตำแหน่ง ว่าง = ทรัพย์สินเช่าหรือไม่มีวันที่ซื้อ',
+            'warranty' => 'ประกัน ณ วันที่ตัดจำหน่าย: ยังมีประกัน = วันหมดประกันอยู่หลังวันที่ตัดจำหน่าย, ประกันตลอดอายุ, หมดประกันแล้ว = หมดในหรือก่อนวันที่ตัดจำหน่าย, ไม่ได้บันทึก = ทรัพย์สินที่ซื้อแต่ไม่มีวันหมดประกัน ว่าง = ทรัพย์สินเช่า',
+            'warranty_months' => 'จำนวนเดือนประกันที่เหลือ ณ วันที่ตัดจำหน่าย คิดจากจำนวนวันหารด้วย 30.44 ปัดเป็นจำนวนเต็มและอย่างน้อย 1 มีค่าเฉพาะเมื่อยังมีประกัน',
+            'value' => 'ราคาซื้อที่บันทึกไว้ของทรัพย์สินที่ซื้อ ว่าง = ทรัพย์สินเช่าซึ่งไม่มีมูลค่าของตัวเอง',
+            'reason' => 'เหตุผลการตัดจำหน่ายที่เลือกจากรายการใน Settings ว่าง = คืนผู้ให้เช่าหรือไม่ได้เลือก',
+            'reason_note' => 'หมายเหตุที่พิมพ์ตอนตัดจำหน่ายหรือคืนผู้ให้เช่า ว่าง = ไม่ได้กรอก',
+        ];
     }
 
     public function columns(): array
