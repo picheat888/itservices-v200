@@ -241,10 +241,10 @@ function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) 
     // resolves against the document (nothing up to the app's scrolling <main> is positioned), so
     // labels in lower rows stretched the page and added a second, outer scrollbar.
     return (
-        <span className="relative inline-flex max-w-[12rem] items-center gap-1.5" title={`${kindLabel}: ${place.name}`}>
+        <span className="relative flex max-w-[7rem] min-w-0 items-center gap-1.5">
             <Icon className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="sr-only">{kindLabel}: </span>
-            <span className="truncate">{place.name}</span>
+            <TruncText text={place.name} />
         </span>
     );
 }
@@ -1180,7 +1180,7 @@ export default function AssetsPage() {
                                             <th className="px-3 py-2.5">{t('asset_col_place')}</th>
                                             <th className="px-3 py-2.5">{t('asset_status')}</th>
                                             <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_col_cover')}</th>
-                                            <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_purchase_date')}</th>
+                                            <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_col_purchased')}</th>
                                             <th className="px-3 py-2.5 whitespace-nowrap">{t('asset_col_handed_over')}</th>
                                             <th className="px-3 py-2.5">{t('asset_supplier')}</th>
                                             <th className="px-3 py-2.5 text-right">{t('asset_value')}</th>
@@ -1323,22 +1323,15 @@ export default function AssetsPage() {
                                                     </td>
                                                     {/* Holder with their department under it (the department alone was a column
                                                         empty for every pool and shared asset). */}
-                                                    <td className="max-w-[12rem] px-3 py-2.5">
+                                                    <td className="max-w-[8.5rem] px-3 py-2.5">
                                                         {a.owner_name ? (
                                                             <>
-                                                                <div
-                                                                    className="truncate"
-                                                                    title={localPair(a.owner_name, a.owner_name_th, lang) ?? undefined}
-                                                                >
-                                                                    {localPair(a.owner_name, a.owner_name_th, lang)}
-                                                                </div>
+                                                                <TruncText text={localPair(a.owner_name, a.owner_name_th, lang)} />
                                                                 {a.department && (
-                                                                    <div
-                                                                        className="text-muted-foreground truncate text-xs"
-                                                                        title={localPair(a.department, a.department_th, lang) ?? undefined}
-                                                                    >
-                                                                        {localPair(a.department, a.department_th, lang)}
-                                                                    </div>
+                                                                    <TruncText
+                                                                        text={localPair(a.department, a.department_th, lang)}
+                                                                        className="text-muted-foreground text-xs"
+                                                                    />
                                                                 )}
                                                             </>
                                                         ) : (
