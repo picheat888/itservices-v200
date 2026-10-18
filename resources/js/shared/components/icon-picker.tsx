@@ -75,6 +75,8 @@ export function IconPicker({
                     <div className="bg-popover absolute z-50 mt-1 w-full rounded-md border p-2 shadow-md">
                         <input
                             name="icon_search"
+                            autoComplete="off"
+                            spellCheck={false}
                             autoFocus
                             value={q}
                             onChange={(e) => setQ(e.target.value)}

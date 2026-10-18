@@ -374,7 +374,15 @@ export function AssetFormDrawer({
                                     />
                                 </Field>
                                 <Field label={t('asset_serial')} required error={err.serial} name="serial">
-                                    <Input value={form.serial} onChange={(e) => upd('serial', e.target.value)} placeholder="SN-XXXXXXXX" />
+                                    <Input
+                                        value={form.serial}
+                                        onChange={(e) => upd('serial', e.target.value)}
+                                        placeholder="SN-XXXXXXXX"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        autoCapitalize="none"
+                                        spellCheck={false}
+                                    />
                                 </Field>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -402,6 +410,7 @@ export function AssetFormDrawer({
                                         maxLength={10}
                                         onChange={(e) => upd('tag', e.target.value)}
                                         placeholder={t('asset_nickname_ph')}
+                                        autoComplete="off"
                                     />
                                 </Field>
                             </div>
@@ -428,6 +437,7 @@ export function AssetFormDrawer({
                                                 value={form.value ? formatNumber(Number(form.value), lang) : ''}
                                                 onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
                                                 placeholder="0"
+                                                autoComplete="off"
                                             />
                                         </Field>
                                         <Field label={t('asset_supplier')} required error={err.supplier} name="supplier">

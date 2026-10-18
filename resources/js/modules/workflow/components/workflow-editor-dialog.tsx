@@ -263,6 +263,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Field label={t('wf_name')} name="name" required error={nameErr}>
                             <Input
+                                autoComplete="off"
                                 value={name}
                                 onChange={(e) => {
                                     setName(e.target.value);

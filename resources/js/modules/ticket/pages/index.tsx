@@ -589,6 +589,8 @@ export default function TicketsPage() {
                                     onChange={(e) => list.setFilter('search', e.target.value)}
                                     placeholder={t('ticket_search')}
                                     aria-label={searchLabel(t('ticket_search'))}
+                                    autoComplete="off"
+                                    spellCheck={false}
                                     className="pl-9 text-ellipsis"
                                 />
                             </div>

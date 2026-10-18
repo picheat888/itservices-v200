@@ -102,7 +102,14 @@ export function RoleModal({
                 <div className="space-y-4">
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('perm_role_name')}>
-                        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('perm_role_name_ph')} />
+                        <Input
+                            name="role-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoFocus
+                            autoComplete="off"
+                            placeholder={t('perm_role_name_ph')}
+                        />
                     </Field>
                     <ColorSwatchPicker label={t('perm_role_color')} showLabel value={color} onChange={setColor} />
                     {source && (

@@ -655,6 +655,7 @@ function SchemaField({
                                     autoFocus
                                     value={otherValue?.trimStart() ?? ''}
                                     onChange={(e) => onOtherChange(e.target.value)}
+                                    autoComplete="off"
                                     placeholder={schema.placeholder}
                                 />
                             </Field>
@@ -706,7 +707,10 @@ function SchemaField({
         <Field label={label} required={schema.required} error={error} name={schema.key}>
             <Input
                 type={schema.input === 'number' ? 'number' : schema.input === 'email' ? 'email' : 'text'}
+                autoComplete="off"
+                inputMode={schema.input === 'email' ? 'email' : undefined}
                 autoCapitalize={schema.input === 'email' ? 'none' : undefined}
+                autoCorrect={schema.input === 'email' ? 'off' : undefined}
                 spellCheck={schema.input === 'email' ? false : undefined}
                 min={schema.min}
                 max={schema.max}

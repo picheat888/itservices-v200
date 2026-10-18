@@ -92,10 +92,16 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                                     autoFocus
                                     aria-required
                                     placeholder={t('dept_name_en_ph')}
+                                    autoComplete="off"
                                 />
                             </Field>
                             <Field label={t('dept_name_th')} error={fieldErrors.name_th}>
-                                <Input value={form.name_th} onChange={(e) => set('name_th', e.target.value)} placeholder={t('dept_name_th_ph')} />
+                                <Input
+                                    value={form.name_th}
+                                    onChange={(e) => set('name_th', e.target.value)}
+                                    placeholder={t('dept_name_th_ph')}
+                                    autoComplete="off"
+                                />
                             </Field>
                         </div>
                         <Field label={t('dept_code')} error={tagInvalid ? t('dept_code_en_only') : fieldErrors.tag} help={t('dept_code_hint')}>

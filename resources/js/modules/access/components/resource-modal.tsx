@@ -455,10 +455,12 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     {(curKind === 'email-groups' || curKind === 'file-shares') && (
                         <Field label={t('access_name')} required name="name" error={errors.name}>
                             <Input
+                                name="resource_name"
                                 value={form.name}
                                 onChange={(e) => set('name', e.target.value)}
                                 placeholder={curKind === 'email-groups' ? t('access_ph_group_name') : t('access_ph_share_name')}
                                 autoFocus
+                                autoComplete="off"
                             />
                         </Field>
                     )}
@@ -466,7 +468,16 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     {curKind === 'email-groups' && (
                         <>
                             <Field label={t('access_email')} required name="email" error={errors.email}>
-                                <Input value={form.email} onChange={(e) => set('email', e.target.value)} placeholder={t('access_ph_email')} />
+                                <Input
+                                    value={form.email}
+                                    onChange={(e) => set('email', e.target.value)}
+                                    placeholder={t('access_ph_email')}
+                                    autoComplete="off"
+                                    inputMode="email"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
+                                />
                             </Field>
                             <Field label={t('access_department')} required name="department_id" error={errors.department_id}>
                                 <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={departmentOptions} />
@@ -484,7 +495,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                 </Field>
                             )}
                             <Field label={t('access_description')}>
-                                <Input value={form.description} onChange={(e) => set('description', e.target.value)} />
+                                <Input value={form.description} onChange={(e) => set('description', e.target.value)} autoComplete="off" />
                             </Field>
                         </>
                     )}
@@ -492,7 +503,15 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     {curKind === 'file-shares' && (
                         <>
                             <Field label={t('access_path')} required name="path" error={errors.path}>
-                                <Input value={form.path} onChange={(e) => set('path', e.target.value)} placeholder={t('access_ph_path')} />
+                                <Input
+                                    value={form.path}
+                                    onChange={(e) => set('path', e.target.value)}
+                                    placeholder={t('access_ph_path')}
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    autoCapitalize="none"
+                                    spellCheck={false}
+                                />
                             </Field>
                             <Field label={t('access_department')} required name="department_id" error={errors.department_id}>
                                 <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={departmentOptions} />
@@ -515,6 +534,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         ref={sizeInputRef}
                                         type="text"
                                         inputMode="decimal"
+                                        autoComplete="off"
                                         value={formatSizeValue(form.size_value)}
                                         onChange={(e) => set('size_value', e.target.value.replace(/,/g, '').replace(/[^\d.]/g, ''))}
                                         placeholder={t('access_ph_size')}
@@ -560,7 +580,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                 </Field>
                             )}
                             <Field label={t('access_description')}>
-                                <Input value={form.description} onChange={(e) => set('description', e.target.value)} />
+                                <Input value={form.description} onChange={(e) => set('description', e.target.value)} autoComplete="off" />
                             </Field>
                         </>
                     )}
@@ -586,6 +606,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                             onChange={(e) => set('name', e.target.value)}
                                             placeholder={t('access_ph_platform_name')}
                                             autoFocus
+                                            autoComplete="off"
                                         />
                                     </Field>
                                     <Field label={t('access_url')}>
@@ -593,6 +614,10 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                             value={form.url}
                                             onChange={(e) => set('url', e.target.value)}
                                             placeholder={t('access_ph_url')}
+                                            autoComplete="off"
+                                            inputMode="url"
+                                            autoCapitalize="none"
+                                            autoCorrect="off"
                                             spellCheck={false}
                                         />
                                     </Field>
@@ -605,7 +630,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                             )}
                             <ColorSwatchPicker label={t('access_color')} showLabel value={form.color} onChange={(hex) => set('color', hex)} />
                             <Field label={t('access_policy')}>
-                                <Input value={form.policy} onChange={(e) => set('policy', e.target.value)} />
+                                <Input value={form.policy} onChange={(e) => set('policy', e.target.value)} autoComplete="off" />
                             </Field>
                         </>
                     )}
@@ -627,10 +652,12 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                 <div className="min-w-0 space-y-3">
                                     <Field label={t('access_software_name')} required name="name" error={errors.name}>
                                         <Input
+                                            name="software_name"
                                             value={form.name}
                                             onChange={(e) => set('name', e.target.value)}
                                             placeholder={t('access_ph_software_name')}
                                             autoFocus
+                                            autoComplete="off"
                                         />
                                     </Field>
                                     <Field label={t('access_publisher')}>
@@ -691,6 +718,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                         value={form.notes}
                                         onChange={(e) => set('notes', e.target.value)}
                                         placeholder={t('access_ph_notes')}
+                                        autoComplete="off"
                                         className="min-h-16"
                                     />
                                 </Field>

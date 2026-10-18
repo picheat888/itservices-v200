@@ -92,6 +92,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                     type="number"
                                     name="qty"
                                     inputMode="numeric"
+                                    autoComplete="off"
                                     min={1}
                                     max={available || undefined}
                                     value={qtyInput}
@@ -110,6 +111,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                     <Field label={t('stock_reason')} required>
                         <Textarea
                             name="reason"
+                            autoComplete="off"
                             rows={2}
                             className="min-h-0"
                             value={reason}

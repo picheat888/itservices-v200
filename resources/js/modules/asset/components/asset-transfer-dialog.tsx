@@ -187,6 +187,7 @@ export function AssetTransferDialog({
                                 value={sharedLabel}
                                 onChange={(ev) => setSharedLabel(ev.target.value)}
                                 placeholder={t('transfer_shared_label_ph')}
+                                autoComplete="off"
                                 autoFocus
                             />
                         </Field>

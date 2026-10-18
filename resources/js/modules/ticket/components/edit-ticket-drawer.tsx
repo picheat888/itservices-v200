@@ -250,6 +250,7 @@ export function EditTicketDrawer({
                                         value={subject}
                                         onChange={(e) => setSubject(e.target.value)}
                                         maxLength={200}
+                                        autoComplete="off"
                                         placeholder={t('ticket_subject_ph')}
                                     />
                                 </Field>
@@ -273,7 +274,16 @@ export function EditTicketDrawer({
                                 {t('ticket_sec_contact')} <span className="text-destructive">*</span>
                             </SectionLabel>
                             <Field label={t('ticket_callback_phone')} required error={errors.phone} help={t('ticket_callback_help')}>
-                                <Input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={60} placeholder={t('emp_phone_ph')} />
+                                <Input
+                                    type="tel"
+                                    inputMode="tel"
+                                    autoComplete="tel"
+                                    name="callback_phone"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    maxLength={60}
+                                    placeholder={t('emp_phone_ph')}
+                                />
                             </Field>
                         </section>
 

@@ -78,7 +78,14 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                 <form onSubmit={submit} className="contents">
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('pos_title')} required error={error || undefined}>
-                        <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus aria-required placeholder={t('pos_title_ph')} />
+                        <Input
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            autoFocus
+                            aria-required
+                            placeholder={t('pos_title_ph')}
+                            autoComplete="off"
+                        />
                     </Field>
                     {/* Special position */}
                     <div className="border-border flex items-center justify-between gap-3 rounded-lg border px-3.5 py-3">

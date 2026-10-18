@@ -648,6 +648,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                             <Input
                                                                 inputMode="numeric"
                                                                 name={`count-${l.id}`}
+                                                                autoComplete="off"
                                                                 aria-label={`${t('stock_count_counted')} ${l.sku ?? ''}`}
                                                                 value={entered}
                                                                 placeholder="0"

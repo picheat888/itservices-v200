@@ -78,6 +78,8 @@ function SearchField({
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder={placeholder}
                 aria-label={placeholder ? searchLabel(placeholder) : undefined}
+                autoComplete="off"
+                spellCheck={false}
                 className={cn('pl-9 text-ellipsis', active && FILTER_ACTIVE)}
             />
         </div>

@@ -1059,6 +1059,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                             <Field label={t('set_email_port')} name="port" required error={errors.port}>
                                 <Input
                                     type="number"
+                                    autoComplete="off"
                                     value={form.port ?? ''}
                                     onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)}
                                     placeholder="587"
@@ -1090,10 +1091,14 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                             <Input
                                 value={form.username ?? ''}
                                 onChange={(e) => set('username', e.target.value)}
+                                name="smtp_username"
                                 autoComplete="off"
                                 autoCapitalize="none"
                                 autoCorrect="off"
                                 spellCheck={false}
+                                data-1p-ignore
+                                data-lpignore="true"
+                                data-bwignore
                                 placeholder="user@example.com"
                             />
                         </Field>
@@ -1109,7 +1114,14 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                                 value={form.password ?? ''}
                                 onChange={(e) => set('password', e.target.value)}
                                 placeholder={hasPassword ? '••••••••' : t('set_email_password_ph')}
+                                name="smtp_password"
                                 autoComplete="new-password"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                data-1p-ignore
+                                data-lpignore="true"
+                                data-bwignore
                             />
                         </Field>
                     </div>
@@ -1118,6 +1130,8 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                         <Field label={t('set_email_from_address')} name="from_address" required error={errors.from_address}>
                             <Input
                                 type="email"
+                                name="smtp_from_address"
+                                autoComplete="off"
                                 value={form.from_address ?? ''}
                                 onChange={(e) => set('from_address', e.target.value)}
                                 placeholder="noreply@example.com"
@@ -1130,6 +1144,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                             <Input
                                 value={form.from_name ?? ''}
                                 onChange={(e) => set('from_name', e.target.value)}
+                                autoComplete="off"
                                 placeholder={t('set_brand_name_ph')}
                             />
                         </Field>
@@ -1628,6 +1643,7 @@ function CompanyTab({
                     <div className={FIELD_ROW}>
                         <Field label={t('set_company_name')} name="company_name" required error={errors.company_name}>
                             <Input
+                                autoComplete="off"
                                 value={form.company_name}
                                 onChange={(e) => {
                                     set('company_name', e.target.value);
@@ -1638,6 +1654,7 @@ function CompanyTab({
                         </Field>
                         <Field label={t('set_legal_name')} name="legal_name" required error={errors.legal_name}>
                             <Input
+                                autoComplete="off"
                                 value={form.legal_name}
                                 onChange={(e) => {
                                     set('legal_name', e.target.value);
@@ -1652,6 +1669,7 @@ function CompanyTab({
                             <Input
                                 className="tabular-nums"
                                 value={form.tax_id}
+                                autoComplete="off"
                                 inputMode="numeric"
                                 maxLength={13}
                                 onChange={(e) => {
@@ -1663,6 +1681,7 @@ function CompanyTab({
                         </Field>
                         <Field label={t('set_industry')} name="industry" required error={errors.industry}>
                             <Input
+                                autoComplete="off"
                                 value={form.industry}
                                 onChange={(e) => {
                                     set('industry', e.target.value);
@@ -1674,6 +1693,7 @@ function CompanyTab({
                     </div>
                     <Field label={t('set_address')} name="address" required error={errors.address}>
                         <Input
+                            autoComplete="off"
                             value={form.address}
                             onChange={(e) => {
                                 set('address', e.target.value);
@@ -1899,10 +1919,20 @@ function BrandingSection({
         <div className={FORM_STACK}>
             <div className={FIELD_ROW}>
                 <Field label={t('set_brand_name')} required error={blocked ? t('set_err_brand_name') : undefined}>
-                    <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder={t('set_brand_name_ph')} />
+                    <Input
+                        autoComplete="off"
+                        value={form.brand_name}
+                        onChange={(e) => set('brand_name', e.target.value)}
+                        placeholder={t('set_brand_name_ph')}
+                    />
                 </Field>
                 <Field label={t('set_brand_sub')}>
-                    <Input value={form.brand_sub} onChange={(e) => set('brand_sub', e.target.value)} placeholder={t('set_brand_sub_ph')} />
+                    <Input
+                        autoComplete="off"
+                        value={form.brand_sub}
+                        onChange={(e) => set('brand_sub', e.target.value)}
+                        placeholder={t('set_brand_sub_ph')}
+                    />
                 </Field>
             </div>
 

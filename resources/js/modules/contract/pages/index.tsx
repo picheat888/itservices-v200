@@ -322,6 +322,8 @@ export default function ContractsPage() {
                                     onChange={(e) => setSearchText(e.target.value)}
                                     placeholder={t('contract_search')}
                                     aria-label={searchLabel(t('contract_search'))}
+                                    autoComplete="off"
+                                    spellCheck={false}
                                     className="pl-9 text-ellipsis"
                                 />
                             </div>

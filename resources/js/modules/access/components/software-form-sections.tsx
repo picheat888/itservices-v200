@@ -131,6 +131,7 @@ export function SeatsField({
                                 type="number"
                                 min={min}
                                 inputMode="numeric"
+                                autoComplete="off"
                                 value={seats}
                                 onChange={(e) => onSeatsChange(e.target.value)}
                                 placeholder="0"

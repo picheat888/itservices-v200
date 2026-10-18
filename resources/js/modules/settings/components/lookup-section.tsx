@@ -232,6 +232,7 @@ function LookupModal({
                     <Field label={nameLabel} required error={nameError}>
                         <Input
                             ref={nameRef}
+                            autoComplete="off"
                             value={name}
                             onChange={(e) => {
                                 setName(e.target.value);
@@ -243,7 +244,13 @@ function LookupModal({
                         />
                     </Field>
                     <Field label={t('md_description')}>
-                        <Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={255} onKeyDown={onEnter} />
+                        <Input
+                            autoComplete="off"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            maxLength={255}
+                            onKeyDown={onEnter}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

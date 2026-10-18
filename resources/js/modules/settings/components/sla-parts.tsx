@@ -95,6 +95,7 @@ export function NumberField({
                     id={id}
                     type="number"
                     inputMode="numeric"
+                    autoComplete="off"
                     min={min}
                     max={max}
                     value={Number.isFinite(value) ? value : ''}

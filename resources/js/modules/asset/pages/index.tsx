@@ -885,6 +885,8 @@ export default function AssetsPage() {
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder={t('asset_search')}
+                                    autoComplete="off"
+                                    spellCheck={false}
                                     className="pl-9 text-ellipsis"
                                 />
                             </div>

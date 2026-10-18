@@ -300,6 +300,8 @@ export function SearchableSelect({
             <div className="border-border border-b p-2">
                 <input
                     name="search"
+                    autoComplete="off"
+                    spellCheck={false}
                     autoFocus
                     value={q}
                     onChange={(e) => {

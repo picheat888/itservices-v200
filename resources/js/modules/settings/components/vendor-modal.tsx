@@ -140,6 +140,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                         <Field label={t('md_vendor_name_en')} required error={errors.name}>
                             <Input
                                 ref={nameRef}
+                                autoComplete="off"
                                 value={form.name}
                                 onChange={(e) => set('name', e.target.value)}
                                 autoFocus
@@ -150,6 +151,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                         <Field label={t('md_vendor_name_th')} required error={errors.name_th}>
                             <Input
                                 ref={nameThRef}
+                                autoComplete="off"
                                 value={form.name_th}
                                 onChange={(e) => set('name_th', e.target.value)}
                                 maxLength={120}
@@ -159,13 +161,19 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('md_contact')}>
-                            <Input value={form.contact} onChange={(e) => set('contact', e.target.value)} maxLength={120} onKeyDown={onEnter} />
+                            <Input
+                                autoComplete="off"
+                                value={form.contact}
+                                onChange={(e) => set('contact', e.target.value)}
+                                maxLength={120}
+                                onKeyDown={onEnter}
+                            />
                         </Field>
                         <Field label={t('md_phone')}>
                             <Input
                                 type="tel"
                                 inputMode="tel"
-                                autoComplete="tel"
+                                autoComplete="off"
                                 value={form.phone}
                                 onChange={(e) => set('phone', e.target.value)}
                                 maxLength={50}
@@ -178,7 +186,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                             ref={emailRef}
                             type="email"
                             spellCheck={false}
-                            autoComplete="email"
+                            autoComplete="off"
                             value={form.email}
                             onChange={(e) => set('email', e.target.value)}
                             maxLength={120}
@@ -186,7 +194,13 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                         />
                     </Field>
                     <Field label={t('md_address')}>
-                        <Input value={form.address} onChange={(e) => set('address', e.target.value)} maxLength={255} onKeyDown={onEnter} />
+                        <Input
+                            autoComplete="off"
+                            value={form.address}
+                            onChange={(e) => set('address', e.target.value)}
+                            maxLength={255}
+                            onKeyDown={onEnter}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

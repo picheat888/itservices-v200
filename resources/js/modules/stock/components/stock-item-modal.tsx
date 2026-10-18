@@ -149,7 +149,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         }
                     >
                         <Input
-                            name="name"
+                            name="item_name"
+                            autoComplete="off"
                             value={form.name}
                             onChange={(e) => set('name', e.target.value)}
                             disabled={autoName}
@@ -196,6 +197,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                                 type="number"
                                 name="min_stock"
                                 inputMode="numeric"
+                                autoComplete="off"
                                 min={0}
                                 value={form.min_stock}
                                 onChange={(e) => set('min_stock', Math.max(0, +e.target.value))}
@@ -206,6 +208,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                                 type="number"
                                 name="max_stock"
                                 inputMode="numeric"
+                                autoComplete="off"
                                 min={0}
                                 value={form.max_stock}
                                 onChange={(e) => set('max_stock', Math.max(0, +e.target.value))}

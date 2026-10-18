@@ -257,10 +257,24 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
 
                         {!rights.edit && <p className="text-muted-foreground text-xs">{t('notification_no_edit_right')}</p>}
                         <Field label={t('notification_message_en')} required>
-                            <Input value={en} onChange={(e) => setEn(e.target.value)} onKeyDown={onEnter} maxLength={300} readOnly={!rights.edit} />
+                            <Input
+                                autoComplete="off"
+                                value={en}
+                                onChange={(e) => setEn(e.target.value)}
+                                onKeyDown={onEnter}
+                                maxLength={300}
+                                readOnly={!rights.edit}
+                            />
                         </Field>
                         <Field label={t('notification_message_th')} required>
-                            <Input value={th} onChange={(e) => setTh(e.target.value)} onKeyDown={onEnter} maxLength={300} readOnly={!rights.edit} />
+                            <Input
+                                autoComplete="off"
+                                value={th}
+                                onChange={(e) => setTh(e.target.value)}
+                                onKeyDown={onEnter}
+                                maxLength={300}
+                                readOnly={!rights.edit}
+                            />
                         </Field>
 
                         {placeholdersIn(bell.message_en).length > 0 && (

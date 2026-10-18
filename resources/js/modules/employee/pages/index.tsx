@@ -881,6 +881,8 @@ function DirectoryTab({
                         onChange={(e) => handleSearch(e.target.value)}
                         placeholder={t('search_name_id')}
                         aria-label={searchLabel(t('search_name_id'))}
+                        autoComplete="off"
+                        spellCheck={false}
                         className="pl-9 text-ellipsis"
                     />
                 </div>

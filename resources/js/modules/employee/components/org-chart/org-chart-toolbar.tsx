@@ -110,6 +110,8 @@ export function OrgChartToolbar({
                             }}
                             placeholder={t('org_search_placeholder')}
                             aria-label={searchLabel(t('org_search_placeholder'))}
+                            autoComplete="off"
+                            spellCheck={false}
                             className="text-foreground placeholder:text-muted-foreground w-56 min-w-0 border-none bg-transparent text-[12.5px] text-ellipsis outline-none"
                         />
                         {query && (
