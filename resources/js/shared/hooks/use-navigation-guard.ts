@@ -64,22 +64,44 @@ export function guardNavigation(to: string, go: () => void) {
     void askOnce(guard, go);
 }
 
-/** Intercepts link clicks and Back/Forward while a guard is registered. Mount once, inside the router. */
+// Where the router last settled, so a refused Back can put it back
+let settled: { href: string; state: unknown } | null = null;
+let passGuardedPop = false;
+
+// Back/Forward while a guard is registered; added at module load so it runs before the router's own listener
+function onPopState(event: PopStateEvent) {
+    if (passGuardedPop || passOwnPop) {
+        passGuardedPop = false;
+        passOwnPop = false;
+        return;
+    }
+    const guard = activeGuard();
+    const from = settled;
+    if (!guard || !from || !isGuardedMove(new URL(from.href), new URL(window.location.href), guard.watch)) return;
+
+    // The browser has already moved: keep the router out of it and put the page's entry back
+    event.stopImmediatePropagation();
+    window.history.pushState(from.state, '', from.href);
+    void askOnce(guard, () => {
+        passGuardedPop = true;
+        window.history.back();
+    });
+}
+if (typeof window !== 'undefined') window.addEventListener('popstate', onPopState, true);
+
+/** Tracks where the router settled and intercepts link clicks while a guard is registered. Mount once, inside the router. */
 export function useNavigationGuardHost() {
     const location = useLocation();
     const navigate = useNavigate();
     const navigateRef = useRef(navigate);
     navigateRef.current = navigate;
-    const settled = useRef<{ href: string; state: unknown } | null>(null);
 
-    // Where the router last settled, so a refused Back can put it back
     useEffect(() => {
-        settled.current = { href: window.location.href, state: window.history.state };
+        settled = { href: window.location.href, state: window.history.state };
     }, [location]);
 
     useEffect(() => {
         let replaying = false;
-        let passNextPop = false;
 
         const onClick = (event: MouseEvent) => {
             const guard = activeGuard();
@@ -103,30 +125,7 @@ export function useNavigationGuardHost() {
             });
         };
 
-        const onPopState = (event: PopStateEvent) => {
-            if (passNextPop || passOwnPop) {
-                passNextPop = false;
-                passOwnPop = false;
-                return;
-            }
-            const guard = activeGuard();
-            const from = settled.current;
-            if (!guard || !from || !isGuardedMove(new URL(from.href), new URL(window.location.href), guard.watch)) return;
-
-            // The browser has already moved: keep the router out of it and put the page's entry back
-            event.stopImmediatePropagation();
-            window.history.pushState(from.state, '', from.href);
-            void askOnce(guard, () => {
-                passNextPop = true;
-                window.history.back();
-            });
-        };
-
         window.addEventListener('click', onClick, true);
-        window.addEventListener('popstate', onPopState, true);
-        return () => {
-            window.removeEventListener('click', onClick, true);
-            window.removeEventListener('popstate', onPopState, true);
-        };
+        return () => window.removeEventListener('click', onClick, true);
     }, []);
 }
