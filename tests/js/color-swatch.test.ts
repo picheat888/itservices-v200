@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     CARD_GROUNDS,
+    contrastProblem,
     CUSTOM_COLOR_GRID,
     DEFAULT_SWATCHES,
     findSwatch,
@@ -75,17 +76,31 @@ test('a pale or a very dark colour fails the card check', () => {
 
 test('every custom grid colour reaches 3:1 on both cards', () => {
     for (const hex of CUSTOM_COLOR_GRID.flat()) {
-        if (hex === null) continue;
         for (const ground of CARD_GROUNDS) {
             assert.ok(hexContrastRatio(hex, ground) >= 3, `${hex} on ${ground}`);
         }
     }
 });
 
-test('the custom grid is a rectangle of 10 columns with lowercase unique hexes', () => {
-    assert.ok(CUSTOM_COLOR_GRID.length >= 1 && CUSTOM_COLOR_GRID.length <= 4);
-    for (const row of CUSTOM_COLOR_GRID) assert.equal(row.length, 10);
-    const hexes = CUSTOM_COLOR_GRID.flat().filter((h) => h !== null);
+test('the custom grid is 3 full rows of 12 lowercase unique hexes', () => {
+    assert.equal(CUSTOM_COLOR_GRID.length, 3);
+    for (const row of CUSTOM_COLOR_GRID) assert.equal(row.length, 12);
+    const hexes = CUSTOM_COLOR_GRID.flat();
     assert.equal(new Set(hexes).size, hexes.length);
     for (const hex of hexes) assert.equal(normalizeHex(hex), hex);
+});
+
+test('a colour that reads on both cards has no problem', () => {
+    assert.equal(contrastProblem('#0c9d8c'), null);
+    for (const s of DEFAULT_SWATCHES) assert.equal(contrastProblem(s.hex), null, s.hex);
+});
+
+test('a pale colour is too light for the light card', () => {
+    assert.equal(contrastProblem('#fcd34d'), 'too_light');
+    assert.equal(contrastProblem('#ffffff'), 'too_light');
+});
+
+test('a very dark colour is too dark for the dark card', () => {
+    assert.equal(contrastProblem('#334155'), 'too_dark');
+    assert.equal(contrastProblem('#000000'), 'too_dark');
 });

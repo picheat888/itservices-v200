@@ -220,7 +220,10 @@ export const common: Dict = {
     color_hex_label: 'Hex code',
     color_preview: 'Preview',
     color_hex_invalid: 'Enter a colour like #3b82f6',
-    color_contrast_warning: 'This colour may be hard to see in light or dark mode',
+    color_too_light: 'Too light to see on a light background',
+    color_too_dark: 'Too dark to see on a dark background',
+    color_show_dark: 'Show on dark',
+    color_show_light: 'Show on light',
 
     // calendar.tsx — month navigation
     cal_prev: 'Previous',
