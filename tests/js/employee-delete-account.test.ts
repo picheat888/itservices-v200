@@ -19,6 +19,11 @@ test('the viewer own record by username link', () => {
     assert.deepEqual(accountDeleteBlockers(staff, { employee_id: null, username: 'sam' }, false), ['own_account']);
 });
 
+test('the username link ignores case, like the database collation', () => {
+    assert.deepEqual(accountDeleteBlockers(staff, { employee_id: null, username: 'SAM' }, false), ['own_account']);
+    assert.deepEqual(accountDeleteBlockers({ ...staff, username: 'Sam' }, { employee_id: null, username: 'sam' }, false), ['own_account']);
+});
+
 test('a blank username never links', () => {
     assert.deepEqual(accountDeleteBlockers({ ...staff, username: null }, { employee_id: null, username: null }, false), []);
 });

@@ -1,4 +1,5 @@
 import { translate, useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { departmentApi, useDepartments, useEmployeePicker, useEmployeesByIds } from '@/modules/employee';
 import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
@@ -40,6 +41,9 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useGroupRoleMutations();
     const { data: matrix } = usePermissionMatrix();
+    const { isSuper } = useAuth();
+    // Only a Super admin may hand out the Super admin role
+    const roleOptions = (matrix?.roles ?? []).filter((r) => !r.is_super || isSuper);
     const { data: departments = [] } = useDepartments();
     const { data: groupsData } = useGroupRoles();
 
@@ -209,7 +213,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                     <SelectValue placeholder={t('select_placeholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {(matrix?.roles ?? []).map((r) => (
+                                    {roleOptions.map((r) => (
                                         <SelectItem key={r.value} value={r.value}>
                                             {r.label}
                                         </SelectItem>
