@@ -14,7 +14,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Loader2, Pencil, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 
@@ -72,6 +72,8 @@ export function EditTicketDrawer({
         if (ticket) setShown(ticket);
     }, [ticket]);
     const view = ticket ?? shown;
+    // Opening focuses the picked type
+    const cardRefs = useRef<Partial<Record<TicketCategory, HTMLButtonElement | null>>>({});
 
     // Preload the form + attachments from the ticket each time it opens.
     useEffect(() => {
@@ -183,7 +185,16 @@ export function EditTicketDrawer({
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent
+                className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0"
+                onOpenAutoFocus={(e) => {
+                    const card = ticket ? cardRefs.current[ticket.category] : null;
+                    if (card) {
+                        e.preventDefault();
+                        card.focus();
+                    }
+                }}
+            >
                 <FocusDialogHeader
                     icon={Pencil}
                     eyebrow={view?.ticket_no}
@@ -211,6 +222,9 @@ export function EditTicketDrawer({
                                 {TICKET_CATEGORIES.map((c) => (
                                     <ChoiceCard
                                         key={c}
+                                        ref={(el) => {
+                                            cardRefs.current[c] = el;
+                                        }}
                                         selected={category === c}
                                         onClick={() => setCategory(c)}
                                         className="flex flex-col items-start gap-1 rounded-lg p-3 text-left"
@@ -319,7 +333,7 @@ export function EditTicketDrawer({
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={saving}>
+                    <Button onClick={submit} disabled={saving || !isDirty}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {t('save')}
                     </Button>

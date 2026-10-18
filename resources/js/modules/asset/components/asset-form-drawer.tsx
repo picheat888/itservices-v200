@@ -3,6 +3,7 @@ import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useW
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { fieldError } from '@/shared/lib/api-errors';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
@@ -16,6 +17,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -141,6 +143,7 @@ export function AssetFormDrawer({
         warranty_end: 'warranty_end',
         // Turning "lifetime" on satisfies the warranty-end requirement.
         warranty_lifetime: 'warranty_end',
+        tag: 'tag',
     };
 
     /** Update one field and drop its validation error — editing counts as fixing it. */
@@ -247,8 +250,15 @@ export function AssetFormDrawer({
                 if (editing && onSaved) onSaved();
                 else onClose();
             }, 600);
-        } catch {
-            setErr({ model: t('asset_could_not_save') });
+        } catch (error) {
+            // Each server validation message goes under its own field
+            const fieldErrors: Record<string, string> = {};
+            for (const [field, errKey] of Object.entries(ERR_KEY)) {
+                const message = fieldError(error, field);
+                if (message && !fieldErrors[errKey]) fieldErrors[errKey] = message;
+            }
+            if (Object.keys(fieldErrors).length) setErr(fieldErrors);
+            else useToastStore.getState().push(t('asset_could_not_save'), 'error');
         }
     };
 
@@ -379,7 +389,7 @@ export function AssetFormDrawer({
                                         </div>
                                     </Field>
                                 )}
-                                <Field label={t('asset_nickname')} icon={Tag} help={t('asset_nickname_help')}>
+                                <Field label={t('asset_nickname')} icon={Tag} help={t('asset_nickname_help')} error={err.tag} name="tag">
                                     <Input
                                         value={form.tag}
                                         maxLength={10}

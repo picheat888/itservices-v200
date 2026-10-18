@@ -113,9 +113,13 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $payload = ['category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100];
 
-        $this->postJson('/api/assets', [...$payload, 'tag' => 'PC-ACC-0123'])
+        $refused = $this->postJson('/api/assets', [...$payload, 'tag' => 'PC-ACC-0123'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('tag');
+
+        // The message names the field as the form labels it, not the department "ตัวย่อ"
+        $this->assertStringContainsString('Tag', $refused->json('errors.tag.0'));
+        $this->assertStringNotContainsString('ตัวย่อ', $refused->json('errors.tag.0'));
 
         // Thai counts characters, not bytes
         $this->postJson('/api/assets', [...$payload, 'tag' => 'เครื่องสมชาย'])->assertUnprocessable();
