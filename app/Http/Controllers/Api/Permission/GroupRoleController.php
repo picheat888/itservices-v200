@@ -4,16 +4,20 @@ namespace App\Http\Controllers\Api\Permission;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Permission\GroupRoleMemberResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Services\Permission\GroupRoleMemberService;
 use App\Support\RoleKeys;
 use App\Support\SuperAdmins;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -265,18 +269,19 @@ class GroupRoleController extends Controller
     }
 
     /**
+     * @param  array<int>  $mine  ids of the groups holding the caller's own employee
      * @return array<string, mixed>
      */
-    private function present(GroupRole $g): array
+    private function present(GroupRole $g, array $mine = []): array
     {
         return [
             'id' => $g->id,
             'name' => $g->name,
             'role' => $g->role?->key,
             'role_label' => $g->role ? ($g->role->name ?? $g->role->key) : null,
-            'employee_ids' => $g->employees->pluck('id'),
-            'employees' => $g->employees->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'code' => $e->code]),
-            'member_count' => $g->employees->count(),
+            'member_count' => $g->employees_count ?? $g->employees()->count(),
+            // The caller's own employee sits here: only a Super admin may change its role or members
+            'includes_me' => in_array($g->id, $mine, true),
         ];
     }
 
@@ -284,10 +289,16 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
 
-        $groups = GroupRole::with(['employees'])
+        $mine = DB::table('group_role_employee')
+            ->whereIn('employee_id', $request->user()->linkedEmployeeIds())
+            ->pluck('group_role_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $groups = GroupRole::with('role')
+            ->withCount('employees')
             ->orderBy('name')
             ->get()
-            ->map(fn ($g) => $this->present($g));
+            ->map(fn ($g) => $this->present($g, $mine));
 
         return response()->json([
             'data' => $groups,
@@ -332,7 +343,7 @@ class GroupRoleController extends Controller
         $this->guardSuperGroup($request, $groupRole->role?->key, $role?->key);
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
-        $newEmployeeIds = $data['employee_ids'] ?? [];
+        $newEmployeeIds = $this->nextMembers($data, $oldEmployeeIds);
         $addedEmployeeIds = array_values(array_diff($newEmployeeIds, $oldEmployeeIds));
         $removedEmployeeIds = array_values(array_diff($oldEmployeeIds, $newEmployeeIds));
         $roleChanges = (int) $groupRole->role_id !== (int) $role?->id;
@@ -361,7 +372,7 @@ class GroupRoleController extends Controller
             AuditLog::record('Updated role group', $groupRole->name, $details ?: null, subject: $groupRole);
         });
 
-        return response()->json(['data' => $this->present($groupRole->load(['employees'])), 'message' => 'success']);
+        return response()->json(['data' => $this->present($groupRole->loadCount('employees')), 'message' => 'success']);
     }
 
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
@@ -428,6 +439,91 @@ class GroupRoleController extends Controller
             'role' => ['nullable', 'string', Rule::in(RoleKeys::all())],
             'employee_ids' => ['array'],
             'employee_ids.*' => ['exists:employees,id'],
+            'add_ids' => ['array'],
+            'add_ids.*' => ['exists:employees,id'],
+            'remove_ids' => ['array'],
+            'remove_ids.*' => ['integer'],
         ]);
+    }
+
+    /**
+     * The members after the write: a full employee_ids list, or the current members with add_ids and remove_ids applied.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int>  $current
+     * @return array<int>
+     */
+    private function nextMembers(array $data, array $current): array
+    {
+        if (! array_key_exists('add_ids', $data) && ! array_key_exists('remove_ids', $data)) {
+            return array_map('intval', $data['employee_ids'] ?? []);
+        }
+
+        $added = array_map('intval', $data['add_ids'] ?? []);
+        $removed = array_map('intval', $data['remove_ids'] ?? []);
+
+        return array_values(array_diff(array_unique([...$current, ...$added]), $removed));
+    }
+
+    /** One page of the group's members for the dialog. */
+    public function members(Request $request, GroupRole $groupRole, GroupRoleMemberService $service): JsonResponse
+    {
+        $this->gate($request);
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+
+        return $this->memberPage($request, $service->members($groupRole, $request->query('search'), $perPage));
+    }
+
+    /** People who can join a group (or a new one): one page, or a whole department with all=1. */
+    public function candidates(Request $request, GroupRoleMemberService $service): JsonResponse
+    {
+        $this->gate($request);
+        $params = $request->validate([
+            'group_id' => ['nullable', 'integer'],
+            'department_id' => ['nullable', 'integer'],
+            'search' => ['nullable', 'string'],
+            'all' => ['nullable', 'boolean'],
+            'per_page' => ['nullable', 'integer'],
+        ]);
+        $group = isset($params['group_id']) ? GroupRole::find($params['group_id']) : null;
+        $departmentId = isset($params['department_id']) ? (int) $params['department_id'] : null;
+        // A whole list is only offered per department
+        $all = $request->boolean('all') && $departmentId !== null;
+        $perPage = max(10, min(100, (int) ($params['per_page'] ?? 20)));
+
+        $result = $service->candidates($group, $params['search'] ?? null, $departmentId, $all, $perPage);
+        if ($result instanceof Collection) {
+            $this->flagProtected($request, $result->pluck('id')->all());
+
+            return response()->json(['data' => GroupRoleMemberResource::collection($result), 'message' => 'success']);
+        }
+
+        return $this->memberPage($request, $result);
+    }
+
+    private function memberPage(Request $request, LengthAwarePaginator $page): JsonResponse
+    {
+        $this->flagProtected($request, collect($page->items())->pluck('id')->all());
+
+        return response()->json([
+            'data' => GroupRoleMemberResource::collection($page->items()),
+            'meta' => [
+                'total' => $page->total(),
+                'per_page' => $page->perPage(),
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Marks the Super-admin employees a non-super caller may not move.
+     *
+     * @param  array<int>  $employeeIds
+     */
+    private function flagProtected(Request $request, array $employeeIds): void
+    {
+        $protected = $request->user()?->isSuper() ? [] : SuperAdmins::protectedEmployeeIds($employeeIds);
+        $request->attributes->set('protected_employee_ids', array_map('intval', $protected));
     }
 }

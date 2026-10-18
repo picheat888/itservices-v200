@@ -378,6 +378,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('roles', [RoleController::class, 'store'])->name('api.roles.store');
     Route::put('roles/{key}', [RoleController::class, 'update'])->name('api.roles.update');
     Route::delete('roles/{key}', [RoleController::class, 'destroy'])->name('api.roles.destroy');
+    Route::get('group-roles/{groupRole}/members', [GroupRoleController::class, 'members'])->name('api.group-roles.members');
+    Route::get('group-roles-candidates', [GroupRoleController::class, 'candidates'])->name('api.group-roles.candidates');
     Route::apiResource('group-roles', GroupRoleController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::put('group-roles-default', [GroupRoleController::class, 'setDefaultGroup'])->name('api.group-roles.default');
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('api.audit.index');

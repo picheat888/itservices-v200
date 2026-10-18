@@ -1,0 +1,438 @@
+// Add / edit a Role Group: name and role on top, "Add members" beside "Current members", saved through a centred confirm.
+import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { cn } from '@/shared/lib/utils';
+import { SUPER_ROLE } from '@/shared/types';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Check, Loader2, Lock, MoreVertical, PencilLine, Trash2, Users } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import type { GroupMember, GroupRole, RoleRow } from '../api/permissionApi';
+import { useGroupRoleMutations, usePermissionMatrix } from '../hooks/use-permissions';
+import { permissionRefusalText } from '../lib/refusal';
+import { CenteredAlert } from './centered-alert';
+import { GroupMemberList } from './group-member-list';
+import { GroupMemberPicker } from './group-member-picker';
+
+type SaveStep = 'idle' | 'confirm' | 'saving' | 'done';
+
+export function GroupRoleDialog({
+    open,
+    group,
+    groups,
+    defaultGroup,
+    onClose,
+    onSaved,
+}: {
+    open: boolean;
+    /** null = a new group. */
+    group: GroupRole | null;
+    groups: GroupRole[];
+    defaultGroup: GroupRole | null;
+    onClose: () => void;
+    onSaved: (saved: { name: string; members: number }) => void;
+}) {
+    const t = useT();
+    const fmtN = useNumberFormat();
+    const confirm = useConfirm();
+    const { user, isSuper } = useAuth();
+    const { data: matrix } = usePermissionMatrix();
+    const { create, update, remove } = useGroupRoleMutations();
+
+    const [name, setName] = useState('');
+    const [role, setRole] = useState('');
+    const [added, setAdded] = useState<Map<number, GroupMember>>(new Map());
+    const [removed, setRemoved] = useState<Map<number, GroupMember>>(new Map());
+    const [tab, setTab] = useState<'pick' | 'members'>('members');
+    const [tried, setTried] = useState(false);
+    const [saveStep, setSaveStep] = useState<SaveStep>('idle');
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+
+    // Fresh state each time the dialog opens; closing keeps it so the exit animation shows the same content
+    useEffect(() => {
+        if (!open) return;
+        setName(group?.name ?? '');
+        setRole(group?.role ?? '');
+        setAdded(new Map());
+        setRemoved(new Map());
+        setTab('members');
+        setTried(false);
+        setSaveStep('idle');
+        setSaveError(null);
+    }, [open, group]);
+
+    const roles = matrix?.roles ?? [];
+    const myPermissions = new Set(user?.permissions ?? []);
+    // A non-super user may only hand out a role whose permissions they hold
+    const overCeiling = (r: RoleRow) => !isSuper && (r.is_super || r.permissions.some((key) => !myPermissions.has(key)));
+    const readOnly = group !== null && group.role === SUPER_ROLE && !isSuper;
+    const roleLocked = readOnly || (!isSuper && !!group?.includes_me);
+    const chosenRole = roles.find((r) => r.value === role);
+    const baseRole = roles.find((r) => r.value === 'user')?.label ?? 'Staff';
+
+    const nameChanged = group !== null && name.trim() !== group.name;
+    const roleChanged = group !== null && role !== (group.role ?? '');
+    const changes = added.size + removed.size + (nameChanged ? 1 : 0) + (roleChanged ? 1 : 0);
+    const dirty = group === null ? name.trim() !== '' || role !== '' || added.size > 0 : changes > 0;
+    const memberCount = (group?.member_count ?? 0) + added.size - removed.size;
+
+    const leavesTo = defaultGroup && defaultGroup.id !== group?.id ? defaultGroup : null;
+    const leaveNote = leavesTo ? t('gr_leaves_to').replace('{name}', leavesTo.name) : t('gr_leaves_none').replace('{role}', baseRole);
+
+    const taken = groups.some((g) => g.id !== group?.id && g.name.trim().toLowerCase() === name.trim().toLowerCase());
+    const nameError = !name.trim() ? t('gr_err_name') : taken ? t('gr_err_name_taken') : null;
+    const roleError = !role ? t('gr_err_role') : null;
+
+    const guardClose = useDiscardGuard(open && dirty && saveStep === 'idle');
+    const close = () => guardClose(onClose);
+
+    // Staging: ticking someone stages them; taking out a staged person just un-stages them
+    const toggleStaged = (person: GroupMember) =>
+        setAdded((prev) => {
+            const next = new Map(prev);
+            if (next.has(person.id)) next.delete(person.id);
+            else next.set(person.id, person);
+            return next;
+        });
+    const addMany = (people: GroupMember[]) =>
+        setAdded((prev) => {
+            const next = new Map(prev);
+            people.forEach((p) => next.set(p.id, p));
+            return next;
+        });
+    const removeMany = (ids: number[]) =>
+        setAdded((prev) => {
+            const next = new Map(prev);
+            ids.forEach((id) => next.delete(id));
+            return next;
+        });
+    const takeOut = (person: GroupMember) => {
+        if (added.has(person.id)) {
+            toggleStaged(person);
+            return;
+        }
+        setRemoved((prev) => new Map(prev).set(person.id, person));
+    };
+    const undoTakeOut = (person: GroupMember) =>
+        setRemoved((prev) => {
+            const next = new Map(prev);
+            next.delete(person.id);
+            return next;
+        });
+
+    const openSave = () => {
+        if (nameError || roleError) {
+            setTried(true);
+            nameRef.current?.focus();
+            return;
+        }
+        setSaveError(null);
+        setSaveStep('confirm');
+    };
+
+    const runSave = async () => {
+        setSaveError(null);
+        setSaveStep('saving');
+        try {
+            if (group) {
+                await update.mutateAsync({
+                    id: group.id,
+                    payload: { name: name.trim(), role: role || null, add_ids: [...added.keys()], remove_ids: [...removed.keys()] },
+                });
+            } else {
+                await create.mutateAsync({ name: name.trim(), role: role || null, employee_ids: [...added.keys()] });
+            }
+        } catch (err: unknown) {
+            setSaveError(permissionRefusalText(err, t));
+            setSaveStep('confirm');
+            return;
+        }
+        // Same beat as the Role Templates save: the check, then the saved notice
+        setSaveStep('done');
+        const saved = { name: name.trim(), members: memberCount };
+        setTimeout(() => {
+            setSaveStep('idle');
+            onClose();
+            onSaved(saved);
+        }, 850);
+    };
+
+    const askDelete = async () => {
+        if (!group) return;
+        const lines = [
+            group.member_count > 0 &&
+                t('gr_delete_members')
+                    .replace('{n}', fmtN(group.member_count))
+                    .replace(
+                        '{where}',
+                        defaultGroup && defaultGroup.id !== group.id
+                            ? t('gr_where_group').replace('{name}', defaultGroup.name)
+                            : t('gr_where_none').replace('{role}', baseRole),
+                    ),
+            defaultGroup?.id === group.id && t('gr_delete_default'),
+            t('cd_delete_desc'),
+        ].filter((line): line is string => !!line);
+        const ok = await confirm({
+            variant: 'danger',
+            title: t('gr_delete_title').replace('{name}', group.name),
+            description: (
+                <>
+                    {lines.map((line) => (
+                        <span key={line} className="block">
+                            {line}
+                        </span>
+                    ))}
+                </>
+            ),
+            action: () => remove.mutateAsync(group.id),
+            errorMessage: (err) => permissionRefusalText(err, t),
+        });
+        if (ok) onClose();
+    };
+
+    const movedIn = [...added.values()].filter((p) => p.group_id !== null).length;
+    const confirmLines = [
+        t('gr_confirm_group').replace('{name}', name.trim()),
+        added.size > 0 &&
+            (movedIn > 0
+                ? t('gr_confirm_add_moved').replace('{n}', fmtN(added.size)).replace('{m}', fmtN(movedIn))
+                : t('gr_confirm_add').replace('{n}', fmtN(added.size))),
+        removed.size > 0 &&
+            t('gr_confirm_remove')
+                .replace('{n}', fmtN(removed.size))
+                .replace('{where}', leavesTo ? t('gr_where_group').replace('{name}', leavesTo.name) : t('gr_where_none').replace('{role}', baseRole)),
+        roleChanged && chosenRole && t('gr_confirm_role').replace('{role}', chosenRole.label),
+        nameChanged && group && t('gr_confirm_rename').replace('{name}', group.name),
+        group === null && added.size === 0 && t('gr_no_members'),
+    ].filter((line): line is string => !!line);
+
+    const fieldLabel = (htmlFor: string, text: string, changed: boolean) => (
+        <label htmlFor={htmlFor} className={cn('text-sm font-medium', changed && 'font-semibold text-orange-700 dark:text-orange-400')}>
+            {text}
+        </label>
+    );
+    const showNameError = tried && nameError !== null;
+    const showRoleError = tried && roleError !== null;
+    const roleHelp = roleLocked && !readOnly ? t('perm_refusal_own_access') : !isSuper ? t('gr_role_ceiling') : null;
+
+    return (
+        <>
+            <Dialog open={open} onOpenChange={(o) => !o && close()}>
+                <DialogContent
+                    className={focusDialogContentClass}
+                    // Focus the dialog itself: the first control is the ⋮ menu, and a field would raise the iPad keyboard
+                    onOpenAutoFocus={(e) => {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement | null)?.focus();
+                    }}
+                >
+                    <FocusDialogHeader
+                        icon={Users}
+                        eyebrow={group === null ? t('gr_add') : readOnly ? t('perm_groups') : t('gr_edit')}
+                        title={name.trim() || group?.name || t('gr_new_title')}
+                        headerRight={
+                            group !== null &&
+                            !readOnly && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            aria-label={t('actions')}
+                                            className="hover:bg-accent focus-visible:ring-ring data-[state=open]:bg-accent flex h-8 w-8 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+                                        >
+                                            <MoreVertical className="h-4 w-4" aria-hidden />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => void askDelete()} className="text-destructive focus:text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                            {t('gr_delete')}
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )
+                        }
+                    />
+
+                    {readOnly && (
+                        <div className="border-border flex items-center gap-2 border-t bg-amber-50 px-6 py-2.5 text-[13px] text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+                            <Lock className="h-4 w-4 shrink-0" aria-hidden />
+                            {t('gr_admin_protected')}
+                        </div>
+                    )}
+
+                    {/* Name and role */}
+                    <div className="border-border grid gap-4 border-t px-6 py-4 md:grid-cols-2">
+                        <div className="grid content-start gap-1.5">
+                            {fieldLabel('gr-name', t('gr_name'), nameChanged)}
+                            <Input
+                                ref={nameRef}
+                                id="gr-name"
+                                name="group-name"
+                                autoComplete="off"
+                                value={name}
+                                disabled={readOnly}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder={t('gr_name_ph')}
+                                aria-invalid={showNameError || undefined}
+                                aria-describedby={showNameError ? 'gr-name-error' : undefined}
+                                className={cn(showNameError && 'border-destructive')}
+                            />
+                            {showNameError && (
+                                <p id="gr-name-error" className="text-destructive text-xs">
+                                    {nameError}
+                                </p>
+                            )}
+                        </div>
+                        <div className="grid content-start gap-1.5">
+                            <div className="flex min-w-0 items-baseline gap-1.5">
+                                {fieldLabel('gr-role', t('gr_role'), roleChanged)}
+                                <span id="gr-role-help" className="text-muted-foreground truncate text-xs">
+                                    {roleHelp ?? (chosenRole ? t('gr_role_help').replace('{role}', chosenRole.label) : t('gr_role_help_none'))}
+                                </span>
+                            </div>
+                            <Select value={role || undefined} onValueChange={setRole} disabled={roleLocked}>
+                                <SelectTrigger
+                                    id="gr-role"
+                                    aria-invalid={showRoleError || undefined}
+                                    aria-describedby="gr-role-help"
+                                    className={cn(showRoleError && 'border-destructive')}
+                                >
+                                    <SelectValue placeholder={t('select_placeholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {roles.map((r) => (
+                                        <SelectItem key={r.value} value={r.value} disabled={r.value !== role && overCeiling(r)}>
+                                            <span className="flex items-center gap-2">
+                                                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.color }} aria-hidden />
+                                                {r.label}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {showRoleError && <p className="text-destructive text-xs">{roleError}</p>}
+                        </div>
+                    </div>
+
+                    {/* Narrow screens show one pane at a time */}
+                    {!readOnly && (
+                        <div className="border-border flex gap-1 border-t px-4 lg:hidden" role="tablist">
+                            {(['pick', 'members'] as const).map((id) => (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={tab === id}
+                                    onClick={() => setTab(id)}
+                                    className={cn(
+                                        '-mb-px border-b-2 px-3 py-2.5 text-sm font-medium',
+                                        tab === id ? 'border-brand text-foreground' : 'text-muted-foreground border-transparent',
+                                    )}
+                                >
+                                    {id === 'pick' ? t('gr_pick_title') : `${t('gr_members_title')} (${fmtN(memberCount)})`}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className={cn('border-border grid min-h-0 flex-1 border-t', !readOnly && 'lg:grid-cols-2')}>
+                        {!readOnly && (
+                            <div className={cn('border-border min-h-0 flex-col lg:flex lg:border-r', tab === 'pick' ? 'flex' : 'hidden')}>
+                                <GroupMemberPicker
+                                    groupId={group?.id ?? null}
+                                    added={added}
+                                    onToggle={toggleStaged}
+                                    onAddMany={addMany}
+                                    onRemoveMany={removeMany}
+                                    selfEmployeeId={user?.employee_id ?? null}
+                                    isSuper={isSuper}
+                                />
+                            </div>
+                        )}
+                        <div className={cn('min-h-0 flex-col lg:flex', readOnly || tab === 'members' ? 'flex' : 'hidden')}>
+                            <GroupMemberList
+                                groupId={group?.id ?? null}
+                                memberCount={memberCount}
+                                added={added}
+                                removed={removed}
+                                onRemove={takeOut}
+                                onUndo={undoTakeOut}
+                                leaveNote={leaveNote}
+                                selfEmployeeId={user?.employee_id ?? null}
+                                isSuper={isSuper}
+                                readOnly={readOnly}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="border-border bg-muted/30 flex items-center justify-end gap-2 border-t px-6 py-3">
+                        {!readOnly && (
+                            <span
+                                role="status"
+                                aria-live="polite"
+                                className={cn('text-muted-foreground mr-auto flex items-center gap-1.5 text-xs', changes === 0 && 'invisible')}
+                            >
+                                <span className="h-2 w-2 rounded-full bg-orange-600 dark:bg-orange-400" aria-hidden />
+                                {t('perm_ui_unsaved')} <b className="text-foreground font-semibold tabular-nums">{fmtN(changes)}</b>
+                            </span>
+                        )}
+                        <Button variant="outline" onClick={close}>
+                            {readOnly ? t('close') : t('cancel')}
+                        </Button>
+                        {!readOnly && (
+                            <Button onClick={openSave} disabled={group !== null && changes === 0}>
+                                {t('save')}
+                            </Button>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <CenteredAlert
+                open={saveStep !== 'idle'}
+                icon={PencilLine}
+                title={group === null ? t('gr_confirm_create_title') : t('perm_confirm_title')}
+                busy={saveStep === 'saving' || saveStep === 'done'}
+                onClose={() => setSaveStep('idle')}
+                actions={
+                    <>
+                        <Button variant="outline" className="w-full" disabled={saveStep !== 'confirm'} onClick={() => setSaveStep('idle')}>
+                            {t('cancel')}
+                        </Button>
+                        <Button className="w-full font-semibold" disabled={saveStep !== 'confirm'} onClick={() => void runSave()}>
+                            {saveStep === 'saving' ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    {t('saving')}
+                                </>
+                            ) : saveStep === 'done' ? (
+                                <>
+                                    <Check className="h-4 w-4" />
+                                    {t('saved')}
+                                </>
+                            ) : (
+                                t('save')
+                            )}
+                        </Button>
+                    </>
+                }
+            >
+                {confirmLines.map((line) => (
+                    <span key={line} className="block">
+                        {line}
+                    </span>
+                ))}
+                {saveError && <span className="text-destructive mt-2 block">{saveError}</span>}
+            </CenteredAlert>
+        </>
+    );
+}

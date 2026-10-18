@@ -2,10 +2,9 @@ import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useDepartments, useEmployeesByIds, usePositions, useSections } from '@/modules/employee';
 import { PAGE_SIZES } from '@/shared/components/data-table';
-import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -20,11 +19,10 @@ import { formatNumber } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
-import { SUPER_ROLE, type Lang } from '@/shared/types';
+import type { Lang } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
@@ -47,18 +45,17 @@ import {
     Shield,
     ShieldCheck,
     Trash2,
-    Users,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
+import type { AuditDetails, AuditFilters, RoleRow } from '../api/permissionApi';
 import { AccessPermissionTree } from '../components/access-permission-tree';
 import { AssetPermissionTree } from '../components/asset-permission-tree';
 import { AuditMemberChanges } from '../components/audit-member-changes';
 import { CenteredAlert } from '../components/centered-alert';
 import { ContractPermissionTree } from '../components/contract-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
-import { GroupRoleModal } from '../components/group-role-modal';
+import { GroupRolesTab } from '../components/group-roles-tab';
 import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
 import { NotificationPermissionTree } from '../components/notification-permission-tree';
 import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, PlainRow, spreadRows } from '../components/permission-layout';
@@ -69,15 +66,7 @@ import { RoleModal } from '../components/role-modal';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { TicketPermissionTree } from '../components/ticket-permission-tree';
 import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
-import {
-    useAuditLogs,
-    useGroupRoleMutations,
-    useGroupRoles,
-    usePermissionMatrix,
-    useRoleMutations,
-    useSetDefaultGroup,
-    useUpdateRolePermissions,
-} from '../hooks/use-permissions';
+import { useAuditLogs, usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
 import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
@@ -88,8 +77,8 @@ import { permissionRefusalText } from '../lib/refusal';
 const TABS = ['templates', 'groups', 'logs'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
-// URL keys of the Logs list; cleared when the tab changes.
-const AUDIT_LIST_KEYS = ['search', 'category', 'user', 'page'];
+// URL keys of the Logs and Role Groups lists; cleared when the tab changes.
+const AUDIT_LIST_KEYS = ['search', 'category', 'user', 'page', 'role', 'sort', 'view', 'add'];
 
 /** Permission each tab's own endpoints require. */
 const TAB_PERMISSION: Record<Tab, string> = {
@@ -628,196 +617,6 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                         : t('perm_saved_desc_none').replace('{name}', saved.label))}
             </CenteredAlert>
         </PermissionViewProvider>
-    );
-}
-
-function GroupRolesTab() {
-    const t = useT();
-    const fmtN = useNumberFormat();
-    const lang = useUiStore((s) => s.lang);
-    const confirm = useConfirm();
-    const { isSuper } = useAuth();
-    const { data, isLoading } = useGroupRoles();
-    const { remove } = useGroupRoleMutations();
-    const setDefaultGroup = useSetDefaultGroup();
-    const [modal, setModal] = useState<{ open: boolean; group: GroupRole | null }>({ open: false, group: null });
-    const [defaultDialog, setDefaultDialog] = useState(false);
-    const [pendingDefault, setPendingDefault] = useState<number | null>(null);
-
-    const groups = data?.data ?? [];
-    const defaultGroupId = data?.default_group_id ?? null;
-
-    const defaultGroup = groups.find((g) => g.id === defaultGroupId);
-    // Super admin groups are never offered as the default; the current one stays visible
-    const defaultChoices = groups.filter((g) => g.role !== SUPER_ROLE || g.id === defaultGroupId);
-
-    if (isLoading)
-        return (
-            <div className="p-5">
-                <CardGridSkeleton count={4} cols={4} />
-            </div>
-        );
-
-    return (
-        <div className="space-y-4 p-5">
-            {/* Default Role Group selector */}
-            <div className="border-border flex flex-wrap items-end justify-between gap-3 border-b pb-4">
-                <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs font-medium">{t('perm_default_group')}</div>
-                    <button
-                        onClick={() => {
-                            setPendingDefault(defaultGroupId);
-                            setDefaultDialog(true);
-                        }}
-                        className="border-border bg-background hover:bg-accent flex h-9 w-64 items-center gap-2 rounded-md border px-3 text-sm transition-colors"
-                    >
-                        {defaultGroup ? (
-                            <>
-                                <Users className="text-brand h-4 w-4 shrink-0" />
-                                <span className="text-brand truncate font-medium">{defaultGroup.name}</span>
-                            </>
-                        ) : (
-                            <span className="text-muted-foreground">{translate(lang, 'perm_ui_not_set')}</span>
-                        )}
-                    </button>
-                </div>
-                <Button onClick={() => setModal({ open: true, group: null })}>
-                    <Plus className="h-4 w-4" />
-                    {t('gr_add')}
-                </Button>
-            </div>
-
-            {groups.length === 0 && (
-                <div className="border-border rounded-lg border border-dashed">
-                    <EmptyState title={t('perm_empty_groups')} hint={t('perm_empty_groups_hint').replace('{button}', t('gr_add'))} />
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {groups.map((g) => {
-                    const isDefault = g.id === defaultGroupId;
-                    // Only a super admin may edit or delete the Administrator role group.
-                    const adminLocked = g.role === SUPER_ROLE && !isSuper;
-                    return (
-                        <Card key={g.id} className={cn('p-4', isDefault && 'ring-brand/40 ring-2')}>
-                            <div className="flex items-start justify-between">
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="truncate font-semibold">{g.name}</span>
-                                        {isDefault && (
-                                            <span className="bg-brand/10 text-brand shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                                                {t('gr_default_badge')}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex gap-0.5">
-                                    <DisabledReason reason={adminLocked ? t('gr_admin_protected') : null} label={t('edit')}>
-                                        <button
-                                            onClick={() => setModal({ open: true, group: g })}
-                                            disabled={adminLocked}
-                                            aria-label={t('edit')}
-                                            className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                                        >
-                                            <Pencil className="h-3.5 w-3.5" />
-                                        </button>
-                                    </DisabledReason>
-                                    <DisabledReason reason={adminLocked ? t('gr_admin_protected') : null} label={t('delete')}>
-                                        <button
-                                            onClick={async () => {
-                                                await confirm({
-                                                    variant: 'danger',
-                                                    entity: { name: g.name },
-                                                    action: () => remove.mutateAsync(g.id),
-                                                    errorMessage: (err) => permissionRefusalText(err, t),
-                                                });
-                                            }}
-                                            disabled={adminLocked}
-                                            aria-label={t('delete')}
-                                            className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                    </DisabledReason>
-                                </div>
-                            </div>
-                            {g.role_label && (
-                                <span className="bg-brand/10 text-brand mt-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium">
-                                    {g.role_label}
-                                </span>
-                            )}
-                            <div className="border-border text-muted-foreground mt-3 flex items-center justify-between border-t pt-3 text-sm">
-                                <span className="text-foreground flex items-center gap-1.5 font-semibold">
-                                    <Users className="h-3.5 w-3.5" /> {fmtN(g.member_count)}
-                                </span>
-                                <span>{translate(lang, 'perm_ui_members')}</span>
-                            </div>
-                        </Card>
-                    );
-                })}
-            </div>
-
-            <GroupRoleModal open={modal.open} onClose={() => setModal({ open: false, group: null })} group={modal.group} />
-
-            {/* Default group dialog */}
-            <Dialog open={defaultDialog} onOpenChange={setDefaultDialog}>
-                <DialogContent className="max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle>{t('perm_default_group')}</DialogTitle>
-                        <DialogDescription>{t('perm_default_group_desc')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="py-2">
-                        <Select
-                            value={pendingDefault !== null ? String(pendingDefault) : '__none__'}
-                            onValueChange={(v) => setPendingDefault(v === '__none__' ? null : Number(v))}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="__none__">
-                                    <span className="text-muted-foreground">{translate(lang, 'perm_ui_none_set')}</span>
-                                </SelectItem>
-                                {defaultChoices.map((g) => (
-                                    <SelectItem key={g.id} value={String(g.id)}>
-                                        {g.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setDefaultDialog(false)}>
-                            {t('cancel')}
-                        </Button>
-                        <Button
-                            disabled={setDefaultGroup.isPending}
-                            onClick={async () => {
-                                const groupToSet = pendingDefault;
-                                const groupName = groups.find((g) => g.id === groupToSet)?.name;
-
-                                setDefaultDialog(false);
-
-                                const ok = await confirm({
-                                    variant: 'edit',
-                                    title: t('perm_default_group'),
-                                    entity: groupToSet ? { name: groupName } : { name: translate(lang, 'perm_ui_clear_default') },
-                                    action: () => setDefaultGroup.mutateAsync(groupToSet),
-                                    errorMessage: (err) => permissionRefusalText(err, t),
-                                });
-
-                                if (!ok) {
-                                    setPendingDefault(groupToSet);
-                                    setDefaultDialog(true);
-                                }
-                            }}
-                        >
-                            {t('save')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
     );
 }
 
