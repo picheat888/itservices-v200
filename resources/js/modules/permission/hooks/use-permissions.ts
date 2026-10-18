@@ -34,11 +34,13 @@ export function useUpdateRolePermissions() {
 
 export function useRoleMutations() {
     const qc = useQueryClient();
-    const invalidate = () => {
-        qc.invalidateQueries({ queryKey: KEY });
-        // Role names and colours show on the Role Groups list and its dialog
-        qc.invalidateQueries({ queryKey: GROUPS, exact: true });
-    };
+    // Returned so a duplicate resolves only once the matrix holds the new role
+    const invalidate = () =>
+        Promise.all([
+            qc.invalidateQueries({ queryKey: KEY }),
+            // Role names and colours show on the Role Groups list and its dialog
+            qc.invalidateQueries({ queryKey: GROUPS, exact: true }),
+        ]);
     return {
         create: useMutation({ mutationFn: (p: { name: string; color: string }) => roleApi.create(p), onSuccess: invalidate }),
         update: useMutation({
@@ -46,6 +48,10 @@ export function useRoleMutations() {
             onSuccess: invalidate,
         }),
         remove: useMutation({ mutationFn: (key: string) => roleApi.remove(key), onSuccess: invalidate }),
+        duplicate: useMutation({
+            mutationFn: (v: { key: string; name: string; color: string }) => roleApi.duplicate(v.key, { name: v.name, color: v.color }),
+            onSuccess: invalidate,
+        }),
     };
 }
 

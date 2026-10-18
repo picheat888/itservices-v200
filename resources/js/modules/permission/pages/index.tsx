@@ -18,7 +18,7 @@ import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Briefcase, Check, LayoutDashboard, Loader2, Lock, Pencil, PencilLine, Plus, Save, Search, Shield, ShieldCheck, Trash2 } from 'lucide-react';
+import { Briefcase, Check, LayoutDashboard, Loader2, Lock, PencilLine, Plus, Save, Search, Shield, ShieldCheck } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { RoleRow } from '../api/permissionApi';
@@ -36,7 +36,8 @@ import { ProfilePermissionTree } from '../components/profile-permission-tree';
 import { REPORT_COUNT, ReportPermissionTree } from '../components/report-permission-tree';
 import { REQUEST_COUNT, RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleBar } from '../components/role-bar';
-import { RoleModal } from '../components/role-modal';
+import { RoleModal, type RoleModalMode } from '../components/role-modal';
+import { RoleRowMenu } from '../components/role-row-menu';
 import { STOCK_COUNT, StockPermissionTree } from '../components/stock-permission-tree';
 import { TICKET_COUNT, TicketPermissionTree } from '../components/ticket-permission-tree';
 import { WORKFLOW_COUNT, WorkflowPermissionTree } from '../components/workflow-permission-tree';
@@ -200,7 +201,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const roleMut = useRoleMutations();
     const [searchParams, setSearchParams] = useSearchParams();
     const [draft, setDraft] = useState<Set<string>>(new Set());
-    const [roleModal, setRoleModal] = useState<{ open: boolean; role: RoleRow | null }>({ open: false, role: null });
+    // The mode stays on close, so the dialog keeps its words through the exit animation
+    const [roleModal, setRoleModal] = useState<{ open: boolean; mode: RoleModalMode }>({ open: false, mode: { kind: 'create' } });
     const [query, setQuery] = useState('');
     // Save flow: centred confirm (count frozen at open), ✓ flash, then the saved notice
     const [saveStep, setSaveStep] = useState<'idle' | 'confirm' | 'saving' | 'done'>('idle');
@@ -388,6 +390,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const switchRole = (key: string) => {
         if (key !== role.value) guardRoleSwitch(() => selectRole(key));
     };
+    const editRole = (r: RoleRow) => setRoleModal({ open: true, mode: { kind: 'edit', role: r } });
+    const duplicateRole = (r: RoleRow) => setRoleModal({ open: true, mode: { kind: 'duplicate', source: r, savedCount: heldKeys(r).size } });
     const roleOptions = roles.map((r) => ({ value: r.value, label: r.label, search: r.label, icon: <RoleBar color={r.color} className="h-4" /> }));
 
     const openSave = () => {
@@ -495,7 +499,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         >
             <div className="border-border flex items-center justify-between border-b p-3">
                 <span className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_all_templates')}</span>
-                <Button onClick={() => setRoleModal({ open: true, role: null })}>
+                <Button onClick={() => setRoleModal({ open: true, mode: { kind: 'create' } })}>
                     <Plus className="h-4 w-4" />
                     {t('perm_new_role')}
                 </Button>
@@ -521,14 +525,13 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 <RoleBar color={r.color} className="h-6" />
                                 <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand-ink')}>{r.label}</span>
                             </button>
-                            {!r.is_system && (
-                                <RoleRowActions
-                                    role={r}
-                                    onEdit={() => setRoleModal({ open: true, role: r })}
-                                    onDelete={() => handleDeleteRole(r)}
-                                    className="pointer-events-none pr-4 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100"
-                                />
-                            )}
+                            <RoleRowMenu
+                                role={r}
+                                onEdit={() => editRole(r)}
+                                onDuplicate={() => duplicateRole(r)}
+                                onDelete={() => handleDeleteRole(r)}
+                                className="pr-2"
+                            />
                         </div>
                     ))}
                 </div>
@@ -554,13 +557,12 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                         searchPlaceholder={t('gr_role_search')}
                                     />
                                 </div>
-                                {!role.is_system && (
-                                    <RoleRowActions
-                                        role={role}
-                                        onEdit={() => setRoleModal({ open: true, role })}
-                                        onDelete={() => handleDeleteRole(role)}
-                                    />
-                                )}
+                                <RoleRowMenu
+                                    role={role}
+                                    onEdit={() => editRole(role)}
+                                    onDuplicate={() => duplicateRole(role)}
+                                    onDelete={() => handleDeleteRole(role)}
+                                />
                             </div>
                             <div className="text-muted-foreground text-xs">
                                 {role.is_super ? t('perm_super_locked') : `${fmtN(draft.size)} ${t('perm_enabled')}`}
@@ -641,7 +643,12 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                 </div>
             </div>
 
-            <RoleModal open={roleModal.open} onClose={() => setRoleModal({ open: false, role: null })} role={roleModal.role} />
+            <RoleModal
+                open={roleModal.open}
+                mode={roleModal.mode}
+                onClose={() => setRoleModal((m) => ({ ...m, open: false }))}
+                onDuplicated={switchRole}
+            />
 
             <CenteredAlert
                 open={saveStep !== 'idle'}
@@ -696,33 +703,6 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                         : t('perm_saved_desc_none').replace('{name}', saved.label))}
             </CenteredAlert>
         </PermissionViewProvider>
-    );
-}
-
-/** Edit and delete for a custom role, in the role list row and the tablet header. */
-function RoleRowActions({ role, onEdit, onDelete, className }: { role: RoleRow; onEdit: () => void; onDelete: () => void; className?: string }) {
-    const t = useT();
-    return (
-        <div className={cn('flex gap-0.5', className)}>
-            <button
-                type="button"
-                onClick={onEdit}
-                title={`${t('edit')} ${role.label}`}
-                aria-label={`${t('edit')} ${role.label}`}
-                className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
-            >
-                <Pencil className="h-3.5 w-3.5" aria-hidden />
-            </button>
-            <button
-                type="button"
-                onClick={onDelete}
-                title={`${t('delete')} ${role.label}`}
-                aria-label={`${t('delete')} ${role.label}`}
-                className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
-            >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-        </div>
     );
 }
 
