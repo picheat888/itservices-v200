@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useLocationMutations } from '@/modules/employee';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
@@ -9,13 +10,20 @@ import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { LocationItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Boxes } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 /** LocationModal — add or edit a location; Save shows a spinner, then a tick, then the dialog closes. */
 export function LocationModal({ open, location, onClose }: { open: boolean; location?: LocationItem | null; onClose: () => void }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(location ?? null);
+    useEffect(() => {
+        if (open) setShown(location ?? null);
+    }, [open, location]);
+    const view = open ? (location ?? null) : shown;
     const confirmEdit = useConfirmEdit();
     const { create, update } = useLocationMutations();
     const [name, setName] = useState('');
@@ -72,37 +80,42 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{location ? t('edit_location') : t('add_location')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
-                <Field label={t('loc_name')} required error={nameError}>
-                    <Input
-                        ref={nameRef}
-                        autoComplete="off"
-                        value={name}
-                        onChange={(e) => {
-                            setName(e.target.value);
-                            setNameError(undefined);
-                        }}
-                        autoFocus
-                        maxLength={120}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                submit();
-                            }
-                        }}
-                    />
-                </Field>
-                <DialogFooter>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Boxes}
+                    eyebrow={t('set_master_data')}
+                    title={view ? t('edit_location') : t('add_location')}
+                    code={view?.name}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+                    <Field label={t('loc_name')} required error={nameError}>
+                        <Input
+                            ref={nameRef}
+                            autoComplete="off"
+                            value={name}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                setNameError(undefined);
+                            }}
+                            autoFocus
+                            maxLength={120}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                    submit();
+                                }
+                            }}
+                        />
+                    </Field>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

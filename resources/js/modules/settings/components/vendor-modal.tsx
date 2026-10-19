@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
@@ -9,9 +10,10 @@ import { localName } from '@/shared/lib/local-name';
 import type { Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
+import { Boxes } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useVendorMutations } from '../hooks/use-master-data';
 
@@ -35,6 +37,12 @@ function fromVendor(vendor?: Vendor | null): typeof emptyForm {
 /** VendorModal — add or edit a vendor (English and Thai names plus contact details); Save shows a spinner, then a tick, then the dialog closes. */
 export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?: Vendor | null; onClose: () => void }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(vendor ?? null);
+    useEffect(() => {
+        if (open) setShown(vendor ?? null);
+    }, [open, vendor]);
+    const view = open ? (vendor ?? null) : shown;
     const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { create, update } = useVendorMutations();
@@ -129,12 +137,15 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{vendor ? t('md_edit_vendor') : t('md_add_vendor')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Boxes}
+                    eyebrow={t('set_master_data')}
+                    title={view ? t('md_edit_vendor') : t('md_add_vendor')}
+                    code={view ? localName(view, lang) : undefined}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('md_vendor_name_en')} required error={errors.name}>
@@ -202,14 +213,14 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                             onKeyDown={onEnter}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

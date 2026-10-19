@@ -902,6 +902,8 @@ function UnitsList() {
             addLabel={t('md_add_unit')}
             editLabel={t('md_edit_unit')}
             nameLabel={t('md_unit_name')}
+            icon={Boxes}
+            eyebrow={t('set_master_data')}
             addButtonLabel={t('md_add_unit')}
             emptyName="units"
         />
@@ -921,6 +923,8 @@ function WarrantyTypesList() {
             addLabel={t('md_add_warranty_type')}
             editLabel={t('md_edit_warranty_type')}
             nameLabel={t('md_warranty_type_name')}
+            icon={Boxes}
+            eyebrow={t('set_master_data')}
             addButtonLabel={t('md_add_warranty_type')}
             emptyName="warranty_types"
         />
@@ -1649,6 +1653,8 @@ function WriteoffReasonsSection() {
                 addLabel={t('set_wo_reason_add')}
                 editLabel={t('set_wo_reason_edit')}
                 nameLabel={t('set_wo_reason_name')}
+                icon={Box}
+                eyebrow={t('set_assets')}
                 addButtonLabel={t('set_wo_reason_add')}
                 emptyName="writeoff_reasons"
             />

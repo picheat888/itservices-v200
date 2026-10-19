@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
@@ -8,14 +9,21 @@ import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Boxes } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useBrandMutations } from '../hooks/use-master-data';
 
 /** BrandModal — add or edit a brand; Save shows a spinner, then a tick, then the dialog closes. */
 export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Brand | null; onClose: () => void }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(brand ?? null);
+    useEffect(() => {
+        if (open) setShown(brand ?? null);
+    }, [open, brand]);
+    const view = open ? (brand ?? null) : shown;
     const confirmEdit = useConfirmEdit();
     const { create, update } = useBrandMutations();
     const [name, setName] = useState('');
@@ -81,12 +89,15 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{brand ? t('md_edit_brand') : t('md_add_brand')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Boxes}
+                    eyebrow={t('set_master_data')}
+                    title={view ? t('md_edit_brand') : t('md_add_brand')}
+                    code={view?.name}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('md_brand_name')} required error={nameError}>
                         <Input
@@ -111,14 +122,14 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                             onKeyDown={onEnter}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
