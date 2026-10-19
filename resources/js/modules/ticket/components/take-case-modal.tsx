@@ -10,7 +10,7 @@ import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Zap } from 'lucide-react';
@@ -105,8 +105,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent
-                className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0"
+            <FormDialogContent
                 // Every field is optional, so don't raise the iPad keyboard on open
                 onOpenAutoFocus={(e) => {
                     e.preventDefault();
@@ -122,7 +121,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     srDescription={t('ticket_take_case')}
                 />
 
-                <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     {!fromRequest && (
@@ -182,9 +181,9 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     <Field label={t('ticket_initial_notes')}>
                         <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
@@ -192,8 +191,8 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                         <Zap className="h-4 w-4" />
                         {t('ticket_take_case')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

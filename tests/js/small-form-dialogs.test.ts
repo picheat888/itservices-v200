@@ -23,7 +23,13 @@ function assertSmallForm(rel: string): void {
     for (const re of OLD_LOOK) assert.doesNotMatch(src, re, `${rel}: still has ${re}`);
 }
 
-const TICKET_4B: string[] = [];
+const TICKET_4B = [
+    'modules/ticket/components/assign-ticket-modal.tsx',
+    'modules/ticket/components/forward-ticket-modal.tsx',
+    'modules/ticket/components/resolve-ticket-modal.tsx',
+    'modules/ticket/components/take-case-modal.tsx',
+    'modules/ticket/components/ticket-update-modal.tsx',
+];
 const REPORT_4B: string[] = [];
 const SETTINGS_4A: string[] = [];
 const PEOPLE_4A: string[] = [];
@@ -32,6 +38,8 @@ const RECORD_4A: string[] = [];
 const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_4A, ...RECORD_4A];
 
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
+
+test('ticket small forms use the shared shell', () => TICKET_4B.forEach(assertSmallForm));
 
 test('the shared shell is 560 wide, capped, with a 32px close button and the large-dialog footer bar', () => {
     const src = read('shared/ui/dialog.tsx');

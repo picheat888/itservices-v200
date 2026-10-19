@@ -8,7 +8,7 @@ import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { Check, CheckCircle2, X, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -62,7 +62,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+            <FormDialogContent>
                 <FocusDialogHeader
                     icon={isComplete ? CheckCircle2 : XCircle}
                     eyebrow={view?.ticket_no}
@@ -72,7 +72,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                     srDescription={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
                 />
 
-                <div className="flex-1 space-y-4 overflow-y-auto border-t px-6 py-6">
+                <DialogBody className="space-y-4">
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <p className="text-muted-foreground text-sm">
@@ -91,9 +91,9 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                             placeholder={isComplete ? t('ticket_resolution_ph_complete') : t('ticket_resolution_ph_cancel')}
                         />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                <DialogFooterBar>
                     {/* "Back" on the cancel dialog, so its two buttons don't both read ยกเลิก */}
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {isComplete ? t('cancel') : t('back')}
@@ -102,8 +102,8 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                         {isComplete ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                         {isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
