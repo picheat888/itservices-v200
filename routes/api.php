@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Access\SocialPlatformController;
 use App\Http\Controllers\Api\Access\SoftwareController;
 use App\Http\Controllers\Api\Asset\AssetController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\LoginDeviceController;
 use App\Http\Controllers\Api\Contract\ContractAttachmentController;
 use App\Http\Controllers\Api\Contract\ContractController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
@@ -76,7 +77,10 @@ use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 
-Route::post('login', [AuthController::class, 'login'])->name('api.login');
+Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.login');
+// Device-limit dialog: sign a device out with the pending token, before this browser has a session
+Route::post('login/devices/{device}/sign-out', [LoginDeviceController::class, 'signOut'])
+    ->whereNumber('device')->middleware('throttle:login-pending')->name('api.login.devices.sign-out');
 Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.show');
 // Browser errors from the SPA, guests included (logs/frontend)
 Route::post('client-errors', [ClientErrorController::class, 'store'])
