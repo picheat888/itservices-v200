@@ -104,6 +104,9 @@ class ReportExportEmailTest extends TestCase
         $this->actingAs($user)->get("/files/report-exports/{$export->id}")->assertForbidden();
 
         $this->travel(31)->days();
+        // A reader 31 days later arrives on a new session
+        $this->flushSession();
+        $this->defaultCookies = [];
         $this->actingAs($user)->get($link)->assertForbidden();
     }
 

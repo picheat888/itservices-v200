@@ -163,7 +163,7 @@ class SecuritySettingsTest extends TestCase
         AppSetting::put('session_timeout_minutes', '30');
         $request = $this->sessionRequest(User::factory()->create(), time() - 32 * 60);
 
-        $response = (new CheckSessionTimeout)
+        $response = app(CheckSessionTimeout::class)
             ->handle($request, fn () => response('next'));
 
         $this->assertSame(401, $response->getStatusCode());
@@ -175,7 +175,7 @@ class SecuritySettingsTest extends TestCase
         AppSetting::put('session_timeout_minutes', '30');
         $request = $this->sessionRequest(User::factory()->create(), time() - 60);
 
-        $response = (new CheckSessionTimeout)
+        $response = app(CheckSessionTimeout::class)
             ->handle($request, fn () => response('next'));
 
         $this->assertSame(200, $response->getStatusCode());
@@ -187,7 +187,7 @@ class SecuritySettingsTest extends TestCase
         AppSetting::put('session_timeout_minutes', '0');
         $request = $this->sessionRequest(User::factory()->create(), time() - 999999);
 
-        $response = (new CheckSessionTimeout)
+        $response = app(CheckSessionTimeout::class)
             ->handle($request, fn () => response('next'));
 
         $this->assertSame(200, $response->getStatusCode());
