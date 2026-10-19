@@ -231,15 +231,17 @@ export const common: Dict = {
     err_throttle_body: 'ระบบพักการใช้งานชั่วคราว รอให้ครบเวลาแล้วกดลองใหม่',
     err_throttle_toast: 'ใช้งานถี่เกินไป กรุณารอประมาณ {n} วินาทีแล้วลองใหม่',
     err_reference: 'รหัสอ้างอิงสำหรับแจ้ง IT: {id}',
-    err_render_title: 'หน้านี้แสดงผลไม่ได้',
-    err_render_body: 'โหลดหน้าใหม่เพื่อใช้งานต่อ',
-    err_render_report_it: 'ถ้ายังเป็นอีกให้แจ้ง IT พร้อมรหัสอ้างอิง',
     err_maintenance_title: 'ปิดปรับปรุงชั่วคราว',
     err_maintenance_body: 'ระบบกำลังปรับปรุง ใช้งานได้อีกครั้งในประมาณ {n} นาที',
     err_maintenance_later: 'ระบบกำลังปรับปรุง กรุณาลองใหม่ภายหลัง',
     err_network_still: 'ยังเชื่อมต่อไม่ได้',
     err_ready: 'พร้อม',
     err_ready_spoken: 'ลองใหม่ได้แล้ว',
+
+    // error-boundary.tsx — crash screen
+    err_render_title: 'หน้านี้แสดงผลไม่ได้',
+    err_render_body: 'โหลดหน้าใหม่เพื่อใช้งานต่อ',
+    err_render_report_it: 'ถ้ายังเป็นอีกให้แจ้ง IT พร้อมรหัสอ้างอิง',
 
     // http.ts, form error banners — a save the server failed
     err_action_server: 'ทำรายการไม่สำเร็จ เพราะเซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้ง',
@@ -281,7 +283,6 @@ export const common: Dict = {
     cmn_empty_bell_empty: 'ไม่มีการแจ้งเตือน',
     cmn_empty_bell_empty_hint: 'เรื่องที่ต้องรู้หรือต้องทำจะแจ้งที่นี่',
     cmn_empty_no_access: 'ไม่มีสิทธิ์เข้าถึง',
-    cmn_empty_no_access_hint: 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ หากคิดว่าเป็นข้อผิดพลาดโปรดติดต่อผู้ดูแลระบบ',
     cmn_empty_record_missing: 'ไม่พบข้อมูลนี้',
     cmn_empty_record_missing_hint: 'ข้อมูลอาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง',
     cmn_empty_search_select: 'ไม่พบรายการ',
