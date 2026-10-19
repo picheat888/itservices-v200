@@ -1,7 +1,7 @@
 // Errors that stop the page (server, network, rate limit, maintenance) as a dialog over the blurred app, driven by stores/app-error.
 // Words come from the bundled dictionaries, so they show even when the API is down.
 import { useT } from '@/lang';
-import { BlockingDialog } from '@/shared/components/blocking-dialog';
+import { BlockingDialog, useTopDialogOpen } from '@/shared/components/blocking-dialog';
 import { CountdownRing } from '@/shared/components/countdown-ring';
 import { ErrorIcon, ErrorState } from '@/shared/components/error-state';
 import { useConnectionRecovery } from '@/shared/hooks/use-connection-recovery';
@@ -22,8 +22,10 @@ const RING_TONE = {
 
 export function AppErrorDialog() {
     const kind = useAppErrorStore((s) => s.kind);
+    // Waits in the store under the idle warning or account switch, so their buttons keep working
+    const topDialogOpen = useTopDialogOpen();
 
-    if (!kind) return null;
+    if (!kind || topDialogOpen) return null;
 
     return (
         <BlockingDialog layer="wall">
