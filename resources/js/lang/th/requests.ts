@@ -35,8 +35,16 @@ export const requests: Dict = {
     req_kpi_approved: 'อนุมัติแล้ว',
     req_kpi_rejected: 'ไม่อนุมัติ',
     req_kpi_cycle: 'เวลาพิจารณาเฉลี่ย',
-    req_kpi_cycle_sub: 'ตั้งแต่ยื่นจนพิจารณาครบทุกขั้น',
+    req_kpi_cycle_from: 'จาก{scope}',
+    req_kpi_cycle_note: 'ตั้งแต่ยื่นจนพิจารณาครบทุกขั้น นับเฉพาะคำขอที่พิจารณาครบแล้ว',
     req_kpi_days_suffix: ' วัน',
+    req_kpi_completed_more: 'เสร็จสิ้นอีก {n}',
+    req_kpi_cancelled_more: 'ยกเลิกอีก {n}',
+    req_kpi_filed_within: 'จากที่ยื่น{period}',
+    req_kpi_scope_filed: 'คำขอที่ยื่น{period}',
+    req_kpi_scope_all: 'คำขอทั้งหมด',
+    req_kpi_approved_note: 'นับ{scope} อนุมัติแล้ว {a} เสร็จสิ้นอีก {c}',
+    req_kpi_rejected_note: 'นับ{scope} ไม่อนุมัติ {r} ยกเลิกอีก {c}',
 
     // pages/index.tsx — แท็บภาพรวม
     req_queue_title: 'รอคุณพิจารณา',

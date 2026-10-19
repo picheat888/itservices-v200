@@ -4,7 +4,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
-import { OverviewHeader, useOverviewPeriod, type PeriodOptions } from '@/shared/components/overview-period';
+import { OverviewHeader, useOverviewPeriod, useShownPeriod, type PeriodOptions } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -294,7 +294,8 @@ export default function TicketsPage() {
         });
     };
 
-    const { data: summary, isLoading: summaryLoading } = useTicketSummary(canOverview, range);
+    const { data: summary, isLoading: summaryLoading, isPlaceholderData: summaryStale } = useTicketSummary(canOverview, range);
+    const summaryPeriod = useShownPeriod(range, summaryStale);
     const {
         data: listData,
         isLoading,
@@ -516,6 +517,7 @@ export default function TicketsPage() {
                                 {summary && (
                                     <TicketOverviewTiles
                                         summary={summary}
+                                        period={summaryPeriod}
                                         canOpenReport={has('reports.module') && has('reports.tickets')}
                                         onOpenOverSla={() => changeTab('all', { sla: 'over_sla' })}
                                         onOpenWaiting={() => changeTab('all', { status: 'open' })}

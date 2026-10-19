@@ -178,6 +178,15 @@ export const common: Dict = {
     period_unit_week: 'week',
     period_unit_month: 'month',
     period_unit_year: 'year',
+    period_within_days: 'in the last {n} days',
+    period_recent_days: 'in the last {n} days',
+    period_within_year: 'this year',
+    period_since_start: 'since the start',
+    period_within_range: 'in the chosen range',
+    period_versus_days: 'vs the {n} days before',
+    period_versus_previous: 'vs the period before',
+    period_now: '{text} now',
+    period_now_only: 'As of now',
 
     // record-stamps.tsx — when and by whom a record was added / last changed
     record_added: 'Added',

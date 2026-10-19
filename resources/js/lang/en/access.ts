@@ -125,9 +125,9 @@ export const access: Dict = {
 
     // access dashboard — Overview tab
     access_tab_overview: 'Overview',
-    access_dash_up: '↑ {n} more grants in this period',
-    access_dash_down: '↓ {n} fewer grants in this period',
-    access_dash_flat: 'No change in this period',
+    access_dash_up: '↑ {n} more grants {period}',
+    access_dash_down: '↓ {n} fewer grants {period}',
+    access_dash_flat: 'No change {period}',
     access_dash_distribution_title: 'Grants by type',
     access_dash_distribution_cap: 'All active access grants, split by resource type',
     access_dash_grants_total: 'total grants',

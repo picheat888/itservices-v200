@@ -11,6 +11,7 @@ export const asset: Dict = {
     asset_total: 'ทรัพย์สินทั้งหมด',
     asset_deployed: 'ใช้งานอยู่',
     asset_ready: 'พร้อมส่งมอบ',
+    asset_ready_n: 'พร้อมส่งมอบ {n}',
     asset_pending_accept: 'รอรับมอบ',
     asset_pending_return: 'รอรับคืน',
     asset_common: 'ส่วนกลาง',

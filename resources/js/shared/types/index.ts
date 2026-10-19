@@ -83,6 +83,8 @@ export interface Position {
     /** "Special position": employees in it may be saved without a department or a report-to. */
     allow_special_position: boolean;
     employees_count?: number;
+    /** Holders still active (the position list only). */
+    active_employees_count?: number;
 }
 
 export interface ApproverNode {

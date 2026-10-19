@@ -5,7 +5,7 @@ import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
-import { OverviewHeader, overviewPeriodParams, useOverviewPeriod } from '@/shared/components/overview-period';
+import { OverviewHeader, overviewPeriodParams, useOverviewPeriod, usePeriodWords, useShownPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
@@ -169,6 +169,8 @@ export default function RequestsPage() {
     const { data: pageData, isLoading, isFetching, isPlaceholderData, isError, refetch } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
+    const metaPeriod = useShownPeriod(period, isPlaceholderData);
+    const periodWords = usePeriodWords();
 
     // Overview only: the oldest requests waiting on me.
     const {
@@ -359,6 +361,13 @@ export default function RequestsPage() {
               : {};
     const visibleTotal = meta ? meta.pending + meta.approved + meta.completed + meta.rejected + meta.cancelled : null;
     const kpiLoading = !meta;
+    // KPI footers name the filing window the period counts by; all time names none
+    const filedAllTime = metaPeriod === 'all';
+    const filedScope = (word: (period: typeof metaPeriod) => string) =>
+        filedAllTime ? t('req_kpi_scope_all') : t('req_kpi_scope_filed').replace('{period}', word(metaPeriod));
+    const filedWithin = filedAllTime ? '' : ` ${t('req_kpi_filed_within').replace('{period}', periodWords.within(metaPeriod))}`;
+    const completedMore = t('req_kpi_completed_more').replace('{n}', fmtN(meta?.period.completed ?? 0));
+    const cancelledMore = t('req_kpi_cancelled_more').replace('{n}', fmtN(meta?.period.cancelled ?? 0));
     // What the sidebar badge counts: waiting on me plus, for IT, the approved queue
     const attention = meta ? meta.awaiting_me + meta.to_complete : null;
 
@@ -404,7 +413,7 @@ export default function RequestsPage() {
                                     label={t('req_kpi_awaiting')}
                                     value={String(meta?.awaiting_me ?? 0)}
                                     onClick={() => switchTab('approvals')}
-                                    sub={t('req_kpi_awaiting_of_short').replace('{n}', fmtN(meta?.pending ?? 0))}
+                                    sub={periodWords.now(t('req_kpi_awaiting_of_short').replace('{n}', fmtN(meta?.pending ?? 0)))}
                                     footerTitle={t('req_kpi_awaiting_of').replace('{n}', fmtN(meta?.pending ?? 0))}
                                     loading={kpiLoading}
                                 />
@@ -413,7 +422,11 @@ export default function RequestsPage() {
                                     label={t('req_kpi_approved')}
                                     value={String(meta?.period.approved ?? 0)}
                                     onClick={() => switchTab('all', { status: 'approved', ...periodFiled })}
-                                    sub={`${meta?.period.completed ?? 0} ${t('req_status_completed')}`}
+                                    sub={`${completedMore}${filedWithin}`}
+                                    footerTitle={t('req_kpi_approved_note')
+                                        .replace('{scope}', filedScope(periodWords.recent))
+                                        .replace('{a}', fmtN(meta?.period.approved ?? 0))
+                                        .replace('{c}', fmtN(meta?.period.completed ?? 0))}
                                     loading={kpiLoading}
                                 />
                                 <StatCard
@@ -421,14 +434,19 @@ export default function RequestsPage() {
                                     label={t('req_kpi_rejected')}
                                     value={String(meta?.period.rejected ?? 0)}
                                     onClick={() => switchTab('all', { status: 'rejected', ...periodFiled })}
-                                    sub={`${meta?.period.cancelled ?? 0} ${t('req_status_cancelled')}`}
+                                    sub={`${cancelledMore}${filedWithin}`}
+                                    footerTitle={t('req_kpi_rejected_note')
+                                        .replace('{scope}', filedScope(periodWords.recent))
+                                        .replace('{r}', fmtN(meta?.period.rejected ?? 0))
+                                        .replace('{c}', fmtN(meta?.period.cancelled ?? 0))}
                                     loading={kpiLoading}
                                 />
                                 <StatCard
                                     icon={Clock}
                                     label={t('req_kpi_cycle')}
                                     value={meta?.period.avg_cycle_days != null ? `${meta.period.avg_cycle_days}${t('req_kpi_days_suffix')}` : '—'}
-                                    sub={t('req_kpi_cycle_sub')}
+                                    sub={t('req_kpi_cycle_from').replace('{scope}', filedScope(periodWords.within))}
+                                    footerTitle={t('req_kpi_cycle_note')}
                                     loading={kpiLoading}
                                 />
                             </div>

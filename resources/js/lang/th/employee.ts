@@ -65,7 +65,9 @@ export const employee: Dict = {
     emp_status_caption: 'ใช้งาน จากทั้งหมด {n} คน',
     emp_status_active: 'ใช้งาน',
     emp_status_resigned: 'ลาออก',
-    emp_resigned_period: 'คนที่ลาออกในช่วงนี้',
+    emp_resigned_days: 'ลาออก {n} วันล่าสุด',
+    emp_resigned_all: 'ลาออกทั้งหมด',
+    emp_resigned_range: 'ลาออกในช่วงที่เลือก',
     emp_recent_resignations: 'ลาออกล่าสุด',
     position: 'ตำแหน่ง',
     position_ph: 'เลือกตำแหน่ง',
@@ -380,8 +382,10 @@ export const employee: Dict = {
     // pages/index.tsx — การ์ด KPI ภาพรวม และแถบสถานะ
     emp_kpi_total_sub: 'ใช้งาน {n} คน',
     emp_kpi_depts_sub: '{n} หน่วยงาน',
-    emp_kpi_positions_sub: '{n} ตำแหน่งที่มีพนักงาน',
-    emp_kpi_hires_sub: 'คนที่เริ่มงานในช่วงนี้',
+    emp_kpi_positions_sub: 'มีคน {n} ตำแหน่ง',
+    emp_kpi_hires_days: 'เริ่มงาน {n} วันล่าสุด',
+    emp_kpi_hires_all: 'ทุกคนในระบบ',
+    emp_kpi_hires_range: 'เริ่มงานในช่วงที่เลือก',
     emp_status_bar_sr: 'ใช้งาน {active} คน ลาออก {resigned} คน จากทั้งหมด {total} คน',
 
     // position-modal.tsx และ department-modal.tsx — placeholder และข้อความบันทึกไม่สำเร็จ

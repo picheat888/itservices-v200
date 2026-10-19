@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
@@ -164,6 +165,23 @@ class EmployeeApiTest extends TestCase
         $this->putJson("/api/employees/{$emp->id}", ['first_name' => 'No', 'last_name' => 'Org', 'position_id' => $position->id])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['department_id', 'section_id', 'manager_id']);
+    }
+
+    public function test_position_list_counts_active_holders_apart_from_everyone(): void
+    {
+        $this->actingAs($this->super());
+        $filled = Position::create(['title' => 'Technician']);
+        $vacated = Position::create(['title' => 'Driver']);
+        Employee::create(['first_name' => 'Still', 'last_name' => 'Here', 'position_id' => $filled->id, 'status' => EmployeeStatus::Active]);
+        Employee::create(['first_name' => 'Gone', 'last_name' => 'Away', 'position_id' => $filled->id, 'status' => EmployeeStatus::Resigned]);
+        Employee::create(['first_name' => 'Also', 'last_name' => 'Gone', 'position_id' => $vacated->id, 'status' => EmployeeStatus::Resigned]);
+
+        $rows = collect($this->getJson('/api/positions')->assertOk()->json('data'))->keyBy('title');
+
+        $this->assertSame(2, $rows['Technician']['employees_count']);
+        $this->assertSame(1, $rows['Technician']['active_employees_count']);
+        $this->assertSame(1, $rows['Driver']['employees_count']);
+        $this->assertSame(0, $rows['Driver']['active_employees_count']);
     }
 
     public function test_special_position_skips_department_and_report_to(): void

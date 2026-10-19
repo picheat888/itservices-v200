@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
-import { OverviewHeader, useOverviewPeriod } from '@/shared/components/overview-period';
+import { OverviewHeader, useOverviewPeriod, usePeriodWords, useShownPeriod } from '@/shared/components/overview-period';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -365,7 +365,9 @@ export function AccessOverview({
     const t = useT();
     const fmtN = useNumberFormat();
     const [period, setPeriod] = useOverviewPeriod();
-    const { data, isLoading, isError, refetch } = useAccessSummary(period);
+    const { data, isLoading, isError, isPlaceholderData, refetch } = useAccessSummary(period);
+    const shownPeriod = useShownPeriod(period, isPlaceholderData);
+    const periodWords = usePeriodWords();
     // Whether the governance triage drawer is open (every issue group in one panel).
     const [issuesOpen, setIssuesOpen] = useState(false);
 
@@ -411,7 +413,13 @@ export function AccessOverview({
                             icon={Icon}
                             value={stat.resources}
                             onClick={() => onOpenTab(kind)}
-                            footer={<span className={deltaTone}>{t(deltaKey).replace('{n}', fmtN(Math.abs(net)))}</span>}
+                            footer={
+                                <span className={deltaTone}>
+                                    {t(deltaKey)
+                                        .replace('{n}', fmtN(Math.abs(net)))
+                                        .replace('{period}', periodWords.within(shownPeriod))}
+                                </span>
+                            }
                         />
                     );
                 })}

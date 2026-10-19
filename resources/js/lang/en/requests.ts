@@ -38,8 +38,16 @@ export const requests: Dict = {
     req_kpi_approved: 'Approved',
     req_kpi_rejected: 'Rejected',
     req_kpi_cycle: 'Avg. decision time',
-    req_kpi_cycle_sub: 'from submission to final decision',
+    req_kpi_cycle_from: 'from {scope}',
+    req_kpi_cycle_note: 'From submission to final decision, decided requests only',
     req_kpi_days_suffix: 'd',
+    req_kpi_completed_more: '{n} more completed',
+    req_kpi_cancelled_more: '{n} more cancelled',
+    req_kpi_filed_within: 'of those filed {period}',
+    req_kpi_scope_filed: 'requests filed {period}',
+    req_kpi_scope_all: 'all requests',
+    req_kpi_approved_note: 'Of {scope}: {a} approved, {c} more completed',
+    req_kpi_rejected_note: 'Of {scope}: {r} rejected, {c} more cancelled',
 
     // pages/index.tsx — dashboard tab
     req_queue_title: 'Needs your decision',
