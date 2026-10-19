@@ -3313,26 +3313,18 @@
         {
             "key": "ms_fix_avg",
             "label_key": "rep_k_ms_fix_avg",
-            "heading": "เวลาปิดเคสเฉลี่ย (ชม.)",
-            "value": 31.6,
+            "heading": "เวลาแก้ไขโดยเฉลี่ย (ชม.)",
+            "value": 27.3,
             "tone": null,
             "format": "hours",
-            "split": [
-                {
-                    "key": "wait",
-                    "label_key": "rep_rs_split_wait",
-                    "tone": "soft-amber",
-                    "value": 7.3
-                },
-                {
-                    "key": "work",
-                    "label_key": "rep_rs_split_work",
-                    "tone": "soft-blue",
-                    "value": 27.3
-                }
-            ],
+            "split": [],
             "share": null,
-            "note": null,
+            "note": {
+                "label_key": "rep_n_ms_wait_avg",
+                "values": {
+                    "wait": 7.3
+                }
+            },
             "goal": null,
             "attention": null,
             "chart": null,
@@ -3447,26 +3439,18 @@
         {
             "key": "ms_fix_avg",
             "label_key": "rep_k_ms_fix_avg",
-            "heading": "เวลาปิดเคสเฉลี่ย (ชม.)",
-            "value": 26.4,
+            "heading": "เวลาแก้ไขโดยเฉลี่ย (ชม.)",
+            "value": 28.3,
             "tone": null,
             "format": "hours",
-            "split": [
-                {
-                    "key": "wait",
-                    "label_key": "rep_rs_split_wait",
-                    "tone": "soft-amber",
-                    "value": 5.1
-                },
-                {
-                    "key": "work",
-                    "label_key": "rep_rs_split_work",
-                    "tone": "soft-blue",
-                    "value": 28.3
-                }
-            ],
+            "split": [],
             "share": null,
-            "note": null,
+            "note": {
+                "label_key": "rep_n_ms_wait_avg",
+                "values": {
+                    "wait": 5.1
+                }
+            },
             "goal": null,
             "attention": null,
             "chart": null,

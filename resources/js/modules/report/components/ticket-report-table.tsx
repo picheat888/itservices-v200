@@ -111,7 +111,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             header: t('rep_col_resolve'),
             width: '100px',
             align: 'right',
-            render: (r) => <span>{r.resolve_hours === null ? '—' : `${r.resolve_hours} ${t('rep_hours')}`}</span>,
+            render: (r) => <span>{r.work_hours === null ? '—' : `${r.work_hours} ${t('rep_hours')}`}</span>,
         },
         {
             key: 'sla',

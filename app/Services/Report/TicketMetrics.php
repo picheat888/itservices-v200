@@ -23,6 +23,16 @@ final class TicketMetrics
         return round($ticket->created_at->diffInMinutes($ticket->resolved_at, true) / 60, 1);
     }
 
+    /** Calendar hours from taking the case to resolving it ("เวลาแก้ไข"), one decimal; null until both happen. */
+    public static function workHours(Ticket $ticket): ?float
+    {
+        if ($ticket->responded_at === null || $ticket->resolved_at === null) {
+            return null;
+        }
+
+        return round($ticket->responded_at->diffInMinutes($ticket->resolved_at, true) / 60, 1);
+    }
+
     /** Calendar hours from opening to the first response (the case being taken), one decimal; null until then. */
     public static function responseHours(Ticket $ticket): ?float
     {

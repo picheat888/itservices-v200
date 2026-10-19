@@ -47,7 +47,12 @@ class TicketOverviewReportTest extends TestCase
     /** @param array<string, mixed> $attributes */
     private function ticket(array $attributes): Ticket
     {
-        return Ticket::factory()->create(array_merge(['category' => 'hardware'], $attributes));
+        // A completed case is taken the moment it opens unless the test says otherwise.
+        $taken = ($attributes['status'] ?? null) === 'completed' && ! array_key_exists('responded_at', $attributes)
+            ? ['responded_at' => $attributes['created_at'] ?? null]
+            : [];
+
+        return Ticket::factory()->create(array_merge(['category' => 'hardware'], $taken, $attributes));
     }
 
     /** @param array<string, mixed> $extra */
@@ -83,9 +88,9 @@ class TicketOverviewReportTest extends TestCase
     public function test_kpis_count_only_tickets_opened_in_the_range(): void
     {
         $user = $this->deskMember();
-        // Met: resolved 2h after opening, due in 4h.
+        // Met: resolved 2h after opening, due in 4h; waited 1h to be taken, so 1h of fixing.
         $this->ticket(['status' => 'completed', 'priority' => 'critical', 'created_at' => '2026-09-02 09:00',
-            'resolved_at' => '2026-09-02 11:00', 'sla_resolve_due_at' => '2026-09-02 13:00']);
+            'responded_at' => '2026-09-02 10:00', 'resolved_at' => '2026-09-02 11:00', 'sla_resolve_due_at' => '2026-09-02 13:00']);
         // Breached: resolved 10h after opening, due in 8h.
         $this->ticket(['status' => 'completed', 'priority' => 'high', 'created_at' => '2026-09-03 08:00',
             'resolved_at' => '2026-09-03 18:00', 'sla_resolve_due_at' => '2026-09-03 16:00']);
@@ -103,8 +108,8 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame(2, $kpi['sla_measured']);
         $this->assertSame(1, $kpi['sla_met']);
         $this->assertEquals(50.0, $kpi['sla_rate']);
-        // Mean of [2, 10] is 6; nearest-rank P90 is 10.
-        $this->assertEquals(6.0, $kpi['avg_resolve_hours']);
+        // Fixing time only: mean of [1, 10] is 5.5; nearest-rank P90 is 10.
+        $this->assertEquals(5.5, $kpi['avg_resolve_hours']);
         $this->assertEquals(10.0, $kpi['p90_resolve_hours']);
     }
 
@@ -371,7 +376,7 @@ class TicketOverviewReportTest extends TestCase
     public function test_rows_are_paginated_newest_first_with_sla_state(): void
     {
         $user = $this->deskMember();
-        $met = $this->ticket(['status' => 'completed', 'created_at' => '2026-09-02 09:00',
+        $met = $this->ticket(['status' => 'completed', 'created_at' => '2026-09-02 09:00', 'responded_at' => '2026-09-02 09:30',
             'resolved_at' => '2026-09-02 11:00', 'sla_resolve_due_at' => '2026-09-02 13:00']);
         $late = $this->ticket(['status' => 'in_progress', 'created_at' => '2026-09-10 09:00',
             'responded_at' => '2026-09-10 09:10', 'sla_resolve_due_at' => '2026-09-11 09:00']);
@@ -384,9 +389,9 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame(2, $body['meta']['total']);
         $this->assertSame($late->id, $body['data'][0]['id']);
         $this->assertSame('over_sla', $body['data'][0]['sla']);
-        $this->assertNull($body['data'][0]['resolve_hours']);
+        $this->assertNull($body['data'][0]['work_hours']);
         $this->assertSame('met', $body['data'][1]['sla']);
-        $this->assertEquals(2.0, $body['data'][1]['resolve_hours']);
+        $this->assertEquals(1.5, $body['data'][1]['work_hours']);
         $this->assertSame($met->ticket_no, $body['data'][1]['ticket_no']);
     }
 

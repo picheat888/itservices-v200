@@ -180,13 +180,9 @@ class TicketManualSlaReport extends TabularReport
             ReportSummary::make('ms_take_rate', 'รับเคสทัน SLA (%)', self::percent($tally['take_met'], $tally['take_total']), null, 'percent')
                 ->withGoal($goal)
                 ->withNote(['label_key' => 'rep_rs_note_take', 'values' => ['met' => $tally['take_met'], 'n' => $tally['take_total']]]),
-            // Where the average time went, as the request report splits it: waiting to be taken (the
-            // table's "เวลารับเคสโดยเฉลี่ย", over every case taken), then taking to closing (completed cases).
-            ReportSummary::make('ms_fix_avg', 'เวลาปิดเคสเฉลี่ย (ชม.)', $tally['fix_avg_hours'], null, 'hours')
-                ->withSplit($tally['take_avg_hours'] === null || $tally['work_avg_hours'] === null ? [] : [
-                    ['key' => 'wait', 'label_key' => 'rep_rs_split_wait', 'tone' => 'soft-amber', 'value' => round($tally['take_avg_hours'], 1)],
-                    ['key' => 'work', 'label_key' => 'rep_rs_split_work', 'tone' => 'soft-blue', 'value' => $tally['work_avg_hours']],
-                ]),
+            // Taking to closing only; the wait to be taken is its own line.
+            ReportSummary::make('ms_fix_avg', 'เวลาแก้ไขโดยเฉลี่ย (ชม.)', $tally['work_avg_hours'], null, 'hours')
+                ->withNote($tally['take_avg_hours'] === null ? null : ['label_key' => 'rep_n_ms_wait_avg', 'values' => ['wait' => round($tally['take_avg_hours'], 1)]]),
             ReportSummary::make('ms_over_sla', 'เกิน SLA ตอนนี้', $tally['over_now'], 'soft-red')
                 ->withShareOf($tally['open'])
                 ->withSplit([
