@@ -22,6 +22,8 @@ use Illuminate\Support\Str;
  */
 class EmailNotificationService
 {
+    public const NOT_CONFIGURED_ERROR = 'SMTP is not set up in Settings > Email: the message was written to the mail log file, not sent';
+
     public function __construct(private readonly MailConfigService $mailConfig) {}
 
     /**
@@ -196,11 +198,13 @@ class EmailNotificationService
         $subject = $this->brandedSubject($subject);
 
         $this->mailConfig->apply();
+        // No SMTP in Settings and the .env fallback only writes to a log file
+        $logOnly = config('mail.mailers.'.config('mail.default').'.transport') === 'log';
 
         try {
             Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoFile(), EmailTemplates::widthFor($templateKey), $attachmentPath, $attachmentName));
-            $status = 'sent';
-            $error = null;
+            $status = $logOnly ? 'failed' : 'sent';
+            $error = $logOnly ? self::NOT_CONFIGURED_ERROR : null;
         } catch (\Throwable $e) {
             $status = 'failed';
             // The mailer's own words, kept verbatim on purpose. Whoever reads the delivery
