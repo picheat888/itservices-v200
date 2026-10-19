@@ -11,9 +11,21 @@ import { PermissionSwitch } from './permission-switch';
 /** A group with more children than this spans two cells and lays its children in two columns. */
 export const WIDE_CHILDREN = 6;
 
-/** Unsaved changes (orange), the search term (tinted), search hits hidden behind an off master and the super role's lock, for every card on the page. */
-type PermissionView = { changed: (key: string) => boolean; query: string; hiddenHits: (module: string) => number; superRole: boolean };
-const PermissionViewContext = createContext<PermissionView>({ changed: () => false, query: '', hiddenHits: () => 0, superRole: false });
+/** Unsaved changes (orange), the search term (tinted), search hits hidden behind an off master and the role-wide locks (super role, the reader's own role), for every card on the page. */
+type PermissionView = {
+    changed: (key: string) => boolean;
+    query: string;
+    hiddenHits: (module: string) => number;
+    superRole: boolean;
+    ownRole: boolean;
+};
+const PermissionViewContext = createContext<PermissionView>({
+    changed: () => false,
+    query: '',
+    hiddenHits: () => 0,
+    superRole: false,
+    ownRole: false,
+});
 export const PermissionViewProvider = PermissionViewContext.Provider;
 
 export const CHANGED_TEXT = 'font-semibold text-orange-700 dark:text-orange-400';
@@ -36,14 +48,24 @@ function Label({ label, pkey }: { label: string; pkey?: string }) {
 /** Ids that tie a row's label, hint and lock reason to its switch; `notes` are the hidden texts the switch reads. */
 function useSwitchWiring(s: SwitchProps, extraDescribedBy?: string) {
     const t = useT();
-    const { superRole } = useContext(PermissionViewContext);
+    const { superRole, ownRole } = useContext(PermissionViewContext);
     const id = useId();
-    const reason = !s.locked ? null : superRole ? t('perm_super_locked') : s.lockedBy ? t('perm_lock_needs').replace('{name}', s.lockedBy) : null;
+    const locked = s.locked || ownRole;
+    const reason = !locked
+        ? null
+        : superRole
+          ? t('perm_super_locked')
+          : ownRole
+            ? t('perm_refusal_own_access')
+            : s.lockedBy
+              ? t('perm_lock_needs').replace('{name}', s.lockedBy)
+              : null;
     const hintId = s.info ? `${id}-hint` : undefined;
     // Keyboard focus on the switch shows its hint, as hover does for the (i)
     const [hintShown, setHintShown] = useState(false);
     const reasonId = reason ? `${id}-reason` : undefined;
     return {
+        locked,
         switchId: `${id}-switch`,
         hintShown,
         focusEvents: {
@@ -73,9 +95,9 @@ function useSwitchWiring(s: SwitchProps, extraDescribedBy?: string) {
 // The (i) flows after the label's last word, also when the label wraps
 const HINT_AFTER_LABEL = 'ml-1 align-[-2px]';
 
-function SwitchLabel({ htmlFor, s }: { htmlFor: string; s: SwitchProps }) {
+function SwitchLabel({ htmlFor, s, locked }: { htmlFor: string; s: SwitchProps; locked: boolean }) {
     return (
-        <label htmlFor={htmlFor} className={cn('min-w-0', !s.locked && 'cursor-pointer')}>
+        <label htmlFor={htmlFor} className={cn('min-w-0', !locked && 'cursor-pointer')}>
             <Label label={s.label} pkey={s.pkey} />
         </label>
     );
@@ -148,7 +170,7 @@ function MasterBand({
         <div className={cn('bg-brand/5 border-border flex items-center gap-2.5 px-3.5 py-2.5', hasBody && 'border-b')}>
             <div className="min-w-0">
                 <div className="text-sm font-semibold">
-                    <SwitchLabel htmlFor={wiring.switchId} s={master} />
+                    <SwitchLabel htmlFor={wiring.switchId} s={master} locked={wiring.locked} />
                     {master.info && <InfoHint text={master.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
                 </div>
                 <div id={subId} className="text-muted-foreground text-xs">
@@ -160,7 +182,7 @@ function MasterBand({
                     id={wiring.switchId}
                     label={master.label}
                     on={master.on}
-                    locked={master.locked}
+                    locked={wiring.locked}
                     onClick={master.onToggle}
                     describedBy={wiring.describedBy}
                     {...wiring.focusEvents}
@@ -192,7 +214,7 @@ export function GroupHead({ chip, lang, ...s }: SwitchProps & { chip?: boolean; 
     return (
         <div className="bg-muted -mx-2 mb-1 flex min-h-[34px] items-center gap-2 rounded-md px-2">
             <span className="min-w-0 text-sm font-medium">
-                <SwitchLabel htmlFor={wiring.switchId} s={s} />
+                <SwitchLabel htmlFor={wiring.switchId} s={s} locked={wiring.locked} />
                 {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
             </span>
             <span className="ml-auto flex items-center gap-2">
@@ -201,7 +223,7 @@ export function GroupHead({ chip, lang, ...s }: SwitchProps & { chip?: boolean; 
                     id={wiring.switchId}
                     label={s.label}
                     on={s.on}
-                    locked={s.locked}
+                    locked={wiring.locked}
                     onClick={s.onToggle}
                     describedBy={wiring.describedBy}
                     {...wiring.focusEvents}
@@ -246,7 +268,7 @@ export function ChildRow({ aria, ...s }: SwitchProps & { aria?: string }) {
     return (
         <div className="flex min-h-[30px] items-center gap-2">
             <span className="text-muted-foreground min-w-0 text-[13px]">
-                <SwitchLabel htmlFor={wiring.switchId} s={s} />
+                <SwitchLabel htmlFor={wiring.switchId} s={s} locked={wiring.locked} />
                 {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
             </span>
             <span className="ml-auto">
@@ -254,7 +276,7 @@ export function ChildRow({ aria, ...s }: SwitchProps & { aria?: string }) {
                     id={wiring.switchId}
                     label={aria ?? s.label}
                     on={s.on}
-                    locked={s.locked}
+                    locked={wiring.locked}
                     onClick={s.onToggle}
                     describedBy={wiring.describedBy}
                     {...wiring.focusEvents}
@@ -272,7 +294,7 @@ export function PlainRow({ dimOff, comingSoon, lang, ...s }: SwitchProps & { dim
     return (
         <div className="flex min-h-[34px] items-center gap-2">
             <span className={cn('min-w-0 text-sm', dimOff && !s.on ? 'text-muted-foreground' : 'text-foreground font-medium')}>
-                <SwitchLabel htmlFor={wiring.switchId} s={s} />
+                <SwitchLabel htmlFor={wiring.switchId} s={s} locked={wiring.locked} />
                 {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
                 {comingSoon && (
                     <span id={tagId} className="ml-1 text-xs italic opacity-70">
@@ -285,7 +307,7 @@ export function PlainRow({ dimOff, comingSoon, lang, ...s }: SwitchProps & { dim
                     id={wiring.switchId}
                     label={s.label}
                     on={s.on}
-                    locked={s.locked}
+                    locked={wiring.locked}
                     onClick={s.onToggle}
                     describedBy={wiring.describedBy}
                     {...wiring.focusEvents}

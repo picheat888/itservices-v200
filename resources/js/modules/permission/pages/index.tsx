@@ -43,6 +43,7 @@ import { TicketPermissionTree } from '../components/ticket-permission-tree';
 import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
 import { usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
 import { rebaseDraft, specEdges } from '../lib/draft-rebase';
+import { isOwnRole } from '../lib/own-role';
 import { countGranted, hiddenHitCount, specKeys } from '../lib/permission-count';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { cardSpec, FLAT_CARD_META } from '../lib/permission-specs';
@@ -166,6 +167,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const { data, isLoading, isError, refetch } = usePermissionMatrix();
     const update = useUpdateRolePermissions();
     const roleMut = useRoleMutations();
+    const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [draft, setDraft] = useState<Set<string>>(new Set());
     // The mode stays on close, so the dialog keeps its words through the exit animation
@@ -296,8 +298,11 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
     if (isLoading || !data || !role) return <RolesSkeleton />;
 
+    const ownRole = isOwnRole(role, user?.role);
+    const readOnly = role.is_super || ownRole;
+
     const toggle = (key: string) => {
-        if (role.is_super) return;
+        if (readOnly) return;
         setDraft((prev) => {
             const next = new Set(prev);
             if (next.has(key)) next.delete(key);
@@ -462,7 +467,13 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
     return (
         <PermissionViewProvider
-            value={{ changed: (key) => changedKeys.has(key), query, hiddenHits: (module) => hiddenHits.get(module) ?? 0, superRole: role.is_super }}
+            value={{
+                changed: (key) => changedKeys.has(key),
+                query,
+                hiddenHits: (module) => hiddenHits.get(module) ?? 0,
+                superRole: role.is_super,
+                ownRole,
+            }}
         >
             <div className="border-border flex items-center justify-between border-b p-3">
                 <span className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_all_templates')}</span>
@@ -554,10 +565,10 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 />
                             </div>
                             {/* Amber badge where Save stands: the role is protected, not wrong */}
-                            {role.is_super ? (
+                            {readOnly ? (
                                 <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-amber-300/70 bg-amber-50 px-2.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
                                     <Lock className="h-3.5 w-3.5 shrink-0" />
-                                    {t('perm_super_readonly')}
+                                    {ownRole ? t('perm_refusal_own_access') : t('perm_super_readonly')}
                                 </span>
                             ) : (
                                 <div className="flex flex-col items-end gap-1">
