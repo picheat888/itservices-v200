@@ -42,6 +42,23 @@ class RoleDuplicateTest extends TestCase
         return $keys;
     }
 
+    public function test_create_rename_and_duplicate_answer_with_the_role_resource_only(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $shape = ['key', 'name', 'color', 'is_system'];
+
+        $created = $this->postJson('/api/roles', ['name' => 'Desk', 'color' => '#2563eb'])->assertCreated()->json('data');
+        $this->assertSame($shape, array_keys($created));
+        $this->assertSame(['key' => 'desk', 'name' => 'Desk', 'color' => '#2563eb', 'is_system' => false], $created);
+
+        $renamed = $this->putJson('/api/roles/desk', ['name' => 'Help desk', 'color' => '#2563eb'])->assertOk()->json('data');
+        $this->assertSame($shape, array_keys($renamed));
+        $this->assertSame('Help desk', $renamed['name']);
+
+        $copy = $this->postJson('/api/roles/staff/duplicate', ['name' => 'Staff two'])->assertCreated()->json('data');
+        $this->assertSame($shape, array_keys($copy));
+    }
+
     public function test_a_duplicate_carries_the_saved_permissions_but_no_members(): void
     {
         $this->grant($this->staff, 'tickets.view_all', 'tickets.create');
