@@ -37,3 +37,13 @@ export function periodReachesToday(period: OverviewPeriod, today = new Date()): 
 
 /** A stable query-key part for a period. */
 export const overviewPeriodKey = (period: OverviewPeriod) => (typeof period === 'object' ? `${period.from}_${period.to}` : String(period));
+
+/** Which words name a period on a KPI card footer: the lang key, and the day count for a preset. */
+export function periodWordKey(period: OverviewPeriod, form: 'within' | 'recent' | 'versus'): { key: string; days?: number } {
+    if (typeof period === 'number') {
+        const key = form === 'within' ? 'period_within_days' : form === 'recent' ? 'period_recent_days' : 'period_versus_days';
+        return { key, days: period };
+    }
+    if (form === 'versus') return { key: 'period_versus_previous' };
+    return { key: period === 'year' ? 'period_within_year' : period === 'all' ? 'period_since_start' : 'period_within_range' };
+}

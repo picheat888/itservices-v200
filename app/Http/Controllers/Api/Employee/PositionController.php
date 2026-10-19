@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StorePositionRequest;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\PositionResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Position;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +17,12 @@ class PositionController extends Controller
 {
     public function index(): JsonResponse
     {
-        return PositionResource::collection(Position::withCount('employees')->orderBy('code')->get())->response();
+        $positions = Position::withCount([
+            'employees',
+            'employees as active_employees_count' => fn (Builder $q) => $q->where('status', EmployeeStatus::Active->value),
+        ])->orderBy('code')->get();
+
+        return PositionResource::collection($positions)->response();
     }
 
     /** Employees holding a position (for the "view members" dialog). */

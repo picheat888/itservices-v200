@@ -178,6 +178,15 @@ export const common: Dict = {
     period_unit_week: 'สัปดาห์',
     period_unit_month: 'เดือน',
     period_unit_year: 'ปี',
+    period_within_days: 'ใน {n} วัน',
+    period_recent_days: 'ใน {n} วันล่าสุด',
+    period_within_year: 'ปีนี้',
+    period_since_start: 'ตั้งแต่ต้น',
+    period_within_range: 'ในช่วงที่เลือก',
+    period_versus_days: 'เทียบ {n} วันก่อน',
+    period_versus_previous: 'เทียบช่วงก่อนหน้า',
+    period_now: '{text} ตอนนี้',
+    period_now_only: 'ตอนนี้',
 
     // record-stamps.tsx — วันที่และผู้เพิ่ม/แก้ไขล่าสุดของ record
     record_added: 'เพิ่มเมื่อ',

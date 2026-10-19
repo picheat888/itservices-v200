@@ -1,5 +1,6 @@
 // Overview tab header: "ภาพรวม" plus the period buttons (7 / 30 / 90 days, this year, all, custom range; each module picks which).
 // The period lives in the URL (?range=7|30|90|year|custom&from&to); the module's default period stays out of it.
+// usePeriodWords() names that period (or "ตอนนี้") on the KPI card footers below the header.
 import { useT } from '@/lang';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -8,8 +9,16 @@ import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { Gauge } from 'lucide-react';
 import { useState } from 'react';
 
-import { PRESETS, readOverviewPeriod, spanDays, type OverviewPeriod, type PeriodOptions } from '@/shared/lib/overview-period-core';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import {
+    overviewPeriodKey,
+    periodWordKey,
+    PRESETS,
+    readOverviewPeriod,
+    spanDays,
+    type OverviewPeriod,
+    type PeriodOptions,
+} from '@/shared/lib/overview-period-core';
 
 export { overviewPeriodKey, overviewPeriodParams, periodReachesToday, readOverviewPeriod, spanDays } from '@/shared/lib/overview-period-core';
 export type { OverviewPeriod, PeriodOptions } from '@/shared/lib/overview-period-core';
@@ -26,6 +35,38 @@ export function useOverviewPeriod(options?: PeriodOptions): [OverviewPeriod, (ne
                 : { range: next === fallback ? null : String(next), from: null, to: null },
         );
     return [period, setPeriod];
+}
+
+/** The period the figures on screen belong to: the old one while a new period loads behind them. */
+export function useShownPeriod(period: OverviewPeriod, showingOld: boolean): OverviewPeriod {
+    const [shown, setShown] = useState(period);
+    if (!showingOld && overviewPeriodKey(shown) !== overviewPeriodKey(period)) {
+        setShown(period);
+    }
+    return showingOld ? shown : period;
+}
+
+/** Words that tie a KPI card footer to the chosen period, or mark it as a figure of right now. */
+export function usePeriodWords() {
+    const t = useT();
+    const fmtN = useNumberFormat();
+    const say = (period: OverviewPeriod, form: Parameters<typeof periodWordKey>[1]) => {
+        const { key, days } = periodWordKey(period, form);
+        return days === undefined ? t(key) : t(key).replace('{n}', fmtN(days));
+    };
+
+    return {
+        /** "ใน 30 วัน", "ปีนี้", "ตั้งแต่ต้น" or "ในช่วงที่เลือก" */
+        within: (period: OverviewPeriod) => say(period, 'within'),
+        /** As within(), with "ใน 30 วันล่าสุด" for a preset */
+        recent: (period: OverviewPeriod) => say(period, 'recent'),
+        /** What a change is measured against: "เทียบ 30 วันก่อน" or "เทียบช่วงก่อนหน้า" */
+        versus: (period: OverviewPeriod) => say(period, 'versus'),
+        /** "{text} ตอนนี้" */
+        now: (text: string) => t('period_now').replace('{text}', text),
+        /** "ตอนนี้" for a card with nothing else under its number */
+        nowOnly: t('period_now_only'),
+    };
 }
 
 const SEGMENT = 'press rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2';

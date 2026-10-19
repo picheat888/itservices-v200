@@ -131,9 +131,9 @@ export const access: Dict = {
 
     // access dashboard — แท็บภาพรวม
     access_tab_overview: 'ภาพรวม',
-    access_dash_up: '↑ เพิ่มขึ้น {n} สิทธิ์ในช่วงนี้',
-    access_dash_down: '↓ ลดลง {n} สิทธิ์ในช่วงนี้',
-    access_dash_flat: 'ไม่เปลี่ยนแปลงในช่วงนี้',
+    access_dash_up: '↑ เพิ่มขึ้น {n} สิทธิ์{period}',
+    access_dash_down: '↓ ลดลง {n} สิทธิ์{period}',
+    access_dash_flat: 'ไม่เปลี่ยนแปลง{period}',
     access_dash_distribution_title: 'สัดส่วนสิทธิ์แยกตามประเภท',
     access_dash_distribution_cap: 'สิทธิ์การเข้าถึงที่ใช้งานอยู่ทั้งหมด แบ่งตามประเภทของ Resource',
     access_dash_grants_total: 'สิทธิ์รวม',

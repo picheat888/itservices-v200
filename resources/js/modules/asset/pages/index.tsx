@@ -7,7 +7,7 @@ import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
-import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
+import { OverviewHeader, periodReachesToday, useOverviewPeriod, usePeriodWords } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -398,6 +398,7 @@ export default function AssetsPage() {
     const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
     const [period, setPeriod] = useOverviewPeriod();
+    const periodWords = usePeriodWords();
     const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = useAssetSummary(period);
     const {
         data: listData,
@@ -669,15 +670,25 @@ export default function AssetsPage() {
                     <div className="space-y-4 px-5 pb-5">
                         {/* Summary stats live on the Overview tab. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
+                            <StatCard label={t('asset_total')} value={summary?.total ?? 0} footer={periodWords.nowOnly} icon={Box} />
                             <StatCard
                                 label={t('asset_deployed')}
                                 value={summary?.deployed ?? 0}
-                                footer={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`}
+                                footer={periodWords.now(t('asset_ready_n').replace('{n}', fmtN(summary?.ready ?? 0)))}
                                 icon={CheckCircle2}
                             />
-                            <StatCard label={t('asset_pending_accept')} value={summary?.pending_acceptance ?? 0} icon={Clock} />
-                            <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
+                            <StatCard
+                                label={t('asset_pending_accept')}
+                                value={summary?.pending_acceptance ?? 0}
+                                footer={periodWords.nowOnly}
+                                icon={Clock}
+                            />
+                            <StatCard
+                                label={t('asset_pending_return')}
+                                value={summary?.pending_return ?? 0}
+                                footer={periodWords.nowOnly}
+                                icon={RefreshCcw}
+                            />
                         </div>
 
                         {/* The two cards stand the same height: the row stretches both to the taller,

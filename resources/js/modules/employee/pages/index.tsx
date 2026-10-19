@@ -4,8 +4,15 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
-import { OverviewHeader, periodReachesToday, useOverviewPeriod } from '@/shared/components/overview-period';
-import { type PageTab, PageTabs } from '@/shared/components/page-tabs';
+import {
+    OverviewHeader,
+    periodReachesToday,
+    useOverviewPeriod,
+    usePeriodWords,
+    useShownPeriod,
+    type OverviewPeriod,
+} from '@/shared/components/overview-period';
+import { PageTabs, type PageTab } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
@@ -127,7 +134,14 @@ export default function EmployeesPage() {
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isTab, 'overview');
     const [period, setPeriod] = useOverviewPeriod();
-    const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = useEmployeeSummary(period);
+    const {
+        data: summary,
+        isLoading: summaryLoading,
+        isError: summaryFailed,
+        isPlaceholderData: summaryStale,
+        refetch: refetchSummary,
+    } = useEmployeeSummary(period);
+    const summaryPeriod = useShownPeriod(period, summaryStale);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
 
@@ -511,6 +525,7 @@ export default function EmployeesPage() {
                     {tab === 'overview' && !summaryLoading && summary && (
                         <OverviewTab
                             summary={summary}
+                            period={summaryPeriod}
                             highlightLast={periodReachesToday(period)}
                             departments={departments}
                             positions={positions}
@@ -994,12 +1009,14 @@ function EmployeeOverviewSkeleton() {
 
 function OverviewTab({
     summary,
+    period,
     highlightLast,
     departments,
     positions,
     onViewDepartments,
 }: {
     summary: EmployeeSummary | undefined;
+    period: OverviewPeriod;
     highlightLast: boolean;
     departments: Department[];
     positions: Position[];
@@ -1009,29 +1026,38 @@ function OverviewTab({
     const fmtN = useNumberFormat();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
+    const words = usePeriodWords();
+    // "ใน 30 วันล่าสุด" style wording per period; all time counts everyone on record
+    const periodWord = (days: string, all: string, range: string) =>
+        typeof period === 'number' ? t(days).replace('{n}', fmtN(period)) : period === 'all' ? t(all) : t(range);
 
     const sectionTotal = departments.reduce((sum, d) => sum + (d.sections_count ?? 0), 0);
-    const filledPositions = positions.filter((p) => (p.employees_count ?? 0) > 0).length;
+    const filledPositions = positions.filter((p) => (p.active_employees_count ?? 0) > 0).length;
     const kpis = [
         {
             label: t('total_employees'),
             value: String(summary?.total ?? '—'),
             icon: Users,
-            sub: t('emp_kpi_total_sub').replace('{n}', fmtN(summary?.active ?? 0)),
+            sub: words.now(t('emp_kpi_total_sub').replace('{n}', fmtN(summary?.active ?? 0))),
         },
         {
             label: t('departments_count'),
             value: String(departments.length),
             icon: Building2,
-            sub: t('emp_kpi_depts_sub').replace('{n}', fmtN(sectionTotal)),
+            sub: words.now(t('emp_kpi_depts_sub').replace('{n}', fmtN(sectionTotal))),
         },
         {
             label: t('active_positions'),
             value: String(positions.length),
             icon: Briefcase,
-            sub: t('emp_kpi_positions_sub').replace('{n}', fmtN(filledPositions)),
+            sub: words.now(t('emp_kpi_positions_sub').replace('{n}', fmtN(filledPositions))),
         },
-        { label: t('new_hires'), value: String(summary?.new_hires ?? '—'), icon: UserPlus, sub: t('emp_kpi_hires_sub') },
+        {
+            label: t('new_hires'),
+            value: String(summary?.new_hires ?? '—'),
+            icon: UserPlus,
+            sub: periodWord('emp_kpi_hires_days', 'emp_kpi_hires_all', 'emp_kpi_hires_range'),
+        },
     ];
 
     // Employee-status split (active vs resigned) for the status card's bar.
@@ -1090,7 +1116,9 @@ function OverviewTab({
                         </div>
                         <div className="border-border mt-4 flex items-center gap-3 border-t border-dashed pt-3.5">
                             <span className="text-destructive text-[32px] leading-none font-bold">{summary?.resigned_in_period ?? 0}</span>
-                            <span className="text-muted-foreground text-[12.5px]">{t('emp_resigned_period')}</span>
+                            <span className="text-muted-foreground text-[12.5px]">
+                                {periodWord('emp_resigned_days', 'emp_resigned_all', 'emp_resigned_range')}
+                            </span>
                         </div>
                     </div>
                 </Card>

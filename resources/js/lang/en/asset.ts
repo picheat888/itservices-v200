@@ -11,6 +11,7 @@ export const asset: Dict = {
     asset_total: 'Total assets',
     asset_deployed: 'In use',
     asset_ready: 'Ready to deploy',
+    asset_ready_n: '{n} ready to deploy',
     asset_pending_accept: 'Pending acceptance',
     asset_pending_return: 'Pending return',
     asset_common: 'Common',

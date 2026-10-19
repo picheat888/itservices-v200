@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources\Employee;
 
+use App\Models\Employee\Position;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Employee\Position */
+/** @mixin Position */
 class PositionResource extends JsonResource
 {
     /**
@@ -19,6 +20,7 @@ class PositionResource extends JsonResource
             'title' => $this->title,
             'allow_special_position' => (bool) $this->allow_special_position,
             'employees_count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
+            'active_employees_count' => $this->whenCounted('active_employees'),
         ];
     }
 }

@@ -65,7 +65,9 @@ export const employee: Dict = {
     emp_status_caption: 'active of {n} staff',
     emp_status_active: 'Active',
     emp_status_resigned: 'Resigned',
-    emp_resigned_period: 'left in this period',
+    emp_resigned_days: 'left in the last {n} days',
+    emp_resigned_all: 'left, all time',
+    emp_resigned_range: 'left in the chosen range',
     emp_recent_resignations: 'Recent resignations',
     position: 'Position',
     position_ph: 'Select a position',
@@ -384,7 +386,9 @@ export const employee: Dict = {
     emp_kpi_total_sub: '{n} active',
     emp_kpi_depts_sub: '{n} sections',
     emp_kpi_positions_sub: '{n} filled',
-    emp_kpi_hires_sub: 'started in this period',
+    emp_kpi_hires_days: 'started in the last {n} days',
+    emp_kpi_hires_all: 'everyone on record',
+    emp_kpi_hires_range: 'started in the chosen range',
     emp_status_bar_sr: '{active} active and {resigned} resigned of {total} staff',
 
     // position-modal.tsx and department-modal.tsx — form placeholders and save errors

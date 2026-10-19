@@ -1,6 +1,7 @@
 // Overview tab: the four summary tiles. Two act on right now (past SLA, waiting for pickup),
 // two read the chosen window (SLA as the report counts it, opened vs closed).
 import { useT } from '@/lang';
+import { usePeriodWords, type OverviewPeriod } from '@/shared/components/overview-period';
 import { StatCard, StatGrid } from '@/shared/components/stat-card';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { slaLevel, type SlaLevel } from '@/shared/lib/sla-level';
@@ -71,17 +72,21 @@ function ReportLink({ href, children }: { href: string | null; children: ReactNo
 
 export function TicketOverviewTiles({
     summary,
+    period,
     canOpenReport,
     onOpenOverSla,
     onOpenWaiting,
 }: {
     summary: TicketSummary;
+    period: OverviewPeriod;
     canOpenReport: boolean;
     onOpenOverSla: () => void;
     onOpenWaiting: () => void;
 }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const words = usePeriodWords();
+    const within = words.within(period);
     const sla = summary.period_sla;
     const live = summary.backlog_open + summary.backlog_in_progress;
     const net = summary.created - summary.resolved;
@@ -102,9 +107,13 @@ export function TicketOverviewTiles({
                 alert={summary.over_sla_now > 0 ? 'red' : undefined}
                 onClick={summary.over_sla_now > 0 ? onOpenOverSla : undefined}
                 className="h-full"
-                footer={summary.over_sla_now === 0 ? t('ticket_dash_over_sla_ok_sub') : summary.over_sla_oldest_days != null ? oldest : ofLive}
+                footer={
+                    summary.over_sla_now === 0 ? t('ticket_dash_over_sla_ok_sub') : words.now(summary.over_sla_oldest_days != null ? oldest : ofLive)
+                }
                 footerTitle={
-                    summary.over_sla_now > 0 ? [ofLive, summary.over_sla_oldest_days != null && oldest].filter(Boolean).join(' ') : undefined
+                    summary.over_sla_now > 0
+                        ? words.now([ofLive, summary.over_sla_oldest_days != null && oldest].filter(Boolean).join(' '))
+                        : undefined
                 }
             />
             <StatCard
@@ -117,7 +126,7 @@ export function TicketOverviewTiles({
                 className="h-full"
                 footer={
                     summary.backlog_open > 0
-                        ? t('ticket_tile_working').replace('{n}', fmtN(summary.backlog_in_progress))
+                        ? words.now(t('ticket_tile_working').replace('{n}', fmtN(summary.backlog_in_progress)))
                         : t('ticket_dash_waiting_ok_sub')
                 }
             />
@@ -132,12 +141,14 @@ export function TicketOverviewTiles({
                     className={linked}
                     footer={
                         sla.rate == null ? (
-                            t('ticket_tile_sla_none')
-                        ) : (
+                            t('ticket_tile_sla_none').replace('{period}', within)
+                        ) : sla.delta_pts != null ? (
                             <span className="inline-flex items-center gap-1.5">
-                                {sla.delta_pts != null && <PointsTrend delta={sla.delta_pts} />}
-                                {split('ticket_tile_sla_split_short')}
+                                <PointsTrend delta={sla.delta_pts} />
+                                {words.versus(period)}
                             </span>
+                        ) : (
+                            `${split('ticket_tile_sla_split_short')} ${within}`
                         )
                     }
                 />
@@ -149,15 +160,17 @@ export function TicketOverviewTiles({
                     value={Math.abs(net)}
                     tone={net > 0 ? 'red' : net < 0 ? 'green' : undefined}
                     aside={<FlowBars flow={summary.flow} />}
-                    footerTitle={`${t('ticket_tile_flow_opened').replace('{n}', fmtN(summary.created))} ${t('ticket_tile_flow_closed').replace('{n}', fmtN(summary.resolved))}`}
+                    footerTitle={`${within} ${t('ticket_tile_flow_opened').replace('{n}', fmtN(summary.created))} ${t('ticket_tile_flow_closed').replace('{n}', fmtN(summary.resolved))}`}
                     className={linked}
                     footer={
-                        <span className="inline-flex items-center gap-1.5">
-                            <span className="bg-brand/50 h-2 w-2 rounded-sm" />
+                        // Inline (not flex) so a cut line ends in "…"; the period leads so it is never the part cut
+                        <>
+                            {within}
+                            <span className="bg-brand/50 mx-1.5 inline-block h-2 w-2 rounded-sm align-middle" />
                             {t('ticket_tile_flow_opened_short').replace('{n}', fmtN(summary.created))}
-                            <span className="ml-1 h-2 w-2 rounded-sm bg-emerald-500" />
+                            <span className="mr-1.5 ml-2 inline-block h-2 w-2 rounded-sm bg-emerald-500 align-middle" />
                             {t('ticket_tile_flow_closed_short').replace('{n}', fmtN(summary.resolved))}
-                        </span>
+                        </>
                     }
                 />
             </ReportLink>
