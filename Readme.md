@@ -6552,3 +6552,34 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - (`17e0c6b9`) แท็บภาพรวมของ 7 โมดูล (Ticket, พนักงาน, คำขอ, สิทธิ์การเข้าถึง, ทรัพย์สิน, สัญญา, คลังอะไหล่) เดิมเรียงการ์ด 4 ใบแถวเดียวตั้งแต่ 1024px ทำให้ iPad mini แนวนอนเหลือที่บรรทัดล่างราว 160px คำบอกช่วงเวลาและชื่อการ์ด "ปิดทัน SLA (เป้า 90%)" โดนตัด ตอนนี้เรียง 4 ใบตั้งแต่ 1280px (`xl:grid-cols-4`) ต่ำกว่านั้นเป็น 2×2 (การ์ดกว้าง 420px ที่ 1024px) โครงตอนโหลดของแต่ละแท็บใช้คอลัมน์เดียวกัน; `StatGrid` ที่ 4 ใบ (`ROW_COLUMNS[4]` ใน `stat-card.tsx`) ก็เปลี่ยนตาม ใช้อยู่ที่ Ticket ที่เดียว
 - Dashboard และหน้ารายงานไม่ได้แตะ (หน้ารายงานใช้ `summary-columns.ts` ของตัวเอง)
 - **ตรวจแล้ว** เปิดหน้าจริงทั้ง 7 แท็บที่ 1024px ได้ 2 แถว ทุกแท็บ ที่ 1280px ยังเป็นแถวเดียว 4 ใบ; JS 325 เทส
+
+## จำกัดจำนวนเครื่อง เครื่องที่ล็อกอินอยู่ และบันทึก Login (2026-10-19)
+ตาม design doc `docs/superpowers/specs/2026-10-19-session-limit-design.md` และ mockup 7 หน้าที่ผู้ใช้อนุมัติ commit เริ่มที่ `e7541f57` จบที่ `65ccb0b5` (ยังไม่ push)
+
+**สิ่งที่สร้าง**
+- **จำกัดเครื่องต่อบัญชี** (`9bbb8fa1`, `ffad17db`) Settings ส่วนความปลอดภัยมีสวิตช์กับปุ่ม 1 / 2 / 3 เครื่อง เปิดแล้วเริ่มที่ 2 ใช้กับทุกบัญชีรวมผู้ดูแล; เปิดหรือลดจำนวนแล้วบัญชีที่เกินจะเหลือเครื่องที่ใช้ล่าสุดเครื่องเดียว (เครื่องของคนที่กดบันทึกอยู่ยังอยู่เสมอ) มี confirm ก่อนบันทึก
+- **เข้าเครื่องที่เกิน** (`c6cdca62`, `92f3a2dc`) login ครั้งที่เกินขึ้น dialog กลางจอบอกเครื่องที่ใช้อยู่ ต้องออกจากระบบอย่างน้อย 1 เครื่องจึงกด "เข้าสู่ระบบ" ได้ ไม่ต้องกรอกรหัสผ่านซ้ำ (ใช้ token `pending` อายุ 5 นาที)
+- **บอกเหตุที่ถูกออกจากระบบ** (`831d3645`, `a3ff162d`, `6e11c251`, `65be0895`) เครื่องที่ถูกสั่งออกรู้ตอนส่งคำขอครั้งถัดไป แล้วหน้า login ขึ้นข้อความตามเหตุ (เครื่องอื่นเข้าแทน, สั่งออกจากโปรไฟล์, ผู้ดูแลจำกัดจำนวน, หมดเวลา, เปลี่ยนรหัสผ่าน, บัญชีถูกปิด)
+- **โปรไฟล์ แท็บ "การเข้าสู่ระบบ"** (`5cf26201`, `0f9f6684`) การ์ดเครื่องที่ล็อกอินอยู่ (ป้าย "เครื่องนี้", ออกจากระบบเครื่องอื่นได้) กับประวัติ 10 รายการล่าสุด `?dialog=profile&section=devices`
+- **Permissions แท็บ "Login"** (`a17fb2c6`, `682f364d`) บันทึกการเข้าสู่ระบบทุกบัญชี ค้นหา กรองเหตุการณ์ กรองวันที่ สถานะอยู่ใน URL ใช้สิทธิ์ใหม่ `system.view_logins` (ให้ role ที่มี `system.view_audit` อยู่แล้วด้วย migration)
+- **ที่ตั้ง** (`d7427b1a`, `8695b329`, `9bbb8fa1`) "ชื่อเครือข่าย" (IP หรือช่วง IP เป็นชื่อ เช่นสำนักงานใหญ่) ใน Settings มาก่อน ไม่ตรงค่อยอ่านฐาน DB-IP Lite City ผ่าน `geoip2/geoip2` (`storage/app/geoip/dbip-city-lite.mmdb`) แสดงเป็นอังกฤษ "Bangkok, Thailand"; `geoip:update` ดาวน์โหลดใหม่ทุกวันที่ 3 ของเดือน 03:30; Settings ใส่เครดิต "IP Geolocation by DB-IP" ไม่มีไฟล์ก็แค่ไม่มีที่ตั้ง ไม่ error
+- **เก็บประวัติ** ตั้งได้ที่ Settings (`login_log_days`) ค่า 0 (ไม่ลบ) หรืออย่างน้อย 90 วัน ลบโดย `logs:prune`; ห้ามต่ำกว่า 90 เพราะ 90 วันนี้คือช่วงที่ใช้จำว่า IP ไหนบัญชีนี้เคยเข้า
+
+**กฎความปลอดภัย**
+- **remember me เป็นรายเครื่อง** token อยู่ที่ `user_devices` ไม่ใช่ `users.remember_token` (`d8032616`, `35269bb5`) cookie จำฉันแบบเก่าก่อนฟีเจอร์นี้ใช้ไม่ได้อีก ทุกคนที่ติ๊กจำไว้ต้อง login ใหม่ครั้งเดียว; logout และการเปลี่ยนรหัสผ่านทิ้ง token เก่าของบัญชีด้วย
+- **จำกัดความถี่** login 50 ครั้งต่อนาทีต่อ IP (สำนักงานเดียวกันใช้ IP เดียวกัน) กับ 5 ครั้งต่อ username+IP เดิม และใส่ผิด 10 ครั้งใน 15 นาทีจากทุก IP จะล็อกบัญชีนั้น 15 นาที นับต่อ id บัญชี ไม่ว่าพิมพ์อีเมลหรือ username (`860172e1`); IP ที่บัญชีนั้นเคย login สำเร็จใน 90 วันล่าสุดข้ามการล็อกข้าม IP ได้ (เจ้าของบัญชีที่เข้าจากที่เดิมจึงไม่โดนล็อกเพราะคนนอกใส่รหัสผิด) ส่วนที่ใส่ผิดยังนับอยู่; `pending` 10 ครั้งต่อนาทีต่อ IP
+- **ที่อยู่ IP** `trustProxies` เชื่อเฉพาะ `127.0.0.1` กับ `::1` (cloudflared เครื่องเดียวกัน) ห้ามใช้ `*` ไม่งั้นใครก็เขียน IP ลง log ได้
+- **"ใช้งาน" คือใช้จริง** `last_active_at` ขยับเฉพาะคำขอเขียนกับ ping กิจกรรม (ส่งทุกครั้งที่ล็อกอินอยู่ ไม่ใช่เฉพาะตอนเปิด idle timeout) poll กระดิ่งไม่นับ; เครื่องที่ไม่จำไว้หมดอายุเมื่อไม่ใช้เกินอายุ (idle timeout ถ้าเปิด ไม่เกิน `SESSION_LIFETIME`) แล้วคำขอถัดไปตอบ 401; เครื่องที่จำไว้อยู่ 7 วัน
+- **เครื่องที่ล็อกอินอยู่ก่อน deploy** ได้แถว device ตอนส่งคำขอครั้งถัดไป ไม่มีใครถูกออกจากระบบเพราะ deploy
+
+**ขึ้น server**
+- รัน migration `2026_10_20_000001` ถึง `000004` (ผู้ใช้รัน 000001 ถึง 000003 บน itservices_perf แล้ว; 000004 ให้ `system.view_logins` กับ role ที่มี `system.view_audit` รันซ้ำได้)
+- รัน `php artisan geoip:update` หนึ่งครั้งหลัง deploy (ต้องออกเน็ตไป `download.db-ip.com`) ก่อนรัน IP ที่ไม่มีชื่อเครือข่ายจะไม่มีที่ตั้ง
+- PHP บน production ต้องมี extension `curl` (dependency ของ `geoip2/geoip2` ผ่าน `maxmind/web-service-common`) ติดตั้งด้วย `composer install`
+
+**เทสที่เพิ่ม**
+- `tests/Feature/Auth`: `UserDeviceActiveTest`, `DeviceServiceTest`, `DeviceRememberTest`, `TrackDeviceTest`, `LoginDeviceLimitTest`, `LoginEventApiTest`, `MyDevicesApiTest`, `NetworkNameApiTest`, `DeviceLimitSettingTest`, `LocationResolverTest`, `DbIpLookupTest`, `UpdateGeoIpDatabaseTest`, `TrustedProxyTest` และแก้ `RememberMeTest`
+- `tests/Unit`: `CidrTest`, `UserAgentLabelTest`
+- `tests/Feature` ที่ปรับให้เข้ากับตารางใหม่: `LogRetentionTest`, `SecuritySettingsTest`, `Report/ReportExportEmailTest`, `Perf/PerfDatasetInvariantsTest`
+- `tests/js`: `device-limit`, `device-limit-confirm`, `login-events`, `login-log-params`, `profile-load-failed`; ปรับ `login-redirect`, `profile-section`, `card-layout` และ fixture `permission-layout.json`
+- **ยังไม่ทำ** คำในประวัติใช้ "เข้าเครื่องใหม่" ไม่ใช่ "เข้าเครื่องที่ 3" เพราะแถวเหตุการณ์ไม่เก็บจำนวนที่จำกัดตอนนั้น ถ้าอยากได้เลขต้องเพิ่มคอลัมน์ `limit` ใน `login_events`
