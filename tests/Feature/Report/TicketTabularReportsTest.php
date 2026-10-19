@@ -9,6 +9,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Report\Ticket\TicketBacklogReport;
 use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
@@ -299,12 +300,12 @@ class TicketTabularReportsTest extends TestCase
         $this->assertNotContains('response_due_at', $screen);
         $this->assertArrayNotHasKey('description', $this->actingAs($user)->getJson('/api/reports/tabular/tickets.backlog/rows')->json('data.0'));
 
-        // A column picked down to two still exports the sheet-only ones.
+        // A column picked down to two still exports every column to Excel.
         $this->actingAs($user)->exportReport('/api/reports/tabular/tickets.backlog/export?format=xlsx&columns[]=ticket_no&columns[]=hours_left')->assertAccepted();
         $this->assertExportStored('Report_tickets-backlog_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $this->rowsSheet($export);
             $headings = $sheet->headings();
-            $this->assertSame(['เลขที่ Ticket', 'รายละเอียด', 'ลักษณะงาน', 'วันที่ครบกำหนด SLA รับเคส', 'วันที่ครบกำหนด SLA ปิดเคส', 'เหลือ (ชม.)', 'สถานะ SLA', 'รหัสพนักงานผู้แจ้ง', 'รหัสแผนก'], $headings);
+            $this->assertSame(array_map(fn ($column) => $column->heading, app(TicketBacklogReport::class)->sheetColumns()), $headings);
 
             // Most overdue first: t2 (resolve due the 20th) is over SLA, t5 (response due in 24 h) due soon.
             $rows = $export->rows->map(fn (Ticket $t) => array_combine($headings, $sheet->map($t)))->keyBy('เลขที่ Ticket');

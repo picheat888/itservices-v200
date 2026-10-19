@@ -60,22 +60,16 @@ final class SheetLayout
     /**
      * Who made the file, from which system, and how many data rows it holds.
      *
-     * @param  list<string>  $omittedColumns  columns the reader's column picker left out
      * @return list<list<string|int>>
      */
-    public static function fileFacts(string $exportedBy, int $rowCount, string $dataSheet, array $omittedColumns = []): array
+    public static function fileFacts(string $exportedBy, int $rowCount, string $dataSheet): array
     {
-        $facts = [
+        return [
             ['สร้างเมื่อ', DateDisplay::dateTime(now())],
             ['ส่งออกโดย', $exportedBy],
             ['ระบบ', self::systemName()],
             ["จำนวนแถวในชีต \"{$dataSheet}\"", $rowCount],
         ];
-        if ($omittedColumns !== []) {
-            $facts[] = ['คอลัมน์ที่ซ่อนไว้ตอนส่งออก', implode(', ', $omittedColumns)];
-        }
-
-        return $facts;
     }
 
     public static function systemName(): string

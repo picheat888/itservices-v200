@@ -121,8 +121,14 @@ class ExcelAnalysisReadyTest extends TestCase
         $this->assertSame('Audit Reader', $this->labelValue($summary, 'ส่งออกโดย'));
         $this->assertSame('IT Service Desk V2.0', $this->labelValue($summary, 'ระบบ'));
         $this->assertSame(1, $this->labelValue($summary, 'จำนวนแถวในชีต "ข้อมูลดิบ"'));
-        // The column picker's choice is on record
-        $this->assertStringContainsString('หมวดหมู่', $this->labelValue($summary, 'คอลัมน์ที่ซ่อนไว้ตอนส่งออก'));
+    }
+
+    public function test_excel_keeps_every_column_whatever_the_column_picker_hides(): void
+    {
+        $picked = $this->workbook(['asset_code', 'status'])->getSheetByName('ข้อมูลดิบ')->toArray(null, false, false)[0];
+
+        $this->assertSame($this->workbook()->getSheetByName('ข้อมูลดิบ')->toArray(null, false, false)[0], $picked);
+        $this->assertContains('หมวดหมู่', $picked);
     }
 
     public function test_the_file_properties_name_the_system_the_report_and_the_exporter(): void

@@ -55,9 +55,9 @@ export const report: Dict = {
     rep_snap_none_sla_rate: 'ยังไม่มีงานที่ปิดในช่วงนี้',
     // components/column-picker.tsx — column picker
     rep_columns: 'คอลัมน์',
-    rep_columns_hint: 'เลือกคอลัมน์ที่จะแสดง ไฟล์ที่ส่งออกจะมีเฉพาะคอลัมน์ที่เลือก',
+    rep_columns_hint: 'เลือกคอลัมน์ที่จะแสดง ไฟล์ PDF จะมีเฉพาะคอลัมน์ที่เลือก ส่วน Excel มีครบทุกคอลัมน์',
     rep_columns_changed_sr: 'คอลัมน์ที่ปรับจากค่าตั้งต้น',
-    rep_export_columns_note: 'ส่งออกเฉพาะ {n} คอลัมน์ที่แสดงอยู่',
+    rep_export_columns_note: 'PDF มีเฉพาะ {n} คอลัมน์ที่แสดงอยู่ ไฟล์ Excel มีครบทุกคอลัมน์',
     rep_tickets_overview_title: 'ภาพรวม Ticket & SLA',
     rep_tickets_overview_desc: 'ปริมาณงาน เวลาแก้ไข และการปิดงานทัน SLA แยกตามหมวด ความสำคัญ และแผนก',
 
