@@ -164,7 +164,7 @@ test('the server reason for an ended device maps to the login notice', () => {
     assert.equal(reasonOf('limit'), 'limit');
     assert.equal(reasonOf('idle_timeout'), 'session_expired');
     assert.equal(reasonOf('password_changed'), 'signed_out');
-    assert.equal(reasonOf('account_closed'), 'signed_out');
+    assert.equal(reasonOf('account_closed'), 'account_closed');
     assert.equal(reasonOf('something_new'), 'signed_out');
     assert.equal(reasonOf('constructor'), 'signed_out');
     assert.equal(reasonOf(undefined), 'signed_out');
@@ -258,6 +258,15 @@ test('any other 401 on a working screen is a plain sign-out, and an ended device
     });
 });
 
+test('an account closed while in use goes to the login page with its own notice, even from /me or a quiet request', () => {
+    const closed = { message: 'account_closed' };
+    assert.deepEqual(signedOutRedirectFor(request({ body: closed })), { reason: 'account_closed', by: null });
+    assert.deepEqual(signedOutRedirectFor(request({ url: '/me', pathname: '/', body: closed })), { reason: 'account_closed', by: null });
+    assert.deepEqual(signedOutRedirectFor(request({ quiet: true, body: closed })), { reason: 'account_closed', by: null });
+    assert.equal(signedOutRedirectFor(request({ pathname: '/login', body: closed })), null);
+    assert.equal(signedOutRedirectFor(request({ status: 403, body: closed })), null);
+});
+
 test('only a 401 can sign the reader out', () => {
     assert.equal(signedOutRedirectFor(request({ status: 403, body: ENDED })), null);
     assert.equal(signedOutRedirectFor(request({ status: 419 })), null);
@@ -267,7 +276,7 @@ test('only a 401 can sign the reader out', () => {
 test('a file link redirect names the server reason, and the login page shows the same notice as the JSON answer', () => {
     assert.equal(loginNoticeReason('idle_timeout'), 'session_expired');
     assert.equal(loginNoticeReason('password_changed'), 'signed_out');
-    assert.equal(loginNoticeReason('account_closed'), 'signed_out');
+    assert.equal(loginNoticeReason('account_closed'), 'account_closed');
     assert.equal(loginNoticeReason('third_device'), 'third_device');
     assert.equal(loginNoticeReason('profile'), 'profile');
     assert.equal(loginNoticeReason('limit'), 'limit');
@@ -277,7 +286,7 @@ test('a file link redirect names the server reason, and the login page shows the
 });
 
 test('the reasons the app itself puts in the URL keep their notice, and anything else shows none', () => {
-    for (const reason of ['session_expired', 'signed_out', 'third_device', 'profile', 'limit'] as const) {
+    for (const reason of ['session_expired', 'signed_out', 'third_device', 'profile', 'limit', 'account_closed'] as const) {
         assert.equal(loginNoticeReason(reason), reason);
     }
     assert.equal(loginNoticeReason(null), null);

@@ -31,6 +31,7 @@ const NOTICES: Record<SignedOutReason, { icon: LucideIcon; text: string }> = {
     third_device: { icon: MonitorSmartphone, text: 'login_notice_third_device' },
     profile: { icon: LogOut, text: 'login_notice_profile' },
     limit: { icon: Shield, text: 'login_notice_limit' },
+    account_closed: { icon: Lock, text: 'login_err_closed' },
 };
 
 // A touch screen lets the server label an iPad that reports itself as a Mac (display only)
