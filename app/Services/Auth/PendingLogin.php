@@ -1,12 +1,13 @@
 <?php
 
 // The short-lived proof that a password was right while the account is at its device limit,
-// bound to the account and to the browser session that asked.
+// bound to the account, the browser session that asked and the password it proved.
 
 namespace App\Services\Auth;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -23,12 +24,13 @@ class PendingLogin
         Cache::put(self::cacheKey($token), [
             'user_id' => $user->getKey(),
             'session_id' => $request->session()->getId(),
+            'password' => self::passwordMark($user),
         ], self::TTL_SECONDS);
 
         return $token;
     }
 
-    /** The account behind the token; null when it expired, was used, or another session holds it. */
+    /** The account behind the token; null when it expired, was used, another session holds it, or the password changed since. */
     public function user(string $token, Request $request): ?User
     {
         $entry = Cache::get(self::cacheKey($token));
@@ -40,7 +42,12 @@ class PendingLogin
             return null;
         }
 
-        return User::query()->find($entry['user_id']);
+        $user = User::query()->find($entry['user_id']);
+        if ($user === null || ! hash_equals((string) ($entry['password'] ?? ''), self::passwordMark($user))) {
+            return null;
+        }
+
+        return $user;
     }
 
     public function forget(string $token): void
@@ -51,5 +58,10 @@ class PendingLogin
     private static function cacheKey(string $token): string
     {
         return 'pending-login:'.$token;
+    }
+
+    private static function passwordMark(User $user): string
+    {
+        return Auth::guard('web')->hashPasswordForCookie($user->getAuthPassword());
     }
 }
