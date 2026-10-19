@@ -242,7 +242,7 @@ class LoginRequest extends FormRequest
         return Str::transliterate(Str::lower($this->string('login')).'|'.$this->ip());
     }
 
-    /** Cross-IP counter: one per account (email and username alike), else per normalised typed name. */
+    /** Cross-IP counter: one per account (email and username alike), else per normalised typed name, hashed so no name can match an account key. */
     public function loginThrottleKey(): string
     {
         $user = $this->account();
@@ -252,7 +252,7 @@ class LoginRequest extends FormRequest
 
         $typed = preg_replace('/\p{Cf}+/u', '', (string) $this->loginName()) ?? '';
 
-        return 'login-user:'.Str::transliterate(Str::lower(trim($typed)));
+        return 'login-user:name:'.hash('sha256', Str::transliterate(Str::lower(trim($typed))));
     }
 
     private function loginName(): ?string
