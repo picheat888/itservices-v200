@@ -41,7 +41,7 @@ function writeShared(key: string, at: number): void {
     }
 }
 
-/** @param sendsHeartbeat false for a remembered sign-in, which the server never times out */
+/** @param sendsHeartbeat false in a tab blocked by an account switch; the timeout is 0 for a remembered sign-in, which still pings */
 export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolean) {
     const qc = useQueryClient();
     const warnSeconds = warnSecondsFor(timeoutMinutes);
