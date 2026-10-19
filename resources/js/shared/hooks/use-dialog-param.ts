@@ -1,6 +1,7 @@
 // A dialog whose open state lives in the URL as `?dialog=<name>`: links and reloads open it, Back closes it.
 // Opening pushes an entry (Back pops just the dialog); `{ over: true }` stacks on the open one; closing steps back
 // over a pushed entry, else drops the param in place. URL writes elsewhere keep the entry's state (keepDialogState).
+import { passNextBack } from '@/shared/hooks/use-navigation-guard';
 import { dialogCloseParams } from '@/shared/lib/dialog-search';
 import { useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -60,6 +61,8 @@ export function useDialogParam<T extends string>(
         }
         if (open === null) return;
         if (state?.dialogPushed && !options.inPlace) {
+            // Already confirmed or saved: the dirty-form guard must not ask again
+            passNextBack();
             navigate(-1);
             return;
         }
