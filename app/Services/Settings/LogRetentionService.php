@@ -4,6 +4,7 @@ namespace App\Services\Settings;
 
 use App\Models\AuditLog;
 use App\Models\Auth\LoginEvent;
+use App\Models\Auth\UserDevice;
 use App\Models\Email\EmailLog;
 use App\Models\Settings\AppSetting;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,7 @@ class LogRetentionService
     /**
      * Runs every window that is switched on; safe to run twice.
      *
-     * @return array{email_bodies: int, email_logs: int, audit_logs: int, notifications: int, login_events: int}
+     * @return array{email_bodies: int, email_logs: int, audit_logs: int, notifications: int, login_events: int, user_devices: int}
      */
     public function run(): array
     {
@@ -37,6 +38,7 @@ class LogRetentionService
             'audit_logs' => $this->pruneAuditLogs(),
             'notifications' => $this->pruneNotifications(),
             'login_events' => $this->pruneLoginEvents(),
+            'user_devices' => $this->pruneDevices(),
         ];
 
         // Logged only when something went, so an empty night adds no audit row
@@ -50,6 +52,7 @@ class LogRetentionService
             'audit_logs' => $removed['audit_logs'],
             'notifications' => $removed['notifications'],
             'login_events' => $removed['login_events'],
+            'user_devices' => $removed['user_devices'],
         ];
     }
 
@@ -117,6 +120,23 @@ class LogRetentionService
 
         return $this->inChunks(fn () => LoginEvent::query()
             ->where('created_at', '<', $cutoff)
+            ->limit(self::CHUNK)
+            ->delete());
+    }
+
+    // Ended or expired devices last used before the login window; an active device is never pruned
+    private function pruneDevices(): int
+    {
+        $days = $this->days('login_log_days');
+        if ($days === 0) {
+            return 0;
+        }
+
+        $cutoff = now()->subDays($days);
+
+        return $this->inChunks(fn () => UserDevice::query()
+            ->inactive()
+            ->where('last_active_at', '<', $cutoff)
             ->limit(self::CHUNK)
             ->delete());
     }

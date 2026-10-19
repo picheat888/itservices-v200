@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\Auth\LoginEventType;
 use App\Models\AuditLog;
 use App\Models\Auth\LoginEvent;
+use App\Models\Auth\UserDevice;
 use App\Models\Email\EmailLog;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
@@ -138,6 +139,39 @@ class LogRetentionTest extends TestCase
 
         $this->assertDatabaseHas('login_events', ['id' => $ancient->id]);
         $this->assertDatabaseHas('login_events', ['id' => $kept->id]);
+    }
+
+    public function test_ended_and_expired_devices_past_the_login_window_are_pruned_and_active_ones_never_are(): void
+    {
+        $user = User::factory()->create();
+        $endedLongAgo = UserDevice::factory()->for($user)->ended()->create(['last_active_at' => now()->subDays(366)]);
+        $endedRecently = UserDevice::factory()->for($user)->ended()->create(['last_active_at' => now()->subDays(364)]);
+        $plainLongAgo = UserDevice::factory()->for($user)->create(['last_active_at' => now()->subDays(400)]);
+        $rememberedLongAgo = UserDevice::factory()->for($user)->remembered()->create([
+            'last_active_at' => now()->subDays(400), 'remember_expires_at' => now()->subDays(393),
+        ]);
+        $stillRemembered = UserDevice::factory()->for($user)->remembered()->create(['last_active_at' => now()->subDays(400)]);
+        $inUse = UserDevice::factory()->for($user)->create();
+
+        $this->artisan('logs:prune')->assertSuccessful();
+
+        foreach ([$endedLongAgo, $plainLongAgo, $rememberedLongAgo] as $pruned) {
+            $this->assertDatabaseMissing('user_devices', ['id' => $pruned->id]);
+        }
+        foreach ([$endedRecently, $stillRemembered, $inUse] as $kept) {
+            $this->assertDatabaseHas('user_devices', ['id' => $kept->id]);
+        }
+        $this->assertStringContainsString('user_devices: 3', AuditLog::where('action', 'Pruned logs')->sole()->target);
+    }
+
+    public function test_a_login_window_of_zero_keeps_every_device(): void
+    {
+        AppSetting::put('login_log_days', '0');
+        $ancient = UserDevice::factory()->ended()->create(['last_active_at' => now()->subDays(5000)]);
+
+        $this->artisan('logs:prune')->assertSuccessful();
+
+        $this->assertDatabaseHas('user_devices', ['id' => $ancient->id]);
     }
 
     public function test_audit_logs_are_kept_forever_unless_a_window_is_set(): void

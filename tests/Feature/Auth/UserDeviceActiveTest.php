@@ -110,6 +110,27 @@ class UserDeviceActiveTest extends TestCase
         $this->assertSame([], UserDevice::active(now()->addMinutes(121))->pluck('id')->all());
     }
 
+    public function test_every_device_is_either_active_or_inactive_never_both(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        UserDevice::factory()->create(['last_active_at' => now()->subMinutes(29)]);
+        UserDevice::factory()->create(['last_active_at' => now()->subMinutes(31)]);
+        UserDevice::factory()->create(['remember_expires_at' => now()->addDay(), 'last_active_at' => now()->subDays(3)]);
+        UserDevice::factory()->create(['remember_expires_at' => now()->subMinute(), 'last_active_at' => now()->subDays(3)]);
+        UserDevice::factory()->ended()->create(['remember_expires_at' => now()->addDay()]);
+        UserDevice::factory()->ended()->create();
+        $all = UserDevice::query()->orderBy('id')->pluck('id')->all();
+
+        foreach ([now(), now()->addMinutes(20), now()->addDays(2)] as $moment) {
+            $active = UserDevice::active($moment)->pluck('id')->all();
+            $inactive = UserDevice::inactive($moment)->pluck('id')->all();
+
+            $this->assertSame([], array_intersect($active, $inactive));
+            $this->assertEqualsCanonicalizing($all, [...$active, ...$inactive]);
+        }
+        $this->assertCount(2, UserDevice::active()->get());
+    }
+
     public function test_a_user_lists_their_devices(): void
     {
         $user = User::factory()->create();
