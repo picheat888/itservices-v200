@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useLocations } from '@/modules/employee';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -9,7 +10,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { MapPin } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -98,11 +99,16 @@ export function AssetLocationDialog({
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-lg">
-                <DialogTitle>{isBulk ? t('asset_bulk_location_title') : t('asset_location_title')}</DialogTitle>
-                <DialogDescription>{description}</DialogDescription>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={MapPin}
+                    eyebrow={isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : view?.asset_code}
+                    title={isBulk ? t('asset_bulk_location_title') : t('asset_location_title')}
+                    subtitle={!isBulk && view?.model ? <span className="text-muted-foreground text-sm">{view.model}</span> : undefined}
+                    srDescription={description || undefined}
+                />
 
-                <div className="mt-4 space-y-5">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     {/* Where it sits today, so the new choice is a change from something. */}
@@ -126,18 +132,18 @@ export function AssetLocationDialog({
                     <Field label={t('asset_location_note')}>
                         <Textarea value={note} onChange={(ev) => setNote(ev.target.value)} rows={3} placeholder={t('asset_location_note_ph')} />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)}>
+                <DialogFooterBar>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton className="flex-1" onClick={submit} loading={updateLocation.isPending}>
+                    <SaveButton onClick={submit} loading={updateLocation.isPending}>
                         <MapPin className="h-4 w-4" />
                         {t('asset_location_save')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
