@@ -66,7 +66,8 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
+            // Eloquent users with remember-me tokens per device (App\Services\Auth\DeviceUserProvider)
+            'driver' => 'devices',
             'model' => env('AUTH_MODEL', User::class),
         ],
 

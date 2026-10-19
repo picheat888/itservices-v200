@@ -3,12 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Auth\DeviceEndReason;
 use App\Enums\UserRole;
 use App\Models\Auth\UserDevice;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
+use App\Services\Auth\DeviceService;
 use App\Support\Permissions;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -239,17 +241,11 @@ class User extends Authenticatable
         return (int) now()->startOfDay()->diffInDays($this->password_changed_at->copy()->addDays($days)->startOfDay(), false);
     }
 
-    /**
-     * Sign the account out everywhere — after its password is reset or changed.
-     *
-     * Laravel keeps only the user id in the session, and a "remember me" cookie carries a
-     * token that outlives any session, so a new password alone leaves every other device
-     * signed in. That matters because the usual reason to change a password is a suspected
-     * takeover. Ends every session (but $keepSessionId — the device making the change),
-     * every API token, and every remember cookie, by rotating the token they must match.
-     */
+    /** After a password change or reset: ends every device, session, API token and remember cookie but $keepSessionId's. */
     public function signOutEverywhere(?string $keepSessionId = null): void
     {
+        app(DeviceService::class)->endAllOf($this, DeviceEndReason::PasswordChanged, $keepSessionId);
+
         // Database-stored sessions
         $table = config('session.table', 'sessions');
         if (Schema::hasTable($table)) {

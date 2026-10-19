@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Http\Middleware\CheckSessionTimeout;
+use App\Models\Auth\UserDevice;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Settings\AppSetting;
@@ -11,15 +12,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-/**
- * "Remember me": the cookie lasts 7 days, a remembered sign-in is not cut short by the
- * idle timeout (that is what ticking the box asks for), a sign-in without it is — even
- * when the browser still holds an old remember cookie — and a password change or an
- * admin reset ends every remembered sign-in on other devices.
- */
+// Remember me: a 7-day cookie, exempt from the idle timeout, ended on other devices by a password change or admin reset.
 class RememberMeTest extends TestCase
 {
     use RefreshDatabase;
@@ -33,10 +30,13 @@ class RememberMeTest extends TestCase
             ->assertOk();
     }
 
-    /** The recaller cookie value the guard would issue for this user. */
+    /** The recaller cookie of a new remembered device of this user. */
     private function recaller(User $user): string
     {
-        return $user->id.'|'.$user->getRememberToken().'|'.$user->getAuthPassword();
+        $token = Str::random(60);
+        UserDevice::factory()->for($user)->remembered()->create(['remember_token_hash' => hash('sha256', $token)]);
+
+        return $user->id.'|'.$token.'|'.$user->getAuthPassword();
     }
 
     public function test_the_remember_cookie_lasts_seven_days(): void
@@ -73,7 +73,7 @@ class RememberMeTest extends TestCase
     public function test_a_sign_in_restored_from_the_remember_cookie_counts_as_remembered(): void
     {
         AppSetting::put('session_timeout_minutes', '30');
-        $user = User::factory()->create(['remember_token' => 'token-from-last-week']);
+        $user = User::factory()->create();
 
         // No session at all — the browser comes back with only the remember cookie.
         $this->withHeader('Origin', self::ORIGIN)
