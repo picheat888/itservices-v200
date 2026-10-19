@@ -30,18 +30,18 @@ class ReportJobMemoryLimitTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_export_job_raises_the_memory_limit_to_4g(): void
+    public function test_export_job_raises_the_memory_limit_to_4096m(): void
     {
         (new GenerateReportExport(999999))->handle(app(ReportExportService::class));
 
-        $this->assertSame('4G', ini_get('memory_limit'));
+        $this->assertSame('4096M', ini_get('memory_limit'));
     }
 
-    public function test_scheduled_report_job_raises_the_memory_limit_to_4g(): void
+    public function test_scheduled_report_job_raises_the_memory_limit_to_4096m(): void
     {
         (new SendScheduledReport(999999, now()->toIso8601String()))->handle(app(ReportScheduleService::class));
 
-        $this->assertSame('4G', ini_get('memory_limit'));
+        $this->assertSame('4096M', ini_get('memory_limit'));
     }
 
     public function test_export_job_leaves_a_missing_export_alone(): void
