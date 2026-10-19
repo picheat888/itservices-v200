@@ -1,20 +1,22 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
+import { Warehouse } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** RequestDrawer — submit a new stock request (Requester → approver → fulfilled). */
 export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -65,12 +67,9 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('stock_new_request')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('stock_new_request')}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader icon={Warehouse} eyebrow={t('stock')} title={t('stock_new_request')} />
+                <DialogBody>
                     <Field label={t('stock_item')} required>
                         <SearchableSelect
                             value={sku}
@@ -117,16 +116,16 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                             placeholder={`${t('stock_reason_ph')}…`}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={submit.isPending}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={submit.isPending} success={saved} onClick={send} disabled={!saved && !canSubmit}>
                         {t('stock_submit')}
                     </SaveButton>
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

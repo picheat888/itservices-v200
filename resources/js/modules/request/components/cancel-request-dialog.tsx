@@ -2,6 +2,7 @@
  * Withdraw a pending request: the requester (or the HR filer) must say why, like an IT "not delivered" close.
  */
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -10,10 +11,10 @@ import { serverMessage } from '@/shared/lib/api-errors';
 import { requestTitle } from '@/shared/lib/request-meta';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Ban } from 'lucide-react';
+import { Ban, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRequestMutations } from '../hooks/use-requests';
 
@@ -67,17 +68,16 @@ export function CancelRequestDialog({
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && !cancel.isPending && guardClose(onClose)}>
-            <DialogContent className="max-w-[480px]">
-                {/* Header — pr-7 keeps the reference clear of the close button */}
-                <div className="flex items-start justify-between gap-3 pr-7">
-                    <div>
-                        <DialogTitle className="text-base font-bold">{t('req_cancel_title')}</DialogTitle>
-                        <DialogDescription className="mt-1.5 text-xs">{t('req_cancel_hint')}</DialogDescription>
-                    </div>
-                    <span className="text-muted-foreground shrink-0 text-xs">{ctx.reference}</span>
-                </div>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={XCircle}
+                    eyebrow={ctx.reference}
+                    title={t('req_cancel_title')}
+                    subtitle={<span className="text-muted-foreground text-sm">{t('req_cancel_hint')}</span>}
+                    srDescription={t('req_cancel_hint')}
+                />
 
-                <div className="space-y-4">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <p className="border-border rounded-lg border px-3.5 py-2.5 text-sm font-semibold">{requestTitle(ctx, t, lang)}</p>
                     <Field label={t('req_cancel_reason')} required error={reasonErr} name="cancel_reason">
@@ -93,9 +93,9 @@ export function CancelRequestDialog({
                             className="min-h-[84px]"
                         />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <DialogFooter>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={cancel.isPending}>
                         {t('req_cancel_keep')}
                     </Button>
@@ -103,8 +103,8 @@ export function CancelRequestDialog({
                         <Ban className="h-4 w-4" />
                         {t('req_cancel_request')}
                     </SaveButton>
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

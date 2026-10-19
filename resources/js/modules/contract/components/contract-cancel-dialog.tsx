@@ -1,9 +1,10 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import type { Contract } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { Ban } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -54,33 +55,30 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
 
     return (
         <Dialog open={!!contract} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Ban className="text-destructive h-5 w-5" />
-                        {t('contract_cancel_confirm_title')}
-                    </DialogTitle>
-                    {named && (
-                        <DialogDescription className="flex flex-wrap gap-x-3">
-                            <span>{named.name}</span>
-                            <span>{named.code}</span>
-                        </DialogDescription>
-                    )}
-                </DialogHeader>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Ban}
+                    eyebrow={named?.code}
+                    title={t('contract_cancel_confirm_title')}
+                    subtitle={named ? <span className="text-muted-foreground text-sm">{named.name}</span> : undefined}
+                    srDescription={named ? `${named.name} ${named.code}` : undefined}
+                />
 
-                <FormErrorBanner message={serverError} shakeKey={serverErrorCount} />
+                <DialogBody>
+                    <FormErrorBanner message={serverError} shakeKey={serverErrorCount} />
 
-                <Field label={t('contract_cancel_reason')} required error={error}>
-                    <Textarea
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        rows={3}
-                        autoFocus
-                        placeholder={t('contract_cancel_reason_ph')}
-                    />
-                </Field>
+                    <Field label={t('contract_cancel_reason')} required error={error}>
+                        <Textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            rows={3}
+                            autoFocus
+                            placeholder={t('contract_cancel_reason_ph')}
+                        />
+                    </Field>
+                </DialogBody>
 
-                <DialogFooter>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={cancel.isPending}>
                         {t('cancel')}
                     </Button>
@@ -88,8 +86,8 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                         <Ban className="h-4 w-4" />
                         {t('contract_cancel')}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
