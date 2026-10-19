@@ -12,7 +12,7 @@ import { useStockMovementsBreakdown } from '../hooks/use-reports';
 import type { StockMovementsBreakdown, StockWaitingRequest, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
 import { CardsUpdating } from './cards-updating';
-import { CardEmpty, CardTitle, fold, FoldToggle, Sparkline } from './chart-parts';
+import { CardEmpty, CardTitle, fold, FoldToggle, InfoMark, Sparkline } from './chart-parts';
 import { FILL, TEXT } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -72,27 +72,40 @@ function MovementTiles({ tiles, months }: { tiles: Tiles; months: Months }) {
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
             <KpiTile
                 label={t('stock_mv_receive')}
+                badge={<InfoMark info={[t('rep_info_stock_movements_receive_qty'), t('rep_info_stock_movements_receive_value')]} />}
                 {...flow('receive')}
                 footer={foot('rep_smv_k_receive_foot', { amount: money(tiles.receive.value) })}
             />
             <KpiTile
                 label={t('stock_mv_issue')}
+                badge={<InfoMark info={[t('rep_info_stock_movements_issue_qty'), t('rep_info_stock_movements_issue_value')]} />}
                 {...flow('issue')}
                 footer={foot('rep_smv_k_issue_foot', { amount: money(tiles.issue.value), n: n(tiles.issue.times) })}
             />
             <KpiTile
                 label={t('stock_mv_return')}
+                badge={<InfoMark info={t('rep_info_stock_movements_return_qty')} />}
                 {...flow('return')}
                 footer={foot('rep_smv_k_return_foot', { n: n(tiles.return.times), amount: money(tiles.return.value) })}
             />
-            <KpiTile label={t('stock_mv_transfer')} {...flow('transfer')} footer={foot('rep_smv_k_transfer_foot', { n: n(tiles.transfer.times) })} />
+            <KpiTile
+                label={t('stock_mv_transfer')}
+                badge={<InfoMark info={t('rep_info_stock_movements_transfer_qty')} />}
+                {...flow('transfer')}
+                footer={foot('rep_smv_k_transfer_foot', { n: n(tiles.transfer.times) })}
+            />
             <KpiTile
                 label={t('rep_smv_k_adjust')}
                 value={signedCount(adjust, lang)}
                 unit={unit}
                 tone={adjust < 0 ? 'red' : adjust > 0 ? 'green' : undefined}
                 alert={adjust < 0 ? 'red' : undefined}
-                badge={adjust < 0 ? <StatusBadge tone="red">{t('rep_smv_k_net_down')}</StatusBadge> : undefined}
+                badge={
+                    <>
+                        {adjust < 0 ? <StatusBadge tone="red">{t('rep_smv_k_net_down')}</StatusBadge> : undefined}
+                        <InfoMark info={t('rep_info_stock_movements_adjust_net')} />
+                    </>
+                }
                 footer={foot('rep_smv_k_adjust_foot', {
                     up: n(tiles.adjust_up.qty),
                     down: n(tiles.adjust_down.qty),

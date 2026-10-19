@@ -62,18 +62,19 @@ function OverviewTiles({ tiles }: { tiles: ContractOverviewBreakdown['tiles'] })
             />
             <KpiTile
                 label={t('rep_cov_k_monthly')}
+                badge={<InfoMark info={[t('rep_info_contracts_overview_monthly_total'), t('rep_info_contracts_overview_yearly_total')]} />}
                 value={contractMoney(tiles.monthly, lang)}
                 footer={<span className="block truncate">{rich(t('rep_cov_k_monthly_foot'), { amount: contractMoney(tiles.yearly, lang) })}</span>}
             />
             <KpiTile
                 label={t('rep_cov_k_next12')}
-                hint={t('rep_cov_k_next12_hint')}
+                badge={<InfoMark info={t('rep_cov_k_next12_hint')} />}
                 value={contractMoney(tiles.next_12, lang)}
                 footer={<span className="block truncate">{rich(t('rep_cov_k_next12_foot'), { n: count(tiles.next_12_bills, lang) })}</span>}
             />
             <KpiTile
                 label={t('rep_cov_k_remaining')}
-                hint={t('rep_cov_k_remaining_hint')}
+                badge={<InfoMark info={t('rep_cov_k_remaining_hint')} />}
                 value={contractMoney(tiles.remaining, lang)}
                 footer={
                     <span className="block truncate">
@@ -85,6 +86,7 @@ function OverviewTiles({ tiles }: { tiles: ContractOverviewBreakdown['tiles'] })
             />
             <KpiTile
                 label={t('rep_cov_k_top_vendor')}
+                badge={<InfoMark info={t('rep_info_contracts_overview_cov_top_vendor')} />}
                 value={top ? `${share}%` : '—'}
                 unit={top ? t('rep_cov_k_top_vendor_unit') : undefined}
                 bar={

@@ -92,12 +92,14 @@ function Tiles({ data }: { data: ContractRenewalsBreakdown }) {
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
             <KpiTile
                 label={t('rep_cren_k_within').replace('{w}', windowText(t, data.within))}
+                badge={<InfoMark info={t('rep_info_contracts_renewals_within')} />}
                 value={count(within.count, lang)}
                 unit={unit}
                 footer={within.count > 0 ? rich(t('rep_cren_per_year'), { v: contractMoney(within.yearly, lang) }) : t('rep_cren_k_within_none')}
             />
             <KpiTile
                 label={t('rep_cren_k_soon')}
+                badge={<InfoMark info={t('rep_info_contracts_renewals_within_30')} />}
                 value={count(soon.count, lang)}
                 unit={unit}
                 alert={soon.count > 0 ? 'amber' : undefined}
@@ -112,6 +114,7 @@ function Tiles({ data }: { data: ContractRenewalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_cren_k_overdue')}
+                badge={<InfoMark info={t('rep_info_contracts_renewals_overdue')} />}
                 value={count(overdue.count, lang)}
                 unit={unit}
                 alert={overdue.count > 0 ? 'red' : undefined}
@@ -126,7 +129,7 @@ function Tiles({ data }: { data: ContractRenewalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_cren_k_files')}
-                hint={t('rep_cren_k_files_hint')}
+                badge={<InfoMark info={t('rep_cren_k_files_hint')} />}
                 value={count(files.missing, lang)}
                 unit={t('rep_cren_k_files_of').replace('{n}', count(files.open, lang))}
                 bar={
@@ -151,6 +154,7 @@ function Tiles({ data }: { data: ContractRenewalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_cren_k_closed')}
+                badge={<InfoMark info={t('rep_info_contracts_renewals_closed_year')} />}
                 value={count(closed.count, lang)}
                 unit={unit}
                 footer={rich(t('rep_cren_k_closed_foot'), { c: count(closed.cancelled, lang), e: count(closed.expired, lang) })}

@@ -56,7 +56,12 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
                 unit={unit}
                 tone={tiles.out > 0 ? 'red' : undefined}
                 alert={tiles.out > 0 ? 'red' : undefined}
-                badge={tiles.out > 0 ? <StatusBadge tone="red">{share(tiles.out)}</StatusBadge> : undefined}
+                badge={
+                    <>
+                        {tiles.out > 0 ? <StatusBadge tone="red">{share(tiles.out)}</StatusBadge> : undefined}
+                        <InfoMark info={t('rep_info_stock_below_min_out_of_stock')} />
+                    </>
+                }
                 bar={pieces.length > 0 ? splitBar(pieces) : undefined}
                 footer={pieces.length > 0 ? <TileLegend pieces={pieces} /> : undefined}
             />
@@ -66,7 +71,12 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
                 unit={unit}
                 tone={tiles.low > 0 ? 'amber' : undefined}
                 alert={tiles.low > 0 ? 'amber' : undefined}
-                badge={tiles.low > 0 ? <StatusBadge tone="amber">{share(tiles.low)}</StatusBadge> : undefined}
+                badge={
+                    <>
+                        {tiles.low > 0 ? <StatusBadge tone="amber">{share(tiles.low)}</StatusBadge> : undefined}
+                        <InfoMark info={t('rep_info_stock_below_min_below_min')} />
+                    </>
+                }
                 footer={foot('rep_slv_k_low_foot', { n: n(tiles.low_gap) })}
             />
             <KpiTile
@@ -74,16 +84,26 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
                 value={n(tiles.over)}
                 unit={unit}
                 tone={tiles.over > 0 ? 'blue' : undefined}
-                badge={tiles.over > 0 ? <StatusBadge tone="blue">{share(tiles.over)}</StatusBadge> : undefined}
+                badge={
+                    <>
+                        {tiles.over > 0 ? <StatusBadge tone="blue">{share(tiles.over)}</StatusBadge> : undefined}
+                        <InfoMark info={t('rep_info_stock_below_min_over_max')} />
+                    </>
+                }
                 footer={foot('rep_slv_k_over_foot', { n: n(tiles.over_excess) })}
             />
             <KpiTile
                 label={t('rep_slv_k_reorder')}
-                badge={<InfoMark info={[t('rep_slv_k_reorder_info_qty'), t('rep_slv_k_reorder_info_none')]} />}
+                badge={<InfoMark info={t('rep_info_stock_below_min_reorder_value')} />}
                 value={stockMoney(tiles.reorder.value, lang)}
                 footer={foot('rep_slv_k_reorder_foot', { n: n(tiles.reorder.items) })}
             />
-            <KpiTile label={t('rep_slv_k_excess')} value={stockMoney(tiles.excess_value, lang)} footer={foot('rep_slv_k_excess_foot', {})} />
+            <KpiTile
+                label={t('rep_slv_k_excess')}
+                badge={<InfoMark info={t('rep_info_stock_below_min_excess_value')} />}
+                value={stockMoney(tiles.excess_value, lang)}
+                footer={foot('rep_slv_k_excess_foot', {})}
+            />
         </div>
     );
 }

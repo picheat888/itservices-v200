@@ -14,7 +14,7 @@ import { useStockValuationBreakdown } from '../hooks/use-reports';
 import type { StockValuationBreakdown, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
 import { CardsUpdating } from './cards-updating';
-import { CardEmpty, CardPager, CardTitle, fold, FoldToggle } from './chart-parts';
+import { CardEmpty, CardPager, CardTitle, fold, FoldToggle, InfoMark } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { CardHeadingSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -82,18 +82,21 @@ function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Cat
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(4))}>
             <KpiTile
                 label={t('rep_sva_k_value')}
+                badge={<InfoMark info={t('rep_info_stock_valuation_stock_value')} />}
                 value={stockMoney(tiles.value, lang)}
                 bar={valuePieces.length > 0 ? splitBar(valuePieces) : undefined}
                 footer={valuePieces.length > 0 ? <TileLegend pieces={valuePieces} /> : undefined}
             />
             <KpiTile
                 label={t('rep_sva_k_qty')}
+                badge={<InfoMark info={t('rep_info_stock_valuation_qty_total')} />}
                 value={n(tiles.qty)}
                 unit={t('rep_sva_unit')}
                 footer={foot('rep_sva_k_qty_foot', { n: n(tiles.held), date: fmt.date(asOf) })}
             />
             <KpiTile
                 label={t('rep_sva_k_held')}
+                badge={<InfoMark info={[t('rep_info_stock_valuation_total'), t('rep_info_stock_valuation_out')]} />}
                 value={n(tiles.held)}
                 unit={t('rep_sva_k_held_of').replace('{n}', n(tiles.items))}
                 alert={tiles.out > 0 ? 'amber' : undefined}
@@ -105,9 +108,12 @@ function ValueTiles({ tiles, categories, asOf }: { tiles: Tiles; categories: Cat
                 value={stockMoney(tiles.dead90.value, lang)}
                 alert={tiles.dead90.count > 0 ? 'amber' : undefined}
                 badge={
-                    tiles.dead90.value > 0 ? (
-                        <StatusBadge tone="gray">{t('rep_sva_k_dead_share').replace('{pct}', fmtN(deadShare))}</StatusBadge>
-                    ) : undefined
+                    <>
+                        {tiles.dead90.value > 0 && (
+                            <StatusBadge tone="gray">{t('rep_sva_k_dead_share').replace('{pct}', fmtN(deadShare))}</StatusBadge>
+                        )}
+                        <InfoMark info={[t('rep_info_stock_valuation_dead90_count'), t('rep_info_stock_valuation_dead90_value')]} />
+                    </>
                 }
                 footer={foot('rep_sva_items', { n: n(tiles.dead90.count) })}
             />
