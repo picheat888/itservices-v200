@@ -255,14 +255,18 @@ class LoginDeviceLimitTest extends TestCase
         $pending = $this->signIn($user)->json('pending');
         $this->signOutDevice($older->id, $pending)->assertOk();
 
-        // An admin resets the password
+        // A password change alone voids the token
         $user->forceFill(['password' => Hash::make('N3w-Passw0rd!')])->save();
 
         $this->signOutDevice($newer->id, $pending)->assertForbidden()->assertJsonPath('message', 'pending_expired');
+        $this->assertNull($newer->fresh()->ended_at);
+
+        // An admin reset also signs every device out, leaving room to sign in
+        $user->signOutEverywhere();
+
         $this->complete($pending)->assertForbidden()->assertJsonPath('message', 'pending_expired');
         $this->assertGuest();
-        $this->assertNull($newer->fresh()->ended_at);
-        $this->assertSame(1, $this->activeCount($user));
+        $this->assertSame(0, $this->activeCount($user));
     }
 
     public function test_completion_rechecks_a_lowered_limit(): void
