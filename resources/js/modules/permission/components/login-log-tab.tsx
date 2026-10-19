@@ -46,7 +46,9 @@ function LoginUserCell({ row }: { row: LoginEventRow }) {
 /** The event word with its reason line under it; wrong passwords and locks read in destructive text. */
 function LoginEventCell({ row }: { row: LoginEventRow }) {
     const t = useT();
-    const { event, reason, failed } = loginEventWords(row, t);
+    const { event, reason: reasonLine, failed } = loginEventWords(row, t);
+    // An unknown account is named in the user cell
+    const reason = row.user === null ? null : reasonLine;
 
     return (
         <div className="min-w-0">

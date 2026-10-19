@@ -1,5 +1,5 @@
 // Reads the Login tab's URL values (?event, ?from, ?to) into what the list asks the server for; no React, so node tests load it as is.
-import type { LoginEventType } from '@/modules/auth/api/authApi';
+import type { LoginEventType } from '@/modules/auth';
 
 /** The event filter's choices, in the order the select lists them. */
 export const LOGIN_EVENT_FILTERS: readonly LoginEventType[] = ['signed_in', 'failed', 'locked', 'signed_out', 'forced_out'];
