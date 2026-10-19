@@ -90,6 +90,24 @@ test('the same key within a second collapses into one toast', (t) => {
     assert.equal(useToastStore.getState().toasts.length, 1);
 });
 
+test('the same key stays one toast while the first is still up, and may come back once it leaves', (t) => {
+    reset();
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let now = 4_500_000;
+    t.mock.method(Date, 'now', () => now);
+    const { push, leave } = useToastStore.getState();
+    push('slow down', 'warning', undefined, undefined, { key: 'http-throttle' });
+    now += 3_000;
+    push('slow down again', 'warning', undefined, undefined, { key: 'http-throttle' });
+    assert.equal(useToastStore.getState().toasts.length, 1);
+
+    leave(useToastStore.getState().toasts[0].id);
+    push('slow down while it slides out', 'warning', undefined, undefined, { key: 'http-throttle' });
+    t.mock.timers.tick(TOAST_LEAVE_MS);
+    assert.equal(useToastStore.getState().toasts.length, 1);
+    assert.equal(useToastStore.getState().toasts[0].message, 'slow down while it slides out');
+});
+
 test('a group dismissal slides shown toasts out before removing them; queued ones drop at once', (t) => {
     reset();
     t.mock.timers.enable({ apis: ['setTimeout'] });

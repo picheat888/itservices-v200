@@ -1,9 +1,11 @@
 /**
  * Helpers for reading Laravel API error responses on the client.
  */
+import { translate } from '@/lang';
+import { isServerFailure, markShownInline, requestIdOf } from '@/shared/lib/http-errors';
 import { formatNumber } from '@/shared/lib/number';
-import { useUiStore } from '@/stores/ui';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 
 interface ApiErrorShape {
     response?: {
@@ -27,8 +29,20 @@ export function fieldError(error: unknown, field: string): string | undefined {
     return e?.response?.data?.errors?.[field]?.[0];
 }
 
-/** The server's own `message` on a failed request, if it sent one. */
+/** A 5xx in words, with its reference for IT; the server's own text may be a stack trace. */
+export function serverFailureText(error: unknown): string {
+    const lang = useUiStore.getState().lang;
+    const reference = requestIdOf(error);
+    const text = translate(lang, 'err_action_server');
+    return reference ? `${text} ${translate(lang, 'err_reference').replace('{id}', reference)}` : text;
+}
+
+/** The server's own `message` on a failed request, if it sent one; a 5xx gets the standard words and no toast repeats it. */
 export function serverMessage(error: unknown): string | undefined {
+    if (isServerFailure(error)) {
+        markShownInline(error);
+        return serverFailureText(error);
+    }
     const message = (error as ApiErrorShape)?.response?.data?.message;
     return typeof message === 'string' && message !== '' ? message : undefined;
 }
@@ -41,7 +55,9 @@ export function serverMessage(error: unknown): string | undefined {
 export function toastDeleteError(error: unknown, t: (key: string) => string, bodyKey = 'md_in_use', titleKey = 'md_in_use_title'): void {
     const res = (error as { response?: { status?: number; data?: { count?: number } } })?.response;
     if (res?.status === 409) {
-        useToastStore.getState().push(t(bodyKey).replace('{count}', formatNumber(res.data?.count ?? 0, useUiStore.getState().lang)), 'error', t(titleKey));
+        useToastStore
+            .getState()
+            .push(t(bodyKey).replace('{count}', formatNumber(res.data?.count ?? 0, useUiStore.getState().lang)), 'error', t(titleKey));
     } else {
         useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
     }

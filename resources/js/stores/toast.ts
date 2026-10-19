@@ -22,7 +22,7 @@ export const TOAST_MAX_TIMED = 5;
 /** Gap between two timed toasts entering the screen. */
 export const TOAST_STAGGER_MS = 1500;
 
-// Identical toasts (same key) within this window collapse into one
+// Identical toasts (same key) collapse into one while the first is still queued or on screen, and for this long after it leaves
 const DEDUPE_MS = 1000;
 
 /** Slide-out plus row collapse (app.css .toast-leave / .toast-row-leaving); the toast is removed after it. */
@@ -124,7 +124,7 @@ export const useToastStore = create<ToastState>((set, get) => ({
         set((s) => {
             const now = Date.now();
             const key = options?.key ?? message;
-            if (s.toasts.some((toast) => toast.key === key && now - toast.createdAt < DEDUPE_MS)) {
+            if (s.toasts.some((toast) => toast.key === key && (!toast.leaving || now - toast.createdAt < DEDUPE_MS))) {
                 return s;
             }
             const duration = options?.duration !== undefined ? options.duration : TOAST_DURATION[tone];

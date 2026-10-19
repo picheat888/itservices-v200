@@ -3,7 +3,7 @@ import { formatNumber } from '@/shared/lib/number';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore, type AppErrorKind } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
-import { Ban, RotateCw, ServerCrash, WifiOff } from 'lucide-react';
+import { Ban, RotateCw, ServerCrash, WifiOff, Wrench } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 // Full-screen takeover for system/transient API failures. Words come from the bundled dictionaries, so they show even when the API is down.
@@ -11,12 +11,10 @@ const COPY: Record<AppErrorKind, { icon: ComponentType<{ className?: string }>; 
     server: { icon: ServerCrash, title: 'err_server_title', message: 'err_server_body' },
     network: { icon: WifiOff, title: 'err_network_title', message: 'err_network_body' },
     'rate-limit': { icon: Ban, title: 'err_throttle_title', message: 'err_throttle_body' },
+    maintenance: { icon: Wrench, title: 'err_maintenance_title', message: 'err_maintenance_body' },
 };
 
-/**
- * Renders nothing until the app-error store holds an error, then covers the whole
- * viewport with a clear message + Reload action. Driven by the axios interceptor (services/http.ts).
- */
+/** Renders nothing until the app-error store holds an error, then covers the viewport with a message and Reload (driven by shared/lib/http.ts). */
 export function AppErrorScreen() {
     const kind = useAppErrorStore((s) => s.kind);
     const retryAfter = useAppErrorStore((s) => s.retryAfter);
@@ -26,7 +24,7 @@ export function AppErrorScreen() {
     if (!kind) return null;
 
     const { icon: Icon, title, message } = COPY[kind];
-    const detail = kind === 'rate-limit' && retryAfter ? translate(lang, 'err_retry_after').replace('{n}', formatNumber(retryAfter, lang)) : null;
+    const detail = retryAfter ? translate(lang, 'err_retry_after').replace('{n}', formatNumber(retryAfter, lang)) : null;
 
     return (
         <div className="bg-background fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 px-6 text-center">

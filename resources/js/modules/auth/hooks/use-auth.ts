@@ -1,4 +1,5 @@
 import { authApi, type LoginPayload } from '@/modules/auth/api/authApi';
+import { httpStatus } from '@/shared/lib/http-errors';
 import { announceSignIn } from '@/shared/lib/login-redirect';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { SUPER_ROLE, type User } from '@/shared/types';
@@ -10,12 +11,13 @@ export function useAuth() {
         queryFn: async () => {
             try {
                 return await authApi.me();
-            } catch {
-                return null;
+            } catch (error) {
+                // Only a 401 means signed out; a 429 or an outage is an error, not a reason to send the reader to the login page
+                if (httpStatus(error) === 401) return null;
+                throw error;
             }
         },
         staleTime: 5 * 60 * 1000,
-        retry: false,
     });
 
     const user = query.data ?? null;
@@ -27,7 +29,8 @@ export function useAuth() {
 
     return {
         user,
-        isLoading: query.isLoading,
+        // Still unknown while /me has not answered, or failed for a reason other than 401 (the error screen covers it)
+        isLoading: query.data === undefined,
         isAuthenticated: !!user,
         isSuper,
         can: (permission: string) => isSuper || !!user?.permissions?.includes(permission),

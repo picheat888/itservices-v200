@@ -221,6 +221,11 @@ export const common: Dict = {
     err_reference: 'Reference for IT: {id}',
     err_render_title: "This screen couldn't be shown",
     err_render_body: 'The problem has been recorded for the IT team. Reload the page and try again.',
+    err_maintenance_title: 'Down for maintenance',
+    err_maintenance_body: 'The system is being updated. Please come back in a moment.',
+
+    // http.ts, form error banners — a save the server failed
+    err_action_server: "That didn't go through because the server ran into a problem. Please try again.",
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'Blue',
