@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Email;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Email\EmailTemplateResource;
 use App\Models\AuditLog;
-use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
@@ -52,17 +51,12 @@ class EmailTemplateController extends Controller
 
         $templates = EmailTemplate::with('updater.employee')->orderBy('id')->get();
 
-        $sentTotal = EmailLog::where('status', 'sent')->count();
-        $failedTotal = EmailLog::where('status', 'failed')->count();
-        $attempts = $sentTotal + $failedTotal;
-
         return response()->json([
             'data' => EmailTemplateResource::collection($templates),
             'stats' => [
                 'templates' => $templates->count(),
                 'enabled' => $templates->where('enabled', true)->count(),
-                'sent_today' => EmailLog::where('status', 'sent')->whereDate('created_at', today())->count(),
-                'delivery_rate' => $attempts > 0 ? round($sentTotal / $attempts * 100, 1) : null,
+                ...$this->service->deliveryStats(),
             ],
             'mail' => $this->fromIdentity(),
         ]);
@@ -217,10 +211,12 @@ class EmailTemplateController extends Controller
         $this->allow($request, 'notifications.email_test');
 
         $draft = $request->validate([
-            'name' => ['sometimes', 'string', 'max:150'],
-            'subject' => ['sometimes', 'string', 'max:255'],
-            'body_html' => ['sometimes', 'string'],
+            'name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'body_html' => ['sometimes', 'nullable', 'string'],
         ]);
+        // A cleared field in the editor falls back to the saved wording
+        $draft = array_filter($draft, 'filled');
 
         $to = $request->user()->email;
         if (! $to) {
@@ -247,6 +243,7 @@ class EmailTemplateController extends Controller
             rtrim((string) config('app.url'), '/').'/',
             'Open in portal',
             $draft['name'] ?? $emailTemplate->name,
+            isTest: true,
         );
 
         // 200 either way. A rejected address or an unreachable SMTP host is an answer to

@@ -116,7 +116,7 @@ class Logs implements PerfStep
         $this->ctx->sql->insert('email_logs', $this->fill('email_logs', [
             'id' => $this->ctx->reg->nextId('email_logs'), 'template_key' => $key, 'to_email' => $status === 'skipped' ? null : $person['email'],
             'recipient_name' => $person['name'] ?? null, 'subject' => '[IT Service Desk] '.$subject,
-            'body_html' => '<p>Hello '.($person['name'] ?? '').',</p><p>'.$text.'</p>', 'status' => $status,
+            'body_html' => '<p>Hello '.($person['name'] ?? '').',</p><p>'.$text.'</p>', 'status' => $status, 'is_test' => 0,
             'error' => match ($status) {
                 'skipped' => 'Recipient has no email address',
                 'failed' => 'Connection timed out',

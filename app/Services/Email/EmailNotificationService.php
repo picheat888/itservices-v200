@@ -7,6 +7,7 @@ use App\Mail\TemplatedMail;
 use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\MailSetting;
 use App\Services\Settings\MailConfigService;
 use App\Support\EmailTemplates;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,8 @@ use Illuminate\Support\Str;
  */
 class EmailNotificationService
 {
+    public const DELIVERY_RATE_DAYS = 30;
+
     public const NOT_CONFIGURED_ERROR = 'SMTP is not set up in Settings > Email: the message was written to the mail log file, not sent';
 
     public function __construct(private readonly MailConfigService $mailConfig) {}
@@ -134,15 +137,14 @@ class EmailNotificationService
         $html = $this->render($template->body_html, $vars);
 
         if (blank($toEmail)) {
-            EmailLog::create([
+            // Branded like a real send: the row records what they would have received
+            $this->writeLog([
                 'template_key' => $key,
                 'to_email' => null,
                 'recipient_name' => $recipientName,
-                // Branded like a real send: the row records what they would have received.
                 'subject' => $this->brandedSubject($subject),
-                // Kept even though nothing was sent: what they would have received is the
-                // useful half of "nobody told them".
                 'body_html' => $html,
+                'action' => $this->actionRecord($actionUrl, $actionLabel),
                 'status' => 'skipped',
                 'error' => 'Recipient has no email address',
             ]);
@@ -185,14 +187,14 @@ class EmailNotificationService
         $html = '<p>This is a test email from your IT Service Desk.</p>'
             .'<p style="color:#64748b">If you received this, your SMTP settings are working.</p>';
 
-        return $this->deliver($toEmail, $subject, $html, null);
+        return $this->deliver($toEmail, $subject, $html, null, isTest: true);
     }
 
     /**
      * Core send: applies DB SMTP config, sends the mailable, logs the result,
-     * and bumps the template's last_sent_at. Returns true on success.
+     * and bumps the template's last_sent_at (not for a test). Returns true on success.
      */
-    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null, ?string $attachmentPath = null, ?string $attachmentName = null): bool
+    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null, ?string $attachmentPath = null, ?string $attachmentName = null, bool $isTest = false): bool
     {
         $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
         $subject = $this->brandedSubject($subject);
@@ -215,22 +217,75 @@ class EmailNotificationService
             Log::warning('Email send failed', ['to' => $toEmail, 'error' => $error]);
         }
 
-        EmailLog::create([
+        // The rendered message only; the frame is rebuilt from the layout when the log is read
+        $this->writeLog([
             'template_key' => $templateKey,
             'to_email' => $toEmail,
             'recipient_name' => $recipientName,
             'subject' => $subject,
-            // The rendered message only. The frame it was sent in is rebuilt from the
-            // layout when somebody reads the log, since it is the same on every email.
             'body_html' => $html,
+            'action' => $this->actionRecord($actionUrl, $actionLabel),
             'status' => $status,
+            'is_test' => $isTest,
             'error' => $error,
         ]);
 
-        if ($status === 'sent' && $templateKey) {
-            EmailTemplate::where('key', $templateKey)->update(['last_sent_at' => now()]);
+        // toBase(): a send is not an edit, so updated_at stays put
+        if ($status === 'sent' && $templateKey && ! $isTest) {
+            EmailTemplate::where('key', $templateKey)->toBase()->update(['last_sent_at' => now()]);
         }
 
         return $status === 'sent';
+    }
+
+    /**
+     * Sent today and the 30-day delivery rate, real sends only. Tests are left out, and so
+     * are mails that never left because SMTP was not set up; with no SMTP the rate is null.
+     *
+     * @return array{sent_today: int, delivery_rate: ?float, delivery_sent: int, delivery_attempts: int, mail_configured: bool}
+     */
+    public function deliveryStats(): array
+    {
+        $real = fn () => EmailLog::query()->where('is_test', false);
+        $since = now()->subDays(self::DELIVERY_RATE_DAYS);
+
+        $sent = $real()->where('status', 'sent')->where('created_at', '>=', $since)->count();
+        $failed = $real()->where('status', 'failed')->where('created_at', '>=', $since)
+            ->where(fn ($q) => $q->whereNull('error')->orWhere('error', '!=', self::NOT_CONFIGURED_ERROR))
+            ->count();
+        $attempts = $sent + $failed;
+        $configured = MailSetting::current()->isConfigured();
+
+        return [
+            'sent_today' => $real()->where('status', 'sent')->whereBetween('created_at', [today(), today()->endOfDay()])->count(),
+            'delivery_rate' => $configured && $attempts > 0 ? round($sent / $attempts * 100, 1) : null,
+            'delivery_sent' => $sent,
+            'delivery_attempts' => $attempts,
+            'mail_configured' => $configured,
+        ];
+    }
+
+    /** @return array{url?: string, label?: string} the button the mail carried; [] when it had none */
+    private function actionRecord(?string $actionUrl, ?string $actionLabel): array
+    {
+        return filled($actionUrl) ? ['url' => $actionUrl, 'label' => $actionLabel ?: 'Open in portal'] : [];
+    }
+
+    /**
+     * A failed log write never fails a mail that already went out.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function writeLog(array $row): void
+    {
+        // Characters, not display width: Thai marks have zero width but fill the varchar(255)
+        $subject = (string) $row['subject'];
+        $row['subject'] = mb_strlen($subject) > 255 ? mb_substr($subject, 0, 254).'…' : $subject;
+
+        try {
+            EmailLog::create($row);
+        } catch (\Throwable $e) {
+            Log::warning('Email log write failed', ['to' => $row['to_email'], 'template' => $row['template_key'], 'error' => $e->getMessage()]);
+        }
     }
 }
