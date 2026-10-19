@@ -10,9 +10,7 @@
     <title>{{ $page['code'] }} - {{ $page['brand']['name'] }}</title>
 
     <link rel="icon" href="{{ $page['brand']['logo_url'] }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/fonts/noto-sans-thai/noto-sans-thai.css">
 
     <script>
         // The reader's app choices (SPA localStorage entry itservices-ui): theme, language, accent

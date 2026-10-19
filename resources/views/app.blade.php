@@ -20,9 +20,9 @@
              block early. --}}
         <script id="brand" type="application/json">@json($brand, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
 
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        {{-- Noto Sans Thai from this server (licence: public/fonts/noto-sans-thai/OFL.txt) --}}
+        <link rel="preload" href="/fonts/noto-sans-thai/noto-sans-thai-thai-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="stylesheet" href="/fonts/noto-sans-thai/noto-sans-thai.css">
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app/App.tsx'])
