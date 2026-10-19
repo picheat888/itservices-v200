@@ -231,15 +231,17 @@ export const common: Dict = {
     err_throttle_body: 'Usage is paused for a moment. Try again when the timer ends.',
     err_throttle_toast: 'Too many requests. Wait about {n} seconds and try again.',
     err_reference: 'Reference for IT: {id}',
-    err_render_title: "This page can't be shown",
-    err_render_body: 'Reload the page to continue.',
-    err_render_report_it: 'If it keeps happening, send IT the reference code.',
     err_maintenance_title: 'Down for maintenance',
     err_maintenance_body: 'The system is being updated. Back in about {n} min.',
     err_maintenance_later: 'The system is being updated. Please try again later.',
     err_network_still: "Still can't connect.",
     err_ready: 'Ready',
     err_ready_spoken: 'You can try again now.',
+
+    // error-boundary.tsx — crash screen
+    err_render_title: "This page can't be shown",
+    err_render_body: 'Reload the page to continue.',
+    err_render_report_it: 'If it keeps happening, send IT the reference code.',
 
     // http.ts, form error banners — a save the server failed
     err_action_server: "That didn't go through because the server ran into a problem. Please try again.",
@@ -281,7 +283,6 @@ export const common: Dict = {
     cmn_empty_bell_empty: 'No notifications',
     cmn_empty_bell_empty_hint: 'Things you need to know or do show here.',
     cmn_empty_no_access: 'No access',
-    cmn_empty_no_access_hint: "You don't have permission to view this section. Contact an administrator if you think this is a mistake.",
     cmn_empty_record_missing: 'Record not found',
     cmn_empty_record_missing_hint: 'It may have been deleted, or the link is wrong.',
     cmn_empty_search_select: 'No match',

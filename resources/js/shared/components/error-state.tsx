@@ -18,10 +18,11 @@ export function ErrorIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: ErrorT
     return <Icon className={cn('h-10 w-10', TONE_CLASS[tone])} strokeWidth={1.75} aria-hidden />;
 }
 
-// Reference row: the server's request id with a copy button
+// Reference row: the server's request id, with a copy button where the clipboard works (https or localhost)
 export function ReferenceCode({ code }: { code: string }) {
     const t = useT();
     const [copied, setCopied] = useState(false);
+    const canCopy = typeof navigator.clipboard?.writeText === 'function';
 
     const copy = async () => {
         try {
@@ -38,9 +39,11 @@ export function ReferenceCode({ code }: { code: string }) {
             <span>
                 {t('err_reference_label')} <span className="text-foreground">{code}</span>
             </span>
-            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" aria-label={t('err_copy_reference')} onClick={copy}>
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            </Button>
+            {canCopy && (
+                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" aria-label={t('err_copy_reference')} onClick={copy}>
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+            )}
         </div>
     );
 }

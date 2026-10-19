@@ -86,6 +86,38 @@ class ErrorPagesTest extends TestCase
         $response->assertSee('href="/login?next=%2Ffiles%2F__test-error%2F401"', false);
     }
 
+    /** @return array<string, array{int, list<array{string, string, string, string}>}> */
+    public static function buttons(): array
+    {
+        $dashboard = fn (string $style = 'primary'): array => ['/', 'กลับหน้า Dashboard', 'Back to Dashboard', $style];
+        $reload = fn (int $code): array => ["/files/__test-error/{$code}", 'โหลดหน้าใหม่', 'Reload', 'primary'];
+
+        return [
+            'unauthorized' => [401, [['/login?next=%2Ffiles%2F__test-error%2F401', 'เข้าสู่ระบบ', 'Sign in', 'primary']]],
+            'forbidden' => [403, [$dashboard()]],
+            'not found' => [404, [$dashboard()]],
+            'page expired' => [419, [$reload(419)]],
+            'too many requests' => [429, [$reload(429)]],
+            'server error' => [500, [$reload(500), $dashboard('ghost')]],
+            'maintenance' => [503, [$reload(503)]],
+        ];
+    }
+
+    /** @param  list<array{string, string, string, string}>  $buttons  href, Thai label, English label, style */
+    #[DataProvider('buttons')]
+    public function test_each_code_offers_the_buttons_that_fit_it(int $code, array $buttons): void
+    {
+        $response = $this->get("/files/__test-error/{$code}");
+
+        $response->assertStatus($code);
+        // The same buttons once per language block, nothing else
+        $this->assertSame(count($buttons) * 2, substr_count((string) $response->getContent(), 'class="button '));
+        foreach ($buttons as [$href, $thai, $english, $style]) {
+            $response->assertSee("<a href=\"{$href}\" class=\"button {$style}\">{$thai}</a>", false);
+            $response->assertSee("<a href=\"{$href}\" class=\"button {$style}\">{$english}</a>", false);
+        }
+    }
+
     public function test_503_says_minutes_from_retry_after(): void
     {
         $response = $this->get('/files/__test-error/503?retry_after=120');
