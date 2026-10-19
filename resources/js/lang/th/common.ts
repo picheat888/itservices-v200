@@ -223,9 +223,14 @@ export const common: Dict = {
     err_render_body: 'ระบบบันทึกปัญหาไว้ให้ทีม IT แล้ว กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง',
     err_maintenance_title: 'ปิดปรับปรุงชั่วคราว',
     err_maintenance_body: 'ระบบกำลังปิดปรับปรุง กรุณากลับมาใหม่อีกครั้งในอีกสักครู่',
+    err_network_still: 'ยังเชื่อมต่อไม่ได้ ระบบจะลองเชื่อมต่อให้เองทุก 10 วินาที',
 
     // http.ts, form error banners — a save the server failed
     err_action_server: 'ทำรายการไม่สำเร็จ เพราะเซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้ง',
+
+    // not-found.tsx — an address that does not exist
+    cmn_not_found_title: 'ไม่พบหน้านี้',
+    cmn_not_found_hint: 'ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'น้ำเงิน',

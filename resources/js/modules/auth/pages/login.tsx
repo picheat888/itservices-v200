@@ -103,7 +103,7 @@ export default function LoginPage() {
             return t('login_err_server');
         }
         if (res.status === 429) {
-            // The sign-in lockout sends `retry_after`; the app-wide 60/min limiter only
+            // The sign-in lockout sends `retry_after`; the app-wide API limiter only
             // sends the Retry-After header. Either way, tell the user how long to wait.
             const header = Number(res.headers?.['retry-after']);
             const seconds = res.data?.retry_after ?? (Number.isFinite(header) ? header : 0);

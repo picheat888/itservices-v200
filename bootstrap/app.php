@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(AssignRequestId::class);
         $middleware->statefulApi();
-        // Apply the standard 'api' rate limiter (60/min) to every API route.
+        // Apply the standard 'api' rate limiter (300/min, AppServiceProvider) to every API route.
         $middleware->api(append: ['throttle:api', SetRequestLocale::class]);
         $middleware->alias([
             'permission' => EnsurePermission::class,
