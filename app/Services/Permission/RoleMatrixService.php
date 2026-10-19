@@ -9,6 +9,7 @@ use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Support\PermissionLayout;
 use App\Support\Permissions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class RoleMatrixService
 {
     /**
-     * @return array{catalog: array<string, list<string>>, roles: Collection<int, array<string, mixed>>}
+     * @return array{catalog: array<string, list<string>>, layout: list<array<string, mixed>>, roles: Collection<int, array<string, mixed>>}
      */
     public function matrix(): array
     {
@@ -60,6 +61,7 @@ class RoleMatrixService
 
         return [
             'catalog' => Permissions::catalog(),
+            'layout' => PermissionLayout::cards(),
             'roles' => $roles,
         ];
     }

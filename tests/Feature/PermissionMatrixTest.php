@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Permission\Role;
+use App\Models\User;
+use App\Support\PermissionLayout;
 use App\Support\Permissions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -20,6 +24,8 @@ use Tests\TestCase;
  */
 class PermissionMatrixTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * A key is "enforced" once anything refuses a request over it: route middleware,
      * a controller guard, a Form Request, or a service.
@@ -85,6 +91,35 @@ class PermissionMatrixTest extends TestCase
         return array_values(array_unique($matches[1]));
     }
 
+    /**
+     * Every key of every card, as GET /api/permissions sends them.
+     *
+     * @return list<string>
+     */
+    private function layoutKeys(): array
+    {
+        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
+        $admin = User::factory()->create(['role' => 'super']);
+
+        $layout = $this->actingAs($admin)->getJson('/api/permissions')
+            ->assertOk()
+            ->assertJsonPath('data.layout.0.module', 'dashboard')
+            ->json('data.layout');
+        $this->assertSame(PermissionLayout::cards(), $layout);
+
+        $keys = [];
+        foreach ($layout as $card) {
+            if ($card['master'] !== null) {
+                $keys[] = $card['master']['key'];
+            }
+            foreach ($card['cells'] as $cell) {
+                array_push($keys, ...($cell['kind'] === 'group' ? [$cell['view'], ...$cell['children'], ...$cell['solo']] : $cell['keys']));
+            }
+        }
+
+        return $keys;
+    }
+
     /** Modules the matrix renders a card for. */
     private function renderedModules(): array
     {
@@ -101,9 +136,10 @@ class PermissionMatrixTest extends TestCase
             $modules = array_merge($modules, $names[1]);
         }
 
-        // ADMIN_GROUPS carries fully-qualified keys; take their module half.
-        preg_match_all("/'([a-z_]+)\.[a-z_]+'/", $src, $adminKeys);
-        $modules = array_merge($modules, $adminKeys[1]);
+        // The server layout carries fully-qualified keys; take their module half.
+        foreach ($this->layoutKeys() as $key) {
+            $modules[] = strstr($key, '.', true);
+        }
 
         return array_values(array_unique($modules));
     }
