@@ -58,6 +58,9 @@ Schedule::command('reports:prune-exports')->dailyAt('02:15');
 // not at the next hour; a sweep with nothing due is one indexed query.
 Schedule::command('reports:send-scheduled')->everyFiveMinutes();
 
+// DB-IP City Lite refresh, the 3rd of each month after the 1st-of-month publish
+Schedule::command('geoip:update')->monthlyOn(3, '03:30')->withoutOverlapping();
+
 // Log digest for analysis (logs/digest), and a heartbeat the digest reads to tell the scheduler is alive.
 Schedule::command('logs:digest')->weeklyOn(1, '07:00');
 Schedule::call(fn () => SchedulerHeartbeat::beat())->everyMinute()->name('scheduler-heartbeat');
