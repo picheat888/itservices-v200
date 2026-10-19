@@ -18,7 +18,7 @@ import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
 import { TicketsPage } from '@/modules/ticket';
 import { WorkflowsPage } from '@/modules/workflow';
-import { AppErrorScreen } from '@/shared/components/app-error-screen';
+import { AppErrorDialog } from '@/shared/components/app-error-dialog';
 import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { installClientErrorReporting } from '@/shared/lib/client-error-report';
@@ -232,7 +232,7 @@ createRoot(document.getElementById('app')!).render(
             <ErrorBoundary>
                 <App />
             </ErrorBoundary>
-            <AppErrorScreen />
+            <AppErrorDialog />
             {/* The app's one toast region — ad-hoc messages and server notifications
                 share this queue, so they can never render over each other. */}
             <Toaster />

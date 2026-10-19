@@ -1,5 +1,5 @@
-// While the "connection lost" screen is up: check again when the browser comes back online and every 10 seconds,
-// then close the screen and refetch what is on it, so nothing typed underneath is lost to a reload.
+// While the "connection lost" dialog is up: check again when the browser comes back online and every 10 seconds,
+// then close the dialog and refetch what is on it, so nothing typed underneath is lost to a reload.
 import { serverReachable } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
