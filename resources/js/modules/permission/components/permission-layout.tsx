@@ -4,6 +4,7 @@ import { InfoHint } from '@/shared/components/info-hint';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
+import { Lock } from 'lucide-react';
 import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { PermissionCardHeader } from './permission-card-header';
 import { PermissionSwitch } from './permission-switch';
@@ -208,29 +209,41 @@ export function PermissionCell({ wide, children }: { wide?: boolean; children: R
     );
 }
 
-/** A switch that owns the children under it: a tinted heading band. */
+/** A switch that owns the children under it: a tinted heading band, and while it is off a line saying the children wait on it. */
 export function GroupHead({ chip, lang, ...s }: SwitchProps & { chip?: boolean; lang: Lang }) {
     const wiring = useSwitchWiring(s);
+    // Role-wide locks (super, own role) explain themselves in the header badge
+    const childrenWait = !s.on && !wiring.locked;
     return (
-        <div className="bg-muted -mx-2 mb-1 flex min-h-[34px] items-center gap-2 rounded-md px-2">
-            <span className="min-w-0 text-sm font-medium">
-                <SwitchLabel htmlFor={wiring.switchId} s={s} locked={wiring.locked} />
-                {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
-            </span>
-            <span className="ml-auto flex items-center gap-2">
-                {chip && <span className="bg-brand/10 text-brand-ink rounded px-1.5 text-xs font-semibold">{translate(lang, 'perm_ui_view')}</span>}
-                <PermissionSwitch
-                    id={wiring.switchId}
-                    label={s.label}
-                    on={s.on}
-                    locked={wiring.locked}
-                    onClick={s.onToggle}
-                    describedBy={wiring.describedBy}
-                    {...wiring.focusEvents}
-                />
-                {wiring.notes}
-            </span>
-        </div>
+        <>
+            <div className="bg-muted -mx-2 mb-1 flex min-h-[34px] items-center gap-2 rounded-md px-2">
+                <span className="min-w-0 text-sm font-medium">
+                    <SwitchLabel htmlFor={wiring.switchId} s={s} locked={wiring.locked} />
+                    {s.info && <InfoHint text={s.info} tabbable={false} shown={wiring.hintShown} className={HINT_AFTER_LABEL} />}
+                </span>
+                <span className="ml-auto flex items-center gap-2">
+                    {chip && (
+                        <span className="bg-brand/10 text-brand-ink rounded px-1.5 text-xs font-semibold">{translate(lang, 'perm_ui_view')}</span>
+                    )}
+                    <PermissionSwitch
+                        id={wiring.switchId}
+                        label={s.label}
+                        on={s.on}
+                        locked={wiring.locked}
+                        onClick={s.onToggle}
+                        describedBy={wiring.describedBy}
+                        {...wiring.focusEvents}
+                    />
+                    {wiring.notes}
+                </span>
+            </div>
+            {childrenWait && (
+                <p className="text-muted-foreground motion-pop-in -mt-0.5 mb-1 flex items-center gap-1.5 text-xs">
+                    <Lock className="h-3 w-3 shrink-0" aria-hidden />
+                    {translate(lang, 'perm_lock_needs').replace('{name}', s.label)}
+                </p>
+            )}
+        </>
     );
 }
 
