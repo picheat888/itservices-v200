@@ -38,6 +38,7 @@ export const email: Dict = {
     email_log_skipped: 'No address',
     email_log_no_address: 'no email address',
     email_log_content: 'The email',
+    email_log_action_not_recorded: 'Logged before buttons were recorded, so no button is shown',
     email_preview: 'Preview',
     email_insert_var: 'Insert variable',
     email_tool_bold: 'Bold',

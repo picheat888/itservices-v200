@@ -1226,7 +1226,12 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
                             <div>
                                 <SectionLabel>{t('email_log_content')}</SectionLabel>
                                 {log.preview_html ? (
-                                    <SentEmailFrame html={log.preview_html} title={t('email_log_content')} />
+                                    <>
+                                        <SentEmailFrame html={log.preview_html} title={t('email_log_content')} />
+                                        {!log.action_recorded && (
+                                            <p className="text-muted-foreground mt-2 text-xs">{t('email_log_action_not_recorded')}</p>
+                                        )}
+                                    </>
                                 ) : (
                                     <EmptyState
                                         title={t('email_empty_log_detail_content')}

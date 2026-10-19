@@ -38,6 +38,7 @@ export const email: Dict = {
     email_log_skipped: 'ไม่มีอีเมล',
     email_log_no_address: 'ไม่มีที่อยู่อีเมล',
     email_log_content: 'เนื้อหาอีเมล',
+    email_log_action_not_recorded: 'อีเมลนี้บันทึกก่อนระบบเก็บปุ่มในอีเมล จึงไม่แสดงปุ่ม',
     email_preview: 'ตัวอย่าง',
     email_insert_var: 'แทรกตัวแปร',
     email_tool_bold: 'ตัวหนา',

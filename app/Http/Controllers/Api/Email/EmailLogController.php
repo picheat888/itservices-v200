@@ -53,6 +53,8 @@ class EmailLogController extends Controller
                 'error' => $emailLog->error,
                 'created_at' => $emailLog->created_at?->toIso8601String(),
                 'preview_html' => $emailLog->body_html === null ? null : $this->renderSentEmail($emailLog),
+                // Rows from before the button was recorded show none rather than a guessed one
+                'action_recorded' => $emailLog->action !== null,
             ],
         ]);
     }
@@ -66,8 +68,7 @@ class EmailLogController extends Controller
         // "Request awaiting your approval", not request.approval_needed. Resolved live like
         // the rest of the frame; a template that has since been deleted falls back to the key.
         $eyebrow = EmailTemplate::where('key', $log->template_key)->value('name') ?? $log->template_key;
-        // The button the mail carried; rows from before it was recorded keep the generic one
-        $action = $log->action ?? ['url' => rtrim((string) config('app.url'), '/').'/', 'label' => 'Open in portal'];
+        $action = $log->action ?? [];
 
         return view('emails.templated', [
             'subjectLine' => $log->subject,
