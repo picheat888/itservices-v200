@@ -5,6 +5,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { LoadFailed } from '@/shared/components/load-failed';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatCard } from '@/shared/components/stat-card';
@@ -338,7 +339,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
 export function NotificationSettingsStats() {
     const t = useT();
     const { data, isLoading } = useNotificationTemplates();
-    const figure = (value: number | undefined) => String(value ?? 0);
+    const figure = (value: number | undefined) => (value === undefined ? '—' : String(value));
 
     return (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -374,7 +375,7 @@ export function NotificationSettingsPane() {
     const t = useT();
     const fmtN = useNumberFormat();
     const rights = useBellRights();
-    const { data, isLoading } = useNotificationTemplates();
+    const { data, isLoading, isError, refetch } = useNotificationTemplates();
     const { update } = useNotificationTemplateMutations();
     // Module chip, search, page and rows-per-page live in the URL
     const list = useListParams();
@@ -587,6 +588,7 @@ export function NotificationSettingsPane() {
                 rowHeight={58}
                 onRowClick={openEditor}
                 paging={list.table.paging}
+                emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
                 empty={
                     isFiltered
                         ? { kind: 'search', title: t('notification_empty_settings_filtered'), hint: t('notification_empty_settings_filtered_hint') }

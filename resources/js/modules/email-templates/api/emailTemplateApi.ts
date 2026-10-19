@@ -25,7 +25,11 @@ export interface EmailTemplateStats {
     templates: number;
     enabled: number;
     sent_today: number;
+    /** Last 30 days of real sends; null while SMTP is not set up or nothing was attempted. */
     delivery_rate: number | null;
+    delivery_sent: number;
+    delivery_attempts: number;
+    mail_configured: boolean;
 }
 
 /** The address the system sends from — shown on the preview's From line. */

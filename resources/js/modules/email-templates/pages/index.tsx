@@ -579,11 +579,15 @@ export default function EmailTemplatesPage() {
     const t = useT();
     const fmtN = useNumberFormat();
     const confirm = useConfirm();
-    const { data, isLoading } = useEmailTemplates();
+    const navigate = useNavigate();
+    const { can } = useAuth();
+    const { data, isLoading, isError, refetch } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
     const rights = useEmailRights();
+    const canLogs = can('notifications.logs');
+    const tabIds = TAB_IDS.filter((id) => id !== 'log' || canLogs);
     // Active tab in ?tab=; each tab's search, filter chip, page and rows-per-page in the URL.
-    const [tab, changeTab] = useTabParam(isEmailTab, 'email');
+    const [tab, changeTab] = useTabParam((v): v is EmailTab => isEmailTab(v) && (v !== 'log' || canLogs), 'email');
     const list = useListParams();
     const search = list.get('search');
 
@@ -773,18 +777,38 @@ export default function EmailTemplatesPage() {
                     <StatCard label={t('email_templates')} value={String(stats?.templates ?? '—')} icon={Mail} loading={isLoading} />
                     <StatCard label={t('email_enabled')} value={String(stats?.enabled ?? '—')} icon={Check} loading={isLoading} />
                     <StatCard label={t('email_sent_today')} value={String(stats?.sent_today ?? '—')} icon={Send} loading={isLoading} />
-                    <StatCard
-                        label={t('email_delivery')}
-                        value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'}
-                        icon={History}
-                        loading={isLoading}
-                        onClick={() => switchTab('log')}
-                    />
+                    {stats && !stats.mail_configured ? (
+                        // No SMTP yet: say so instead of a rate made of mail that never left
+                        <StatCard
+                            label={t('email_delivery')}
+                            value={t('email_delivery_not_set')}
+                            icon={AlertTriangle}
+                            alert="amber"
+                            footer={t(can('settings.email') ? 'email_delivery_set_up' : 'email_delivery_ask_admin')}
+                            onClick={can('settings.email') ? () => navigate('/settings?tab=email') : undefined}
+                        />
+                    ) : (
+                        <StatCard
+                            label={t('email_delivery')}
+                            value={stats?.delivery_rate != null ? fmtN(stats.delivery_rate, { maxDecimals: 1 }) : '—'}
+                            unit={stats?.delivery_rate != null ? '%' : undefined}
+                            icon={History}
+                            loading={isLoading}
+                            footer={
+                                stats && stats.delivery_attempts > 0
+                                    ? t('email_delivery_window')
+                                          .replace('{sent}', fmtN(stats.delivery_sent))
+                                          .replace('{total}', fmtN(stats.delivery_attempts))
+                                    : t('email_delivery_window_none')
+                            }
+                            onClick={canLogs ? () => switchTab('log') : undefined}
+                        />
+                    )}
                 </div>
             )}
 
             <Card className="overflow-clip">
-                <PageTabs tabs={TAB_IDS.map((id) => ({ id, label: t(TAB_LABEL_KEYS[id]) }))} active={tab} onChange={switchTab} />
+                <PageTabs tabs={tabIds.map((id) => ({ id, label: t(TAB_LABEL_KEYS[id]) }))} active={tab} onChange={switchTab} />
 
                 {tab === 'notification' && <NotificationSettingsPane />}
                 {tab === 'log' && <DeliveryLogPane />}
@@ -838,6 +862,7 @@ export default function EmailTemplatesPage() {
                             onRowClick={setEditing}
                             paging={list.table.paging}
                             caption={t('email_templates')}
+                            emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
                             empty={
                                 search || module
                                     ? { kind: 'search', title: t('email_empty_templates_filtered'), hint: t('email_empty_templates_filtered_hint') }
