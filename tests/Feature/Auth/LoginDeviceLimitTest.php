@@ -17,6 +17,7 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -246,6 +247,22 @@ class LoginDeviceLimitTest extends TestCase
 
         $this->assertNull($newer->fresh()->ended_at);
         $this->assertSame(2, $this->activeCount($user));
+    }
+
+    public function test_a_password_change_while_the_dialog_is_open_voids_the_token(): void
+    {
+        [$user, $older, $newer] = $this->fullAccount();
+        $pending = $this->signIn($user)->json('pending');
+        $this->signOutDevice($older->id, $pending)->assertOk();
+
+        // An admin resets the password
+        $user->forceFill(['password' => Hash::make('N3w-Passw0rd!')])->save();
+
+        $this->signOutDevice($newer->id, $pending)->assertForbidden()->assertJsonPath('message', 'pending_expired');
+        $this->complete($pending)->assertForbidden()->assertJsonPath('message', 'pending_expired');
+        $this->assertGuest();
+        $this->assertNull($newer->fresh()->ended_at);
+        $this->assertSame(1, $this->activeCount($user));
     }
 
     public function test_completion_rechecks_a_lowered_limit(): void
