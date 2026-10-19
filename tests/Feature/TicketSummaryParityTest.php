@@ -88,7 +88,7 @@ class TicketSummaryParityTest extends TestCase
     {
         Employee::create(['first_name' => 'Anan', 'last_name' => 'User']);
         $this->rules();
-        mt_srand(20260925);
+        $this->seedRandom(20260925);
         $categories = ['hardware', 'software', 'network', 'other'];
         $priorities = [null, 'critical', 'high', 'medium', 'low'];
         $classes = ['standard', 'standard', 'repair_internal', 'repair_vendor'];

@@ -22,6 +22,7 @@ class WholeDaysTest extends TestCase
 
     public function test_agrees_with_the_carbon_version_over_random_pairs(): void
     {
+        gc_collect_cycles(); // a Faker generator left by an earlier test reseeds mt_rand when destroyed
         mt_srand(11);
         foreach (['Asia/Bangkok', 'UTC', 'America/New_York'] as $tz) {
             for ($i = 0; $i < 600; $i++) {

@@ -45,7 +45,7 @@ class TicketSlaBusinessWalkParityTest extends TestCase
         $memo->setValue(null, $hours);
         $walk = (new ReflectionClass(TicketSla::class))->getMethod('addBusinessMinutesWalk');
 
-        mt_srand(20261017);
+        $this->seedRandom(20261017);
         for ($n = 0; $n < 600; $n++) {
             $from = Carbon::createFromTimestamp(mt_rand(1_600_000_000, 1_800_000_000), $zone);
             $minutes = [0, 1, 30, 59, 60, 240, 480, 1440, 4320, mt_rand(0, 60 * 400), mt_rand(0, 60 * 2000)][mt_rand(0, 10)];
@@ -68,7 +68,7 @@ class TicketSlaBusinessWalkParityTest extends TestCase
         date_default_timezone_set($zone);
 
         try {
-            mt_srand(20261018);
+            $this->seedRandom(20261018);
             for ($n = 0; $n < 400; $n++) {
                 $at = mt_rand(1_600_000_000, 1_800_000_000);
                 $minutes = [0, 1, 59, 240, 1440, mt_rand(0, 60 * 400), mt_rand(0, 60 * 2000)][mt_rand(0, 6)];
