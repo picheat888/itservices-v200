@@ -28,6 +28,9 @@ class DeviceService
 
     private const IPAD_OS = 'iPadOS';
 
+    /** Whether the sessions table exists, asked once per instance (a schema query on MariaDB). */
+    private ?bool $hasSessionTable = null;
+
     public function __construct(
         private readonly LoginEventRecorder $events,
         private readonly CurrentDevice $current,
@@ -287,7 +290,8 @@ class DeviceService
     private function forgetSession(string $sessionId): void
     {
         $table = config('session.table', 'sessions');
-        if (Schema::hasTable($table)) {
+        $this->hasSessionTable ??= Schema::hasTable($table);
+        if ($this->hasSessionTable) {
             DB::table($table)->where('id', $sessionId)->delete();
         }
 

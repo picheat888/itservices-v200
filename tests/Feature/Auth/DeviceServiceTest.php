@@ -226,6 +226,22 @@ class DeviceServiceTest extends TestCase
         $this->assertNotNull($olderOfB->fresh()->ended_at);
     }
 
+    public function test_trimming_many_devices_asks_for_the_sessions_table_once(): void
+    {
+        $user = User::factory()->create();
+        UserDevice::factory()->count(4)->for($user)->sequence(fn ($sequence) => ['last_active_at' => now()->subMinutes($sequence->index)])->create();
+        $tableChecks = 0;
+        DB::listen(function ($query) use (&$tableChecks) {
+            if (str_contains($query->sql, 'sqlite_master')) {
+                $tableChecks++;
+            }
+        });
+
+        $this->assertSame(3, $this->service()->trimTo(1));
+
+        $this->assertSame(1, $tableChecks);
+    }
+
     public function test_trim_with_the_limit_off_ends_nothing(): void
     {
         UserDevice::factory()->count(3)->for(User::factory())->create();
