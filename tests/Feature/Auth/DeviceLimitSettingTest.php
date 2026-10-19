@@ -146,11 +146,11 @@ class DeviceLimitSettingTest extends TestCase
         $user = User::factory()->create();
         $this->devicesOf($user, 3);
 
-        $this->browserOf(User::factory()->create(['role' => 'super']))->save(['login_log_days' => 30])->assertOk();
+        $this->browserOf(User::factory()->create(['role' => 'super']))->save(['login_log_days' => 90])->assertOk();
 
         $this->assertSame('2', AppSetting::get('device_limit'));
         $this->assertSame(3, $this->activeCount($user));
-        $this->assertSame('30', AppSetting::get('login_log_days'));
+        $this->assertSame('90', AppSetting::get('login_log_days'));
     }
 
     public function test_the_security_payload_carries_the_new_keys(): void
@@ -210,5 +210,27 @@ class DeviceLimitSettingTest extends TestCase
         $this->save(['login_log_days' => -1])->assertUnprocessable()->assertJsonValidationErrors('login_log_days');
 
         $this->save(['device_limit' => 10, 'login_log_days' => 3650])->assertOk();
+    }
+
+    public function test_the_login_history_window_is_zero_or_at_least_ninety_days(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->save(['login_log_days' => 0])->assertOk()->assertJsonPath('data.login_log_days', 0);
+        $this->save(['login_log_days' => 90])->assertOk()->assertJsonPath('data.login_log_days', 90);
+
+        $this->save(['login_log_days' => 45])->assertUnprocessable()->assertJsonValidationErrors('login_log_days');
+        $this->save(['login_log_days' => 89])->assertUnprocessable()->assertJsonValidationErrors('login_log_days');
+        $this->assertSame('90', AppSetting::get('login_log_days'), 'a refused value is not stored');
+    }
+
+    public function test_a_refused_login_history_window_says_how_low_it_can_go(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->withHeader('X-Locale', 'en')->save(['login_log_days' => 45])
+            ->assertJsonPath('errors.login_log_days.0', 'Keep the login history for at least 90 days, or keep it forever (0).');
+        $this->withHeader('X-Locale', 'th')->save(['login_log_days' => 45])
+            ->assertJsonPath('errors.login_log_days.0', 'เก็บประวัติการเข้าสู่ระบบอย่างน้อย 90 วัน หรือเก็บตลอดไป');
     }
 }

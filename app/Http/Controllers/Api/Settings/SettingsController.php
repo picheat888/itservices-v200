@@ -10,6 +10,7 @@ use App\Enums\Ticket\TicketSlaClock;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
@@ -21,6 +22,7 @@ use App\Services\Employee\EmployeeService;
 use App\Services\Settings\LogRetentionService;
 use App\Support\DateDisplay;
 use App\Support\TicketSla;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -400,7 +402,7 @@ class SettingsController extends Controller
             'email_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
             'audit_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
             'notification_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
-            'login_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'login_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650', $this->atLeastKnownIpDays(...)],
             'device_limit' => ['sometimes', 'integer', 'min:0', 'max:10'],
         ]);
 
@@ -416,6 +418,15 @@ class SettingsController extends Controller
         }
 
         return $this->security($request);
+    }
+
+    /** The Login log is kept forever (0) or at least as long as the sign-in rule looks back for a known IP. */
+    private function atLeastKnownIpDays(string $attribute, mixed $value, Closure $fail): void
+    {
+        $days = (int) $value;
+        if ($days > 0 && $days < LoginRequest::KNOWN_IP_DAYS) {
+            $fail('validation.login_log_days_min')->translate(['days' => LoginRequest::KNOWN_IP_DAYS]);
+        }
     }
 
     // Turning the limit on or lowering it signs out the extra devices; the saving admin's own device stays
