@@ -17,7 +17,7 @@ class PerfDatasetInvariantsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const RUNTIME = ['sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs', 'password_reset_tokens', 'personal_access_tokens', 'mail_settings'];
+    private const RUNTIME = ['sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs', 'password_reset_tokens', 'personal_access_tokens', 'mail_settings', 'user_devices', 'login_events', 'network_names'];
 
     // Empty at this tiny scale or empty in the source configuration itself
     private const MAY_BE_EMPTY = ['report_pins', 'workflow_step_approvers', 'contract_alert_logs', 'contract_bell_logs', 'stock_alert_logs'];
