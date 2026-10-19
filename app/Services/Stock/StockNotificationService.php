@@ -2,6 +2,7 @@
 
 namespace App\Services\Stock;
 
+use App\Enums\Stock\StockCountStatus;
 use App\Models\Stock\StockAlertLog;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\StockItem;
@@ -254,7 +255,7 @@ class StockNotificationService
         $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r));
 
         // Counting — bell-only reminder per draft session.
-        $drafts = StockCount::where('status', 'draft')->get();
+        $drafts = StockCount::where('status', StockCountStatus::Draft)->get();
         $drafts->each(fn (StockCount $c) => $this->countDraft($c));
 
         return ['alerts' => $alertItems->count(), 'waiting' => $waiting->count(), 'drafts' => $drafts->count()];
