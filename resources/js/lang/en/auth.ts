@@ -50,4 +50,18 @@ export const auth: Dict = {
     device_signed_out_done: 'Signed out',
     device_last_used: 'Last used {time}',
     device_other: 'Other',
+    // lib/login-events.ts — event and reason words of a login-log row
+    login_event_signed_in: 'Signed in',
+    login_event_failed: 'Wrong password',
+    login_event_locked: 'Locked',
+    login_event_signed_out: 'Signed out',
+    login_event_forced_out: 'Forced out',
+    login_reason_third_device: 'Signed in on a new device',
+    login_reason_profile: 'Ended from profile',
+    login_reason_limit: 'Device limit turned on',
+    login_reason_idle_timeout: 'Idle timeout',
+    login_reason_password_changed: 'Password changed',
+    login_reason_account_closed: 'Account closed',
+    login_reason_remembered: 'Remembered',
+    login_reason_unknown_account: 'Account not found',
 };

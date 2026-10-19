@@ -1,4 +1,4 @@
-// My Profile drawer: cover, read-only rail, and tabs (details form, assets, tickets, requests, access) held in ?section=.
+// My Profile drawer: cover, read-only rail, and tabs (details form, assets, tickets, requests, access, sign-ins) held in ?section=.
 import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
@@ -19,11 +19,29 @@ import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import { AtSign, Box, Briefcase, Building2, Camera, Hash, Inbox, KeyRound, Phone, Shield, Ticket, UserCheck, UserRound, Users } from 'lucide-react';
+import {
+    AtSign,
+    Box,
+    Briefcase,
+    Building2,
+    Camera,
+    Hash,
+    Inbox,
+    KeyRound,
+    MonitorSmartphone,
+    Phone,
+    Shield,
+    Ticket,
+    UserCheck,
+    UserRound,
+    Users,
+} from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useMyDevices } from '../hooks/use-my-devices';
 import { useProfileSection } from '../hooks/use-profile-section';
 import { PROFILE_SECTIONS, type ProfileSection } from '../types';
 import { MyAssetsTab } from './my-assets-tab';
+import { MyDevicesTab } from './my-devices-tab';
 import { ProfileDetailsTab, type ProfileFormKey } from './profile-details-tab';
 
 // Names are stored as one space-joined string: the first word is the given name, the rest the surname
@@ -81,13 +99,14 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     const canEdit = can('profile.edit');
     const linked = !!user?.employee_code;
-    // Assets and Access show for any linked employee; Tickets and Requests answer to their page's permission
+    // Assets and Access show for any linked employee; Tickets and Requests answer to their page's permission; Sign-ins is everyone's own
     const sees: Record<ProfileSection, boolean> = {
         profile: true,
         assets: linked,
         tickets: can('tickets.my'),
         requests: can('requests.submit'),
         access: linked,
+        devices: true,
     };
     const allowed = PROFILE_SECTIONS.filter((s) => sees[s]);
     const [urlTab, setTab] = useProfileSection(allowed);
@@ -100,6 +119,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && sees.assets);
     const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && sees.access);
+    const { data: myDevices } = useMyDevices(open && sees.devices);
     const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: TAB_ROWS, requested: true }, open && sees.tickets);
     const { data: myRequests, isLoading: requestsLoading } = useRequests({ page: 1, per_page: TAB_ROWS, scope: 'mine' }, open && sees.requests);
 
@@ -241,6 +261,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         tickets: { label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : myTickets?.meta?.total },
         requests: { label: t('requests'), icon: Inbox, count: requestsLoading ? undefined : myRequests?.meta?.total },
         access: { label: t('emp_v_tab_access'), icon: Shield, count: accessCount },
+        devices: { label: t('profile_tab_devices'), icon: MonitorSmartphone, count: myDevices?.devices.length },
     };
     const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id] }));
 
@@ -423,6 +444,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                     empty={{ title: t('profile_empty_access'), hint: t('profile_empty_access_hint') }}
                                 />
                             )}
+                            {tab === 'devices' && <MyDevicesTab />}
                         </div>
                     </div>
                 </div>

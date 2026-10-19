@@ -20,3 +20,7 @@ export { SetPasswordDialog } from './components/set-password-dialog';
 // API
 export * from './api/authApi';
 export * from './api/preferencesApi';
+
+// Pure helpers
+export { deviceLine, placeLine } from './lib/device-limit';
+export { loginEventWords, type LoginEventWords } from './lib/login-events';
