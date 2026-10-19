@@ -31,7 +31,16 @@ const TICKET_4B = [
     'modules/ticket/components/ticket-update-modal.tsx',
 ];
 const REPORT_4B = ['modules/report/components/export-report-dialog.tsx', 'modules/report/components/schedule-report-dialog.tsx'];
-const SETTINGS_4A: string[] = [];
+const SETTINGS_4A = [
+    'modules/settings/components/brand-modal.tsx',
+    'modules/settings/components/model-modal.tsx',
+    'modules/settings/components/category-modal.tsx',
+    'modules/settings/components/vendor-modal.tsx',
+    'modules/settings/components/warehouse-modal.tsx',
+    'modules/settings/components/location-modal.tsx',
+    'modules/settings/components/lookup-section.tsx',
+    'modules/settings/components/request-data-section.tsx',
+];
 const PEOPLE_4A: string[] = [];
 const ASSET_4A: string[] = [];
 const RECORD_4A: string[] = [];
@@ -40,6 +49,15 @@ const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
 
 test('ticket small forms use the shared shell', () => TICKET_4B.forEach(assertSmallForm));
+
+test('settings small forms use the 4ข look', () => SETTINGS_4A.forEach(assertSmallForm));
+
+test('write-off reasons show the assets area, units and warranty types the master-data area', () => {
+    const page = read('modules/settings/pages/index.tsx');
+    assert.match(page, /icon=\{Box\}/, 'write-off reasons icon');
+    assert.match(page, /eyebrow=\{t\('set_assets'\)\}/, 'write-off reasons eyebrow');
+    assert.equal((page.match(/eyebrow=\{t\('set_master_data'\)\}/g) ?? []).length, 2, 'units and warranty types eyebrow');
+});
 
 test('export and schedule dialogs use the shared shell and keep their own body and ghost cancel', () => {
     for (const rel of REPORT_4B) {

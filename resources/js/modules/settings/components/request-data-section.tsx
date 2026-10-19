@@ -1,6 +1,7 @@
 // Settings → Request data: the choice lists behind the request form's managed selects.
 // One tab per list (?list=), rows reordered by drag or the arrow buttons, edited in OptionModal.
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { Field } from '@/shared/components/field';
 import { PageTabs } from '@/shared/components/page-tabs';
@@ -17,12 +18,12 @@ import { cn } from '@/shared/lib/utils';
 import type { RequestOption, RequestOptionList } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { ArrowDown, ArrowUp, GripVertical, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, Inbox, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRequestOptionLists, useRequestOptionMutations } from '../hooks/use-master-data';
 
@@ -331,6 +332,13 @@ function OptionModal({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    // The header keeps the option and list being edited while the dialog closes
+    const [shown, setShown] = useState({ option, list });
+    useEffect(() => {
+        if (open) setShown({ option, list });
+    }, [open, option, list]);
+    const view = open ? { option, list } : shown;
+    const listLine = view.list ? `${t(REQUEST_TYPE_META[view.list.request_type].labelKey)} ${localLabel(view.list, lang)}` : undefined;
     const [form, setForm] = useState<OptionForm>(() => optionSeed(null));
     const [err, setErr] = useState('');
     const [saved, setSaved] = useState(false);
@@ -371,18 +379,24 @@ function OptionModal({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent {...(!list && { 'aria-describedby': undefined })}>
-                <DialogHeader>
-                    <DialogTitle>{option ? t('rd_edit') : t('rd_add')}</DialogTitle>
-                    {list && (
-                        <DialogDescription className="flex flex-wrap gap-x-3">
-                            <span>{t(REQUEST_TYPE_META[list.request_type].labelKey)}</span>
-                            <span>{localLabel(list, lang)}</span>
-                        </DialogDescription>
-                    )}
-                </DialogHeader>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Inbox}
+                    eyebrow={t('set_request_data')}
+                    title={view.option ? t('rd_edit') : t('rd_add')}
+                    code={view.option ? localLabel(view.option, lang) : undefined}
+                    subtitle={
+                        view.list ? (
+                            <span className="text-muted-foreground flex flex-wrap gap-x-3 text-sm">
+                                <span>{t(REQUEST_TYPE_META[view.list.request_type].labelKey)}</span>
+                                <span>{localLabel(view.list, lang)}</span>
+                            </span>
+                        ) : undefined
+                    }
+                    srDescription={listLine ?? t('md_modal_desc')}
+                />
 
-                <div className="space-y-4">
+                <DialogBody>
                     <Field label={t('rd_label_en')} required error={err} name="label_en">
                         <Input
                             autoFocus
@@ -412,15 +426,15 @@ function OptionModal({
                         </div>
                     </Field>
                     <p className="text-muted-foreground text-xs">{option ? t('rd_rename_safe') : t('rd_new_at_end')}</p>
-                </div>
+                </DialogBody>
 
-                <DialogFooter>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

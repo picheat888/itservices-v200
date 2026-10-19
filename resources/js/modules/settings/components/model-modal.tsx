@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
@@ -8,9 +9,10 @@ import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { AssetModel, Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Boxes } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAssetModelMutations, useBrands } from '../hooks/use-master-data';
 
@@ -20,6 +22,12 @@ const NO_BRAND = '__none__';
 /** ModelModal — add or edit an asset model with an optional brand; Save shows a spinner, then a tick, then the dialog closes. */
 export function ModelModal({ open, model, onClose }: { open: boolean; model?: AssetModel | null; onClose: () => void }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(model ?? null);
+    useEffect(() => {
+        if (open) setShown(model ?? null);
+    }, [open, model]);
+    const view = open ? (model ?? null) : shown;
     const confirmEdit = useConfirmEdit();
     const { create, update } = useAssetModelMutations();
     const { data: brands = [] } = useBrands();
@@ -80,12 +88,15 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{model ? t('md_edit_model') : t('md_add_model')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Boxes}
+                    eyebrow={t('set_master_data')}
+                    title={view ? t('md_edit_model') : t('md_add_model')}
+                    code={view?.name}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('md_brand')} controlId="model-brand">
                         <Select
@@ -126,14 +137,14 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                             }}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

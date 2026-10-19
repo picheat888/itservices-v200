@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import type { EmptyStateProps } from '@/shared/components/empty-state';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
@@ -9,10 +10,10 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 /** A simple {id, name, description} master-data row. */
@@ -43,6 +44,9 @@ interface LookupSectionProps {
     addLabel: string;
     editLabel: string;
     nameLabel: string;
+    /** Dialog header icon and the line above the title: the Settings area the list lives in. */
+    icon: LucideIcon;
+    eyebrow: string;
     /** Toolbar add button label. */
     addButtonLabel: string;
     /** Which master-data list this is: picks its set_empty_md_<name> words. */
@@ -58,7 +62,18 @@ export function masterDataEmpty(t: (key: string) => string, name: string, search
 }
 
 /** LookupSection — CRUD list for a {name, description} lookup; search and page live in the URL (?search, page, per). */
-export function LookupSection({ rows, loading, mutations, addLabel, editLabel, nameLabel, addButtonLabel, emptyName }: LookupSectionProps) {
+export function LookupSection({
+    rows,
+    loading,
+    mutations,
+    addLabel,
+    editLabel,
+    nameLabel,
+    icon,
+    eyebrow,
+    addButtonLabel,
+    emptyName,
+}: LookupSectionProps) {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
@@ -133,6 +148,8 @@ export function LookupSection({ rows, loading, mutations, addLabel, editLabel, n
                 addLabel={addLabel}
                 editLabel={editLabel}
                 nameLabel={nameLabel}
+                icon={icon}
+                eyebrow={eyebrow}
                 create={create}
                 update={update}
                 onClose={() => {
@@ -151,6 +168,8 @@ function LookupModal({
     addLabel,
     editLabel,
     nameLabel,
+    icon,
+    eyebrow,
     create,
     update,
     onClose,
@@ -160,11 +179,19 @@ function LookupModal({
     addLabel: string;
     editLabel: string;
     nameLabel: string;
+    icon: LucideIcon;
+    eyebrow: string;
     create: MutationLike;
     update: MutationLike;
     onClose: () => void;
 }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(item);
+    useEffect(() => {
+        if (open) setShown(item);
+    }, [open, item]);
+    const view = open ? item : shown;
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [nameError, setNameError] = useState<string | undefined>();
@@ -223,12 +250,15 @@ function LookupModal({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{item ? editLabel : addLabel}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={icon}
+                    eyebrow={eyebrow}
+                    title={view ? editLabel : addLabel}
+                    code={view?.name}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
                     <Field label={nameLabel} required error={nameError}>
                         <Input
                             ref={nameRef}
@@ -252,14 +282,14 @@ function LookupModal({
                             onKeyDown={onEnter}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

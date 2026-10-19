@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { IconPicker } from '@/shared/components/icon-picker';
 import { SaveButton } from '@/shared/components/save-button';
@@ -10,15 +11,22 @@ import { localName } from '@/shared/lib/local-name';
 import type { Category } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
+import { Boxes } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useCategoryMutations } from '../hooks/use-master-data';
 
 /** CategoryModal — add or edit a category; Save shows a spinner, then a tick, then the dialog closes. */
 export function CategoryModal({ open, category, onClose }: { open: boolean; category?: Category | null; onClose: () => void }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(category ?? null);
+    useEffect(() => {
+        if (open) setShown(category ?? null);
+    }, [open, category]);
+    const view = open ? (category ?? null) : shown;
     const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { create, update } = useCategoryMutations();
@@ -99,12 +107,15 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{category ? t('md_edit_category') : t('md_add_category')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Boxes}
+                    eyebrow={t('set_master_data')}
+                    title={view ? t('md_edit_category') : t('md_add_category')}
+                    code={view ? localName(view, lang) : undefined}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('md_category_name_en')} required error={nameError}>
@@ -143,14 +154,14 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                             onKeyDown={onEnter}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
