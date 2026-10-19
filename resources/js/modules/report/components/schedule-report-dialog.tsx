@@ -12,11 +12,12 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
-import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
+import { Dialog, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { isAxiosError } from 'axios';
@@ -24,7 +25,6 @@ import { CalendarClock, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import type { ExportFormat, ScheduleFrequency, ScheduleInput } from '../types';
 import type { FilterChip } from './schedule-filter-summary';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** A 422 on one of these fields gets its own line; anything else falls back to the generic refusal. */
 const FIELD_ERRORS: Record<string, string> = {
@@ -200,7 +200,7 @@ export function ScheduleReportDialog({
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent className="max-w-xl p-0">
+            <FormDialogContent>
                 <FocusDialogHeader
                     icon={CalendarClock}
                     eyebrow={t('rep_schedule_eyebrow')}
@@ -208,161 +208,165 @@ export function ScheduleReportDialog({
                     subtitle={subtitle}
                     srDescription={t('rep_schedule_eyebrow')}
                 />
-                <div className="space-y-5 px-6 pb-2">
-                    <div className="space-y-2">
-                        <div id={frequencyLabelId} className="text-muted-foreground text-xs font-semibold">
-                            {t('rep_schedule_frequency')}
-                        </div>
-                        {/* A radio group to assistive tech — the cards are one choice of three. */}
-                        <div role="radiogroup" aria-labelledby={frequencyLabelId} className="grid gap-2 sm:grid-cols-3">
-                            {FREQUENCIES.map((f) => (
-                                <ChoiceCard
-                                    key={f}
-                                    role="radio"
-                                    aria-checked={frequency === f}
-                                    selected={frequency === f}
-                                    onClick={() => setFrequency(f)}
-                                    className="rounded-lg p-3 text-left"
-                                >
-                                    <span className="block text-sm font-semibold">{t(`rep_schedule_freq_${f}`)}</span>
-                                    {/* Only when it goes out; what each send covers is said once, in the summary below. */}
-                                    <span className="text-muted-foreground text-xs">{t(`rep_schedule_freq_${f}_when`)}</span>
-                                </ChoiceCard>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
+                <div className="min-h-0 flex-1 overflow-y-auto py-4">
+                    <div className="space-y-5 px-6 pb-2">
                         <div className="space-y-2">
-                            <div className="text-muted-foreground text-xs font-semibold">{t('rep_schedule_hour')}</div>
-                            <Select value={String(hour)} onValueChange={(v) => setHour(Number(v))}>
-                                <SelectTrigger aria-label={t('rep_schedule_hour')}>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {HOURS.map((h) => (
-                                        <SelectItem key={h} value={String(h)}>
-                                            {hourLabel(h)}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <div id={formatLabelId} className="text-muted-foreground text-xs font-semibold">
-                                {t('rep_export_format')}
+                            <div id={frequencyLabelId} className="text-muted-foreground text-xs font-semibold">
+                                {t('rep_schedule_frequency')}
                             </div>
-                            <div role="radiogroup" aria-labelledby={formatLabelId} className="flex gap-2">
-                                {formats.map((f) => (
+                            {/* A radio group to assistive tech — the cards are one choice of three. */}
+                            <div role="radiogroup" aria-labelledby={frequencyLabelId} className="grid gap-2 sm:grid-cols-3">
+                                {FREQUENCIES.map((f) => (
                                     <ChoiceCard
                                         key={f}
                                         role="radio"
-                                        aria-checked={format === f}
-                                        selected={format === f}
-                                        onClick={() => setFormat(f)}
-                                        className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left"
+                                        aria-checked={frequency === f}
+                                        selected={frequency === f}
+                                        onClick={() => setFrequency(f)}
+                                        className="rounded-lg p-3 text-left"
                                     >
-                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${formatChoices[f].tone}`}>{f}</span>
-                                        <span className="text-sm font-semibold">{formatChoices[f].title}</span>
+                                        <span className="block text-sm font-semibold">{t(`rep_schedule_freq_${f}`)}</span>
+                                        {/* Only when it goes out; what each send covers is said once, in the summary below. */}
+                                        <span className="text-muted-foreground text-xs">{t(`rep_schedule_freq_${f}_when`)}</span>
                                     </ChoiceCard>
                                 ))}
                             </div>
                         </div>
-                    </div>
 
-                    <div className="space-y-2">
-                        <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold">
-                            <label htmlFor={recipientsInputId}>{t('rep_schedule_recipients')}</label>
-                            <span className="normal-case">
-                                {fmtN(recipients.length)}/{fmtN(MAX_RECIPIENTS)}
-                            </span>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <div className="text-muted-foreground text-xs font-semibold">{t('rep_schedule_hour')}</div>
+                                <Select value={String(hour)} onValueChange={(v) => setHour(Number(v))}>
+                                    <SelectTrigger aria-label={t('rep_schedule_hour')}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {HOURS.map((h) => (
+                                            <SelectItem key={h} value={String(h)}>
+                                                {hourLabel(h)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <div id={formatLabelId} className="text-muted-foreground text-xs font-semibold">
+                                    {t('rep_export_format')}
+                                </div>
+                                <div role="radiogroup" aria-labelledby={formatLabelId} className="flex gap-2">
+                                    {formats.map((f) => (
+                                        <ChoiceCard
+                                            key={f}
+                                            role="radio"
+                                            aria-checked={format === f}
+                                            selected={format === f}
+                                            onClick={() => setFormat(f)}
+                                            className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left"
+                                        >
+                                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${formatChoices[f].tone}`}>
+                                                {f}
+                                            </span>
+                                            <span className="text-sm font-semibold">{formatChoices[f].title}</span>
+                                        </ChoiceCard>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                        <div
-                            className={cn(
-                                'border-input bg-background flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border px-2 py-1.5',
-                                recipientsError && 'border-destructive',
-                            )}
-                        >
-                            {recipients.map((r, i) => (
-                                <span
-                                    key={r}
-                                    className={cn(
-                                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
-                                        badIndexes.has(i) ? 'bg-destructive/10 dark:text-destructive text-red-700' : 'bg-muted',
-                                    )}
-                                >
-                                    {r}
-                                    <button
-                                        type="button"
-                                        onClick={() => setRecipients(recipients.filter((x) => x !== r))}
-                                        aria-label={t('rep_schedule_recipient_remove').replace('{email}', r)}
-                                        className="hover:text-foreground text-muted-foreground"
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </button>
+
+                        <div className="space-y-2">
+                            <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold">
+                                <label htmlFor={recipientsInputId}>{t('rep_schedule_recipients')}</label>
+                                <span className="normal-case">
+                                    {fmtN(recipients.length)}/{fmtN(MAX_RECIPIENTS)}
                                 </span>
-                            ))}
-                            <Input
-                                id={recipientsInputId}
-                                autoComplete="off"
-                                inputMode="email"
-                                autoCapitalize="none"
-                                autoCorrect="off"
-                                spellCheck={false}
-                                enterKeyHint="enter"
-                                value={draft}
-                                onChange={(e) => {
-                                    setDraft(e.target.value);
-                                    setDraftError(null);
-                                }}
-                                onKeyDown={onDraftKey}
-                                onBlur={() => draft.trim() && commitDraft()}
-                                placeholder={recipients.length === 0 ? t('rep_schedule_recipients_placeholder') : ''}
-                                aria-invalid={!!recipientsError}
-                                aria-describedby={recipientsNoteId}
-                                className="h-7 min-w-40 flex-1 border-0 px-1 shadow-none focus-visible:ring-0"
-                            />
-                        </div>
-                        <div id={recipientsNoteId} className={cn('text-xs', recipientsError ? 'text-destructive' : 'text-muted-foreground')}>
-                            {recipientsError ?? t('rep_schedule_recipients_hint')}
-                        </div>
-                    </div>
-
-                    {/* What will actually go out: when and what period, the filters kept, then whose access it reads with. */}
-                    <div className="bg-brand/5 space-y-2 rounded-lg px-3 py-2.5 text-sm">
-                        <div>
-                            {t(`rep_schedule_when_${frequency}`).replace('{time}', hourLabel(hour))}{' '}
-                            {t(coverage === 'now' ? 'rep_schedule_cover_now' : `rep_schedule_cover_${coverage}_${frequency}`)}
-                        </div>
-                        {filterChips && (
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                                <span className="text-muted-foreground">{t('rep_schedule_filters_label')}</span>
-                                {filterChips.length === 0 ? (
-                                    <span className="text-muted-foreground">{t('rep_schedule_filters_none')}</span>
-                                ) : (
-                                    filterChips.map((chip) => (
-                                        <span key={chip.label} className="bg-background border-border rounded-full border px-2 py-0.5">
-                                            <span className="text-muted-foreground">{chip.label}:</span>{' '}
-                                            <span className="font-medium">{chip.value}</span>
-                                        </span>
-                                    ))
+                            </div>
+                            <div
+                                className={cn(
+                                    'border-input bg-background flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border px-2 py-1.5',
+                                    recipientsError && 'border-destructive',
                                 )}
+                            >
+                                {recipients.map((r, i) => (
+                                    <span
+                                        key={r}
+                                        className={cn(
+                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
+                                            badIndexes.has(i) ? 'bg-destructive/10 dark:text-destructive text-red-700' : 'bg-muted',
+                                        )}
+                                    >
+                                        {r}
+                                        <button
+                                            type="button"
+                                            onClick={() => setRecipients(recipients.filter((x) => x !== r))}
+                                            aria-label={t('rep_schedule_recipient_remove').replace('{email}', r)}
+                                            className="hover:text-foreground text-muted-foreground"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                                <Input
+                                    id={recipientsInputId}
+                                    autoComplete="off"
+                                    inputMode="email"
+                                    autoCapitalize="none"
+                                    autoCorrect="off"
+                                    spellCheck={false}
+                                    enterKeyHint="enter"
+                                    value={draft}
+                                    onChange={(e) => {
+                                        setDraft(e.target.value);
+                                        setDraftError(null);
+                                    }}
+                                    onKeyDown={onDraftKey}
+                                    onBlur={() => draft.trim() && commitDraft()}
+                                    placeholder={recipients.length === 0 ? t('rep_schedule_recipients_placeholder') : ''}
+                                    aria-invalid={!!recipientsError}
+                                    aria-describedby={recipientsNoteId}
+                                    className="h-7 min-w-40 flex-1 border-0 px-1 shadow-none focus-visible:ring-0"
+                                />
+                            </div>
+                            <div id={recipientsNoteId} className={cn('text-xs', recipientsError ? 'text-destructive' : 'text-muted-foreground')}>
+                                {recipientsError ?? t('rep_schedule_recipients_hint')}
+                            </div>
+                        </div>
+
+                        {/* What will actually go out: when and what period, the filters kept, then whose access it reads with. */}
+                        <div className="bg-brand/5 space-y-2 rounded-lg px-3 py-2.5 text-sm">
+                            <div>
+                                {t(`rep_schedule_when_${frequency}`).replace('{time}', hourLabel(hour))}{' '}
+                                {t(coverage === 'now' ? 'rep_schedule_cover_now' : `rep_schedule_cover_${coverage}_${frequency}`)}
+                            </div>
+                            {filterChips && (
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                    <span className="text-muted-foreground">{t('rep_schedule_filters_label')}</span>
+                                    {filterChips.length === 0 ? (
+                                        <span className="text-muted-foreground">{t('rep_schedule_filters_none')}</span>
+                                    ) : (
+                                        filterChips.map((chip) => (
+                                            <span key={chip.label} className="bg-background border-border rounded-full border px-2 py-0.5">
+                                                <span className="text-muted-foreground">{chip.label}:</span>{' '}
+                                                <span className="font-medium">{chip.value}</span>
+                                            </span>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                            {coverage !== 'now' && <div className="text-muted-foreground text-xs">{t('rep_schedule_dates_roll')}</div>}
+                        </div>
+                        {/* Recipients outside the desk read with the scheduler's access — worth its own line. */}
+                        <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400">
+                            <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+                            <span>{t('rep_schedule_permission_note')}</span>
+                        </div>
+                        {error != null && badIndexes.size === 0 && !fieldErrors.recipients && (
+                            <div className="text-destructive text-sm">
+                                {fieldError ? t(FIELD_ERRORS[fieldError]) : refusalText(error, t, 'rep_schedule_refusal_')}
                             </div>
                         )}
-                        {coverage !== 'now' && <div className="text-muted-foreground text-xs">{t('rep_schedule_dates_roll')}</div>}
                     </div>
-                    {/* Recipients outside the desk read with the scheduler's access — worth its own line. */}
-                    <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400">
-                        <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-                        <span>{t('rep_schedule_permission_note')}</span>
-                    </div>
-                    {error != null && badIndexes.size === 0 && !fieldErrors.recipients && (
-                        <div className="text-destructive text-sm">
-                            {fieldError ? t(FIELD_ERRORS[fieldError]) : refusalText(error, t, 'rep_schedule_refusal_')}
-                        </div>
-                    )}
                 </div>
-                <DialogFooter className="border-border border-t px-6 py-4">
+                <DialogFooterBar>
                     <Button variant="ghost" onClick={() => handleOpenChange(false)}>
                         {t('rep_dialog_cancel')}
                     </Button>
@@ -370,8 +374,8 @@ export function ScheduleReportDialog({
                         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
                         {initial ? t('rep_schedule_save') : t('rep_schedule_create')}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
