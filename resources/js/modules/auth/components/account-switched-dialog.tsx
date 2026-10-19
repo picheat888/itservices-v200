@@ -1,12 +1,12 @@
 // "Account switched": the shared session now belongs to another account (a sign-in in another tab); Reload is the only way on.
 import { useT } from '@/lang';
+import { BlockingDialog } from '@/shared/components/blocking-dialog';
 import { localName } from '@/shared/lib/local-name';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { UserRoundCheck } from 'lucide-react';
-import { BlockingDialog } from './blocking-dialog';
 
 export function AccountSwitchedDialog({ user }: { user: User }) {
     const t = useT();

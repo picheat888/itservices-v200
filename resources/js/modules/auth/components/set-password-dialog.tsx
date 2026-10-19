@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { useLogout } from '@/modules/auth/hooks/use-auth';
+import { BlockingDialog } from '@/shared/components/blocking-dialog';
 import { KeyRound } from 'lucide-react';
-import { BlockingDialog } from './blocking-dialog';
 import { PasswordDialogHead, PasswordForm } from './password-form';
 
 /** Set your password: blocks an account whose password someone else set (new account or admin reset) until it has its own. */
