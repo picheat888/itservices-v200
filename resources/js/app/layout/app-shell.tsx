@@ -15,6 +15,7 @@ import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNavigationGuardHost } from '@/shared/hooks/use-navigation-guard';
+import { useAppErrorStore } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -48,7 +49,14 @@ export function AppShell() {
     });
     // Remembered sign-ins skip the idle timer, as the server does; a tab blocked by an account switch stops it, or it would sign the new account out
     const idleMinutes = user?.remembered || switchedTo ? 0 : (security?.session_timeout_minutes ?? 0);
-    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered && !switchedTo);
+    // Every sign-in pings on activity, remembered or not: the server ends a device after about 2 h without a write or ping
+    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !switchedTo);
+    // Shell mounted
+    const setShellMounted = useAppErrorStore((s) => s.setShellMounted);
+    useEffect(() => {
+        setShellMounted(true);
+        return () => setShellMounted(false);
+    }, [setShellMounted]);
     const [notifOpen, setNotifOpen] = useState(false);
     // The tray stays mounted for its 100ms close animation
     const [notifMounted, setNotifMounted] = useState(false);
