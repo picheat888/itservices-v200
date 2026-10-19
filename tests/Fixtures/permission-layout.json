@@ -1,0 +1,609 @@
+[
+    {
+        "module": "dashboard",
+        "master": null,
+        "note": null,
+        "cells": [
+            {
+                "kind": "plain",
+                "keys": [
+                    "dashboard.view_it",
+                    "dashboard.view_requests",
+                    "dashboard.view_contracts",
+                    "dashboard.view_hr",
+                    "dashboard.view_activity"
+                ],
+                "coming_soon_aware": true
+            }
+        ]
+    },
+    {
+        "module": "tickets",
+        "master": {
+            "key": "tickets.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "tickets.view_dashboard",
+                    "tickets.jobs"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "tickets.view_all",
+                "children": [
+                    "tickets.resolve",
+                    "tickets.forward",
+                    "tickets.assign",
+                    "tickets.set_work_class"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "set",
+                "label": "perm_ui_tickets_level",
+                "hint": "perm_ui_tickets_level_hint",
+                "keys": [
+                    "tickets.level_hardware",
+                    "tickets.level_software",
+                    "tickets.level_network",
+                    "tickets.level_cctv",
+                    "tickets.level_telephone",
+                    "tickets.level_other"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "tickets.create",
+                "children": [
+                    "tickets.edit_own"
+                ],
+                "chip": false,
+                "outside_master": true,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": "perm_ui_self_service",
+                "solo": [
+                    "tickets.my"
+                ]
+            }
+        ]
+    },
+    {
+        "module": "requests",
+        "master": {
+            "key": "requests.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "requests.complete"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "requests.submit",
+                "children": [
+                    "requests.submit_computer",
+                    "requests.submit_hardware",
+                    "requests.submit_mobile",
+                    "requests.submit_email",
+                    "requests.submit_social",
+                    "requests.submit_fileshare",
+                    "requests.submit_software",
+                    "requests.submit_recovery",
+                    "requests.submit_mailgroup",
+                    "requests.submit_telephone",
+                    "requests.submit_network",
+                    "requests.submit_cctv",
+                    "requests.submit_other"
+                ],
+                "chip": false,
+                "outside_master": false,
+                "cluster": {
+                    "title": "perm_ui_request_types",
+                    "hint": "perm_ui_request_types_hint"
+                },
+                "fill_on_grant": true,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "requests.view_all",
+                "children": [
+                    "requests.cancel_any"
+                ],
+                "chip": false,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "set",
+                "label": "perm_ui_notifications",
+                "hint": "perm_ui_request_notify_hint",
+                "keys": [
+                    "requests.notify_approved",
+                    "requests.notify_stalled"
+                ]
+            }
+        ]
+    },
+    {
+        "module": "assets",
+        "master": {
+            "key": "assets.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "assets.view_dashboard"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "assets.view",
+                "children": [
+                    "assets.register",
+                    "assets.edit",
+                    "assets.delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "assets.manage",
+                "children": [
+                    "assets.transfer",
+                    "assets.receive",
+                    "assets.retire"
+                ],
+                "chip": false,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "assets.special",
+                "children": [
+                    "assets.force_recall",
+                    "assets.cancel_writeoff"
+                ],
+                "chip": false,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            }
+        ]
+    },
+    {
+        "module": "contracts",
+        "master": {
+            "key": "contracts.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "contracts.view_dashboard",
+                    "contracts.alerts"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "contracts.view",
+                "children": [
+                    "contracts.create",
+                    "contracts.edit",
+                    "contracts.delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "contracts.view_lifecycle",
+                "children": [
+                    "contracts.cancel",
+                    "contracts.expire",
+                    "contracts.reactivate"
+                ],
+                "chip": false,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            }
+        ]
+    },
+    {
+        "module": "stock",
+        "master": {
+            "key": "stock.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "stock.view_dashboard",
+                    "stock.view_count",
+                    "stock.view_events"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "stock.view",
+                "children": [
+                    "stock.manage_items",
+                    "stock.delete",
+                    "stock.receive",
+                    "stock.return",
+                    "stock.transfer"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "stock.view_request",
+                "children": [
+                    "stock.request",
+                    "stock.approve",
+                    "stock.fulfill"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            }
+        ]
+    },
+    {
+        "module": "employees",
+        "master": {
+            "key": "employees.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "employees.view_dashboard",
+                    "employees.view_org"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "employees.view",
+                "children": [
+                    "employees.add",
+                    "employees.import",
+                    "employees.edit",
+                    "employees.reset_password",
+                    "employees.resign",
+                    "employees.cancel_resign",
+                    "employees.set_credentials",
+                    "employees.delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "employees.view_section",
+                "children": [
+                    "employees.section_add",
+                    "employees.section_edit",
+                    "employees.section_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "employees.view_department",
+                "children": [
+                    "employees.department_add",
+                    "employees.department_edit",
+                    "employees.department_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "employees.view_position",
+                "children": [
+                    "employees.position_add",
+                    "employees.position_edit",
+                    "employees.position_delete",
+                    "employees.position_special"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            }
+        ]
+    },
+    {
+        "module": "access",
+        "master": {
+            "key": "access.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "access.overview"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "access.email_view",
+                "children": [
+                    "access.email_add",
+                    "access.email_edit",
+                    "access.email_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "access.file_view",
+                "children": [
+                    "access.file_add",
+                    "access.file_edit",
+                    "access.file_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "access.social_view",
+                "children": [
+                    "access.social_add",
+                    "access.social_edit",
+                    "access.social_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "access.software_view",
+                "children": [
+                    "access.software_add",
+                    "access.software_edit",
+                    "access.software_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            }
+        ]
+    },
+    {
+        "module": "profile",
+        "master": null,
+        "note": "perm_ui_self_service_all",
+        "cells": [
+            {
+                "kind": "plain",
+                "keys": [
+                    "profile.edit",
+                    "profile.return_assets"
+                ],
+                "coming_soon_aware": false
+            }
+        ]
+    },
+    {
+        "module": "reports",
+        "master": {
+            "key": "reports.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "set",
+                "label": "perm_ui_group_report_domains",
+                "hint": null,
+                "keys": [
+                    "reports.tickets",
+                    "reports.assets",
+                    "reports.contracts",
+                    "reports.stock",
+                    "reports.requests",
+                    "reports.employees",
+                    "reports.access"
+                ]
+            },
+            {
+                "kind": "set",
+                "label": "perm_ui_group_report_tools",
+                "hint": null,
+                "keys": [
+                    "reports.export",
+                    "reports.schedule",
+                    "reports.schedule_manage"
+                ]
+            }
+        ]
+    },
+    {
+        "module": "workflows",
+        "master": {
+            "key": "workflows.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "set",
+                "label": "perm_ui_group_workflows",
+                "hint": null,
+                "keys": [
+                    "workflows.manage"
+                ]
+            }
+        ]
+    },
+    {
+        "module": "permissions",
+        "master": {
+            "key": "system.manage_permissions",
+            "sub": "perm_ui_permissions_card_sub"
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "plain",
+                "keys": [
+                    "system.manage_roles",
+                    "system.manage_groups",
+                    "system.view_audit"
+                ],
+                "coming_soon_aware": true
+            }
+        ]
+    },
+    {
+        "module": "notifications",
+        "master": {
+            "key": "notifications.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "notifications.logs"
+                ]
+            },
+            {
+                "kind": "set",
+                "label": "perm_ui_group_email",
+                "hint": null,
+                "keys": [
+                    "notifications.email_edit",
+                    "notifications.email_toggle",
+                    "notifications.email_test"
+                ]
+            },
+            {
+                "kind": "set",
+                "label": "perm_ui_group_inapp",
+                "hint": null,
+                "keys": [
+                    "notifications.inapp_edit",
+                    "notifications.inapp_toggle",
+                    "notifications.inapp_test"
+                ]
+            }
+        ]
+    },
+    {
+        "module": "settings",
+        "master": {
+            "key": "settings.access",
+            "sub": "perm_ui_settings_card_sub"
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "plain",
+                "keys": [
+                    "settings.company",
+                    "settings.system",
+                    "settings.masterdata",
+                    "settings.email",
+                    "settings.sla",
+                    "settings.requestdata",
+                    "settings.assets",
+                    "settings.security"
+                ],
+                "coming_soon_aware": true
+            }
+        ]
+    }
+]
