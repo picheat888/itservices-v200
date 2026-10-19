@@ -965,7 +965,7 @@ const DASH_DEPT_LIMIT = 8;
 function EmployeeOverviewSkeleton() {
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
                         <div className="flex items-start justify-between">
@@ -1069,7 +1069,7 @@ function OverviewTab({
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 {kpis.map((k) => (
                     <StatCard key={k.label} icon={k.icon} label={k.label} value={k.value} sub={k.sub} />
                 ))}

@@ -397,7 +397,7 @@ export function AccessOverview({
         <div className="space-y-4 tabular-nums">
             {header}
             {/* KPI row — one card per channel (count + the period's net change) */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 {CHANNELS.map(({ key, kind }) => {
                     const stat = data.channels[key];
                     const meta = CHANNEL[kind];
@@ -685,7 +685,7 @@ export function AccessOverview({
 function OverviewSkeleton() {
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
                         <div className="flex items-start justify-between">

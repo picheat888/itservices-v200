@@ -407,7 +407,7 @@ export default function RequestsPage() {
                         {isError && !meta ? (
                             <LoadFailedPanel onRetry={() => refetch()} />
                         ) : (
-                            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                                 <StatCard
                                     icon={Inbox}
                                     label={t('req_kpi_awaiting')}

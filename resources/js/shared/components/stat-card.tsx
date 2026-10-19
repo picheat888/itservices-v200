@@ -215,11 +215,11 @@ export function StatCard({
     );
 }
 
-/** Columns for a row of KPI cards: two, then all of them from 1024px. */
+/** Columns for a row of KPI cards: two, then all of them from 1024px; four wait for 1280px so a landscape iPad shows 2×2. */
 const ROW_COLUMNS: Record<number, string> = {
     2: 'grid-cols-2',
     3: 'grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-2 lg:grid-cols-4',
+    4: 'grid-cols-2 xl:grid-cols-4',
     5: 'grid-cols-2 lg:grid-cols-5',
 };
 
