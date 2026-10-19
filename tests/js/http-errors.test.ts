@@ -7,6 +7,7 @@ import {
     outranks,
     retryAfterOf,
     shouldRetryQuery,
+    shouldShowAppError,
     wasShownInline,
 } from '../../resources/js/shared/lib/http-errors.ts';
 
@@ -56,4 +57,11 @@ test('a failure a form showed is remembered, others are not', () => {
     assert.equal(wasShownInline(shown), true);
     assert.equal(wasShownInline(other), false);
     assert.equal(wasShownInline(null), false);
+});
+
+test('a closed server dialog stays quiet on the same page and comes back on another', () => {
+    assert.equal(shouldShowAppError('server', null, '/assets', '/assets'), false);
+    assert.equal(shouldShowAppError('server', null, '/assets', '/tickets'), true);
+    assert.equal(shouldShowAppError('network', null, '/assets', '/assets'), true);
+    assert.equal(shouldShowAppError('server', 'server', null, '/assets'), false);
 });
