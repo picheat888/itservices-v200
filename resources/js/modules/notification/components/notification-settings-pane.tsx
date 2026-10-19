@@ -8,6 +8,7 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatCard } from '@/shared/components/stat-card';
+import { TruncText } from '@/shared/components/trunc-text';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -419,17 +420,17 @@ export function NotificationSettingsPane() {
         {
             key: 'code',
             header: t('notification_col_id'),
-            className: 'w-[6%]',
+            width: '72px',
             render: (n) => <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">{n.code}</span>,
         },
         {
             key: 'name',
             header: t('notification_col_name'),
-            className: 'w-[24%] max-w-0',
+            width: '336px',
             render: (n) => (
                 <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <span className="truncate font-medium">{t(`notification_name_${suffix(n.key)}`)}</span>
+                    <div className="flex min-w-0 items-center gap-2">
+                        <TruncText text={t(`notification_name_${suffix(n.key)}`)} className="font-medium" />
                         {!n.is_standard && (
                             <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
                                 {t('notification_modified')}
@@ -453,7 +454,7 @@ export function NotificationSettingsPane() {
                             </InfoPopover>
                         )}
                     </div>
-                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{n.key}</div>
+                    <TruncText text={n.key} className="text-muted-foreground mt-0.5 text-xs" />
                 </div>
             ),
         },
@@ -461,16 +462,16 @@ export function NotificationSettingsPane() {
             // Both languages, always
             key: 'message',
             header: t('notification_col_message'),
-            className: 'w-[30%] max-w-0',
+            minWidth: '18rem',
             render: (n) => (
                 <div className="min-w-0 space-y-0.5">
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-muted-foreground shrink-0 text-xs tracking-wide">{t('notification_lang_en')}</span>
-                        <span className="truncate text-xs">{n.message_en}</span>
+                        <TruncText text={n.message_en} className="text-xs" />
                     </div>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-muted-foreground shrink-0 text-xs tracking-wide">{t('notification_lang_th')}</span>
-                        <span className="text-muted-foreground truncate text-xs">{n.message_th}</span>
+                        <TruncText text={n.message_th} className="text-muted-foreground text-xs" />
                     </div>
                 </div>
             ),
@@ -478,21 +479,20 @@ export function NotificationSettingsPane() {
         {
             key: 'trigger',
             header: t('notification_col_trigger'),
-            className: 'w-[16%] max-w-0',
-            hideBelow: 'lg',
-            render: (n) => <span className="text-muted-foreground block truncate text-xs">{t(`notification_when_${suffix(n.key)}`)}</span>,
+            width: '288px',
+            render: (n) => <TruncText text={t(`notification_when_${suffix(n.key)}`)} className="text-muted-foreground text-xs" />,
         },
         {
             key: 'audience',
             header: t('notification_col_audience'),
-            className: 'w-[12%] max-w-0',
-            hideBelow: 'lg',
-            render: (n) => <span className="text-muted-foreground block truncate text-xs">{t(`notification_who_${suffix(n.key)}`)}</span>,
+            width: '176px',
+            render: (n) => <TruncText text={t(`notification_who_${suffix(n.key)}`)} className="text-muted-foreground text-xs" />,
         },
         {
             key: 'last_sent',
             header: t('notification_col_last_sent'),
-            className: 'w-[8%] whitespace-nowrap',
+            width: '112px',
+            className: 'whitespace-nowrap',
             render: (n) => (
                 <span className="text-muted-foreground text-xs tabular-nums">
                     {relativeTime(n.last_sent_at, t, t('notification_never_sent'), fmtN)}
@@ -502,7 +502,7 @@ export function NotificationSettingsPane() {
         {
             key: 'enabled',
             header: t('notification_col_on'),
-            className: 'w-[2%]',
+            width: '64px',
             // Keeps its own click inside the clickable row
             render: (n) => (
                 <DisabledReason reason={rights.toggle ? null : t('notification_no_toggle_right')} label={t('notification_toggle')}>
@@ -526,7 +526,7 @@ export function NotificationSettingsPane() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            className: 'w-[2%]',
+            width: '64px',
             render: (n) => (
                 <div className="flex justify-end">
                     <button
