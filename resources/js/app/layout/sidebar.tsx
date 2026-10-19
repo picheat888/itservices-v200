@@ -74,7 +74,7 @@ function WideSidebar({ onProfile }: SidebarProps) {
         <aside
             id="app-sidebar"
             aria-label={t('nav_menu')}
-            className="nav-push border-sidebar-border bg-sidebar relative flex h-screen shrink-0 overflow-clip border-r"
+            className="nav-push border-sidebar-border bg-sidebar relative flex h-dvh shrink-0 overflow-clip border-r"
         >
             {/* Fixed width inside, so nothing reflows while the rail widens */}
             <div className="flex h-full w-64 shrink-0 flex-col">
