@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     createLoginRedirect,
+    loginNoticeReason,
     parseDeviceSignedOut,
     readSignedOutBy,
     serverFileTarget,
@@ -261,4 +262,26 @@ test('only a 401 can sign the reader out', () => {
     assert.equal(signedOutRedirectFor(request({ status: 403, body: ENDED })), null);
     assert.equal(signedOutRedirectFor(request({ status: 419 })), null);
     assert.equal(signedOutRedirectFor(request({ status: undefined })), null);
+});
+
+test('a file link redirect names the server reason, and the login page shows the same notice as the JSON answer', () => {
+    assert.equal(loginNoticeReason('idle_timeout'), 'session_expired');
+    assert.equal(loginNoticeReason('password_changed'), 'signed_out');
+    assert.equal(loginNoticeReason('account_closed'), 'signed_out');
+    assert.equal(loginNoticeReason('third_device'), 'third_device');
+    assert.equal(loginNoticeReason('profile'), 'profile');
+    assert.equal(loginNoticeReason('limit'), 'limit');
+    for (const reason of ['idle_timeout', 'password_changed', 'account_closed', 'third_device', 'profile', 'limit']) {
+        assert.equal(loginNoticeReason(reason), parseDeviceSignedOut({ message: 'device_signed_out', reason, by: null })?.reason, reason);
+    }
+});
+
+test('the reasons the app itself puts in the URL keep their notice, and anything else shows none', () => {
+    for (const reason of ['session_expired', 'signed_out', 'third_device', 'profile', 'limit'] as const) {
+        assert.equal(loginNoticeReason(reason), reason);
+    }
+    assert.equal(loginNoticeReason(null), null);
+    assert.equal(loginNoticeReason(''), null);
+    assert.equal(loginNoticeReason('something_new'), null);
+    assert.equal(loginNoticeReason('constructor'), null);
 });

@@ -1,7 +1,9 @@
 // Sends the reader to the login page with why they were signed out; when several requests or tabs fail at once,
 // the first reason wins, and an idle timeout is announced so the other tabs show it too.
 
-export type SignedOutReason = 'session_expired' | 'signed_out' | 'third_device' | 'profile' | 'limit';
+const SIGNED_OUT_REASONS = ['session_expired', 'signed_out', 'third_device', 'profile', 'limit'] as const;
+
+export type SignedOutReason = (typeof SIGNED_OUT_REASONS)[number];
 
 /** The device that took this session's place (a third_device sign-out). */
 export type SignedOutBy = { os: string; browser: string; location: string | null; at: string };
@@ -85,13 +87,21 @@ export function readSignedOutBy(): SignedOutBy | null {
     }
 }
 
-// Server end reasons that have their own login notice; idle_timeout reuses the idle notice, anything else is a plain sign-out
+// Server end reasons and their login notice; idle_timeout reuses the idle notice, anything else is a plain sign-out
 const DEVICE_END_REASONS = new Map<string, SignedOutReason>([
     ['third_device', 'third_device'],
     ['profile', 'profile'],
     ['limit', 'limit'],
     ['idle_timeout', 'session_expired'],
+    ['password_changed', 'signed_out'],
+    ['account_closed', 'signed_out'],
 ]);
+
+/** The notice for ?reason=: the app's own reasons as they are, a server end reason (a file link's redirect) as its JSON answer shows it. */
+export function loginNoticeReason(reason: string | null): SignedOutReason | null {
+    if (!reason) return null;
+    return SIGNED_OUT_REASONS.find((known) => known === reason) ?? DEVICE_END_REASONS.get(reason) ?? null;
+}
 
 /** The login notice for a 401 device_signed_out answer, or null when the answer is something else. */
 export function parseDeviceSignedOut(data: unknown): { reason: SignedOutReason; by: SignedOutBy | null } | null {
