@@ -1,7 +1,7 @@
 // Sends the reader to the login page with why they were signed out; when several requests or tabs fail at once,
 // the first reason wins, and an idle timeout is announced so the other tabs show it too.
 
-const SIGNED_OUT_REASONS = ['session_expired', 'signed_out', 'third_device', 'profile', 'limit'] as const;
+const SIGNED_OUT_REASONS = ['session_expired', 'signed_out', 'third_device', 'profile', 'limit', 'account_closed'] as const;
 
 export type SignedOutReason = (typeof SIGNED_OUT_REASONS)[number];
 
@@ -87,14 +87,14 @@ export function readSignedOutBy(): SignedOutBy | null {
     }
 }
 
-// Server end reasons and their login notice; idle_timeout reuses the idle notice, anything else is a plain sign-out
+// Server end reasons and their login notice; idle_timeout reuses the idle notice, password_changed and anything unknown are a plain sign-out
 const DEVICE_END_REASONS = new Map<string, SignedOutReason>([
     ['third_device', 'third_device'],
     ['profile', 'profile'],
     ['limit', 'limit'],
     ['idle_timeout', 'session_expired'],
     ['password_changed', 'signed_out'],
-    ['account_closed', 'signed_out'],
+    ['account_closed', 'account_closed'],
 ]);
 
 /** The notice for ?reason=: the app's own reasons as they are, a server end reason (a file link's redirect) as its JSON answer shows it. */
@@ -113,7 +113,7 @@ export function parseDeviceSignedOut(data: unknown): { reason: SignedOutReason; 
 
 /**
  * Where a failed answer sends the reader: the login page with its reason, or null to leave it to the caller.
- * An ended device always goes (even for /me and quiet requests), because that answer is single-shot; a plain 401 skips /me (route guard) and quiet requests.
+ * An ended device or a closed account always goes (even for /me and quiet requests), because that answer is single-shot; a plain 401 skips /me (route guard) and quiet requests.
  */
 export function signedOutRedirectFor(answer: {
     status: number | undefined;
@@ -125,8 +125,13 @@ export function signedOutRedirectFor(answer: {
     if (answer.status !== 401 || answer.pathname.startsWith('/login')) return null;
     const ended = parseDeviceSignedOut(answer.body);
     if (ended) return ended;
+    if (isAccountClosed(answer.body)) return { reason: 'account_closed', by: null };
     if (answer.url?.endsWith('/me') || answer.quiet) return null;
     return { reason: 'signed_out', by: null };
+}
+
+function isAccountClosed(body: unknown): boolean {
+    return typeof body === 'object' && body !== null && (body as Record<string, unknown>).message === 'account_closed';
 }
 
 /** A server file link (/files/…, /pdf/…) to reopen after sign-in, from ?next=; anything else is ignored so the login page never sends people off-site. */
