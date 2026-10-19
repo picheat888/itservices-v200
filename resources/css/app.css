@@ -503,6 +503,15 @@
     background-color: var(--color-card);
     background-image: linear-gradient(var(--row-tint, transparent), var(--row-tint, transparent));
 }
+/* Pinned header cell: the same card + header tint (TABLE_HEAD) as the rest of its row */
+.pin-head {
+    --head-tint: transparent;
+    background-color: var(--color-card);
+    background-image: linear-gradient(var(--head-tint), var(--head-tint));
+}
+.dark .pin-head {
+    --head-tint: color-mix(in oklab, var(--color-muted) 50%, transparent);
+}
 
 @media (prefers-reduced-motion: reduce) {
     .animate-shake {

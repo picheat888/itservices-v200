@@ -171,9 +171,19 @@ function MasterBand({
     );
 }
 
-/** One ruled cell; neighbours share a 1px line, the card edge shows none. */
+/** One ruled cell; neighbours share a 1px line, the card edge shows none, the last cell rules the empty slots after it. */
 export function PermissionCell({ wide, children }: { wide?: boolean; children: ReactNode }) {
-    return <div className={cn('border-border -mt-px -ml-px min-w-0 border-t border-l px-4 pt-2.5 pb-3', wide && '@md:col-span-2')}>{children}</div>;
+    return (
+        <div
+            className={cn(
+                'border-border relative -mt-px -ml-px min-w-0 border-t border-l px-4 pt-2.5 pb-3',
+                'last:after:border-border last:after:absolute last:after:top-0 last:after:left-full last:after:h-full last:after:w-screen last:after:border-t last:after:border-l',
+                wide && '@md:col-span-2',
+            )}
+        >
+            {children}
+        </div>
+    );
 }
 
 /** A switch that owns the children under it: a tinted heading band. */
