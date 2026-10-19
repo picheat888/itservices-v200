@@ -233,6 +233,7 @@ export const report: Dict = {
     rep_schedule: 'ตั้งเวลาส่ง',
     rep_no_export_right: 'คุณไม่มีสิทธิ์ส่งออกไฟล์',
     rep_no_schedule_right: 'คุณไม่มีสิทธิ์ตั้งเวลาส่งรายงาน',
+    rep_schedule_report_full: 'รายงานนี้ตั้งส่งอัตโนมัติครบ {n} รายการแล้ว ลบหรือแก้รายการเดิมในหน้ารายงานก่อน',
     rep_no_report_right: 'คุณไม่มีสิทธิ์เปิดรายงานนี้แล้ว',
     rep_schedule_eyebrow: 'ส่งรายงานทางอีเมลอัตโนมัติ',
     rep_schedule_frequency: 'ความถี่',
@@ -274,6 +275,7 @@ export const report: Dict = {
     rep_schedule_refusal_invalid: 'ข้อมูลไม่ถูกต้อง ตรวจแล้วลองอีกครั้ง',
     rep_schedule_refusal_forbidden: 'คุณไม่มีสิทธิ์เปิดรายงานนี้',
     rep_schedule_refusal_schedule_limit: 'ตั้งเวลาส่งได้สูงสุด {limit} รายการ ลบรายการเก่าก่อน',
+    rep_schedule_refusal_report_schedule_limit: 'รายงานนี้ตั้งส่งอัตโนมัติได้สูงสุด {limit} รายการ ลบหรือแก้รายการเดิมก่อน',
 
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'รายงานที่ตั้งส่งอัตโนมัติ',

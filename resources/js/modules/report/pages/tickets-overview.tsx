@@ -40,7 +40,13 @@ import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
 import { TicketReportTable } from '../components/ticket-report-table';
 import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
 import { useReportDialog } from '../hooks/use-report-rights';
-import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
+import {
+    MAX_SCHEDULES_PER_REPORT,
+    useCreateSchedule,
+    useExportTicketOverview,
+    useReportSchedulesFull,
+    useTicketOverview,
+} from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 /** Tile alert per SLA level against the goal: within 10 points amber, further off red. */
@@ -130,6 +136,12 @@ export default function TicketOverviewReportPage() {
     const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
     const scheduleOpen = dialog === 'schedule';
     const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
+    const schedulesFull = useReportSchedulesFull('tickets.overview', canSchedule);
+    const scheduleBlocked = !canSchedule
+        ? t('rep_no_schedule_right')
+        : schedulesFull
+          ? t('rep_schedule_report_full').replace('{n}', fmtN(MAX_SCHEDULES_PER_REPORT))
+          : null;
     const exportMut = useExportTicketOverview();
     const scheduleMut = useCreateSchedule();
 
@@ -159,8 +171,8 @@ export default function TicketOverviewReportPage() {
                 description={t('rep_tickets_overview_desc')}
                 actions={
                     <>
-                        <DisabledReason reason={canSchedule ? null : t('rep_no_schedule_right')} label={t('rep_schedule')}>
-                            <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data || !canSchedule}>
+                        <DisabledReason reason={scheduleBlocked} label={t('rep_schedule')}>
+                            <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data || scheduleBlocked !== null}>
                                 <CalendarClock className="h-4 w-4" />
                                 {t('rep_schedule')}
                             </Button>

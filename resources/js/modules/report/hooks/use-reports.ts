@@ -404,6 +404,16 @@ export function useDeleteAllExports() {
 
 export const useReportSchedules = () => useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules });
 
+/** Mirrors ReportSchedule::MAX_PER_REPORT. */
+export const MAX_SCHEDULES_PER_REPORT = 3;
+
+/** Whether the reader already keeps the most schedules one report takes. */
+export function useReportSchedulesFull(reportKey: string, enabled: boolean): boolean {
+    const { data: items = [] } = useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules, enabled });
+
+    return items.filter((s) => s.report_key === reportKey).length >= MAX_SCHEDULES_PER_REPORT;
+}
+
 /** Set a schedule from a report page — a tabular one (key given) or the ticket overview. */
 export function useCreateSchedule() {
     const queryClient = useQueryClient();

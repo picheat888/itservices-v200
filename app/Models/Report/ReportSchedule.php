@@ -29,6 +29,9 @@ class ReportSchedule extends Model
     /** Schedules one person may keep. */
     public const MAX_PER_USER = 10;
 
+    /** Schedules one person may keep for the same report. */
+    public const MAX_PER_REPORT = 3;
+
     /** Addresses one schedule may send to. */
     public const MAX_RECIPIENTS = 10;
 

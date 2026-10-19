@@ -61,6 +61,9 @@ class ReportScheduleService
         if (ReportSchedule::query()->where('user_id', $owner->id)->count() >= ReportSchedule::MAX_PER_USER) {
             Refusal::fail('schedule_limit', ['limit' => ReportSchedule::MAX_PER_USER]);
         }
+        if (ReportSchedule::query()->where('user_id', $owner->id)->where('report_key', $reportKey)->count() >= ReportSchedule::MAX_PER_REPORT) {
+            Refusal::fail('report_schedule_limit', ['limit' => ReportSchedule::MAX_PER_REPORT]);
+        }
 
         $schedule = new ReportSchedule([
             'user_id' => $owner->id,

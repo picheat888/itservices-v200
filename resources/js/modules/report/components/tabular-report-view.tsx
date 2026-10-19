@@ -16,7 +16,15 @@ import { useSearchParams } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
 import { useReportDialog } from '../hooks/use-report-rights';
-import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows, useTabularSummary } from '../hooks/use-reports';
+import {
+    MAX_SCHEDULES_PER_REPORT,
+    useCreateSchedule,
+    useExportTabular,
+    useReportSchedulesFull,
+    useTabularDefinition,
+    useTabularRows,
+    useTabularSummary,
+} from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import { withoutFilters } from '../lib/filter-scope';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
@@ -211,6 +219,12 @@ function TabularReportBody({
     const setExportOpen = (open: boolean) => setDialog(open ? 'export' : null);
     const scheduleOpen = dialog === 'schedule';
     const setScheduleOpen = (open: boolean) => setDialog(open ? 'schedule' : null);
+    const schedulesFull = useReportSchedulesFull(reportKey, canSchedule);
+    const scheduleBlocked = !canSchedule
+        ? t('rep_no_schedule_right')
+        : schedulesFull
+          ? t('rep_schedule_report_full').replace('{n}', fmtN(MAX_SCHEDULES_PER_REPORT))
+          : null;
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
     const scheduleMut = useCreateSchedule();
@@ -233,8 +247,8 @@ function TabularReportBody({
                 description={t(`rep_${stem}_desc`)}
                 actions={
                     <>
-                        <DisabledReason reason={canSchedule ? null : t('rep_no_schedule_right')} label={t('rep_schedule')}>
-                            <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!canSchedule}>
+                        <DisabledReason reason={scheduleBlocked} label={t('rep_schedule')}>
+                            <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={scheduleBlocked !== null}>
                                 <CalendarClock className="h-4 w-4" />
                                 {t('rep_schedule')}
                             </Button>
