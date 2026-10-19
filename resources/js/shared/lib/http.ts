@@ -7,6 +7,7 @@ import {
     isServerFailure,
     requestIdOf,
     retryAfterOf,
+    serviceUnavailableKind,
     showsOwnThrottle,
     wasShownInline,
 } from '@/shared/lib/http-errors';
@@ -132,8 +133,8 @@ http.interceptors.response.use(
                 showError('rate-limit', retryAfter);
             }
         } else if (status === 503) {
-            // Maintenance mode answers everything the same way, so every caller waits
-            showError('maintenance', retryAfterOf(error));
+            // Maintenance or a full database answers everything the same way, so every caller waits
+            showError(serviceUnavailableKind(error), retryAfterOf(error));
         }
 
         return Promise.reject(error);

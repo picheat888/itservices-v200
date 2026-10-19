@@ -34,6 +34,12 @@ return [
         'body_later' => 'We are down for maintenance. Please check back later.',
     ],
 
+    // 503 server busy
+    'busy' => [
+        'title' => 'Service Unavailable',
+        'body' => 'Many people are using the system right now. Please wait a moment and try again.',
+    ],
+
     // Buttons
     'actions' => [
         'sign_in' => 'Sign in',

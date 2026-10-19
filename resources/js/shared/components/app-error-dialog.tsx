@@ -1,4 +1,4 @@
-// Errors that stop the page (server, network, rate limit, maintenance) as a dialog over the blurred app, driven by stores/app-error.
+// Errors that stop the page (server, network, rate limit, busy server, maintenance) as a dialog over the blurred app, driven by stores/app-error.
 // Words come from the bundled dictionaries, so they show even when the API is down.
 import { useT } from '@/lang';
 import { BlockingDialog, useTopDialogOpen } from '@/shared/components/blocking-dialog';
@@ -12,7 +12,7 @@ import { formatNumber } from '@/shared/lib/number';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
-import { Hourglass, Loader2, ServerCrash, WifiOff, Wrench, type LucideIcon } from 'lucide-react';
+import { Hourglass, Loader2, ServerCrash, Users, WifiOff, Wrench, type LucideIcon } from 'lucide-react';
 
 const RING_TONE = {
     wait: 'text-amber-600 dark:text-amber-400',
@@ -33,6 +33,7 @@ export function AppErrorDialog() {
                 {kind === 'server' && <ServerBody />}
                 {kind === 'network' && <NetworkBody />}
                 {kind === 'rate-limit' && <RateLimitBody />}
+                {kind === 'busy' && <BusyBody />}
                 {kind === 'maintenance' && <MaintenanceBody />}
             </div>
         </BlockingDialog>
@@ -113,6 +114,11 @@ function RateLimitBody() {
     return <WaitBody icon={Hourglass} tone="wait" title={t('err_throttle_title')} line={t('err_throttle_body')} />;
 }
 
+function BusyBody() {
+    const t = useT();
+    return <WaitBody icon={Users} tone="wait" title={t('err_busy_title')} line={t('err_busy_body')} />;
+}
+
 function MaintenanceBody() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -130,7 +136,7 @@ interface WaitBodyProps {
     line: string;
 }
 
-// Rate limit and maintenance: a ring counts down the server's Retry-After; without one, the plain icon and Retry at once
+// Rate limit, busy server and maintenance: a ring counts down the server's Retry-After; without one, the plain icon and Retry at once
 function WaitBody({ icon, tone, title, line }: WaitBodyProps) {
     const t = useT();
     const retryAfter = useAppErrorStore((s) => s.retryAfter);

@@ -40,7 +40,7 @@ class ErrorPage
 
         return [
             'code' => $code,
-            'tone' => self::TONES[$code] ?? 'info',
+            'tone' => self::busy($code, $exception) ? 'wait' : (self::TONES[$code] ?? 'info'),
             'lang' => $request->getPreferredLanguage(self::LANGUAGES) === 'en' ? 'en' : 'th',
             'texts' => [
                 'th' => self::texts($code, $exception, 'th'),
@@ -68,6 +68,10 @@ class ErrorPage
     /** @return array{title: string, body: string} */
     private static function texts(int $code, ?Throwable $exception, string $lang): array
     {
+        if (self::busy($code, $exception)) {
+            return ['title' => __('errors.busy.title', [], $lang), 'body' => __('errors.busy.body', [], $lang)];
+        }
+
         $minutes = $code === 503 ? self::minutesToWait($exception) : null;
 
         $body = match (true) {
@@ -104,6 +108,12 @@ class ErrorPage
             'th' => __("errors.actions.{$action}", [], 'th'),
             'en' => __("errors.actions.{$action}", [], 'en'),
         ];
+    }
+
+    /** A 503 raised for a full or unreachable database (DatabaseBusy), not maintenance. */
+    private static function busy(int $code, ?Throwable $exception): bool
+    {
+        return $code === 503 && $exception instanceof HttpExceptionInterface && $exception->getMessage() === DatabaseBusy::MESSAGE;
     }
 
     /** Whole minutes from the Retry-After seconds, or null when there is none. */
