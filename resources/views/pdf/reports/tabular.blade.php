@@ -58,6 +58,7 @@
         table.data td { border: 0.5px solid #cbd5e1; padding: 3px 5px; font-size: 9.5px; vertical-align: top; }
         table.data th.r, table.data td.r { text-align: right; }
         table.data td.nw { white-space: nowrap; }
+        table.data tr.total td { font-weight: bold; background: #f8fafc; border-top: 1px solid #94a3b8; }
         .late { color: #dc2626; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
@@ -111,6 +112,13 @@
                 @endforeach
             </tr>
         @endforeach
+        @if (! empty($section['total']))
+            <tr class="total">
+                @foreach ($section['total'] as $i => $cell)
+                    <td class="{{ is_int($cell) || is_float($cell) ? 'r nw' : 'nw' }}">{{ $sectionCell($cell, $headings[$i] ?? '', in_array($i, $section['money'] ?? [], true)) }}</td>
+                @endforeach
+            </tr>
+        @endif
         </tbody>
     </table>
 @endforeach

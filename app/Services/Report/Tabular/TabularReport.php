@@ -301,9 +301,10 @@ abstract class TabularReport
      * `note` (PDF only) says what the table does not follow, in the page's words ("ตามสถานะตอนนี้
      * ไม่ขึ้นกับช่วงวันที่"); `empty` (PDF only) replaces the table with one line when it cannot be drawn.
      * `money` lists the column indexes holding baht: both files add "(บาท)" and show 2 decimals.
+     * `total` (PDF only, the sheet stays a plain table for Power BI) is a bold last row.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>, note?: string, empty?: string, money?: list<int>}>
+     * @return list<array{title: string, headings: list<string>, rows: list<list<string|int|float|null>>, note?: string, empty?: string, money?: list<int>, total?: list<string|int|float|null>|null}>
      */
     public function exportSections(User $viewer, array $filters): array
     {

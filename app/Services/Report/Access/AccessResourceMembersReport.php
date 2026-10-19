@@ -306,7 +306,7 @@ class AccessResourceMembersReport extends TabularReport
             ReportColumn::text('employee', 'พนักงาน', fn (AccessMembership $m) => $m->employee?->name)
                 ->labelKey('rep_c_ac_employee')->linkTo('/employees', fn (AccessMembership $m) => $m->employee_id),
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (AccessMembership $m) => $m->employee?->code)->hiddenByDefault(),
-            ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::localized('department', 'แผนก', fn (AccessMembership $m) => AccessFacts::department($m->employee))->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('level', 'ระดับ', fn (AccessMembership $m) => AccessFacts::level($m), AccessFacts::LEVEL_KEYS, AccessFacts::LEVEL_TH)
                 ->labelKey('rep_c_ac_level'),
             ReportColumn::text('purpose', 'วัตถุประสงค์', fn (AccessMembership $m) => $m->purpose)->labelKey('rep_c_ac_purpose')->hiddenByDefault(),

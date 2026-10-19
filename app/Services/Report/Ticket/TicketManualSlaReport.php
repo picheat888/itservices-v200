@@ -123,7 +123,7 @@ class TicketManualSlaReport extends TabularReport
             ReportColumn::localized('requester', 'ผู้แจ้ง', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th, 'code' => $t->requester->code] : null)
                 // "ผู้แจ้ง", as the Ticket & SLA page's list heads it (the shared rep_c_requester reads "ผู้ขอ").
                 ->labelKey('rep_col_requester')->withCode('รหัสพนักงานผู้แจ้ง', 'รหัสพนักงานของผู้แจ้ง ใช้เชื่อมกับตารางพนักงาน'),
-            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th, 'code' => $d->code] : null)->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th, 'code' => $d->code] : null)->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('category', 'หมวด', fn (Ticket $t) => $t->category, self::categoryKeys(), self::categoryTh()),
             ReportColumn::enum('priority', 'ความสำคัญ', fn (Ticket $t) => $t->priority, self::priorityKeys(), self::priorityTh()),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),

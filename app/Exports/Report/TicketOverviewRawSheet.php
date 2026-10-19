@@ -65,7 +65,7 @@ class TicketOverviewRawSheet implements FromCollection, ShouldAutoSize, WithColu
             ['heading' => 'รหัสพนักงานผู้แจ้ง', 'meaning' => 'รหัสพนักงานของผู้แจ้งปัญหา', 'value' => fn (Ticket $t) => $t->requester?->code],
             ['heading' => 'ผู้แจ้ง', 'meaning' => 'ชื่อพนักงานที่แจ้งปัญหา (ชื่อไทยถ้ามี)', 'value' => fn (Ticket $t) => $t->requester?->name_th ?: $t->requester?->name],
             ['heading' => 'แผนกผู้แจ้ง', 'meaning' => 'แผนกปัจจุบันของผู้แจ้ง', 'value' => fn (Ticket $t) => $t->requester?->department?->name_th ?: $t->requester?->department?->name],
-            ['heading' => 'รหัสแผนกผู้แจ้ง', 'meaning' => 'รหัสแผนกของผู้แจ้งในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)', 'value' => fn (Ticket $t) => $t->requester?->department?->code],
+            ['heading' => 'รหัสแผนกผู้แจ้ง', 'meaning' => 'รหัสแผนกของผู้แจ้ง ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)', 'value' => fn (Ticket $t) => $t->requester?->department?->code],
             ['heading' => 'เบอร์ติดต่อกลับ', 'meaning' => 'เบอร์ที่ผู้แจ้งให้ไว้สำหรับติดต่อกลับ', 'value' => fn (Ticket $t) => $t->callback_phone],
             ['heading' => 'ทรัพย์สินที่เกี่ยวข้อง', 'meaning' => 'รหัสทรัพย์สิน IT ที่ผูกกับปัญหานี้ (ถ้ามี)', 'value' => fn (Ticket $t) => $t->relatedAsset?->asset_code],
             ['heading' => 'ผู้รับผิดชอบ', 'meaning' => 'เจ้าหน้าที่ IT ที่ถือเคสอยู่ล่าสุด ว่าง = ยังไม่มีคนรับ', 'value' => fn (Ticket $t) => $t->assignee?->name],

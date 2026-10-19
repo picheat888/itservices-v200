@@ -205,6 +205,21 @@ class RequestApprovalsReportTest extends TestCase
         $this->assertCount(0, $byRequest('R21'));
     }
 
+    public function test_the_requester_is_a_column_on_the_page_and_the_pdf(): void
+    {
+        $report = app(RequestApprovalsReport::class);
+        $screen = array_map(fn ($c) => $c->key, $report->screenColumns());
+        $this->assertSame(['request_no', 'requester', 'department'], array_slice($screen, 0, 3));
+        $this->assertContains('requester', array_map(fn ($c) => $c->key, $report->exportColumns()));
+
+        $department = collect($report->definition()['columns'])->firstWhere('key', 'department');
+        $this->assertTrue($department['hidden']);
+        $this->assertSame('rep_c_rqa_requester_department', $department['label_key']);
+
+        $row = collect($this->rows()['data'])->firstWhere('request_no', $this->r['R2']->reference);
+        $this->assertSame($this->r['R2']->requester_name, $row['requester']);
+    }
+
     public function test_rows_follow_type_department_and_approver(): void
     {
         $this->assertSame(

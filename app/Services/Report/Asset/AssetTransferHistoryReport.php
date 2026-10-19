@@ -166,7 +166,7 @@ class AssetTransferHistoryReport extends TabularReport
             ReportColumn::text("{$end}_code", $end === 'from' ? 'จาก (รหัสพนักงาน)' : 'ไปยัง (รหัสพนักงาน)', fn (AssetTransfer $t) => $person($t) ? $t->getAttribute($column) : null)->hiddenByDefault(),
             ReportColumn::localized("{$end}_department", $end === 'from' ? 'จาก (แผนก)' : 'ไปยัง (แผนก)', fn (AssetTransfer $t) => isset($person($t)['department'])
                 ? ['name' => $person($t)['department']['name'], 'name_th' => $person($t)['department']['name_th'], 'code' => $person($t)['department']['code'] ?? null]
-                : null)->hiddenByDefault()->withCode($end === 'from' ? 'จาก (รหัสแผนก)' : 'ไปยัง (รหัสแผนก)', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+                : null)->hiddenByDefault()->withCode($end === 'from' ? 'จาก (รหัสแผนก)' : 'ไปยัง (รหัสแผนก)', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::number("{$end}_resigned", $end === 'from' ? 'จาก (ลาออกแล้ว)' : 'ไปยัง (ลาออกแล้ว)', fn (AssetTransfer $t) => $person($t) === null ? null : (int) $person($t)['resigned'])->hiddenByDefault()->screenOnly(),
             ReportColumn::text("{$end}_resigned_th", $end === 'from' ? 'จาก (ลาออกแล้ว)' : 'ไปยัง (ลาออกแล้ว)', fn (AssetTransfer $t) => $person($t) === null ? null : ($person($t)['resigned'] ? 'ใช่' : 'ไม่ใช่'))
                 ->sheetOnly()->describe('พนักงานคนนี้ลาออกแล้วหรือยัง ณ วันที่ส่งออก (ว่าง = ปลายทางไม่ใช่พนักงาน)'),
@@ -489,6 +489,8 @@ class AssetTransferHistoryReport extends TabularReport
                     ['กดรับหลัง 2 วันขึ้นไป', $a['later']], ['รอกดรับ', $a['waiting']], ['เรียกคืนก่อนกดรับ', $a['recalled']],
                     ['ไม่ได้กดรับ', $a['never_accepted']], ['ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)', $a['to_shared']],
                     ['เวลากดรับมอบ มัธยฐาน (ชม.)', $a['median_hours']],
+                    ['กดรับภายใน 2 วัน', $a['within_2_days']],
+                    ['กดรับภายใน 2 วัน (% จากส่งมอบให้พนักงาน)', $a['to_people'] === 0 ? null : (int) round($a['within_2_days'] / $a['to_people'] * 100)],
                 ],
             ],
             [

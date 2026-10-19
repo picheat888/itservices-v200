@@ -166,7 +166,7 @@ class ContractRentalsReport extends TabularReport
             ReportColumn::enum('status', 'สถานะ', fn (Asset $a) => $a->status, self::STATUS_KEYS, self::STATUS_TH),
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),
             ReportColumn::text('holder_code', 'รหัสพนักงานผู้ถือ', fn (Asset $a) => $a->ownerEmployee?->code)->sheetOnly()->describe('รหัสพนักงานที่ถือทรัพย์สินอยู่ ใช้เชื่อมกับตารางพนักงาน (ว่าง = ไม่มีพนักงานถือ เช่น อยู่ในคลังหรือเป็นส่วนกลาง)'),
-            ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a))->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a))->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::text('contract_code', 'เลขที่สัญญา', fn (Asset $a) => $a->contract?->code)
                 ->labelKey('rep_c_code')
                 ->linkTo('/contracts', fn (Asset $a) => $a->contract_id),

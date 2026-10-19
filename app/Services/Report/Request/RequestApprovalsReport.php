@@ -176,6 +176,12 @@ class RequestApprovalsReport extends TabularReport
         return [
             ReportColumn::text('request_no', 'เลขที่คำขอ', fn (RequestApproval $s) => $s->request?->reference)
                 ->linkTo('/requests', fn (RequestApproval $s) => $s->service_request_id),
+            ReportColumn::text('requester', 'ผู้ขอ', fn (RequestApproval $s) => $s->request?->requester_name),
+            ReportColumn::text('requester_code', 'รหัสพนักงานผู้ขอ', fn (RequestApproval $s) => $s->request?->employee?->code)->sheetOnly()
+                ->describe('รหัสพนักงานของผู้ขอ ใช้เชื่อมกับตารางพนักงาน'),
+            ReportColumn::localized('department', 'แผนกผู้ขอ', fn (RequestApproval $s) => $this->requesterDepartment($s->request))
+                ->labelKey('rep_c_rqa_requester_department')->hiddenByDefault()
+                ->withCode('รหัสแผนกผู้ขอ', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('request_type', 'ประเภทคำขอ', fn (RequestApproval $s) => $s->request?->type, self::typeKeys(), self::typeTh()),
             ReportColumn::text('step', 'ชื่อขั้น', fn (RequestApproval $s) => $s->label)->labelKey('rep_c_rqa_step'),
             ReportColumn::number('position', 'ลำดับขั้น', fn (RequestApproval $s) => $s->position)->labelKey('rep_c_rqa_position')->hiddenByDefault(),
@@ -184,7 +190,7 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::text('approver_code', 'รหัสพนักงานผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['code'] : null)
                 ->labelKey('rep_c_rqa_approver_code')->hiddenByDefault(),
             ReportColumn::localized('approver_department', 'แผนกผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['department'] : null)
-                ->labelKey('rep_c_rqa_approver_department')->hiddenByDefault()->withCode('รหัสแผนกผู้อนุมัติ', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+                ->labelKey('rep_c_rqa_approver_department')->hiddenByDefault()->withCode('รหัสแผนกผู้อนุมัติ', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::text('approver_kind', 'ชนิดผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? ApprovalFacts::person($s)['kind'] : null)
                 ->labelKey('rep_c_rqa_approver_kind')->hiddenByDefault()->screenOnly(),
             ReportColumn::text('approver_kind_th', 'ชนิดผู้อนุมัติ', fn (RequestApproval $s) => $notSkipped($s) ? self::APPROVER_KIND_TH[ApprovalFacts::person($s)['kind']] ?? null : null)
@@ -200,10 +206,6 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::text('note', 'หมายเหตุ', fn (RequestApproval $s) => $s->note)->labelKey('rep_c_rqa_note'),
             ReportColumn::enum('skip_reason', 'เหตุผลที่ข้าม', fn (RequestApproval $s) => $s->skip_reason?->value, self::SKIP_KEYS, self::SKIP_TH)
                 ->labelKey('rep_c_rqa_skip_reason')->hiddenByDefault(),
-            ReportColumn::text('requester', 'ผู้ขอ', fn (RequestApproval $s) => $s->request?->requester_name)->sheetOnly(),
-            ReportColumn::text('requester_code', 'รหัสพนักงานผู้ขอ', fn (RequestApproval $s) => $s->request?->employee?->code)->sheetOnly()
-                ->describe('รหัสพนักงานของผู้ขอ ใช้เชื่อมกับตารางพนักงาน'),
-            ReportColumn::localized('department', 'แผนกผู้ขอ', fn (RequestApproval $s) => $this->requesterDepartment($s->request))->sheetOnly()->withCode('รหัสแผนกผู้ขอ', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('request_status', 'สถานะคำขอ', fn (RequestApproval $s) => $s->request?->status, self::STATUS_KEYS, self::STATUS_TH)->sheetOnly(),
         ];
     }

@@ -343,6 +343,8 @@ class AssetTransferHistoryReportTest extends TestCase
                 && $waiting->headings()[1] === 'ยี่ห้อ'
                 && in_array(['ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)', 1], $acceptance->array(), true)
                 && in_array(['รอกดรับ', 1], $acceptance->array(), true)
+                && in_array(['กดรับภายใน 2 วัน', 2], $acceptance->array(), true)
+                && in_array(['กดรับภายใน 2 วัน (% จากส่งมอบให้พนักงาน)', 33], $acceptance->array(), true)
                 && in_array('การกดรับมอบ', $titles, true)
                 && $waiting->array()[0][0] === 'A2'
                 && $waiting->array()[2][7] === 'ลาออก';

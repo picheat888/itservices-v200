@@ -1169,6 +1169,7 @@ export const report: Dict = {
     rep_c_rqa_position: 'Step no.',
     rep_c_rqa_approver_code: 'Approver code',
     rep_c_rqa_approver_department: 'Approver department',
+    rep_c_rqa_requester_department: 'Requester department',
     rep_c_rqa_approver_kind: 'Approver kind',
     rep_c_rqa_approver_flag: 'Approver status',
     rep_c_rqa_became_current: 'Reached',
