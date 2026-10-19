@@ -2,36 +2,44 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Enums\Auth\DeviceEndReason;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Resources\Auth\UserDeviceResource;
 use App\Http\Resources\Auth\UserResource;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Notifications\PasswordExpiringNotification;
+use App\Services\Auth\DeviceService;
+use App\Services\Auth\PendingLogin;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-    public function login(LoginRequest $request): JsonResponse
+    private const DEVICE_LOCK_SECONDS = 10;
+
+    private const DEVICE_LOCK_WAIT_SECONDS = 5;
+
+    public function login(LoginRequest $request, DeviceService $devices, PendingLogin $pendingLogins): JsonResponse
     {
-        $request->authenticate();
+        $user = $request->resolveUser();
+        $pending = $request->pendingToken();
 
-        $request->session()->regenerate();
-        // A remembered sign-in lasts as long as its remember cookie; the idle timeout only
-        // applies to one without it (see CheckSessionTimeout).
-        $request->session()->put(CheckSessionTimeout::REMEMBERED, $request->boolean('remember'));
+        $refusal = Cache::lock("device-limit:{$user->id}", self::DEVICE_LOCK_SECONDS)
+            ->block(self::DEVICE_LOCK_WAIT_SECONDS, fn () => $this->signInWithinLimit($request, $user, $pending, $devices, $pendingLogins));
+        if ($refusal !== null) {
+            return $refusal;
+        }
 
-        // Backfill the password timestamp for legacy accounts so enabling the
-        // expiry policy later doesn't instantly lock everyone out — their clock
-        // starts from this sign-in instead of "never".
-        $user = $request->user();
+        // Legacy accounts: the expiry clock starts at this sign-in, not "never"
         if ($user->password_changed_at === null) {
             $user->forceFill(['password_changed_at' => now()])->saveQuietly();
         }
@@ -39,9 +47,43 @@ class AuthController extends Controller
         AuditLog::record('Signed in');
         $this->warnAboutPasswordExpiry($user);
 
-        return (new UserResource($request->user()))
+        return (new UserResource($user))
             ->additional(['message' => 'success'])
             ->response();
+    }
+
+    /** Signs in and starts the device when the account has room; otherwise the 409 device list. */
+    private function signInWithinLimit(LoginRequest $request, User $user, ?string $pending, DeviceService $devices, PendingLogin $pendingLogins): ?JsonResponse
+    {
+        if ($pending !== null && $pendingLogins->user($pending, $request) === null) {
+            throw LoginRequest::pendingExpired();
+        }
+
+        $limit = $devices->limit();
+        $active = $devices->active($user);
+        if ($limit > 0 && $active->count() >= $limit) {
+            return response()->json([
+                'message' => 'device_limit',
+                'limit' => $limit,
+                'pending' => $pending ?? $pendingLogins->issue($user, $request),
+                'devices' => UserDeviceResource::collection($active)->resolve($request),
+            ], 409);
+        }
+
+        $remember = $request->boolean('remember');
+        $rememberToken = $remember ? $devices->issueRememberToken($user) : null;
+
+        Auth::guard('web')->login($user, $remember);
+        $request->session()->regenerate();
+        // Remembered sign-ins are exempt from the idle timeout (CheckSessionTimeout)
+        $request->session()->put(CheckSessionTimeout::REMEMBERED, $remember);
+        $devices->start($user, $request, $rememberToken);
+
+        if ($pending !== null) {
+            $pendingLogins->forget($pending);
+        }
+
+        return null;
     }
 
     /**
@@ -79,11 +121,18 @@ class AuthController extends Controller
         $user->notify(new PasswordExpiringNotification($remaining));
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(Request $request, DeviceService $devices): JsonResponse
     {
         AuditLog::record('Signed out');
 
+        $user = $request->user();
+        $device = $devices->currentOf($user, $request);
+        if ($device !== null) {
+            $devices->end($device, DeviceEndReason::SignedOut);
+        }
+
         Auth::guard('web')->logout();
+        $devices->retireLegacyRememberToken($user);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -165,7 +214,7 @@ class AuthController extends Controller
      * new one, and stamps password_changed_at so the expiry policy resets.
      * Used both voluntarily and by the forced change-password flow.
      */
-    public function changePassword(Request $request): JsonResponse
+    public function changePassword(Request $request, DeviceService $devices): JsonResponse
     {
         // A forced change waives the current password: the person just signed in with it
         $forced = (bool) $request->user()?->must_change_password;
@@ -190,18 +239,32 @@ class AuthController extends Controller
             'must_change_password' => false,
         ])->save();
 
-        // Every other device is signed out — sessions and remember cookies alike — while
-        // this one stays in. A remembered sign-in gets a fresh cookie for the new token,
-        // or it would silently stop being remembered.
-        // A token-authenticated client has no session to keep, so everything goes.
+        // Every other device is signed out; a token client has no session to keep
         $session = $request->hasSession() ? $request->session() : null;
         $user->signOutEverywhere($session?->getId());
         if ($session?->get(CheckSessionTimeout::REMEMBERED) === true) {
-            Auth::guard('web')->login($user, true);
+            $this->rememberThisDeviceAgain($request, $user, $devices);
         }
 
         AuditLog::record('Changed own password');
 
         return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();
+    }
+
+    /** The device that changed the password stays remembered: a new device token and cookie, on the new session id. */
+    private function rememberThisDeviceAgain(Request $request, User $user, DeviceService $devices): void
+    {
+        $device = $devices->currentOf($user, $request);
+        $token = $devices->issueRememberToken($user);
+
+        Auth::guard('web')->login($user, true);
+
+        if ($device === null) {
+            $devices->start($user, $request, $token, recordEvent: false);
+
+            return;
+        }
+
+        $devices->rememberAgain($device, $token, $request->session()->getId());
     }
 }

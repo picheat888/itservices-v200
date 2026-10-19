@@ -9,6 +9,7 @@ use App\Enums\Auth\LoginEventType;
 use App\Models\Auth\UserDevice;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -65,7 +66,7 @@ class DeviceService
         $device = $user->devices()->create([
             'session_id' => $session?->getId(),
             'remember_token_hash' => $remembered ? hash('sha256', $rememberToken) : null,
-            'remember_expires_at' => $remembered ? $now->copy()->addMinutes((int) config('auth.guards.web.remember')) : null,
+            'remember_expires_at' => $remembered ? $this->rememberExpiry() : null,
             ...$this->events->describe($request),
             'user_agent' => $this->userAgentOf($request),
             'signed_in_at' => $now,
@@ -96,6 +97,45 @@ class DeviceService
         $this->current->set($device);
 
         $this->events->record(LoginEventType::SignedIn, $device->user, $request, ['device' => $device, 'remembered' => true]);
+    }
+
+    /** A remembered device carries on with a new token and a full remember lifetime, on its new session id. */
+    public function rememberAgain(UserDevice $device, string $token, string $sessionId): void
+    {
+        $previousSessionId = $device->session_id;
+
+        $device->forceFill([
+            'session_id' => $sessionId,
+            'remember_token_hash' => hash('sha256', $token),
+            'remember_expires_at' => $this->rememberExpiry(),
+        ])->save();
+
+        if ($previousSessionId !== null && $previousSessionId !== $sessionId) {
+            Cache::forget(self::stateCacheKey($previousSessionId));
+        }
+        $this->current->set($device);
+    }
+
+    /** The not-ended device of $user this request is signed in with: the session's device, else the one its remember cookie matched. */
+    public function currentOf(User $user, Request $request): ?UserDevice
+    {
+        $deviceId = ($request->hasSession() ? $request->session()->get(self::SESSION_KEY) : null) ?? $this->current->get()?->getKey();
+        $device = $deviceId === null ? null : UserDevice::query()->find($deviceId);
+
+        if ($device === null || $device->ended_at !== null || (int) $device->user_id !== (int) $user->getKey()) {
+            return null;
+        }
+
+        return $device;
+    }
+
+    /** users.remember_token gets a fresh value no cookie carries, so every cookie from before devices stops working. */
+    public function retireLegacyRememberToken(User $user): void
+    {
+        $token = Str::random(self::REMEMBER_TOKEN_LENGTH);
+
+        User::query()->whereKey($user->getKey())->toBase()->update([$user->getRememberTokenName() => $token]);
+        $this->holdRememberTokenInMemory($user, $token);
     }
 
     /**
@@ -193,6 +233,11 @@ class DeviceService
             ->orderByDesc('last_active_at')
             ->orderByDesc('id')
             ->get();
+    }
+
+    private function rememberExpiry(): CarbonInterface
+    {
+        return now()->addMinutes((int) config('auth.guards.web.remember'));
     }
 
     // Marked clean, so no later save() on this instance writes it to users.remember_token

@@ -16,6 +16,7 @@ use App\Services\Auth\GeoIpLookup;
 use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Queue\Events\JobProcessing;
@@ -86,7 +87,20 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('client-errors', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
 
+        // Sign-in per IP: a whole office shares one public IP
+        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(50)->by($request->ip())->response(self::tooManySignIns(...)));
+        RateLimiter::for('login-pending', fn (Request $request) => Limit::perMinute(10)->by($request->ip())->response(self::tooManySignIns(...)));
+
         // Scheduled report mails: a backlog goes out one run per minute
         RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
+    }
+
+    /** @param  array<string, int|string>  $headers */
+    private static function tooManySignIns(Request $request, array $headers): JsonResponse
+    {
+        return response()->json([
+            'message' => 'too_many_attempts',
+            'retry_after' => (int) ($headers['Retry-After'] ?? 0),
+        ], 429, $headers);
     }
 }

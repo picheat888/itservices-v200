@@ -11,6 +11,7 @@ use App\Services\Auth\DeviceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -36,12 +37,23 @@ class DeviceRememberTest extends TestCase
         return $user->id.'|'.$token.'|'.$user->getAuthPassword();
     }
 
-    /** A different browser: no guard user, no request-scoped device, no session from the previous request. */
+    /** A different browser: no guard user, no request-scoped device, no session or cookies from the previous request. */
     private function freshBrowser(): void
     {
         Auth::forgetGuards();
         $this->app->forgetScopedInstances();
         $this->flushSession();
+        $this->defaultCookies = [];
+    }
+
+    /** The same browser again, on its session cookie. */
+    private function inSession(string $sessionId): static
+    {
+        $this->freshBrowser();
+
+        return $this->withHeader('Origin', self::ORIGIN)
+            ->withCredentials()
+            ->withCookie(config('session.cookie'), $sessionId);
     }
 
     private function withRememberCookie(string $cookie): static
@@ -121,8 +133,9 @@ class DeviceRememberTest extends TestCase
         $this->withRememberCookie($this->cookieFor($user, 'laptop-token'))->postJson('/api/logout')->assertOk();
 
         $this->assertNull($laptop->fresh()->remember_token_hash);
+        $this->assertSame(DeviceEndReason::SignedOut, $laptop->fresh()->end_reason);
         $this->assertSame(hash('sha256', 'phone-token'), $phone->fresh()->remember_token_hash);
-        $this->assertSame($usersToken, $user->fresh()->getRememberToken());
+        $this->assertNotContains($user->fresh()->getRememberToken(), [$usersToken, 'laptop-token', 'phone-token']);
 
         $this->meWithCookie($this->cookieFor($user, 'laptop-token'))->assertUnauthorized();
         $this->meWithCookie($this->cookieFor($user, 'phone-token'))->assertOk();
@@ -174,5 +187,43 @@ class DeviceRememberTest extends TestCase
             ->assertOk();
 
         $this->assertNull($user->fresh()->remember_token);
+    }
+
+    public function test_changing_the_password_gives_this_remembered_device_a_new_cookie(): void
+    {
+        $user = User::factory()->create();
+        $recaller = Auth::guard('web')->getRecallerName();
+        $oldCookie = $this->inSession(Str::random(40))
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password', 'remember' => true])
+            ->assertOk()
+            ->getCookie($recaller)->getValue();
+        $device = UserDevice::query()->sole();
+
+        $newCookie = $this->inSession(session()->getId())
+            ->putJson('/api/password', ['current_password' => 'password', 'password' => 'N3w-Passw0rd!', 'password_confirmation' => 'N3w-Passw0rd!'])
+            ->assertOk()
+            ->getCookie($recaller)->getValue();
+
+        $device->refresh();
+        $this->assertNull($device->ended_at);
+        $this->assertSame(session()->getId(), $device->session_id);
+        $this->assertSame(hash('sha256', explode('|', $newCookie)[1]), $device->remember_token_hash);
+        $this->assertSame(1, UserDevice::count());
+        $this->assertNotSame(explode('|', $newCookie)[1], $user->fresh()->getRememberToken());
+
+        $this->meWithCookie($oldCookie)->assertUnauthorized();
+        $this->meWithCookie($newCookie)->assertOk()->assertJsonPath('data.remembered', true);
+    }
+
+    public function test_logout_retires_a_cookie_from_before_devices(): void
+    {
+        $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
+        $legacy = $this->cookieFor($user, 'token-from-before-devices');
+
+        $this->withRememberCookie($legacy)->postJson('/api/logout')->assertOk();
+
+        $this->meWithCookie($legacy)->assertUnauthorized();
+        $this->assertNotNull($user->fresh()->getRememberToken());
+        $this->assertNotSame('token-from-before-devices', $user->fresh()->getRememberToken());
     }
 }
