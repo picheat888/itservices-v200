@@ -1,6 +1,6 @@
 import type { Lang } from '@/shared/types';
 import { cascadeToggle, countGranted } from '../lib/permission-count';
-import { actionLabel } from '../lib/permission-labels';
+import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { EMPLOYEE_COUNT, EMPLOYEE_TREE } from '../lib/permission-specs';
 import { ChildList, ChildRow, GeneralCell, GroupHead, PermissionCard, PermissionCell, WIDE_CHILDREN } from './permission-layout';
 
@@ -9,6 +9,7 @@ const { master: MASTER, groups: GROUPS } = EMPLOYEE_TREE;
 const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
 const label = (key: string, lang: Lang) => actionLabel('employees', key.replace('employees.', ''), lang);
+const info = (key: string, lang: Lang) => actionDescription('employees', key.replace('employees.', ''), lang);
 
 /** Employee card: master → view → management, with cascade; super is read-only. */
 export function EmployeePermissionTree({
@@ -36,6 +37,7 @@ export function EmployeePermissionTree({
     const view = (key: string) => ({
         pkey: key,
         label: label(key, lang),
+        info: info(key, lang),
         on: has(key) && masterOn,
         locked: isSuper || !masterOn,
         lockedBy: label(MASTER, lang),
@@ -52,6 +54,7 @@ export function EmployeePermissionTree({
             master={{
                 pkey: MASTER,
                 label: label(MASTER, lang),
+                info: info(MASTER, lang),
                 on: masterOn,
                 locked: isSuper,
                 onToggle: () => toggle(MASTER),
@@ -72,6 +75,7 @@ export function EmployeePermissionTree({
                                             key={child}
                                             pkey={child}
                                             label={label(child, lang)}
+                                            info={info(child, lang)}
                                             aria={`${label(group.view, lang)} ${label(child, lang)}`}
                                             on={has(child) && viewOn}
                                             locked={isSuper || !viewOn}
