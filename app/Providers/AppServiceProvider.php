@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Jobs\SendScheduledReport;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
@@ -75,5 +76,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('client-errors', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+
+        // Scheduled report mails: a backlog goes out one run per minute
+        RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
     }
 }
