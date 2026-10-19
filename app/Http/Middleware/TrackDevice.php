@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DeviceService;
 use Closure;
+use Illuminate\Auth\Recaller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -120,7 +121,7 @@ class TrackDevice
     }
 
     /**
-     * Why the session named by the browser's cookie was ended elsewhere, if it was.
+     * Why the session named by the browser's cookie was ended elsewhere, else why the device of its remember cookie was.
      *
      * @return array{reason: string, by: ?array<string, mixed>}|null
      */
@@ -128,8 +129,23 @@ class TrackDevice
     {
         $sessionId = $request->cookies->get(config('session.cookie'));
         $ended = is_string($sessionId) && $sessionId !== '' ? Cache::get(DeviceService::endedCacheKey($sessionId)) : null;
+        if (! is_array($ended)) {
+            $ended = self::endedRememberOf($request);
+        }
 
         return is_array($ended) ? $ended : null;
+    }
+
+    /** The note left for the remember cookie's device, which outlives the session note. */
+    private static function endedRememberOf(Request $request): mixed
+    {
+        $cookie = $request->cookies->get(Auth::guard('web')->getRecallerName());
+        $recaller = new Recaller(is_string($cookie) ? $cookie : '');
+        if (! $recaller->valid()) {
+            return null;
+        }
+
+        return Cache::get(DeviceService::endedTokenCacheKey(DeviceService::rememberTokenHash($recaller->token())));
     }
 
     /** @return DeviceState */

@@ -408,6 +408,57 @@ class TrackDeviceTest extends TestCase
         $this->assertSame(0, LoginEvent::query()->where('event', 'signed_in')->count());
     }
 
+    /** Ended overnight: by morning the session cookie and its note are gone, only the remember cookie is sent. */
+    public function test_a_remembered_device_ended_while_its_browser_slept_learns_why_from_its_remember_cookie(): void
+    {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create();
+        $recaller = Auth::guard('web')->getRecallerName();
+        $rememberCookie = $this->withHeader('Origin', self::ORIGIN)
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password', 'remember' => true])
+            ->assertOk()
+            ->getCookie($recaller)
+            ->getValue();
+        $newcomer = $this->newcomer();
+        $this->devices()->end(UserDevice::query()->sole(), DeviceEndReason::ThirdDevice, $newcomer);
+
+        $this->travel(10)->hours();
+
+        $response = $this->meWithRememberCookie($rememberCookie)
+            ->assertUnauthorized()
+            ->assertExactJson(['message' => 'device_signed_out', 'reason' => 'third_device', 'by' => $newcomer]);
+        $this->assertTrue($response->getCookie($recaller, false)->isCleared());
+
+        // A file link in the same state goes to the login page with the reason
+        $this->freshBrowser();
+        $fileLink = $this->withCookie($recaller, $rememberCookie)
+            ->get('/files/employees/1/photo')
+            ->assertRedirect('/login?reason=third_device');
+        $this->assertTrue($fileLink->getCookie($recaller, false)->isCleared());
+    }
+
+    public function test_a_device_ended_after_its_remember_period_leaves_no_note_for_the_cookie(): void
+    {
+        $user = User::factory()->create();
+        $device = $this->rememberedDevice($user, 'laptop-token');
+        $device->forceFill(['remember_expires_at' => now()->subMinute()])->save();
+
+        $this->devices()->end($device, DeviceEndReason::Profile);
+
+        $this->assertFalse(Cache::has(DeviceService::endedTokenCacheKey(DeviceService::rememberTokenHash('laptop-token'))));
+        $this->meWithRememberCookie($this->cookieFor($user, 'laptop-token'))->assertUnauthorized()->assertJsonPath('message', 'Unauthenticated.');
+    }
+
+    public function test_signing_out_leaves_no_note_for_the_remember_cookie(): void
+    {
+        $user = User::factory()->create();
+        $device = $this->rememberedDevice($user, 'laptop-token');
+
+        $this->devices()->end($device, DeviceEndReason::SignedOut);
+
+        $this->meWithRememberCookie($this->cookieFor($user, 'laptop-token'))->assertUnauthorized()->assertJsonPath('message', 'Unauthenticated.');
+    }
+
     /** The device check runs before route bindings and throttles, so a 404 cannot leave a signed-in session without its device. */
     public function test_a_remember_restore_whose_first_request_is_a_404_still_reattaches_its_device(): void
     {
