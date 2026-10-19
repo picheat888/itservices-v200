@@ -56,7 +56,7 @@ function LastSend({ item }: { item: ManagedScheduleItem }) {
     return (
         <div className="space-y-0.5">
             <StatusBadge tone={failed ? 'red' : 'green'}>{t(failed ? 'rep_manage_status_failed' : 'rep_manage_status_ok')}</StatusBadge>
-            <div className="text-muted-foreground text-xs">{fmt.dateTime(item.last_run_at)}</div>
+            <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(item.last_run_at)}</div>
         </div>
     );
 }
@@ -238,6 +238,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
         {
             key: 'owner',
             header: t('rep_manage_col_owner'),
+            width: '176px',
             render: (item) => (
                 <div className="min-w-0">
                     <div className="truncate font-semibold">{item.owner.name ?? '-'}</div>
@@ -248,6 +249,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
         {
             key: 'report',
             header: t('rep_manage_col_report'),
+            minWidth: '10rem',
             render: (item) => (
                 <span className="flex min-w-0 items-center gap-2">
                     <span
@@ -264,12 +266,19 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
                 </span>
             ),
         },
-        { key: 'when', header: t('rep_manage_col_when'), render: (item) => <span className="whitespace-nowrap">{labels.when(item)}</span> },
+        {
+            key: 'when',
+            header: t('rep_manage_col_when'),
+            width: '136px',
+            hideBelow: 'lg',
+            render: (item) => <span className="whitespace-nowrap">{labels.when(item)}</span>,
+        },
         {
             key: 'recipients',
             header: t('rep_manage_col_recipients'),
+            width: '116px',
             render: (item) => (
-                <div>
+                <div className="whitespace-nowrap">
                     <div>{t('rep_manage_people').replace('{n}', fmtN(item.recipient_list.length))}</div>
                     {labels.outside(item) > 0 && (
                         <div className="text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -279,7 +288,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
                 </div>
             ),
         },
-        { key: 'last', header: t('rep_manage_col_last'), render: (item) => <LastSend item={item} /> },
+        { key: 'last', header: t('rep_manage_col_last'), width: '136px', render: (item) => <LastSend item={item} /> },
     ];
 
     const statusOptions: { value: StatusFilter; label: string; tone: 'gray' | 'green' | 'red' | 'violet' }[] = [
@@ -384,7 +393,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
                     <div
                         aria-hidden="true"
                         className={cn(
-                            'bg-foreground/5 pointer-events-none absolute inset-0 transition-opacity duration-200 motion-reduce:transition-none',
+                            'bg-foreground/5 pointer-events-none absolute inset-0 z-20 transition-opacity duration-200 motion-reduce:transition-none',
                             panelOpen ? 'opacity-100' : 'opacity-0',
                         )}
                     />
@@ -393,7 +402,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
                         aria-hidden={!panelOpen}
                         inert={!panelOpen}
                         className={cn(
-                            'bg-card border-border absolute inset-y-0 right-0 w-full overflow-y-auto border-l p-5 shadow-2xl transition-transform duration-200 motion-reduce:transition-none sm:w-[440px]',
+                            'bg-card border-border absolute inset-y-0 right-0 z-20 w-full overflow-y-auto border-l p-5 shadow-2xl transition-transform duration-200 motion-reduce:transition-none sm:w-[440px]',
                             panelOpen ? 'translate-x-0' : 'translate-x-full',
                         )}
                     >
