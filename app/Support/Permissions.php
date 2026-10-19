@@ -264,22 +264,7 @@ class Permissions
      */
     public static function normalizeStock(array $granted): array
     {
-        $set = array_flip($granted);
-        $hierarchy = self::stockHierarchy();
-
-        if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'stock.')));
-        }
-
-        foreach ($hierarchy['groups'] as $viewKey => $children) {
-            if (! isset($set[$viewKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree($granted, self::stockHierarchy());
     }
 
     /**
@@ -313,22 +298,7 @@ class Permissions
      */
     public static function normalizeEmployees(array $granted): array
     {
-        $set = array_flip($granted);
-        $hierarchy = self::employeeHierarchy();
-
-        if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'employees.')));
-        }
-
-        foreach ($hierarchy['groups'] as $viewKey => $children) {
-            if (! isset($set[$viewKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree($granted, self::employeeHierarchy());
     }
 
     /**
@@ -358,22 +328,7 @@ class Permissions
      */
     public static function normalizeAccess(array $granted): array
     {
-        $set = array_flip($granted);
-        $hierarchy = self::accessHierarchy();
-
-        if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'access.')));
-        }
-
-        foreach ($hierarchy['groups'] as $viewKey => $children) {
-            if (! isset($set[$viewKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree($granted, self::accessHierarchy());
     }
 
     /**
@@ -406,22 +361,7 @@ class Permissions
      */
     public static function normalizeContracts(array $granted): array
     {
-        $set = array_flip($granted);
-        $hierarchy = self::contractHierarchy();
-
-        if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'contracts.')));
-        }
-
-        foreach ($hierarchy['groups'] as $viewKey => $children) {
-            if (! isset($set[$viewKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree($granted, self::contractHierarchy());
     }
 
     /**
@@ -450,23 +390,7 @@ class Permissions
      */
     public static function normalizeAssets(array $granted): array
     {
-        $set = array_flip($granted);
-        $hierarchy = self::assetHierarchy();
-
-        if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter(array_keys($set), fn ($key) => ! str_starts_with($key, 'assets.')));
-        }
-
-        // Master on: a management child requires its group view.
-        foreach ($hierarchy['groups'] as $viewKey => $children) {
-            if (! isset($set[$viewKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree($granted, self::assetHierarchy());
     }
 
     /**
@@ -531,16 +455,7 @@ class Permissions
             ));
         }
 
-        // Master on: a management child requires its group view.
-        foreach ($hierarchy['groups'] as $viewKey => $children) {
-            if (! isset($set[$viewKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree(array_keys($set), $hierarchy);
     }
 
     /**
@@ -571,23 +486,7 @@ class Permissions
      */
     public static function normalizeRequests(array $granted): array
     {
-        $set = array_flip($granted);
-        $hierarchy = self::requestHierarchy();
-
-        if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter(array_keys($set), fn ($key) => ! str_starts_with($key, 'requests.')));
-        }
-
-        // Master on: a child requires its group key.
-        foreach ($hierarchy['groups'] as $groupKey => $children) {
-            if (! isset($set[$groupKey])) {
-                foreach ($children as $child) {
-                    unset($set[$child]);
-                }
-            }
-        }
-
-        return array_keys($set);
+        return self::normalizeTree($granted, self::requestHierarchy());
     }
 
     /**
@@ -615,11 +514,7 @@ class Permissions
      */
     public static function normalizeWorkflows(array $granted): array
     {
-        if (in_array(self::workflowHierarchy()['master'], $granted, true)) {
-            return $granted;
-        }
-
-        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'workflows.')));
+        return self::normalizeTree($granted, self::workflowHierarchy());
     }
 
     /**
@@ -656,11 +551,7 @@ class Permissions
      */
     public static function normalizeNotifications(array $granted): array
     {
-        if (in_array(self::notificationHierarchy()['master'], $granted, true)) {
-            return $granted;
-        }
-
-        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'notifications.')));
+        return self::normalizeTree($granted, self::notificationHierarchy());
     }
 
     /**
@@ -696,11 +587,7 @@ class Permissions
      */
     public static function normalizeReports(array $granted): array
     {
-        if (in_array(self::reportHierarchy()['master'], $granted, true)) {
-            return $granted;
-        }
-
-        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'reports.')));
+        return self::normalizeTree($granted, self::reportHierarchy());
     }
 
     /**
@@ -713,11 +600,35 @@ class Permissions
      */
     public static function normalizeSettings(array $granted): array
     {
-        if (in_array(self::SETTINGS_MASTER, $granted, true)) {
-            return $granted;
+        return self::normalizeTree($granted, ['master' => self::SETTINGS_MASTER, 'groups' => []]);
+    }
+
+    /**
+     * One module's tree rule: without its master every key of the module is dropped; with it, a child needs its group key.
+     * The module is the master key's prefix; other modules' keys pass through.
+     *
+     * @param  list<string>  $granted
+     * @param  array{master: string, groups: array<string, list<string>>}  $hierarchy
+     * @return list<string>
+     */
+    private static function normalizeTree(array $granted, array $hierarchy): array
+    {
+        $set = array_flip($granted);
+        $prefix = strstr($hierarchy['master'], '.', true).'.';
+
+        if (! isset($set[$hierarchy['master']])) {
+            return array_values(array_filter(array_keys($set), fn (string $key) => ! str_starts_with($key, $prefix)));
         }
 
-        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'settings.')));
+        foreach ($hierarchy['groups'] as $groupKey => $children) {
+            if (! isset($set[$groupKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
     }
 
     /**
@@ -751,10 +662,6 @@ class Permissions
      */
     public static function normalizeSystem(array $granted): array
     {
-        if (in_array(self::SYSTEM_MASTER, $granted, true)) {
-            return $granted;
-        }
-
-        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'system.')));
+        return self::normalizeTree($granted, ['master' => self::SYSTEM_MASTER, 'groups' => []]);
     }
 }
