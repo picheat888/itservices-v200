@@ -18,6 +18,8 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -1288,54 +1290,53 @@ function DeliveryLogPane() {
     const rows = data?.data ?? [];
     const meta = data?.meta;
     const counts = meta?.counts;
+    const dateWidth = useDateColumnWidth();
 
     const columns: Column<EmailLogRow>[] = [
         {
             key: 'created_at',
             header: t('email_log_time'),
-            className: 'w-[15%]',
+            width: dateWidth,
             render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
         },
         {
             key: 'template',
             header: t('email_trigger'),
-            className: 'w-[16%] max-w-0',
-            hideBelow: 'lg',
-            render: (r) => <span className="block truncate text-xs">{r.template_key ?? '—'}</span>,
+            width: '168px',
+            render: (r) => <TruncText text={r.template_key ?? '—'} className="text-xs" />,
         },
         {
             key: 'subject',
             header: t('email_subject'),
-            className: 'w-[26%] max-w-0',
-            render: (r) => <span className="block truncate text-xs">{r.subject}</span>,
+            minWidth: '16rem',
+            render: (r) => <TruncText text={r.subject} className="text-xs" />,
         },
         {
             key: 'recipient',
             header: t('email_log_recipient'),
-            className: 'w-[19%] max-w-0',
+            width: '224px',
             // Name first when known; a skipped row has no address, so the name says who was left out.
             render: (r) =>
                 r.recipient_name ? (
                     <div className="min-w-0">
-                        <div className="truncate text-xs font-medium">{r.recipient_name}</div>
-                        <div className="text-muted-foreground mt-0.5 truncate text-xs">{r.to_email ?? t('email_log_no_address')}</div>
+                        <TruncText text={r.recipient_name} className="text-xs font-medium" />
+                        <TruncText text={r.to_email ?? t('email_log_no_address')} className="text-muted-foreground mt-0.5 text-xs" />
                     </div>
                 ) : (
-                    <div className="truncate text-xs">{r.to_email ?? t('email_log_no_address')}</div>
+                    <TruncText text={r.to_email ?? t('email_log_no_address')} className="text-xs" />
                 ),
         },
         {
             key: 'status',
             header: t('status'),
-            className: 'w-[11%]',
+            width: '116px',
             render: (r) => <StatusBadge tone={LOG_STATUS_META[r.status].tone}>{t(LOG_STATUS_META[r.status].labelKey)}</StatusBadge>,
         },
         {
             key: 'error',
             header: t('email_log_reason'),
-            className: 'w-[13%] max-w-0',
-            hideBelow: 'lg',
-            render: (r) => <span className="text-muted-foreground block truncate text-xs">{r.error ?? '—'}</span>,
+            minWidth: '14rem',
+            render: (r) => <TruncText text={r.error ?? '—'} className="text-muted-foreground text-xs" />,
         },
     ];
 
