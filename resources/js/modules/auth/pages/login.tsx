@@ -8,7 +8,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { markShownInline } from '@/shared/lib/http-errors';
-import { readSignedOutBy, serverFileTarget, type SignedOutBy, type SignedOutReason } from '@/shared/lib/login-redirect';
+import { loginNoticeReason, readSignedOutBy, serverFileTarget, type SignedOutBy, type SignedOutReason } from '@/shared/lib/login-redirect';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -32,8 +32,6 @@ const NOTICES: Record<SignedOutReason, { icon: LucideIcon; text: string }> = {
     profile: { icon: LogOut, text: 'login_notice_profile' },
     limit: { icon: Shield, text: 'login_notice_limit' },
 };
-
-const noticeReason = (reason: string | null): SignedOutReason | null => (Object.keys(NOTICES) as SignedOutReason[]).find((r) => r === reason) ?? null;
 
 // A touch screen lets the server label an iPad that reports itself as a Mac (display only)
 const hasTouchScreen = (): boolean => navigator.maxTouchPoints > 1;
@@ -85,13 +83,13 @@ export default function LoginPage() {
 
     // Signed out by the idle timer or from elsewhere: say so once, then drop ?reason= so a reload does not repeat it
     const [searchParams, setSearchParams] = useSearchParams();
-    const [signedOutReason, setSignedOutReason] = useState(() => noticeReason(searchParams.get('reason')));
+    const [signedOutReason, setSignedOutReason] = useState(() => loginNoticeReason(searchParams.get('reason')));
     const [signedOutBy, setSignedOutBy] = useState<SignedOutBy | null>(() =>
-        noticeReason(searchParams.get('reason')) === 'third_device' ? readSignedOutBy() : null,
+        loginNoticeReason(searchParams.get('reason')) === 'third_device' ? readSignedOutBy() : null,
     );
     useEffect(() => {
         if (!searchParams.has('reason')) return;
-        const reason = noticeReason(searchParams.get('reason'));
+        const reason = loginNoticeReason(searchParams.get('reason'));
         if (reason) setSignedOutReason(reason);
         const by = reason === 'third_device' ? readSignedOutBy() : null;
         if (by) setSignedOutBy(by);
