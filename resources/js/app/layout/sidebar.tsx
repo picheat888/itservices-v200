@@ -342,53 +342,58 @@ function NavRow({ item, badge, onPick }: { item: NavItem; badge: number | null; 
     const t = useT();
     const fmtN = useNumberFormat();
     const rises = useCountRises(badge);
+    const pageMissing = useUiStore((s) => s.pageMissing);
     const Icon = item.icon;
     return (
         <NavLink
             to={item.to}
             end={item.to === '/'}
+            aria-current={pageMissing ? false : 'page'}
             title={t(item.label)}
             onClick={onPick}
             className={({ isActive }) =>
                 cn(
                     'group relative flex items-center gap-3 overflow-hidden rounded-md py-2 pr-3 pl-[15px] text-sm font-medium focus-visible:outline-none',
-                    isActive ? 'text-brand-ink font-semibold' : 'text-sidebar-foreground',
+                    isActive && !pageMissing ? 'text-brand-ink font-semibold' : 'text-sidebar-foreground',
                 )
             }
         >
-            {({ isActive }) => (
-                <>
-                    <span
-                        aria-hidden="true"
-                        className={cn(
-                            'nav-row-bg group-focus-visible:ring-ring absolute inset-0 rounded-md group-focus-visible:ring-2 group-focus-visible:ring-inset',
-                            isActive ? 'bg-brand/15' : 'group-hover:bg-sidebar-accent',
-                        )}
-                    />
-                    <Icon className="relative h-[18px] w-[18px] shrink-0" />
-                    <span className="nav-label relative min-w-0 flex-1 truncate">{t(item.label)}</span>
-                    {!!badge && (
-                        <>
-                            {/* Rail dot and menu pill; the outer span carries the rail/menu cross-fade, the inner one the motion */}
-                            <span aria-hidden="true" className="nav-mark absolute top-1.5 left-[35px]">
-                                <span key={rises} className={cn('bg-brand block h-2 w-2 rounded-full', badgeMotion(rises))} />
-                            </span>
-                            <span aria-hidden="true" className="nav-label relative shrink-0">
-                                <span
-                                    key={rises}
-                                    className={cn(
-                                        'bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground block rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
-                                        badgeMotion(rises),
-                                    )}
-                                >
-                                    {fmtN(badge)}
+            {({ isActive: routeActive }) => {
+                const isActive = routeActive && !pageMissing;
+                return (
+                    <>
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                'nav-row-bg group-focus-visible:ring-ring absolute inset-0 rounded-md group-focus-visible:ring-2 group-focus-visible:ring-inset',
+                                isActive ? 'bg-brand/15' : 'group-hover:bg-sidebar-accent',
+                            )}
+                        />
+                        <Icon className="relative h-[18px] w-[18px] shrink-0" />
+                        <span className="nav-label relative min-w-0 flex-1 truncate">{t(item.label)}</span>
+                        {!!badge && (
+                            <>
+                                {/* Rail dot and menu pill; the outer span carries the rail/menu cross-fade, the inner one the motion */}
+                                <span aria-hidden="true" className="nav-mark absolute top-1.5 left-[35px]">
+                                    <span key={rises} className={cn('bg-brand block h-2 w-2 rounded-full', badgeMotion(rises))} />
                                 </span>
-                            </span>
-                            <span className="sr-only">, {t('nav_badge_sr').replace('{n}', fmtN(badge))}</span>
-                        </>
-                    )}
-                </>
-            )}
+                                <span aria-hidden="true" className="nav-label relative shrink-0">
+                                    <span
+                                        key={rises}
+                                        className={cn(
+                                            'bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground block rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
+                                            badgeMotion(rises),
+                                        )}
+                                    >
+                                        {fmtN(badge)}
+                                    </span>
+                                </span>
+                                <span className="sr-only">, {t('nav_badge_sr').replace('{n}', fmtN(badge))}</span>
+                            </>
+                        )}
+                    </>
+                );
+            }}
         </NavLink>
     );
 }

@@ -251,6 +251,11 @@ export const common: Dict = {
     // not-found.tsx — an address that does not exist
     cmn_not_found_title: 'ไม่พบหน้านี้',
     cmn_not_found_hint: 'ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว',
+    cmn_not_found_crumb: 'ไม่พบหน้า',
+
+    // require-permission.tsx — no access page
+    err_noaccess_line1: 'บัญชีของคุณยังไม่มีสิทธิ์เปิดหน้านี้',
+    err_noaccess_line2: 'ถ้าต้องใช้งานให้ติดต่อ IT',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'น้ำเงิน',

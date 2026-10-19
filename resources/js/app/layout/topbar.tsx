@@ -41,8 +41,9 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const bellPops = useCountRises(notifData ? unreadCount : null);
 
     const crumbTail = useUiStore((s) => s.crumbTail);
-    const current = findNavItem(pathname);
-    const here = current ? t(current.label) : t('overall');
+    const pageMissing = useUiStore((s) => s.pageMissing);
+    const current = pageMissing ? undefined : findNavItem(pathname);
+    const here = pageMissing ? t('cmn_not_found_crumb') : current ? t(current.label) : t('overall');
     // Breadcrumb: the sidebar section this page sits in
     const section = current ? navGroups.find((g) => g.items.includes(current)) : undefined;
 

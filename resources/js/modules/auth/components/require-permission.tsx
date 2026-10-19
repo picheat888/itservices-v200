@@ -1,8 +1,9 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth/hooks/use-auth';
-import { EmptyState } from '@/shared/components/empty-state';
+import { ErrorIcon, ErrorState } from '@/shared/components/error-state';
 import type { Role } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 /**
@@ -41,11 +42,17 @@ export function NoAccess({ title, hint }: { title?: string; hint?: string }) {
 
     return (
         <div className="grid min-h-[72dvh] place-items-center px-4">
-            <EmptyState kind="denied" titleAs="h1" title={title ?? t('cmn_empty_no_access')} hint={hint ?? t('cmn_empty_no_access_hint')}>
-                <Button asChild variant="outline">
-                    <Link to="/">{t('noaccess_back')}</Link>
-                </Button>
-            </EmptyState>
+            <ErrorState
+                variant="page"
+                visual={<ErrorIcon icon={Lock} tone="info" />}
+                title={title ?? t('cmn_empty_no_access')}
+                lines={hint ? [hint] : [t('err_noaccess_line1'), t('err_noaccess_line2')]}
+                actions={
+                    <Button asChild className="w-full">
+                        <Link to="/">{t('noaccess_back')}</Link>
+                    </Button>
+                }
+            />
         </div>
     );
 }

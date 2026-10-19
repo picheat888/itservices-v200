@@ -11,11 +11,12 @@ export function useDocumentTitle(explicitKey?: string) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const brandName = useUiStore((s) => s.brandName);
+    const pageMissing = useUiStore((s) => s.pageMissing);
     const { pathname } = useLocation();
 
     useEffect(() => {
         const item = findNavItem(pathname);
-        const labelKey = explicitKey ?? item?.label ?? 'overall';
+        const labelKey = explicitKey ?? (pageMissing ? 'cmn_not_found_crumb' : (item?.label ?? 'overall'));
         document.title = `${t(labelKey)} - ${brandName}`;
-    }, [pathname, explicitKey, lang, t, brandName]);
+    }, [pathname, explicitKey, pageMissing, lang, t, brandName]);
 }
