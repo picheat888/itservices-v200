@@ -573,7 +573,11 @@ export function AccessOverview({
                                         key="recent"
                                         icon={TrendingUp}
                                         tone="ink"
-                                        title={t('access_dash_recent_title')}
+                                        title={
+                                            shownPeriod === 'all'
+                                                ? t('access_dash_recent_title_all')
+                                                : t('access_dash_recent_title').replace('{period}', periodWords.within(shownPeriod))
+                                        }
                                         sub={t('access_dash_recent_sub')}
                                         value={gov.added_in_period}
                                     />
