@@ -9,7 +9,7 @@ import { useFormError } from '@/shared/hooks/use-form-error';
 import { refusalText } from '@/shared/lib/api-errors';
 import type { Ticket, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Check, Info, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
@@ -69,7 +69,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0">
+            <FormDialogContent>
                 <FocusDialogHeader
                     icon={UserPlus}
                     eyebrow={view?.ticket_no}
@@ -78,7 +78,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                     srDescription={t('ticket_assign')}
                 />
 
-                <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <Field label={t('ticket_select_staff')} required>
@@ -95,9 +95,9 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                         <Info className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>{t('ticket_notify_assignee')}</span>
                     </div>
-                </div>
+                </DialogBody>
 
-                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 rounded-b-lg border-t px-6 py-3.5">
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
@@ -105,8 +105,8 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                         <Check className="h-4 w-4" />
                         {t('ticket_assign')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

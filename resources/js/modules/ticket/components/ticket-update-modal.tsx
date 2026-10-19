@@ -11,7 +11,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { AlertTriangle, ArrowRight, MessageSquarePlus, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -110,7 +110,7 @@ export function TicketUpdateModal({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+            <FormDialogContent>
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
                     eyebrow={view?.ticket_no}
@@ -119,7 +119,7 @@ export function TicketUpdateModal({
                     srDescription={t('ticket_update_title')}
                 />
 
-                <div className="flex-1 space-y-4 overflow-y-auto border-t px-6 py-6">
+                <DialogBody className="space-y-4">
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <p className="text-muted-foreground text-sm">{t('ticket_update_hint')}</p>
@@ -187,9 +187,9 @@ export function TicketUpdateModal({
                                 <span>{t('ticket_work_class_forecast_unavailable')}</span>
                             </div>
                         ))}
-                </div>
+                </DialogBody>
 
-                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
@@ -197,8 +197,8 @@ export function TicketUpdateModal({
                         <Send className="h-4 w-4" />
                         {t('ticket_update_save')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
