@@ -18,8 +18,6 @@ use App\Services\Asset\AssetService;
  */
 final class DemoAssets implements DemoStep
 {
-    private const PERFORMED_BY = 'IT Team';
-
     /** [model key, category name, value, vendor key] — cycled to build the purchased fleet. */
     private const FLEET = [
         ['latitude', 'Laptop', 32000, 'dell'],
@@ -122,13 +120,13 @@ final class DemoAssets implements DemoStep
                 'owner_label' => 'Shared - '.$ctx->locations[$locationKey]->name,
                 'location_id' => $ctx->locations[$locationKey]->id,
                 'reason' => 'Shared equipment',
-            ], self::PERFORMED_BY);
+            ], $ctx->user('it.lead'));
             $ctx->audit('Transferred asset', "{$ctx->assets[$assetKey]->asset_code} → {$ctx->assets[$assetKey]->ownerCode()}");
         }
 
         // A shared item relocated with its line.
         $clock->at($clock->daysAgo(60));
-        $ctx->assets['a-035'] = $this->assets->relocate($ctx->assets['a-035']->fresh(), $ctx->locations['plant4'], self::PERFORMED_BY, 'Line moved to plant 4');
+        $ctx->assets['a-035'] = $this->assets->relocate($ctx->assets['a-035']->fresh(), $ctx->locations['plant4'], $ctx->user('it.lead'), 'Line moved to plant 4');
         $ctx->audit('Updated asset location', "{$ctx->assets['a-035']->asset_code} → {$ctx->locations['plant4']->name}");
 
         // Return requested (pending_return), and one received back into the pool.
@@ -141,7 +139,7 @@ final class DemoAssets implements DemoStep
         }
         $clock->at($clock->daysAgo(3));
         $ctx->actAs($lead);
-        $ctx->assets['a-006'] = $this->assets->markReceived($ctx->assets['a-006']->fresh(), self::PERFORMED_BY, $warehouses->first()->name);
+        $ctx->assets['a-006'] = $this->assets->markReceived($ctx->assets['a-006']->fresh(), $ctx->user('it.lead'), $warehouses->first()->name);
         $ctx->audit('Received asset', $ctx->assets['a-006']->asset_code);
 
         // Written off from the pool.
@@ -167,7 +165,7 @@ final class DemoAssets implements DemoStep
             'owner_employee_id' => $ctx->employee($employeeKey)->id,
             'location_id' => $ctx->locations['hq2']->id,
             'reason' => 'New equipment for daily work',
-        ], self::PERFORMED_BY);
+        ], $ctx->user('it.lead'));
         $ctx->audit('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}");
 
         if ($accept) {

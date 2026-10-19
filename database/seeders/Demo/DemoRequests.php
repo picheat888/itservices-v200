@@ -11,6 +11,7 @@ use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Services\Employee\EmployeeOnboardingService;
 use App\Services\Request\RequestService;
+use App\Services\Ticket\TicketClosureService;
 use App\Services\Ticket\TicketService;
 use Illuminate\Http\UploadedFile;
 use RuntimeException;
@@ -81,6 +82,7 @@ final class DemoRequests implements DemoStep
     public function __construct(
         private readonly RequestService $requests,
         private readonly TicketService $tickets,
+        private readonly TicketClosureService $closures,
         private readonly EmployeeOnboardingService $onboarding,
     ) {}
 
@@ -194,9 +196,8 @@ final class DemoRequests implements DemoStep
         $delivered = $kind === 'completed';
         $resolution = $delivered ? 'Delivered and set up with the requester.' : 'Not delivered - facilities will provide the canteen TV.';
         $clock->at($clock->after($taken, max(0, $lastDay - 3), 15));
-        $ticket = $this->tickets->resolve($ticket->fresh(), $delivered, $resolution);
-        $ctx->audit('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
-        $this->requests->settleFromTicket($ticket, $lead, $delivered, $resolution);
+        // Closes the case and settles its request together, with its own audit entry
+        $this->closures->close($ticket->fresh(), $lead, $delivered, $resolution);
     }
 
     private function currentApproval(ServiceRequest $request): ?RequestApproval
