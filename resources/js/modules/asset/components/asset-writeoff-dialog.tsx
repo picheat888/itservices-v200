@@ -24,6 +24,7 @@ import { useAssetMutations } from '../hooks/use-assets';
 export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: number[]; open: boolean; onClose: () => void; onDone: () => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const selectedCount = t('asset_bulk_count').replace('{count}', fmtN(ids.length));
     const { bulk } = useAssetMutations();
     const { data: reasons = [] } = useWriteoffReasons();
     const [reasonId, setReasonId] = useState('');
@@ -73,11 +74,7 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <FormDialogContent>
-                <FocusDialogHeader
-                    icon={FlaskConicalOff}
-                    eyebrow={t('asset_bulk_count').replace('{count}', fmtN(ids.length))}
-                    title={t('asset_writeoff_title')}
-                />
+                <FocusDialogHeader icon={FlaskConicalOff} eyebrow={selectedCount} title={t('asset_writeoff_title')} srDescription={selectedCount} />
 
                 <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
