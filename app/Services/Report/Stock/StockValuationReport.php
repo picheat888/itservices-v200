@@ -13,6 +13,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Services\Report\Tabular\ThaiWords;
 use App\Support\SearchTerms;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -102,6 +103,11 @@ class StockValuationReport extends TabularReport
     public function countingNotes(array $filters): array
     {
         return [...parent::countingNotes($filters), 'มูลค่าคงคลังคิดแบบเข้าก่อนออกก่อน (FIFO) ต้นทุนเฉลี่ย = มูลค่าคงคลัง (FIFO) ÷ จำนวนคงเหลือ'];
+    }
+
+    public function tileLabels(): array
+    {
+        return array_filter(['total' => ThaiWords::get('rep_sva_k_held')]);
     }
 
     public function summary(Builder $query, array $filters): array

@@ -9,7 +9,7 @@ import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { SummaryItem } from '../types';
-import { reportDates, Sparkline } from './chart-parts';
+import { InfoMark, reportDates, Sparkline } from './chart-parts';
 import { FILL } from './chart-tones';
 import { KpiTile } from './kpi-tile';
 import { formatLiveNumber } from './report-scope';
@@ -202,15 +202,18 @@ export function SummaryStrip({ items }: { items: SummaryItem[] }) {
                         value={item.format === 'years' && item.value !== null ? <YearsTip years={item.value}>{value}</YearsTip> : value}
                         unit={unit}
                         badge={
-                            share !== null ? (
-                                assetColor ? (
-                                    <StatusBadge color={assetColor}>{`${share}%`}</StatusBadge>
-                                ) : (
-                                    <StatusBadge tone={base}>{`${share}%`}</StatusBadge>
-                                )
-                            ) : goal !== null ? (
-                                <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', fmtN(goal))}</StatusBadge>
-                            ) : undefined
+                            <>
+                                {share !== null ? (
+                                    assetColor ? (
+                                        <StatusBadge color={assetColor}>{`${share}%`}</StatusBadge>
+                                    ) : (
+                                        <StatusBadge tone={base}>{`${share}%`}</StatusBadge>
+                                    )
+                                ) : goal !== null ? (
+                                    <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', fmtN(goal))}</StatusBadge>
+                                ) : null}
+                                {item.info_key && <InfoMark info={t(item.info_key)} />}
+                            </>
                         }
                         // Flagged only above zero: red below the goal or for a red tile, amber for an amber one.
                         alert={

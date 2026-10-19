@@ -1,7 +1,7 @@
 {{-- PDF of any tabular report (Report Center → /reports/tabular/{key}/export). Rendered by TabularReportExporter. No queries here: the report's query() eager-loads everything the columns read. --}}
 @php
     $num = fn ($n) => \App\Services\Report\Tabular\TileText::number($n);
-    $tiles = array_map(fn ($tile) => \App\Services\Report\Tabular\TileText::of($tile, $company['currency']), $summary);
+    $tiles = array_map(fn ($tile) => \App\Services\Report\Tabular\TileText::of($tile, $company['currency'], $report->tileLabels()[$tile->key] ?? null), $summary);
     $columns = $report->exportColumns();
     $numeric = ['number', 'money', 'days_left', 'hours_left'];
     $lines = array_values(array_filter([
@@ -158,7 +158,7 @@
 
 {{-- Explanation page: the summary tiles the page explains, every printed column's meaning (the Excel glossary), how it counts --}}
 @php
-    $tileMeanings = $report->summaryMeanings();
+    $tileMeanings = array_filter(array_map(fn ($tile) => ($key = $report->tileInfoKey($tile->key)) ? \App\Services\Report\Tabular\ThaiWords::get($key) : null, $summary));
     $countingNotes ??= $report->countingNotes([]);
     $columnMeanings = array_values(array_filter(array_map(fn ($c) => [$c->heading, $report->columnMeaning($c)], $columns), fn ($m) => $m[1] !== ''));
 @endphp
@@ -167,10 +167,8 @@
     @if ($tileMeanings)
         <h3>ตัวเลขสรุป</h3>
         <table class="data">
-            @foreach ($summary as $i => $tile)
-                @if (isset($tileMeanings[$tile->key]))
-                    <tr><td class="term">{{ $tiles[$i]['label'] }}</td><td>{{ $tileMeanings[$tile->key] }}</td></tr>
-                @endif
+            @foreach ($tileMeanings as $i => $meaning)
+                <tr><td class="term">{{ $tiles[$i]['label'] }}</td><td>{{ $meaning }}</td></tr>
             @endforeach
         </table>
     @endif

@@ -15,6 +15,7 @@ use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
+use App\Services\Report\Tabular\ThaiWords;
 use App\Support\DateDisplay;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -365,6 +366,16 @@ class ContractRenewalsReport extends TabularReport
             ->filter(fn (array $row) => $from === null || $row['closed_at'] >= $from->format('Y-m-d'))
             ->sortBy([['closed_at', 'desc'], ['code', 'asc']])
             ->values();
+    }
+
+    protected function infoKeys(): array
+    {
+        return ['no_file' => 'rep_cren_k_files_hint'];
+    }
+
+    public function tileLabels(): array
+    {
+        return array_filter(['total' => 'สัญญาในรายการ', 'overdue' => ThaiWords::get('rep_cren_k_overdue')]);
     }
 
     public function summary(Builder $query, array $filters): array

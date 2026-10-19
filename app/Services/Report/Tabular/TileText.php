@@ -17,13 +17,13 @@ final class TileText
     /**
      * @return array{label: string, value: string, badge: ?string, line: ?string, line_tone: ?string, tone: ?string, alert: bool}
      */
-    public static function of(ReportSummary $tile, string $currency = 'THB'): array
+    public static function of(ReportSummary $tile, string $currency = 'THB', ?string $label = null): array
     {
         $tone = $tile->tone === null ? null : self::TONES[preg_replace('/^soft-/', '', $tile->tone)] ?? null;
         [$line, $lineTone] = self::line($tile);
 
         return [
-            'label' => self::label($tile),
+            'label' => $label ?? self::label($tile),
             'value' => self::value($tile->value, $tile->format, $currency),
             'badge' => $tile->share !== null ? $tile->share.'%' : ($tile->goal !== null ? 'เป้า '.$tile->goal.'%' : null),
             'line' => $line,

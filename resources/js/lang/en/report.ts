@@ -1595,7 +1595,7 @@ export const report: Dict = {
     rep_cov_k_monthly: 'Cost per month',
     rep_cov_k_monthly_foot: 'Per year {amount}',
     rep_cov_k_next12: 'Due in 12 months',
-    rep_cov_k_next12_hint: 'Bills that fall due in the 12 months from this month',
+    rep_cov_k_next12_hint: 'Bills that fall due in the 12 months from today',
     rep_cov_k_next12_foot: 'From {n} bills, renewals not included',
     rep_cov_k_remaining: 'Left on contracts',
     rep_cov_k_remaining_hint: 'Bills left until the end date of every contract still open',
@@ -2083,4 +2083,195 @@ export const report: Dict = {
     rep_empty_tickets_overview_by_assignee_hint: 'Try a wider date range or clear the filters.',
     rep_empty_tickets_overview_rows: 'No ticket matches these filters',
     rep_empty_tickets_overview_rows_hint: 'Try a wider date range or clear the filters.',
+
+    // summary-strip.tsx · pdf/reports — tile ⓘ explanations
+    rep_info_tickets_overview_total: 'Tickets opened in the chosen dates, by the chosen filters. The line below is the same-length period before.',
+    rep_info_tickets_overview_completed:
+        'Tickets opened in the chosen dates and completed. The percent is of all tickets; the line below counts the canceled ones.',
+    rep_info_tickets_overview_sla_rate:
+        'Share of completed cases closed by their SLA close deadline, of tickets opened in the chosen dates. Canceled and open cases are left out.',
+    rep_info_tickets_overview_avg_resolve_hours:
+        'Average calendar hours from taking the case to completing it, waiting time left out, for completed cases opened in the chosen dates. P90: 90% of cases were fixed within it.',
+    rep_info_tickets_overview_backlog:
+        'Tickets not closed now, whatever the dates, by the other filters: open, in progress, and those past their SLA deadline.',
+    rep_info_tickets_backlog_total:
+        'Tickets not closed now, waiting to be taken or in progress, by the chosen filters including the SLA one, whenever they were opened.',
+    rep_info_tickets_backlog_over_sla:
+        'Tickets not closed and past their SLA deadline now: the take deadline while nobody has taken it, the close deadline once taken.',
+    rep_info_tickets_backlog_due_soon:
+        'Tickets not yet past SLA that fall due within 24 hours from now. The line below is when the next one falls due.',
+    rep_info_tickets_backlog_unassigned: 'Tickets not closed with nobody assigned now. The line below is the longest wait since opening.',
+    rep_info_tickets_manual_sla_ms_total:
+        'Tickets staff opened themselves in the chosen dates: completed, canceled and still open (open or in progress).',
+    rep_info_tickets_manual_sla_ms_close_rate:
+        'Share of completed cases closed by their SLA close deadline, of tickets opened in the chosen dates. Canceled and open cases are left out.',
+    rep_info_tickets_manual_sla_ms_take_rate:
+        'Share of cases taken by their SLA take deadline, of every case taken (canceled later included), for tickets opened in the chosen dates.',
+    rep_info_tickets_manual_sla_ms_fix_avg:
+        'Average calendar hours from taking the case to closing it, waiting time left out, for completed cases opened in the chosen dates. The line below is the average wait to be taken.',
+    rep_info_tickets_manual_sla_ms_over_sla:
+        'Cases opened in the chosen dates, not closed and past their SLA deadline now: not taken, or taken and not closed. Older cases are in the open-tickets report.',
+    rep_info_tickets_request_sla_rs_total:
+        'Tickets the system opened from fully approved requests in the chosen dates: completed, canceled and still open.',
+    rep_info_tickets_request_sla_rs_close_rate:
+        'Share of completed cases closed by their SLA close deadline, of tickets opened in the chosen dates. Canceled and open cases are left out.',
+    rep_info_tickets_request_sla_rs_take_rate:
+        'Share of cases taken by their SLA take deadline, of every case taken, for tickets opened in the chosen dates.',
+    rep_info_tickets_request_sla_rs_fix_avg:
+        'Average calendar hours from opening to closing, nights and weekends included, completed cases only, split into waiting to be taken and fixing.',
+    rep_info_tickets_request_sla_rs_over_sla:
+        'Cases opened in the chosen dates, not closed and past their SLA deadline now: not taken, or taken and not closed.',
+    rep_info_requests_overview_rqo_total:
+        'Requests filed in the chosen dates by the chosen type, department and status (not the search): completed, not finished, and rejected or canceled.',
+    rep_info_requests_overview_rqo_pending:
+        'Requests waiting for an approver now, whenever filed, by the chosen type and department. The line below compares with 7 days ago.',
+    rep_info_requests_overview_rqo_completed:
+        'Requests filed in the chosen dates that IT has delivered. The line below counts the fully approved ones still waiting for IT.',
+    rep_info_requests_overview_rqo_rejected:
+        'Requests filed in the chosen dates that an approver rejected, counted by filing date. The line below compares with the same-length period before.',
+    rep_info_requests_overview_rqo_lead:
+        'Median whole calendar days from filing to completion, for requests filed in the chosen dates and completed.',
+    rep_info_requests_approvals_rqa_waiting:
+        'Requests waiting for an approver now, whenever they reached them, split by days since reaching the current approver.',
+    rep_info_requests_approvals_rqa_avg_days:
+        'Average days from a step reaching its approver to the decision, for steps reached in the chosen dates; steps still waiting count to today. Withdrawn and skipped steps are left out.',
+    rep_info_requests_approvals_rqa_rejected:
+        'Requests an approver rejected in the chosen dates, counted by rejection date. The line below compares with the same-length period before.',
+    rep_info_requests_approvals_rqa_skipped:
+        'Approval steps the system skipped on filing, with no approver found or the requester owning the item, for requests filed in the chosen dates. Counted per step; the approver filter does not apply.',
+    rep_info_requests_approvals_rqa_blocked:
+        'Requests waiting now whose approver has left or has no account, so nobody can approve them. Department steps with no named approver are not counted.',
+    rep_info_requests_it_pending_rqi_waiting: 'Fully approved requests waiting for IT now, by the chosen filters, split by days since full approval.',
+    rep_info_requests_it_pending_rqi_over_3: 'Requests waiting for IT 4 days or more since full approval, the over-7-days ones included.',
+    rep_info_requests_it_pending_rqi_over_7: 'Requests waiting for IT 8 days or more since full approval. The line below is the longest wait.',
+    rep_info_requests_it_pending_rqi_no_ticket:
+        'Fully approved requests with no ticket yet. The line below counts those with a ticket nobody is assigned to.',
+    rep_info_requests_it_pending_rqi_joiners:
+        'New joiners starting within 30 days before or after today with onboarding requests still waiting for approval or for IT. Only the department filter applies.',
+    rep_info_assets_overview_total:
+        'Every asset in the register now, written-off ones included, bought and rented. With a department picked, only assets its staff hold.',
+    rep_info_assets_overview_in_use:
+        'Assets staff hold and assets in shared use now, not those waiting to be accepted or returned. The percent is of all assets.',
+    rep_info_assets_overview_ready: 'Assets in store and ready to hand over now, bought and rented. The percent is of all assets.',
+    rep_info_assets_overview_pending_return: 'Assets whose return was requested, or whose holder left, waiting for IT to take them back now.',
+    rep_info_assets_transfer_history_th_handovers:
+        'Hand-overs out of store in the chosen dates, counted as times, not assets: to staff and to shared use.',
+    rep_info_assets_transfer_history_th_back_in:
+        'Times assets came back into store in the chosen dates: returns after use and recalls before the receiver accepted.',
+    rep_info_assets_transfer_history_th_waiting_now:
+        'Assets waiting now for staff to accept or for IT to take back, by status now, whatever the dates. Only the category and department filters apply.',
+    rep_info_assets_transfer_history_th_accept_median:
+        'Half the hand-overs to staff in the chosen dates were accepted within this time, in calendar hours, accepted ones only.',
+    rep_info_assets_transfer_history_th_relocations:
+        'Times an asset changed place with the same holder in the chosen dates, by who held it: staff, shared use or the store.',
+    rep_info_assets_writeoffs_wo_total:
+        'Assets taken off the register in the chosen dates, rented ones returned to the lessor included: bought and rented.',
+    rep_info_assets_writeoffs_wo_purchase_value:
+        'Total purchase price of bought assets written off in the chosen dates, rented ones left out. The line below is the count and the average per asset.',
+    rep_info_assets_writeoffs_wo_avg_life:
+        'Average years from purchase to write-off of bought assets written off in the chosen dates, those with no purchase date left out. The line below is the shortest-lived category.',
+    rep_info_assets_writeoffs_wo_under_warranty:
+        'Bought assets written off in the chosen dates while still under warranty (or lifetime warranty) that day. The line below is their total purchase price.',
+    rep_info_assets_writeoffs_wo_rented_overdue:
+        'Rented assets not yet returned to the lessor on contracts past their end date, now, whatever the dates. The line below names the contracts.',
+    rep_info_assets_warranty_expiring_wty_within:
+        'Bought assets whose warranty ends between today and the chosen number of days, lifetime warranties and written-off assets left out, by status now.',
+    rep_info_assets_warranty_expiring_wty_value:
+        'Total purchase price of the assets whose warranty ends within the chosen number of days from today.',
+    rep_info_assets_warranty_expiring_wty_within_30:
+        'Bought assets whose warranty ends within 30 days from today, whatever the chosen window. The line below is the nearest one.',
+    rep_info_assets_warranty_expiring_wty_expired:
+        'Bought assets out of warranty but still in the register now. The line below is their purchase price and how many are in store.',
+    rep_info_assets_warranty_expiring_wty_dated:
+        'Bought assets with a warranty end date recorded, against all bought assets not written off and not on lifetime warranty. The line below counts those missing the date or vendor.',
+    rep_info_contracts_overview_cov_in_reminder:
+        'Live contracts inside their reminder window now: days left within the farthest reminder switched on. Contracts with no reminder on are not counted.',
+    rep_info_contracts_overview_monthly_total: 'Yearly cost of the live contracts now divided by 12, from contract values, not payments made.',
+    rep_info_contracts_overview_yearly_total:
+        'Each bill times its billings in a year, over every live contract now, from contract values, not payments made.',
+    rep_info_contracts_overview_cov_top_vendor:
+        'The vendor with the highest yearly cost among live contracts now. The percent is its share of the whole yearly cost.',
+    rep_info_contracts_renewals_total:
+        'Contracts in the list below: not canceled or ended, ending within the chosen number of days or already past their end date, now.',
+    rep_info_contracts_renewals_within:
+        'Contracts not canceled or ended whose end date is after today and within the chosen number of days, overdue ones left out.',
+    rep_info_contracts_renewals_within_30: 'Contracts not canceled or ended that end within the next 30 days, now, whatever the chosen window.',
+    rep_info_contracts_renewals_overdue: 'Contracts at or past their end date not yet renewed, ended or canceled, today’s included, now.',
+    rep_info_contracts_renewals_closed_year: 'Contracts canceled or ended from 1 January this year to today.',
+    rep_info_contracts_rentals_crent_contracts_open:
+        'Hardware contracts not canceled or ended now: rent (rented assets linked), buy (only bought assets linked) and none linked.',
+    rep_info_contracts_rentals_crent_contracts_all:
+        'Every hardware contract, canceled and ended ones included: rent (rented assets linked), buy (only bought assets linked) and none linked.',
+    rep_info_contracts_rentals_crent_due_soon: 'Rented assets not yet returned on contracts ending within the next 90 days, now.',
+    rep_info_contracts_rentals_crent_ended_out: 'Rented assets not yet returned on contracts at or past their end date, or canceled or ended, now.',
+    rep_info_contracts_rentals_crent_unlinked_yearly:
+        'Yearly cost of the hardware contracts with no asset linked that are not canceled or ended, from contract values.',
+    rep_info_stock_below_min_out_of_stock: 'SKUs with nothing left across all warehouses now, by the chosen category.',
+    rep_info_stock_below_min_below_min: 'SKUs with a Min set and stock below it now, but not out.',
+    rep_info_stock_below_min_over_max: 'SKUs with more stock than their Max now.',
+    rep_info_stock_below_min_reorder_value:
+        'What it costs to fill out-of-stock and below-Min SKUs up to Max, at the last receiving price, else the set cost. SKUs with no price are left out.',
+    rep_info_stock_below_min_excess_value: 'Value of the quantity above Max, at the average cost of the lots left now.',
+    rep_info_stock_movements_receive_qty: 'Quantity received in the chosen dates, by the chosen warehouse and category, all units added together.',
+    rep_info_stock_movements_receive_value:
+        'Value received in the chosen dates, at the price entered on receiving, else the SKU’s average cost that day.',
+    rep_info_stock_movements_issue_qty: 'Quantity issued on approved requests in the chosen dates, all units added together.',
+    rep_info_stock_movements_issue_value:
+        'Value issued in the chosen dates, at the average cost of the lots received up to the issue day (average cost, not FIFO).',
+    rep_info_stock_movements_return_qty: 'Quantity returned to store in the chosen dates, all units added together.',
+    rep_info_stock_movements_transfer_qty: 'Quantity moved between warehouses in the chosen dates; the total on hand does not change.',
+    rep_info_stock_movements_adjust_net:
+        'Net change from stock counts in the chosen dates: adjusted up minus adjusted down; below zero means more short than over.',
+    rep_info_stock_valuation_total: 'SKUs with stock above 0 at the end of the chosen day, by the chosen category and search.',
+    rep_info_stock_valuation_qty_total: 'Total quantity on hand at the end of the chosen day, every warehouse and unit added together.',
+    rep_info_stock_valuation_stock_value: 'Stock value at the end of the chosen day, FIFO: what is left in each lot times that lot’s price.',
+    rep_info_stock_valuation_out: 'SKUs in the chosen category with nothing on hand at the end of the chosen day.',
+    rep_info_stock_valuation_dead90_count:
+        'SKUs with stock but no receipt, issue, return, transfer or adjustment for over 90 days up to the chosen day, always 90 days.',
+    rep_info_stock_valuation_dead90_value: 'FIFO value of the SKUs with no movement for over 90 days, at the end of the chosen day.',
+    rep_info_employees_overview_eo_working:
+        'Staff working on the last day of the chosen dates, or today if the range has not ended, against the start of the range.',
+    rep_info_employees_overview_eo_joined:
+        'New staff whose start day falls in the chosen dates and has come. Those not started yet are in the line below.',
+    rep_info_employees_overview_eo_left:
+        'Staff whose last day falls in the chosen dates, ones not yet gone included. The rate is against the average headcount, compared with the same-length period before.',
+    rep_info_employees_overview_eo_preparing:
+        'New staff in the chosen dates with onboarding requests not finished, rejected ones included. The line below counts who has started and when the next one starts.',
+    rep_info_employees_overview_eo_holding:
+        'People past their last day still holding access now, whatever the dates. The split by resource type counts grants.',
+    rep_info_employees_open_items_total:
+        'Staff with at least one open item now, plus accounts with no employee; a person with several counts once. The topic filter does not change the tiles.',
+    rep_info_employees_open_items_open_assets:
+        'People recorded as resigned who still hold assets now, those before their last day included, counted per person.',
+    rep_info_employees_open_items_open_access: 'People past their last day still holding access of any resource type now, counted per person.',
+    rep_info_employees_open_items_open_accounts:
+        'Accounts to deal with now: leavers’ accounts, first passwords not changed, and expired passwords when the policy is on.',
+    rep_info_employees_open_items_open_data:
+        'Staff with missing or clashing data now: no manager, email, department, section or position (working staff), or dates that do not fit (everyone).',
+    rep_info_access_overview_ac_active: 'Access grants not revoked now, leavers’ included, by resource type, whatever the dates.',
+    rep_info_access_overview_ac_holders:
+        'Working staff holding at least one grant now. The percent is of all working staff in the chosen department.',
+    rep_info_access_overview_ac_granted:
+        'Grants given in the chosen dates. The line below counts those revoked in the same dates and the net change.',
+    rep_info_access_overview_ac_leavers: 'Grants not revoked of people past their last day (or with no last day recorded) now, whatever the dates.',
+    rep_info_access_overview_ac_care:
+        'Email groups and file shares whose owner left or that have none, and resources with no member, now; each counted once, whatever the department filter.',
+    rep_info_access_resource_members_ar_resources:
+        'Email groups, file shares and social / internet resources by the filters, by type. Software is in the licence report.',
+    rep_info_access_resource_members_ar_members:
+        'Members not revoked across the resources in the report now; a person in several counts each time. The line below is the number of people.',
+    rep_info_access_resource_members_ar_cross:
+        'Working members from another department than the email group or file share. The percent is of members whose department can be compared.',
+    rep_info_access_resource_members_ar_leavers:
+        'Memberships not revoked of people past their last day now. The line below counts the resources that still have them.',
+    rep_info_access_resource_members_ar_owner: 'Email groups and file shares with no owner, or whose owner has left, now.',
+    rep_info_access_software_licenses_sl_software:
+        'Software in the register by the filters, by licence type: perpetual, subscription, free and open source. Those with no type are not in the split.',
+    rep_info_access_software_licenses_sl_bought: 'Licences of software with a set number: held by working staff, by leavers, and free, now.',
+    rep_info_access_software_licenses_sl_used:
+        'Licences held now, unlimited software included, so it can be above licences bought; against each month end of the last 6 months.',
+    rep_info_access_software_licenses_sl_full:
+        'Software using all its licences or more now. The line below splits those with requests waiting, those full and those with room.',
+    rep_info_access_software_licenses_sl_leavers:
+        'Licences still held by people past their last day now, counted per licence and free to take back. The line below is the number of people and the longest time gone.',
 };

@@ -65,7 +65,7 @@ class TabularReportController extends Controller
     private function headline(TabularReport $report, Builder $query, array $filters): array
     {
         return [
-            'summary' => array_map(fn (ReportSummary $s) => $s->toArray(), $report->summary($query, $filters)),
+            'summary' => array_map(fn (ReportSummary $s) => [...$s->toArray(), 'info_key' => $report->tileInfoKey($s->key)], $report->summary($query, $filters)),
             'charts' => $report->charts($query, $filters),
         ];
     }
