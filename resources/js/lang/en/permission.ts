@@ -8,6 +8,8 @@ export const permission: Dict = {
     perm_groups: 'Role Groups',
     perm_audit: 'Audit logs',
     perm_audit_search: 'Search action, item or user…',
+    perm_logins: 'Login',
+    perm_logins_search: 'Search employee name, username, IP or place…',
     perm_load_failed: 'Could not load the permissions. Please try again.',
     perm_members: 'members',
     perm_enabled: 'permissions enabled',
@@ -129,6 +131,10 @@ export const permission: Dict = {
     audit_records: 'Records',
     audit_target: 'Target',
     audit_details: 'Details',
+    perm_login_col_event: 'Event',
+    perm_login_col_ip: 'IP',
+    perm_login_col_place: 'Location',
+    perm_login_col_device: 'Device',
     permission_level: 'Permission level',
 
     // modules/permissions/lib/permission-labels.ts — permission tree labels
@@ -578,6 +584,7 @@ export const permission: Dict = {
     perm_conflict_title: 'This Role Template just changed',
     perm_discard_title: 'Discard unsaved permissions?',
     perm_audit_filter_category: 'Action type',
+    perm_login_all_events: 'All events',
     perm_lock_needs: 'Turn on {name} first',
     perm_search_none_hint: 'Try other words.',
 
@@ -757,4 +764,8 @@ export const permission: Dict = {
     perm_empty_audit_hint: 'Adds, edits and deletes are logged here.',
     perm_empty_audit_search: 'No activity matches',
     perm_empty_audit_search_hint: 'Try other words or clear the filters.',
+    perm_empty_logins: 'No sign-in history yet',
+    perm_empty_logins_hint: 'Sign-ins, sign-outs and failed attempts are logged here.',
+    perm_empty_logins_search: 'No sign-in history matches',
+    perm_empty_logins_search_hint: 'Try other words or clear the filters.',
 };

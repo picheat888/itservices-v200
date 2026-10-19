@@ -1,3 +1,4 @@
+import type { LoginEventRow, LoginEventType } from '@/modules/auth';
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope } from '@/shared/types';
 import type { CardLayout } from '../lib/card-layout';
@@ -95,6 +96,22 @@ export interface AuditLogsResponse {
     meta: AuditMeta;
 }
 
+/** What the Login tab asks for; every field but the page is optional. */
+export interface LoginEventParams {
+    page: number;
+    perPage: number;
+    search?: string;
+    event?: LoginEventType | '';
+    /** Whole days (YYYY-MM-DD), `to` included. */
+    from?: string;
+    to?: string;
+}
+
+export interface LoginEventsResponse {
+    data: LoginEventRow[];
+    meta: Omit<AuditMeta, 'users'>;
+}
+
 export interface GroupRole {
     id: number;
     name: string;
@@ -186,6 +203,19 @@ export const permissionApi = {
                     search: filters.search || undefined,
                     category: filters.category && filters.category !== 'all' ? filters.category : undefined,
                     user: filters.user && filters.user !== 'all' ? filters.user : undefined,
+                },
+            })
+            .then((r) => r.data),
+    loginEvents: (p: LoginEventParams) =>
+        http
+            .get<LoginEventsResponse>('/login-events', {
+                params: {
+                    page: p.page,
+                    per_page: p.perPage,
+                    search: p.search || undefined,
+                    event: p.event || undefined,
+                    from: p.from || undefined,
+                    to: p.to || undefined,
                 },
             })
             .then((r) => r.data),

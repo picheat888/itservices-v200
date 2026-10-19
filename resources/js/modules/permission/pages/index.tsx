@@ -25,6 +25,7 @@ import type { RoleRow } from '../api/permissionApi';
 import { AuditLogTab } from '../components/audit-log-tab';
 import { CenteredAlert } from '../components/centered-alert';
 import { GroupRolesTab } from '../components/group-roles-tab';
+import { LoginLogTab } from '../components/login-log-tab';
 import { CHANGED_TEXT, PermissionViewProvider } from '../components/permission-layout';
 import { PermissionTreeCard } from '../components/permission-tree-card';
 import { RoleBar } from '../components/role-bar';
@@ -39,17 +40,18 @@ import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-la
 import { isRoleChanged } from '../lib/refusal';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
-const TABS = ['templates', 'groups', 'logs'] as const;
+const TABS = ['templates', 'groups', 'logs', 'logins'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
-// URL keys of the Logs and Role Groups lists; cleared when the tab changes.
-const TAB_LIST_KEYS = ['search', 'category', 'user', 'page', 'per', 'role', 'sort', 'view', 'add'];
+// URL keys of the Logs, Login and Role Groups lists; cleared when the tab changes.
+const TAB_LIST_KEYS = ['search', 'category', 'user', 'event', 'from', 'to', 'page', 'per', 'role', 'sort', 'view', 'add'];
 
 /** Permission each tab's own endpoints require. */
 const TAB_PERMISSION: Record<Tab, string> = {
     templates: 'system.manage_roles',
     groups: 'system.manage_groups',
     logs: 'system.view_audit',
+    logins: 'system.view_logins',
 };
 
 export default function PermissionsPage() {
@@ -69,7 +71,12 @@ export default function PermissionsPage() {
         guardTabSwitch(() => setTab(next, { extra: (params) => TAB_LIST_KEYS.forEach((key) => params.delete(key)) }));
     };
 
-    const labels: Record<Tab, string> = { templates: t('perm_roles'), groups: t('perm_groups'), logs: t('perm_audit') };
+    const labels: Record<Tab, string> = {
+        templates: t('perm_roles'),
+        groups: t('perm_groups'),
+        logs: t('perm_audit'),
+        logins: t('perm_logins'),
+    };
     const tabs = allowed.map((id) => ({ id, label: labels[id] }));
 
     return (
@@ -85,6 +92,7 @@ export default function PermissionsPage() {
                 {tab === 'templates' && <RolesTab onDirtyChange={setRolesDirty} />}
                 {tab === 'groups' && <GroupRolesTab />}
                 {tab === 'logs' && <AuditLogTab />}
+                {tab === 'logins' && <LoginLogTab />}
                 {tab === null && <EmptyState kind="denied" title={t('perm_empty_no_tabs')} hint={t('perm_empty_no_tabs_hint')} />}
             </Card>
         </div>
