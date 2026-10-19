@@ -237,6 +237,10 @@ export const common: Dict = {
     // http.ts, form error banners — a save the server failed
     err_action_server: "That didn't go through because the server ran into a problem. Please try again.",
 
+    // error-state.tsx — reference row
+    err_reference_label: 'Reference',
+    err_copy_reference: 'Copy reference code',
+
     // not-found.tsx — an address that does not exist
     cmn_not_found_title: 'Page not found',
     cmn_not_found_hint: 'The link may be mistyped, or the page has moved.',

@@ -22,10 +22,6 @@ export function toneFor(secondsLeft: number, warnSeconds: number): WarnTone {
     return 'danger';
 }
 
-export function clock(seconds: number): string {
-    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
-
 export function spokenTime(seconds: number, words: { minutes: (n: number) => string; seconds: (n: number) => string }): string {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;

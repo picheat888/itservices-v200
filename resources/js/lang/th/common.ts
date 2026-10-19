@@ -237,6 +237,10 @@ export const common: Dict = {
     // http.ts, form error banners — a save the server failed
     err_action_server: 'ทำรายการไม่สำเร็จ เพราะเซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้ง',
 
+    // error-state.tsx — reference row
+    err_reference_label: 'รหัสอ้างอิง',
+    err_copy_reference: 'คัดลอกรหัสอ้างอิง',
+
     // not-found.tsx — an address that does not exist
     cmn_not_found_title: 'ไม่พบหน้านี้',
     cmn_not_found_hint: 'ลิงก์อาจพิมพ์ผิด หรือหน้านี้ถูกย้ายไปแล้ว',

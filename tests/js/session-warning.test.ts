@@ -2,7 +2,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-    clock,
     crossedAnnouncement,
     dismissesWarning,
     heartbeatMsFor,
@@ -46,13 +45,6 @@ test('ring colour follows the share of the warning left', () => {
     assert.equal(toneFor(30, 30), 'ok');
     assert.equal(toneFor(15, 30), 'warn');
     assert.equal(toneFor(7, 30), 'danger');
-});
-
-test('clock always reads minutes and seconds', () => {
-    assert.equal(clock(105), '1:45');
-    assert.equal(clock(120), '2:00');
-    assert.equal(clock(45), '0:45');
-    assert.equal(clock(5), '0:05');
 });
 
 test('spoken time names minutes and seconds in words', () => {
