@@ -30,7 +30,7 @@ const TICKET_4B = [
     'modules/ticket/components/take-case-modal.tsx',
     'modules/ticket/components/ticket-update-modal.tsx',
 ];
-const REPORT_4B: string[] = [];
+const REPORT_4B = ['modules/report/components/export-report-dialog.tsx', 'modules/report/components/schedule-report-dialog.tsx'];
 const SETTINGS_4A: string[] = [];
 const PEOPLE_4A: string[] = [];
 const ASSET_4A: string[] = [];
@@ -40,6 +40,16 @@ const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
 
 test('ticket small forms use the shared shell', () => TICKET_4B.forEach(assertSmallForm));
+
+test('export and schedule dialogs use the shared shell and keep their own body and ghost cancel', () => {
+    for (const rel of REPORT_4B) {
+        assertSmallForm(rel);
+        const src = read(rel);
+        assert.match(src, /variant="ghost"/, `${rel}: ghost cancel`);
+        assert.match(src, /px-6 pb-2/, `${rel}: body unchanged`);
+        assert.doesNotMatch(src, /<DialogBody\b/, `${rel}: no hairline body`);
+    }
+});
 
 test('the shared shell is 560 wide, capped, with a 32px close button and the large-dialog footer bar', () => {
     const src = read('shared/ui/dialog.tsx');
