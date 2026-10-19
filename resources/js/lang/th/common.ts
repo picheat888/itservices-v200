@@ -234,6 +234,8 @@ export const common: Dict = {
     err_maintenance_title: 'ปิดปรับปรุงชั่วคราว',
     err_maintenance_body: 'ระบบกำลังปรับปรุง ใช้งานได้อีกครั้งในประมาณ {n} นาที',
     err_maintenance_later: 'ระบบกำลังปรับปรุง กรุณาลองใหม่ภายหลัง',
+    err_busy_title: 'ระบบมีผู้ใช้งานมาก',
+    err_busy_body: 'มีผู้ใช้งานพร้อมกันมาก รอให้ครบเวลาแล้วกดลองใหม่',
     err_network_still: 'ยังเชื่อมต่อไม่ได้',
     err_ready: 'พร้อม',
     err_ready_spoken: 'ลองใหม่ได้แล้ว',

@@ -5,12 +5,15 @@ use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\SetRequestLocale;
 use App\Http\Middleware\TrackDevice;
+use App\Support\DatabaseBusy;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -38,4 +41,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         // A browser whose device was ended elsewhere has lost its session row; it still learns why
         $exceptions->render(fn (AuthenticationException $e, Request $request) => TrackDevice::answerLostSession($request));
+        // A full or unreachable database asks the reader to wait (503 + Retry-After); the QueryException is still logged
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if (! DatabaseBusy::is($e)) {
+                return null;
+            }
+            $headers = ['Retry-After' => (string) DatabaseBusy::RETRY_AFTER];
+            if ($request->expectsJson()) {
+                return response()->json(['message' => DatabaseBusy::MESSAGE], 503, $headers);
+            }
+
+            return response()->view('errors.503', ['exception' => new HttpException(503, DatabaseBusy::MESSAGE, $e, $headers)], 503, $headers);
+        });
     })->create();

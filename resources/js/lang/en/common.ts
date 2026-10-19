@@ -234,6 +234,8 @@ export const common: Dict = {
     err_maintenance_title: 'Down for maintenance',
     err_maintenance_body: 'The system is being updated. Back in about {n} min.',
     err_maintenance_later: 'The system is being updated. Please try again later.',
+    err_busy_title: 'Server busy',
+    err_busy_body: 'Many people are using the system right now. Try again when the timer ends.',
     err_network_still: "Still can't connect.",
     err_ready: 'Ready',
     err_ready_spoken: 'You can try again now.',

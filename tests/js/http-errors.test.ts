@@ -7,6 +7,7 @@ import {
     outranks,
     quietPathAfterMove,
     retryAfterOf,
+    serviceUnavailableKind,
     shouldRetryQuery,
     shouldShowAppError,
     showsOwnThrottle,
@@ -21,6 +22,24 @@ test('a query retries a 5xx and a dropped connection, twice at most', () => {
     assert.equal(shouldRetryQuery(1, answered(502)), true);
     assert.equal(shouldRetryQuery(2, answered(500)), false);
     assert.equal(shouldRetryQuery(0, dropped), true);
+});
+
+test('a 503 is not retried: the server asked the reader to wait', () => {
+    assert.equal(shouldRetryQuery(0, answered(503, { 'retry-after': '15' })), false);
+});
+
+test('a 503 that says server_busy is the busy kind, any other 503 is maintenance', () => {
+    const busy = { config: { method: 'get' }, response: { status: 503, headers: {}, data: { message: 'server_busy' } } };
+    const down = { config: { method: 'get' }, response: { status: 503, headers: {}, data: { message: 'Service Unavailable' } } };
+    assert.equal(serviceUnavailableKind(busy), 'busy');
+    assert.equal(serviceUnavailableKind(down), 'maintenance');
+    assert.equal(serviceUnavailableKind(answered(503)), 'maintenance');
+});
+
+test('a busy server outranks a server error, maintenance outranks busy', () => {
+    assert.equal(outranks('busy', 'server'), true);
+    assert.equal(outranks('maintenance', 'busy'), true);
+    assert.equal(outranks('server', 'busy'), false);
 });
 
 test('a query does not retry an answer that will not change', () => {

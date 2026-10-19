@@ -4,10 +4,10 @@
 interface FailureShape {
     code?: string;
     config?: { method?: string; quietServerError?: boolean };
-    response?: { status?: number; headers?: Record<string, unknown> };
+    response?: { status?: number; headers?: Record<string, unknown>; data?: { message?: unknown } };
 }
 
-export type AppErrorKind = 'server' | 'network' | 'rate-limit' | 'maintenance';
+export type AppErrorKind = 'server' | 'network' | 'rate-limit' | 'busy' | 'maintenance';
 
 export function httpStatus(error: unknown): number | undefined {
     return (error as FailureShape | null)?.response?.status;
@@ -35,9 +35,14 @@ export function isNetworkFailure(error: unknown): boolean {
     return !!failure && typeof failure === 'object' && 'config' in failure && !failure.response && failure.code !== 'ERR_CANCELED';
 }
 
-/** A query asks again only when another try can answer differently: a 5xx or a dropped connection, at most twice. */
+/** A query asks again only when another try can answer differently: a 5xx (not a 503, which asks to wait) or a dropped connection, at most twice. */
 export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
-    return failureCount < 2 && (isServerFailure(error) || isNetworkFailure(error));
+    return failureCount < 2 && ((isServerFailure(error) && httpStatus(error) !== 503) || isNetworkFailure(error));
+}
+
+/** A 503 is a full or unreachable database when the server says server_busy (App\Support\DatabaseBusy), else maintenance. */
+export function serviceUnavailableKind(error: unknown): 'busy' | 'maintenance' {
+    return (error as FailureShape | null)?.response?.data?.message === 'server_busy' ? 'busy' : 'maintenance';
 }
 
 export function isQuietServerError(error: unknown): boolean {
@@ -53,7 +58,7 @@ export function isReadRequest(error: unknown): boolean {
     return ((error as FailureShape | null)?.config?.method ?? 'get').toLowerCase() === 'get';
 }
 
-const RANK: Record<AppErrorKind, number> = { 'rate-limit': 1, network: 2, server: 3, maintenance: 4 };
+const RANK: Record<AppErrorKind, number> = { 'rate-limit': 1, network: 2, server: 3, busy: 4, maintenance: 5 };
 
 /** A later error replaces the one on screen only when it is more serious, so the first 5xx keeps its reference. */
 export function outranks(next: AppErrorKind, current: AppErrorKind | null): boolean {
