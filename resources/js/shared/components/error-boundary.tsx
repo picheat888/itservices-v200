@@ -51,19 +51,25 @@ export class ErrorBoundary extends Component<Props, State> {
 
     private unmounted = false;
 
+    private crashId = 0;
+
     static getDerivedStateFromError(): Partial<State> {
         return { crashed: true, reference: null };
     }
 
     componentDidCatch(error: Error, info: ErrorInfo): void {
+        const crashId = ++this.crashId;
         void reportClientError('render', error, { stack: info.componentStack ?? null }).then((reference) => {
             // Only the crash still showing gets the reference
-            if (reference && !this.unmounted && this.state.crashed) this.setState({ reference });
+            if (reference && !this.unmounted && crashId === this.crashId && this.state.crashed) this.setState({ reference });
         });
     }
 
     componentDidUpdate(prevProps: Props): void {
-        if (this.state.crashed && prevProps.resetKey !== this.props.resetKey) this.setState({ crashed: false, reference: null });
+        if (this.state.crashed && prevProps.resetKey !== this.props.resetKey) {
+            this.crashId++;
+            this.setState({ crashed: false, reference: null });
+        }
     }
 
     componentWillUnmount(): void {
