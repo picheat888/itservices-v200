@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Settings;
 
+use App\Console\Commands\UpdateGeoIpDatabase;
 use App\Enums\Request\RequestType;
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketCategory;
@@ -14,6 +15,7 @@ use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
 use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
+use App\Services\Auth\DeviceService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Employee\EmployeeService;
 use App\Services\Settings\LogRetentionService;
@@ -380,45 +382,55 @@ class SettingsController extends Controller
         return $this->show();
     }
 
-    /**
-     * Returns the security policy values. Readable by any authenticated user
-     * because the frontend session-timeout hook needs the timeout on every load.
-     */
+    /** Security policy values; any signed-in user may read them (the session-timeout hook needs the timeout on every load). */
     public function security(Request $request): JsonResponse
     {
         return response()->json(['data' => $this->securityPayload(), 'message' => 'success']);
     }
 
-    /**
-     * Updates the security policy — session timeout, password expiry, and the data-retention
-     * windows the nightly prune reads. Gated by route middleware permission:settings.security.
-     */
-    public function updateSecurity(Request $request): JsonResponse
+    /** Updates session timeout, password expiry, device limit and the retention windows (route permission settings.security). */
+    public function updateSecurity(Request $request, DeviceService $devices): JsonResponse
     {
         $data = $request->validate([
-            // 0 disables the respective policy. For the retention windows below that reads
-            // as "keep forever", which is how audit logs ship.
+            // 0 turns the policy off; for the retention windows that means keep forever
             'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'password_expiry_days' => ['required', 'integer', 'min:0', 'max:3650'],
-            // `sometimes`, unlike the two above: the retention windows arrived later, and a
-            // caller that sends only the authentication policy must keep working rather than
-            // being made to resend settings it has nothing to say about.
+            // Later-added keys are `sometimes`, so a client sending only the first two keeps working
             'email_log_body_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
             'email_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
             'audit_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
             'notification_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'login_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'device_limit' => ['sometimes', 'integer', 'min:0', 'max:10'],
         ]);
+
+        $previousDeviceLimit = $devices->limit();
 
         foreach ($data as $key => $value) {
             AppSetting::put($key, (string) $value);
         }
         AuditLog::record('Updated security settings', implode(', ', array_keys($data)));
 
+        if (isset($data['device_limit'])) {
+            $this->trimDevicesToLimit($request, $devices, $previousDeviceLimit, (int) $data['device_limit']);
+        }
+
         return $this->security($request);
     }
 
+    // Turning the limit on or lowering it signs out the extra devices; the saving admin's own device stays
+    private function trimDevicesToLimit(Request $request, DeviceService $devices, int $previousLimit, int $newLimit): void
+    {
+        $isTurnedOnOrLowered = $newLimit > 0 && ($previousLimit === 0 || $newLimit < $previousLimit);
+        if (! $isTurnedOnOrLowered) {
+            return;
+        }
+
+        $devices->trimTo($newLimit, $devices->currentOf($request->user(), $request)?->id);
+    }
+
     /**
-     * @return array{session_timeout_minutes: int, password_expiry_days: int, email_log_body_days: int, email_log_days: int, audit_log_days: int, notification_days: int}
+     * @return array{session_timeout_minutes: int, password_expiry_days: int, email_log_body_days: int, email_log_days: int, audit_log_days: int, notification_days: int, login_log_days: int, device_limit: int, geoip_updated_at: string|null}
      */
     private function securityPayload(): array
     {
@@ -427,12 +439,15 @@ class SettingsController extends Controller
         return [
             'session_timeout_minutes' => (int) AppSetting::get('session_timeout_minutes', '0'),
             'password_expiry_days' => (int) AppSetting::get('password_expiry_days', '0'),
-            // Defaults live on the service that enforces them, so the screen and the nightly
-            // sweep can never disagree about what an unsaved install is doing.
+            // Defaults live on the service that enforces them, so the screen and the nightly sweep agree
             'email_log_body_days' => $retention->days('email_log_body_days'),
             'email_log_days' => $retention->days('email_log_days'),
             'audit_log_days' => $retention->days('audit_log_days'),
             'notification_days' => $retention->days('notification_days'),
+            'login_log_days' => $retention->days('login_log_days'),
+            'device_limit' => app(DeviceService::class)->limit(),
+            // Read-only: when the GeoIP file was last replaced
+            'geoip_updated_at' => UpdateGeoIpDatabase::lastUpdated()?->toIso8601String(),
         ];
     }
 
