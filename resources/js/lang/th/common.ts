@@ -221,6 +221,11 @@ export const common: Dict = {
     err_reference: 'รหัสอ้างอิงสำหรับแจ้ง IT: {id}',
     err_render_title: 'หน้าจอนี้แสดงผลไม่ได้',
     err_render_body: 'ระบบบันทึกปัญหาไว้ให้ทีม IT แล้ว กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง',
+    err_maintenance_title: 'ปิดปรับปรุงชั่วคราว',
+    err_maintenance_body: 'ระบบกำลังปิดปรับปรุง กรุณากลับมาใหม่อีกครั้งในอีกสักครู่',
+
+    // http.ts, form error banners — a save the server failed
+    err_action_server: 'ทำรายการไม่สำเร็จ เพราะเซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้ง',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'น้ำเงิน',

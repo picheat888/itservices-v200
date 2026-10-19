@@ -1,5 +1,7 @@
 import { translate } from '@/lang';
+import { serverFailureText } from '@/shared/lib/api-errors';
 import { rememberRequestId } from '@/shared/lib/client-error-report';
+import { httpStatus, isQuietServerError, isServerFailure, requestIdOf, retryAfterOf, wasShownInline } from '@/shared/lib/http-errors';
 import { redirectToLogin } from '@/shared/lib/login-redirect';
 import { formatNumber } from '@/shared/lib/number';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
@@ -74,7 +76,7 @@ http.interceptors.response.use(
             }
         }
 
-        // Full-screen error for outages; 401/403/422 are left to callers
+        // Full-screen error for outages; 401/403/422 are left to callers, other 5xx to the cache handlers below
         const showError = useAppErrorStore.getState().show;
         if (!error.response) {
             // Aborted by the app (React Query on unmount): not an outage
@@ -102,8 +104,7 @@ http.interceptors.response.use(
             // The login page shows its own throttle wait inline
             return Promise.reject(error);
         } else if (status === 429) {
-            const retry = Number(error.response.headers?.['retry-after']);
-            const retryAfter = Number.isFinite(retry) && retry > 0 ? retry : null;
+            const retryAfter = retryAfterOf(error);
             // Signed in: a toast, not a full-screen takeover
             const loggedIn = !!queryClient.getQueryData(ME_KEY);
             if (loggedIn) {
@@ -123,13 +124,35 @@ http.interceptors.response.use(
             } else {
                 showError('rate-limit', retryAfter);
             }
-        } else if (status !== undefined && status >= 500 && !error.config?.quietServerError) {
-            showError('server', null, requestId);
+        } else if (status === 503) {
+            // Maintenance mode answers everything the same way, so every caller waits
+            showError('maintenance', retryAfterOf(error));
         }
 
         return Promise.reject(error);
     },
 );
+
+// A read that still fails after its retries takes over the screen, unless the screen still has its last answer
+queryClient.getQueryCache().subscribe((event) => {
+    if (event.type !== 'updated' || event.action.type !== 'error') return;
+    const error = event.action.error;
+    if (event.query.state.data !== undefined || !isServerFailure(error) || isQuietServerError(error) || httpStatus(error) === 503) return;
+    useAppErrorStore.getState().show('server', null, requestIdOf(error));
+});
+
+// A failed save is the form's to show (serverMessage); a toast stands in only when nothing on screen took it
+queryClient.getMutationCache().subscribe((event) => {
+    if (event.type !== 'updated' || event.action.type !== 'error') return;
+    const error = event.action.error;
+    if (!isServerFailure(error) || isQuietServerError(error) || httpStatus(error) === 503) return;
+    // Runs before mutateAsync's caller catches the error, so wait for it
+    setTimeout(() => {
+        if (wasShownInline(error)) return;
+        const lang = useUiStore.getState().lang;
+        useToastStore.getState().push(serverFailureText(error), 'error', translate(lang, 'err_server_title'), undefined, { key: 'http-server' });
+    }, 0);
+});
 
 let csrfReady = false;
 
