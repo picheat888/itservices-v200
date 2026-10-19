@@ -309,7 +309,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
                     <div className="min-w-0 flex-1">
                         <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
-                            <h2 className="truncate text-xl leading-tight font-extrabold tracking-tight">{displayName}</h2>
+                            <h2 className="min-w-0 text-xl leading-tight font-extrabold tracking-tight break-words">{displayName}</h2>
                             {empLoading ? (
                                 <Skeleton className="h-5 w-16 rounded-full" />
                             ) : emp?.status === 'resigned' ? (

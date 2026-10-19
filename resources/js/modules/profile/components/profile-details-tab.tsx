@@ -40,7 +40,7 @@ export function ProfileDetailsTab({
     const readFact = (label: string, value: string | null | undefined) => (
         <div className="min-w-0 space-y-1">
             <dt className="text-muted-foreground text-xs">{label}</dt>
-            {empLoading && !value ? <Skeleton className="mt-1 h-3.5 w-24" /> : <dd className="truncate text-sm font-medium">{value || '—'}</dd>}
+            {empLoading && !value ? <Skeleton className="mt-1 h-3.5 w-24" /> : <dd className="text-sm font-medium break-words">{value || '—'}</dd>}
         </div>
     );
 
