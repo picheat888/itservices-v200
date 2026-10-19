@@ -16,7 +16,7 @@ class ReportPermissionsTest extends TestCase
 
     private const KEYS = [
         'reports.module', 'reports.tickets', 'reports.assets', 'reports.contracts', 'reports.stock',
-        'reports.requests', 'reports.employees', 'reports.access', 'reports.export', 'reports.schedule',
+        'reports.requests', 'reports.employees', 'reports.access', 'reports.export', 'reports.schedule', 'reports.schedule_manage',
     ];
 
     public function test_the_catalog_carries_every_report_key(): void

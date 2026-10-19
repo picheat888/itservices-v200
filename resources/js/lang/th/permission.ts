@@ -367,6 +367,8 @@ export const permission: Dict = {
     'perm_desc_reports.export': 'สั่งส่งออก Excel/PDF ของรายงานที่เปิดได้ และดาวน์โหลดจากไฟล์ส่งออกของฉัน',
     'perm_act_reports.schedule': 'ตั้งเวลาส่ง',
     'perm_desc_reports.schedule': 'ตั้ง แก้ หยุด ลบ และสั่งส่งรายงานทางอีเมลตามเวลา',
+    'perm_act_reports.schedule_manage': 'จัดการรายงานอัตโนมัติของทุกคน',
+    'perm_desc_reports.schedule_manage': 'ดู หยุด ลบ และเอาผู้รับออกจากรายงานที่ตั้งส่งอัตโนมัติของผู้ใช้ทุกคน',
     // ผังสิทธิ์ — Email Templates
     // ผังสิทธิ์ — Settings
     'perm_act_settings.access': 'เข้าถึงการตั้งค่า',
@@ -724,6 +726,10 @@ export const permission: Dict = {
     audit_ev_updated_bell: 'แก้ไขข้อความแจ้งเตือน',
     audit_ev_reset_bell_to_standard: 'คืนค่าข้อความแจ้งเตือนมาตรฐาน',
     audit_ev_downloaded_report_export: 'ดาวน์โหลดไฟล์รายงาน',
+    audit_ev_paused_scheduled_report: 'หยุดส่งรายงานอัตโนมัติ',
+    audit_ev_resumed_scheduled_report: 'เปิดส่งรายงานอัตโนมัติต่อ',
+    audit_ev_deleted_scheduled_report: 'ลบรายงานที่ตั้งส่งอัตโนมัติ',
+    audit_ev_removed_scheduled_report_recipient: 'เอาผู้รับออกจากรายงานอัตโนมัติ',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'คุณยังไม่มีสิทธิ์ใช้งานส่วนใดในหน้านี้',

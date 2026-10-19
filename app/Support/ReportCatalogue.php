@@ -88,6 +88,9 @@ class ReportCatalogue
 
     public const SCHEDULE = 'reports.schedule';
 
+    /** Pause, delete and trim the recipients of anyone's scheduled report (the admin's "จัดการ" dialog). */
+    public const SCHEDULE_MANAGE = 'reports.schedule_manage';
+
     /**
      * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>, range?: bool}>
      */

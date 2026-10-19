@@ -92,7 +92,7 @@ class Permissions
             'reports' => [
                 'module',
                 'tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access',
-                'export', 'schedule',
+                'export', 'schedule', 'schedule_manage',
             ],
             'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'requestdata', 'assets', 'security'],
         ];
@@ -683,6 +683,7 @@ class Permissions
                 'reports.access' => [],
                 'reports.export' => [],
                 'reports.schedule' => [],
+                'reports.schedule_manage' => [],
             ],
         ];
     }

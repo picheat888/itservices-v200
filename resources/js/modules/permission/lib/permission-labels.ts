@@ -155,6 +155,7 @@ const LIVE = new Set<string>([
     'reports.access',
     'reports.export',
     'reports.schedule',
+    'reports.schedule_manage',
     'settings.access',
     'settings.company',
     'settings.system',

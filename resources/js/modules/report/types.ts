@@ -41,6 +41,13 @@ export interface ReportScheduleItem extends ScheduleInput {
     created_at: string;
 }
 
+/** A schedule as the admin's "จัดการ" dialog lists it (ManagedReportScheduleResource). */
+export interface ManagedScheduleItem extends ReportScheduleItem {
+    owner: { id: number; name: string | null; department: { name: string; name_th: string | null } | null };
+    /** Each recipient and whether the address belongs to an account (else an outside email). */
+    recipient_list: { email: string; has_account: boolean }[];
+}
+
 /** One file on "ไฟล์ส่งออกของฉัน" (ReportExportResource). */
 export interface ReportExportItem {
     id: number;
