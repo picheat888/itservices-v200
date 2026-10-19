@@ -9,7 +9,9 @@ use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DbIpLookup;
+use App\Services\Auth\DeviceUserProvider;
 use App\Services\Auth\GeoIpLookup;
 use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(GeoIpLookup::class, DbIpLookup::class);
+        $this->app->scoped(CurrentDevice::class);
     }
 
     /**
@@ -45,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(JobProcessing::class, fn () => AppSetting::flushCache());
 
         $this->configureRateLimiting();
+
+        // Remember-me tokens per device
+        Auth::provider('devices', fn ($app, array $config) => new DeviceUserProvider($app['hash'], $config['model']));
 
         // Each bell row carries its kind, so the tray counts and pages in SQL.
         DatabaseNotification::creating(function (DatabaseNotification $notification) {
