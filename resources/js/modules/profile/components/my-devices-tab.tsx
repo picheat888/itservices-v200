@@ -18,6 +18,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { Monitor, Smartphone, Tablet, type LucideIcon } from 'lucide-react';
 import { useEndMyDevice, useMyDevices, useMyLoginEvents } from '../hooks/use-my-devices';
+import { showLoadFailed } from '../lib/load-failed';
 import { TableCard } from './profile-table';
 
 const DEVICE_ICONS: Record<string, LucideIcon> = { iOS: Smartphone, Android: Smartphone, iPadOS: Tablet };
@@ -205,7 +206,7 @@ export function MyDevicesTab() {
                     <DeviceCardSkeleton />
                     <DeviceCardSkeleton />
                 </div>
-            ) : devicesQuery.isError ? (
+            ) : showLoadFailed({ isError: devicesQuery.isError, hasData: devicesQuery.data !== undefined }) ? (
                 <LoadFailedPanel onRetry={() => void devicesQuery.refetch()} />
             ) : ordered.length === 0 ? (
                 <EmptyPane kind="empty" title={t('profile_empty_devices')} />
@@ -222,7 +223,7 @@ export function MyDevicesTab() {
             <LoginHistory
                 rows={eventsQuery.data ?? []}
                 loading={eventsQuery.isLoading}
-                failed={eventsQuery.isError}
+                failed={showLoadFailed({ isError: eventsQuery.isError, hasData: eventsQuery.data !== undefined })}
                 onRetry={() => void eventsQuery.refetch()}
             />
             <p className="text-muted-foreground text-xs">{t('profile_logins_hint')}</p>
