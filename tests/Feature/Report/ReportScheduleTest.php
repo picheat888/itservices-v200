@@ -210,6 +210,25 @@ class ReportScheduleTest extends TestCase
         ])->assertUnprocessable()->assertJsonPath('message', 'schedule_limit')->assertJsonPath('limit', ReportSchedule::MAX_PER_USER);
     }
 
+    public function test_one_report_takes_at_most_three_schedules_per_person(): void
+    {
+        $owner = $this->userWith([...$this->reportRights('assets')]);
+        $other = $this->userWith([...$this->reportRights('assets')]);
+        for ($i = 0; $i < ReportSchedule::MAX_PER_REPORT; $i++) {
+            $this->schedule($owner);
+            $this->schedule($other);
+        }
+        $this->schedule($owner, ['report_key' => 'assets.warranty_expiring']);
+        $input = ['format' => 'pdf', 'frequency' => 'daily', 'send_hour' => 7, 'recipients' => ['a@example.com']];
+
+        $this->actingAs($owner)->postJson(self::OVERVIEW, $input)
+            ->assertUnprocessable()->assertJsonPath('message', 'report_schedule_limit')->assertJsonPath('limit', 3);
+        $this->assertSame(3, ReportSchedule::query()->where('user_id', $owner->id)->where('report_key', 'assets.overview')->count());
+
+        // Another report of the same person still takes a new one
+        $this->actingAs($owner)->postJson('/api/reports/tabular/assets.writeoffs/schedule', $input)->assertCreated();
+    }
+
     // ── sending ─────────────────────────────────────────────────────────────────────
 
     public function test_the_sweep_sends_a_due_schedule_to_every_recipient_with_the_file_attached(): void

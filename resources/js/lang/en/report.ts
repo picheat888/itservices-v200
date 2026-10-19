@@ -233,6 +233,7 @@ export const report: Dict = {
     rep_schedule: 'Schedule',
     rep_no_export_right: 'You cannot export files',
     rep_no_schedule_right: 'You cannot schedule reports',
+    rep_schedule_report_full: 'This report already has {n} auto-sent schedules. Remove or edit one under Reports first.',
     rep_no_report_right: 'You can no longer open this report',
     rep_schedule_eyebrow: 'Email this report automatically',
     rep_schedule_frequency: 'How often',
@@ -274,6 +275,7 @@ export const report: Dict = {
     rep_schedule_refusal_invalid: 'Something is not valid. Check it and try again.',
     rep_schedule_refusal_forbidden: 'You do not have access to this report',
     rep_schedule_refusal_schedule_limit: 'You can keep up to {limit} schedules. Remove an old one first.',
+    rep_schedule_refusal_report_schedule_limit: 'One report takes up to {limit} auto-sent schedules. Remove or edit one first.',
 
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'Auto-sent reports',
