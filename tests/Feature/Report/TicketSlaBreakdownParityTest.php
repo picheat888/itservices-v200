@@ -50,7 +50,7 @@ class TicketSlaBreakdownParityTest extends TestCase
     /** A deterministic spread of tickets: every status, taken/untaken, deadline missing/equal/past/future. */
     private function seedTickets(): void
     {
-        mt_srand(20260925);
+        $this->seedRandom(20260925);
         $people = [null, User::factory()->create(['name' => 'Kan'])->id, User::factory()->create(['name' => 'Som'])->id, User::factory()->create(['name' => 'Ant'])->id];
         $requester = Employee::create(['first_name' => 'Anan', 'last_name' => 'User'])->id;
         $categories = ['hardware', 'software', 'software', 'other', 'network'];

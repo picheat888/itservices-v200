@@ -28,6 +28,13 @@ abstract class TestCase extends BaseTestCase
         parent::tearDown();
     }
 
+    /** Seed mt_rand for a fixed data set once earlier tests' Faker generators are gone (each reseeds mt_rand at random when destroyed). */
+    protected function seedRandom(int $seed): void
+    {
+        gc_collect_cycles();
+        mt_srand($seed);
+    }
+
     private function useTemporaryLogRoot(): void
     {
         $this->logRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'itsd-test-logs-'.bin2hex(random_bytes(4));
