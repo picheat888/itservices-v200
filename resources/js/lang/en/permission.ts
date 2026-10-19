@@ -513,7 +513,7 @@ export const permission: Dict = {
     audit_field_note: 'Note',
     audit_field_contract: 'Contract',
     audit_field_login_account: 'Login account',
-    // components/*-permission-tree.tsx, role / group modals, pages/index.tsx — labels
+    // components/permission-tree-card.tsx, role / group modals, pages/index.tsx — labels
     perm_ui_master_note: 'Master: gates the module and the sidebar icon',
     perm_ui_view: 'View',
     perm_ui_saved: 'Saved',

@@ -1,8 +1,14 @@
 // Role Template counts: card headers and section totals share countGranted, so a fully-on role reads full.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { cardCountSpec, type CardLayout } from '../../resources/js/modules/permission/lib/card-layout.ts';
 import { countGranted, hiddenHitCount, specKeys, type CountSpec } from '../../resources/js/modules/permission/lib/permission-count.ts';
-import { TICKET_COUNT as TICKETS } from '../../resources/js/modules/permission/lib/permission-specs.ts';
+
+const layout: CardLayout[] = JSON.parse(readFileSync(join(import.meta.dirname, '../Fixtures/permission-layout.json'), 'utf8'));
+const specOf = (module: string): CountSpec => cardCountSpec(layout.find((card) => card.module === module)!);
+const TICKETS = specOf('tickets');
 const holds =
     (...keys: string[]) =>
     (key: string) =>

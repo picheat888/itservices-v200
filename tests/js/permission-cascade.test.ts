@@ -1,21 +1,22 @@
 // One Role Template switch flipped on the real card specs: what it takes along, and that it agrees with the rebase edges.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { cardCountSpec, countingHas, type CardLayout } from '../../resources/js/modules/permission/lib/card-layout.ts';
 import { specEdges } from '../../resources/js/modules/permission/lib/draft-rebase.ts';
-import { cascadeToggle, specKeys } from '../../resources/js/modules/permission/lib/permission-count.ts';
-import {
-    cardSpec,
-    NOTIFICATION_COUNT,
-    REQUEST_COUNT,
-    REQUEST_TREE,
-    STOCK_COUNT,
-    TICKET_COUNT,
-    TREE_COUNT,
-} from '../../resources/js/modules/permission/lib/permission-specs.ts';
+import { cascadeToggle, specKeys, type CountSpec } from '../../resources/js/modules/permission/lib/permission-count.ts';
+
+const layout: CardLayout[] = JSON.parse(readFileSync(join(import.meta.dirname, '../Fixtures/permission-layout.json'), 'utf8'));
+const specOf = (module: string): CountSpec => cardCountSpec(layout.find((card) => card.module === module)!);
+const STOCK_COUNT = specOf('stock');
+const TICKET_COUNT = specOf('tickets');
+const REQUEST_COUNT = specOf('requests');
+const NOTIFICATION_COUNT = specOf('notifications');
 
 const set = (...keys: string[]) => new Set(keys);
 const sorted = (s: Set<string>) => [...s].sort();
-const SUBMIT_TYPES = REQUEST_TREE.groups[0].children;
+const SUBMIT_TYPES = REQUEST_COUNT.groups!.find((g) => g.view === 'requests.submit')!.children;
 
 test('a child on brings its view and the master', () => {
     assert.deepEqual(sorted(cascadeToggle(set(), 'stock.receive', STOCK_COUNT)), ['stock.module', 'stock.receive', 'stock.view']);
@@ -51,13 +52,16 @@ test('a flat card: any switch on brings the master', () => {
 });
 
 test('every card: a switch on never leaves a child above an off parent, a switch off never strands one', () => {
-    for (const [module, spec] of Object.entries(TREE_COUNT)) {
+    for (const card of layout) {
+        const module = card.module;
+        const spec = cardCountSpec(card);
         const edges = specEdges(spec);
         const orphans = (draft: Set<string>) => edges.filter((e) => draft.has(e.child) && !draft.has(e.parent)).map((e) => `${e.parent}>${e.child}`);
         const keys = specKeys(spec);
         assert.equal(new Set(keys).size, keys.length, `${module}: a key listed twice`);
+        const prefix = keys[0].slice(0, keys[0].indexOf('.') + 1);
         assert.ok(
-            keys.every((key) => key.startsWith(`${module}.`)),
+            keys.every((key) => key.startsWith(prefix)),
             `${module}: a key from another module`,
         );
         for (const key of keys) {
@@ -67,16 +71,17 @@ test('every card: a switch on never leaves a child above an off parent, a switch
     }
 });
 
-test('each card gets its spec: trees by module, flat Administration cards on their master key, the rest free', () => {
-    assert.deepEqual(cardSpec({ module: 'tickets', keys: [] }), { spec: TICKET_COUNT, liveOnly: false });
-    assert.deepEqual(cardSpec({ module: 'profile', keys: ['profile.edit'] }), { spec: { free: ['profile.edit'] }, liveOnly: false });
-    assert.deepEqual(cardSpec({ module: 'dashboard', keys: ['dashboard.view_it'] }), { spec: { free: ['dashboard.view_it'] }, liveOnly: true });
+test('each card gets its spec: flat Administration cards on their master key, profile and dashboard free, live-only where coming-soon aware', () => {
+    const all = () => true;
+    const live = (key: string) => key !== 'dashboard.view_hr';
+    assert.deepEqual(specOf('profile'), { free: ['profile.edit', 'profile.return_assets'] });
+    assert.equal(specOf('dashboard').free?.length, 5);
+    assert.equal(countingHas(layout.find((c) => c.module === 'dashboard')!, all, live)('dashboard.view_hr'), false);
+    assert.equal(countingHas(layout.find((c) => c.module === 'profile')!, all, () => false)('profile.edit'), true);
 
-    const settings = cardSpec({ module: 'settings', keys: ['settings.access', 'settings.company'] });
-    assert.deepEqual(settings, { spec: { master: 'settings.access', gated: ['settings.company'] }, liveOnly: true });
-    assert.deepEqual(sorted(cascadeToggle(set(), 'settings.company', settings.spec)), ['settings.access', 'settings.company']);
-    assert.equal(
-        cardSpec({ module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles'] }).spec.master,
-        'system.manage_permissions',
-    );
+    const settings = specOf('settings');
+    assert.equal(settings.master, 'settings.access');
+    assert.ok(settings.gated?.includes('settings.company'));
+    assert.deepEqual(sorted(cascadeToggle(set(), 'settings.company', settings)), ['settings.access', 'settings.company']);
+    assert.equal(specOf('permissions').master, 'system.manage_permissions');
 });

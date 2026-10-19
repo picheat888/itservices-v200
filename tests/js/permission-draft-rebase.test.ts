@@ -1,8 +1,16 @@
 // A Role Template draft rebased after someone else saved keeps the reader's changes and the other save's changes.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { cardCountSpec, type CardLayout } from '../../resources/js/modules/permission/lib/card-layout.ts';
 import { rebaseDraft, specEdges } from '../../resources/js/modules/permission/lib/draft-rebase.ts';
-import { STOCK_COUNT, TICKET_COUNT } from '../../resources/js/modules/permission/lib/permission-specs.ts';
+import type { CountSpec } from '../../resources/js/modules/permission/lib/permission-count.ts';
+
+const layout: CardLayout[] = JSON.parse(readFileSync(join(import.meta.dirname, '../Fixtures/permission-layout.json'), 'utf8'));
+const specOf = (module: string): CountSpec => cardCountSpec(layout.find((card) => card.module === module)!);
+const STOCK_COUNT = specOf('stock');
+const TICKET_COUNT = specOf('tickets');
 
 const EDGES = [...specEdges(STOCK_COUNT), ...specEdges(TICKET_COUNT)];
 

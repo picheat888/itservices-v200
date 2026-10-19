@@ -506,7 +506,7 @@ export const permission: Dict = {
     audit_field_note: 'หมายเหตุ',
     audit_field_contract: 'สัญญา',
     audit_field_login_account: 'บัญชีเข้าใช้งาน',
-    // components/*-permission-tree.tsx, role / group modals, pages/index.tsx — labels
+    // components/permission-tree-card.tsx, role / group modals, pages/index.tsx — labels
     perm_ui_master_note: 'ตัวหลัก: คุมโมดูลและไอคอนใน sidebar',
     perm_ui_view: 'ดู',
     perm_ui_saved: 'บันทึกแล้ว',

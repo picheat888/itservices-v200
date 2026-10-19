@@ -9,19 +9,7 @@ use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Keeps the permission matrix honest about what it can actually grant.
- *
- * The screen locks any key missing from the LIVE set in permission-labels.ts and tags
- * it "(Coming soon)", and renders a module only if it is listed in PERM_SECTIONS or
- * ADMIN_GROUPS. Neither omission fails anywhere: requests.submit / view_all / complete
- * were enforced by the API and granted by default to three roles, yet showed as off,
- * locked and unbuilt — and workflows.manage had no switch at all, grantable only by
- * editing the database.
- *
- * Nothing in TypeScript can catch that, because the lists are plain data and the keys
- * they are meant to mirror live in PHP. So the check is here.
- */
+// Keeps the Role Templates matrix honest: every enforced key can be switched on, and every catalogue module has a card.
 class PermissionMatrixTest extends TestCase
 {
     use RefreshDatabase;
@@ -71,30 +59,9 @@ class PermissionMatrixTest extends TestCase
     }
 
     /**
-     * Modules with a hand-built tree component. Those trees decide `locked` themselves
-     * and never consult the LIVE set, so their keys are toggleable regardless of it —
-     * only the generic card and the admin groups gate on LIVE.
+     * Every key of every card as GET /api/permissions sends them, with whether the card locks it while it is not live.
      *
-     * Read from the page rather than listed here, so removing a tree makes the module
-     * generic and brings its keys back under the check automatically.
-     *
-     * @return list<string>
-     */
-    private function modulesWithOwnTree(): array
-    {
-        $src = (string) file_get_contents(
-            resource_path('js/modules/permission/pages/index.tsx')
-        );
-
-        preg_match_all("/group\.module === '([a-z_]+)'/", $src, $matches);
-
-        return array_values(array_unique($matches[1]));
-    }
-
-    /**
-     * Every key of every card, as GET /api/permissions sends them.
-     *
-     * @return list<string>
+     * @return array<string, bool> key => true when a coming-soon-aware plain cell holds it
      */
     private function layoutKeys(): array
     {
@@ -110,38 +77,42 @@ class PermissionMatrixTest extends TestCase
         $keys = [];
         foreach ($layout as $card) {
             if ($card['master'] !== null) {
-                $keys[] = $card['master']['key'];
+                $keys[$card['master']['key']] = false;
             }
             foreach ($card['cells'] as $cell) {
-                array_push($keys, ...($cell['kind'] === 'group' ? [$cell['view'], ...$cell['children'], ...$cell['solo']] : $cell['keys']));
+                $cellKeys = $cell['kind'] === 'group' ? [$cell['view'], ...$cell['children'], ...$cell['solo']] : $cell['keys'];
+                $liveGated = $cell['kind'] === 'plain' && $cell['coming_soon_aware'];
+                foreach ($cellKeys as $key) {
+                    $keys[$key] = $liveGated;
+                }
             }
         }
 
         return $keys;
     }
 
-    /** Modules the matrix renders a card for. */
+    /**
+     * Keys the page switches regardless of the LIVE set: every layout key outside a coming-soon-aware plain cell.
+     * A catalogue module with no layout card falls to a coming-soon-aware "Other" card, so its keys stay under the check.
+     *
+     * @return list<string>
+     */
+    private function keysWithoutLiveGate(): array
+    {
+        return array_keys(array_filter($this->layoutKeys(), fn (bool $liveGated) => ! $liveGated));
+    }
+
+    /**
+     * Modules that have a card in the server layout.
+     *
+     * @return list<string>
+     */
     private function renderedModules(): array
     {
-        $src = (string) file_get_contents(
-            resource_path('js/modules/permission/pages/index.tsx')
-        );
-
-        $modules = [];
-
-        // PERM_SECTIONS: modules: ['a', 'b', ...]
-        preg_match_all("/modules:\s*\[([^\]]+)\]/", $src, $sections);
-        foreach ($sections[1] as $list) {
-            preg_match_all("/'([a-z_]+)'/", $list, $names);
-            $modules = array_merge($modules, $names[1]);
-        }
-
-        // The server layout carries fully-qualified keys; take their module half.
-        foreach ($this->layoutKeys() as $key) {
-            $modules[] = strstr($key, '.', true);
-        }
-
-        return array_values(array_unique($modules));
+        return array_values(array_unique(array_map(
+            fn (string $key) => strstr($key, '.', true),
+            array_keys($this->layoutKeys()),
+        )));
     }
 
     public function test_every_enforced_permission_can_be_toggled_in_the_matrix(): void
@@ -151,13 +122,12 @@ class PermissionMatrixTest extends TestCase
         $this->assertArrayHasKey('system.manage_roles', $enforced, 'the scan no longer reads Form Request gate() keys');
         $this->assertArrayHasKey('system.manage_groups', $enforced, 'the scan no longer reads Form Request gate() keys');
 
-        $exempt = $this->modulesWithOwnTree();
+        $exempt = $this->keysWithoutLiveGate();
         $live = $this->liveKeys();
 
         $lockedButEnforced = [];
         foreach ($enforced as $key => $file) {
-            [$module] = explode('.', $key);
-            if (in_array($module, $exempt, true) || in_array($key, $live, true)) {
+            if (in_array($key, $exempt, true) || in_array($key, $live, true)) {
                 continue;
             }
             $lockedButEnforced[$key] = $file;
