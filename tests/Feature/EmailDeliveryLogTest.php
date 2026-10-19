@@ -8,9 +8,11 @@ use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\MailSetting;
 use App\Models\User;
 use App\Services\Email\EmailNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -317,5 +319,32 @@ class EmailDeliveryLogTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'no_perms']));
 
         $this->getJson('/api/email-logs')->assertForbidden();
+    }
+
+    public function test_without_smtp_a_mail_written_to_the_log_file_is_an_error_with_the_reason(): void
+    {
+        Mail::fake();
+        config(['mail.default' => 'log']);
+
+        $sent = $this->service()->deliver('manee@example.com', 'Hello', '<p>Body</p>', 'test.template');
+
+        $this->assertFalse($sent);
+        $log = EmailLog::query()->latest('id')->firstOrFail();
+        $this->assertSame('failed', $log->status);
+        $this->assertSame(EmailNotificationService::NOT_CONFIGURED_ERROR, $log->error);
+    }
+
+    public function test_with_smtp_set_up_the_same_mail_is_sent(): void
+    {
+        Mail::fake();
+        config(['mail.default' => 'log']);
+        MailSetting::current()->update(['host' => 'smtp.example.com', 'port' => 587, 'from_address' => 'desk@example.com']);
+
+        $sent = $this->service()->deliver('manee@example.com', 'Hello', '<p>Body</p>', 'test.template');
+
+        $this->assertTrue($sent);
+        $log = EmailLog::query()->latest('id')->firstOrFail();
+        $this->assertSame('sent', $log->status);
+        $this->assertNull($log->error);
     }
 }

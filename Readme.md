@@ -6378,3 +6378,8 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ผู้ใช้เลือกเว้นระยะอย่างเดียว: รอบเก่าที่ค้างของรายงานเดียวกันยังส่งครบทุกรอบ (ไม่ข้าม)
 - สาเหตุที่พบ: `composer run demo` ที่รันอยู่เปิดก่อนเพิ่ม worker `reports` (`0d54a004`) งานส่งรายงานจึงค้างใน queue ไม่มี log อีเมล ต้องรันคำสั่งใหม่
 - เทส `ReportScheduleThrottleTest`
+
+## Email log: ยังไม่ตั้งค่า SMTP = ส่งไม่สำเร็จ พร้อมเหตุผล (2026-10-19)
+- เดิมเมื่อ `mail_settings` ว่าง ระบบใช้ค่าสำรองใน `.env` (`MAIL_MAILER=log`) ซึ่งเขียนอีเมลลงไฟล์ log แต่ log อีเมลบันทึก `sent` (ตั้งแต่ 2026-10-13 มี 755 แถวที่ไม่ได้ส่งจริง ไม่ได้แก้แถวเก่า)
+- ตอนนี้ `deliver()` เช็ก transport ของ mailer ที่ใช้จริง ถ้าเป็น `log` บันทึก `failed` + `EmailNotificationService::NOT_CONFIGURED_ERROR` ("SMTP is not set up in Settings > Email: …") และคืน false รายงานตามกำหนดเวลาจึงเป็น `delivery_failed` และเจ้าของได้กระดิ่ง อีเมลยังถูกเขียนลงไฟล์ log ให้ดูเนื้อหาได้
+- เทส `EmailDeliveryLogTest` (+2)
