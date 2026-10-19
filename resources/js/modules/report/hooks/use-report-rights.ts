@@ -10,8 +10,9 @@ export function useReportRights() {
     const { can } = useAuth();
     const canExport = can('reports.export');
     const canSchedule = can('reports.schedule');
+    const canManageSchedules = can('reports.schedule_manage');
 
-    return { canExport, canSchedule, seesMyExports: canExport || canSchedule };
+    return { canExport, canSchedule, canManageSchedules, seesMyExports: canExport || canSchedule };
 }
 
 /** A report page's ?dialog=export|schedule; a dialog the reader has no right for is dropped from the URL in place. */

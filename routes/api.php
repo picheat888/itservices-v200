@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\Report\EmployeeOpenItemsBreakdownController;
 use App\Http\Controllers\Api\Report\EmployeeOverviewBreakdownController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
+use App\Http\Controllers\Api\Report\ReportScheduleAdminController;
 use App\Http\Controllers\Api\Report\ReportScheduleController;
 use App\Http\Controllers\Api\Report\RequestApprovalsBreakdownController;
 use App\Http\Controllers\Api\Report\RequestItPendingBreakdownController;
@@ -120,6 +121,11 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::put('reports/schedules/{schedule}', [ReportScheduleController::class, 'update'])->whereNumber('schedule')->name('api.reports.schedules.update');
     Route::delete('reports/schedules/{schedule}', [ReportScheduleController::class, 'destroy'])->whereNumber('schedule')->name('api.reports.schedules.destroy');
     Route::post('reports/schedules/{schedule}/send-now', [ReportScheduleController::class, 'sendNow'])->whereNumber('schedule')->name('api.reports.schedules.send-now');
+    // Everyone's schedules for an admin (reports.schedule_manage): pause, delete, take a recipient off.
+    Route::get('reports/schedules/manage', [ReportScheduleAdminController::class, 'index'])->name('api.reports.schedules.manage.index');
+    Route::patch('reports/schedules/{schedule}/manage', [ReportScheduleAdminController::class, 'update'])->whereNumber('schedule')->name('api.reports.schedules.manage.update');
+    Route::delete('reports/schedules/{schedule}/manage', [ReportScheduleAdminController::class, 'destroy'])->whereNumber('schedule')->name('api.reports.schedules.manage.destroy');
+    Route::delete('reports/schedules/{schedule}/recipients', [ReportScheduleAdminController::class, 'removeRecipient'])->whereNumber('schedule')->name('api.reports.schedules.manage.recipients.destroy');
     Route::post('reports/tickets/overview/schedule', [ReportScheduleController::class, 'storeTicketOverview'])->name('api.reports.tickets.overview.schedule');
     Route::post('reports/tabular/{key}/schedule', [ReportScheduleController::class, 'storeTabular'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.schedule');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');

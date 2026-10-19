@@ -18,6 +18,7 @@ import type {
     EmployeeOverviewBreakdown,
     ExportFormat,
     ItPendingBreakdown,
+    ManagedScheduleItem,
     ManualSlaBreakdown,
     PagedRows,
     ReportDefinition,
@@ -259,4 +260,15 @@ export const reportApi = {
     deleteSchedule: (id: number) => http.delete(`/reports/schedules/${id}`),
 
     sendScheduleNow: (id: number) => http.post(`/reports/schedules/${id}/send-now`),
+
+    /** Everyone's schedules, for an admin with reports.schedule_manage. */
+    managedSchedules: () => http.get<{ data: ManagedScheduleItem[] }>('/reports/schedules/manage').then((r) => r.data.data),
+
+    setManagedScheduleActive: (id: number, active: boolean) =>
+        http.patch<{ data: ManagedScheduleItem }>(`/reports/schedules/${id}/manage`, { active }).then((r) => r.data.data),
+
+    deleteManagedSchedule: (id: number) => http.delete(`/reports/schedules/${id}/manage`),
+
+    removeScheduleRecipient: (id: number, email: string) =>
+        http.delete<{ data: ManagedScheduleItem }>(`/reports/schedules/${id}/recipients`, { params: { email } }).then((r) => r.data.data),
 };

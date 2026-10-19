@@ -174,7 +174,7 @@ export const REPORT_TREE: { master: string; groups: KeyCluster[] } = {
                 'reports.access',
             ],
         },
-        { id: 'tools', labelKey: 'perm_ui_group_report_tools', keys: ['reports.export', 'reports.schedule'] },
+        { id: 'tools', labelKey: 'perm_ui_group_report_tools', keys: ['reports.export', 'reports.schedule', 'reports.schedule_manage'] },
     ],
 };
 

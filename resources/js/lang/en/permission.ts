@@ -374,6 +374,8 @@ export const permission: Dict = {
     'perm_desc_reports.export': 'Export Excel/PDF of the reports this role may open and download them from My exports',
     'perm_act_reports.schedule': 'Schedule emails',
     'perm_desc_reports.schedule': 'Set, edit, pause, delete and send scheduled report emails',
+    'perm_act_reports.schedule_manage': "Manage everyone's auto-sent reports",
+    'perm_desc_reports.schedule_manage': "See, pause, delete and remove recipients from everyone's scheduled report emails",
     // permission tree — Email Templates
     // permission tree — Settings
     'perm_act_settings.access': 'Settings access',
@@ -733,6 +735,10 @@ export const permission: Dict = {
     audit_ev_updated_bell: 'Updated notification',
     audit_ev_reset_bell_to_standard: 'Reset notification to standard',
     audit_ev_downloaded_report_export: 'Downloaded a report export',
+    audit_ev_paused_scheduled_report: 'Paused an auto-sent report',
+    audit_ev_resumed_scheduled_report: 'Resumed an auto-sent report',
+    audit_ev_deleted_scheduled_report: 'Deleted an auto-sent report',
+    audit_ev_removed_scheduled_report_recipient: 'Removed a recipient from an auto-sent report',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     perm_empty_no_tabs: 'You have no access to this page yet',

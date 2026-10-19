@@ -19,7 +19,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { CalendarClock, Clock, Mail, Pencil, Send, Trash2 } from 'lucide-react';
+import { CalendarClock, Clock, Mail, Pencil, Send, Settings2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useReportRights } from '../hooks/use-report-rights';
 import {
@@ -33,6 +33,7 @@ import {
 } from '../hooks/use-reports';
 import { defaultTicketReportFilters } from '../hooks/use-ticket-report-filters';
 import type { ReportScheduleItem, TicketReportFilters } from '../types';
+import { ManageSchedulesDialog } from './manage-schedules-dialog';
 import { RailHeading, RailHeadingSkeleton, RailRowsSkeleton } from './my-exports';
 import { reportStem } from './report-catalogue';
 import { tabularFilterChips, ticketFilterChips } from './schedule-filter-summary';
@@ -195,6 +196,8 @@ export function ScheduledReports() {
     const { data: catalogue = [], isSuccess: catalogueLoaded } = useReportCatalogue();
     const update = useUpdateSchedule();
     const [editing, setEditing] = useState<ReportScheduleItem | null>(null);
+    const { canManageSchedules } = useReportRights();
+    const [managing, setManaging] = useState(false);
     // The last schedule opened, kept while the dialog animates closed so it does not blank.
     const [shown, setShown] = useState<ReportScheduleItem | null>(null);
 
@@ -219,7 +222,27 @@ export function ScheduledReports() {
     // (as the exports card above does).
     return (
         <Card id="scheduled-reports" className="overflow-hidden">
-            {isLoading ? <RailHeadingSkeleton note={false} /> : <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} />}
+            {isLoading ? (
+                <RailHeadingSkeleton note={false} />
+            ) : (
+                <RailHeading
+                    icon={CalendarClock}
+                    title={t('rep_schedules_title')}
+                    action={
+                        canManageSchedules ? (
+                            <button
+                                type="button"
+                                onClick={() => setManaging(true)}
+                                className="focus-visible:ring-brand text-brand inline-flex items-center gap-1 rounded-sm font-medium transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                                <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                {t('rep_manage')}
+                            </button>
+                        ) : undefined
+                    }
+                />
+            )}
+            {canManageSchedules && <ManageSchedulesDialog open={managing} onOpenChange={setManaging} />}
             {isLoading && <RailRowsSkeleton rows={2} />}
             {!isLoading && items.length === 0 && (
                 <EmptyState kind="empty" title={t('rep_empty_center_schedules')} hint={t('rep_empty_center_schedules_hint')} />

@@ -124,6 +124,7 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
             'reports.access',
             'reports.export',
             'reports.schedule',
+            'reports.schedule_manage',
         ],
     },
     { module: 'workflows', keys: ['workflows.module', 'workflows.manage'] },

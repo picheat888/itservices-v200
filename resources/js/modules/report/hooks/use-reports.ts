@@ -439,6 +439,30 @@ export function useDeleteSchedule() {
     });
 }
 
+/** Everyone's schedules for the admin's "จัดการ" dialog; fetched only while it is open. */
+export const MANAGED_SCHEDULES_KEY = ['reports', 'schedules', 'manage'] as const;
+
+export const useManagedSchedules = (enabled: boolean) => useQuery({ queryKey: MANAGED_SCHEDULES_KEY, queryFn: reportApi.managedSchedules, enabled });
+
+/** Pause / resume, delete and take a recipient off anyone's schedule; the admin's own card refreshes too. */
+export function useManageSchedule() {
+    const queryClient = useQueryClient();
+    // REPORT_SCHEDULES_KEY is the prefix of MANAGED_SCHEDULES_KEY, so this refreshes both lists.
+    const refresh = () => queryClient.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY });
+
+    return {
+        setActive: useMutation({
+            mutationFn: ({ id, active }: { id: number; active: boolean }) => reportApi.setManagedScheduleActive(id, active),
+            onSuccess: refresh,
+        }),
+        remove: useMutation({ mutationFn: (id: number) => reportApi.deleteManagedSchedule(id), onSuccess: refresh }),
+        removeRecipient: useMutation({
+            mutationFn: ({ id, email }: { id: number; email: string }) => reportApi.removeScheduleRecipient(id, email),
+            onSuccess: refresh,
+        }),
+    };
+}
+
 export function useSendScheduleNow() {
     const queryClient = useQueryClient();
 
