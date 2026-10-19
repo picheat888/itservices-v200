@@ -28,6 +28,8 @@ export interface UserDevice {
 export interface DeviceLimitResponse {
     limit: number;
     pending: string;
+    /** Seconds the pending token lives; null when the server did not say. */
+    expires_in: number | null;
     devices: UserDevice[];
 }
 

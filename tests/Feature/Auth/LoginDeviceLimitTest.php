@@ -121,6 +121,7 @@ class LoginDeviceLimitTest extends TestCase
             ->assertStatus(409)
             ->assertJsonPath('message', 'device_limit')
             ->assertJsonPath('limit', 2)
+            ->assertJsonPath('expires_in', 300)
             ->assertJsonCount(2, 'devices')
             ->assertJsonPath('devices.0.id', $newer->id)
             ->assertJsonPath('devices.1.id', $older->id)

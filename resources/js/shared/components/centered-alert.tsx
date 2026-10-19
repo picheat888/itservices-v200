@@ -5,13 +5,14 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
-type Shown = { Icon: LucideIcon; title: ReactNode; children: ReactNode; actions: ReactNode; errorText: ReactNode };
+type Shown = { Icon: LucideIcon; title: ReactNode; children: ReactNode; body: ReactNode; actions: ReactNode; errorText: ReactNode };
 
 export function CenteredAlert({
     open,
     icon,
     title,
     children,
+    body,
     actions,
     busy,
     errorText,
@@ -23,6 +24,8 @@ export function CenteredAlert({
     icon: LucideIcon;
     title: ReactNode;
     children: ReactNode;
+    /** Content under the text that is not part of the description a screen reader reads on open (a list with its own buttons). */
+    body?: ReactNode;
     /** Buttons share the row equally; one fills it. */
     actions: ReactNode;
     /** While true the alert cannot be dismissed (a save is running). */
@@ -39,12 +42,18 @@ export function CenteredAlert({
     const opener = useRef<HTMLElement | null>(null);
 
     // The last open content stays on screen through the exit animation
-    const retained = useRef<Shown>({ Icon: icon, title, children, actions, errorText });
+    const retained = useRef<Shown>({ Icon: icon, title, children, body, actions, errorText });
     useEffect(() => {
-        if (open) retained.current = { Icon: icon, title, children, actions, errorText };
+        if (open) retained.current = { Icon: icon, title, children, body, actions, errorText };
     });
-    const shown: Shown = open ? { Icon: icon, title, children, actions, errorText } : retained.current;
+    const shown: Shown = open ? { Icon: icon, title, children, body, actions, errorText } : retained.current;
     const { Icon } = shown;
+    const error =
+        shown.errorText != null ? (
+            <span role="alert" className="text-destructive mt-2 block">
+                {shown.errorText}
+            </span>
+        ) : null;
 
     // Busy buttons are disabled; focus they held moves to the alert instead of the page body
     useEffect(() => {
@@ -86,13 +95,15 @@ export function CenteredAlert({
                         <DialogTitle className="mb-1 text-base leading-normal font-semibold tracking-normal text-balance">{shown.title}</DialogTitle>
                         <DialogDescription className="text-muted-foreground text-sm text-pretty">
                             {shown.children}
-                            {shown.errorText != null && (
-                                <span role="alert" className="text-destructive mt-2 block">
-                                    {shown.errorText}
-                                </span>
-                            )}
+                            {shown.body == null && error}
                         </DialogDescription>
                     </div>
+                    {shown.body != null && (
+                        <div className="text-sm">
+                            {shown.body}
+                            {error}
+                        </div>
+                    )}
                     <div className="grid auto-cols-fr grid-flow-col gap-2">{shown.actions}</div>
                 </DialogPrimitive.Content>
             </DialogPortal>

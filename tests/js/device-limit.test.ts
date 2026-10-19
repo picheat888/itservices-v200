@@ -6,6 +6,7 @@ import {
     deviceLimitOf,
     deviceLine,
     isPendingExpired,
+    pendingMinutes,
     placeLine,
     signedOutByLine,
 } from '../../resources/js/modules/auth/lib/device-limit.ts';
@@ -49,8 +50,18 @@ test('no ip leaves the location alone', () => assert.equal(placeLine(device({ ip
 test('neither a location nor an ip leaves nothing to show', () => assert.equal(placeLine(device({ ip: null, location: null })), ''));
 
 test('the 409 device_limit body is read into the dialog data', () => {
-    const body = { message: 'device_limit', limit: 2, pending: 'tok', devices: [device()] };
-    assert.deepEqual(deviceLimitOf(answer(409, body)), { limit: 2, pending: 'tok', devices: [device()] });
+    const body = { message: 'device_limit', limit: 2, pending: 'tok', expires_in: 300, devices: [device()] };
+    assert.deepEqual(deviceLimitOf(answer(409, body)), { limit: 2, pending: 'tok', expires_in: 300, devices: [device()] });
+});
+test('a 409 without a usable time limit still opens the dialog, with no time to show', () => {
+    const body = { message: 'device_limit', limit: 2, pending: 'tok', expires_in: 'soon', devices: [device()] };
+    assert.equal(deviceLimitOf(answer(409, body))?.expires_in, null);
+});
+test('the time limit reads in whole minutes, rounded up', () => {
+    assert.equal(pendingMinutes(300), 5);
+    assert.equal(pendingMinutes(90), 2);
+    assert.equal(pendingMinutes(null), null);
+    assert.equal(pendingMinutes(0), null);
 });
 test('a 409 with another message is not a device limit', () => assert.equal(deviceLimitOf(answer(409, { message: 'other' })), null));
 test('a device_limit body on another status is not a device limit', () =>

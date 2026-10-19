@@ -1,7 +1,7 @@
 // Sign-in dialog for an account at its device limit: sign out at least one listed device, then finish signing in.
 import { useT } from '@/lang';
 import { authApi, type DeviceLimitResponse, type UserDevice } from '@/modules/auth/api/authApi';
-import { canContinue, deviceLine, isPendingExpired, placeLine } from '@/modules/auth/lib/device-limit';
+import { canContinue, deviceLine, isPendingExpired, pendingMinutes, placeLine } from '@/modules/auth/lib/device-limit';
 import { CenteredAlert } from '@/shared/components/centered-alert';
 import { SaveButton } from '@/shared/components/save-button';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -10,7 +10,7 @@ import { httpStatus, markShownInline } from '@/shared/lib/http-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Check, Loader2, MonitorSmartphone } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function DeviceLimitDialog({
     open,
@@ -53,7 +53,19 @@ export function DeviceLimitDialog({
 
     const busy = endingId !== null || completing;
 
-    const markSignedOut = (id: number) => setSignedOut((prev) => new Set(prev).add(id));
+    // Signing a device out replaces its button, so focus goes on to "Sign in", which that just unlocked
+    const continueRef = useRef<HTMLButtonElement>(null);
+    const [focusContinue, setFocusContinue] = useState(false);
+    useEffect(() => {
+        if (!focusContinue || busy) return;
+        continueRef.current?.focus();
+        setFocusContinue(false);
+    }, [focusContinue, busy]);
+
+    const markSignedOut = (id: number) => {
+        setSignedOut((prev) => new Set(prev).add(id));
+        setFocusContinue(true);
+    };
 
     const continueSignIn = () => {
         setEndError(null);
@@ -83,6 +95,7 @@ export function DeviceLimitDialog({
     };
 
     const count = fmtN(devices.length);
+    const minutes = pendingMinutes(limit?.expires_in ?? null);
 
     return (
         <CenteredAlert
@@ -93,12 +106,28 @@ export function DeviceLimitDialog({
             errorText={endError ?? errorText}
             className="max-w-[420px]"
             onClose={onCancel}
+            body={
+                // Device rows, outside the description so it stays two short lines when read aloud
+                <div className="grid gap-2 text-left">
+                    {devices.map((device) => (
+                        <DeviceRow
+                            key={device.id}
+                            device={device}
+                            done={signedOut.has(device.id)}
+                            ending={endingId === device.id}
+                            disabled={busy}
+                            onSignOut={() => void signOut(device)}
+                        />
+                    ))}
+                </div>
+            }
             actions={
                 <>
                     <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={onCancel}>
                         {t('cancel')}
                     </Button>
                     <SaveButton
+                        ref={continueRef}
                         type="button"
                         className="w-full font-semibold"
                         loading={completing}
@@ -113,19 +142,7 @@ export function DeviceLimitDialog({
         >
             <span className="block">{t('login_device_limit_line1').replace('{n}', count)}</span>
             <span className="block">{t('login_device_limit_line2')}</span>
-            {/* Device rows */}
-            <span className="mt-4 grid gap-2 text-left">
-                {devices.map((device) => (
-                    <DeviceRow
-                        key={device.id}
-                        device={device}
-                        done={signedOut.has(device.id)}
-                        ending={endingId === device.id}
-                        disabled={busy}
-                        onSignOut={() => void signOut(device)}
-                    />
-                ))}
-            </span>
+            {minutes !== null && <span className="mt-1 block text-xs">{t('login_device_limit_time').replace('{n}', fmtN(minutes))}</span>}
         </CenteredAlert>
     );
 }
@@ -150,7 +167,7 @@ function DeviceRow({
     const lastUsed = relativeTime(device.last_active_at ?? device.signed_in_at, t, '', fmtN);
 
     return (
-        <span className="border-border bg-card flex items-center gap-3 rounded-lg border px-3 py-2.5">
+        <div className="border-border bg-card flex items-center gap-3 rounded-lg border px-3 py-2.5">
             <span className="min-w-0 flex-1">
                 <span className="text-foreground block text-sm font-medium break-words">{line}</span>
                 {place && <span className="text-muted-foreground block text-xs break-words">{place}</span>}
@@ -159,7 +176,7 @@ function DeviceRow({
             {done ? (
                 <span
                     role="status"
-                    className="inline-flex h-9 shrink-0 items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400"
+                    className="inline-flex h-10 shrink-0 items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400"
                 >
                     <Check className="h-4 w-4" aria-hidden />
                     {t('device_signed_out_done')}
@@ -169,7 +186,7 @@ function DeviceRow({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className={cn('shrink-0', ending && 'disabled:opacity-100')}
+                    className={cn('h-10 shrink-0', ending && 'disabled:opacity-100')}
                     disabled={disabled}
                     aria-busy={ending || undefined}
                     aria-label={`${t('device_sign_out')} ${line}`}
@@ -179,6 +196,6 @@ function DeviceRow({
                     {t('device_sign_out')}
                 </Button>
             )}
-        </span>
+        </div>
     );
 }
