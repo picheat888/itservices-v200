@@ -10,6 +10,7 @@ import {
     type GroupRoleListResponse,
     type GroupRoleOption,
     type GroupRoleUpdatePayload,
+    type LoginEventParams,
 } from '../api/permissionApi';
 import { baseRoleLabel } from '../lib/group-rules';
 
@@ -125,5 +126,12 @@ export const useAuditLogs = (page: number, perPage: number, filters: AuditFilter
     useQuery({
         queryKey: ['audit-logs', page, perPage, filters],
         queryFn: () => permissionApi.auditLogs(page, perPage, filters),
+        placeholderData: (prev) => prev,
+    });
+
+export const useLoginEvents = (params: LoginEventParams) =>
+    useQuery({
+        queryKey: ['login-events', params],
+        queryFn: () => permissionApi.loginEvents(params),
         placeholderData: (prev) => prev,
     });

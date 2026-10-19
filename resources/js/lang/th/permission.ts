@@ -8,6 +8,8 @@ export const permission: Dict = {
     perm_groups: 'กลุ่มบทบาท',
     perm_audit: 'บันทึกการตรวจสอบ',
     perm_audit_search: 'ค้นหาการกระทำ, รายการ หรือผู้ทำ…',
+    perm_logins: 'Login',
+    perm_logins_search: 'ค้นหาชื่อพนักงาน ชื่อผู้ใช้ IP หรือที่ตั้ง…',
     perm_load_failed: 'โหลดข้อมูลสิทธิ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
     perm_members: 'สมาชิก',
     perm_enabled: 'สิทธิ์ที่เปิด',
@@ -128,6 +130,10 @@ export const permission: Dict = {
     audit_records: 'รายการที่เกี่ยวข้อง',
     audit_target: 'เป้าหมาย',
     audit_details: 'รายละเอียด',
+    perm_login_col_event: 'เหตุการณ์',
+    perm_login_col_ip: 'IP',
+    perm_login_col_place: 'ที่ตั้ง',
+    perm_login_col_device: 'อุปกรณ์',
     permission_level: 'ระดับสิทธิ์',
 
     // modules/permissions/lib/permission-labels.ts — ป้ายชื่อในผังสิทธิ์
@@ -568,6 +574,7 @@ export const permission: Dict = {
     perm_conflict_title: 'บทบาทนี้เพิ่งถูกแก้',
     perm_discard_title: 'ทิ้งสิทธิ์ที่ยังไม่บันทึก?',
     perm_audit_filter_category: 'ประเภทการกระทำ',
+    perm_login_all_events: 'ทุกเหตุการณ์',
     perm_lock_needs: 'เปิด {name} ก่อน',
     perm_search_none_hint: 'ลองค้นด้วยคำอื่น',
 
@@ -747,4 +754,8 @@ export const permission: Dict = {
     perm_empty_audit_hint: 'การเพิ่ม แก้ไข หรือลบข้อมูลจะบันทึกไว้ที่นี่',
     perm_empty_audit_search: 'ไม่พบกิจกรรมที่ตรงกับคำค้นหรือตัวกรอง',
     perm_empty_audit_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
+    perm_empty_logins: 'ยังไม่มีประวัติการเข้าสู่ระบบ',
+    perm_empty_logins_hint: 'การเข้าสู่ระบบ ออกจากระบบ และการเข้าที่ไม่สำเร็จจะบันทึกไว้ที่นี่',
+    perm_empty_logins_search: 'ไม่พบประวัติที่ตรงกับคำค้นหรือตัวกรอง',
+    perm_empty_logins_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
 };
