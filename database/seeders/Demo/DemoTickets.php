@@ -8,6 +8,7 @@ use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Ticket\TicketClosureService;
 use App\Services\Ticket\TicketService;
 
 /**
@@ -50,7 +51,10 @@ final class DemoTickets implements DemoStep
     /** Employees who report cases (none of them IT staff). */
     private const REQUESTERS = ['staff', 'pd.4', 'sup.pd', 'qc.2', 'se.2', 'hr.staff', 'acc.2', 'acc.3', 'sale.2', 'lg.3', 'mn.2', 'pu.2', 'ga.2', 'mgr.pd', 'hr.2'];
 
-    public function __construct(private readonly TicketService $tickets) {}
+    public function __construct(
+        private readonly TicketService $tickets,
+        private readonly TicketClosureService $closures,
+    ) {}
 
     public function run(DemoContext $ctx, DemoClock $clock): void
     {
@@ -121,12 +125,13 @@ final class DemoTickets implements DemoStep
             $late = $i % 7 === 3;
             $cancelled = in_array($i, self::CANCELLED, true);
             $clock->at($clock->after($noted, max(0, $daysAgo - ($late ? 7 : 1)), 16));
-            $ticket = $this->tickets->resolve(
+            // The closure service writes its own "Resolved ticket" audit entry
+            $ticket = $this->closures->close(
                 $ticket->fresh(),
+                $staff,
                 ! $cancelled,
                 $cancelled ? 'Cancelled - the requester solved it themselves.' : $resolution,
             );
-            $ctx->audit('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
         }
     }
 
