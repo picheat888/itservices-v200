@@ -14,16 +14,29 @@ import { ChevronDown, Loader2, LogOut } from 'lucide-react';
 import { useEffect, useRef, type RefObject } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { nextFocusIndex } from './menu-focus';
+import { useCountRises } from './use-count-rises';
 import { useNavScroll } from './use-nav-scroll';
 import { useSidebarStyle } from './use-sidebar-style';
 
-/** Count of hand-overs waiting for the user's acceptance, pinned to the avatar. */
-function PendingAssetsPill({ count }: { count: number }) {
+/** A late count fades in quietly when it first lands, and pops each time it rises (keyed by its rises). */
+function badgeMotion(rises: number): string {
+    return rises > 0 ? 'badge-pop' : 'motion-pop-in';
+}
+
+/** Count of hand-overs waiting for the user's acceptance, pinned to the avatar; null while loading. */
+function PendingAssetsPill({ count }: { count: number | null }) {
     const t = useT();
     const fmtN = useNumberFormat();
-    if (count <= 0) return null;
+    const rises = useCountRises(count);
+    if (!count) return null;
     return (
-        <span className="ring-sidebar absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-700 px-1 text-[10px] font-bold text-white ring-2">
+        <span
+            key={rises}
+            className={cn(
+                'ring-sidebar absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-700 px-1 text-[10px] font-bold text-white ring-2',
+                badgeMotion(rises),
+            )}
+        >
             <span aria-hidden="true">{fmtN(count)}</span>
             <span className="sr-only">{t('profile_pending_assets_badge').replace('{n}', fmtN(count))}</span>
         </span>
@@ -35,18 +48,11 @@ function useSidebarData() {
     const { user } = useAuth();
     const role = (user?.role ?? 'user') as Role;
     const perms = user?.permissions ?? [];
-    // One endpoint returns every count, already 0 for anything this user may not see.
+    // One endpoint returns every count, already 0 for anything this user may not see; undefined until it lands
     const counts = useSidebarBadges(user != null);
-    // Keyed by nav item id; a count missing here shows no badge.
-    const badges: Record<string, number> = {
-        stock: counts.stock,
-        contracts: counts.contracts,
-        assets: counts.assets,
-        access: counts.access,
-        tickets: counts.tickets,
-        employees: counts.employees,
-        requests: counts.requests,
-    };
+    // The server names each count after its nav item id; null = still loading
+    const byId: Partial<Record<string, number>> = counts ?? {};
+    const badgeFor = (id: string): number | null => (counts ? (byId[id] ?? 0) : null);
     const canSee = (i: NavItem) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
         if (i.permission) return perms.includes(i.permission);
@@ -55,7 +61,7 @@ function useSidebarData() {
     };
     const groups = navGroups.map((g) => ({ ...g, items: g.items.filter(canSee) })).filter((g) => g.items.length > 0);
 
-    return { user, counts, badges, groups };
+    return { user, myAssets: counts ? counts.my_assets : null, badgeFor, groups };
 }
 
 interface SidebarProps {
@@ -157,14 +163,14 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
     const logoUrl = useUiStore((s) => s.logoUrl);
     const lang = useUiStore((s) => s.lang);
     const { data: settings } = useSettings();
-    const { user, counts, badges, groups } = useSidebarData();
+    const { user, myAssets, badgeFor, groups } = useSidebarData();
     const navRef = useRef<HTMLElement>(null);
     const { pathname } = useLocation();
     const { edges, pageDown } = useNavScroll(navRef, `${pathname}|${groups.length}`);
     // Name follows the UI language; avatar initials stay on the English name
     const displayName = localPair(user?.name, user?.name_th, lang);
     // Kit waiting for acceptance opens the profile straight on its Assets tab.
-    const openProfile = () => onProfile(counts.my_assets > 0 ? 'assets' : undefined);
+    const openProfile = () => onProfile(myAssets ? 'assets' : undefined);
 
     return (
         <>
@@ -208,7 +214,7 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                                 </div>
                                 <div className="space-y-0.5">
                                     {group.items.map((item) => (
-                                        <NavRow key={item.id} item={item} badge={badges[item.id] ?? 0} onPick={onPick} />
+                                        <NavRow key={item.id} item={item} badge={badgeFor(item.id)} onPick={onPick} />
                                     ))}
                                 </div>
                             </div>
@@ -238,7 +244,7 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                     >
                         <span className="relative shrink-0">
                             <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-8 w-8 shrink-0" textClassName="text-xs" />
-                            <PendingAssetsPill count={counts.my_assets} />
+                            <PendingAssetsPill count={myAssets} />
                         </span>
                     </button>
                     <SignOutButton pending={logout.isPending} onClick={() => logout.mutate()} className="h-10 w-10" />
@@ -259,7 +265,7 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                                     className="h-9 w-9 shrink-0"
                                     textClassName="text-xs"
                                 />
-                                <PendingAssetsPill count={counts.my_assets} />
+                                <PendingAssetsPill count={myAssets} />
                             </span>
                             <div className="min-w-0 flex-1">
                                 <div className="truncate text-sm font-medium">{displayName}</div>
@@ -332,9 +338,10 @@ function SignOutButton({ pending, onClick, className }: { pending: boolean; onCl
 }
 
 /** One menu row: rail icon + dot when closed, label + count pill when open. */
-function NavRow({ item, badge, onPick }: { item: NavItem; badge: number; onPick?: () => void }) {
+function NavRow({ item, badge, onPick }: { item: NavItem; badge: number | null; onPick?: () => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const rises = useCountRises(badge);
     const Icon = item.icon;
     return (
         <NavLink
@@ -360,14 +367,22 @@ function NavRow({ item, badge, onPick }: { item: NavItem; badge: number; onPick?
                     />
                     <Icon className="relative h-[18px] w-[18px] shrink-0" />
                     <span className="nav-label relative min-w-0 flex-1 truncate">{t(item.label)}</span>
-                    {badge > 0 && (
+                    {!!badge && (
                         <>
-                            <span aria-hidden="true" className="nav-mark bg-brand absolute top-1.5 left-[35px] h-2 w-2 rounded-full" />
-                            <span
-                                aria-hidden="true"
-                                className="nav-label bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground relative shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
-                            >
-                                {fmtN(badge)}
+                            {/* Rail dot and menu pill; the outer span carries the rail/menu cross-fade, the inner one the motion */}
+                            <span aria-hidden="true" className="nav-mark absolute top-1.5 left-[35px]">
+                                <span key={rises} className={cn('bg-brand block h-2 w-2 rounded-full', badgeMotion(rises))} />
+                            </span>
+                            <span aria-hidden="true" className="nav-label relative shrink-0">
+                                <span
+                                    key={rises}
+                                    className={cn(
+                                        'bg-brand/15 text-brand-ink dark:group-aria-[current=page]:bg-brand dark:group-aria-[current=page]:text-brand-foreground block rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
+                                        badgeMotion(rises),
+                                    )}
+                                >
+                                    {fmtN(badge)}
+                                </span>
                             </span>
                             <span className="sr-only">, {t('nav_badge_sr').replace('{n}', fmtN(badge))}</span>
                         </>

@@ -8,7 +8,7 @@ import { useUiStore } from '@/stores/ui';
 import { Bell, Moon, Sun } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { countRose } from './count-rise';
+import { useCountRises } from './use-count-rises';
 import { useSidebarStyle } from './use-sidebar-style';
 
 /** Topbar buttons share one look: 36px (40px below 1280px), hover fades in, press shrinks the content. */
@@ -162,17 +162,6 @@ function Press({ children }: { children: ReactNode }) {
             {children}
         </span>
     );
-}
-
-/** How many times the count has gone up since it first loaded (null while loading). */
-function useCountRises(count: number | null): number {
-    const [seen, setSeen] = useState<number | null>(null);
-    const [rises, setRises] = useState(0);
-    if (count !== null && count !== seen) {
-        if (countRose(seen, count)) setRises(rises + 1);
-        setSeen(count);
-    }
-    return rises;
 }
 
 /** Menu icon drawn as three lines, so on narrow screens they can fold into an X (app.css `.nav-burger`). */
