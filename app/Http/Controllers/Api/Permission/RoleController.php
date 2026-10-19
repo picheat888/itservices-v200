@@ -7,6 +7,7 @@ use App\Http\Requests\Permission\DuplicateRoleRequest;
 use App\Http\Requests\Permission\ManageRolesRequest;
 use App\Http\Requests\Permission\StoreRoleRequest;
 use App\Http\Requests\Permission\UpdateRoleRequest;
+use App\Http\Resources\Permission\RoleResource;
 use App\Services\Permission\RoleDuplicateService;
 use App\Services\Permission\RoleService;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,7 @@ class RoleController extends Controller
     {
         $role = $roles->create($request->validated());
 
-        return response()->json(['data' => $role, 'message' => 'success'], 201);
+        return response()->json(['data' => new RoleResource($role), 'message' => 'success'], 201);
     }
 
     /** A new custom role with the source's saved permissions; members are not copied. */
@@ -25,14 +26,14 @@ class RoleController extends Controller
     {
         $role = $service->duplicate($request->sourceRole(), $request->validated('name'), $request->validated('color'), $request->user());
 
-        return response()->json(['data' => $role, 'message' => 'success'], 201);
+        return response()->json(['data' => new RoleResource($role), 'message' => 'success'], 201);
     }
 
     public function update(UpdateRoleRequest $request, RoleService $roles): JsonResponse
     {
         $role = $roles->update($request->editedRole(), $request->validated());
 
-        return response()->json(['data' => $role, 'message' => 'success']);
+        return response()->json(['data' => new RoleResource($role), 'message' => 'success']);
     }
 
     public function destroy(ManageRolesRequest $request, string $key, RoleService $roles): JsonResponse
