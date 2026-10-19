@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -9,9 +10,10 @@ import { localName } from '@/shared/lib/local-name';
 import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
+import { Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useSectionMutations } from '../hooks/use-sections';
@@ -20,6 +22,12 @@ const empty = { department_id: '', name: '', name_th: '' };
 
 export function SectionModal({ open, onClose, section }: { open: boolean; onClose: () => void; section: Section | null }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(section);
+    useEffect(() => {
+        if (open) setShown(section);
+    }, [open, section]);
+    const view = open ? section : shown;
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
@@ -86,15 +94,15 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
-            <DialogContent aria-describedby={undefined}>
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        {section ? t('edit_section') : t('add_section')}
-                        {section?.code && <span className="text-muted-foreground text-xs font-normal">{section.code}</span>}
-                    </DialogTitle>
-                </DialogHeader>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Users}
+                    eyebrow={t('employees')}
+                    title={view ? t('edit_section') : t('add_section')}
+                    code={view?.code || undefined}
+                />
                 <form onSubmit={submit} className="contents">
-                    <div className="space-y-4">
+                    <DialogBody>
                         <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                         <Field label={t('department')} required error={error || undefined}>
                             <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={deptOptions} />
@@ -119,15 +127,15 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                                 />
                             </Field>
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </DialogBody>
+                    <DialogFooterBar>
                         <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
                         <SaveButton type="submit" loading={saving} success={saved} disabled={!canSave} />
-                    </DialogFooter>
+                    </DialogFooterBar>
                 </form>
-            </DialogContent>
+            </FormDialogContent>
         </Dialog>
     );
 }

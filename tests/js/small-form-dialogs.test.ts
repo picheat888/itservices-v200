@@ -41,7 +41,12 @@ const SETTINGS_4A = [
     'modules/settings/components/lookup-section.tsx',
     'modules/settings/components/request-data-section.tsx',
 ];
-const PEOPLE_4A: string[] = [];
+const PEOPLE_4A = [
+    'modules/employee/components/department-modal.tsx',
+    'modules/employee/components/position-modal.tsx',
+    'modules/employee/components/section-modal.tsx',
+    'modules/permission/components/role-modal.tsx',
+];
 const ASSET_4A: string[] = [];
 const RECORD_4A: string[] = [];
 const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_4A, ...RECORD_4A];
@@ -58,6 +63,8 @@ test('write-off reasons show the assets area, units and warranty types the maste
     assert.match(page, /eyebrow=\{t\('set_assets'\)\}/, 'write-off reasons eyebrow');
     assert.equal((page.match(/eyebrow=\{t\('set_master_data'\)\}/g) ?? []).length, 2, 'units and warranty types eyebrow');
 });
+
+test('employee and role small forms use the 4ข look', () => PEOPLE_4A.forEach(assertSmallForm));
 
 test('export and schedule dialogs use the shared shell and keep their own body and ghost cancel', () => {
     for (const rel of REPORT_4B) {
