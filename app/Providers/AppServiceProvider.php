@@ -13,6 +13,7 @@ use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DbIpLookup;
 use App\Services\Auth\DeviceUserProvider;
 use App\Services\Auth\GeoIpLookup;
+use App\Support\ErrorPage;
 use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -23,7 +24,9 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\View as BladeView;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,10 +44,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // The settings cache lives exactly as long as one application instance.
-        // In production that is one request; in the test suite it is one test, and
-        // without this the rows one test wrote would answer the next one's reads
-        // long after RefreshDatabase had rolled them away.
+        // Settings cache per application instance (one request, one test)
         AppSetting::flushCache();
         // A long-lived queue worker boots once; each job reads settings fresh.
         Event::listen(JobProcessing::class, fn () => AppSetting::flushCache());
@@ -59,12 +59,7 @@ class AppServiceProvider extends ServiceProvider
             $notification->kind = NotificationKind::of((array) $notification->data);
         });
 
-        // Strict morph map for Access Control resources. Because enforceMorphMap()
-        // puts Eloquent into strict mode, EVERY model used in a polymorphic
-        // relationship must be listed here — including User, which backs the
-        // `notifiable` morph on Laravel's database notifications. Existing
-        // notification rows store the User FQCN, so we key it by its class name
-        // to keep both stored data and new writes resolving correctly.
+        // Strict morph map: every polymorphic model must be listed, User keyed by its class name
         Relation::enforceMorphMap([
             'email_group' => EmailGroup::class,
             'file_share' => FileShare::class,
@@ -72,13 +67,16 @@ class AppServiceProvider extends ServiceProvider
             'software' => Software::class,
             User::class => User::class,
         ]);
+
+        // Blade error pages: words, buttons, brand and accent (no queries in the view)
+        View::composer('errors.layout', fn (BladeView $view) => $view->with('page', ErrorPage::for(
+            $view->getData()['code'],
+            request(),
+            $view->getData()['exception'] ?? null,
+        )));
     }
 
-    /**
-     * Standard API throttle: 300 requests/minute, keyed per authenticated user
-     * (so one heavy user can't starve others) and falling back to the client IP
-     * for unauthenticated calls. Exceeding it returns HTTP 429.
-     */
+    /** API throttle 300/min per user (client IP when signed out), plus the named limiters below. */
     private function configureRateLimiting(): void
     {
         RateLimiter::for('api', function (Request $request) {
