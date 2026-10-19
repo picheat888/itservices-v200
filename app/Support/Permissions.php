@@ -80,7 +80,7 @@ class Permissions
                 'social_view', 'social_add', 'social_edit', 'social_delete',
                 'software_view', 'software_add', 'software_edit', 'software_delete',
             ],
-            'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'view_audit'],
+            'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'view_audit', 'view_logins'],
             // Email & Notification — see notificationHierarchy().
             'notifications' => [
                 'module',
@@ -205,7 +205,7 @@ class Permissions
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
                 'settings.access', 'settings.assets', 'settings.company', 'settings.masterdata', 'settings.requestdata', 'settings.sla',
                 'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',
-                'system.manage_permissions', 'system.view_audit',
+                'system.manage_permissions', 'system.view_audit', 'system.view_logins',
                 'tickets.assign', 'tickets.create', 'tickets.edit_own', 'tickets.forward', 'tickets.jobs', 'tickets.level_cctv', 'tickets.level_hardware', 'tickets.level_network', 'tickets.level_other', 'tickets.level_software', 'tickets.level_telephone', 'tickets.module', 'tickets.my', 'tickets.resolve', 'tickets.set_work_class', 'tickets.view_all', 'tickets.view_dashboard',
                 'workflows.manage', 'workflows.module',
             ],

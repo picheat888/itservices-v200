@@ -354,6 +354,8 @@ export const permission: Dict = {
     'perm_act_system.view_audit': 'ดูบันทึกการตรวจสอบ',
     'perm_desc_system.view_audit':
         'เห็นบันทึกการตรวจสอบของทุกโมดูล รวมถึงข้อมูลที่ถูกลบไปแล้ว เช่น อีเมลและเบอร์โทรของพนักงาน ควรให้เฉพาะผู้ดูแลระบบ',
+    'perm_act_system.view_logins': 'ดูประวัติการเข้าสู่ระบบ',
+    'perm_desc_system.view_logins': 'เห็นแท็บ Login ในหน้าสิทธิ์การใช้งาน ว่าใครเข้าสู่ระบบเมื่อไร จาก IP และที่ตั้งไหน ด้วยอุปกรณ์อะไร',
     // ผังสิทธิ์ — Reports
     perm_mod_reports: 'รายงาน',
     'perm_act_reports.module': 'เข้าศูนย์รายงาน',

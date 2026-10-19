@@ -540,7 +540,8 @@
                 "keys": [
                     "system.manage_roles",
                     "system.manage_groups",
-                    "system.view_audit"
+                    "system.view_audit",
+                    "system.view_logins"
                 ],
                 "coming_soon_aware": true
             }

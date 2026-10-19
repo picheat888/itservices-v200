@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Access\SoftwareController;
 use App\Http\Controllers\Api\Asset\AssetController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\LoginDeviceController;
+use App\Http\Controllers\Api\Auth\MyDeviceController;
 use App\Http\Controllers\Api\Contract\ContractAttachmentController;
 use App\Http\Controllers\Api\Contract\ContractController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\Notification\NotificationTemplateController;
 use App\Http\Controllers\Api\Permission\AuditLogController;
 use App\Http\Controllers\Api\Permission\GroupRoleController;
+use App\Http\Controllers\Api\Permission\LoginEventController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\Report\AccessOverviewBreakdownController;
@@ -57,6 +59,7 @@ use App\Http\Controllers\Api\Settings\BrandController;
 use App\Http\Controllers\Api\Settings\CategoryController;
 use App\Http\Controllers\Api\Settings\ClientErrorController;
 use App\Http\Controllers\Api\Settings\LocationController;
+use App\Http\Controllers\Api\Settings\NetworkNameController;
 use App\Http\Controllers\Api\Settings\RequestOptionController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Settings\UnitController;
@@ -98,6 +101,10 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::get('session/ping', fn () => response()->json(['ok' => true]))
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.session.ping');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
+    // Profile Devices tab — the caller's own devices and last login events
+    Route::get('me/devices', [MyDeviceController::class, 'index'])->name('api.me.devices');
+    Route::delete('me/devices/{device}', [MyDeviceController::class, 'destroy'])->whereNumber('device')->name('api.me.devices.destroy');
+    Route::get('me/login-events', [MyDeviceController::class, 'events'])->name('api.me.login-events');
     // Every sidebar badge count in one request (per-count permission handled in the service).
     Route::get('sidebar-badges', [SidebarBadgeController::class, 'index'])->name('api.sidebar-badges');
     // The front page in one request — same arrangement: the service gates block by block.
@@ -194,6 +201,13 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])
         ->middleware('permission:settings.security')->name('api.settings.security.update');
+    // Network names — what a sign-in IP is called in the Login log
+    Route::middleware('permission:settings.security')->prefix('settings/network-names')->group(function () {
+        Route::get('/', [NetworkNameController::class, 'index'])->name('api.settings.network-names.index');
+        Route::post('/', [NetworkNameController::class, 'store'])->name('api.settings.network-names.store');
+        Route::put('{networkName}', [NetworkNameController::class, 'update'])->whereNumber('networkName')->name('api.settings.network-names.update');
+        Route::delete('{networkName}', [NetworkNameController::class, 'destroy'])->whereNumber('networkName')->name('api.settings.network-names.destroy');
+    });
     Route::get('settings/mail', [SettingsController::class, 'mailSettings'])
         ->middleware('permission:settings.email')->name('api.settings.mail');
     Route::put('settings/mail', [SettingsController::class, 'updateMailSettings'])
@@ -391,6 +405,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::apiResource('group-roles', GroupRoleController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::put('group-roles-default', [GroupRoleController::class, 'setDefaultGroup'])->name('api.group-roles.default');
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('api.audit.index');
+    Route::get('login-events', [LoginEventController::class, 'index'])
+        ->middleware('permission:system.view_logins')->name('api.login-events.index');
 
     // Notifications
     Route::get('notifications', [NotificationController::class, 'index'])->name('api.notifications.index');

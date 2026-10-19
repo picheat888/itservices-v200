@@ -361,6 +361,9 @@ export const permission: Dict = {
     'perm_act_system.view_audit': 'View audit log',
     'perm_desc_system.view_audit':
         'Sees the audit log of every module, including deleted records such as employee email and phone. Give it to administrators only.',
+    'perm_act_system.view_logins': 'View login log',
+    'perm_desc_system.view_logins':
+        'Sees the Login tab on the Permissions page: who signed in and when, from which IP and place, on what device. Give it to administrators only.',
     // permission tree — Reports
     perm_mod_reports: 'Reports',
     'perm_act_reports.module': 'Open the Report Center',
