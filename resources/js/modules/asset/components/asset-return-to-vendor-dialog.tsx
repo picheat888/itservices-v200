@@ -25,6 +25,7 @@ import { useAssetMutations } from '../hooks/use-assets';
 export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids: number[]; open: boolean; onClose: () => void; onDone: () => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const selectedCount = t('asset_bulk_count').replace('{count}', fmtN(ids.length));
     const { returnToVendor } = useAssetMutations();
     const [note, setNote] = useState('');
     const [error, setError] = useState<string | undefined>();
@@ -59,10 +60,10 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
             <FormDialogContent>
                 <FocusDialogHeader
                     icon={Undo2}
-                    eyebrow={t('asset_bulk_count').replace('{count}', fmtN(ids.length))}
+                    eyebrow={selectedCount}
                     title={t('asset_return_vendor_title')}
                     subtitle={<span className="text-muted-foreground text-sm">{t('asset_return_vendor_desc')}</span>}
-                    srDescription={t('asset_return_vendor_desc')}
+                    srDescription={`${selectedCount} ${t('asset_return_vendor_desc')}`}
                 />
 
                 <DialogBody>

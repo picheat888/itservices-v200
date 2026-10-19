@@ -113,3 +113,18 @@ test('the shared shell is 560 wide, capped, with a 32px close button and the lar
     // Every other dialog keeps today's close button
     assert.ok(src.includes('absolute top-4 right-4'), 'base close button unchanged');
 });
+
+test('a long edit chip truncates inside the title row instead of spilling past the dialog edge', () => {
+    const src = read('shared/components/dialog-header.tsx');
+    const chip = src.match(/'([^']*rounded-md px-2 py-0\.5 text-xs font-semibold[^']*)'/);
+    assert.ok(chip, 'chip class string found');
+    for (const part of ['max-w-full', 'truncate']) assert.ok(chip[1].split(' ').includes(part), `chip: ${part}`);
+});
+
+test('bulk asset dialogs still tell screen readers how many assets are selected', () => {
+    for (const rel of ['modules/asset/components/asset-writeoff-dialog.tsx', 'modules/asset/components/asset-return-to-vendor-dialog.tsx']) {
+        const src = read(rel);
+        assert.match(src, /const selectedCount = t\('asset_bulk_count'\)/, `${rel}: count text`);
+        assert.match(src, /srDescription=\{[^\n]*selectedCount/, `${rel}: count in the description`);
+    }
+});

@@ -102,7 +102,7 @@ export function FocusDialogHeader({
                     {code && (
                         <span
                             className={cn(
-                                'shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold',
+                                'max-w-full shrink-0 truncate rounded-md px-2 py-0.5 text-xs font-semibold',
                                 accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : 'bg-brand/10 text-brand-ink',
                             )}
                             style={codeStyle}
