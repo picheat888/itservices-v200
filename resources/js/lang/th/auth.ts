@@ -35,4 +35,19 @@ export const auth: Dict = {
     session_switched: 'แท็บอื่นเข้าสู่ระบบด้วยบัญชี {name}\nโหลดหน้าใหม่เพื่อใช้บัญชีนี้',
     session_reload: 'โหลดหน้าใหม่',
     session_one_second: '1 วินาที',
+    // pages/login.tsx — why you were signed out, expired confirmation
+    login_notice_third_device: 'บัญชีนี้เข้าสู่ระบบจากเครื่องอื่น ออกจากระบบแล้ว',
+    login_notice_by: '{device} ที่{location} เมื่อ {time}',
+    login_notice_by_no_location: '{device} เมื่อ {time}',
+    login_notice_profile: 'เครื่องนี้ถูกสั่งออกจากระบบจากหน้าโปรไฟล์ของบัญชีนี้',
+    login_notice_limit: 'ผู้ดูแลระบบจำกัดจำนวนเครื่องที่ใช้พร้อมกัน ระบบเก็บไว้เฉพาะเครื่องที่คุณใช้ล่าสุด',
+    login_pending_expired: 'หมดเวลายืนยัน กรุณาเข้าสู่ระบบอีกครั้ง',
+    // components/device-limit-dialog.tsx — sign-in for an account at its device limit
+    login_device_limit_title: 'บัญชีนี้เข้าใช้อยู่ {n} เครื่องแล้ว',
+    login_device_limit_line1: 'ตรวจสอบการเข้าสู่ระบบทั้ง {n} เครื่องด้านล่าง',
+    login_device_limit_line2: 'แล้วออกจากระบบอย่างน้อย 1 เครื่อง เพื่อเข้าสู่ระบบที่เครื่องนี้',
+    device_sign_out: 'ออกจากระบบ',
+    device_signed_out_done: 'ออกจากระบบแล้ว',
+    device_last_used: 'ใช้ล่าสุด {time}',
+    device_other: 'อื่น ๆ',
 };
