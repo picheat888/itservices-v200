@@ -10,6 +10,7 @@ import type { DataIssueKey, EmployeeOpenItemsBreakdown, OpenItemsAccountKind, Op
 import { Segments } from './access-overview-cards';
 import { count } from './access-parts';
 import { CardsUpdating } from './cards-updating';
+import { InfoMark } from './chart-parts';
 import { KpiTile } from './kpi-tile';
 import { AccessCard, AccountCard, AssetCard, DataCard } from './open-items-tables';
 import { CardHeadingSkeleton, DataTableSkeleton, KpiRowSkeleton } from './report-skeletons';
@@ -211,6 +212,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(tiles))}>
             <KpiTile
                 label={t('rep_ef_k_total')}
+                badge={<InfoMark info={t('rep_info_employees_open_items_total')} />}
                 value={n(data.people_total)}
                 unit={people}
                 footer={
@@ -223,6 +225,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_ef_group_asset')}
+                badge={<InfoMark info={t('rep_info_employees_open_items_open_assets')} />}
                 value={n(data.asset.people)}
                 unit={people}
                 alert={data.asset.people > 0 ? 'red' : undefined}
@@ -234,6 +237,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_ef_group_access')}
+                badge={<InfoMark info={t('rep_info_employees_open_items_open_access')} />}
                 value={n(data.access.people)}
                 unit={people}
                 alert={data.access.people > 0 ? 'red' : undefined}
@@ -245,6 +249,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_ef_group_acct')}
+                badge={<InfoMark info={t('rep_info_employees_open_items_open_accounts')} />}
                 value={n(acct.accounts)}
                 unit={accountsUnit}
                 bar={acct.accounts > 0 ? barOf(accountPieces, accountsUnit, lang) : undefined}
@@ -258,6 +263,7 @@ export function OpenItemsTiles({ data }: { data: EmployeeOpenItemsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_ef_group_data')}
+                badge={<InfoMark info={t('rep_info_employees_open_items_open_data')} />}
                 value={n(data.data.people)}
                 unit={people}
                 alert={data.data.people > 0 ? 'amber' : undefined}

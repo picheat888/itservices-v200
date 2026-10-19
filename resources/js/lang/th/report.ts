@@ -1868,8 +1868,6 @@ export const report: Dict = {
     rep_slv_k_over_foot: 'เกิน Max รวม {n} ชิ้น',
     rep_slv_k_reorder: 'มูลค่าที่ควรสั่ง',
     rep_slv_k_reorder_foot: 'เติมถึง Max {n} รายการ',
-    rep_slv_k_reorder_info_qty: 'ชิ้นที่ต้องเติมถึง Max (หรือ Min เมื่อไม่ได้ตั้ง Max) × ราคารับเข้าครั้งล่าสุด',
-    rep_slv_k_reorder_info_none: 'ไม่นับรายการที่ยังไม่มีราคา',
     rep_slv_k_excess: 'มูลค่าส่วนที่เกิน Max',
     rep_slv_k_excess_foot: 'คิดจากต้นทุนเฉลี่ย',
     rep_slv_c_level: 'คงเหลือเทียบ Min / Max',

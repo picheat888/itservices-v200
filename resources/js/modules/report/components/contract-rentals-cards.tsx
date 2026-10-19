@@ -13,7 +13,7 @@ import { useContractRentalsBreakdown } from '../hooks/use-reports';
 import type { ChartTone, ContractRentalKind, ContractRentalsBreakdown, ContractRentalState, RentalAssetStatus, TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
 import { CardsUpdating } from './cards-updating';
-import { CardTitle, CountBar, CardEmpty as Empty, FoldToggle, rich, Swatch } from './chart-parts';
+import { CardTitle, CountBar, CardEmpty as Empty, FoldToggle, InfoMark, rich, Swatch } from './chart-parts';
 import { FILL } from './chart-tones';
 import { ContractCode, ContractNameCell } from './contract-cells';
 import { ContractLeftPill } from './contract-left-pill';
@@ -159,6 +159,15 @@ function Tiles({ data }: { data: ContractRentalsBreakdown }) {
         <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
             <KpiTile
                 label={t(data.scope === 'open' ? 'rep_crent_k_open' : 'rep_crent_k_all')}
+                badge={
+                    <InfoMark
+                        info={
+                            data.scope === 'open'
+                                ? t('rep_info_contracts_rentals_crent_contracts_open')
+                                : t('rep_info_contracts_rentals_crent_contracts_all')
+                        }
+                    />
+                }
                 value={n(tiles.contracts.total)}
                 unit={unitContracts}
                 bar={
@@ -187,7 +196,7 @@ function Tiles({ data }: { data: ContractRentalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_crent_k_rented')}
-                hint={t('rep_crent_k_rented_hint')}
+                badge={<InfoMark info={t('rep_crent_k_rented_hint')} />}
                 value={n(tiles.rented_in_use)}
                 unit={unitAssets}
                 footer={
@@ -198,6 +207,7 @@ function Tiles({ data }: { data: ContractRentalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_crent_k_due')}
+                badge={<InfoMark info={t('rep_info_contracts_rentals_crent_due_soon')} />}
                 value={n(tiles.due_soon)}
                 unit={unitAssets}
                 alert={tiles.due_soon > 0 ? 'amber' : undefined}
@@ -205,6 +215,7 @@ function Tiles({ data }: { data: ContractRentalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_crent_k_ended')}
+                badge={<InfoMark info={t('rep_info_contracts_rentals_crent_ended_out')} />}
                 value={n(tiles.ended_out)}
                 unit={unitAssets}
                 alert={tiles.ended_out > 0 ? 'red' : undefined}
@@ -212,7 +223,7 @@ function Tiles({ data }: { data: ContractRentalsBreakdown }) {
             />
             <KpiTile
                 label={t('rep_crent_k_unlinked')}
-                hint={t('rep_crent_k_unlinked_hint')}
+                badge={<InfoMark info={[t('rep_crent_k_unlinked_hint'), t('rep_info_contracts_rentals_crent_unlinked_yearly')]} />}
                 value={n(tiles.unlinked)}
                 unit={unitContracts}
                 footer={

@@ -1884,8 +1884,6 @@ export const report: Dict = {
     rep_slv_k_over_foot: '{n} pcs above Max in all',
     rep_slv_k_reorder: 'Reorder value',
     rep_slv_k_reorder_foot: 'Refill {n} items to Max',
-    rep_slv_k_reorder_info_qty: 'Pieces needed to reach Max (or Min when no Max is set) × the last receipt price.',
-    rep_slv_k_reorder_info_none: 'Items with no price yet are not counted.',
     rep_slv_k_excess: 'Value above Max',
     rep_slv_k_excess_foot: 'At average cost',
     rep_slv_c_level: 'On hand vs Min / Max',
