@@ -87,10 +87,21 @@ class AppServiceProvider extends ServiceProvider
 
         // Sign-in per IP: a whole office shares one public IP
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(50)->by($request->ip())->response(self::tooManySignIns(...)));
-        RateLimiter::for('login-pending', fn (Request $request) => Limit::perMinute(10)->by($request->ip())->response(self::tooManySignIns(...)));
+        RateLimiter::for('login-pending', fn (Request $request) => [
+            Limit::perMinute(10)->by(self::pendingTokenKey($request))->response(self::tooManySignIns(...)),
+            Limit::perMinute(50)->by($request->ip())->response(self::tooManySignIns(...)),
+        ]);
 
         // Scheduled report mails: a backlog goes out one run per minute
         RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
+    }
+
+    /** One device-limit dialog: the IP plus a hash of its pending token (body field `pending`); the IP alone when there is none. */
+    private static function pendingTokenKey(Request $request): string
+    {
+        $token = $request->input('pending');
+
+        return $request->ip().'|'.(is_string($token) && $token !== '' ? sha1($token) : '');
     }
 
     /** @param  array<string, int|string>  $headers */

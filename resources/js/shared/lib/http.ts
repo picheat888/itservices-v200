@@ -1,7 +1,15 @@
 import { translate } from '@/lang';
 import { serverFailureText } from '@/shared/lib/api-errors';
 import { rememberRequestId } from '@/shared/lib/client-error-report';
-import { httpStatus, isQuietServerError, isServerFailure, requestIdOf, retryAfterOf, wasShownInline } from '@/shared/lib/http-errors';
+import {
+    httpStatus,
+    isQuietServerError,
+    isServerFailure,
+    requestIdOf,
+    retryAfterOf,
+    showsOwnThrottle,
+    wasShownInline,
+} from '@/shared/lib/http-errors';
 import { redirectToLogin, signedOutRedirectFor } from '@/shared/lib/login-redirect';
 import { formatNumber } from '@/shared/lib/number';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
@@ -99,8 +107,8 @@ http.interceptors.response.use(
                 .then((reachable) => {
                     if (!reachable) showError('network');
                 });
-        } else if (status === 429 && error.config?.url?.endsWith('/login')) {
-            // The login page shows its own throttle wait inline
+        } else if (status === 429 && showsOwnThrottle(error.config?.url)) {
+            // The login page and its device dialog show their own throttle wait inline
             return Promise.reject(error);
         } else if (status === 429) {
             const retryAfter = retryAfterOf(error);

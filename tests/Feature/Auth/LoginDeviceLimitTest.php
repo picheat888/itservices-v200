@@ -526,13 +526,32 @@ class LoginDeviceLimitTest extends TestCase
         $this->assertSame([LoginEventType::Failed, DeviceEndReason::AccountClosed, $user->id], [$event->event, $event->reason, $event->user_id]);
     }
 
-    public function test_device_sign_out_allows_ten_tries_a_minute_per_ip(): void
+    public function test_device_sign_out_allows_ten_tries_a_minute_per_pending_token(): void
     {
+        [$first, $second] = [Str::random(40), Str::random(40)];
         for ($i = 0; $i < 10; $i++) {
+            $this->signOutDevice(1, $first)->assertForbidden();
+        }
+
+        $this->signOutDevice(1, $first)->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+
+        // Another sign-in from the same office IP has its own ten
+        for ($i = 0; $i < 10; $i++) {
+            $this->signOutDevice(1, $second)->assertForbidden();
+        }
+        $this->signOutDevice(1, $second)->assertStatus(429);
+    }
+
+    public function test_device_sign_out_allows_fifty_tries_a_minute_per_ip(): void
+    {
+        for ($i = 0; $i < 50; $i++) {
             $this->signOutDevice(1, Str::random(40))->assertForbidden();
         }
 
-        $this->signOutDevice(1, Str::random(40))->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+        $response = $this->signOutDevice(1, Str::random(40))->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+
+        $this->assertGreaterThan(0, $response->json('retry_after'));
+        $this->browser(self::BROWSER_A, '198.51.100.20')->postJson('/api/login/devices/1/sign-out', ['pending' => Str::random(40)])->assertForbidden();
     }
 
     public function test_logout_ends_this_device(): void
