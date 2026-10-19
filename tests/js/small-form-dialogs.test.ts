@@ -63,6 +63,8 @@ const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_
 
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
 
+test('27 small forms are on the shell', () => assert.equal(ALL.length, 27));
+
 test('ticket small forms use the shared shell', () => TICKET_4B.forEach(assertSmallForm));
 
 test('settings small forms use the 4ข look', () => SETTINGS_4A.forEach(assertSmallForm));
