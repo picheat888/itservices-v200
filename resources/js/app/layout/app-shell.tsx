@@ -73,7 +73,7 @@ export function AppShell() {
 
     return (
         <div
-            className="bg-background flex h-screen overflow-hidden"
+            className="bg-background flex h-dvh overflow-hidden"
             data-density={density}
             data-nav={iconsOnly ? 'closed' : 'open'}
             data-narrow={narrow || undefined}
