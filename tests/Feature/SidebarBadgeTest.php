@@ -166,6 +166,34 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(0, $this->actingAs($submitOnly)->getJson('/api/sidebar-badges')->assertOk()->json('data.requests'));
     }
 
+    public function test_the_contracts_count_in_sql_matches_the_reminder_rule_on_every_edge(): void
+    {
+        $make = fn (string $name, int $daysLeft, array $extra = []) => Contract::create([
+            'name' => $name, 'type' => 'software', 'value' => 1000, 'billing_cycle' => 'yearly',
+            'start_date' => now()->subYear(), 'end_date' => now()->startOfDay()->addDays($daysLeft),
+            'notify_150' => false, 'notify_120' => false, 'notify_90' => false, 'notify_60' => false,
+            'notify_45' => false, 'notify_30' => false, 'notify_7' => false,
+            ...$extra,
+        ]);
+
+        $make('ends today', 0);
+        $make('overdue', -3);
+        $make('on the 30-day line', 30, ['notify_30' => true]);
+        $make('a day before the 30-day line', 31, ['notify_30' => true]);
+        $make('inside the widest of two windows', 100, ['notify_7' => true, 'notify_120' => true]);
+        $make('no reminders, still ahead', 5);
+        $make('cancelled while overdue', -10, ['cancelled_at' => now()]);
+        $make('expired by hand', -1, ['expired_at' => now()]);
+
+        $byRule = Contract::all()
+            ->filter(fn (Contract $c) => $c->cancelled_at === null && $c->expired_at === null && ($c->isInReminder() || $c->daysRemaining() <= 0))
+            ->pluck('name')->sort()->values()->all();
+        $bySql = Contract::needsRenewal()->pluck('name')->sort()->values()->all();
+
+        $this->assertSame(['ends today', 'inside the widest of two windows', 'on the 30-day line', 'overdue'], $bySql);
+        $this->assertSame($byRule, $bySql);
+    }
+
     public function test_counts_the_user_may_not_see_come_back_as_zero(): void
     {
         $this->seedWorkForEveryBadge();
