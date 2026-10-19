@@ -96,7 +96,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
     }
 
-    /** One device-limit dialog: the IP plus a hash of its pending token (body field `pending`); the IP alone when there is none. */
+    /** One device-limit dialog: the IP plus a hash of its pending token (body field `pending`); the trailing `|` keeps it apart from the 50/IP key. */
     private static function pendingTokenKey(Request $request): string
     {
         $token = $request->input('pending');

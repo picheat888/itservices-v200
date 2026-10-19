@@ -153,7 +153,7 @@ class LogRetentionTest extends TestCase
         $stillRemembered = UserDevice::factory()->for($user)->remembered()->create(['last_active_at' => now()->subDays(400)]);
         $inUse = UserDevice::factory()->for($user)->create();
 
-        $this->artisan('logs:prune')->assertSuccessful();
+        $this->artisan('logs:prune')->expectsOutputToContain('devices: 3')->assertSuccessful();
 
         foreach ([$endedLongAgo, $plainLongAgo, $rememberedLongAgo] as $pruned) {
             $this->assertDatabaseMissing('user_devices', ['id' => $pruned->id]);

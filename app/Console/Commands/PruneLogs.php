@@ -19,7 +19,7 @@ class PruneLogs extends Command
         $logFiles = $files->prune();
         $this->info(
             "Pruned — email bodies emptied: {$r['email_bodies']}, email logs: {$r['email_logs']}, ".
-            "audit logs: {$r['audit_logs']}, notifications: {$r['notifications']}, login events: {$r['login_events']}, log files: {$logFiles}"
+            "audit logs: {$r['audit_logs']}, notifications: {$r['notifications']}, login events: {$r['login_events']}, devices: {$r['user_devices']}, log files: {$logFiles}"
         );
 
         return self::SUCCESS;
