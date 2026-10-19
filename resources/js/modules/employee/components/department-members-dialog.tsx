@@ -73,7 +73,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
 
     return (
         <Dialog open={!!department} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Building2 className="text-muted-foreground h-4 w-4" />
@@ -97,7 +97,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     loading={loadingMembers}
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
-                    maxBodyHeight="52vh"
+                    maxBodyHeight="52dvh"
                     search={{ value: query, onChange: setQuery }}
                     empty={
                         query

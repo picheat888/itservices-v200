@@ -86,7 +86,7 @@ interface DataTableProps<T> {
     /** Extra classes for the <table> — e.g. a `min-w-[…]` so the one flexible column keeps room on a
      *  narrow screen and the table scrolls sideways instead of squeezing that column to nothing. */
     tableClassName?: string;
-    /** Cap the table body height (e.g. "55vh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
+    /** Cap the table body height (e.g. "55dvh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
     maxBodyHeight?: string;
     /** Fill the parent's height: rows-per-page is computed from the available height,
      *  the rows-per-page picker is hidden, and the body never scrolls (page over instead).

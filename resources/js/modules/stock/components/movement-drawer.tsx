@@ -471,7 +471,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     <DialogDescription className="sr-only">{dialogTitle}</DialogDescription>
                 </DialogHeader>
                 {/* -mx-2/px-2 keeps focus rings inside the scroll clip */}
-                <div className="-mx-2 max-h-[70vh] space-y-3 overflow-y-auto overscroll-contain px-2 py-1.5">
+                <div className="-mx-2 max-h-[70dvh] space-y-3 overflow-y-auto overscroll-contain px-2 py-1.5">
                     <Field label={t('stock_item')} required help={isTransfer ? t('stock_mv_doc_auto') : undefined}>
                         <SearchableSelect value={sku} onChange={onSkuChange} placeholder={t('stock_select_sku')} options={skuOptions} />
                     </Field>

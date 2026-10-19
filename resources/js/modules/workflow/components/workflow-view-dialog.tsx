@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { Workflow } from '@/shared/types';
@@ -11,7 +12,6 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Flag, Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { WorkflowStrip } from './workflow-strip';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Read-only focus dialog for one workflow: route strip and per-step detail, with a shortcut
@@ -45,7 +45,7 @@ export function WorkflowViewDialog({
 
     return (
         <Dialog open={!!workflow} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] max-w-[760px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex max-h-[min(860px,calc(100dvh-72px))] max-w-[760px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={WorkflowIcon}
                     eyebrow={t(REQUEST_TYPE_META[wf.request_type].labelKey)}

@@ -241,7 +241,7 @@ export function MovementsTab() {
                                         </div>
                                     </DialogHeader>
 
-                                    <div className="max-h-[72vh] space-y-4 overflow-auto overscroll-contain">
+                                    <div className="max-h-[72dvh] space-y-4 overflow-auto overscroll-contain">
                                         {/* Item + signed quantity */}
                                         <div className="border-border flex items-center justify-between gap-3 rounded-xl border p-3.5">
                                             <div className="min-w-0">

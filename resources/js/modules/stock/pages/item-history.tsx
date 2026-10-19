@@ -80,7 +80,7 @@ export default function ItemHistoryPage() {
 
     if (isLoading || !data) {
         return (
-            <div role="status" className="bg-background mx-auto min-h-screen max-w-5xl px-6 py-8">
+            <div role="status" className="bg-background mx-auto min-h-dvh max-w-5xl px-6 py-8">
                 {/* Header + view cards + table rows */}
                 <div className="mb-6 flex items-start justify-between gap-4" aria-hidden>
                     <div className="space-y-2">
@@ -117,7 +117,7 @@ export default function ItemHistoryPage() {
     const moves = (v: View) => data.movements.filter((m) => VIEW_FILTER[v].types.includes(m.type));
 
     return (
-        <div className="bg-background mx-auto min-h-screen max-w-5xl px-6 py-8">
+        <div className="bg-background mx-auto min-h-dvh max-w-5xl px-6 py-8">
             {/* Print-only document header (A4) */}
             <div className="mb-4 hidden print:block">
                 <div className="flex items-end justify-between gap-4">

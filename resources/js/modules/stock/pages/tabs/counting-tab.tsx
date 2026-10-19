@@ -867,7 +867,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         <DialogTitle>{t('stock_count_serial_verify_title')}</DialogTitle>
                         <DialogDescription className="text-xs">{t('stock_count_serial_verify_hint')}</DialogDescription>
                     </DialogHeader>
-                    <div className="max-h-[60vh] space-y-3 overflow-auto overscroll-contain">
+                    <div className="max-h-[60dvh] space-y-3 overflow-auto overscroll-contain">
                         {(serialCheck ?? []).map((it) => {
                             const ticked = missingByItem[it.stock_item_id] ?? [];
                             const ok = ticked.length === it.need;

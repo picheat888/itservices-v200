@@ -272,9 +272,9 @@ export function AssetFormDrawer({
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* Fixed height + centered: same size for rented & purchased, and tall enough that the
-                (taller) purchased form shows in full on desktop without an inner scroll. Caps at 92vh
+                (taller) purchased form shows in full on desktop without an inner scroll. Caps at 92dvh
                 on short viewports so it never spills off-screen. */}
-            <DialogContent className="!flex h-[min(880px,92vh)] w-full max-w-[880px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex h-[min(880px,92dvh)] w-full max-w-[880px] flex-col gap-0 overflow-hidden p-0">
                 {/* Header */}
                 <div className="flex items-center gap-3 px-6 pt-4 pb-3">
                     <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">

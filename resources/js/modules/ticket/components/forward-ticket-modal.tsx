@@ -62,7 +62,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0">
+            <DialogContent className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0">
                 <FocusDialogHeader
                     icon={ArrowRightLeft}
                     eyebrow={view?.ticket_no}

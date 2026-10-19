@@ -70,7 +70,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     return (
         <Dialog open={!!section} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Users className="text-muted-foreground h-4 w-4" />
@@ -92,7 +92,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                     loading={loadingMembers}
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
-                    maxBodyHeight="52vh"
+                    maxBodyHeight="52dvh"
                     search={{ value: query, onChange: setQuery }}
                     empty={
                         query

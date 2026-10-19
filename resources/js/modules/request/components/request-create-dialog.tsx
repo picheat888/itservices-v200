@@ -254,7 +254,7 @@ export function RequestCreateDialog({
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !submit.isPending && guardClose(onClose)}>
             {/* Fixed height so the dialog never resizes between steps */}
-            <DialogContent className="!flex h-[min(760px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex h-[min(760px,calc(100dvh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={HeaderIcon}
                     accent={type ? REQUEST_TYPE_META[type].color : undefined}

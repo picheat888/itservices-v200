@@ -378,7 +378,7 @@ export function TicketDetailDrawer({
             <Dialog open={!!ticket} onOpenChange={(o) => !o && onClose()}>
                 <DialogContent
                     // Height follows the content, capped at the focus-dialog size; the floor stops a tab switch collapsing it
-                    className={cn(focusDialogContentClass, 'h-auto max-h-[min(860px,calc(100vh-72px))] min-h-[380px]')}
+                    className={cn(focusDialogContentClass, 'h-auto max-h-[min(860px,calc(100dvh-72px))] min-h-[380px]')}
                     // Focus the dialog itself so no button opens with a focus ring (and no field raises the iPad keyboard)
                     onOpenAutoFocus={(e) => {
                         e.preventDefault();

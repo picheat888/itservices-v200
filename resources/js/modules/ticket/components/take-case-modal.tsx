@@ -106,7 +106,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
             <DialogContent
-                className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0"
+                className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0"
                 // Every field is optional, so don't raise the iPad keyboard on open
                 onOpenAutoFocus={(e) => {
                     e.preventDefault();

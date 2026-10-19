@@ -62,7 +62,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={isComplete ? CheckCircle2 : XCircle}
                     eyebrow={view?.ticket_no}

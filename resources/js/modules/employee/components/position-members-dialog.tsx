@@ -72,7 +72,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
 
     return (
         <Dialog open={!!position} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Briefcase className="text-muted-foreground h-4 w-4" />
@@ -91,7 +91,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                     loading={loadingMembers}
                     loadingRows={expected ? Math.min(expected, 20) : undefined}
                     loadingAvatar
-                    maxBodyHeight="52vh"
+                    maxBodyHeight="52dvh"
                     search={{ value: query, onChange: setQuery }}
                     empty={
                         query
@@ -99,7 +99,9 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                             : { kind: 'empty', title: t('emp_empty_position_members'), hint: t('emp_empty_position_members_hint') }
                     }
                     searchPlaceholder={t('emp_search_by_department')}
-                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.department_th ?? ''} ${m.section ?? ''} ${m.section_th ?? ''}`}
+                    searchable={(m) =>
+                        `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.department_th ?? ''} ${m.section ?? ''} ${m.section_th ?? ''}`
+                    }
                 />
             </DialogContent>
         </Dialog>
