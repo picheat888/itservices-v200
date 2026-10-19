@@ -134,10 +134,10 @@ class AssetWriteoffReport extends TabularReport
             ReportColumn::date('written_off_at', 'วันที่ตัดจำหน่าย', fn (Asset $a) => $a->written_off_at),
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             // Drawn under the code on the page ("Dell Latitude 5440"), so hidden as columns of their own.
-            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->hiddenByDefault(),
+            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->hiddenByDefault()->withCode('รหัสยี่ห้อ', 'เลข ID ของยี่ห้อในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางยี่ห้อใน Power BI', fn (Asset $a) => $a->brand_id),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name)->hiddenByDefault(),
             ReportColumn::localized('category', 'หมวดหมู่', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null)
-                ->labelKey('rep_c_asset_category'),
+                ->labelKey('rep_c_asset_category')->withCode('รหัสหมวดหมู่', 'เลข ID ของหมวดหมู่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดหมู่ใน Power BI', fn (Asset $a) => $a->category_id),
             ReportColumn::enum('source', 'ที่มา', fn (Asset $a) => $a->source, self::SOURCE_KEYS, self::SOURCE_TH),
             ReportColumn::text('contract', 'สัญญา', fn (Asset $a) => $a->contract?->code)->linkTo('/contracts', fn (Asset $a) => $a->contract_id),
             // The page reads this into the reason cell: a return to the lessor carries no reason of its own.
@@ -146,7 +146,7 @@ class AssetWriteoffReport extends TabularReport
             ReportColumn::text('reason_note', 'หมายเหตุ', fn (Asset $a) => $a->last_reason)->hiddenByDefault(),
             ReportColumn::text('written_off_by', 'ผู้ตัดจำหน่าย', fn (Asset $a) => $a->writtenOffBy?->name)->hiddenByDefault(),
             ReportColumn::text('serial', 'Serial', fn (Asset $a) => $a->serial)->hiddenByDefault(),
-            ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name)->hiddenByDefault(),
+            ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name)->hiddenByDefault()->withCode('รหัสคลัง', 'เลข ID ของคลังในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางคลังใน Power BI', fn (Asset $a) => $a->warehouse_id),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date)->hiddenByDefault(),
             // How long it served: bought to written off, in years (bought assets only).
             ReportColumn::number('age_years', 'อายุใช้งาน (ปี)', fn (Asset $a) => self::ageYears($a) === null ? null : round(self::ageYears($a), 1), 1),

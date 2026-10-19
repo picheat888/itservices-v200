@@ -132,14 +132,14 @@ class WarrantyExpiringReport extends TabularReport
         return [
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             ReportColumn::localized('category', 'หมวดหมู่', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null)
-                ->labelKey('rep_c_asset_category'),
+                ->labelKey('rep_c_asset_category')->withCode('รหัสหมวดหมู่', 'เลข ID ของหมวดหมู่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดหมู่ใน Power BI', fn (Asset $a) => $a->category_id),
             // Drawn before the model on the page ("Dell Latitude 5440").
-            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->hiddenByDefault(),
+            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->hiddenByDefault()->withCode('รหัสยี่ห้อ', 'เลข ID ของยี่ห้อในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางยี่ห้อใน Power BI', fn (Asset $a) => $a->brand_id),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name),
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),
             ReportColumn::text('holder_code', 'รหัสพนักงานผู้ถือ', fn (Asset $a) => $a->ownerEmployee?->code)->sheetOnly()->describe('รหัสพนักงานที่ถือทรัพย์สินอยู่ ใช้เชื่อมกับตารางพนักงาน (ว่าง = ไม่มีพนักงานถือ เช่น อยู่ในคลังหรือเป็นส่วนกลาง)'),
             ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a))->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
-            ReportColumn::localized('vendor', 'ผู้ขาย', fn (Asset $a) => $a->vendor ? ['name' => $a->vendor->name, 'name_th' => $a->vendor->name_th] : null),
+            ReportColumn::localized('vendor', 'ผู้ขาย', fn (Asset $a) => $a->vendor ? ['name' => $a->vendor->name, 'name_th' => $a->vendor->name_th] : null)->withCode('รหัสผู้ขาย', 'เลข ID ของผู้ขายในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางผู้ขายใน Power BI', fn (Asset $a) => $a->vendor_id),
             ReportColumn::enum('status', 'สถานะ', fn (Asset $a) => $a->status, self::STATUS_KEYS, self::STATUS_TH)->hiddenByDefault(),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date)->hiddenByDefault(),
             ReportColumn::money('value', 'มูลค่าซื้อ', fn (Asset $a) => $a->value)->hiddenByDefault(),

@@ -153,8 +153,8 @@ class AssetOverviewReport extends TabularReport
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             ReportColumn::text('tag', 'ชื่อ Tag', fn (Asset $a) => $a->tag),
             ReportColumn::localized('category', 'หมวดหมู่', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null)
-                ->labelKey('rep_c_asset_category'),
-            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name),
+                ->labelKey('rep_c_asset_category')->withCode('รหัสหมวดหมู่', 'เลข ID ของหมวดหมู่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดหมู่ใน Power BI', fn (Asset $a) => $a->category_id),
+            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->withCode('รหัสยี่ห้อ', 'เลข ID ของยี่ห้อในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางยี่ห้อใน Power BI', fn (Asset $a) => $a->brand_id),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name),
             ReportColumn::text('serial', 'Serial', fn (Asset $a) => $a->serial),
             ReportColumn::enum('status', 'สถานะ', fn (Asset $a) => $a->status, self::STATUS_KEYS, self::STATUS_TH),
@@ -162,8 +162,8 @@ class AssetOverviewReport extends TabularReport
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),
             ReportColumn::text('holder_code', 'รหัสพนักงานผู้ถือ', fn (Asset $a) => $a->ownerEmployee?->code)->sheetOnly()->describe('รหัสพนักงานที่ถือทรัพย์สินอยู่ ใช้เชื่อมกับตารางพนักงาน (ว่าง = ไม่มีพนักงานถือ เช่น อยู่ในคลังหรือเป็นส่วนกลาง)'),
             ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a))->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
-            ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name),
-            ReportColumn::text('location', 'สถานที่', fn (Asset $a) => $a->location?->name),
+            ReportColumn::text('warehouse', 'คลัง', fn (Asset $a) => $a->warehouse?->name)->withCode('รหัสคลัง', 'เลข ID ของคลังในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางคลังใน Power BI', fn (Asset $a) => $a->warehouse_id),
+            ReportColumn::text('location', 'สถานที่', fn (Asset $a) => $a->location?->name)->withCode('รหัสสถานที่', 'เลข ID ของสถานที่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางสถานที่ใน Power BI', fn (Asset $a) => $a->location_id),
             // Rented assets don't store their own value (fee lives on the linked contract —
             // AssetResource::toArray follows the same rule); purchased assets carry it directly.
             ReportColumn::money('value', 'มูลค่า', fn (Asset $a) => $a->source === AssetSource::Rented ? $a->contract?->value : $a->value),

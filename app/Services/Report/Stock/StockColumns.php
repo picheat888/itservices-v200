@@ -34,7 +34,7 @@ trait StockColumns
         return [
             ReportColumn::text('sku', 'SKU', fn ($row) => $item($row)?->sku),
             ReportColumn::text('item_name', 'ชื่อรายการ', fn ($row) => $item($row)?->name),
-            ReportColumn::localized('category', 'หมวด', fn ($row) => ($category = $item($row)?->category) ? ['name' => $category->name, 'name_th' => $category->name_th] : null),
+            ReportColumn::localized('category', 'หมวด', fn ($row) => ($category = $item($row)?->category) ? ['name' => $category->name, 'name_th' => $category->name_th] : null)->withCode('รหัสหมวด', 'เลข ID ของหมวดในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดใน Power BI', fn ($row) => $item($row)?->category_id),
             ReportColumn::text('unit', 'หน่วย', fn ($row) => $item($row)?->unit?->name),
         ];
     }
