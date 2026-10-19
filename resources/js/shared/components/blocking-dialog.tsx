@@ -1,4 +1,4 @@
-// A dialog only its own buttons can close (password walls, idle warning): a real modal with a focus trap,
+// A dialog only its own buttons can close (password walls, idle warning, error screens): a real modal with a focus trap,
 // above every other dialog, and scrollable when the screen is short (on-screen keyboard).
 import { cn } from '@/shared/lib/utils';
 import { Dialog, DialogOverlay, DialogPortal } from '@/shared/ui/dialog';
@@ -19,13 +19,14 @@ export function BlockingDialog({ layer = 'wall', className, children }: { layer?
     return (
         <Dialog open>
             <DialogPortal>
-                <DialogOverlay className={cn(z, 'bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]')} />
+                <DialogOverlay className={z} />
                 <DialogPrimitive.Content
                     onEscapeKeyDown={hold}
                     onInteractOutside={hold}
                     onCloseAutoFocus={restoreFocus}
                     className={cn(
                         z,
+                        'motion-sheet data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
                         'border-border bg-background fixed top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[14px] border shadow-2xl focus:outline-hidden',
                         className,
                     )}

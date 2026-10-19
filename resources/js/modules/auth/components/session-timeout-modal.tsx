@@ -1,13 +1,13 @@
 import { useT } from '@/lang';
 import { clock, crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '@/modules/auth/lib/session-warning';
+import { BlockingDialog } from '@/shared/components/blocking-dialog';
+import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { Clock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { BlockingDialog } from './blocking-dialog';
-import { formatNumber } from '@/shared/lib/number';
-import { useUiStore } from '@/stores/ui';
 
 interface Props {
     secondsLeft: number;
