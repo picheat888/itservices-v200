@@ -135,7 +135,7 @@ function foldTypeBars(rest: AssetSummary['by_type']): TypeBar {
 function AssetOverviewSkeleton() {
     return (
         <div className="space-y-4 px-5 pb-5">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
                         <div className="flex items-start justify-between">
@@ -669,7 +669,7 @@ export default function AssetsPage() {
                 {tab === 'overview' && !summaryLoading && summary && (
                     <div className="space-y-4 px-5 pb-5">
                         {/* Summary stats live on the Overview tab. */}
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                             <StatCard label={t('asset_total')} value={summary?.total ?? 0} footer={periodWords.nowOnly} icon={Box} />
                             <StatCard
                                 label={t('asset_deployed')}

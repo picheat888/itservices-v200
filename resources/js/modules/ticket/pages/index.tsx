@@ -89,7 +89,7 @@ const pickAllowed = <T extends string>(value: string, allowed: readonly T[]): T 
 function TicketOverviewBodySkeleton() {
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <Card key={i} className="p-5">
                         <div className="flex items-start justify-between">

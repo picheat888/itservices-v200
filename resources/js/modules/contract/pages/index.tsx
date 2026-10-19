@@ -636,7 +636,7 @@ function OverviewTab({
         return (
             <div className="space-y-4 p-5">
                 <OverviewHeader />
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <Card key={i} className="p-5">
                             <div className="flex items-start justify-between">
@@ -709,7 +709,7 @@ function OverviewTab({
     return (
         <div className="space-y-4 p-5">
             <OverviewHeader />
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                 <StatCard label={t('contract_total')} value={String(summary.total)} sub={null} icon={FileText} />
                 <StatCard label={t('contract_active_normal')} value={String(summary.active)} sub={null} icon={CheckCircle2} />
                 <StatCard
