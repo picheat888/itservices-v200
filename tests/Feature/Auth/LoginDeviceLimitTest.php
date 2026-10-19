@@ -353,7 +353,7 @@ class LoginDeviceLimitTest extends TestCase
         $user = User::factory()->create();
 
         for ($i = 1; $i <= 10; $i++) {
-            $this->failSignIn($i % 2 === 0 ? Str::upper($user->email) : $user->email, "198.51.100.{$i}")->assertStatus(422);
+            $this->failSignIn($user->email, "198.51.100.{$i}")->assertStatus(422);
         }
 
         $response = $this->browser(self::BROWSER_A, '198.51.100.11')
@@ -385,6 +385,82 @@ class LoginDeviceLimitTest extends TestCase
 
         $this->travel(11)->minutes();
         $this->signIn($user, self::BROWSER_B)->assertOk();
+    }
+
+    /** Ten wrong passwords for $login, from 198.51.100.1 to .10. */
+    private function lockFromOtherIps(string $login): void
+    {
+        foreach (range(1, 10) as $i) {
+            $this->failSignIn($login, "198.51.100.{$i}")->assertStatus(422);
+        }
+    }
+
+    private function signedInBefore(User $user, string $ip, int $daysAgo): void
+    {
+        LoginEvent::create([
+            'user_id' => $user->id, 'event' => LoginEventType::SignedIn, 'ip' => $ip,
+            'os' => 'Windows', 'browser' => 'Chrome', 'created_at' => now()->subDays($daysAgo),
+        ]);
+    }
+
+    public function test_a_known_ip_still_signs_in_while_the_username_is_locked(): void
+    {
+        $user = User::factory()->create();
+        $this->signedInBefore($user, self::OFFICE_IP, 3);
+        $this->lockFromOtherIps($user->email);
+
+        $this->signIn($user)->assertOk()->assertJsonPath('data.id', $user->id);
+    }
+
+    public function test_an_unknown_ip_is_still_locked(): void
+    {
+        $user = User::factory()->create();
+        $this->signedInBefore($user, self::OFFICE_IP, 3);
+        $this->lockFromOtherIps($user->email);
+
+        $this->browser(self::BROWSER_A, '198.51.100.99')
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertStatus(429)
+            ->assertJsonPath('message', 'too_many_attempts');
+    }
+
+    public function test_an_old_sign_in_does_not_make_an_ip_known(): void
+    {
+        $user = User::factory()->create();
+        $this->signedInBefore($user, self::OFFICE_IP, 91);
+        $this->lockFromOtherIps($user->email);
+
+        $this->signIn($user)->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+    }
+
+    public function test_email_and_username_share_one_counter(): void
+    {
+        $user = User::factory()->create(['username' => 'somchai.k']);
+
+        foreach (range(1, 10) as $i) {
+            $this->failSignIn($i <= 5 ? $user->email : 'somchai.k', "198.51.100.{$i}")->assertStatus(422);
+        }
+
+        foreach ([$user->email, 'somchai.k'] as $login) {
+            $this->browser(self::BROWSER_A, '198.51.100.11')
+                ->postJson('/api/login', ['login' => $login, 'password' => 'password'])
+                ->assertStatus(429)
+                ->assertJsonPath('message', 'too_many_attempts');
+        }
+    }
+
+    public function test_an_unknown_name_is_locked_the_same_way(): void
+    {
+        foreach (range(1, 10) as $i) {
+            $this->failSignIn($i % 2 === 0 ? 'Ghost.User' : 'ghost.user', "198.51.100.{$i}")->assertStatus(422);
+        }
+
+        $response = $this->failSignIn('ghost.user', '198.51.100.11')->assertStatus(429);
+
+        $this->assertSame(['message', 'retry_after'], array_keys($response->json()));
+        $this->assertSame('too_many_attempts', $response->json('message'));
+        $this->assertEqualsWithDelta(900, $response->json('retry_after'), 5);
+        $this->assertEqualsWithDelta(900, (int) $response->headers->get('Retry-After'), 5);
     }
 
     public function test_a_successful_sign_in_clears_the_username_counter(): void
