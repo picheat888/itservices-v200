@@ -188,8 +188,9 @@ class AccessOverviewReportTest extends TestCase
         $this->assertSame('red', $summary['ac_leavers']['attention']);
         $this->assertSame(['people' => 1, 'days' => 25], $summary['ac_leavers']['note']['values']);
 
-        $this->assertSame(4, $summary['ac_care']['value']);
-        $this->assertSame(['owner_gone' => 1, 'no_owner' => 1, 'empty' => 2], array_column($summary['ac_care']['split'], 'value', 'key'));
+        // Spare has no owner and no member: counted once, under its owner.
+        $this->assertSame(3, $summary['ac_care']['value']);
+        $this->assertSame(['owner_gone' => 1, 'no_owner' => 1, 'empty' => 1], array_column($summary['ac_care']['split'], 'value', 'key'));
 
         // Long names carry a short one for the tile's one-line footer.
         $this->assertSame('rep_ac_type_email_group_short', array_column($summary['ac_active']['split'], 'short_key', 'key')['email_group']);
@@ -244,7 +245,7 @@ class AccessOverviewReportTest extends TestCase
 
         $this->assertSame(['QC Docs'], array_column($data['care']['owner_gone'], 'name'));
         $this->assertSame(['Spare'], array_column($data['care']['no_owner'], 'name'));
-        $this->assertEqualsCanonicalizing(['Spare', 'LINE'], array_column($data['care']['empty'], 'name'));
+        $this->assertSame(['LINE'], array_column($data['care']['empty'], 'name'));
     }
 
     public function test_the_granted_note_says_whether_the_range_ended_with_more_fewer_or_the_same(): void
@@ -266,7 +267,8 @@ class AccessOverviewReportTest extends TestCase
 
         $this->assertSame([], $data['leavers']['people']);
         $this->assertCount(1, $data['departments']);
-        $this->assertCount(2, $data['care']['empty']);
+        $this->assertCount(1, $data['care']['empty']);
+        $this->assertCount(1, $data['care']['no_owner']);
     }
 
     public function test_the_file_carries_the_cards_as_sheets(): void

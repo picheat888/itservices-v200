@@ -436,9 +436,10 @@ class AssetWriteoffReport extends TabularReport
     }
 
     /**
-     * Every contract with assets attached — all-time, the date range set aside; only the contract
-     * filter narrows it. Per contract: its units, handed back, written off another way (owed to
-     * the lessor), still out, days to its end, handed back before the end, and its state.
+     * Every contract with rented assets attached — all-time, the date range set aside; only the contract
+     * filter narrows it. Bought assets on a contract (an MA) are not the lessor's and stay out. Per
+     * contract: its rented units, handed back, written off another way (owed to the lessor), still out,
+     * days to its end, handed back before the end, and its state.
      *
      * @param  array<string, mixed>  $filters
      * @return list<array<string, mixed>>
@@ -446,12 +447,13 @@ class AssetWriteoffReport extends TabularReport
     private function contracts(array $filters): array
     {
         $contracts = Contract::query()
-            ->whereHas('assets')
+            ->whereHas('assets', fn (Builder $q) => $q->where('source', AssetSource::Rented->value))
             ->when($filters['contract_id'] ?? null, fn (Builder $q, $id) => $q->whereKey((int) $id))
             ->with('vendor:id,name,name_th')
             ->get(['id', 'code', 'name', 'vendor_id', 'end_date']);
         $assets = Asset::query()
             ->whereIn('contract_id', $contracts->modelKeys())
+            ->where('source', AssetSource::Rented->value)
             ->get(['id', 'contract_id', 'status', 'returned_to_vendor_at'])
             ->groupBy('contract_id');
         $today = today();
