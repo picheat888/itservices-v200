@@ -10,10 +10,11 @@ import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { NavItem, Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
-import { Loader2, LogOut } from 'lucide-react';
+import { ChevronDown, Loader2, LogOut } from 'lucide-react';
 import { useEffect, useRef, type RefObject } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { nextFocusIndex } from './menu-focus';
+import { useNavScroll } from './use-nav-scroll';
 import { useSidebarStyle } from './use-sidebar-style';
 
 /** Count of hand-overs waiting for the user's acceptance, pinned to the avatar. */
@@ -157,6 +158,9 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
     const lang = useUiStore((s) => s.lang);
     const { data: settings } = useSettings();
     const { user, counts, badges, groups } = useSidebarData();
+    const navRef = useRef<HTMLElement>(null);
+    const { pathname } = useLocation();
+    const { edges, pageDown } = useNavScroll(navRef, `${pathname}|${groups.length}`);
     // Name follows the UI language; avatar initials stay on the English name
     const displayName = localPair(user?.name, user?.name_th, lang);
     // Kit waiting for acceptance opens the profile straight on its Assets tab.
@@ -185,26 +189,34 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                 </Link>
             </div>
 
-            <nav className="flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-2 py-3">
-                {groups.map((group, idx) => (
-                    <div key={group.label}>
-                        {/* Rail: a short rule in place of the group name (app.css .nav-head) */}
-                        <div className={cn('nav-head relative overflow-hidden', idx === 0 && 'nav-head-first')}>
-                            <div className="nav-label text-muted-foreground px-3 text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase">
-                                {t(group.label)}
+            <div className="relative min-h-0 flex-1">
+                <nav
+                    ref={navRef}
+                    className="absolute inset-0 scroll-pt-7 scroll-pb-14 overflow-x-hidden overflow-y-auto overscroll-contain px-2 py-3"
+                >
+                    <div className="space-y-5">
+                        {groups.map((group, idx) => (
+                            <div key={group.label}>
+                                {/* Rail: a short rule in place of the group name (app.css .nav-head) */}
+                                <div className={cn('nav-head relative overflow-hidden', idx === 0 && 'nav-head-first')}>
+                                    <div className="nav-label text-muted-foreground px-3 text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase">
+                                        {t(group.label)}
+                                    </div>
+                                    {idx > 0 && (
+                                        <span aria-hidden="true" className="nav-mark bg-sidebar-border absolute top-0 left-3 h-px w-6 rounded-full" />
+                                    )}
+                                </div>
+                                <div className="space-y-0.5">
+                                    {group.items.map((item) => (
+                                        <NavRow key={item.id} item={item} badge={badges[item.id] ?? 0} onPick={onPick} />
+                                    ))}
+                                </div>
                             </div>
-                            {idx > 0 && (
-                                <span aria-hidden="true" className="nav-mark bg-sidebar-border absolute top-0 left-3 h-px w-6 rounded-full" />
-                            )}
-                        </div>
-                        <div className="space-y-0.5">
-                            {group.items.map((item) => (
-                                <NavRow key={item.id} item={item} badge={badges[item.id] ?? 0} onPick={onPick} />
-                            ))}
-                        </div>
+                        ))}
                     </div>
-                ))}
-            </nav>
+                </nav>
+                <NavScrollCue edges={edges} open={open} onPageDown={pageDown} />
+            </div>
 
             {settings?.company_name && (
                 <div inert={!open} className="nav-label px-4 pt-1 pb-2 text-center">
@@ -221,6 +233,7 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                     <button
                         onClick={openProfile}
                         title={t('profile')}
+                        aria-label={t('profile')}
                         className="hover:bg-sidebar-accent flex h-10 w-10 items-center justify-center rounded-md transition-colors"
                     >
                         <span className="relative shrink-0">
@@ -236,6 +249,7 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                         <button
                             onClick={openProfile}
                             title={t('profile')}
+                            aria-label={`${t('profile')}, ${displayName}`}
                             className="hover:bg-sidebar-accent flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors"
                         >
                             <span className="relative shrink-0">
@@ -260,6 +274,41 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                     </div>
                 </div>
             </div>
+        </>
+    );
+}
+
+/** Fades over the menu's hidden ends; ▾ pages down by touch (keyboard and screen readers reach every item anyway). */
+function NavScrollCue({ edges, open, onPageDown }: { edges: { above: boolean; below: boolean }; open: boolean; onPageDown: () => void }) {
+    return (
+        <>
+            <span
+                aria-hidden="true"
+                className={cn(
+                    'from-sidebar to-sidebar/0 pointer-events-none absolute inset-x-0 top-0 h-7 bg-linear-to-b transition-opacity duration-150 motion-reduce:transition-none',
+                    edges.above ? 'opacity-100' : 'opacity-0',
+                )}
+            />
+            <span
+                aria-hidden="true"
+                className={cn(
+                    'from-sidebar/0 to-sidebar pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-linear-to-b to-70% transition-opacity duration-150 motion-reduce:transition-none',
+                    edges.below ? 'opacity-100' : 'opacity-0',
+                )}
+            />
+            <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={onPageDown}
+                className={cn(
+                    'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute bottom-1 flex h-7 w-12 items-center justify-center rounded-md transition-opacity duration-150 motion-reduce:transition-none',
+                    open ? 'left-1/2 -translate-x-1/2' : 'left-2',
+                    edges.below ? 'opacity-100' : 'pointer-events-none opacity-0',
+                )}
+            >
+                <ChevronDown className="h-4 w-4" />
+            </button>
         </>
     );
 }
