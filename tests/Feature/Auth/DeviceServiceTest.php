@@ -80,6 +80,19 @@ class DeviceServiceTest extends TestCase
         $this->assertSame(0, LoginEvent::count());
     }
 
+    public function test_start_keeps_its_token_out_of_the_users_table(): void
+    {
+        $user = User::factory()->create(['password_changed_at' => null]);
+        $usersToken = $user->remember_token;
+        $user->setRememberToken('token-set-by-hand');
+
+        $this->service()->start($user, $this->requestFrom('198.51.100.9', 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0'), 'token-set-by-hand');
+        $user->forceFill(['password_changed_at' => now()])->saveQuietly();
+
+        $this->assertSame('token-set-by-hand', $user->getRememberToken());
+        $this->assertSame($usersToken, $user->fresh()->remember_token);
+    }
+
     public function test_reattach_moves_the_device_to_the_new_session_and_records_a_remembered_sign_in(): void
     {
         $device = UserDevice::factory()->remembered()->create([

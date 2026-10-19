@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DeviceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -138,6 +139,30 @@ class DeviceRememberTest extends TestCase
             ->assertOk();
 
         $this->assertSame($usersToken, $user->fresh()->getRememberToken());
+    }
+
+    public function test_an_issued_token_never_reaches_the_users_table(): void
+    {
+        $user = User::factory()->create(['password_changed_at' => null]);
+        $usersToken = $user->remember_token;
+        $devices = $this->app->make(DeviceService::class);
+
+        $token = $devices->issueRememberToken($user);
+        $user->forceFill(['password_changed_at' => now()])->saveQuietly();
+
+        $this->assertSame(60, strlen($token));
+        $this->assertSame($token, $user->getRememberToken());
+        $this->assertSame($usersToken, $user->fresh()->remember_token);
+
+        $request = Request::create('/api/login', 'POST', [], [], [], ['REMOTE_ADDR' => '203.0.113.5', 'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0']);
+        $request->setLaravelSession($this->app['session.store']);
+        $device = $devices->start($user, $request, $token);
+        $devices->end($device, DeviceEndReason::ThirdDevice);
+        $deviceCount = UserDevice::count();
+
+        $this->meWithCookie($this->cookieFor($user, $token))->assertUnauthorized();
+        $this->assertSame($deviceCount, UserDevice::count());
+        $this->assertSame($usersToken, $user->fresh()->remember_token);
     }
 
     public function test_signing_in_with_remember_never_writes_the_users_token(): void

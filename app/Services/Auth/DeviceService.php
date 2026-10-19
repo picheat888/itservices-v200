@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class DeviceService
 {
@@ -21,6 +22,8 @@ class DeviceService
     public const SESSION_KEY = '_device_id';
 
     private const USER_AGENT_MAX = 300;
+
+    private const REMEMBER_TOKEN_LENGTH = 60;
 
     private const IPAD_OS = 'iPadOS';
 
@@ -41,11 +44,23 @@ class DeviceService
         return (int) AppSetting::get('device_limit', '0');
     }
 
+    /** A new device remember token, put on $user for the guard's cookie but never saved to users.remember_token. */
+    public function issueRememberToken(User $user): string
+    {
+        $token = Str::random(self::REMEMBER_TOKEN_LENGTH);
+        $this->holdRememberTokenInMemory($user, $token);
+
+        return $token;
+    }
+
     public function start(User $user, Request $request, ?string $rememberToken, bool $recordEvent = true): UserDevice
     {
         $now = now();
         $session = $request->hasSession() ? $request->session() : null;
         $remembered = $rememberToken !== null;
+        if ($remembered) {
+            $this->holdRememberTokenInMemory($user, $rememberToken);
+        }
 
         $device = $user->devices()->create([
             'session_id' => $session?->getId(),
@@ -178,6 +193,13 @@ class DeviceService
             ->orderByDesc('last_active_at')
             ->orderByDesc('id')
             ->get();
+    }
+
+    // Marked clean, so no later save() on this instance writes it to users.remember_token
+    private function holdRememberTokenInMemory(User $user, string $token): void
+    {
+        $user->setRememberToken($token);
+        $user->syncOriginalAttribute($user->getRememberTokenName());
     }
 
     private function forgetSession(string $sessionId): void
