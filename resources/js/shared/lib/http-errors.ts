@@ -44,6 +44,11 @@ export function isQuietServerError(error: unknown): boolean {
     return !!(error as FailureShape | null)?.config?.quietServerError;
 }
 
+/** The sign-in form and its device-limit dialog word their own throttle wait, so a 429 there raises no full-screen error. */
+export function showsOwnThrottle(url: string | undefined): boolean {
+    return !!url && (url.endsWith('/login') || url.includes('/login/devices/'));
+}
+
 export function isReadRequest(error: unknown): boolean {
     return ((error as FailureShape | null)?.config?.method ?? 'get').toLowerCase() === 'get';
 }
