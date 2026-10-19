@@ -139,14 +139,26 @@ class EmailDeliveryRecordTest extends TestCase
         $this->assertStringNotContainsString('Open in portal', $this->actingAs($admin)->getJson("/api/email-logs/{$without->id}")->json('data.preview_html'));
     }
 
-    public function test_an_older_row_without_a_recorded_button_keeps_the_generic_one(): void
+    public function test_an_older_row_without_a_recorded_button_shows_none_and_says_so(): void
     {
         $this->log('sent', ['body_html' => '<p>Old</p>']);
         $log = EmailLog::query()->firstOrFail();
 
-        $html = $this->actingAs($this->admin())->getJson("/api/email-logs/{$log->id}")->json('data.preview_html');
+        $data = $this->actingAs($this->admin())->getJson("/api/email-logs/{$log->id}")->json('data');
 
-        $this->assertStringContainsString('Open in portal', $html);
+        $this->assertStringNotContainsString('Open in portal', $data['preview_html']);
+        $this->assertFalse($data['action_recorded']);
+    }
+
+    public function test_the_backfill_flags_earlier_test_sends_by_their_subject(): void
+    {
+        $this->log('sent', ['subject' => '[Desk] Your ticket (test 09:41)']);
+        $this->log('sent', ['subject' => '[Desk] Test email', 'template_key' => null]);
+        $this->log('sent', ['subject' => '[Desk] Your ticket TKT-1 has been created']);
+
+        (require database_path('migrations/2026_10_19_135505_backfill_email_log_test_flags.php'))->up();
+
+        $this->assertSame([true, true, false], EmailLog::query()->orderBy('id')->pluck('is_test')->all());
     }
 
     public function test_a_subject_longer_than_the_column_is_cut_to_fit(): void

@@ -84,6 +84,8 @@ export interface EmailLogListResponse {
 export interface EmailLogDetail extends Omit<EmailLogRow, 'template_key'> {
     template_key: string | null;
     preview_html: string | null;
+    /** False for rows logged before the mail's button was kept; the frame then shows none. */
+    action_recorded: boolean;
 }
 
 export interface EmailLogParams {
