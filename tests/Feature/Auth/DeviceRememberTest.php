@@ -85,7 +85,8 @@ class DeviceRememberTest extends TestCase
 
         $this->meWithCookie($this->cookieFor($user, 'laptop-token'))->assertUnauthorized();
         $this->meWithCookie($this->cookieFor($user, 'phone-token'))->assertOk();
-        $this->assertSame($usersToken, $user->fresh()->getRememberToken());
+        // Ending a device also retires the cookie from before devices; a device token never lands there
+        $this->assertNotContains($user->fresh()->getRememberToken(), [$usersToken, 'laptop-token', 'phone-token']);
     }
 
     public function test_an_ended_device_cookie_never_signs_in_again(): void
@@ -175,7 +176,7 @@ class DeviceRememberTest extends TestCase
 
         $this->meWithCookie($this->cookieFor($user, $token))->assertUnauthorized();
         $this->assertSame($deviceCount, UserDevice::count());
-        $this->assertSame($usersToken, $user->fresh()->remember_token);
+        $this->assertNotContains($user->fresh()->remember_token, [$usersToken, $token]);
     }
 
     public function test_signing_in_with_remember_never_writes_the_users_token(): void
