@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Auth\LoginEventType;
 use App\Models\AuditLog;
+use App\Models\Auth\LoginEvent;
 use App\Models\Email\EmailLog;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
@@ -11,24 +13,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/**
- * The nightly retention sweep (`logs:prune`).
- *
- * Three tables record what the system did rather than what the business owns, and none of
- * them shrink on their own. What these tests pin down is not that rows disappear — that part
- * is easy — but the three judgements around it: an email log keeps its row after its body is
- * emptied (the Email Templates counters read that table), an unread bell is never deleted
- * however old it gets, and a window left at 0 means keep forever rather than delete now.
- */
+// The nightly retention sweep (logs:prune): row and body windows, unread bells kept, 0 = keep forever.
 class LogRetentionTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * EmailLog manages created_at itself and does not accept it as fillable, so the age is
-     * forced on afterwards — the alternative, travelling time for every row, would make each
-     * test read as a sequence of dates rather than as the ages that matter to it.
-     */
+    // EmailLog does not accept created_at as fillable, so the age is set afterwards
     private function emailLog(int $daysAgo, string $status = 'sent'): EmailLog
     {
         $log = EmailLog::create([
@@ -58,6 +48,16 @@ class LogRetentionTest extends TestCase
         ]);
 
         return $id;
+    }
+
+    private function loginEvent(int $daysAgo): LoginEvent
+    {
+        return LoginEvent::create([
+            'login_name' => 'someone',
+            'event' => LoginEventType::SignedIn,
+            'ip' => '203.0.113.5',
+            'created_at' => now()->subDays($daysAgo),
+        ]);
     }
 
     public function test_an_old_email_keeps_its_row_after_its_body_is_emptied(): void
@@ -119,6 +119,27 @@ class LogRetentionTest extends TestCase
         $this->assertDatabaseHas('notifications', ['id' => $recentlyRead]);
     }
 
+    public function test_login_events_older_than_the_window_are_pruned(): void
+    {
+        // Shipped default window is 365 days
+        $expired = $this->loginEvent(366);
+        $kept = $this->loginEvent(364);
+
+        $this->artisan('logs:prune')->expectsOutputToContain('login events: 1')->assertSuccessful();
+
+        $this->assertDatabaseMissing('login_events', ['id' => $expired->id]);
+        $this->assertDatabaseHas('login_events', ['id' => $kept->id]);
+        $this->assertStringContainsString('login_events: 1', AuditLog::where('action', 'Pruned logs')->sole()->target);
+
+        AppSetting::put('login_log_days', '0');
+        $ancient = $this->loginEvent(5000);
+
+        $this->artisan('logs:prune')->assertSuccessful();
+
+        $this->assertDatabaseHas('login_events', ['id' => $ancient->id]);
+        $this->assertDatabaseHas('login_events', ['id' => $kept->id]);
+    }
+
     public function test_audit_logs_are_kept_forever_unless_a_window_is_set(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
@@ -137,16 +158,18 @@ class LogRetentionTest extends TestCase
 
     public function test_a_window_of_zero_keeps_everything(): void
     {
-        foreach (['email_log_body_days', 'email_log_days', 'audit_log_days', 'notification_days'] as $key) {
+        foreach (['email_log_body_days', 'email_log_days', 'audit_log_days', 'notification_days', 'login_log_days'] as $key) {
             AppSetting::put($key, '0');
         }
         $email = $this->emailLog(3000);
         $notification = $this->notification(daysAgo: 3000, readDaysAgo: 2999);
+        $loginEvent = $this->loginEvent(3000);
 
         $this->artisan('logs:prune')->assertSuccessful();
 
         $this->assertNotNull($email->refresh()->body_html);
         $this->assertDatabaseHas('notifications', ['id' => $notification]);
+        $this->assertDatabaseHas('login_events', ['id' => $loginEvent->id]);
         // Nothing happened, so the sweep wrote no audit line about it either.
         $this->assertSame(0, AuditLog::where('action', 'Pruned logs')->count());
     }
