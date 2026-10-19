@@ -189,7 +189,7 @@ class StockMovementReport extends TabularReport
             ReportSummary::make('return_qty', 'คืนของ (ชิ้น)', $tiles['return']['qty']),
             // Transfers move stock between warehouses without changing the total.
             ReportSummary::make('transfer_qty', 'ย้ายคลัง (ชิ้น)', $tiles['transfer']['qty']),
-            ReportSummary::make('adjust_net', 'ปรับยอดสุทธิ (ชิ้น)', $tiles['adjust_up']['qty'] - $tiles['adjust_down']['qty']),
+            ReportSummary::make('adjust_net', 'ปรับยอดจากการนับสต็อก (ชิ้น)', $tiles['adjust_up']['qty'] - $tiles['adjust_down']['qty']),
         ];
     }
 

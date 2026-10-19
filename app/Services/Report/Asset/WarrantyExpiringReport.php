@@ -217,6 +217,12 @@ class WarrantyExpiringReport extends TabularReport
         return $statuses;
     }
 
+    /** The window tile (wty_within_90d …) shares one explanation whatever the window. */
+    public function tileInfoKey(string $tileKey): ?string
+    {
+        return parent::tileInfoKey(preg_match('/^wty_within_\d+d$/', $tileKey) === 1 ? 'wty_within' : $tileKey);
+    }
+
     public function summary(Builder $query, array $filters): array
     {
         $within = self::window($filters);

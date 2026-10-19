@@ -325,6 +325,11 @@ class ContractRentalsReport extends TabularReport
         ];
     }
 
+    protected function infoKeys(): array
+    {
+        return ['crent_rented_in_use' => 'rep_crent_k_rented_hint', 'crent_unlinked' => 'rep_crent_k_unlinked_hint'];
+    }
+
     public function summary(Builder $query, array $filters): array
     {
         $tiles = self::tiles($this->facts($filters));

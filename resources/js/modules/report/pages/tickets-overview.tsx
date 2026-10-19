@@ -17,6 +17,7 @@ import { isAxiosError } from 'axios';
 import { AlertCircle, CalendarClock, Download } from 'lucide-react';
 import { BacklogAging } from '../components/backlog-aging';
 import { CARD_HEADING_TINT } from '../components/card-heading';
+import { InfoMark } from '../components/chart-parts';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile, slaLevel, type SlaLevel } from '../components/kpi-tile';
@@ -224,6 +225,7 @@ export default function TicketOverviewReportPage() {
                     <div className={cn('grid grid-cols-2 gap-3', summaryColumns(5))}>
                         <KpiTile
                             label={t('rep_kpi_total')}
+                            badge={<InfoMark info={t('rep_info_tickets_overview_total')} />}
                             value={String(data.kpi.total)}
                             footer={
                                 <Change
@@ -235,12 +237,18 @@ export default function TicketOverviewReportPage() {
                         />
                         <KpiTile
                             label={t('rep_kpi_completed')}
+                            badge={<InfoMark info={t('rep_info_tickets_overview_completed')} />}
                             value={String(data.kpi.completed)}
                             footer={t('rep_kpi_canceled').replace('{n}', fmtN(data.kpi.canceled))}
                         />
                         <KpiTile
                             label={t('rep_kpi_sla')}
-                            badge={<StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', fmtN(data.sla_goal))}</StatusBadge>}
+                            badge={
+                                <>
+                                    <StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', fmtN(data.sla_goal))}</StatusBadge>
+                                    <InfoMark info={t('rep_info_tickets_overview_sla_rate')} />
+                                </>
+                            }
                             value={fmt(data.kpi.sla_rate)}
                             unit={data.kpi.sla_rate === null ? undefined : '%'}
                             alert={data.kpi.sla_rate === null ? false : SLA_ALERT[slaLevel(data.kpi.sla_rate, data.sla_goal)]}
@@ -253,7 +261,7 @@ export default function TicketOverviewReportPage() {
                         />
                         <KpiTile
                             label={t('rep_kpi_avg')}
-                            hint={t('rep_col_time_hint')}
+                            badge={<InfoMark info={t('rep_info_tickets_overview_avg_resolve_hours')} />}
                             value={fmt(data.kpi.avg_resolve_hours)}
                             unit={data.kpi.avg_resolve_hours === null ? undefined : t('rep_hours')}
                             footer={
@@ -277,9 +285,12 @@ export default function TicketOverviewReportPage() {
                         <KpiTile
                             label={t('rep_kpi_backlog')}
                             badge={
-                                data.backlog.over_sla > 0 ? (
-                                    <StatusBadge tone="red">{t('rep_kpi_over_sla').replace('{n}', fmtN(data.backlog.over_sla))}</StatusBadge>
-                                ) : undefined
+                                <>
+                                    {data.backlog.over_sla > 0 && (
+                                        <StatusBadge tone="red">{t('rep_kpi_over_sla').replace('{n}', fmtN(data.backlog.over_sla))}</StatusBadge>
+                                    )}
+                                    <InfoMark info={t('rep_info_tickets_overview_backlog')} />
+                                </>
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
                             footer={

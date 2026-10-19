@@ -254,6 +254,8 @@ export type TabularFilters = Record<string, string | number | null>;
 export interface SummaryItem {
     key: string;
     label_key: string;
+    /** What the tile counts, for its ⓘ (the PDF's explanation page reads the same words). */
+    info_key?: string | null;
     value: number | null;
     /** Amber / red also mark the tile as needing attention. */
     tone:

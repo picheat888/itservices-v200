@@ -253,8 +253,9 @@ class ContractOverviewReportTest extends TestCase
         $this->assertSame(1, $tiles['cov_next_12']->note['values']['waiting']);
         $this->assertSame(1, $tiles['cov_remaining']->note['values']['waiting']);
         // The PDF's explanation page carries the page's own ⓘ text for these tiles.
-        $this->assertSame(['cov_active', 'cov_next_12', 'cov_remaining'], array_keys($report->summaryMeanings()));
-        $this->assertStringContainsString('12 เดือน', $report->summaryMeanings()['cov_next_12']);
+        $this->assertSame('rep_cov_k_active_hint', $report->tileInfoKey('cov_active'));
+        $this->assertSame('rep_cov_k_next12_hint', $report->tileInfoKey('cov_next_12'));
+        $this->assertSame('rep_info_contracts_overview_cov_in_reminder', $report->tileInfoKey('cov_in_reminder'));
     }
 
     public function test_xlsx_export_carries_thai_headings_and_labels(): void

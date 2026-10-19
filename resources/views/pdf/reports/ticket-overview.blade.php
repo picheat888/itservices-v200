@@ -25,8 +25,10 @@
         ['ปิดสำเร็จ', $num($k['completed']), $k['total'] ? $pct(round($k['completed'] / $k['total'] * 100)) : null, 'ยกเลิก '.$num($k['canceled']), '#059669', false],
         ['ปิดทัน SLA', $pct($k['sla_rate']), 'เป้า '.$goal.'%', 'ทัน '.$num($k['sla_met']).' จาก '.$num($k['sla_measured']).' เคส'.($prev && $prev['sla_rate'] !== null ? ', ช่วงก่อนหน้า '.$pct($prev['sla_rate']) : ''), $slaTone($k['sla_rate']), $k['sla_rate'] !== null && $k['sla_rate'] < $goal],
         ['เวลาแก้ไขโดยเฉลี่ย', $hrs($k['avg_resolve_hours']), null, 'P90 '.$hrs($k['p90_resolve_hours']).($prev ? ', ช่วงก่อนหน้า '.$hrs($prev['avg_resolve_hours']) : ''), '#7c3aed', false],
-        ['ค้างอยู่ตอนนี้', $num($backlog['open'] + $backlog['in_progress']), null, 'รอรับเคส '.$num($backlog['open']).', กำลังดำเนินการ '.$num($backlog['in_progress']).', เกิน SLA '.$num($backlog['over_sla']), '#dc2626', $backlog['over_sla'] > 0],
+        ['ค้างอยู่ตอนนี้', $num($backlog['open'] + $backlog['in_progress']), null, 'เปิด '.$num($backlog['open']).', กำลังทำ '.$num($backlog['in_progress']).', เกิน SLA '.$num($backlog['over_sla']), '#dc2626', $backlog['over_sla'] > 0],
     ];
+    // What each tile counts, in tile order: the page's ⓘ words.
+    $tileInfo = array_map(fn ($key) => \App\Services\Report\Tabular\ThaiWords::get("rep_info_tickets_overview_{$key}"), ['total', 'completed', 'sla_rate', 'avg_resolve_hours', 'backlog']);
     $categoryTotal = max(1, array_sum(array_column($summary['by_category'], 'count')));
 @endphp
 <!DOCTYPE html>
@@ -67,6 +69,7 @@
         tr { page-break-inside: avoid; }
         .explain { page-break-before: always; }
         h3 { font-size: 11px; margin: 10px 0 3px; page-break-after: avoid; }
+        table.data td.term { width: 24%; font-weight: bold; }
         ul.notes { margin: 0; padding-left: 16px; }
         ul.notes li { margin-bottom: 2px; }
         table.sign { width: 100%; margin-top: 26px; border-collapse: separate; border-spacing: 14px 0; page-break-inside: avoid; }
@@ -166,6 +169,14 @@
 
 <div class="explain">
     <h2>คำอธิบายตัวเลขและคอลัมน์</h2>
+    <h3>ตัวเลขสรุป</h3>
+    <table class="data">
+        @foreach ($tiles as $i => $tile)
+            @if ($tileInfo[$i])
+                <tr><td class="term">{{ $tile[0] }}</td><td>{{ $tileInfo[$i] }}</td></tr>
+            @endif
+        @endforeach
+    </table>
     <h3>หมายเหตุการนับ</h3>
     <ul class="notes">
         <li>เวลาทั้งหมดเป็นเวลาประเทศไทย</li>

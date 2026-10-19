@@ -311,13 +311,30 @@ abstract class TabularReport
         return [];
     }
 
+    /** The lang key of what a tile counts (its ⓘ on the page, its line on the PDF's explanation page); null when none is written. */
+    public function tileInfoKey(string $tileKey): ?string
+    {
+        $key = $this->infoKeys()[$tileKey] ?? 'rep_info_'.str_replace('.', '_', $this->key()).'_'.$tileKey;
+
+        return ThaiWords::get($key) === null ? null : $key;
+    }
+
     /**
-     * What each summary tile counts, by tile key, for the PDF's explanation page — the page's own
-     * ⓘ text where it has one. None by default.
+     * Tiles whose ⓘ words are the page's own hint rather than rep_info_<report>_<tile>.
      *
      * @return array<string, string>
      */
-    public function summaryMeanings(): array
+    protected function infoKeys(): array
+    {
+        return [];
+    }
+
+    /**
+     * PDF tile labels, by tile key, where the page's rep_k_<tile> word is not the one the page shows.
+     *
+     * @return array<string, string>
+     */
+    public function tileLabels(): array
     {
         return [];
     }
