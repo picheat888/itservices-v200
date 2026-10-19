@@ -5,6 +5,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Auth\DeviceEndReason;
 use App\Models\Auth\UserDevice;
 use App\Models\User;
 use App\Services\Auth\CurrentDevice;
@@ -65,7 +66,9 @@ class TrackDevice
 
         $now = now()->getTimestamp();
         if ($state['remember_expires_at'] !== null && $state['remember_expires_at'] <= $now) {
-            $state = $this->outlivedRemember($request, $state);
+            $state = $this->outlivedRemember($request, $state, $now);
+        } elseif ($state['remember_expires_at'] === null && $now - $state['last_active_at'] >= self::lifetimeSeconds()) {
+            return $this->outlivedLifetime($request, $state);
         }
 
         if (CheckSessionTimeout::isActivity($request) && $now - $state['last_active_at'] >= self::USE_EVERY_SECONDS) {
@@ -86,6 +89,17 @@ class TrackDevice
         Cookie::queue(Cookie::forget(Auth::guard('web')->getRecallerName()));
 
         if (! $request->expectsJson()) {
+            if ($request->hasSession()) {
+                $session = $request->session();
+                // Signed out without cycling tokens; a cookie restore may have moved the session to a new id
+                $session->forget([Auth::guard('web')->getName(), DeviceService::SESSION_KEY]);
+                Cache::put(
+                    DeviceService::endedCacheKey($session->getId()),
+                    ['reason' => $reason, 'by' => $endedBy],
+                    now()->addMinutes((int) config('session.lifetime')),
+                );
+            }
+
             return redirect('/login?reason='.rawurlencode($reason));
         }
 
@@ -209,20 +223,44 @@ class TrackDevice
     }
 
     /**
-     * Past its remember period while the session is still alive: the device carries on as a session device.
+     * Past its remember period while the session is still alive: the device and session carry on as a plain sign-in.
      *
      * @param  DeviceState  $state
      * @return DeviceState
      */
-    private function outlivedRemember(Request $request, array $state): array
+    private function outlivedRemember(Request $request, array $state, int $now): array
     {
         UserDevice::query()->whereKey($state['id'])->whereNull('ended_at')->update([
             'remember_token_hash' => null,
             'remember_expires_at' => null,
+            'last_active_at' => now(),
         ]);
+        $request->session()->put(CheckSessionTimeout::REMEMBERED, false);
         $state['remember_expires_at'] = null;
+        $state['last_active_at'] = $now;
 
         return $this->store($request, $state);
+    }
+
+    /**
+     * Unused for longer than a plain device lives (polls kept the session alive): it ends like an idle timeout.
+     *
+     * @param  DeviceState  $state
+     */
+    private function outlivedLifetime(Request $request, array $state): Response
+    {
+        $device = UserDevice::query()->find($state['id']);
+        if ($device !== null) {
+            $this->devices->end($device, DeviceEndReason::IdleTimeout);
+        }
+
+        return self::signedOut($request, DeviceEndReason::IdleTimeout->value, null);
+    }
+
+    /** A plain device's lifetime, plus the minute its last use may trail the real one (use is written once a minute). */
+    private static function lifetimeSeconds(): int
+    {
+        return UserDevice::lifetimeMinutes() * 60 + self::USE_EVERY_SECONDS;
     }
 
     /** @param  DeviceState  $state */

@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\SetRequestLocale;
 use App\Http\Middleware\TrackDevice;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => EnsurePermission::class,
         ]);
+        // The idle and device checks run right after sign-in, before route bindings and throttles
+        $middleware->appendToPriorityList(AuthenticatesRequests::class, CheckSessionTimeout::class);
+        $middleware->appendToPriorityList(CheckSessionTimeout::class, TrackDevice::class);
         // A signed-out browser opening a file link (e.g. from an email) signs in, then comes back to it.
         $middleware->redirectGuestsTo(fn (Request $request) => '/login?next='.rawurlencode($request->getRequestUri()));
     })
