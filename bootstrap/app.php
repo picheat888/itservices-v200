@@ -17,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(AssignRequestId::class);
+        // Cloudflare Tunnel runs on this machine, so only loopback may name the client IP.
+        $middleware->trustProxies(at: ['127.0.0.1', '::1'], headers: Request::HEADER_X_FORWARDED_FOR);
         $middleware->statefulApi();
         // Apply the standard 'api' rate limiter (300/min, AppServiceProvider) to every API route.
         $middleware->api(append: ['throttle:api', SetRequestLocale::class]);

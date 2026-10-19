@@ -9,6 +9,8 @@ use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Services\Auth\DbIpLookup;
+use App\Services\Auth\GeoIpLookup;
 use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -26,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(GeoIpLookup::class, DbIpLookup::class);
     }
 
     /**
