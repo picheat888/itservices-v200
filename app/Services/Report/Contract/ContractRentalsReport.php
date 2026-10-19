@@ -159,8 +159,8 @@ class ContractRentalsReport extends TabularReport
         return [
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             ReportColumn::localized('category', 'หมวดหมู่', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null)
-                ->labelKey('rep_c_asset_category'),
-            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name),
+                ->labelKey('rep_c_asset_category')->withCode('รหัสหมวดหมู่', 'เลข ID ของหมวดหมู่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดหมู่ใน Power BI', fn (Asset $a) => $a->category_id),
+            ReportColumn::text('brand', 'ยี่ห้อ', fn (Asset $a) => $a->brand?->name)->withCode('รหัสยี่ห้อ', 'เลข ID ของยี่ห้อในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางยี่ห้อใน Power BI', fn (Asset $a) => $a->brand_id),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name),
             ReportColumn::enum('source', 'ที่มา', fn (Asset $a) => $a->source, self::SOURCE_KEYS, self::SOURCE_TH),
             ReportColumn::enum('status', 'สถานะ', fn (Asset $a) => $a->status, self::STATUS_KEYS, self::STATUS_TH),
@@ -172,7 +172,7 @@ class ContractRentalsReport extends TabularReport
                 ->linkTo('/contracts', fn (Asset $a) => $a->contract_id),
             ReportColumn::text('contract_name', 'ชื่อสัญญา', fn (Asset $a) => $a->contract?->name)->labelKey('rep_c_name')->hiddenByDefault(),
             ReportColumn::localized('vendor', 'ผู้ขาย', fn (Asset $a) => $a->contract?->vendor ? ['name' => $a->contract->vendor->name, 'name_th' => $a->contract->vendor->name_th] : null)
-                ->hiddenByDefault(),
+                ->hiddenByDefault()->withCode('รหัสผู้ขาย', 'เลข ID ของผู้ขายในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางผู้ขายใน Power BI', fn (Asset $a) => $a->contract?->vendor_id),
             ReportColumn::date('end_date', 'วันที่สิ้นสุด', fn (Asset $a) => $a->contract?->end_date)->labelKey('rep_crent_c_end'),
             ReportColumn::enum('contract_state', 'สถานะสัญญา', fn (Asset $a) => $a->contract ? self::state($a->contract) : null, self::STATE_KEYS, self::STATE_TH)
                 ->labelKey('rep_crent_c_state'),

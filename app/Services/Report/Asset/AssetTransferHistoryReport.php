@@ -129,10 +129,10 @@ class AssetTransferHistoryReport extends TabularReport
             ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (AssetTransfer $t) => $t->asset_tag)->linkTo('/assets', fn (AssetTransfer $t) => $t->asset_id),
             // Drawn under the code on the page, so hidden as columns of their own.
             ReportColumn::text('brand', 'ยี่ห้อ', fn (AssetTransfer $t) => $this->trail($t, 'brands')[$t->asset_id] ?? null)
-                ->labelKey('rep_c_brand')->hiddenByDefault(),
+                ->labelKey('rep_c_brand')->hiddenByDefault()->withCode('รหัสยี่ห้อ', 'เลข ID ของยี่ห้อในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางยี่ห้อใน Power BI', fn (AssetTransfer $t) => $this->trail($t, 'brand_ids')[$t->asset_id] ?? null),
             ReportColumn::text('model', 'รุ่น', fn (AssetTransfer $t) => $t->asset_model)->hiddenByDefault(),
             ReportColumn::localized('category', 'หมวดหมู่', fn (AssetTransfer $t) => $this->trail($t, 'categories')[$t->asset_id] ?? null)
-                ->labelKey('rep_c_asset_category')->hiddenByDefault(),
+                ->labelKey('rep_c_asset_category')->hiddenByDefault()->withCode('รหัสหมวดหมู่', 'เลข ID ของหมวดหมู่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดหมู่ใน Power BI', fn (AssetTransfer $t) => $this->trail($t, 'category_ids')[$t->asset_id] ?? null),
             ReportColumn::number('asset_moves', 'จำนวนครั้งที่เคลื่อนไหว', fn (AssetTransfer $t) => $this->trail($t, 'moves')[$t->asset_id] ?? null)->hiddenByDefault(),
             ReportColumn::enum('transfer_kind', 'ประเภทรายการ', fn (AssetTransfer $t) => $t->kind, self::KIND_KEYS, self::KIND_TH),
             ReportColumn::localized('from_label', 'จาก', fn (AssetTransfer $t) => $this->partyLabel($t, 'from_owner')),
@@ -191,7 +191,7 @@ class AssetTransferHistoryReport extends TabularReport
     {
         $people = TransferTrail::people($rows);
         $assetIds = $rows->pluck('asset_id')->unique()->values();
-        $assets = Asset::query()->whereIn('id', $assetIds)->with('category:id,name,name_th')->get(['id', 'category_id']);
+        $assets = Asset::query()->whereIn('id', $assetIds)->with('category:id,name,name_th')->get(['id', 'category_id', 'brand_id']);
 
         return [
             'people' => $people,
@@ -199,6 +199,8 @@ class AssetTransferHistoryReport extends TabularReport
             'outcomes' => TransferTrail::outcomes($rows, $people),
             'categories' => $assets->mapWithKeys(fn (Asset $a) => [$a->id => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null])->all(),
             'brands' => TransferTrail::brands($assetIds),
+            'category_ids' => $assets->pluck('category_id', 'id')->all(),
+            'brand_ids' => $assets->pluck('brand_id', 'id')->all(),
             'moves' => AssetTransfer::query()->whereIn('asset_id', $assetIds)->selectRaw('asset_id, COUNT(*) as n')->groupBy('asset_id')
                 ->pluck('n', 'asset_id')->map(fn ($n) => (int) $n)->all(),
         ];

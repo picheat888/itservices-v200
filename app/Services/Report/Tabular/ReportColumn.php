@@ -234,13 +234,15 @@ final class ReportColumn
     }
 
     /**
-     * Add a sheet-only code column right after this one, read from the resolver's `code` key
-     * (a localized column whose resolver returns ['name' => …, 'name_th' => …, 'code' => …]).
+     * Add a sheet-only code column right after this one: $code reads it off the row (a record id
+     * such as category_id), else it is the resolver's `code` key (['name' => …, 'code' => …]).
+     *
+     * @param  (Closure(Model): (string|int|null))|null  $code
      */
-    public function withCode(string $heading, string $meaning): self
+    public function withCode(string $heading, string $meaning, ?Closure $code = null): self
     {
         $resolve = $this->resolve;
-        $this->codeColumn = self::text("{$this->key}_code", $heading, fn (Model $row) => (($resolve)($row))['code'] ?? null)
+        $this->codeColumn = self::text("{$this->key}_code", $heading, $code ?? fn (Model $row) => (($resolve)($row))['code'] ?? null)
             ->sheetOnly()
             ->describe($meaning);
 

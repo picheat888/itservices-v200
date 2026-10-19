@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
 use App\Services\Report\Asset\AssetWriteoffReport;
+use App\Services\Report\Contract\ContractOverviewReport;
 use App\Services\Report\Request\RequestApprovalsReport;
 use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Tabular\CellDate;
@@ -169,6 +170,24 @@ class ExcelAnalysisReadyTest extends TestCase
         $this->assertSame(array_search('แผนก', $headings, true) + 1, array_search('รหัสแผนก', $headings, true));
         $this->assertSame('D-IT', $byHolderCode['EMP-5']['รหัสแผนก']);
         $this->assertNull($byHolderCode['none']['ผู้ถือ']);
+    }
+
+    public function test_master_data_names_carry_their_record_id_as_the_code_beside_them(): void
+    {
+        $asset = Asset::query()->sole();
+        $rows = $this->workbook()->getSheetByName('ข้อมูลดิบ')->toArray(null, false, false);
+        $headings = $rows[0];
+        $row = array_combine($headings, $rows[1]);
+
+        foreach (['หมวดหมู่' => 'รหัสหมวดหมู่', 'ยี่ห้อ' => 'รหัสยี่ห้อ', 'คลัง' => 'รหัสคลัง', 'สถานที่' => 'รหัสสถานที่'] as $name => $code) {
+            $this->assertSame(array_search($name, $headings, true) + 1, array_search($code, $headings, true), $code);
+        }
+        $this->assertEquals($asset->category_id, $row['รหัสหมวดหมู่']);
+        $this->assertEquals($asset->brand_id, $row['รหัสยี่ห้อ']);
+
+        $vendorCodes = fn ($report) => array_values(array_filter(array_map(fn ($c) => $c->heading, $report->sheetColumns()), fn ($h) => $h === 'รหัสผู้ขาย'));
+        $this->assertSame(['รหัสผู้ขาย'], $vendorCodes(app(ContractOverviewReport::class)));
+        $this->assertContains('รหัสหมวด', array_map(fn ($c) => $c->heading, app(StockBelowMinReport::class)->sheetColumns()));
     }
 
     public function test_a_display_only_mix_stays_off_the_sheet_and_its_parts_stay_on(): void

@@ -128,7 +128,7 @@ class ContractRenewalsReport extends TabularReport
         return [
             ReportColumn::text('code', 'เลขที่สัญญา', fn (Contract $c) => $c->code)->linkTo('/contracts', fn (Contract $c) => $c->id),
             ReportColumn::text('name', 'ชื่อสัญญา', fn (Contract $c) => $c->name),
-            ReportColumn::localized('vendor', 'ผู้ขาย', fn (Contract $c) => $c->vendor ? ['name' => $c->vendor->name, 'name_th' => $c->vendor->name_th] : null),
+            ReportColumn::localized('vendor', 'ผู้ขาย', fn (Contract $c) => $c->vendor ? ['name' => $c->vendor->name, 'name_th' => $c->vendor->name_th] : null)->withCode('รหัสผู้ขาย', 'เลข ID ของผู้ขายในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางผู้ขายใน Power BI', fn (Contract $c) => $c->vendor_id),
             ReportColumn::enum('type', 'ประเภท', fn (Contract $c) => $c->type, self::TYPE_KEYS, self::TYPE_TH),
             ReportColumn::date('start_date', 'วันที่เริ่ม', fn (Contract $c) => $c->start_date)->hiddenByDefault(),
             ReportColumn::date('end_date', 'วันที่สิ้นสุด', fn (Contract $c) => $c->end_date)->labelKey('rep_cren_c_end'),
