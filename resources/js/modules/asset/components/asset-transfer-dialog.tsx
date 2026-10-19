@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useEmployeePicker, useEmployeesByIds, useLocations } from '@/modules/employee';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
@@ -11,7 +12,7 @@ import { localName, localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
@@ -135,11 +136,16 @@ export function AssetTransferDialog({
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-lg">
-                <DialogTitle>{isBulk ? t('asset_bulk_transfer_title') : t('transfer_asset')}</DialogTitle>
-                <DialogDescription>{description}</DialogDescription>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Share2}
+                    eyebrow={isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : shownAsset?.asset_code}
+                    title={isBulk ? t('asset_bulk_transfer_title') : t('transfer_asset')}
+                    subtitle={!isBulk && shownAsset?.model ? <span className="text-muted-foreground text-sm">{shownAsset.model}</span> : undefined}
+                    srDescription={description || undefined}
+                />
 
-                <div className="mt-4 space-y-5">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     {/* Segmented toggle: Employee | Shared */}
@@ -206,18 +212,18 @@ export function AssetTransferDialog({
                     <Field label={t('asset_transfer_reason')}>
                         <Textarea value={reason} onChange={(ev) => setReason(ev.target.value)} rows={3} placeholder={t('asset_transfer_reason_ph')} />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)}>
+                <DialogFooterBar>
+                    <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton className="flex-1" onClick={submit} loading={busy}>
+                    <SaveButton onClick={submit} loading={busy}>
                         <Share2 className="h-4 w-4" />
                         {t('asset_transfer_action')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useWriteoffReasons } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -8,7 +9,7 @@ import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { FlaskConicalOff } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -71,14 +72,14 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-lg">
-                <DialogTitle className="flex items-center gap-2">
-                    <FlaskConicalOff className="text-destructive h-5 w-5" />
-                    {t('asset_writeoff_title')}
-                </DialogTitle>
-                <DialogDescription>{t('asset_bulk_count').replace('{count}', fmtN(ids.length))}</DialogDescription>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={FlaskConicalOff}
+                    eyebrow={t('asset_bulk_count').replace('{count}', fmtN(ids.length))}
+                    title={t('asset_writeoff_title')}
+                />
 
-                <div className="mt-4 space-y-4">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('asset_writeoff_reason')} required error={reasonErr}>
                         <SearchableSelect
@@ -100,18 +101,18 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                             placeholder={t('asset_writeoff_note_ph')}
                         />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)} disabled={bulk.isPending}>
+                <DialogFooterBar>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={bulk.isPending}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton variant="destructive" className="flex-1" onClick={submit} loading={bulk.isPending}>
+                    <SaveButton variant="destructive" onClick={submit} loading={bulk.isPending}>
                         <FlaskConicalOff className="h-4 w-4" />
                         {t('asset_writeoff')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

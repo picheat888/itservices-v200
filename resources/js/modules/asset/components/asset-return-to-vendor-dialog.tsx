@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -6,7 +7,7 @@ import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -55,17 +56,16 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-lg">
-                <DialogTitle className="flex items-center gap-2">
-                    <Undo2 className="text-brand h-5 w-5" aria-hidden="true" />
-                    {t('asset_return_vendor_title')}
-                </DialogTitle>
-                <DialogDescription>
-                    {t('asset_bulk_count').replace('{count}', fmtN(ids.length))}
-                    <span className="mt-1 block">{t('asset_return_vendor_desc')}</span>
-                </DialogDescription>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Undo2}
+                    eyebrow={t('asset_bulk_count').replace('{count}', fmtN(ids.length))}
+                    title={t('asset_return_vendor_title')}
+                    subtitle={<span className="text-muted-foreground text-sm">{t('asset_return_vendor_desc')}</span>}
+                    srDescription={t('asset_return_vendor_desc')}
+                />
 
-                <div className="mt-4 space-y-4">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('asset_writeoff_note')} error={error}>
                         <Textarea
@@ -76,18 +76,18 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
                             placeholder={t('asset_return_vendor_note_ph')}
                         />
                     </Field>
-                </div>
+                </DialogBody>
 
-                <div className="mt-6 flex flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => guardClose(onClose)} disabled={returnToVendor.isPending}>
+                <DialogFooterBar>
+                    <Button variant="outline" onClick={() => guardClose(onClose)} disabled={returnToVendor.isPending}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton className="flex-1" onClick={submit} loading={returnToVendor.isPending}>
+                    <SaveButton onClick={submit} loading={returnToVendor.isPending}>
                         <Undo2 className="h-4 w-4" />
                         {t('asset_return_vendor')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
