@@ -463,6 +463,20 @@ class LoginDeviceLimitTest extends TestCase
         $this->assertEqualsWithDelta(900, (int) $response->headers->get('Retry-After'), 5);
     }
 
+    public function test_a_typed_name_shaped_like_an_account_key_never_locks_that_account(): void
+    {
+        $user = User::factory()->create();
+        $this->lockFromOtherIps('id:'.$user->id);
+
+        $this->browser(self::BROWSER_A, '198.51.100.200')
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $user->id);
+
+        // The typed name keeps its own lock
+        $this->failSignIn('id:'.$user->id, '198.51.100.201')->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+    }
+
     public function test_a_successful_sign_in_clears_the_username_counter(): void
     {
         AppSetting::put('device_limit', '0');
