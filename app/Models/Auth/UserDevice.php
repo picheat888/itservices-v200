@@ -70,6 +70,24 @@ class UserDevice extends Model
         });
     }
 
+    /**
+     * Devices ended or expired at $now: exactly the ones active() leaves out.
+     *
+     * @param  Builder<UserDevice>  $query
+     * @return Builder<UserDevice>
+     */
+    public function scopeInactive(Builder $query, ?CarbonInterface $now = null): Builder
+    {
+        $now ??= now();
+
+        return $query->where(fn (Builder $device) => $device
+            ->whereNotNull('ended_at')
+            ->orWhere('remember_expires_at', '<=', $now)
+            ->orWhere(fn (Builder $plain) => $plain
+                ->whereNull('remember_expires_at')
+                ->where('last_active_at', '<', $now->copy()->subMinutes(self::lifetimeMinutes()))));
+    }
+
     /** Minutes a device without remember-me stays active: the idle timeout when on, never more than the session lifetime. */
     public static function lifetimeMinutes(): int
     {
