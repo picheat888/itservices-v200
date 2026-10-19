@@ -595,7 +595,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                     <div className="space-y-6">
                         {sectionViews.map(({ section, groups, shown }) => {
                             const SectionIcon = section.icon;
-                            const sectionActions = groups.flatMap((g) => specKeys(cardSpec(g).spec));
+                            const sectionActions = groups.flatMap((g) => specKeys(countSpecOf(data.layout, g).spec));
                             const sectionCount = groups
                                 .map(tally)
                                 .reduce((sum, c) => ({ on: sum.on + c.on, total: sum.total + c.total }), { on: 0, total: 0 });
