@@ -3,6 +3,8 @@
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\SetRequestLocale;
+use App\Http\Middleware\TrackDevice;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -29,5 +31,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request) => '/login?next='.rawurlencode($request->getRequestUri()));
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // A browser whose device was ended elsewhere has lost its session row; it still learns why
+        $exceptions->render(fn (AuthenticationException $e, Request $request) => TrackDevice::answerLostSession($request));
     })->create();

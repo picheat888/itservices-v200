@@ -39,6 +39,12 @@ class DeviceService
         return 'device-state:'.$sessionId;
     }
 
+    /** Cache key of why a session's device was ended elsewhere, read by the browser still holding that session cookie. */
+    public static function endedCacheKey(string $sessionId): string
+    {
+        return 'device-ended:'.$sessionId;
+    }
+
     /** The per-account device limit; 0 = off. */
     public function limit(): int
     {
@@ -163,11 +169,14 @@ class DeviceService
         }
 
         $device->refresh();
+        $signedOut = $reason === DeviceEndReason::SignedOut;
         if ($sessionId !== null) {
+            if (! $signedOut) {
+                Cache::put(self::endedCacheKey($sessionId), ['reason' => $reason->value, 'by' => $endedBy], now()->addMinutes((int) config('session.lifetime')));
+            }
             $this->forgetSession($sessionId);
         }
 
-        $signedOut = $reason === DeviceEndReason::SignedOut;
         $this->events->record(
             $signedOut ? LoginEventType::SignedOut : LoginEventType::ForcedOut,
             null,

@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Auth\DeviceEndReason;
 use App\Models\Settings\AppSetting;
+use App\Services\Auth\DeviceService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,10 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Inactivity timeout on top of Laravel's session: past the configured window (plus a heartbeat of grace)
- * the session is invalidated and the SPA gets 401 "session_expired". Remembered sign-ins are exempt.
- */
+// Inactivity timeout: past the window plus a heartbeat of grace the device ends and the SPA gets 401 "session_expired".
 class CheckSessionTimeout
 {
     /** Session key: whether this sign-in was made with "remember me" ticked. */
@@ -24,6 +23,8 @@ class CheckSessionTimeout
 
     /** The browser warns and signs out on time; the server waits one heartbeat (its longest) longer. */
     public const GRACE_SECONDS = 60;
+
+    public function __construct(private readonly DeviceService $devices) {}
 
     public static function clockKey(string $clock): string
     {
@@ -59,6 +60,10 @@ class CheckSessionTimeout
         $lost = is_string($clock) && $lastActivity === null;
         if ($lost || ($lastActivity !== null && $now - $lastActivity > $minutes * 60 + self::GRACE_SECONDS)) {
             Cache::forget(self::clockKey((string) $clock));
+            $device = $this->devices->currentOf($request->user(), $request);
+            if ($device !== null) {
+                $this->devices->end($device, DeviceEndReason::IdleTimeout);
+            }
             // Invalidating is the logout for cookie SPA auth; the sanctum guard's logout() would throw
             $session->invalidate();
             $session->regenerateToken();
@@ -71,7 +76,7 @@ class CheckSessionTimeout
             $session->put(self::IDLE_CLOCK, $clock);
         }
 
-        if ($lastActivity === null || $this->isActivity($request)) {
+        if ($lastActivity === null || self::isActivity($request)) {
             $keepFor = 2 * max($minutes * 60 + self::GRACE_SECONDS, (int) config('session.lifetime') * 60);
             Cache::put(self::clockKey($clock), $now, $keepFor);
         }
@@ -80,7 +85,7 @@ class CheckSessionTimeout
     }
 
     /** Only the browser's activity ping and writes count; reads the page makes on its own do not. */
-    private function isActivity(Request $request): bool
+    public static function isActivity(Request $request): bool
     {
         return ! $request->isMethodSafe() || $request->routeIs('api.session.ping');
     }
