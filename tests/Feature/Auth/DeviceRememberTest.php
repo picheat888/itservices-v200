@@ -116,10 +116,10 @@ class DeviceRememberTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.remembered', true);
 
-        $this->assertNull($this->app->make(CurrentDevice::class)->get());
-        $this->assertSame(0, UserDevice::count());
-        $this->assertSame('token-from-before-devices', $user->fresh()->getRememberToken());
+        $this->assertNotNull(UserDevice::query()->sole()->remember_token_hash);
+        $this->assertNotSame('token-from-before-devices', $user->fresh()->getRememberToken());
 
+        $this->meWithCookie($this->cookieFor($user, 'token-from-before-devices'))->assertUnauthorized();
         $this->meWithCookie($this->cookieFor($user, 'a-guessed-token'))->assertUnauthorized();
     }
 

@@ -7,11 +7,12 @@ use App\Http\Controllers\File\FileController;
 use App\Http\Middleware\BlockResignedEmployees;
 use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
+use App\Http\Middleware\TrackDevice;
 use App\Models\Settings\AppSetting;
 use Illuminate\Support\Facades\Route;
 
-// Same sign-in checks as the API group: timeout, closed accounts and owed password changes
-$signedIn = ['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmployees::class, CheckPasswordExpiry::class];
+// Same sign-in checks as the API group: timeout, signed-out devices, closed accounts and owed password changes
+$signedIn = ['auth:sanctum', CheckSessionTimeout::class, TrackDevice::class, BlockResignedEmployees::class, CheckPasswordExpiry::class];
 
 // Server-rendered PDFs (dompdf), opened in a browser tab; each controller checks its permission
 Route::middleware($signedIn)->prefix('pdf')->group(function () {
@@ -30,14 +31,7 @@ Route::middleware($signedIn)->prefix('files')->group(function () {
     Route::get('social-platforms/{socialPlatform}/logo', [FileController::class, 'socialLogo'])->name('files.social-logo');
 });
 
-// SPA entry — every non-API, non-asset, non-pdf path renders the React app,
-// which handles client-side routing via react-router.
-//
-// The brand travels with the page rather than being fetched after it. The SPA used to
-// start from VITE_APP_NAME — baked into the JS bundle at build time — and correct
-// itself once /api/settings answered, so every reload showed a build-time name for the
-// length of a round-trip. Read here, not inside the view, because a Blade template is
-// not where this app queries anything.
+// SPA entry for every other path; the brand travels with the page (read here, not in the Blade view)
 Route::get('/{any?}', function () {
     return view('app', ['brand' => AppSetting::brand()]);
 })->where('any', '^(?!api|sanctum|storage|build|pdf|files).*$')->name('spa');

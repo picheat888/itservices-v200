@@ -75,6 +75,7 @@ use App\Http\Controllers\Api\Workflow\WorkflowController;
 use App\Http\Middleware\BlockResignedEmployees;
 use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
+use App\Http\Middleware\TrackDevice;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.login');
@@ -86,17 +87,9 @@ Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.
 Route::post('client-errors', [ClientErrorController::class, 'store'])
     ->middleware('throttle:client-errors')->name('api.client-errors.store');
 
-/**
- * CheckPasswordExpiry answers 403 password_expired while an account still owes a
- * password change, so the forced change is enforced by the API and not only by the
- * dialog the SPA shows. Four routes opt out, or the lock would have no exit:
- * `me` is how the SPA learns it must ask, `password` is the way out, `logout` must
- * always work, and the heartbeat keeps the session alive while the form is open.
- */
-Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmployees::class, CheckPasswordExpiry::class])->group(function () {
-    // BlockResignedEmployees stands down here so somebody whose resignation landed
-    // mid-session can still clear their own cookie rather than being 401'd out of the
-    // only route that tidies up after them.
+// Signed-in API; me, password, logout and the ping opt out of the owed-password lock so it has an exit
+Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::class, BlockResignedEmployees::class, CheckPasswordExpiry::class])->group(function () {
+    // A closed account can still sign itself out
     Route::post('logout', [AuthController::class, 'logout'])
         ->withoutMiddleware([CheckPasswordExpiry::class, BlockResignedEmployees::class])->name('api.logout');
     Route::get('me', [AuthController::class, 'me'])

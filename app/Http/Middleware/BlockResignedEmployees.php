@@ -2,40 +2,35 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Auth\DeviceEndReason;
+use App\Services\Auth\DeviceService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Closes the door on an account whose person has left.
- *
- * Resigning flips employees.status and nothing more — the login row survives, with the
- * role and every permission on it. LoginRequest refuses such an account at the door, but
- * a session opened BEFORE the last day kept answering until it happened to time out; this
- * reads Employee::hasLeft() on every request instead, so access ends the day after the
- * last working day even for somebody already signed in.
- *
- * Accounts with no employee record (the administrator the system ships with) are none of
- * this middleware's business: no directory record means nothing to resign.
- *
- * Answers 401 so the SPA's axios interceptor sends the browser to the login page, where
- * the sign-in attempt then explains that the account is closed.
- */
+// Closes a signed-in session (and its device) the day after the person's last working day: 401 "account_closed".
 class BlockResignedEmployees
 {
+    public function __construct(private readonly DeviceService $devices) {}
+
     /**
      * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // hasLeft(), not the raw status: somebody serving out a notice period is still
-        // working here, and their last day is an ordinary working day.
-        if ($request->user()?->employee?->hasLeft() !== true) {
+        $user = $request->user();
+
+        // hasLeft(), not the raw status: the last day of a notice period is still a working day
+        if ($user?->employee?->hasLeft() !== true) {
             return $next($request);
         }
 
-        // Invalidating the session is the logout for cookie-based SPA auth — the user is
-        // re-read from the session on every request (same reason as CheckSessionTimeout).
+        $device = $this->devices->currentOf($user, $request);
+        if ($device !== null) {
+            $this->devices->end($device, DeviceEndReason::AccountClosed);
+        }
+
+        // Invalidating the session is the logout for cookie SPA auth
         if ($request->hasSession()) {
             $request->session()->invalidate();
             $request->session()->regenerateToken();
