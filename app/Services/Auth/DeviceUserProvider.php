@@ -18,7 +18,7 @@ class DeviceUserProvider extends EloquentUserProvider
         $device = UserDevice::query()
             ->active()
             ->where('user_id', $identifier)
-            ->where('remember_token_hash', hash('sha256', (string) $token))
+            ->where('remember_token_hash', DeviceService::rememberTokenHash((string) $token))
             ->first();
 
         // Legacy cookie from before devices: matches users.remember_token only

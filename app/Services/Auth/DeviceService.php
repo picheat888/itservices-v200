@@ -45,6 +45,18 @@ class DeviceService
         return 'device-ended:'.$sessionId;
     }
 
+    /** Cache key of why a remembered device was ended, read by the browser that only has its remember cookie left. */
+    public static function endedTokenCacheKey(string $tokenHash): string
+    {
+        return 'device-ended-token:'.$tokenHash;
+    }
+
+    /** How a device remember token is stored on user_devices. */
+    public static function rememberTokenHash(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
     /** The per-account device limit; 0 = off. */
     public function limit(): int
     {
@@ -71,7 +83,7 @@ class DeviceService
 
         $device = $user->devices()->create([
             'session_id' => $session?->getId(),
-            'remember_token_hash' => $remembered ? hash('sha256', $rememberToken) : null,
+            'remember_token_hash' => $remembered ? self::rememberTokenHash($rememberToken) : null,
             'remember_expires_at' => $remembered ? $this->rememberExpiry() : null,
             ...$this->events->describe($request),
             'user_agent' => $this->userAgentOf($request),
@@ -112,7 +124,7 @@ class DeviceService
 
         $device->forceFill([
             'session_id' => $sessionId,
-            'remember_token_hash' => hash('sha256', $token),
+            'remember_token_hash' => self::rememberTokenHash($token),
             'remember_expires_at' => $this->rememberExpiry(),
         ])->save();
 
@@ -149,6 +161,8 @@ class DeviceService
     public function end(UserDevice $device, DeviceEndReason $reason, ?array $endedBy = null): void
     {
         $sessionId = $device->session_id;
+        $rememberHash = $device->remember_token_hash;
+        $rememberExpiresAt = $device->remember_expires_at;
 
         $ended = UserDevice::query()
             ->whereKey($device->getKey())
@@ -171,9 +185,14 @@ class DeviceService
             // A cookie from before devices could otherwise sign this browser straight back in
             $this->retireLegacyRememberTokenOf((int) $device->user_id);
         }
+        $why = ['reason' => $reason->value, 'by' => $endedBy];
+        if (! $signedOut && $rememberHash !== null && $rememberExpiresAt?->isFuture()) {
+            // The remember cookie outlives the session note below
+            Cache::put(self::endedTokenCacheKey($rememberHash), $why, $rememberExpiresAt);
+        }
         if ($sessionId !== null) {
             if (! $signedOut) {
-                Cache::put(self::endedCacheKey($sessionId), ['reason' => $reason->value, 'by' => $endedBy], now()->addMinutes((int) config('session.lifetime')));
+                Cache::put(self::endedCacheKey($sessionId), $why, now()->addMinutes((int) config('session.lifetime')));
             }
             $this->forgetSession($sessionId);
         }
