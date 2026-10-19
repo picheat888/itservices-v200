@@ -6606,7 +6606,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 **ขึ้น server**
 - รัน migration `2026_10_20_000001` ถึง `000004` บน itservices_perf รันครบแล้ว (000004 รันวันที่ 2026-10-20)
 - 000004 ให้ `system.view_logins` กับ role ที่มี `system.view_audit` รันซ้ำได้ บน itservices_perf ได้แก่ IT Supervisor/Leader
-- รัน `php artisan geoip:update` หนึ่งครั้งหลัง deploy (ต้องออกเน็ตไป `download.db-ip.com`) จนกว่าจะรัน IP จะไม่มีที่ตั้ง (ยกเว้น IP ที่ตั้งชื่อเครือข่ายไว้)
+- รัน `php artisan geoip:update` หนึ่งครั้งหลัง deploy (ต้องออกเน็ตไป `download.db-ip.com`) จนกว่าจะรัน IP จะไม่มีที่ตั้ง (ยกเว้น IP ที่ตั้งชื่อเครือข่ายไว้) บน itservices_perf รันแล้ววันที่ 2026-10-20 ได้ฐานเดือน 2026-10 ที่ตั้งระดับเมืองเป็นค่าประมาณ IP ของสำนักงานควรตั้งชื่อเครือข่ายไว้
 - PHP บน production ต้องมี extension `curl` (dependency ของ `geoip2/geoip2` ผ่าน `maxmind/web-service-common`) ตรวจหลัง `composer install`
 
 **เทสที่เพิ่ม**
