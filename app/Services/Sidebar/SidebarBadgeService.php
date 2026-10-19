@@ -185,19 +185,10 @@ class SidebarBadgeService
             ->count();
     }
 
-    /**
-     * Live contracts inside their reminder window plus those already past the end date —
-     * the two alert banners on the Contracts page. Terminal states (cancelled / expired)
-     * have nothing left to action, so they are excluded.
-     */
+    /** The two alert banners on the Contracts page (in reminder window + past end date), counted in SQL. */
     private function contractsNeedingRenewal(): int
     {
-        return Contract::query()
-            ->whereNull('cancelled_at')
-            ->whereNull('expired_at')
-            ->get()
-            ->filter(fn (Contract $c) => $c->isInReminder() || $c->daysRemaining() <= 0)
-            ->count();
+        return Contract::needsRenewal()->count();
     }
 
     /**

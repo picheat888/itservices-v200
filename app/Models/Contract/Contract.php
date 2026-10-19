@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\Concerns\RecordsActors;
 use App\Models\Settings\Vendor;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -156,6 +157,23 @@ class Contract extends Model
         $days = $this->daysRemaining();
 
         return $threshold !== null && $days > 0 && $days <= $threshold;
+    }
+
+    /** Live contracts inside their reminder window or past their end date: isInReminder() || daysRemaining() <= 0, in SQL. */
+    public function scopeNeedsRenewal(Builder $query): void
+    {
+        $today = now()->startOfDay();
+
+        $query->whereNull('cancelled_at')
+            ->whereNull('expired_at')
+            ->where(function (Builder $due) use ($today) {
+                $due->whereDate('end_date', '<=', $today);
+                foreach (self::REMINDER_DAYS as $days) {
+                    $due->orWhere(fn (Builder $window) => $window
+                        ->where("notify_{$days}", true)
+                        ->whereDate('end_date', '<=', $today->copy()->addDays($days)));
+                }
+            });
     }
 
     /** Derived lifecycle status: expired (manual, permanent) › cancelled › active/overdue by date. */

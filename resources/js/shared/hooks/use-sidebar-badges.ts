@@ -19,50 +19,28 @@ const EMPTY: SidebarBadges = { employees: 0, access: 0, tickets: 0, requests: 0,
 /** Query key for the combined badge counts — modules invalidate it after an action changes a count. */
 export const SIDEBAR_BADGES_KEY = ['sidebar-badges'] as const;
 
-/**
- * Every sidebar badge in one request. Each badge used to fetch its own module endpoint,
- * so the numbers appeared one at a time (worse on the single-threaded dev server, where
- * the requests queue). One call means they all land together.
- *
- * Polls in the background on the same 15s cadence the asset badges used, so a handover
- * from another session still shows up without a reload.
- */
+/** Every sidebar badge in one request, polled every 15s while the tab is visible (refreshed on return). */
 export function useSidebarBadges(enabled = true) {
     const { data } = useQuery(sidebarBadgesQuery(enabled));
 
     return data ?? EMPTY;
 }
 
-/**
- * One badge's count, or undefined if the counts have not loaded (or failed to) — for a page
- * that must tell "unknown" apart from "zero". Shares the sidebar's query, which
- * usePrefetchSidebarBadges loads before any page draws.
- */
+/** One badge's count, or undefined while unknown (a page that must tell "unknown" from "zero"). */
 export function useSidebarBadge(key: keyof SidebarBadges): number | undefined {
     const { data } = useQuery(sidebarBadgesQuery(true));
 
     return data?.[key];
 }
 
-/**
- * Starts the badge counts loading at app start-up, alongside the signed-in check, and says
- * when that load has settled. ProtectedRoute holds its spinner until it has, so a page draws
- * with its counts already known (the assets page's return strip sits above its tabs — drawn
- * without the count, it would push the page down when the count arrived).
- *
- * Fired before we know anyone is signed in, so a 401 here is quiet (no jump to the login
- * page); the route guard handles signed-out visitors. The 15-second poll stays loud, so a
- * session lost later is still caught. A failed load still counts as settled — the page
- * shows without the counts rather than waiting forever.
- */
+/** Loads the counts at start-up and says when that load settled; ProtectedRoute waits for it so pages draw with their counts. */
 export function usePrefetchSidebarBadges(): boolean {
     const qc = useQueryClient();
     const [settled, setSettled] = useState(() => qc.getQueryState(SIDEBAR_BADGES_KEY)?.status === 'success');
 
     useEffect(() => {
         let alive = true;
-        // retry: false — a signed-out visitor's 401 will not turn into a yes by asking again
-        // (the default 3 retries hit the server three more times from the login page).
+        // Signed-out visitors: a quiet 401, no retries; a failed load still counts as settled
         qc.prefetchQuery({ queryKey: SIDEBAR_BADGES_KEY, queryFn: () => fetchSidebarBadges(true), staleTime: 10_000, retry: false }).finally(() => {
             if (alive) setSettled(true);
         });
@@ -85,6 +63,7 @@ function sidebarBadgesQuery(enabled: boolean) {
         enabled,
         staleTime: 10_000,
         refetchInterval: 15_000,
-        refetchIntervalInBackground: true,
+        refetchIntervalInBackground: false,
+        refetchOnWindowFocus: true,
     };
 }
