@@ -153,7 +153,10 @@ const SPECS: Record<string, CountSpec> = {
         ],
     },
     workflows: { master: 'workflows.module', gated: ['workflows.manage'] },
-    permissions: { master: 'system.manage_permissions', gated: ['system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
+    permissions: {
+        master: 'system.manage_permissions',
+        gated: ['system.manage_roles', 'system.manage_groups', 'system.view_audit', 'system.view_logins'],
+    },
     notifications: {
         master: 'notifications.module',
         groups: [{ view: 'notifications.logs', children: [] }],

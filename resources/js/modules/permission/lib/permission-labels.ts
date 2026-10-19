@@ -136,6 +136,7 @@ const LIVE = new Set<string>([
     'system.manage_roles',
     'system.manage_groups',
     'system.view_audit',
+    'system.view_logins',
     // Email & Notification: the master plus one right per action, all live.
     'notifications.module',
     'notifications.email_edit',

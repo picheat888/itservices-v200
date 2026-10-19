@@ -38,6 +38,7 @@ return [
     'contains' => 'The :attribute field is missing a required value.',
     'current_password' => 'Your current password is incorrect.',
     'password_reused' => 'The new password must be different from the current one.',
+    'invalid_network' => 'Enter an IP address or a range such as 203.150.12.80/29.',
     'date' => 'The :attribute field must be a valid date.',
     'date_equals' => 'The :attribute field must be a date equal to :date.',
     'date_format' => 'The :attribute field must match the format :format.',
