@@ -35,4 +35,19 @@ export const auth: Dict = {
     session_switched: 'Another tab signed in as {name}.\nReload to use this account.',
     session_reload: 'Reload',
     session_one_second: '1 second',
+    // pages/login.tsx — why you were signed out, expired confirmation
+    login_notice_third_device: 'This account was signed in on another device. You were signed out.',
+    login_notice_by: '{device} in {location} at {time}',
+    login_notice_by_no_location: '{device} at {time}',
+    login_notice_profile: "This device was signed out from this account's profile page.",
+    login_notice_limit: 'An administrator limited how many devices can be used at once. Only the device you used last was kept.',
+    login_pending_expired: 'Confirmation timed out. Please sign in again.',
+    // components/device-limit-dialog.tsx — sign-in for an account at its device limit
+    login_device_limit_title: 'This account is already signed in on {n} devices',
+    login_device_limit_line1: 'Check the {n} devices below',
+    login_device_limit_line2: 'then sign out at least 1 to sign in on this one',
+    device_sign_out: 'Sign out',
+    device_signed_out_done: 'Signed out',
+    device_last_used: 'Last used {time}',
+    device_other: 'Other',
 };

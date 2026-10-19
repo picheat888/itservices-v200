@@ -1,16 +1,21 @@
 import { useT } from '@/lang';
 import type { Lang } from '@/lang/types';
+import type { DeviceLimitResponse } from '@/modules/auth/api/authApi';
+import { DeviceLimitDialog } from '@/modules/auth/components/device-limit-dialog';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
+import { deviceLimitOf, isPendingExpired, signedOutByLine } from '@/modules/auth/lib/device-limit';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { serverFileTarget, type SignedOutReason } from '@/shared/lib/login-redirect';
+import { markShownInline } from '@/shared/lib/http-errors';
+import { readSignedOutBy, serverFileTarget, type SignedOutBy, type SignedOutReason } from '@/shared/lib/login-redirect';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, LogOut, Moon, Sun, User } from 'lucide-react';
+import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, LogOut, MonitorSmartphone, Moon, Shield, Sun, User, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
@@ -19,7 +24,19 @@ const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'th', label: 'ไทย' },
 ];
 
-const noticeReason = (reason: string | null): SignedOutReason | null => (reason === 'session_expired' || reason === 'signed_out' ? reason : null);
+// Notice shown for each reason a device was signed out
+const NOTICES: Record<SignedOutReason, { icon: LucideIcon; text: string }> = {
+    session_expired: { icon: Clock, text: 'login_session_expired' },
+    signed_out: { icon: LogOut, text: 'login_signed_out' },
+    third_device: { icon: MonitorSmartphone, text: 'login_notice_third_device' },
+    profile: { icon: LogOut, text: 'login_notice_profile' },
+    limit: { icon: Shield, text: 'login_notice_limit' },
+};
+
+const noticeReason = (reason: string | null): SignedOutReason | null => (Object.keys(NOTICES) as SignedOutReason[]).find((r) => r === reason) ?? null;
+
+// A touch screen lets the server label an iPad that reports itself as a Mac (display only)
+const hasTouchScreen = (): boolean => navigator.maxTouchPoints > 1;
 
 export default function LoginPage() {
     const t = useT();
@@ -34,8 +51,7 @@ export default function LoginPage() {
     const toggleDark = useUiStore((s) => s.toggleDark);
     const markLoginPref = useUiStore((s) => s.markLoginPref);
 
-    // A language / theme switch on the login screen is a deliberate choice:
-    // flag that field so it wins over (and is saved to) the account after sign-in.
+    // A deliberate language / theme choice here wins over the account's saved one after sign-in
     const chooseLang = (next: Lang) => {
         setLang(next);
         markLoginPref('lang');
@@ -44,6 +60,7 @@ export default function LoginPage() {
         toggleDark();
         markLoginPref('dark');
     };
+    const fmt = useDateFormat();
     const { isAuthenticated, isLoading } = useAuth();
     const login = useLogin();
     const [loginId, setLoginId] = useState('');
@@ -57,9 +74,11 @@ export default function LoginPage() {
     const [fieldErrors, setFieldErrors] = useState<{ login?: string; password?: string }>({});
     // Briefly shake the error banner on a rejected sign-in attempt.
     const [shake, setShake] = useState(false);
+    // The 409 answer that opens the device dialog, and a confirmation that ran out
+    const [deviceLimit, setDeviceLimit] = useState<DeviceLimitResponse | null>(null);
+    const [pendingExpired, setPendingExpired] = useState(false);
 
-    // Bounce back to the page the user was headed for (set by ProtectedRoute when a
-    // Quick link / deep URL was opened while signed out), else the dashboard.
+    // Back to the page the reader was headed for (set by ProtectedRoute), else the dashboard
     const location = useLocation();
     const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
     const target = from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/';
@@ -67,10 +86,15 @@ export default function LoginPage() {
     // Signed out by the idle timer or from elsewhere: say so once, then drop ?reason= so a reload does not repeat it
     const [searchParams, setSearchParams] = useSearchParams();
     const [signedOutReason, setSignedOutReason] = useState(() => noticeReason(searchParams.get('reason')));
+    const [signedOutBy, setSignedOutBy] = useState<SignedOutBy | null>(() =>
+        noticeReason(searchParams.get('reason')) === 'third_device' ? readSignedOutBy() : null,
+    );
     useEffect(() => {
         if (!searchParams.has('reason')) return;
         const reason = noticeReason(searchParams.get('reason'));
         if (reason) setSignedOutReason(reason);
+        const by = reason === 'third_device' ? readSignedOutBy() : null;
+        if (by) setSignedOutBy(by);
         setSearchParams(
             (p) => {
                 p.delete('reason');
@@ -88,14 +112,10 @@ export default function LoginPage() {
 
     if (!isLoading && isAuthenticated) return fileTarget ? null : <Navigate to={target} replace />;
 
-    /**
-     * What actually went wrong, in the user's language. The API answers 429 with
-     * `retry_after` once the 5-attempt lockout trips, 422 for wrong credentials, and
-     * nothing at all when it is unreachable — three different fixes, three messages.
-     */
-    const errorMessage = (): string => {
+    // A failed sign-in in the reader's language: lockout, wrong credentials, closed account, expired confirmation or no server
+    const errorMessage = (error: unknown): string => {
         const res = (
-            login.error as {
+            error as {
                 response?: { status?: number; data?: { retry_after?: number; message?: string }; headers?: Record<string, string> };
             } | null
         )?.response;
@@ -103,8 +123,7 @@ export default function LoginPage() {
             return t('login_err_server');
         }
         if (res.status === 429) {
-            // The sign-in lockout sends `retry_after`; the app-wide API limiter only
-            // sends the Retry-After header. Either way, tell the user how long to wait.
+            // The sign-in lockout sends retry_after; the app-wide limiter only sends the Retry-After header
             const header = Number(res.headers?.['retry-after']);
             const seconds = res.data?.retry_after ?? (Number.isFinite(header) ? header : 0);
             if (seconds <= 0) {
@@ -117,17 +136,68 @@ export default function LoginPage() {
 
             return t('login_err_throttled').replace('{time}', wait);
         }
-        // The password was right and the account is simply closed — the person resigned.
-        // Kept apart from 422 on purpose: "check your username and password" would send
-        // somebody whose account was closed hunting for a typo that isn't there.
+        // A right password on a closed account is not a typo
         if (res.status === 403 && res.data?.message === 'account_closed') {
             return t('login_err_closed');
+        }
+        if (isPendingExpired(error)) {
+            return t('login_pending_expired');
         }
         if (res.status === 422) {
             return t('login_error');
         }
 
         return t('login_err_server');
+    };
+
+    // The device dialog is open while a 409 answer or a failure of its own sign-in is on screen
+    const failure = login.isError && deviceLimitOf(login.error) === null ? login.error : null;
+    const dialogOpen = deviceLimit !== null;
+    const bannerText = dialogOpen ? null : pendingExpired ? t('login_pending_expired') : failure ? errorMessage(failure) : null;
+    const notice = signedOutReason ? NOTICES[signedOutReason] : null;
+
+    const shakeBanner = () => {
+        setShake(true);
+        setTimeout(() => setShake(false), 450);
+    };
+
+    // The same handler serves the password sign-in and the one that finishes the dialog
+    const onSignInError = (error: unknown, fromDialog: boolean) => {
+        const refusal = deviceLimitOf(error);
+        if (refusal) {
+            setDeviceLimit(refusal);
+            return;
+        }
+        if (fromDialog && !isPendingExpired(error)) {
+            // The dialog words this one
+            markShownInline(error);
+            return;
+        }
+        setDeviceLimit(null);
+        shakeBanner();
+        // Rejected credentials are retyped from the password field; a lockout or an outage is not
+        if ((error as { response?: { status?: number } })?.response?.status === 422) {
+            passwordRef.current?.select();
+        }
+    };
+
+    const finishSignIn = () => {
+        if (!deviceLimit || login.isPending) {
+            return;
+        }
+        setPendingExpired(false);
+        login.mutate({ pending: deviceLimit.pending, remember, touch: hasTouchScreen() }, { onError: (error) => onSignInError(error, true) });
+    };
+
+    const cancelDeviceLimit = () => {
+        setDeviceLimit(null);
+        login.reset();
+    };
+
+    const expireDeviceLimit = () => {
+        setDeviceLimit(null);
+        setPendingExpired(true);
+        shakeBanner();
     };
 
     const submit = (e: React.FormEvent) => {
@@ -146,30 +216,16 @@ export default function LoginPage() {
         }
         setFieldErrors(errs);
         setSignedOutReason(null);
+        setSignedOutBy(null);
+        setPendingExpired(false);
         login.reset(); // clear any previous "invalid credentials" banner
         if (Object.keys(errs).length > 0) {
-            // Land the caret on the first field that needs fixing — a keyboard or
-            // screen-reader user should not have to hunt for it.
+            // Caret goes to the first field that needs fixing
             (errs.login ? loginRef : passwordRef).current?.focus();
             return;
         }
 
-        login.mutate(
-            { login: loginId, password, remember },
-            {
-                // Wrong credentials → shake the banner once (matches the mockup UX).
-                onError: (error) => {
-                    setShake(true);
-                    setTimeout(() => setShake(false), 450);
-                    // Rejected credentials are retyped from the password field; a lockout or
-                    // an outage is not, so leave focus alone in those cases.
-                    const status = (error as { response?: { status?: number } })?.response?.status;
-                    if (status === 422) {
-                        passwordRef.current?.select();
-                    }
-                },
-            },
-        );
+        login.mutate({ login: loginId, password, remember, touch: hasTouchScreen() }, { onError: (error) => onSignInError(error, false) });
     };
 
     return (
@@ -216,8 +272,7 @@ export default function LoginPage() {
             <main className="relative flex min-h-dvh flex-col items-center justify-center px-5 py-12">
                 {/* Language + theme toggles */}
                 <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                    {/* Both languages stay on screen with the active one filled in: the control
-                        shows what you can switch to, not just what you are already reading. */}
+                    {/* Both languages stay visible, the active one filled in */}
                     <div role="group" aria-label={t('login_language')} className="border-border flex h-9 items-center rounded-lg border p-0.5">
                         {LANGUAGES.map(({ code, label }) => (
                             <button
@@ -282,8 +337,7 @@ export default function LoginPage() {
                                     aria-describedby={fieldErrors.login ? 'login-error' : undefined}
                                     className={cn(
                                         'pl-9',
-                                        // Match the shared Field error look: red border stays on focus,
-                                        // with a soft red glow instead of a solid red ring.
+                                        // Same look as the shared Field error
                                         fieldErrors.login && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
                                     )}
                                 />
@@ -352,21 +406,22 @@ export default function LoginPage() {
                             </Label>
                         </div>
 
-                        {signedOutReason && !login.isError && (
+                        {notice && bannerText === null && !dialogOpen && (
                             <p
                                 role="status"
                                 className="bg-brand/10 border-brand/25 text-brand-ink flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
                             >
-                                {signedOutReason === 'session_expired' ? (
-                                    <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                                ) : (
-                                    <LogOut className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                                )}
-                                {t(signedOutReason === 'session_expired' ? 'login_session_expired' : 'login_signed_out')}
+                                <notice.icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                <span>
+                                    {t(notice.text)}
+                                    {signedOutReason === 'third_device' && signedOutBy && (
+                                        <span className="mt-0.5 block text-xs">{signedOutByLine(signedOutBy, t, fmt.dateTime)}</span>
+                                    )}
+                                </span>
                             </p>
                         )}
 
-                        {login.isError && (
+                        {bannerText !== null && (
                             <p
                                 role="alert"
                                 className={cn(
@@ -375,7 +430,7 @@ export default function LoginPage() {
                                 )}
                             >
                                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                                {errorMessage()}
+                                {bannerText}
                             </p>
                         )}
 
@@ -392,6 +447,18 @@ export default function LoginPage() {
                     </form>
                 </div>
             </main>
+
+            {/* Account at its device limit */}
+            <DeviceLimitDialog
+                open={deviceLimit !== null}
+                limit={deviceLimit}
+                completing={login.isPending && deviceLimit !== null}
+                errorText={dialogOpen && failure ? errorMessage(failure) : undefined}
+                failureText={errorMessage}
+                onContinue={finishSignIn}
+                onCancel={cancelDeviceLimit}
+                onExpired={expireDeviceLimit}
+            />
         </div>
     );
 }
