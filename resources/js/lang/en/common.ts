@@ -223,9 +223,14 @@ export const common: Dict = {
     err_render_body: 'The problem has been recorded for the IT team. Reload the page and try again.',
     err_maintenance_title: 'Down for maintenance',
     err_maintenance_body: 'The system is being updated. Please come back in a moment.',
+    err_network_still: "Still can't connect. We'll keep trying every 10 seconds.",
 
     // http.ts, form error banners — a save the server failed
     err_action_server: "That didn't go through because the server ran into a problem. Please try again.",
+
+    // not-found.tsx — an address that does not exist
+    cmn_not_found_title: 'Page not found',
+    cmn_not_found_hint: 'The link may be mistyped, or the page has moved.',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'Blue',

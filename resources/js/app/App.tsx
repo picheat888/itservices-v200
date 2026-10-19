@@ -2,6 +2,7 @@ import '../../css/app.css';
 
 import { AppShell } from '@/app/layout/app-shell';
 import { Toaster } from '@/app/layout/toaster';
+import NotFoundPage from '@/app/not-found';
 import PlaceholderPage from '@/app/placeholder';
 import { AccessControlPage } from '@/modules/access';
 import { AssetsPage } from '@/modules/asset';
@@ -206,6 +207,8 @@ function App() {
                                 }
                             />
                         ))}
+                        {/* An unknown address says so; a signed-out reader signs in first and lands back here */}
+                        <Route path="*" element={<NotFoundPage />} />
                     </Route>
                     <Route
                         path="stock/items/:id/history"
@@ -216,7 +219,6 @@ function App() {
                         }
                     />
                 </Route>
-                <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </BrowserRouter>
     );

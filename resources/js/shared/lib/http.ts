@@ -92,14 +92,11 @@ http.interceptors.response.use(
             }
 
             // Show the outage screen only if a fresh probe fails too
-            void (async () => {
-                try {
-                    await sleep(400);
-                    await axios.get('/sanctum/csrf-cookie', { withCredentials: true, timeout: 5000 });
-                } catch {
-                    showError('network');
-                }
-            })();
+            void sleep(400)
+                .then(serverReachable)
+                .then((reachable) => {
+                    if (!reachable) showError('network');
+                });
         } else if (status === 429 && error.config?.url?.endsWith('/login')) {
             // The login page shows its own throttle wait inline
             return Promise.reject(error);
@@ -153,6 +150,16 @@ queryClient.getMutationCache().subscribe((event) => {
         useToastStore.getState().push(serverFailureText(error), 'error', translate(lang, 'err_server_title'), undefined, { key: 'http-server' });
     }, 0);
 });
+
+/** A light call outside the API throttle, to tell a dropped connection from one failed request. */
+export async function serverReachable(): Promise<boolean> {
+    try {
+        await axios.get('/sanctum/csrf-cookie', { withCredentials: true, timeout: 5000 });
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 let csrfReady = false;
 

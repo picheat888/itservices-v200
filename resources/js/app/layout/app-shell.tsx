@@ -11,13 +11,14 @@ import {
 } from '@/modules/auth';
 import { PROFILE_SECTION_PARAM, ProfileDrawer } from '@/modules/profile';
 import { settingsApi } from '@/modules/settings';
+import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNavigationGuardHost } from '@/shared/hooks/use-navigation-guard';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { NotificationsDropdown } from './notifications-dropdown';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
@@ -37,6 +38,7 @@ export function AppShell() {
     const menuOpen = narrow && !iconsOnly;
     const { user } = useAuth();
     const switchedTo = useAccountSync(user);
+    const { pathname } = useLocation();
 
     // Same query key as SecurityTab.
     const { data: security } = useQuery({
@@ -44,9 +46,9 @@ export function AppShell() {
         queryFn: settingsApi.getSecurity,
         staleTime: 5 * 60_000,
     });
-    // Remembered sign-ins skip the idle timer, as the server does.
-    const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
-    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered);
+    // Remembered sign-ins skip the idle timer, as the server does; a tab blocked by an account switch stops it, or it would sign the new account out
+    const idleMinutes = user?.remembered || switchedTo ? 0 : (security?.session_timeout_minutes ?? 0);
+    const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !user?.remembered && !switchedTo);
     const [notifOpen, setNotifOpen] = useState(false);
     // The tray stays mounted for its 100ms close animation
     const [notifMounted, setNotifMounted] = useState(false);
@@ -104,7 +106,9 @@ export function AppShell() {
                     inert={menuOpen}
                     className="bg-content relative flex-1 overflow-y-auto px-6 py-4 [--sticky-top:-1rem] [scrollbar-gutter:stable]"
                 >
-                    <Outlet />
+                    <ErrorBoundary inline resetKey={pathname}>
+                        <Outlet />
+                    </ErrorBoundary>
                 </main>
             </div>
 
