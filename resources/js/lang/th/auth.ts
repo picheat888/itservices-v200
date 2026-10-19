@@ -50,4 +50,18 @@ export const auth: Dict = {
     device_signed_out_done: 'ออกจากระบบแล้ว',
     device_last_used: 'ใช้ล่าสุด {time}',
     device_other: 'อื่น ๆ',
+    // lib/login-events.ts — event and reason words of a login-log row
+    login_event_signed_in: 'เข้าสู่ระบบ',
+    login_event_failed: 'รหัสผ่านไม่ถูกต้อง',
+    login_event_locked: 'ถูกล็อก',
+    login_event_signed_out: 'ออกจากระบบ',
+    login_event_forced_out: 'ถูกสั่งออก',
+    login_reason_third_device: 'เข้าเครื่องใหม่',
+    login_reason_profile: 'สั่งจากโปรไฟล์',
+    login_reason_limit: 'เปิดจำกัดจำนวนเครื่อง',
+    login_reason_idle_timeout: 'หมดเวลาเมื่อไม่ใช้งาน',
+    login_reason_password_changed: 'เปลี่ยนรหัสผ่าน',
+    login_reason_account_closed: 'บัญชีถูกปิด',
+    login_reason_remembered: 'จดจำไว้',
+    login_reason_unknown_account: 'ไม่พบบัญชี',
 };
