@@ -340,6 +340,19 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertNull($this->breakdown('from=2020-01-01&to=2020-01-31')['category_totals']);
     }
 
+    public function test_the_pdf_category_table_ends_with_the_totals_row(): void
+    {
+        $this->seedAssets();
+        $report = app(AssetWriteoffReport::class);
+        $viewer = $this->userWith([...$this->reportRights('assets')]);
+        $section = fn (array $filters) => collect($report->exportSections($viewer, $report->resolveFilters($filters)))->firstWhere('title', 'ตามหมวดหมู่');
+
+        $categories = $section(['from' => '2026-08-01', 'to' => '2026-09-30']);
+        $this->assertCount(2, $categories['rows']);
+        $this->assertSame(['รวม 2 หมวด', 7, 4, 3, 55000.0, 3.6, 2, 1, 1, 2], $categories['total']);
+        $this->assertNull($section(['from' => '2020-01-01', 'to' => '2020-01-31'])['total']);
+    }
+
     public function test_the_breakdown_flags_every_contract_all_time_most_urgent_first(): void
     {
         $this->seedAssets();

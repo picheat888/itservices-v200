@@ -107,7 +107,7 @@ class TicketRequestSlaReport extends TabularReport
             ReportColumn::enum('request_type', 'ประเภทคำขอ', fn (Ticket $t) => $t->serviceRequest?->type, self::typeKeys(), self::typeTh()),
             ReportColumn::localized('requester', 'ผู้ขอ', fn (Ticket $t) => $t->requester ? ['name' => $t->requester->name, 'name_th' => $t->requester->name_th] : null),
             ReportColumn::text('requester_code', 'รหัสพนักงานผู้ขอ', fn (Ticket $t) => $t->requester?->code),
-            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th, 'code' => $d->code] : null)->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::localized('department', 'แผนก', fn (Ticket $t) => ($d = $t->requester?->department) ? ['name' => $d->name, 'name_th' => $d->name_th, 'code' => $d->code] : null)->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::enum('ticket_status', 'สถานะ', fn (Ticket $t) => $t->status, self::statusKeys(), self::statusTh()),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (Ticket $t) => $t->assignee?->name),
             ReportColumn::dateTime('opened_at', 'วันที่แจ้ง', fn (Ticket $t) => $t->created_at),

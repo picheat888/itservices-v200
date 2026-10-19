@@ -42,7 +42,7 @@ class TicketOverviewGlossarySheet implements FromArray, ShouldAutoSize, WithColu
         // How the hour figures are counted — the one thing a column name cannot say.
         $rows[] = ['หมายเหตุ', 'ชั่วโมง (ชม.)', 'นับเป็นชั่วโมงตามปฏิทิน (รวมนอกเวลาทำการและวันหยุด) ส่วนกำหนดเวลา SLA คำนวณตามกติกา SLA ที่ตั้งไว้ในหน้า "ตั้งค่า"'];
 
-        $rows[] = ['หมายเหตุ', 'วันที่และวันเวลา', 'เป็นเซลล์วันที่ของ Excel ปี ค.ศ. แสดงแบบ yyyy-mm-dd hh:mm ใช้กรอง เรียง และนำเข้า Power BI ได้โดยตรง'];
+        $rows[] = ['หมายเหตุ', 'วันที่และวันเวลา', 'เซลล์วันที่ของ Excel ปี ค.ศ. แบบ yyyy-mm-dd hh:mm กรอง เรียง และนำเข้าโปรแกรมอื่นได้ทันที'];
 
         return $rows;
     }

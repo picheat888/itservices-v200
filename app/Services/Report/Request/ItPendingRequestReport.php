@@ -133,7 +133,7 @@ class ItPendingRequestReport extends TabularReport
             ReportColumn::text('requester', 'ผู้ขอ', fn (ServiceRequest $r) => $r->requester_name),
             // Drawn under the requester's name on the page.
             ReportColumn::text('requester_code', 'รหัสพนักงานผู้ขอ', fn (ServiceRequest $r) => $r->employee?->code)->labelKey('rep_c_rqi_requester_code')->hiddenByDefault(),
-            ReportColumn::localized('department', 'แผนก', fn (ServiceRequest $r) => $this->department($r))->hiddenByDefault()->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::localized('department', 'แผนก', fn (ServiceRequest $r) => $this->department($r))->hiddenByDefault()->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::date('approved_at', 'อนุมัติเมื่อ', fn (ServiceRequest $r) => $r->approved_at),
             ReportColumn::number('waiting_days', 'รอมาแล้ว (วัน)', fn (ServiceRequest $r) => $this->waitingDays($r)),
             ReportColumn::enum('age_band', 'ช่วงเวลารอ', fn (ServiceRequest $r) => self::ageBand($this->waitingDays($r)), self::AGE_BAND_KEYS, self::AGE_BAND_TH)

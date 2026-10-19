@@ -532,13 +532,10 @@ class AssetWriteoffReport extends TabularReport
                 'money' => [4],
                 'headings' => ['หมวดหมู่', 'ทั้งหมด', 'ซื้อ', 'เช่า', 'มูลค่าซื้อ', 'อายุใช้งานเฉลี่ย (ปี)', 'ไม่ถึง 3 ปี', '3-5 ปี', 'เกิน 5 ปี', 'ยังมีประกัน'],
                 'rows' => array_map(
-                    fn (array $c) => [
-                        $c['category_id'] === null ? self::NO_CATEGORY['name_th'] : ($c['name_th'] ?: $c['name']),
-                        $c['total'], $c['bought'], $c['rented'], $c['bought_value'], $c['avg_age_years'],
-                        $c['age_bands']['under_3'], $c['age_bands']['from_3_to_5'], $c['age_bands']['over_5'], $c['under_warranty'],
-                    ],
+                    fn (array $c) => self::categoryRow($c['category_id'] === null ? self::NO_CATEGORY['name_th'] : ($c['name_th'] ?: $c['name']), $c),
                     $breakdown['categories'],
                 ),
+                'total' => self::categoryRow('รวม '.count($breakdown['categories']).' หมวด', $breakdown['category_totals']),
             ],
             [
                 'title' => 'เครื่องเช่าตามสัญญา',
@@ -551,6 +548,25 @@ class AssetWriteoffReport extends TabularReport
                     $breakdown['contracts'],
                 ),
             ],
+        ];
+    }
+
+    /**
+     * One line of the category table: a category, or the totals; none when there is nothing to total.
+     *
+     * @param  array<string, mixed>|null  $figures  categoryFigures() output
+     * @return list<string|int|float|null>|null
+     */
+    private static function categoryRow(string $name, ?array $figures): ?array
+    {
+        if ($figures === null) {
+            return null;
+        }
+
+        return [
+            $name,
+            $figures['total'], $figures['bought'], $figures['rented'], $figures['bought_value'], $figures['avg_age_years'],
+            $figures['age_bands']['under_3'], $figures['age_bands']['from_3_to_5'], $figures['age_bands']['over_5'], $figures['under_warranty'],
         ];
     }
 

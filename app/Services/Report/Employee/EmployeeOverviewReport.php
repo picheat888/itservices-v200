@@ -129,7 +129,7 @@ class EmployeeOverviewReport extends TabularReport
             ReportColumn::localized('employee', 'พนักงาน', fn (Employee $e) => ['name' => $e->name, 'name_th' => $e->name_th])
                 ->labelKey('rep_c_eo_employee')->linkTo('/employees', fn (Employee $e) => $e->id),
             ReportColumn::text('employee_code', 'รหัสพนักงาน', fn (Employee $e) => $e->code),
-            ReportColumn::localized('department', 'แผนก', fn (Employee $e) => $e->department ? ['name' => $e->department->name, 'name_th' => $e->department->name_th, 'code' => $e->department->code] : null)->withCode('รหัสแผนก', 'รหัสแผนกในระบบ ใช้เชื่อมกับตารางแผนกใน Power BI (ชื่อแผนกอาจเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
+            ReportColumn::localized('department', 'แผนก', fn (Employee $e) => $e->department ? ['name' => $e->department->name, 'name_th' => $e->department->name_th, 'code' => $e->department->code] : null)->withCode('รหัสแผนก', 'รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)'),
             ReportColumn::localized('section', 'หน่วยงาน', fn (Employee $e) => $e->section ? ['name' => $e->section->name, 'name_th' => $e->section->name_th] : null)
                 ->labelKey('rep_c_eo_section'),
             ReportColumn::text('position', 'ตำแหน่ง', fn (Employee $e) => $e->position?->title),

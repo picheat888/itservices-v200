@@ -1166,6 +1166,7 @@ export const report: Dict = {
     rep_c_rqa_position: 'ขั้นที่',
     rep_c_rqa_approver_code: 'รหัสผู้อนุมัติ',
     rep_c_rqa_approver_department: 'แผนกผู้อนุมัติ',
+    rep_c_rqa_requester_department: 'แผนกผู้ขอ',
     rep_c_rqa_approver_kind: 'ชนิดผู้อนุมัติ',
     rep_c_rqa_approver_flag: 'สถานะผู้อนุมัติ',
     rep_c_rqa_became_current: 'ถึงคิว',
