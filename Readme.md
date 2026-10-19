@@ -6604,8 +6604,8 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **เครื่องที่ล็อกอินอยู่ก่อน deploy** ได้แถว device ตอนส่งคำขอครั้งถัดไป ไม่มีใครถูกออกจากระบบเพราะ deploy
 
 **ขึ้น server**
-- รัน migration `2026_10_20_000001` ถึง `000004` ผู้ใช้รัน 000001 ถึง 000003 บน itservices_perf แล้ว
-- 000004 (ให้ `system.view_logins` กับ role ที่มี `system.view_audit` รันซ้ำได้) ยังต้องรันบน itservices_perf
+- รัน migration `2026_10_20_000001` ถึง `000004` บน itservices_perf รันครบแล้ว (000004 รันวันที่ 2026-10-20)
+- 000004 ให้ `system.view_logins` กับ role ที่มี `system.view_audit` รันซ้ำได้ บน itservices_perf ได้แก่ IT Supervisor/Leader
 - รัน `php artisan geoip:update` หนึ่งครั้งหลัง deploy (ต้องออกเน็ตไป `download.db-ip.com`) จนกว่าจะรัน IP จะไม่มีที่ตั้ง (ยกเว้น IP ที่ตั้งชื่อเครือข่ายไว้)
 - PHP บน production ต้องมี extension `curl` (dependency ของ `geoip2/geoip2` ผ่าน `maxmind/web-service-common`) ตรวจหลัง `composer install`
 
