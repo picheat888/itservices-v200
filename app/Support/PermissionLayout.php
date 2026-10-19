@@ -28,7 +28,8 @@ class PermissionLayout
         ));
 
         $requests = Permissions::requestHierarchy()['groups'];
-        $reports = array_keys(Permissions::reportHierarchy()['groups']);
+        $reportTools = ['reports.export', 'reports.schedule', 'reports.schedule_manage'];
+        $reportDomains = array_values(array_diff(array_keys(Permissions::reportHierarchy()['groups']), $reportTools));
 
         return [
             self::card('dashboard', null, [self::plain(self::moduleKeys('dashboard'), true)]),
@@ -60,8 +61,8 @@ class PermissionLayout
             self::treeCard('access', Permissions::accessHierarchy()),
             self::card('profile', null, [self::plain(self::moduleKeys('profile'), false)], 'perm_ui_self_service_all'),
             self::card('reports', ['reports.module', null], [
-                self::set('perm_ui_group_report_domains', null, array_slice($reports, 0, 7)),
-                self::set('perm_ui_group_report_tools', null, array_slice($reports, 7)),
+                self::set('perm_ui_group_report_domains', null, $reportDomains),
+                self::set('perm_ui_group_report_tools', null, $reportTools),
             ]),
             self::card('workflows', ['workflows.module', null], [
                 self::set('perm_ui_group_workflows', null, array_keys(Permissions::workflowHierarchy()['groups'])),

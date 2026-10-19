@@ -69,6 +69,28 @@ class PermissionLayoutTest extends TestCase
         }
     }
 
+    public function test_flat_cells_hold_only_childless_keys(): void
+    {
+        $cards = array_column(PermissionLayout::cards(), null, 'module');
+
+        foreach (self::TREES as $module => $method) {
+            $hierarchy = Permissions::$method();
+            $groups = $hierarchy['groups'];
+            if (isset($hierarchy['standalone'])) {
+                $groups[$hierarchy['standalone']['view']] = $hierarchy['standalone']['children'];
+            }
+
+            foreach ($cards[$module]['cells'] as $cell) {
+                if ($cell['kind'] === 'group') {
+                    continue;
+                }
+                foreach ($cell['keys'] as $key) {
+                    $this->assertSame([], $groups[$key] ?? [], "{$module}: {$key} sits in a flat cell but has children");
+                }
+            }
+        }
+    }
+
     public function test_the_fixture_matches_the_layout(): void
     {
         $cards = PermissionLayout::cards();
