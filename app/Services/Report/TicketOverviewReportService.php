@@ -39,7 +39,7 @@ use Illuminate\Support\Collection;
 class TicketOverviewReportService
 {
     private const POPULATION_COLUMNS = [
-        'id', 'category', 'priority', 'status', 'created_at', 'resolved_at',
+        'id', 'category', 'priority', 'status', 'created_at', 'responded_at', 'resolved_at',
         'sla_resolve_due_at', 'assignee_id', 'requester_id',
     ];
 
@@ -227,7 +227,7 @@ class TicketOverviewReportService
         $completed = Ticket::query()
             ->whereBetween('created_at', [$from, $to])
             ->where('status', TicketStatus::Completed->value)
-            ->get(['id', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
+            ->get(['id', 'created_at', 'responded_at', 'resolved_at', 'sla_resolve_due_at']);
 
         return [...$this->slaCounts($completed), 'avg_resolve_hours' => $this->average($this->sortedHours($completed))];
     }
@@ -255,13 +255,13 @@ class TicketOverviewReportService
      */
     private function sortedHours(Collection $completed): Collection
     {
-        return $completed->map(fn (Ticket $t) => TicketMetrics::resolveHours($t))
+        return $completed->map(fn (Ticket $t) => TicketMetrics::workHours($t))
             ->filter(fn (?float $h) => $h !== null)
             ->sort()
             ->values();
     }
 
-    /** Mean of the resolve hours, to one decimal; null when there are none. */
+    /** Mean of the work hours (taken to resolved), to one decimal; null when there are none. */
     private function average(Collection $hours): ?float
     {
         return $hours->isEmpty() ? null : round((float) $hours->avg(), 1);
@@ -283,7 +283,7 @@ class TicketOverviewReportService
         $from = $to->subDays($days - 1)->startOfDay();
 
         $tickets = $this->inRange($viewer, [...$filters, 'from' => $from, 'to' => $to])
-            ->get(['id', 'status', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
+            ->get(['id', 'status', 'created_at', 'responded_at', 'resolved_at', 'sla_resolve_due_at']);
         $completed = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed);
 
         return [
@@ -451,7 +451,7 @@ class TicketOverviewReportService
             ->whereIn('status', [TicketStatus::Completed->value, TicketStatus::Canceled->value])
             ->whereBetween('resolved_at', [$filters['from'], $filters['to']])
             ->with(['assignee:id,name,employee_id', 'assignee.employee:id,first_name,last_name,first_name_th,last_name_th'])
-            ->get(['id', 'assignee_id', 'status', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
+            ->get(['id', 'assignee_id', 'status', 'created_at', 'responded_at', 'resolved_at', 'sla_resolve_due_at']);
 
         return $tickets->groupBy('assignee_id')
             ->map(function (Collection $group, int $id) {

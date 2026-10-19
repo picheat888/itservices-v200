@@ -98,7 +98,7 @@ class TicketOverviewExportTest extends TestCase
         $worker = Employee::create(['first_name' => 'W', 'department_id' => $ops->id]);
         $tech = User::factory()->create(['name' => 'Tech One']);
         Ticket::factory()->create(['category' => 'hardware', 'status' => 'completed', 'requester_id' => $worker->id, 'assignee_id' => $tech->id,
-            'created_at' => '2026-09-05 08:00', 'resolved_at' => '2026-09-05 10:00', 'sla_resolve_due_at' => '2026-09-06 08:00']);
+            'created_at' => '2026-09-05 08:00', 'responded_at' => '2026-09-05 08:30', 'resolved_at' => '2026-09-05 10:00', 'sla_resolve_due_at' => '2026-09-06 08:00']);
         Ticket::factory()->create(['category' => 'hardware', 'status' => 'in_progress', 'requester_id' => $worker->id, 'assignee_id' => $tech->id,
             'created_at' => '2026-09-06 08:00']);
 
@@ -109,16 +109,17 @@ class TicketOverviewExportTest extends TestCase
             $department = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ปฏิบัติการ');
             $staff = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'Tech One');
             // The 90th percentile reads as a ceiling ("ภายใน"), never as an average of the 90%.
-            $p90 = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === '90% ของเคสปิดได้ภายใน (ชม.)');
+            $p90 = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === '90% ของเคสแก้ไขเสร็จภายใน (ชม.)');
             $range = collect($rows)->first(fn (array $r) => ($r[0] ?? null) === 'ช่วงวันที่');
 
             // แผนก, Ticket, ฮาร์ดแวร์ … อื่น ๆ (6 categories), ยังไม่ปิด, ทัน SLA (%)
-            return $p90 === ['90% ของเคสปิดได้ภายใน (ชม.)', 2.0]
+            // Taken 30 minutes after opening: 1.5 h of fixing.
+            return $p90 === ['90% ของเคสแก้ไขเสร็จภายใน (ชม.)', 1.5]
                 // A whole calendar month reads as the month, in the date setting.
                 && $range === ['ช่วงวันที่', 'ก.ย. 2026']
                 && $department === ['ปฏิบัติการ', 2, 2, 0, 0, 0, 0, 0, 1, 100.0]
-                // ผู้รับผิดชอบ, ทั้งหมด, ปิดสำเร็จ, ยกเลิก, เวลาปิดเคสเฉลี่ย, ทัน SLA (%) — the period only
-                && $staff === ['Tech One', 1, 1, 0, 2.0, 100.0];
+                // ผู้รับผิดชอบ, ทั้งหมด, ปิดสำเร็จ, ยกเลิก, เวลาแก้ไขโดยเฉลี่ย, ทัน SLA (%) — the period only
+                && $staff === ['Tech One', 1, 1, 0, 1.5, 100.0];
         });
     }
 

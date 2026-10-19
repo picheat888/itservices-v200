@@ -191,7 +191,7 @@ export interface TicketReportRow {
     assignee_name_th?: string | null;
     created_at: string | null;
     resolved_at: string | null;
-    resolve_hours: number | null;
+    work_hours: number | null;
     sla: 'met' | 'over_sla' | null;
 }
 

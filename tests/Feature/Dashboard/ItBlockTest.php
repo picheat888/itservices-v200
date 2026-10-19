@@ -94,6 +94,7 @@ class ItBlockTest extends TestCase
         $closed = fn (int $daysAgo, int $hours, bool $late) => Ticket::factory()->create([
             'status' => 'completed',
             'created_at' => now()->subDays($daysAgo),
+            'responded_at' => now()->subDays($daysAgo)->addHour(),
             'resolved_at' => now()->subDays($daysAgo)->addHours($hours),
             'sla_resolve_due_at' => now()->subDays($daysAgo)->addHours($late ? $hours - 1 : $hours + 1),
         ]);
@@ -111,7 +112,8 @@ class ItBlockTest extends TestCase
         $this->assertEquals($report['avg_resolve_hours'], $it['avg_resolve_hours']);
         $this->assertSame(66.7, $it['sla']['rate']);
         $this->assertSame(3, $it['sla']['measured']);
-        $this->assertSame(14.0, $it['avg_resolve_hours']);
+        // Taken 1h after opening: (3 + 29 + 7) / 3, the wait left out.
+        $this->assertSame(13.0, $it['avg_resolve_hours']);
     }
 
     public function test_an_empty_desk_returns_zeros_and_nulls_not_errors(): void

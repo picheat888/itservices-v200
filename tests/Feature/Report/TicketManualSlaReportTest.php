@@ -135,6 +135,10 @@ class TicketManualSlaReportTest extends TestCase
         $this->assertSame(['met' => 5, 'n' => 5], $summary['ms_take_rate']['note']['values']);
         $this->assertSame(1, $summary['ms_over_sla']['value']);
         $this->assertSame([1, 0], array_column($summary['ms_over_sla']['split'], 'value'));
+        // Taking to closing only: (2.5 + 26.5 + 125) / 3; the wait (0.7 h over 5 taken cases) is its own line.
+        $this->assertEquals(51.3, $summary['ms_fix_avg']['value']);
+        $this->assertSame([], $summary['ms_fix_avg']['split']);
+        $this->assertSame(['label_key' => 'rep_n_ms_wait_avg', 'values' => ['wait' => 0.7]], $summary['ms_fix_avg']['note']);
     }
 
     public function test_breakdown_groups_by_category_by_default_with_the_open_cases_the_lateness_and_the_rules(): void
