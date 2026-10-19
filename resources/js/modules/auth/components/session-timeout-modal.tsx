@@ -1,8 +1,9 @@
 import { useT } from '@/lang';
-import { clock, crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '@/modules/auth/lib/session-warning';
+import { crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '@/modules/auth/lib/session-warning';
 import { BlockingDialog } from '@/shared/components/blocking-dialog';
+import { CountdownRing } from '@/shared/components/countdown-ring';
+import { clock, elapsedShare } from '@/shared/lib/countdown';
 import { formatNumber } from '@/shared/lib/number';
-import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -22,9 +23,6 @@ const TONE_CLASS: Record<WarnTone, string> = {
     warn: 'text-amber-600 dark:text-amber-400',
     danger: 'text-red-600 dark:text-red-400',
 };
-
-const RADIUS = 36;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /** Time left in words for a screen reader, e.g. "เหลือเวลาอีก 1 นาที 15 วินาที". */
 function spokenLeft(t: ReturnType<typeof useT>, seconds: number): string {
@@ -50,34 +48,14 @@ export function SessionTimeoutModal({ secondsLeft, warnSeconds, onStay, onLogout
         if (milestone !== null) setAnnouncement(spokenLeft(t, secondsLeft));
     }, [secondsLeft, t]);
 
-    const progress = warnSeconds > 0 ? Math.max(0, Math.min(1, (warnSeconds - secondsLeft) / warnSeconds)) : 1;
+    const progress = elapsedShare(secondsLeft, warnSeconds);
     const tone = TONE_CLASS[toneFor(secondsLeft, warnSeconds)];
 
     return (
         <BlockingDialog layer="top">
             <div className="p-6">
-                <div className="mb-4 flex justify-center" aria-hidden>
-                    <div className="relative flex h-24 w-24 items-center justify-center">
-                        <svg className="absolute inset-0 -rotate-90" viewBox="0 0 88 88">
-                            <circle cx="44" cy="44" r={RADIUS} fill="none" stroke="currentColor" strokeWidth="5" className="text-muted" />
-                            <circle
-                                cx="44"
-                                cy="44"
-                                r={RADIUS}
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="5"
-                                strokeLinecap="round"
-                                strokeDasharray={CIRCUMFERENCE}
-                                strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
-                                className={cn(tone, 'transition-[stroke-dashoffset,color] duration-1000 ease-linear motion-reduce:transition-none')}
-                            />
-                        </svg>
-                        <div className="z-10 flex flex-col items-center">
-                            <Clock className="text-muted-foreground mb-0.5 h-4 w-4" />
-                            <span className={cn('text-2xl leading-none font-bold tabular-nums', tone)}>{clock(secondsLeft)}</span>
-                        </div>
-                    </div>
+                <div className="mb-4 flex justify-center">
+                    <CountdownRing progress={progress} label={clock(secondsLeft)} toneClass={tone} icon={Clock} />
                 </div>
 
                 <DialogTitle className="mb-1 text-center text-base leading-normal font-semibold tracking-normal">
