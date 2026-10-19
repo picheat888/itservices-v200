@@ -25,20 +25,17 @@ import type { RoleRow } from '../api/permissionApi';
 import { AuditLogTab } from '../components/audit-log-tab';
 import { CenteredAlert } from '../components/centered-alert';
 import { GroupRolesTab } from '../components/group-roles-tab';
-import { ModulePermissionCard } from '../components/module-permission-card';
-import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, PlainRow, spreadRows } from '../components/permission-layout';
+import { CHANGED_TEXT, PermissionViewProvider } from '../components/permission-layout';
 import { PermissionTreeCard } from '../components/permission-tree-card';
-import { ProfilePermissionTree } from '../components/profile-permission-tree';
 import { RoleBar } from '../components/role-bar';
 import { RoleModal, type RoleModalMode } from '../components/role-modal';
 import { RoleRowMenu } from '../components/role-row-menu';
 import { usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
-import { cardCountSpec, type CardLayout } from '../lib/card-layout';
+import { cardCountSpec, cardSections, countingHas, pageCards, type CardLayout } from '../lib/card-layout';
 import { rebaseDraft, specEdges } from '../lib/draft-rebase';
 import { isOwnRole } from '../lib/own-role';
 import { countGranted, hiddenHitCount, specKeys } from '../lib/permission-count';
-import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
-import { cardSpec, FLAT_CARD_META } from '../lib/permission-specs';
+import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { isRoleChanged } from '../lib/refusal';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
@@ -94,72 +91,12 @@ export default function PermissionsPage() {
     );
 }
 
-// Permission modules grouped like the sidebar (Workspace / Administration)
-const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
-    { label: 'nav_overview', icon: LayoutDashboard, modules: ['dashboard'] },
-    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access', 'profile'] },
-    // `workflows` sits under ADMIN_GROUPS, as in the sidebar
-    { label: 'nav_admin', icon: Shield, modules: ['system'] },
-];
-
-// Administration cards: live system.* keys plus "coming soon" placeholders; PermissionMatrixTest reads these literals
-const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
-    {
-        module: 'reports',
-        keys: [
-            'reports.module',
-            'reports.tickets',
-            'reports.assets',
-            'reports.contracts',
-            'reports.stock',
-            'reports.requests',
-            'reports.employees',
-            'reports.access',
-            'reports.export',
-            'reports.schedule',
-            'reports.schedule_manage',
-        ],
-    },
-    { module: 'workflows', keys: ['workflows.module', 'workflows.manage'] },
-    { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
-    {
-        module: 'notifications',
-        keys: [
-            'notifications.module',
-            'notifications.email_edit',
-            'notifications.email_toggle',
-            'notifications.email_test',
-            'notifications.inapp_edit',
-            'notifications.inapp_toggle',
-            'notifications.inapp_test',
-            'notifications.logs',
-        ],
-    },
-    {
-        module: 'settings',
-        keys: [
-            'settings.access',
-            'settings.company',
-            'settings.system',
-            'settings.masterdata',
-            'settings.email',
-            'settings.sla',
-            'settings.requestdata',
-            'settings.assets',
-            'settings.security',
-        ],
-    },
-];
-
-/** The server layout of a card drawn by PermissionTreeCard (one with general, group or set cells). */
-const treeLayoutOf = (layout: CardLayout[] | undefined, module: string) =>
-    layout?.find((card) => card.module === module && card.cells.some((cell) => cell.kind !== 'plain'));
-
-/** A card's count spec: tree cards from the server layout, the flat and plain cards as before. */
-function countSpecOf(layout: CardLayout[] | undefined, group: { module: string; keys: string[] }) {
-    const card = treeLayoutOf(layout, group.module);
-    return card ? { spec: cardCountSpec(card), liveOnly: false } : cardSpec(group);
-}
+// Section icons by section label (lib/card-layout.ts sorts the cards into sections); "Other" takes Shield
+const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    nav_overview: LayoutDashboard,
+    nav_workspace: Briefcase,
+    nav_admin: Shield,
+};
 
 function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
@@ -213,14 +150,12 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         [data],
     );
     const heldKeys = (r: RoleRow) => new Set(r.permissions.filter((p) => catalogKeys.has(p)));
+    // Every card of the page with its count spec: the server layout, then a plain card per unknown module
+    const cards = useMemo(() => pageCards(data?.layout ?? [], data?.catalog ?? {}), [data]);
+    const specs = useMemo(() => new Map(cards.map((card) => [card, cardCountSpec(card)])), [cards]);
+    const specOf = (card: CardLayout) => specs.get(card) ?? cardCountSpec(card);
     // Master/view rules of every card, for rebasing a draft onto a newer stored set
-    const draftEdges = useMemo(() => {
-        const catalogGroups = Object.entries(data?.catalog ?? {}).map(([module, actions]) => ({
-            module,
-            keys: actions.map((a) => `${module}.${a}`),
-        }));
-        return [...catalogGroups, ...ADMIN_GROUPS].flatMap((group) => specEdges(countSpecOf(data?.layout, group).spec));
-    }, [data]);
+    const draftEdges = useMemo(() => [...specs.values()].flatMap(specEdges), [specs]);
 
     /** Delete a role template, or say up front why the API would refuse it. */
     const handleDeleteRole = (r: RoleRow) => {
@@ -303,32 +238,10 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const ownRole = isOwnRole(role, user?.role);
     const readOnly = role.is_super || ownRole;
 
-    const toggle = (key: string) => {
-        if (readOnly) return;
-        setDraft((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key);
-            else next.add(key);
-            return next;
-        });
-    };
-
-    // Sections from the catalog; unmapped modules go to a trailing "Other"
-    const sections = PERM_SECTIONS.map((s) => ({ label: s.label, icon: s.icon, modules: s.modules.filter((m) => data.catalog[m]) })).filter(
-        (s) => s.modules.length > 0,
-    );
-    // Modules already in the Administration cards stay out of "Other"
-    const knownModules = new Set([...PERM_SECTIONS.flatMap((s) => s.modules), ...ADMIN_GROUPS.map((g) => g.module)]);
-    const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
-    if (leftover.length > 0) sections.push({ label: 'perm_other', icon: Shield, modules: leftover });
-
-    // Held = in the draft (super holds all); flat cards count only live keys
+    // Held = in the draft (super holds all); coming-soon-aware cards count only live keys
     const has = (key: string) => role.is_super || draft.has(key);
-    const liveHas = (key: string) => isLivePermission(key) && has(key);
-    const tally = (group: { module: string; keys: string[] }) => {
-        const { spec, liveOnly } = countSpecOf(data.layout, group);
-        return countGranted(spec, liveOnly ? liveHas : has);
-    };
+    const countHas = (card: CardLayout) => countingHas(card, has, isLivePermission);
+    const tally = (card: CardLayout) => countGranted(specOf(card), countHas(card));
 
     const keyLabel = (key: string) => {
         const [mod, action] = key.split('.');
@@ -336,28 +249,15 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     };
     const q = query.trim().toLowerCase();
     const isHit = (key: string) => q !== '' && keyLabel(key).toLowerCase().includes(q);
-    const matches = (group: { module: string; keys: string[] }) =>
-        !q || moduleLabel(group.module, lang).toLowerCase().includes(q) || specKeys(countSpecOf(data.layout, group).spec).some(isHit);
+    const matches = (card: CardLayout) => !q || moduleLabel(card.module, lang).toLowerCase().includes(q) || specKeys(specOf(card)).some(isHit);
     const searchPlaceholder = t('perm_search_ph');
 
-    const sectionViews = sections
-        .map((section) => {
-            // Workspace cards come from the backend catalog; Administration is the fixed card split.
-            const groups =
-                section.label === 'nav_admin'
-                    ? ADMIN_GROUPS
-                    : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
-            return { section, groups, shown: groups.filter(matches) };
-        })
+    const sectionViews = cardSections(cards)
+        .map((section) => ({ section, groups: section.cards, shown: section.cards.filter(matches) }))
         .filter((s) => s.shown.length > 0);
     // Hits each card keeps behind its off master, for the master band
     const hiddenHits = new Map(
-        sectionViews.flatMap(({ shown }) =>
-            shown.map((g) => {
-                const { spec, liveOnly } = countSpecOf(data.layout, g);
-                return [g.module, hiddenHitCount(spec, liveOnly ? liveHas : has, isHit)] as const;
-            }),
-        ),
+        sectionViews.flatMap(({ shown }) => shown.map((card) => [card.module, hiddenHitCount(specOf(card), countHas(card), isHit)] as const)),
     );
 
     // Role list and tablet picker share one guarded switch; it pushes ?role= so Back steps through roles
@@ -409,55 +309,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         }, 850);
     };
 
-    const renderCard = (group: { module: string; keys: string[] }) => {
-        const tree = { draft, setDraft, isSuper: role.is_super, lang };
-        const treeCard = treeLayoutOf(data.layout, group.module);
-        if (treeCard) return <PermissionTreeCard key={group.module} card={treeCard} {...tree} />;
-        if (group.module === 'profile') return <ProfilePermissionTree key={group.module} keys={group.keys} {...tree} />;
-        const cardMeta = FLAT_CARD_META[group.module];
-        if (cardMeta) {
-            return (
-                <ModulePermissionCard
-                    key={group.module}
-                    module={group.module}
-                    keys={group.keys}
-                    subtitle={translate(lang, cardMeta.subtitleKey)}
-                    master={cardMeta.master}
-                    {...tree}
-                />
-            );
-        }
-        // Plain card (Dashboard): every switch stands alone, spread over the cells
-        const { on, total } = tally(group);
-        return (
-            <PermissionCard key={group.module} module={group.module} on={on} total={total} keys={group.keys} lang={lang}>
-                {spreadRows(group.keys).map((cell) => (
-                    <PermissionCell key={cell[0]}>
-                        {cell.map((key) => {
-                            const [mod, action] = key.split('.');
-                            const live = isLivePermission(key);
-                            return (
-                                <PlainRow
-                                    key={key}
-                                    pkey={key}
-                                    lang={lang}
-                                    dimOff
-                                    label={keyLabel(key)}
-                                    info={actionDescription(mod, action, lang)}
-                                    comingSoon={!live}
-                                    on={liveHas(key)}
-                                    locked={role.is_super || !live}
-                                    onToggle={() => {
-                                        if (live) toggle(key);
-                                    }}
-                                />
-                            );
-                        })}
-                    </PermissionCell>
-                ))}
-            </PermissionCard>
-        );
-    };
+    const renderCard = (card: CardLayout) => (
+        <PermissionTreeCard key={card.module} card={card} draft={draft} setDraft={setDraft} isSuper={role.is_super} lang={lang} />
+    );
 
     return (
         <PermissionViewProvider
@@ -594,8 +448,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
                     <div className="space-y-6">
                         {sectionViews.map(({ section, groups, shown }) => {
-                            const SectionIcon = section.icon;
-                            const sectionActions = groups.flatMap((g) => specKeys(countSpecOf(data.layout, g).spec));
+                            const SectionIcon = SECTION_ICONS[section.label] ?? Shield;
+                            const sectionActions = groups.flatMap((card) => specKeys(specOf(card)));
                             const sectionCount = groups
                                 .map(tally)
                                 .reduce((sum, c) => ({ on: sum.on + c.on, total: sum.total + c.total }), { on: 0, total: 0 });

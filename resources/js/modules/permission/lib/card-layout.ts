@@ -24,7 +24,8 @@ export type CardLayout = {
     cells: CardCell[];
 };
 
-export type CardRow = { key: string; on: boolean; locked: boolean; lockedBy: string | null };
+/** `comingSoon`: a key of a coming-soon-aware cell that is not live yet (tagged, off and locked). */
+export type CardRow = { key: string; on: boolean; locked: boolean; lockedBy: string | null; comingSoon: boolean };
 export type CardView = { masterOn: boolean; cells: { cell: CardCell; rows: CardRow[] }[] };
 
 const toSpecGroup = (cell: Extract<CardCell, { kind: 'group' }>): SpecGroup => ({
@@ -70,20 +71,27 @@ export function cardKeys(card: CardLayout): string[] {
 }
 
 /** Each cell's switches with their state: on, and which switch (if any) must be on first. */
-export function cardRows(card: CardLayout, has: (key: string) => boolean, roleLocked: boolean): CardView {
+export function cardRows(
+    card: CardLayout,
+    has: (key: string) => boolean,
+    roleLocked: boolean,
+    isLive: (key: string) => boolean = () => true,
+): CardView {
     const master = card.master?.key ?? null;
     const masterOn = master === null || has(master);
 
-    const row = (key: string, lockedBy: string | null, waiting: boolean): CardRow => {
-        if (roleLocked) return { key, on: has(key), locked: true, lockedBy: null };
-        return { key, on: has(key), locked: waiting, lockedBy: waiting ? lockedBy : null };
+    const row = (key: string, lockedBy: string | null, waiting: boolean, comingSoon = false): CardRow => {
+        const on = has(key) && !comingSoon;
+        if (roleLocked) return { key, on, locked: true, lockedBy: null, comingSoon };
+        return { key, on, locked: waiting || comingSoon, lockedBy: waiting ? lockedBy : null, comingSoon };
     };
-    const underMaster = (key: string): CardRow => row(key, master, !masterOn);
+    const underMaster = (key: string, comingSoon = false): CardRow => row(key, master, !masterOn, comingSoon);
 
     const rowsOf = (cell: CardCell): CardRow[] => {
         if (cell.kind !== 'group') {
             const gatedCell = cell.kind === 'set' || master !== null;
-            return cell.keys.map((key) => (gatedCell ? underMaster(key) : row(key, null, false)));
+            const soon = (key: string) => cell.kind === 'plain' && cell.coming_soon_aware && !isLive(key);
+            return cell.keys.map((key) => (gatedCell ? underMaster(key, soon(key)) : row(key, null, false, soon(key))));
         }
         const head = cell.outside_master ? row(cell.view, null, false) : underMaster(cell.view);
         const children = cell.children.map((key) => {
@@ -94,4 +102,61 @@ export function cardRows(card: CardLayout, has: (key: string) => boolean, roleLo
     };
 
     return { masterOn, cells: card.cells.map((cell) => ({ cell, rows: rowsOf(cell) })) };
+}
+
+/** The has() a card counts with: a card with coming-soon-aware cells counts live keys only. */
+export function countingHas(card: CardLayout, has: (key: string) => boolean, isLive: (key: string) => boolean): (key: string) => boolean {
+    const liveOnly = card.cells.some((cell) => cell.kind === 'plain' && cell.coming_soon_aware);
+    return liveOnly ? (key) => isLive(key) && has(key) : has;
+}
+
+const moduleOf = (key: string) => key.slice(0, key.indexOf('.'));
+
+/** The page's cards: the server layout, then a plain card for each catalogue module no layout card holds. */
+export function pageCards(layout: CardLayout[], catalog: Record<string, string[]>): CardLayout[] {
+    const known = new Set(layout.flatMap((card) => cardKeys(card).map(moduleOf)));
+    const unknown = Object.keys(catalog).filter((module) => !known.has(module));
+    return [
+        ...layout,
+        ...unknown.map((module) => ({
+            module,
+            master: null,
+            note: null,
+            cells: [{ kind: 'plain' as const, keys: catalog[module].map((action) => `${module}.${action}`), coming_soon_aware: true }],
+        })),
+    ];
+}
+
+// Page sections, grouped like the sidebar; a card in none of them goes to "Other"
+const SECTIONS: { label: string; modules: string[] }[] = [
+    { label: 'nav_overview', modules: ['dashboard'] },
+    { label: 'nav_workspace', modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access', 'profile'] },
+    { label: 'nav_admin', modules: ['reports', 'workflows', 'permissions', 'notifications', 'settings'] },
+];
+export const OTHER_SECTION = 'perm_other';
+
+/** The cards by page section (section label = lang key), in card order; empty sections are left out. */
+export function cardSections(cards: CardLayout[]): { label: string; cards: CardLayout[] }[] {
+    const labelOf = (card: CardLayout) => SECTIONS.find((s) => s.modules.includes(card.module))?.label ?? OTHER_SECTION;
+    return [...SECTIONS.map((s) => s.label), OTHER_SECTION]
+        .map((label) => ({ label, cards: cards.filter((card) => labelOf(card) === label) }))
+        .filter((s) => s.cards.length > 0);
+}
+
+// Cards whose master band shows its (i)
+const MASTER_INFO = new Set(['stock', 'employees']);
+// Cards whose set rows are named without their heading (Ticket Level, request notifications)
+const BARE_SET_ROWS = new Set(['tickets', 'requests']);
+
+/** Whether a row shows its (i); `cell` null is the master band. Self-service heads and Ticket Level rows show none. */
+export function rowShowsInfo(card: CardLayout, cell: CardCell | null, key: string): boolean {
+    if (cell === null) return MASTER_INFO.has(card.module);
+    if (cell.kind === 'group') return !(cell.outside_master && key === cell.view);
+    if (cell.kind === 'set') return card.module !== 'tickets';
+    return true;
+}
+
+/** Whether a set's rows are named without their heading. */
+export function bareAria(card: CardLayout, cell: CardCell): boolean {
+    return cell.kind === 'set' && BARE_SET_ROWS.has(card.module);
 }
