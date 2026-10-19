@@ -29,7 +29,7 @@ class LoginRequest extends FormRequest
     private const LOGIN_LOCKOUT_SECONDS = 900;
 
     /** An IP the account signed in from within this many days is exempt from the cross-IP lock. */
-    private const KNOWN_IP_DAYS = 90;
+    public const KNOWN_IP_DAYS = 90;
 
     private ?User $namedAccount = null;
 

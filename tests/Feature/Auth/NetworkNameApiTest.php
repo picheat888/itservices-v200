@@ -137,6 +137,30 @@ class NetworkNameApiTest extends TestCase
             ->assertJsonValidationErrors('cidr');
     }
 
+    /** @return array<string, array{string, string}> */
+    public static function localeWords(): array
+    {
+        return [
+            'English' => ['en', 'The IP or IP range has already been taken.'],
+            'Thai' => ['th', 'IP หรือช่วง IP นี้มีอยู่ในระบบแล้ว'],
+        ];
+    }
+
+    #[DataProvider('localeWords')]
+    public function test_a_refused_range_names_the_field_in_words_not_as_cidr(string $locale, string $takenMessage): void
+    {
+        NetworkName::create(['cidr' => '10.0.0.0/8', 'name' => 'Branch VPN']);
+        $this->asAdmin()->withHeader('X-Locale', $locale);
+
+        $taken = $this->postJson('/api/settings/network-names', ['cidr' => '10.0.0.0/8', 'name' => 'Again'])
+            ->assertUnprocessable()
+            ->json('errors.cidr.0');
+        $this->assertSame($takenMessage, $taken);
+
+        $missing = $this->postJson('/api/settings/network-names', ['name' => 'No range'])->assertUnprocessable()->json('errors.cidr.0');
+        $this->assertStringNotContainsStringIgnoringCase('cidr', $missing);
+    }
+
     public function test_only_a_holder_of_the_security_key_can_use_it(): void
     {
         $network = NetworkName::create(['cidr' => '10.0.0.0/8', 'name' => 'Branch VPN']);
