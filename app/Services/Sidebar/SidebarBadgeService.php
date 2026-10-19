@@ -7,6 +7,7 @@ use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\WorkflowStepKind;
+use App\Enums\Stock\StockCountStatus;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Access\AccessMembership;
 use App\Models\Access\EmailGroup;
@@ -217,7 +218,7 @@ class SidebarBadgeService
         }
 
         if ($user?->hasPermission('stock.view_count')) {
-            $total += StockCount::where('status', 'draft')->count();
+            $total += StockCount::where('status', StockCountStatus::Draft)->count();
         }
 
         return $total;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Stock;
 
 use App\Enums\Stock\StockCountAdjustMode;
+use App\Enums\Stock\StockCountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Stock\StockCountResource;
 use App\Models\Stock\StockCount;
@@ -45,7 +46,7 @@ class StockCountController extends Controller
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
                 // Open (draft) sessions across all pages — drives the Audit tab chip + sidebar badge.
-                'draft' => StockCount::where('status', 'draft')->count(),
+                'draft' => StockCount::where('status', StockCountStatus::Draft)->count(),
             ],
         ]);
     }
