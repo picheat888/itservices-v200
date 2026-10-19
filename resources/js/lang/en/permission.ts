@@ -14,6 +14,8 @@ export const permission: Dict = {
     perm_save: 'Save',
     perm_super_locked: 'Holds every permission automatically.',
     perm_super_readonly: 'Not editable',
+    perm_own_readonly: 'View only',
+    perm_own_role_sub: "{n} permissions enabled. You can't change your own access.",
     perm_new_role: 'New template',
     perm_change_props: 'Change Properties',
     perm_role_name: 'Template name',

@@ -14,6 +14,8 @@ export const permission: Dict = {
     perm_save: 'บันทึก',
     perm_super_locked: 'มีสิทธิ์เต็มทุกอย่างโดยอัตโนมัติ',
     perm_super_readonly: 'แก้ไขไม่ได้',
+    perm_own_readonly: 'ดูอย่างเดียว',
+    perm_own_role_sub: '{n} สิทธิ์ที่เปิด แก้สิทธิ์ของตัวเองไม่ได้',
     perm_new_role: 'เพิ่มบทบาท',
     perm_change_props: 'เปลี่ยนแปลงคุณสมบัติ',
     perm_role_name: 'ชื่อบทบาท',

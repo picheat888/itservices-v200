@@ -516,9 +516,14 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
                 <div className="min-w-0 px-5 pb-5">
                     {/* Role header: sticks while the cards scroll, so Save is always in reach */}
-                    <div className="bg-card border-border sticky top-[var(--sticky-top,0px)] z-10 mb-4 flex flex-wrap items-center justify-between gap-3 border-b py-4">
-                        <div className="min-w-0">
-                            <h2 ref={roleHeading} tabIndex={-1} className="sr-only text-lg font-bold focus:outline-none lg:not-sr-only lg:block">
+                    <div className="bg-card border-border sticky top-[var(--sticky-top,0px)] z-10 mb-4 flex flex-wrap items-center justify-between gap-3 border-b py-4 lg:flex-nowrap">
+                        <div className="min-w-0 lg:flex-1">
+                            <h2
+                                ref={roleHeading}
+                                tabIndex={-1}
+                                title={role.label}
+                                className="sr-only text-lg font-bold focus:outline-none lg:not-sr-only lg:block lg:truncate"
+                            >
                                 {role.label}
                             </h2>
                             {/* Below lg: the role list as a picker, with the chosen role's edit and delete */}
@@ -543,12 +548,16 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 />
                             </div>
                             <div className="text-muted-foreground text-xs">
-                                {role.is_super ? t('perm_super_locked') : `${fmtN(draft.size)} ${t('perm_enabled')}`}
+                                {role.is_super
+                                    ? t('perm_super_locked')
+                                    : ownRole
+                                      ? t('perm_own_role_sub').replace('{n}', fmtN(draft.size))
+                                      : `${fmtN(draft.size)} ${t('perm_enabled')}`}
                             </div>
                         </div>
                         {/* Below lg: search fills its own row, Save stays at the right edge */}
-                        <div className="flex flex-wrap items-end gap-2 max-lg:w-full max-lg:flex-nowrap">
-                            <div className="relative w-72 max-w-full max-lg:w-auto max-lg:min-w-0 max-lg:flex-1">
+                        <div className="flex flex-wrap items-end gap-2 max-lg:w-full max-lg:flex-nowrap lg:shrink-0 lg:flex-nowrap">
+                            <div className="relative w-72 max-w-full max-lg:w-auto max-lg:min-w-0 max-lg:flex-1 lg:max-xl:w-60">
                                 <Search
                                     className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
                                     aria-hidden
@@ -568,7 +577,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                             {readOnly ? (
                                 <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-amber-300/70 bg-amber-50 px-2.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
                                     <Lock className="h-3.5 w-3.5 shrink-0" />
-                                    {ownRole ? t('perm_refusal_own_access') : t('perm_super_readonly')}
+                                    {ownRole ? t('perm_own_readonly') : t('perm_super_readonly')}
                                 </span>
                             ) : (
                                 <div className="flex flex-col items-end gap-1">
