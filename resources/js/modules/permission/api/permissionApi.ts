@@ -1,5 +1,6 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope } from '@/shared/types';
+import type { CardLayout } from '../lib/card-layout';
 
 export interface RoleRow {
     value: string;
@@ -25,6 +26,7 @@ export interface RoleSummary {
 
 export interface PermissionMatrix {
     catalog: Record<string, string[]>;
+    layout: CardLayout[];
     roles: RoleRow[];
 }
 
