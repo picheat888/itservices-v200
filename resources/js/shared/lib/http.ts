@@ -2,7 +2,7 @@ import { translate } from '@/lang';
 import { serverFailureText } from '@/shared/lib/api-errors';
 import { rememberRequestId } from '@/shared/lib/client-error-report';
 import { httpStatus, isQuietServerError, isServerFailure, requestIdOf, retryAfterOf, wasShownInline } from '@/shared/lib/http-errors';
-import { parseDeviceSignedOut, redirectToLogin } from '@/shared/lib/login-redirect';
+import { redirectToLogin, signedOutRedirectFor } from '@/shared/lib/login-redirect';
 import { formatNumber } from '@/shared/lib/number';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
@@ -51,15 +51,16 @@ http.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // Any other 401 on a working screen: signed out elsewhere, with the reason when this device was ended (/me is left to the route guard)
-        if (
-            status === 401 &&
-            !error.config?.url?.endsWith('/me') &&
-            !error.config?.quietUnauthenticated &&
-            !window.location.pathname.startsWith('/login')
-        ) {
-            const ended = parseDeviceSignedOut(error.response.data);
-            redirectToLogin(ended?.reason ?? 'signed_out', { by: ended?.by });
+        // Any other 401 on a working screen: signed out elsewhere, with the reason when this device was ended (a plain /me 401 is left to the route guard)
+        const signedOut = signedOutRedirectFor({
+            status,
+            url: error.config?.url,
+            quiet: error.config?.quietUnauthenticated,
+            pathname: window.location.pathname,
+            body: error.response?.data,
+        });
+        if (signedOut) {
+            redirectToLogin(signedOut.reason, { by: signedOut.by });
             return Promise.reject(error);
         }
 

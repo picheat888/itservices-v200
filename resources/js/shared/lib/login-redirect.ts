@@ -21,6 +21,7 @@ export function createLoginRedirect(target: { href: string }, announce?: () => v
         leaving = true;
         if (reason === 'session_expired' && options?.announce !== false) announce?.();
         if (options?.by) rememberSignedOutBy(options.by);
+        else forgetSignedOutBy();
         target.href = `/login?reason=${reason}`;
     };
 }
@@ -53,6 +54,14 @@ function rememberSignedOutBy(by: SignedOutBy): void {
         sessionStorage.setItem(SIGNED_OUT_BY_KEY, JSON.stringify(by));
     } catch {
         // Blocked storage: the notice simply leaves the device out
+    }
+}
+
+function forgetSignedOutBy(): void {
+    try {
+        sessionStorage.removeItem(SIGNED_OUT_BY_KEY);
+    } catch {
+        // Blocked storage: nothing was stored either
     }
 }
 
@@ -90,6 +99,24 @@ export function parseDeviceSignedOut(data: unknown): { reason: SignedOutReason; 
     const { message, reason, by } = data as Record<string, unknown>;
     if (message !== 'device_signed_out') return null;
     return { reason: (typeof reason === 'string' && DEVICE_END_REASONS.get(reason)) || 'signed_out', by: parseSignedOutBy(by) };
+}
+
+/**
+ * Where a failed answer sends the reader: the login page with its reason, or null to leave it to the caller.
+ * An ended device always goes (even for /me and quiet requests), because that answer is single-shot; a plain 401 skips /me (route guard) and quiet requests.
+ */
+export function signedOutRedirectFor(answer: {
+    status: number | undefined;
+    url: string | undefined;
+    quiet: boolean | undefined;
+    pathname: string;
+    body: unknown;
+}): { reason: SignedOutReason; by: SignedOutBy | null } | null {
+    if (answer.status !== 401 || answer.pathname.startsWith('/login')) return null;
+    const ended = parseDeviceSignedOut(answer.body);
+    if (ended) return ended;
+    if (answer.url?.endsWith('/me') || answer.quiet) return null;
+    return { reason: 'signed_out', by: null };
 }
 
 /** A server file link (/files/…, /pdf/…) to reopen after sign-in, from ?next=; anything else is ignored so the login page never sends people off-site. */
