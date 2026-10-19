@@ -22,26 +22,18 @@ import { Briefcase, Check, LayoutDashboard, Loader2, Lock, PencilLine, Plus, Sav
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { RoleRow } from '../api/permissionApi';
-import { AccessPermissionTree } from '../components/access-permission-tree';
-import { AssetPermissionTree } from '../components/asset-permission-tree';
 import { AuditLogTab } from '../components/audit-log-tab';
 import { CenteredAlert } from '../components/centered-alert';
-import { ContractPermissionTree } from '../components/contract-permission-tree';
-import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { GroupRolesTab } from '../components/group-roles-tab';
 import { ModulePermissionCard } from '../components/module-permission-card';
-import { NotificationPermissionTree } from '../components/notification-permission-tree';
 import { CHANGED_TEXT, PermissionCard, PermissionCell, PermissionViewProvider, PlainRow, spreadRows } from '../components/permission-layout';
+import { PermissionTreeCard } from '../components/permission-tree-card';
 import { ProfilePermissionTree } from '../components/profile-permission-tree';
-import { ReportPermissionTree } from '../components/report-permission-tree';
-import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleBar } from '../components/role-bar';
 import { RoleModal, type RoleModalMode } from '../components/role-modal';
 import { RoleRowMenu } from '../components/role-row-menu';
-import { StockPermissionTree } from '../components/stock-permission-tree';
-import { TicketPermissionTree } from '../components/ticket-permission-tree';
-import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
 import { usePermissionMatrix, useRoleMutations, useUpdateRolePermissions } from '../hooks/use-permissions';
+import { cardCountSpec, type CardLayout } from '../lib/card-layout';
 import { rebaseDraft, specEdges } from '../lib/draft-rebase';
 import { isOwnRole } from '../lib/own-role';
 import { countGranted, hiddenHitCount, specKeys } from '../lib/permission-count';
@@ -159,6 +151,16 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     },
 ];
 
+/** The server layout of a card drawn by PermissionTreeCard (one with general, group or set cells). */
+const treeLayoutOf = (layout: CardLayout[] | undefined, module: string) =>
+    layout?.find((card) => card.module === module && card.cells.some((cell) => cell.kind !== 'plain'));
+
+/** A card's count spec: tree cards from the server layout, the flat and plain cards as before. */
+function countSpecOf(layout: CardLayout[] | undefined, group: { module: string; keys: string[] }) {
+    const card = treeLayoutOf(layout, group.module);
+    return card ? { spec: cardCountSpec(card), liveOnly: false } : cardSpec(group);
+}
+
 function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
@@ -217,7 +219,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
             module,
             keys: actions.map((a) => `${module}.${a}`),
         }));
-        return [...catalogGroups, ...ADMIN_GROUPS].flatMap((group) => specEdges(cardSpec(group).spec));
+        return [...catalogGroups, ...ADMIN_GROUPS].flatMap((group) => specEdges(countSpecOf(data?.layout, group).spec));
     }, [data]);
 
     /** Delete a role template, or say up front why the API would refuse it. */
@@ -324,7 +326,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const has = (key: string) => role.is_super || draft.has(key);
     const liveHas = (key: string) => isLivePermission(key) && has(key);
     const tally = (group: { module: string; keys: string[] }) => {
-        const { spec, liveOnly } = cardSpec(group);
+        const { spec, liveOnly } = countSpecOf(data.layout, group);
         return countGranted(spec, liveOnly ? liveHas : has);
     };
 
@@ -335,7 +337,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const q = query.trim().toLowerCase();
     const isHit = (key: string) => q !== '' && keyLabel(key).toLowerCase().includes(q);
     const matches = (group: { module: string; keys: string[] }) =>
-        !q || moduleLabel(group.module, lang).toLowerCase().includes(q) || specKeys(cardSpec(group).spec).some(isHit);
+        !q || moduleLabel(group.module, lang).toLowerCase().includes(q) || specKeys(countSpecOf(data.layout, group).spec).some(isHit);
     const searchPlaceholder = t('perm_search_ph');
 
     const sectionViews = sections
@@ -352,7 +354,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const hiddenHits = new Map(
         sectionViews.flatMap(({ shown }) =>
             shown.map((g) => {
-                const { spec, liveOnly } = cardSpec(g);
+                const { spec, liveOnly } = countSpecOf(data.layout, g);
                 return [g.module, hiddenHitCount(spec, liveOnly ? liveHas : has, isHit)] as const;
             }),
         ),
@@ -409,17 +411,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
     const renderCard = (group: { module: string; keys: string[] }) => {
         const tree = { draft, setDraft, isSuper: role.is_super, lang };
-        if (group.module === 'stock') return <StockPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'employees') return <EmployeePermissionTree key={group.module} {...tree} />;
-        if (group.module === 'contracts') return <ContractPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'assets') return <AssetPermissionTree key={group.module} {...tree} />;
+        const treeCard = treeLayoutOf(data.layout, group.module);
+        if (treeCard) return <PermissionTreeCard key={group.module} card={treeCard} {...tree} />;
         if (group.module === 'profile') return <ProfilePermissionTree key={group.module} keys={group.keys} {...tree} />;
-        if (group.module === 'tickets') return <TicketPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'workflows') return <WorkflowPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'requests') return <RequestPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'notifications') return <NotificationPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'reports') return <ReportPermissionTree key={group.module} {...tree} />;
-        if (group.module === 'access') return <AccessPermissionTree key={group.module} {...tree} />;
         const cardMeta = FLAT_CARD_META[group.module];
         if (cardMeta) {
             return (
