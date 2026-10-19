@@ -60,7 +60,7 @@ export function NoAccess({ title, hint }: { title?: string; hint?: string }) {
     const pct = (count / REDIRECT_SECONDS) * 100;
 
     return (
-        <div className="grid min-h-[72vh] place-items-center px-4">
+        <div className="grid min-h-[72dvh] place-items-center px-4">
             <div className="flex flex-col items-center gap-5 text-center">
                 <EmptyState kind="denied" titleAs="h1" title={title ?? t('cmn_empty_no_access')} hint={hint ?? t('cmn_empty_no_access_hint')} />
 

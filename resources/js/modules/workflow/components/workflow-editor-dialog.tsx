@@ -7,6 +7,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -23,7 +24,6 @@ import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { workflowApi, type ResolvedPreviewRow, type WorkflowStepPayload } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** A step being edited — positions held as ids, which is what the API takes. */
 type EditableStep = {
@@ -239,7 +239,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
     return (
         <Dialog open={!!workflow} onOpenChange={(o) => !o && !update.isPending && guardClose(onClose)}>
-            <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className="!flex h-[min(860px,calc(100dvh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={WorkflowIcon}
                     eyebrow={t('wf_editor_eyebrow')}

@@ -147,16 +147,19 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
                                 zoomAnimation={{ animationTime: 250, animationType: 'easeOutCubic' }}
                                 centerOnInit
                             >
-                                <TransformComponent wrapperClass="!h-[72vh] !w-full" contentClass="!flex !h-full !w-full items-center justify-center">
-                                    <img src={pv.url} alt={pv.name} draggable={false} className="max-h-[70vh] w-auto object-contain select-none" />
+                                <TransformComponent
+                                    wrapperClass="!h-[72dvh] !w-full"
+                                    contentClass="!flex !h-full !w-full items-center justify-center"
+                                >
+                                    <img src={pv.url} alt={pv.name} draggable={false} className="max-h-[70dvh] w-auto object-contain select-none" />
                                 </TransformComponent>
                             </TransformWrapper>
                         ) : isPdf ? (
-                            <iframe src={pv.url} title={pv.name} className="h-[72vh] w-full border-0" />
+                            <iframe src={pv.url} title={pv.name} className="h-[72dvh] w-full border-0" />
                         ) : (
                             // Office / archive / other: no inline render — show a file card with a download action.
                             kindMeta && (
-                                <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
+                                <div className="flex h-[60dvh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
                                     <div className="flex flex-col items-center gap-2">
                                         <kindMeta.Icon strokeWidth={1.5} className={cn('h-20 w-20', FILE_TONE)} />
                                         <span

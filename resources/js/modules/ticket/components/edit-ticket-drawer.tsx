@@ -189,7 +189,7 @@ export function EditTicketDrawer({
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
             <DialogContent
-                className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0"
+                className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0"
                 onOpenAutoFocus={(e) => {
                     const card = ticket ? cardRefs.current[ticket.category] : null;
                     if (card) {

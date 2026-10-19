@@ -324,7 +324,7 @@ export function NotificationsDropdown({
                     role={showChips ? 'tabpanel' : undefined}
                     aria-labelledby={showChips ? `notif-tab-${tab}` : undefined}
                     aria-busy={feed.isLoading || undefined}
-                    className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[min(60vh,560px)] overflow-y-auto overscroll-contain [scrollbar-width:thin] motion-safe:scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                    className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[min(60dvh,560px)] overflow-y-auto overscroll-contain [scrollbar-width:thin] motion-safe:scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
                 >
                     {feed.isLoading ? (
                         Array.from({ length: 3 }).map((_, i) => (

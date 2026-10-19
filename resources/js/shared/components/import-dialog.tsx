@@ -1,12 +1,12 @@
 import { useT } from '@/lang';
 import { FileDropZone } from '@/shared/components/file-drop-zone';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn, downloadBlob } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { AlertCircle, CheckCircle2, Download, Loader2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** One row of a bulk import the server refused, as every import endpoint reports them. */
 export interface ImportRowError {
@@ -174,7 +174,7 @@ export function ImportDialog<Row>({
                 {/* What this import will not do — said before a file is even chosen. */}
                 {notice}
 
-                <div className="max-h-[min(58vh,640px)] space-y-3 overflow-y-auto py-1">
+                <div className="max-h-[min(58dvh,640px)] space-y-3 overflow-y-auto py-1">
                     <div className={cn('grid gap-2', downloads.length > 1 && 'sm:grid-cols-2')}>
                         {downloads.map((download) => (
                             <button

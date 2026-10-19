@@ -173,7 +173,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="bg-background text-foreground relative min-h-screen w-full lg:grid lg:grid-cols-[1.05fr_1fr]">
+        <div className="bg-background text-foreground relative min-h-dvh w-full lg:grid lg:grid-cols-[1.05fr_1fr]">
             {/* ── Brand panel (desktop only) ───────────────────────────────── */}
             <aside className="bg-brand text-brand-foreground relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
                 {/* Blueprint grid texture */}
@@ -213,7 +213,7 @@ export default function LoginPage() {
             </aside>
 
             {/* ── Sign-in form ─────────────────────────────────────────────── */}
-            <main className="relative flex min-h-screen flex-col items-center justify-center px-5 py-12">
+            <main className="relative flex min-h-dvh flex-col items-center justify-center px-5 py-12">
                 {/* Language + theme toggles */}
                 <div className="absolute top-4 right-4 flex items-center gap-1.5">
                     {/* Both languages stay on screen with the active one filled in: the control
