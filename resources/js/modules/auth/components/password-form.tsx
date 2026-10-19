@@ -6,6 +6,7 @@ import { useAuth } from '@/modules/auth/hooks/use-auth';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
+import { SaveButton } from '@/shared/components/save-button';
 import { isValidPassword } from '@/shared/lib/password-policy';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -14,7 +15,7 @@ import { Button } from '@/shared/ui/button';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 
 export function PasswordDialogHead({ icon: Icon, warn, title, desc }: { icon: LucideIcon; warn?: boolean; title: string; desc: string }) {
@@ -157,10 +158,9 @@ export function PasswordForm({
             </div>
 
             <div className="mt-5 flex flex-col gap-2">
-                <Button type="submit" className="w-full" disabled={change.isPending}>
-                    {change.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                <SaveButton type="submit" className="w-full" loading={change.isPending}>
                     {submitLabel}
-                </Button>
+                </SaveButton>
                 <Button type="button" variant="ghost" className="text-muted-foreground w-full" onClick={onSecondary}>
                     {secondaryLabel}
                 </Button>

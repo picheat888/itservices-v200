@@ -15,7 +15,7 @@ class PendingLogin
 {
     private const TOKEN_LENGTH = 40;
 
-    private const TTL_SECONDS = 300;
+    public const TTL_SECONDS = 300;
 
     public function issue(User $user, Request $request): string
     {

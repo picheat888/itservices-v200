@@ -1,28 +1,26 @@
 import { useT } from '@/lang';
-import type { Lang } from '@/lang/types';
 import type { DeviceLimitResponse } from '@/modules/auth/api/authApi';
 import { DeviceLimitDialog } from '@/modules/auth/components/device-limit-dialog';
+import { LoginBrandPanel } from '@/modules/auth/components/login-brand-panel';
+import { LoginToolbar } from '@/modules/auth/components/login-toolbar';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { deviceLimitOf, isPendingExpired, signedOutByLine } from '@/modules/auth/lib/device-limit';
+import { Field, FormErrorBanner } from '@/shared/components/field';
+import { PasswordInput } from '@/shared/components/password-input';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { markShownInline } from '@/shared/lib/http-errors';
 import { loginNoticeReason, readSignedOutBy, serverFileTarget, type SignedOutBy, type SignedOutReason } from '@/shared/lib/login-redirect';
-import { cn } from '@/shared/lib/utils';
-import { Button } from '@/shared/ui/button';
+import { focusFirstError } from '@/shared/lib/utils';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, Clock, Eye, EyeOff, Loader2, Lock, LogOut, MonitorSmartphone, Moon, Shield, Sun, User, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowBigUpDash, Clock, Lock, LogOut, MonitorSmartphone, Shield, User, type LucideIcon } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
-
-const LANGUAGES: { code: Lang; label: string }[] = [
-    { code: 'en', label: 'EN' },
-    { code: 'th', label: 'ไทย' },
-];
 
 // Notice shown for each reason a device was signed out
 const NOTICES: Record<SignedOutReason, { icon: LucideIcon; text: string }> = {
@@ -34,6 +32,16 @@ const NOTICES: Record<SignedOutReason, { icon: LucideIcon; text: string }> = {
     account_closed: { icon: Lock, text: 'login_err_closed' },
 };
 
+// Field ids stay fixed so a rejected password can be selected again
+const LOGIN_ID = 'login';
+const PASSWORD_ID = 'password';
+
+// Tall fields with room for the leading icon; 16px text keeps iPad Safari from zooming in
+const INPUT = 'touch:h-13 h-12 rounded-lg pl-10 text-base md:text-base';
+const FIELD_ICON = 'text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 z-10 size-[18px] -translate-y-1/2';
+
+type FieldErrors = { login?: string; password?: string };
+
 // A touch screen lets the server label an iPad that reports itself as a Mac (display only)
 const hasTouchScreen = (): boolean => navigator.maxTouchPoints > 1;
 
@@ -44,21 +52,6 @@ export default function LoginPage() {
     const brandName = useUiStore((s) => s.brandName);
     const brandSub = useUiStore((s) => s.brandSub);
     const logoUrl = useUiStore((s) => s.logoUrl);
-    const lang = useUiStore((s) => s.lang);
-    const dark = useUiStore((s) => s.dark);
-    const setLang = useUiStore((s) => s.setLang);
-    const toggleDark = useUiStore((s) => s.toggleDark);
-    const markLoginPref = useUiStore((s) => s.markLoginPref);
-
-    // A deliberate language / theme choice here wins over the account's saved one after sign-in
-    const chooseLang = (next: Lang) => {
-        setLang(next);
-        markLoginPref('lang');
-    };
-    const chooseDark = () => {
-        toggleDark();
-        markLoginPref('dark');
-    };
     const fmt = useDateFormat();
     const { isAuthenticated, isLoading } = useAuth();
     const login = useLogin();
@@ -66,13 +59,13 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [remember, setRemember] = useState(false);
-    // Focus targets for failed submits (see submit()).
-    const loginRef = useRef<HTMLInputElement>(null);
-    const passwordRef = useRef<HTMLInputElement>(null);
-    // Per-field required-validation messages (red border + red text, like the mockup).
-    const [fieldErrors, setFieldErrors] = useState<{ login?: string; password?: string }>({});
-    // Briefly shake the error banner on a rejected sign-in attempt.
-    const [shake, setShake] = useState(false);
+    // Lang keys of the required-field errors
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+    // Each rejected attempt shakes the banner again
+    const [errorCount, setErrorCount] = useState(0);
+    const [capsOn, setCapsOn] = useState(false);
+    const [forgotOpen, setForgotOpen] = useState(false);
+    const capsId = useId();
     // The 409 answer that opens the device dialog, and a confirmation that ran out
     const [deviceLimit, setDeviceLimit] = useState<DeviceLimitResponse | null>(null);
     const [pendingExpired, setPendingExpired] = useState(false);
@@ -153,12 +146,7 @@ export default function LoginPage() {
     const failure = login.isError && deviceLimitOf(login.error) === null ? login.error : null;
     const dialogOpen = deviceLimit !== null;
     const bannerText = dialogOpen ? null : pendingExpired ? t('login_pending_expired') : failure ? errorMessage(failure) : null;
-    const notice = signedOutReason ? NOTICES[signedOutReason] : null;
-
-    const shakeBanner = () => {
-        setShake(true);
-        setTimeout(() => setShake(false), 450);
-    };
+    const notice = signedOutReason && bannerText === null && !dialogOpen ? NOTICES[signedOutReason] : null;
 
     // The same handler serves the password sign-in and the one that finishes the dialog
     const onSignInError = (error: unknown, fromDialog: boolean) => {
@@ -173,10 +161,10 @@ export default function LoginPage() {
             return;
         }
         setDeviceLimit(null);
-        shakeBanner();
+        setErrorCount((n) => n + 1);
         // Rejected credentials are retyped from the password field; a lockout or an outage is not
         if ((error as { response?: { status?: number } })?.response?.status === 422) {
-            passwordRef.current?.select();
+            (document.getElementById(PASSWORD_ID) as HTMLInputElement | null)?.select();
         }
     };
 
@@ -196,7 +184,7 @@ export default function LoginPage() {
     const expireDeviceLimit = () => {
         setDeviceLimit(null);
         setPendingExpired(true);
-        shakeBanner();
+        setErrorCount((n) => n + 1);
     };
 
     const submit = (e: React.FormEvent) => {
@@ -205,245 +193,174 @@ export default function LoginPage() {
             return;
         }
 
-        // Client-side required check first — show red field errors and stop.
-        const errs: { login?: string; password?: string } = {};
+        // Required check first: red fields, caret on the first one once its error is linked
+        const errs: FieldErrors = {};
         if (!loginId.trim()) {
-            errs.login = t('login_err_username');
+            errs.login = 'login_err_username';
         }
         if (!password) {
-            errs.password = t('login_err_password');
+            errs.password = 'login_err_password';
         }
         setFieldErrors(errs);
         setSignedOutReason(null);
         setSignedOutBy(null);
         setPendingExpired(false);
-        login.reset(); // clear any previous "invalid credentials" banner
+        login.reset();
         if (Object.keys(errs).length > 0) {
-            // Caret goes to the first field that needs fixing
-            (errs.login ? loginRef : passwordRef).current?.focus();
+            focusFirstError(errs as Record<string, string>);
             return;
         }
 
         login.mutate({ login: loginId, password, remember, touch: hasTouchScreen() }, { onError: (error) => onSignInError(error, false) });
     };
 
+    const readCaps = (e: React.KeyboardEvent) => setCapsOn(e.getModifierState('CapsLock'));
+
     return (
-        <div className="bg-background text-foreground relative min-h-dvh w-full lg:grid lg:grid-cols-[1.05fr_1fr]">
-            {/* ── Brand panel (desktop only) ───────────────────────────────── */}
-            <aside className="bg-brand text-brand-foreground relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
-                {/* Blueprint grid texture */}
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 opacity-[0.12]"
-                    style={{
-                        backgroundImage:
-                            'linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)',
-                        backgroundSize: '40px 40px',
-                    }}
-                />
-                {/* Depth: a tinted gradient wash + two soft light wells */}
-                <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/25" />
-                <div aria-hidden className="pointer-events-none absolute -top-28 -right-28 h-96 w-96 rounded-full bg-white/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-black/20 blur-3xl" />
+        <div className="bg-background text-foreground split:grid split:grid-cols-2 relative min-h-dvh w-full">
+            <LoginBrandPanel />
 
-                <div className="animate-in fade-in slide-in-from-top-2 relative flex items-center gap-3 duration-700">
-                    <img
-                        src={logoUrl || '/logo.svg'}
-                        alt={brandName}
-                        className="h-12 w-12 rounded-xl bg-white/15 object-contain p-1.5 ring-1 ring-white/25"
-                    />
-                    <div>
-                        <div className="text-lg font-bold tracking-tight">{brandName}</div>
-                        <div className="text-sm text-white/70">{brandSub}</div>
-                    </div>
-                </div>
+            <main className="relative flex min-h-dvh min-w-0 flex-col">
+                <LoginToolbar />
 
-                <div className="animate-in fade-in slide-in-from-bottom-3 relative max-w-md duration-700">
-                    <h2 className="text-4xl leading-tight font-bold tracking-tight whitespace-pre-line">{t('login_tagline')}</h2>
-                </div>
-
-                <div className="relative text-xs text-white/55">
-                    © {new Date().getFullYear()} {brandName}
-                </div>
-            </aside>
-
-            {/* ── Sign-in form ─────────────────────────────────────────────── */}
-            <main className="relative flex min-h-dvh flex-col items-center justify-center px-5 py-12">
-                {/* Language + theme toggles */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                    {/* Both languages stay visible, the active one filled in */}
-                    <div role="group" aria-label={t('login_language')} className="border-border flex h-9 items-center rounded-lg border p-0.5">
-                        {LANGUAGES.map(({ code, label }) => (
-                            <button
-                                key={code}
-                                type="button"
-                                onClick={() => chooseLang(code)}
-                                aria-pressed={lang === code}
-                                className={cn(
-                                    'focus-visible:ring-ring ring-offset-background inline-flex h-8 items-center rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-hidden',
-                                    lang === code ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground cursor-pointer',
-                                )}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        type="button"
-                        onClick={chooseDark}
-                        aria-label={t('login_theme')}
-                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring ring-offset-background inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
-                    >
-                        {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </button>
-                </div>
-
-                {/* Compact brand header (mobile only — panel is hidden) */}
-                <div className="mb-8 flex items-center gap-3 lg:hidden">
-                    <img src={logoUrl || '/logo.svg'} alt={brandName} className="h-11 w-11 rounded-xl object-contain" />
-                    <div>
-                        <div className="text-base font-bold">{brandName}</div>
-                        <div className="text-muted-foreground text-xs">{brandSub}</div>
-                    </div>
-                </div>
-
-                <div className="animate-in fade-in slide-in-from-bottom-3 w-full max-w-sm duration-700">
-                    {/* System logo above the heading (desktop only — mobile shows it in the brand header above) */}
-                    <img src={logoUrl || '/logo.svg'} alt={brandName} className="mb-5 hidden h-14 w-14 rounded-xl object-contain lg:block" />
-                    <h1 className="text-2xl font-bold tracking-tight">{t('login_title')}</h1>
-                    <p className="text-muted-foreground mt-1.5 mb-7 text-sm">{t('login_sub')}</p>
-
-                    <form onSubmit={submit} className="space-y-4" noValidate>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="login">{t('login_field')}</Label>
-                            <div className="relative">
-                                <User className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    id="login"
-                                    ref={loginRef}
-                                    value={loginId}
-                                    onChange={(e) => {
-                                        setLoginId(e.target.value);
-                                        if (fieldErrors.login) setFieldErrors((p) => ({ ...p, login: undefined }));
-                                    }}
-                                    autoFocus
-                                    autoComplete="username"
-                                    autoCapitalize="none"
-                                    autoCorrect="off"
-                                    spellCheck={false}
-                                    placeholder={t('login_field')}
-                                    aria-invalid={!!fieldErrors.login}
-                                    aria-describedby={fieldErrors.login ? 'login-error' : undefined}
-                                    className={cn(
-                                        'pl-9',
-                                        // Same look as the shared Field error
-                                        fieldErrors.login && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                    )}
-                                />
+                <div className="touch:px-8 flex flex-1 justify-center px-6 pt-[max(5.5rem,calc(50dvh-18rem))] pb-12">
+                    <div className="animate-in fade-in split:max-w-[25rem] w-full max-w-[30rem] [animation-duration:var(--motion-open)]">
+                        {/* Brand header where the panel is hidden (iPad, narrow windows); short screens tighten the gaps */}
+                        <div className="split:hidden mb-10 flex items-center gap-4 [@media(max-height:50rem)]:mb-7">
+                            <img src={logoUrl || '/logo.svg'} alt="" className="size-16 shrink-0 object-contain" />
+                            <div>
+                                <div className="text-2xl leading-tight font-bold">{brandName}</div>
+                                <div className="text-muted-foreground text-base">{brandSub}</div>
                             </div>
-                            {fieldErrors.login && (
-                                <p
-                                    id="login-error"
-                                    className="text-destructive animate-in fade-in slide-in-from-top-1 flex items-center gap-1.5 text-xs"
-                                >
-                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                    {fieldErrors.login}
-                                </p>
-                            )}
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="password">{t('login_password')}</Label>
-                            <div className="relative">
-                                <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    id="password"
-                                    ref={passwordRef}
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => {
-                                        setPassword(e.target.value);
-                                        if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
-                                    }}
-                                    autoComplete="current-password"
-                                    autoCapitalize="none"
-                                    autoCorrect="off"
-                                    spellCheck={false}
-                                    placeholder={t('login_password')}
-                                    aria-invalid={!!fieldErrors.password}
-                                    aria-describedby={fieldErrors.password ? 'password-error' : undefined}
-                                    className={cn(
-                                        'pr-10 pl-9',
-                                        fieldErrors.password &&
-                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                    )}
-                                />
+                        <h1 className="touch:text-[2rem] text-[1.875rem] leading-tight font-bold">{t('login_title')}</h1>
+                        <p className="text-muted-foreground touch:text-base mt-1.5 text-[0.9375rem]">{t('login_sub')}</p>
+
+                        {/* Why the reader is here, or why the last attempt failed: read before the fields */}
+                        {(notice || bannerText) && (
+                            <div className="mt-6 grid gap-2.5 [@media(max-height:50rem)]:mt-[18px]">
+                                {notice && (
+                                    <p
+                                        role="status"
+                                        className="bg-brand/10 border-brand/25 text-brand-ink flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm"
+                                    >
+                                        <notice.icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                        <span>
+                                            {t(notice.text)}
+                                            {signedOutReason === 'third_device' && signedOutBy && (
+                                                <span className="mt-0.5 block text-xs">{signedOutByLine(signedOutBy, t, fmt.dateTime)}</span>
+                                            )}
+                                        </span>
+                                    </p>
+                                )}
+                                <FormErrorBanner message={bannerText ?? ''} shakeKey={errorCount} />
+                            </div>
+                        )}
+
+                        <form
+                            onSubmit={submit}
+                            noValidate
+                            className="mt-7 grid gap-[18px] [@media(max-height:50rem)]:mt-[22px] [@media(max-height:50rem)]:gap-3.5"
+                        >
+                            <Field label={t('login_field')} name="login" controlId={LOGIN_ID} error={fieldErrors.login && t(fieldErrors.login)}>
+                                {(control) => (
+                                    <div className="relative">
+                                        <User className={FIELD_ICON} aria-hidden />
+                                        <Input
+                                            {...control}
+                                            value={loginId}
+                                            onChange={(e) => {
+                                                setLoginId(e.target.value);
+                                                if (fieldErrors.login) setFieldErrors((p) => ({ ...p, login: undefined }));
+                                            }}
+                                            autoFocus
+                                            autoComplete="username"
+                                            autoCapitalize="none"
+                                            autoCorrect="off"
+                                            spellCheck={false}
+                                            placeholder={t('login_field_placeholder')}
+                                            className={INPUT}
+                                        />
+                                    </div>
+                                )}
+                            </Field>
+
+                            <Field
+                                label={t('login_password')}
+                                name="password"
+                                controlId={PASSWORD_ID}
+                                error={fieldErrors.password && t(fieldErrors.password)}
+                            >
+                                {(control) => (
+                                    <div className="relative" onKeyDown={readCaps} onKeyUp={readCaps} onBlur={() => setCapsOn(false)}>
+                                        <Lock className={FIELD_ICON} aria-hidden />
+                                        <PasswordInput
+                                            {...control}
+                                            aria-describedby={
+                                                [control['aria-describedby'], capsOn ? capsId : null].filter(Boolean).join(' ') || undefined
+                                            }
+                                            large
+                                            inputClassName={INPUT}
+                                            value={password}
+                                            visible={showPassword}
+                                            onToggle={() => setShowPassword((v) => !v)}
+                                            onChange={(value) => {
+                                                setPassword(value);
+                                                if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
+                                            }}
+                                            autoComplete="current-password"
+                                            placeholder={t('login_password')}
+                                        />
+                                        {capsOn && (
+                                            <p id={capsId} className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-xs">
+                                                <ArrowBigUpDash className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                {t('login_caps_on')}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </Field>
+
+                            <div className="flex flex-wrap items-center justify-between gap-x-4">
+                                <div className="flex min-h-11 items-center gap-2.5">
+                                    <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+                                    <Label htmlFor="remember" className="touch:text-[0.9375rem] cursor-pointer font-normal">
+                                        {t('login_remember')}
+                                    </Label>
+                                </div>
                                 <button
                                     type="button"
-                                    onClick={() => setShowPassword((v) => !v)}
-                                    aria-label={showPassword ? t('login_hide_password') : t('login_show_password')}
-                                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
+                                    onClick={() => setForgotOpen((open) => !open)}
+                                    aria-expanded={forgotOpen}
+                                    aria-controls="login-forgot-help"
+                                    className="text-brand-ink focus-visible:ring-ring touch:text-[0.9375rem] min-h-11 cursor-pointer rounded-sm text-sm font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
                                 >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {t('login_forgot')}
                                 </button>
                             </div>
-                            {fieldErrors.password && (
-                                <p
-                                    id="password-error"
-                                    className="text-destructive animate-in fade-in slide-in-from-top-1 flex items-center gap-1.5 text-xs"
-                                >
-                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                    {fieldErrors.password}
-                                </p>
-                            )}
-                        </div>
 
-                        <div className="flex items-center gap-2.5">
-                            <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
-                            <Label htmlFor="remember" className="cursor-pointer font-normal">
-                                {t('login_remember')}
-                            </Label>
-                        </div>
-
-                        {notice && bannerText === null && !dialogOpen && (
-                            <p
-                                role="status"
-                                className="bg-brand/10 border-brand/25 text-brand-ink flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
+                            <SaveButton
+                                type="submit"
+                                loading={login.isPending}
+                                loadingLabel={t('login_signing_in')}
+                                className="touch:h-13 touch:text-base h-12 w-full rounded-lg text-[0.9375rem] font-semibold"
                             >
-                                <notice.icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                                <span>
-                                    {t(notice.text)}
-                                    {signedOutReason === 'third_device' && signedOutBy && (
-                                        <span className="mt-0.5 block text-xs">{signedOutByLine(signedOutBy, t, fmt.dateTime)}</span>
-                                    )}
-                                </span>
-                            </p>
-                        )}
-
-                        {bannerText !== null && (
+                                {t('login_submit')}
+                            </SaveButton>
                             <p
-                                role="alert"
-                                className={cn(
-                                    'bg-destructive/10 dark:text-destructive border-destructive/25 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm text-red-700',
-                                    shake && 'animate-shake',
-                                )}
+                                id="login-forgot-help"
+                                hidden={!forgotOpen}
+                                className="border-border bg-muted/50 rounded-lg border px-3.5 py-3 text-sm leading-relaxed"
                             >
-                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                                {bannerText}
+                                {t('login_forgot_help')}
                             </p>
-                        )}
+                        </form>
+                    </div>
+                </div>
 
-                        <Button type="submit" className="mt-1 w-full active:translate-y-px" disabled={login.isPending}>
-                            {login.isPending ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('login_signing_in')}
-                                </>
-                            ) : (
-                                t('login_submit')
-                            )}
-                        </Button>
-                    </form>
+                <div className="split:hidden text-muted-foreground pb-5 text-center text-xs">
+                    © {new Date().getFullYear()} {brandName}
                 </div>
             </main>
 

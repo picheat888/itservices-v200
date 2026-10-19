@@ -65,6 +65,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'device_limit',
                 'limit' => $limit,
+                'expires_in' => PendingLogin::TTL_SECONDS,
                 'pending' => $pending ?? $pendingLogins->issue($user, $request),
                 'devices' => UserDeviceResource::collection($active)->resolve($request),
             ], 409);

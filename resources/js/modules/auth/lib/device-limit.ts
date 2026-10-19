@@ -43,11 +43,17 @@ export function signedOutByLine(by: SignedOutBy, t: Translate, formatTime: (iso:
 export function deviceLimitOf(error: unknown): DeviceLimitResponse | null {
     const response = (error as FailureShape | null)?.response;
     if (response?.status !== 409 || typeof response.data !== 'object' || response.data === null) return null;
-    const { message, limit, pending, devices } = response.data as Record<string, unknown>;
+    const { message, limit, pending, expires_in, devices } = response.data as Record<string, unknown>;
     if (message !== 'device_limit' || typeof limit !== 'number' || typeof pending !== 'string' || pending === '' || !Array.isArray(devices)) {
         return null;
     }
-    return { limit, pending, devices: devices as UserDevice[] };
+    const expiresIn = typeof expires_in === 'number' && expires_in > 0 ? expires_in : null;
+    return { limit, pending, expires_in: expiresIn, devices: devices as UserDevice[] };
+}
+
+/** The dialog's time limit in whole minutes (rounded up), or null when there is none to show. */
+export function pendingMinutes(seconds: number | null): number | null {
+    return seconds !== null && seconds > 0 ? Math.ceil(seconds / 60) : null;
 }
 
 /** The 403 for a pending token that expired, was used, or belongs to another browser. */
