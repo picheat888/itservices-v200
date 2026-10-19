@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { NoAccess, useAuth } from '@/modules/auth';
 import { useLocationMutations, useLocations } from '@/modules/employee';
+import { CenteredAlert } from '@/shared/components/centered-alert';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { PageTabs } from '@/shared/components/page-tabs';
@@ -36,6 +37,7 @@ import {
     Loader2,
     Mail,
     MapPin,
+    MonitorSmartphone,
     Pencil,
     Plus,
     Send,
@@ -47,7 +49,14 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
+import {
+    settingsApi,
+    type BrandingPayload,
+    type CompanyPayload,
+    type MailSettingsPayload,
+    type SecurityPolicyKey,
+    type SecuritySettings,
+} from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
 import { DateTimeSection } from '../components/datetime-section';
@@ -55,6 +64,7 @@ import { FIELD_ROW, FORM_STACK, FORM_WIDTH } from '../components/form-layout';
 import { LocationModal } from '../components/location-modal';
 import { LookupSection, masterDataEmpty } from '../components/lookup-section';
 import { ModelModal } from '../components/model-modal';
+import { NetworkNamesSection } from '../components/network-names-section';
 import { RequestDataSection } from '../components/request-data-section';
 import { SEGMENT_LEGEND } from '../components/segmented-radio';
 import { TicketsSlaTab } from '../components/tickets-sla-tab';
@@ -88,6 +98,7 @@ import {
     useUpdateDisplay,
     useUploadLogo,
 } from '../hooks/use-settings';
+import { needsTrimConfirm } from '../lib/device-limit';
 import { IDLE_SECTION, type SavedSectionProps, type SectionSaver, type SectionStatus } from '../types';
 
 /** A section tells the page whether it holds unsaved local edits. */
@@ -1180,8 +1191,10 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
 }
 
 const SECURITY_KEY = ['security-settings'] as const;
+// Focus target after the device-limit confirm
+const DEVICE_LIMIT_CONTROL_ID = 'security-device-limit';
 
-/** Session inactivity timeout + password expiry policy (app_settings). */
+/** Security tab: session, password and device policy, network names, data retention (app_settings). */
 function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const qc = useQueryClient();
@@ -1194,8 +1207,12 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         email_log_days: 0,
         audit_log_days: 0,
         notification_days: 0,
+        login_log_days: 0,
+        device_limit: 0,
+        geoip_updated_at: null,
     });
     const [saved, setSaved] = useState(false);
+    const [confirmingLimit, setConfirmingLimit] = useState(false);
 
     useEffect(() => {
         if (data) setForm(data);
@@ -1211,7 +1228,7 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         onError: failed,
     });
 
-    const setVal = (k: keyof SecuritySettings, v: number) => {
+    const setVal = (k: SecurityPolicyKey, v: number) => {
         setForm((f) => ({ ...f, [k]: Math.max(0, v) }));
         setSaved(false);
     };
@@ -1224,6 +1241,17 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         return () => onDirtyChange(false);
     }, [dirty, onDirtyChange]);
 
+    // Save: a limit turning on or dropping asks first
+    const handleSave = () => {
+        if (data && needsTrimConfirm(data.device_limit, form.device_limit)) {
+            setConfirmingLimit(true);
+        } else {
+            update.mutate(form);
+        }
+    };
+    const confirmLimit = () => update.mutate(form, { onSettled: () => setConfirmingLimit(false) });
+    const limitText = String(form.device_limit);
+
     return (
         <div className={FORM_WIDTH}>
             <div className="mb-5">
@@ -1233,7 +1261,7 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
 
             <div className="border-border border-t">
                 {isLoading ? (
-                    <PolicyRowsSkeleton rows={2} />
+                    <PolicyRowsSkeleton rows={3} />
                 ) : (
                     <>
                         <SecurityPolicyRow
@@ -1254,9 +1282,21 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                             unit={t('unit_days')}
                             onChange={(v) => setVal('password_expiry_days', v)}
                         />
+                        <SecurityPolicyRow
+                            label={t('set_device_limit')}
+                            sub={t('set_device_limit_help')}
+                            value={form.device_limit}
+                            presets={[1, 2, 3]}
+                            defaultValue={2}
+                            unit={t('unit_devices')}
+                            controlId={DEVICE_LIMIT_CONTROL_ID}
+                            onChange={(v) => setVal('device_limit', v)}
+                        />
                     </>
                 )}
             </div>
+
+            <NetworkNamesSection geoipUpdatedAt={isLoading ? undefined : (data?.geoip_updated_at ?? null)} />
 
             <div className="mt-8 mb-5">
                 <h2 className="text-lg font-semibold">{t('set_retention')}</h2>
@@ -1265,7 +1305,7 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
 
             <div className="border-border border-t">
                 {isLoading ? (
-                    <PolicyRowsSkeleton rows={4} />
+                    <PolicyRowsSkeleton rows={5} />
                 ) : (
                     <>
                         <SecurityPolicyRow
@@ -1308,15 +1348,46 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                             offLabel={t('policy_keep_forever')}
                             onChange={(v) => setVal('notification_days', v)}
                         />
+                        <SecurityPolicyRow
+                            label={t('set_login_log_days')}
+                            sub={t('set_login_log_days_help')}
+                            value={form.login_log_days}
+                            presets={[90, 180, 365, 730, 1095]}
+                            defaultValue={365}
+                            unit={t('unit_days')}
+                            offLabel={t('policy_keep_forever')}
+                            onChange={(v) => setVal('login_log_days', v)}
+                        />
                     </>
                 )}
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-5">
-                <SaveButton onClick={() => update.mutate(form)} loading={update.isPending} success={saved} disabled={!dirty}>
+                <SaveButton onClick={handleSave} loading={update.isPending && !confirmingLimit} success={saved} disabled={!dirty}>
                     {t('save')}
                 </SaveButton>
             </div>
+
+            <CenteredAlert
+                open={confirmingLimit}
+                icon={MonitorSmartphone}
+                title={t('set_device_limit_confirm_title').replace('{n}', limitText)}
+                busy={update.isPending}
+                returnFocus={() => document.getElementById(DEVICE_LIMIT_CONTROL_ID)}
+                onClose={() => setConfirmingLimit(false)}
+                actions={
+                    <>
+                        <Button variant="outline" className="w-full" disabled={update.isPending} onClick={() => setConfirmingLimit(false)}>
+                            {t('cancel')}
+                        </Button>
+                        <SaveButton className="w-full font-semibold" loading={update.isPending} onClick={confirmLimit}>
+                            {t('save')}
+                        </SaveButton>
+                    </>
+                }
+            >
+                {t('set_device_limit_confirm_text').replace('{n}', limitText)}
+            </CenteredAlert>
         </div>
     );
 }
@@ -1350,6 +1421,7 @@ function SecurityPolicyRow({
     defaultValue,
     unit,
     offLabel,
+    controlId,
     onChange,
 }: {
     label: string;
@@ -1359,6 +1431,8 @@ function SecurityPolicyRow({
     defaultValue: number;
     unit: string;
     offLabel?: string;
+    /** Id of the preset Select. */
+    controlId?: string;
     onChange: (v: number) => void;
 }) {
     const t = useT();
@@ -1378,7 +1452,7 @@ function SecurityPolicyRow({
             <div className="flex shrink-0 items-center gap-3">
                 {on ? (
                     <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
-                        <SelectTrigger className="w-32 tabular-nums" aria-labelledby={labelId}>
+                        <SelectTrigger id={controlId} className="w-32 tabular-nums" aria-labelledby={labelId}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

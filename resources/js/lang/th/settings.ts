@@ -129,7 +129,7 @@ export const settings: Dict = {
     set_wo_reason_edit: 'แก้ไขเหตุผล',
     set_wo_reason_name: 'เหตุผล',
     set_security: 'ความปลอดภัย',
-    set_security_desc: 'ออกจากระบบเมื่อไม่ได้ใช้งาน และอายุรหัสผ่าน',
+    set_security_desc: 'ออกจากระบบเมื่อไม่ได้ใช้งาน อายุรหัสผ่าน และจำนวนเครื่องที่ใช้พร้อมกัน',
     set_session_timeout: 'ออกจากระบบเมื่อไม่ได้ใช้งาน',
     set_session_timeout_help: 'ออกจากระบบเองเมื่อไม่ได้ใช้งานนานเท่านี้ ถ้าติ๊ก "จดจำฉันไว้" ตอนเข้าสู่ระบบ จะอยู่ได้ 7 วัน',
     set_password_expiry: 'รหัสผ่านหมดอายุ',
@@ -323,8 +323,38 @@ export const settings: Dict = {
     set_empty_md_writeoff_reasons_hint: 'กด "{button}" เพื่อสร้างรายการแรก',
     set_empty_md_writeoff_reasons_search: 'ไม่พบเหตุผลการตัดจำหน่ายที่ตรงกับคำค้น',
     set_empty_md_writeoff_reasons_search_hint: 'ลองค้นด้วยคำอื่น',
+    set_empty_md_network_names: 'ยังไม่มีชื่อเครือข่าย',
+    set_empty_md_network_names_hint: 'กด "{button}" เพื่อสร้างรายการแรก',
+    set_empty_md_network_names_search: 'ไม่พบ IP หรือชื่อที่ตรงกับคำค้น',
+    set_empty_md_network_names_search_hint: 'ลองค้นด้วยคำอื่น',
     set_empty_request_data: 'ยังไม่มีตัวเลือกในรายการนี้',
     set_empty_request_data_hint: 'กด "{button}" เพื่อเริ่ม',
     set_empty_sla_repair_targets: 'ยังไม่มีเป้าหมายงานซ่อม',
     set_empty_sla_repair_targets_hint: 'ต้องตั้งเป้าหมายก่อนจึงจะส่งช่างได้',
+
+    // pages/index.tsx — แท็บความปลอดภัย จำนวนเครื่องและประวัติการเข้าสู่ระบบ
+    set_device_limit: 'จำกัดจำนวนเครื่องที่ใช้พร้อมกัน',
+    set_device_limit_help:
+        'ใช้กับทุกบัญชี เข้าเครื่องใหม่เกินจำนวนนี้ ต้องออกจากระบบเครื่องเดิมอย่างน้อย 1 เครื่องก่อน หลายแท็บในเบราว์เซอร์เดียวกันนับเป็น 1 เครื่อง',
+    unit_devices: 'เครื่อง',
+    set_device_limit_confirm_title: 'ตั้งจำกัดที่ {n} เครื่อง',
+    set_device_limit_confirm_text: 'บัญชีที่ใช้อยู่เกิน {n} เครื่อง จะเหลือเฉพาะเครื่องที่ใช้ล่าสุด',
+    set_login_log_days: 'ประวัติการเข้าสู่ระบบ',
+    set_login_log_days_help:
+        'ลบประวัติการเข้าสู่ระบบที่เก่ากว่ากำหนด ระบบใช้ประวัติ 90 วันล่าสุดดูว่าบัญชีเคยเข้าจาก IP นี้หรือไม่ จึงตั้งต่ำกว่า 90 วันไม่ได้',
+
+    // network-names-section.tsx, network-name-modal.tsx — ชื่อเครือข่าย
+    net_title: 'ชื่อเครือข่าย',
+    net_desc: 'ใส่ IP สาธารณะของแต่ละสาขา ระบบจะแสดงชื่อนี้ในแท็บ Login และโปรไฟล์ IP อื่นแสดงตำแหน่งจากฐานข้อมูล GeoIP',
+    net_col_cidr: 'IP หรือช่วง IP',
+    net_col_name: 'ชื่อ',
+    net_search: 'ค้นหา IP หรือชื่อ…',
+    net_add: 'เพิ่ม IP',
+    net_add_title: 'เพิ่มชื่อเครือข่าย',
+    net_edit_title: 'แก้ไขชื่อเครือข่าย',
+    net_cidr_ph: 'เช่น 203.150.12.80/29',
+    net_name_ph: 'เช่น สำนักงานใหญ่',
+    net_geoip_updated: 'ฐานข้อมูล GeoIP อัปเดตล่าสุด {date} อัปเดตเองทุกเดือน',
+    net_geoip_none: 'ยังไม่มีฐานข้อมูล GeoIP อัปเดตเองทุกเดือน',
+    net_geoip_credit: 'IP Geolocation by DB-IP',
 };
