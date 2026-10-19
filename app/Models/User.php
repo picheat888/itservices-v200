@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
+use App\Models\Auth\UserDevice;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -13,6 +14,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -287,6 +289,12 @@ class User extends Authenticatable
     public function getNameThAttribute(): ?string
     {
         return $this->employee?->name_th;
+    }
+
+    /** @return HasMany<UserDevice, $this> */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
     }
 
     /** The employee this login account belongs to (null for system-only accounts). */
