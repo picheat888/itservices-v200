@@ -131,7 +131,7 @@ export const settings: Dict = {
     set_wo_reason_edit: 'Edit reason',
     set_wo_reason_name: 'Reason',
     set_security: 'Security',
-    set_security_desc: 'Session timeout and password expiry.',
+    set_security_desc: 'Session timeout, password expiry and devices signed in at once.',
     set_session_timeout: 'Session timeout',
     set_session_timeout_help: 'Auto sign-out after the selected minutes of inactivity. A sign-in with "Remember me" ticked stays for 7 days instead.',
     set_password_expiry: 'Password expiration',
@@ -326,8 +326,39 @@ export const settings: Dict = {
     set_empty_md_writeoff_reasons_hint: 'Press "{button}" to create the first one.',
     set_empty_md_writeoff_reasons_search: 'No write-off reasons match',
     set_empty_md_writeoff_reasons_search_hint: 'Try other words.',
+    set_empty_md_network_names: 'No network names yet',
+    set_empty_md_network_names_hint: 'Press "{button}" to create the first one.',
+    set_empty_md_network_names_search: 'No IP or name matches',
+    set_empty_md_network_names_search_hint: 'Try other words.',
     set_empty_request_data: 'No options in this list yet',
     set_empty_request_data_hint: 'Press "{button}" to start.',
     set_empty_sla_repair_targets: 'No repair targets yet',
     set_empty_sla_repair_targets_hint: 'Set a target before sending a technician.',
+
+    // pages/index.tsx — Security tab: device limit and login history
+    set_device_limit: 'Devices signed in at once',
+    set_device_limit_help:
+        'Applies to every account. Signing in on a new device over this number means signing out at least 1 existing device first. Tabs in the same browser count as 1 device.',
+    unit_devices: 'devices',
+    set_device_limit_confirm_title: 'Limit to {n} device(s)',
+    set_device_limit_confirm_text: 'Accounts signed in on more devices than this keep only their most recently used ones.',
+    set_login_log_days: 'Login history',
+    set_login_log_days_help:
+        'Delete sign-in history older than this. The last 90 days tell whether an account has signed in from an IP before, so it cannot be set lower than 90 days.',
+
+    // network-names-section.tsx, network-name-modal.tsx — network names
+    net_title: 'Network names',
+    net_desc:
+        "Enter each site's public IP. The system shows this name in the Login tab and the profile; other IPs show a place from the GeoIP database.",
+    net_col_cidr: 'IP or IP range',
+    net_col_name: 'Name',
+    net_search: 'Search IP or name…',
+    net_add: 'Add IP',
+    net_add_title: 'Add network name',
+    net_edit_title: 'Edit network name',
+    net_cidr_ph: 'e.g. 203.150.12.80/29',
+    net_name_ph: 'e.g. Head office',
+    net_geoip_updated: 'GeoIP database last updated {date}. It updates itself every month.',
+    net_geoip_none: 'No GeoIP database yet. It updates itself every month.',
+    net_geoip_credit: 'IP Geolocation by DB-IP',
 };

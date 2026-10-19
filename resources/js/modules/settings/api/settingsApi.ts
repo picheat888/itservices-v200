@@ -129,7 +129,38 @@ export interface SecuritySettings {
     email_log_days: number;
     audit_log_days: number;
     notification_days: number;
+    login_log_days: number;
+    // Signed-in devices allowed per account; 0 = no limit.
+    device_limit: number;
+    // Read-only: when the GeoIP file was last replaced (ISO), null when there is none.
+    geoip_updated_at: string | null;
 }
+
+// What PUT /settings/security accepts: every setting except the read-only GeoIP date.
+export type SecurityPayload = Omit<SecuritySettings, 'geoip_updated_at'>;
+
+// A security setting the page edits as a number.
+export type SecurityPolicyKey = keyof SecurityPayload;
+
+const securityPayloadOf = (s: SecuritySettings): SecurityPayload => ({
+    session_timeout_minutes: s.session_timeout_minutes,
+    password_expiry_days: s.password_expiry_days,
+    email_log_body_days: s.email_log_body_days,
+    email_log_days: s.email_log_days,
+    audit_log_days: s.audit_log_days,
+    notification_days: s.notification_days,
+    login_log_days: s.login_log_days,
+    device_limit: s.device_limit,
+});
+
+// One admin-named IP or range, shown as the sign-in location.
+export interface NetworkName {
+    id: number;
+    cidr: string;
+    name: string;
+}
+
+export type NetworkNamePayload = Pick<NetworkName, 'cidr' | 'name'>;
 
 export interface MailSettingsData {
     host: string | null;
@@ -206,10 +237,29 @@ export const settingsApi = {
 
     getSecurity: () => http.get<ApiEnvelope<SecuritySettings>>('/settings/security').then((r) => r.data.data),
 
-    updateSecurity: async (payload: SecuritySettings) => {
+    updateSecurity: async (settings: SecuritySettings) => {
         await ensureCsrf();
-        const { data } = await http.put<ApiEnvelope<SecuritySettings>>('/settings/security', payload);
+        const { data } = await http.put<ApiEnvelope<SecuritySettings>>('/settings/security', securityPayloadOf(settings));
         return data.data;
+    },
+
+    getNetworkNames: () => http.get<ApiEnvelope<NetworkName[]>>('/settings/network-names').then((r) => r.data.data),
+
+    createNetworkName: async (payload: NetworkNamePayload) => {
+        await ensureCsrf();
+        const { data } = await http.post<ApiEnvelope<NetworkName>>('/settings/network-names', payload);
+        return data.data;
+    },
+
+    updateNetworkName: async (id: number, payload: NetworkNamePayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<NetworkName>>(`/settings/network-names/${id}`, payload);
+        return data.data;
+    },
+
+    deleteNetworkName: async (id: number) => {
+        await ensureCsrf();
+        await http.delete(`/settings/network-names/${id}`);
     },
 
     getMail: () => http.get<ApiEnvelope<MailSettingsData>>('/settings/mail').then((r) => r.data.data),
