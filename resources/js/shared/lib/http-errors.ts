@@ -55,6 +55,12 @@ export function outranks(next: AppErrorKind, current: AppErrorKind | null): bool
     return current === null || RANK[next] > RANK[current];
 }
 
+/** A server error the reader closed stays quiet on that same page; every other kind, and any other page, follows `outranks`. */
+export function shouldShowAppError(next: AppErrorKind, current: AppErrorKind | null, quietPath: string | null, path: string): boolean {
+    if (next === 'server' && quietPath === path) return false;
+    return outranks(next, current);
+}
+
 const shownInline = new WeakSet<object>();
 
 /** A form put this failure in its own error banner, so no toast repeats it. */
