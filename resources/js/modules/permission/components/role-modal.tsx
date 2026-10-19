@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { ColorSwatchPicker, DEFAULT_SWATCHES } from '@/shared/components/color-swatch-picker';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -7,9 +8,9 @@ import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Copy } from 'lucide-react';
+import { Copy, Shield } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RoleRow } from '../api/permissionApi';
 import { useRoleMutations } from '../hooks/use-permissions';
@@ -89,17 +90,29 @@ export function RoleModal({
 
     const saving = create.isPending || update.isPending || duplicate.isPending;
 
-    const title = source ? t('perm_duplicate_title') : role ? t('perm_change_props') : t('perm_new_role');
+    // The header keeps the role being changed or copied while the dialog closes
+    const [shownMode, setShownMode] = useState(mode);
+    useEffect(() => {
+        if (open) setShownMode(mode);
+    }, [open, mode]);
+    const viewMode = open ? mode : shownMode;
+    const viewRole = viewMode.kind === 'edit' ? viewMode.role : null;
+    const viewSource = viewMode.kind === 'duplicate' ? viewMode.source : null;
+    const title = viewSource ? t('perm_duplicate_title') : viewRole ? t('perm_change_props') : t('perm_new_role');
+    const copiedFrom = viewSource ? t('perm_duplicate_from').replace('{name}', viewSource.label) : undefined;
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            {/* Only a duplicate has something to describe; otherwise no description, stated explicitly */}
-            <DialogContent {...(!source && { 'aria-describedby': undefined })}>
-                <DialogHeader>
-                    <DialogTitle>{title}</DialogTitle>
-                    {source && <DialogDescription>{t('perm_duplicate_from').replace('{name}', source.label)}</DialogDescription>}
-                </DialogHeader>
-                <div className="space-y-4">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Shield}
+                    eyebrow={t('permissions')}
+                    title={title}
+                    code={viewRole?.label}
+                    subtitle={copiedFrom ? <span className="text-muted-foreground text-sm">{copiedFrom}</span> : undefined}
+                    srDescription={copiedFrom}
+                />
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('perm_role_name')}>
                         <Input
@@ -119,8 +132,8 @@ export function RoleModal({
                                 .replace('{name}', source.label)}
                         </p>
                     )}
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving || saved}>
                         {t('cancel')}
                     </Button>
@@ -134,8 +147,8 @@ export function RoleModal({
                             t('save')
                         )}
                     </SaveButton>
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

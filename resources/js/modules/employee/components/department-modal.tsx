@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -8,9 +9,10 @@ import { localName } from '@/shared/lib/local-name';
 import type { Department } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
+import { Users } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useDepartmentMutations } from '../hooks/use-departments';
 
@@ -20,6 +22,12 @@ type FieldErrors = Partial<Record<keyof typeof empty, string>>;
 
 export function DepartmentModal({ open, onClose, department }: { open: boolean; onClose: () => void; department: Department | null }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(department);
+    useEffect(() => {
+        if (open) setShown(department);
+    }, [open, department]);
+    const view = open ? department : shown;
     const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { create, update } = useDepartmentMutations();
@@ -77,12 +85,15 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
-            <DialogContent aria-describedby={undefined}>
-                <DialogHeader>
-                    <DialogTitle>{department ? t('edit_department') : t('add_department')}</DialogTitle>
-                </DialogHeader>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Users}
+                    eyebrow={t('employees')}
+                    title={view ? t('edit_department') : t('add_department')}
+                    code={view ? localName(view, lang) : undefined}
+                />
                 <form onSubmit={submit} className="contents">
-                    <div className="space-y-4">
+                    <DialogBody>
                         <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                         <div className="grid grid-cols-2 gap-3">
                             <Field label={t('dept_name_en')} required error={fieldErrors.name}>
@@ -115,15 +126,15 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                                 autoComplete="off"
                             />
                         </Field>
-                    </div>
-                    <DialogFooter>
+                    </DialogBody>
+                    <DialogFooterBar>
                         <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
                         <SaveButton type="submit" loading={saving} success={saved} disabled={!canSave} />
-                    </DialogFooter>
+                    </DialogFooterBar>
                 </form>
-            </DialogContent>
+            </FormDialogContent>
         </Dialog>
     );
 }

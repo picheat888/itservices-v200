@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -7,14 +8,21 @@ import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import type { Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
+import { Users } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { usePositionMutations } from '../hooks/use-positions';
 
 export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {
     const t = useT();
+    // The header keeps the record being edited while the dialog closes
+    const [shown, setShown] = useState(position);
+    useEffect(() => {
+        if (open) setShown(position);
+    }, [open, position]);
+    const view = open ? position : shown;
     const confirm = useConfirm();
     const confirmEdit = useConfirmEdit();
     const { create, update } = usePositionMutations();
@@ -71,38 +79,38 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
-            <DialogContent aria-describedby={undefined}>
-                <DialogHeader>
-                    <DialogTitle>{position ? t('edit_position') : t('add_position')}</DialogTitle>
-                </DialogHeader>
+            <FormDialogContent>
+                <FocusDialogHeader icon={Users} eyebrow={t('employees')} title={view ? t('edit_position') : t('add_position')} code={view?.title} />
                 <form onSubmit={submit} className="contents">
-                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
-                    <Field label={t('pos_title')} required error={error || undefined}>
-                        <Input
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            autoFocus
-                            aria-required
-                            placeholder={t('pos_title_ph')}
-                            autoComplete="off"
-                        />
-                    </Field>
-                    {/* Special position */}
-                    <div className="border-border flex items-center justify-between gap-3 rounded-lg border px-3.5 py-3">
-                        <div className="min-w-0">
-                            <div className="text-sm font-medium">{t('pos_allow_special')}</div>
-                            <div className="text-muted-foreground mt-0.5 text-xs">{t('pos_allow_special_help')}</div>
+                    <DialogBody>
+                        <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
+                        <Field label={t('pos_title')} required error={error || undefined}>
+                            <Input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                autoFocus
+                                aria-required
+                                placeholder={t('pos_title_ph')}
+                                autoComplete="off"
+                            />
+                        </Field>
+                        {/* Special position */}
+                        <div className="border-border flex items-center justify-between gap-3 rounded-lg border px-3.5 py-3">
+                            <div className="min-w-0">
+                                <div className="text-sm font-medium">{t('pos_allow_special')}</div>
+                                <div className="text-muted-foreground mt-0.5 text-xs">{t('pos_allow_special_help')}</div>
+                            </div>
+                            <Switch checked={allowSpecial} onChange={toggleSpecial} aria-label={t('pos_allow_special')} />
                         </div>
-                        <Switch checked={allowSpecial} onChange={toggleSpecial} aria-label={t('pos_allow_special')} />
-                    </div>
-                    <DialogFooter>
+                    </DialogBody>
+                    <DialogFooterBar>
                         <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
                         <SaveButton type="submit" loading={saving} success={saved} disabled={!canSave} />
-                    </DialogFooter>
+                    </DialogFooterBar>
                 </form>
-            </DialogContent>
+            </FormDialogContent>
         </Dialog>
     );
 }
