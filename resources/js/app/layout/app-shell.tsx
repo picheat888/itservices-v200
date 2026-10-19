@@ -57,6 +57,11 @@ export function AppShell() {
         setShellMounted(true);
         return () => setShellMounted(false);
     }, [setShellMounted]);
+    // Leaving the page where the server dialog was closed lets it open again
+    const rearmAppError = useAppErrorStore((s) => s.rearm);
+    useEffect(() => {
+        rearmAppError(pathname);
+    }, [pathname, rearmAppError]);
     const [notifOpen, setNotifOpen] = useState(false);
     // The tray stays mounted for its 100ms close animation
     const [notifMounted, setNotifMounted] = useState(false);

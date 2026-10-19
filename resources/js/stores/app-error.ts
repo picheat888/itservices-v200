@@ -1,8 +1,7 @@
-import { shouldShowAppError, type AppErrorKind } from '@/shared/lib/http-errors';
+import { quietPathAfterMove, shouldShowAppError, type AppErrorKind } from '@/shared/lib/http-errors';
 import { create } from 'zustand';
 
-// System/transient API failures that take over the whole screen (vs. validation
-// or permission errors, which are handled inline by the caller).
+// API failures that stop the page (server, network, rate limit, maintenance) for AppErrorDialog; validation and permission errors stay with the caller.
 export type { AppErrorKind };
 
 interface AppErrorState {
@@ -14,6 +13,7 @@ interface AppErrorState {
     show: (kind: AppErrorKind, retryAfter?: number | null, reference?: string | null) => void;
     clear: () => void;
     dismiss: () => void;
+    rearm: (path: string) => void;
     setShellMounted: (mounted: boolean) => void;
 }
 
@@ -27,5 +27,10 @@ export const useAppErrorStore = create<AppErrorState>((set) => ({
         set((s) => (shouldShowAppError(kind, s.kind, s.quietPath, window.location.pathname) ? { kind, retryAfter, reference } : s)),
     clear: () => set({ kind: null, retryAfter: null, reference: null }),
     dismiss: () => set({ kind: null, retryAfter: null, reference: null, quietPath: window.location.pathname }),
+    rearm: (path) =>
+        set((s) => {
+            const quietPath = quietPathAfterMove(s.quietPath, path);
+            return quietPath === s.quietPath ? s : { quietPath };
+        }),
     setShellMounted: (shellMounted) => set({ shellMounted }),
 }));

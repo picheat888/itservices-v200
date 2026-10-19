@@ -61,6 +61,11 @@ export function shouldShowAppError(next: AppErrorKind, current: AppErrorKind | n
     return outranks(next, current);
 }
 
+/** Moving to another page re-arms the server dialog; staying on the quiet page keeps it quiet. */
+export function quietPathAfterMove(quietPath: string | null, path: string): string | null {
+    return quietPath === path ? quietPath : null;
+}
+
 const shownInline = new WeakSet<object>();
 
 /** A form put this failure in its own error banner, so no toast repeats it. */

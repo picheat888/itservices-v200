@@ -5,6 +5,7 @@ import {
     isNetworkFailure,
     markShownInline,
     outranks,
+    quietPathAfterMove,
     retryAfterOf,
     shouldRetryQuery,
     shouldShowAppError,
@@ -64,4 +65,10 @@ test('a closed server dialog stays quiet on the same page and comes back on anot
     assert.equal(shouldShowAppError('server', null, '/assets', '/tickets'), true);
     assert.equal(shouldShowAppError('network', null, '/assets', '/assets'), true);
     assert.equal(shouldShowAppError('server', 'server', null, '/assets'), false);
+});
+
+test('leaving the page where the server dialog was closed re-arms it', () => {
+    assert.equal(quietPathAfterMove('/assets', '/tickets'), null);
+    assert.equal(quietPathAfterMove('/assets', '/assets'), '/assets');
+    assert.equal(quietPathAfterMove(null, '/assets'), null);
 });
