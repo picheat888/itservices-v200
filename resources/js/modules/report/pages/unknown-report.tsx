@@ -3,21 +3,27 @@
  * plainly and offers the way back to the Report Center, instead of an empty report shell.
  */
 import { useT } from '@/lang';
-import { EmptyState } from '@/shared/components/empty-state';
+import { ErrorIcon, ErrorState } from '@/shared/components/error-state';
 import { Button } from '@/shared/ui/button';
-import { Card } from '@/shared/ui/card';
+import { SearchX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function UnknownReportPage() {
     const t = useT();
 
     return (
-        <Card className="border-dashed">
-            <EmptyState kind="empty" title={t('rep_empty_unknown')} hint={t('rep_empty_unknown_hint')}>
-                <Button asChild variant="outline">
-                    <Link to="/reports">{t('rep_back_to_reports')}</Link>
-                </Button>
-            </EmptyState>
-        </Card>
+        <div className="grid min-h-[72dvh] place-items-center px-4">
+            <ErrorState
+                variant="page"
+                visual={<ErrorIcon icon={SearchX} tone="info" />}
+                title={t('rep_empty_unknown')}
+                lines={[t('rep_empty_unknown_hint')]}
+                actions={
+                    <Button asChild className="w-full">
+                        <Link to="/reports">{t('rep_back_to_reports')}</Link>
+                    </Button>
+                }
+            />
+        </div>
     );
 }

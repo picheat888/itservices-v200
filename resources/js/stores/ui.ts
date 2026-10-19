@@ -59,6 +59,8 @@ interface UiState {
     // Transient (not persisted): a page deeper than its menu entry names itself here, and
     // the topbar trail adds it after the entry (Reports / <report name>). See useCrumbTail.
     crumbTail: string | null;
+    // Transient (not persisted): the catch-all page is showing, so no menu entry or crumb claims the address.
+    pageMissing: boolean;
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
@@ -75,6 +77,7 @@ interface UiState {
     setDateConfig: (config: Partial<Record<keyof DateConfig, unknown>>) => void;
     setNarrowSidebarOpen: (open: boolean) => void;
     setCrumbTail: (label: string | null) => void;
+    setPageMissing: (missing: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -94,6 +97,7 @@ export const useUiStore = create<UiState>()(
             loginPrefsTouched: { dark: false, lang: false },
             narrowSidebarOpen: false,
             crumbTail: null,
+            pageMissing: false,
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),
@@ -114,6 +118,7 @@ export const useUiStore = create<UiState>()(
                 }),
             setNarrowSidebarOpen: (narrowSidebarOpen) => set({ narrowSidebarOpen }),
             setCrumbTail: (crumbTail) => set({ crumbTail }),
+            setPageMissing: (pageMissing) => set({ pageMissing }),
         }),
         {
             name: 'itservices-ui',

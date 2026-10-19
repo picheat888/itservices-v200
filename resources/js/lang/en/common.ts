@@ -251,6 +251,11 @@ export const common: Dict = {
     // not-found.tsx — an address that does not exist
     cmn_not_found_title: 'Page not found',
     cmn_not_found_hint: 'The link may be mistyped, or the page has moved.',
+    cmn_not_found_crumb: 'Page not found',
+
+    // require-permission.tsx — no access page
+    err_noaccess_line1: "Your account can't open this page yet.",
+    err_noaccess_line2: 'Contact IT if you need it.',
 
     // color-swatch-picker.tsx — colour names and the custom colour popover
     color_blue: 'Blue',
