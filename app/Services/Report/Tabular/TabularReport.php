@@ -81,20 +81,15 @@ abstract class TabularReport
     }
 
     /**
-     * The columns the Excel sheet carries: the PDF's, plus every sheet-only and hidden-by-default
-     * column (the page's column picker never takes those out of the file), in sheetOrder() when
-     * the report sets one.
+     * The columns the Excel sheet carries: every column but the screen-only ones, whatever the page's
+     * column picker keeps (the picker shapes the page and the PDF only), in sheetOrder() when the
+     * report sets one.
      *
      * @return list<ReportColumn>
      */
     public function sheetColumns(): array
     {
-        $picked = array_map(fn (ReportColumn $c) => $c->key, $this->exportColumns());
-        $all = $this->columns();
-        $columns = array_values(array_filter(
-            $all,
-            fn (ReportColumn $c) => ! $c->isScreenOnly() && ($c->isSheetOnly() || $c->isHiddenByDefault() || in_array($c->key, $picked, true)),
-        ));
+        $columns = array_values(array_filter($this->columns(), fn (ReportColumn $c) => ! $c->isScreenOnly()));
 
         $order = array_flip($this->sheetOrder());
         if ($order !== []) {
@@ -105,19 +100,12 @@ abstract class TabularReport
             $columns = array_column($ranked, 1);
         }
 
-        // Each master-data code sits right after its name (or at the end when the picker dropped the name)
+        // Each master-data code sits right after its name
         $withCodes = [];
         foreach ($columns as $column) {
             $withCodes[] = $column;
             if ($column->codeColumn() !== null) {
                 $withCodes[] = $column->codeColumn();
-            }
-        }
-        $placed = array_map(fn (ReportColumn $c) => $c->key, $withCodes);
-        foreach ($all as $column) {
-            $code = $column->codeColumn();
-            if ($code !== null && ! in_array($code->key, $placed, true)) {
-                $withCodes[] = $code;
             }
         }
 

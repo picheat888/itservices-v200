@@ -55,9 +55,9 @@ export const report: Dict = {
     rep_snap_none_sla_rate: 'No tickets closed in this period yet',
     // components/column-picker.tsx — column picker
     rep_columns: 'Columns',
-    rep_columns_hint: 'Pick the columns to show. The exported file has only these columns.',
+    rep_columns_hint: 'Pick the columns to show. The PDF has only these columns; Excel has every column.',
     rep_columns_changed_sr: 'columns changed from the default',
-    rep_export_columns_note: 'Exports only the {n} columns shown',
+    rep_export_columns_note: 'The PDF has only the {n} columns shown; Excel has every column',
     rep_tickets_overview_title: 'Ticket & SLA overview',
     rep_tickets_overview_desc: 'Tickets opened, time to fix and SLA results by category, priority and department',
 

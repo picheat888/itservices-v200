@@ -2,7 +2,6 @@
 
 namespace App\Exports\Report;
 
-use App\Services\Report\Tabular\ReportColumn;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +29,7 @@ class TabularReportExport implements WithMultipleSheets, WithProperties
      */
     public function sheets(): array
     {
-        $facts = SheetLayout::fileFacts($this->exportedBy, $this->rows->count(), $this->report->sheetTitle(), $this->omittedColumns());
+        $facts = SheetLayout::fileFacts($this->exportedBy, $this->rows->count(), $this->report->sheetTitle());
 
         return [
             new TabularSummarySheet($this->report, $this->summary, $this->scope, $facts),
@@ -45,20 +44,5 @@ class TabularReportExport implements WithMultipleSheets, WithProperties
     public function properties(): array
     {
         return SheetLayout::properties($this->report->title(), $this->report->key(), $this->exportedBy);
-    }
-
-    /**
-     * Page columns the reader's column picker left out of this file.
-     *
-     * @return list<string>
-     */
-    private function omittedColumns(): array
-    {
-        $kept = array_map(fn (ReportColumn $c) => $c->key, $this->report->sheetColumns());
-
-        return array_values(array_map(
-            fn (ReportColumn $c) => $c->heading,
-            array_filter($this->report->screenColumns(), fn (ReportColumn $c) => ! in_array($c->key, $kept, true)),
-        ));
     }
 }

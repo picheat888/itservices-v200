@@ -223,7 +223,7 @@ class ReportHubTest extends TestCase
 
     // ── column picker ───────────────────────────────────────────────────────────────
 
-    public function test_export_carries_only_the_picked_columns_in_report_order(): void
+    public function test_the_picked_columns_shape_the_pdf_while_excel_keeps_every_column(): void
     {
         Excel::fake();
         Asset::factory()->create(['status' => 'ready']);
@@ -232,10 +232,15 @@ class ReportHubTest extends TestCase
         $this->actingAs($user)
             ->exportReport('/api/reports/tabular/assets.overview/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
 
-        // Picked columns in report order; hidden-by-default and sheet-only columns (codes) always stay in the file
+        // The picker keeps two columns, in report order, for the PDF; the Excel sheet keeps them all
         $this->assertExportStored('Report_assets-overview_2026-09-25.xlsx', function (TabularReportExport $export) {
-            return $this->rowsSheet($export)->headings() === ['รหัสทรัพย์สิน', 'สถานะ', 'รหัสพนักงานผู้ถือ', 'วันที่ลงทะเบียน', 'ลงทะเบียนโดย', 'รหัสแผนก']
-                && count($this->rowsSheet($export)->map($export->rows->first())) === 6;
+            $picked = array_map(fn ($column) => $column->heading, $export->report->exportColumns());
+            $all = array_map(fn ($column) => $column->heading, $export->report->sheetColumns());
+
+            return $picked === ['รหัสทรัพย์สิน', 'สถานะ']
+                && $this->rowsSheet($export)->headings() === $all
+                && in_array('หมวดหมู่', $all, true)
+                && count($this->rowsSheet($export)->map($export->rows->first())) === count($all);
         });
     }
 
