@@ -53,7 +53,12 @@ const ASSET_4A = [
     'modules/asset/components/asset-transfer-dialog.tsx',
     'modules/asset/components/asset-writeoff-dialog.tsx',
 ];
-const RECORD_4A: string[] = [];
+const RECORD_4A = [
+    'modules/contract/components/contract-cancel-dialog.tsx',
+    'modules/request/components/cancel-request-dialog.tsx',
+    'modules/request/components/decision-dialog.tsx',
+    'modules/stock/components/request-drawer.tsx',
+];
 const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_4A, ...RECORD_4A];
 
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
@@ -75,6 +80,13 @@ test('asset small forms use the 4ข look with natural-width footer buttons', ()
     for (const rel of ASSET_4A) {
         assertSmallForm(rel);
         assert.doesNotMatch(read(rel), /<(Button|SaveButton)\b[^>]*className="flex-1"/, `${rel}: equal-width buttons`);
+    }
+});
+
+test('contract, request and stock small forms use the 4ข look', () => {
+    RECORD_4A.forEach(assertSmallForm);
+    for (const rel of ['modules/request/components/cancel-request-dialog.tsx', 'modules/request/components/decision-dialog.tsx']) {
+        assert.doesNotMatch(read(rel), /pr-7/, `${rel}: reference moved into the eyebrow`);
     }
 });
 

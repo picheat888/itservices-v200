@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -11,10 +12,10 @@ import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, RE
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Check, X } from 'lucide-react';
+import { Check, CheckCircle2, X, XCircle } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { useRequestMutations } from '../hooks/use-requests';
 
@@ -86,12 +87,13 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && !pending && guardClose(onClose)}>
-            <DialogContent className="max-w-[520px]">
-                {/* Header — pr-7 keeps the reference clear of the close button */}
-                <div className="flex items-start justify-between gap-3 pr-7">
-                    <div>
-                        <DialogTitle className="text-base font-bold">{rejecting ? t('req_decide_reject') : t('req_decide_approve')}</DialogTitle>
-                        <DialogDescription className="mt-1.5 flex items-center gap-2 text-xs">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={rejecting ? XCircle : CheckCircle2}
+                    eyebrow={ctx.request.reference}
+                    title={rejecting ? t('req_decide_reject') : t('req_decide_approve')}
+                    subtitle={
+                        <span className="text-muted-foreground flex items-center gap-2 text-xs">
                             {/* One dot per rung (decorative; the sentence says it) */}
                             {step && (
                                 <span aria-hidden className="flex items-center gap-1">
@@ -112,12 +114,12 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                                 </span>
                             )}
                             {step ?? requestTitle(ctx.request, t, lang)}
-                        </DialogDescription>
-                    </div>
-                    <span className="text-muted-foreground shrink-0 text-xs">{ctx.request.reference}</span>
-                </div>
+                        </span>
+                    }
+                    srDescription={step ?? requestTitle(ctx.request, t, lang)}
+                />
 
-                <div className="space-y-4">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     {/* The decision slip: service, what was asked for, who for and why */}
@@ -169,10 +171,10 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                             className="min-h-[84px]"
                         />
                     </Field>
-                </div>
+                </DialogBody>
 
                 {/* Who is notified next (not on the last rung or a rejection) */}
-                <DialogFooter className="items-center gap-3 sm:gap-0">
+                <DialogFooterBar>
                     {!rejecting && !isFinal && (
                         <p className="text-muted-foreground mr-auto text-xs leading-relaxed sm:pr-4">
                             {t('req_decide_notify_next').replace(
@@ -195,8 +197,8 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                         {rejecting ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         {rejecting ? t('req_reject') : t('req_approve')}
                     </SaveButton>
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
