@@ -6446,3 +6446,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - **API:** `GET /api/reports/schedules/manage`, `PATCH|DELETE /api/reports/schedules/{id}/manage`, `DELETE /api/reports/schedules/{id}/recipients?email=` (`ReportScheduleAdminController` → `ReportScheduleAdminService`, `ManageReportScheduleRequest`, `ManagedReportScheduleResource` บอกผู้รับที่มีบัญชี) ทุกการกระทำบันทึก audit log (`Paused/Resumed/Deleted scheduled report`, `Removed scheduled report recipient`) พร้อมคำไทย/อังกฤษในหน้าบันทึกการตรวจสอบ
 - **ยังไม่มี:** ประวัติการส่งย้อนหลังหลายรอบ (ระบบเก็บเฉพาะรอบล่าสุดของกำหนดการ) แผงรายละเอียดจึงแสดงเฉพาะการส่งล่าสุด
 - เทส `ReportScheduleAdminTest` (5 ข้อ), `ReportPermissionsTest`; เทส JS 298 ข้อผ่าน; ยังไม่ได้ตรวจหน้าตาใน Chrome
+
+## ตรวจหน้าสิทธิ์การใช้งานบน iPad: สีหัวคอลัมน์ที่ตรึงไว้ และเส้นตารางสิทธิ์ (2026-10-19)
+`7509908f` ผู้ใช้วงจุดในโหมดมืด (ภาพใน `docs/test/12`)
+- ตารางที่มีคอลัมน์ตรึง (คอลัมน์ปุ่มด้านขวา) หัวคอลัมน์ที่ตรึงเป็นสี muted ทึบ แต่หัวแถวอื่นเป็น muted 50% ทับพื้นการ์ด จึงสว่างกว่าเป็นก้อน แก้ที่ `DataTable` + `.pin-head` ใน app.css มีผลทุกตารางที่ตรึงคอลัมน์
+- การ์ดสิทธิ์ (บทบาท) แถวที่มีช่องว่าง เส้นแบ่งหยุดครึ่งทาง ตอนนี้ช่องสุดท้ายลากเส้นต่อให้ช่องว่างหลังมัน (`PermissionCell`) เจอ 10 จาก 14 การ์ด
+- ตรวจด้วยการวัดค่าในหน้าเว็บที่ 1024 และ 768 ทั้งโหมดสว่างและมืด (จับภาพหน้าจอจากเบราว์เซอร์ไม่ได้รอบนี้)
