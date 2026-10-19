@@ -1,7 +1,13 @@
 // Several requests (or tabs) can fail at once when a session ends; only the first reason reaches the login page.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createLoginRedirect, parseDeviceSignedOut, readSignedOutBy, serverFileTarget } from '../../resources/js/shared/lib/login-redirect.ts';
+import {
+    createLoginRedirect,
+    parseDeviceSignedOut,
+    readSignedOutBy,
+    serverFileTarget,
+    signedOutRedirectFor,
+} from '../../resources/js/shared/lib/login-redirect.ts';
 
 test('the first reason wins when several requests fail together', () => {
     const target = { href: '/tickets' };
@@ -170,4 +176,89 @@ test('the device that took the place comes with the ended-device answer, and onl
     assert.equal(parseDeviceSignedOut({ message: 'Unauthenticated.' }), null);
     assert.equal(parseDeviceSignedOut(null), null);
     assert.equal(parseDeviceSignedOut('device_signed_out'), null);
+});
+
+test('a redirect that names no device clears the one an earlier sign-out left behind', (t) => {
+    const storage = memoryStorage();
+    withSessionStorage(storage);
+    t.after(() => Reflect.deleteProperty(globalThis, 'sessionStorage'));
+
+    storage.values.set('itsd:signed-out-by', JSON.stringify(BY));
+    createLoginRedirect({ href: '/' })('signed_out');
+    assert.equal(storage.values.size, 0);
+
+    storage.values.set('itsd:signed-out-by', JSON.stringify(BY));
+    createLoginRedirect({ href: '/' })('limit', { by: null });
+    assert.equal(storage.values.size, 0);
+    assert.equal(readSignedOutBy(), null);
+});
+
+test('a later redirect from the same page does not wipe the device the first one stored', (t) => {
+    const storage = memoryStorage();
+    withSessionStorage(storage);
+    t.after(() => Reflect.deleteProperty(globalThis, 'sessionStorage'));
+    const redirect = createLoginRedirect({ href: '/' });
+
+    redirect('third_device', { by: BY });
+    redirect('signed_out');
+
+    assert.deepEqual(readSignedOutBy(), BY);
+});
+
+test('a clearing step on storage that refuses to work does not stop the redirect', (t) => {
+    withSessionStorage(throwingStorage());
+    t.after(() => Reflect.deleteProperty(globalThis, 'sessionStorage'));
+    const target = { href: '/' };
+
+    createLoginRedirect(target)('signed_out');
+
+    assert.equal(target.href, '/login?reason=signed_out');
+});
+
+// Which failed answers send the reader to the login page, and why
+
+const ENDED = { message: 'device_signed_out', reason: 'third_device', by: BY };
+const request = (overrides: Partial<Parameters<typeof signedOutRedirectFor>[0]> = {}) => ({
+    status: 401,
+    url: '/tickets',
+    quiet: false,
+    pathname: '/tickets',
+    body: { message: 'Unauthenticated.' },
+    ...overrides,
+});
+
+test('a cold open whose /me comes back as an ended device goes to the login page with the reason and the device', () => {
+    assert.deepEqual(signedOutRedirectFor(request({ url: '/me', pathname: '/', body: ENDED })), { reason: 'third_device', by: BY });
+});
+
+test('a plain /me 401 is left to the route guard', () => {
+    assert.equal(signedOutRedirectFor(request({ url: '/me', pathname: '/' })), null);
+    assert.equal(signedOutRedirectFor(request({ url: '/api/me', pathname: '/tickets' })), null);
+});
+
+test('a start-up request that expects a 401 is quiet unless the device was ended', () => {
+    assert.equal(signedOutRedirectFor(request({ quiet: true })), null);
+    assert.deepEqual(signedOutRedirectFor(request({ quiet: true, body: ENDED })), { reason: 'third_device', by: BY });
+});
+
+test('nothing on the login page redirects, so its own /me probe cannot loop', () => {
+    assert.equal(signedOutRedirectFor(request({ url: '/me', pathname: '/login', body: ENDED })), null);
+    assert.equal(signedOutRedirectFor(request({ pathname: '/login', body: ENDED })), null);
+    assert.equal(signedOutRedirectFor(request({ pathname: '/login' })), null);
+});
+
+test('any other 401 on a working screen is a plain sign-out, and an ended device keeps its reason', () => {
+    assert.deepEqual(signedOutRedirectFor(request()), { reason: 'signed_out', by: null });
+    assert.deepEqual(signedOutRedirectFor(request({ body: undefined })), { reason: 'signed_out', by: null });
+    assert.deepEqual(signedOutRedirectFor(request({ body: ENDED })), { reason: 'third_device', by: BY });
+    assert.deepEqual(signedOutRedirectFor(request({ body: { message: 'device_signed_out', reason: 'idle_timeout', by: null } })), {
+        reason: 'session_expired',
+        by: null,
+    });
+});
+
+test('only a 401 can sign the reader out', () => {
+    assert.equal(signedOutRedirectFor(request({ status: 403, body: ENDED })), null);
+    assert.equal(signedOutRedirectFor(request({ status: 419 })), null);
+    assert.equal(signedOutRedirectFor(request({ status: undefined })), null);
 });
