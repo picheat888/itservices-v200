@@ -6383,3 +6383,12 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - เดิมเมื่อ `mail_settings` ว่าง ระบบใช้ค่าสำรองใน `.env` (`MAIL_MAILER=log`) ซึ่งเขียนอีเมลลงไฟล์ log แต่ log อีเมลบันทึก `sent` (ตั้งแต่ 2026-10-13 มี 755 แถวที่ไม่ได้ส่งจริง ไม่ได้แก้แถวเก่า)
 - ตอนนี้ `deliver()` เช็ก transport ของ mailer ที่ใช้จริง ถ้าเป็น `log` บันทึก `failed` + `EmailNotificationService::NOT_CONFIGURED_ERROR` ("SMTP is not set up in Settings > Email: …") และคืน false รายงานตามกำหนดเวลาจึงเป็น `delivery_failed` และเจ้าของได้กระดิ่ง อีเมลยังถูกเขียนลงไฟล์ log ให้ดูเนื้อหาได้
 - เทส `EmailDeliveryLogTest` (+2)
+
+## รายงาน: "เวลาแก้ไข" นับตั้งแต่รับเคสจนปิดเคส (2026-10-19)
+`d42ac741` ผู้ใช้ตัดสินว่าเวลาแก้ไขต้องไม่รวมเวลารอคนรับ และให้ใช้กับทุกที่ที่ใช้คำนี้
+- `TicketMetrics::workHours()` = `responded_at` ถึง `resolved_at` ชั่วโมงตามปฏิทิน (กำหนด SLA ปิดเคสก็นับจากรับเคสอยู่แล้ว)
+- ภาพรวม Ticket & SLA: การ์ดเวลาแก้ไขโดยเฉลี่ย, P90 ("90% แก้ไขเสร็จไม่เกิน"), ช่วงก่อนหน้า, ตารางผู้รับผิดชอบ, คอลัมน์ "เวลาแก้ไข" ของรายการ (API เปลี่ยนจาก `resolve_hours` เป็น `work_hours`), PDF, ชีตสรุป Excel และ Dashboard ส่วน IT (ใช้ service เดียวกัน)
+- SLA ของ Ticket ที่ผู้ใช้เปิดเอง: การ์ด "เวลาแก้ไขโดยเฉลี่ย" เป็นเวลารับเคสถึงปิดเคส บรรทัดล่าง "รอคนรับเฉลี่ย n ชม." (key `rep_n_ms_wait_avg`) แทนแถบแยกรอคนรับ / ลงมือแก้
+- คงเดิม: "เวลาปิดเคส" (เปิดถึงปิด) ในรายงาน Ticket จากคำขอ, คอลัมน์ในตารางแยกกลุ่ม "ปิดเคส (เฉลี่ย)" และชีตข้อมูลดิบ
+- ข้อมูลจริง 30 วัน (เสร็จสิ้น 1,719 เคส ทุกเคสมีเวลารับเคส): เดิม 98.8 ชม. ตอนนี้ 75.5 ชม.
+- เทส: `TicketOverviewReportTest`, `ItBlockTest`, `TicketManualSlaReportTest` (+การ์ดนี้), `TicketOverviewExportTest`, `ExcelNumberFormatTest`, snapshot `ticket-sla-breakdown-*.json`; เทสรายงานและ Dashboard 498 ข้อผ่าน
