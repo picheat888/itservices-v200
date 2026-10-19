@@ -140,7 +140,8 @@ class EmployeeOpenItemsReport extends TabularReport
 
     public function summary(Builder $query, array $filters): array
     {
-        $rows = (clone $query)->get(['grp', 'employee_id']);
+        // Every topic whatever the topic filter, as the page's cards: the filter narrows the list only.
+        $rows = OpenItems::query($this->departmentId($filters), $filters['search'] ?? null)->get(['grp', 'employee_id']);
         $people = fn (?string $group = null) => $rows->when($group, fn (Collection $c) => $c->where('grp', $group))
             ->whereNotNull('employee_id')->pluck('employee_id')->unique()->count();
         $orphanAccounts = $rows->where('grp', 'acct')->whereNull('employee_id')->count();

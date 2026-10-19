@@ -353,6 +353,23 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertNull($section(['from' => '2020-01-01', 'to' => '2020-01-31'])['total']);
     }
 
+    public function test_bought_assets_on_a_contract_are_not_rentals_owed_back(): void
+    {
+        $this->seedAssets();
+        // An ended MA contract with only a bought laptop, and a bought laptop on the ended lease.
+        $ma = $this->contract('CT-2026-905', '2026-06-30');
+        Asset::factory()->create(['status' => 'deployed', 'source' => 'purchased', 'contract_id' => $ma->id]);
+        Asset::factory()->create(['status' => 'deployed', 'source' => 'purchased', 'contract_id' => $this->contracts['ended']->id]);
+
+        $contracts = collect($this->breakdown()['contracts'])->keyBy('code');
+        $summary = collect($this->rows()['summary'])->keyBy('key');
+
+        $this->assertFalse($contracts->has('CT-2026-905'));
+        $this->assertSame(3, $contracts['CT-2026-901']['units']);
+        $this->assertSame(1, $contracts['CT-2026-901']['still_out']);
+        $this->assertSame(1, $summary['wo_rented_overdue']['value']);
+    }
+
     public function test_the_breakdown_flags_every_contract_all_time_most_urgent_first(): void
     {
         $this->seedAssets();

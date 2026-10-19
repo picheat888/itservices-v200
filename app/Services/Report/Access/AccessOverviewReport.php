@@ -413,7 +413,10 @@ class AccessOverviewReport extends TabularReport
                         $care['no_owner'][] = AccessFacts::resource($r, $type) + ['owner' => null];
                     });
             }
-            $model::query()->with($with)->whereDoesntHave('memberships', fn (Builder $q) => $q->whereNull('revoked_at'))->orderBy('code')->get()
+            // A resource listed for its owner already is not listed again, so each one counts once.
+            $listed = collect([...$care['owner_gone'], ...$care['no_owner']])->where('type', $type)->pluck('id')->all();
+            $model::query()->with($with)->whereDoesntHave('memberships', fn (Builder $q) => $q->whereNull('revoked_at'))
+                ->whereKeyNot($listed)->orderBy('code')->get()
                 ->each(function ($r) use ($type, $ownable, &$care) {
                     $care['empty'][] = AccessFacts::resource($r, $type) + ['owner' => $ownable && $r->owner ? AccessFacts::person($r->owner) : null];
                 });

@@ -302,6 +302,9 @@ class EmployeeOpenItemsReportTest extends TestCase
 
         $this->assertSame(['acct'], array_values(array_unique(array_column($rows, 'group'))));
         $this->assertSame('fresh.acct', $rows[0]['item']);
+        // The tiles keep every topic, as the page's cards do.
+        $summary = collect($this->actingAs($creds)->getJson('/api/reports/tabular/employees.open_items/rows?group=acct')->json('summary'))->keyBy('key');
+        $this->assertGreaterThan(0, $summary['open_data']['value']);
         $this->assertSame('ยังไม่ได้เปลี่ยนรหัสผ่านครั้งแรก', collect($rows)->firstWhere('item', 'fresh.acct')['status']);
     }
 
