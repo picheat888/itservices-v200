@@ -70,6 +70,8 @@ export function PasswordForm({
         // The flag that raised a wall turns false here, which unmounts it
         onSuccess: (fresh) => {
             qc.setQueryData<User | null>(ME_KEY, fresh);
+            // Reads the server refused while the wall was up (403 password_expired) load again
+            void qc.invalidateQueries({ predicate: (query) => query.state.status === 'error' });
             pushToast(t('pwd_saved_toast'), 'success');
         },
     });
