@@ -104,6 +104,12 @@ class TrackDeviceTest extends TestCase
         return $this->app->make(DeviceService::class);
     }
 
+    /** The login page a file link is sent to: why it was signed out, and the link to reopen after signing in. */
+    private static function loginPage(string $reason, string $next): string
+    {
+        return '/login?reason='.$reason.'&next='.rawurlencode($next);
+    }
+
     public function test_an_ended_device_gets_401_with_its_reason_and_the_session_ends(): void
     {
         $device = UserDevice::factory()->create();
@@ -299,7 +305,7 @@ class TrackDeviceTest extends TestCase
         $sessionId = Str::random(40);
         $url = "/files/employees/{$employee->id}/photo";
 
-        $this->onDevice($device, $sessionId)->get($url)->assertRedirect('/login?reason=profile');
+        $this->onDevice($device, $sessionId)->get($url)->assertRedirect(self::loginPage('profile', $url));
 
         // The SPA's next request still learns why
         $this->onDevice($device, $sessionId)
@@ -331,7 +337,7 @@ class TrackDeviceTest extends TestCase
 
         // An image or file link goes to the login page and leaves the reason for the SPA's next request
         $nextSessionId = $this->sessionCookieOf(
-            $this->inSession($sessionId)->get('/files/employees/1/photo')->assertRedirect('/login?reason=third_device'),
+            $this->inSession($sessionId)->get('/files/employees/1/photo')->assertRedirect(self::loginPage('third_device', '/files/employees/1/photo')),
         );
         $this->inSession($nextSessionId)
             ->getJson('/api/notifications')
@@ -354,7 +360,7 @@ class TrackDeviceTest extends TestCase
         $recaller = Auth::guard('web')->getRecallerName();
 
         $nextSessionId = $this->sessionCookieOf(
-            $this->inSession($sessionId)->withCookie($recaller, $legacy)->get('/files/employees/1/photo')->assertRedirect('/login?reason=limit'),
+            $this->inSession($sessionId)->withCookie($recaller, $legacy)->get('/files/employees/1/photo')->assertRedirect(self::loginPage('limit', '/files/employees/1/photo')),
         );
         $this->inSession($nextSessionId)
             ->withCookie($recaller, $legacy)
@@ -393,7 +399,7 @@ class TrackDeviceTest extends TestCase
         $response = $this->inSession($sessionId)
             ->withCookie($recaller, $this->cookieFor($user, 'old-laptop-token'))
             ->get('/files/employees/1/photo')
-            ->assertRedirect('/login?reason=profile');
+            ->assertRedirect(self::loginPage('profile', '/files/employees/1/photo'));
         $this->assertTrue($response->getCookie($recaller, false)->isCleared());
 
         $this->inSession($this->sessionCookieOf($response))
@@ -414,7 +420,7 @@ class TrackDeviceTest extends TestCase
         $this->inSession($sessionId)
             ->withCookie(Auth::guard('web')->getRecallerName(), $this->cookieFor($user, 'laptop-token'))
             ->get('/files/employees/1/photo')
-            ->assertRedirect('/login?reason=profile');
+            ->assertRedirect(self::loginPage('profile', '/files/employees/1/photo'));
 
         $this->assertSame(1, UserDevice::count());
         $this->assertSame(0, LoginEvent::query()->where('event', 'signed_in')->count());
@@ -445,7 +451,7 @@ class TrackDeviceTest extends TestCase
         $this->freshBrowser();
         $fileLink = $this->withCookie($recaller, $rememberCookie)
             ->get('/files/employees/1/photo')
-            ->assertRedirect('/login?reason=third_device');
+            ->assertRedirect(self::loginPage('third_device', '/files/employees/1/photo'));
         $this->assertTrue($fileLink->getCookie($recaller, false)->isCleared());
     }
 

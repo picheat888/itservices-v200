@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\Auth\DeviceEndReason;
 use App\Models\Settings\AppSetting;
 use App\Services\Auth\DeviceService;
+use App\Support\LoginRedirect;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
-// Inactivity timeout: past the window plus a heartbeat of grace the device ends and the SPA gets 401 "session_expired".
+// Inactivity timeout: past the window plus a heartbeat of grace the device ends; the SPA gets 401 "session_expired", a browser tab the login page.
 class CheckSessionTimeout
 {
     /** Session key: whether this sign-in was made with "remember me" ticked. */
@@ -67,6 +68,10 @@ class CheckSessionTimeout
             // Invalidating is the logout for cookie SPA auth; the sanctum guard's logout() would throw
             $session->invalidate();
             $session->regenerateToken();
+
+            if (! $request->expectsJson()) {
+                return LoginRedirect::to($request, DeviceEndReason::IdleTimeout->value);
+            }
 
             return response()->json(['message' => 'session_expired'], 401);
         }

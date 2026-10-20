@@ -127,6 +127,21 @@ class PasswordExpiryEnforcementTest extends TestCase
         }
     }
 
+    /** Opened in a tab, a file or PDF link goes to the app, where the wall opens; /login?next= would send it straight back. */
+    public function test_a_file_or_pdf_link_of_a_locked_account_opens_the_app(): void
+    {
+        $employee = Employee::create(['first_name' => 'Photo', 'status' => 'active']);
+        $item = StockItem::create(['sku' => 'SKU-0000001', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 10]);
+
+        foreach ([['must_change_password' => true], ['password_changed_at' => now()->subDays(40)]] as $attributes) {
+            AppSetting::put('password_expiry_days', '30');
+            $user = $this->user($attributes);
+
+            $this->actingAs($user)->get("/files/employees/{$employee->id}/photo")->assertRedirect('/');
+            $this->actingAs($user)->get("/pdf/stock-items/{$item->id}/history")->assertRedirect('/');
+        }
+    }
+
     /** With the policy off, age is irrelevant — only an admin-forced change blocks. */
     public function test_the_policy_being_off_lets_an_old_password_through(): void
     {

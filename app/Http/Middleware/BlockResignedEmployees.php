@@ -4,11 +4,12 @@ namespace App\Http\Middleware;
 
 use App\Enums\Auth\DeviceEndReason;
 use App\Services\Auth\DeviceService;
+use App\Support\LoginRedirect;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-// Closes a signed-in session (and its device) the day after the person's last working day: 401 "account_closed".
+// Closes a signed-in session (and its device) the day after the person's last working day: 401 "account_closed", or the login page for a browser tab.
 class BlockResignedEmployees
 {
     public function __construct(private readonly DeviceService $devices) {}
@@ -34,6 +35,10 @@ class BlockResignedEmployees
         if ($request->hasSession()) {
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+        }
+
+        if (! $request->expectsJson()) {
+            return LoginRedirect::to($request, DeviceEndReason::AccountClosed->value);
         }
 
         return response()->json(['message' => 'account_closed'], 401);
