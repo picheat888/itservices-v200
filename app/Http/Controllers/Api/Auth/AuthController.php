@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
@@ -223,8 +225,25 @@ class AuthController extends Controller
         // A forced change waives the current password: the person just signed in with it
         $forced = (bool) $request->user()?->must_change_password;
 
+        // Wrong current passwords count toward the account's sign-in lockout, so a stolen session cannot guess on here
+        $accountKey = LoginRequest::accountThrottleKey($request->user());
+        if (! $forced && RateLimiter::tooManyAttempts($accountKey, LoginRequest::MAX_ATTEMPTS_PER_LOGIN)) {
+            $seconds = RateLimiter::availableIn($accountKey);
+
+            return response()->json(['message' => 'too_many_attempts', 'retry_after' => $seconds], 429, ['Retry-After' => $seconds]);
+        }
+
         $data = $request->validate([
-            'current_password' => $forced ? ['nullable'] : ['required', 'current_password'],
+            'current_password' => $forced ? ['nullable'] : [
+                'bail', 'required', 'string',
+                function (string $attribute, mixed $value, Closure $fail) use ($request, $accountKey): void {
+                    if (! Hash::check($value, $request->user()->password)) {
+                        LoginRequest::countLoginFailure($accountKey);
+                        Log::warning('Wrong current password on a password change', ['user_id' => $request->user()->id, 'ip' => $request->ip()]);
+                        $fail('validation.current_password')->translate();
+                    }
+                },
+            ],
             'password' => [
                 'required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols(),
                 // Reusing the current password would reset the expiry clock or keep the handed-over one
@@ -242,6 +261,7 @@ class AuthController extends Controller
             'password_changed_at' => now(),
             'must_change_password' => false,
         ])->save();
+        RateLimiter::clear($accountKey);
 
         // Every other device is signed out; a token client has no session to keep
         $session = $request->hasSession() ? $request->session() : null;

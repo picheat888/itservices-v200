@@ -3,11 +3,13 @@
 import { useT } from '@/lang';
 import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
 import { useAuth } from '@/modules/auth/hooks/use-auth';
+import { loginErrorText } from '@/modules/auth/lib/login-error';
 import { AlertIconCircle } from '@/shared/components/centered-alert';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
 import { SaveButton } from '@/shared/components/save-button';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { isValidPassword } from '@/shared/lib/password-policy';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { focusFirstError } from '@/shared/lib/utils';
@@ -48,6 +50,7 @@ export function PasswordForm({
     onDirtyChange?: (dirty: boolean) => void;
 }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const qc = useQueryClient();
     const { user } = useAuth();
     const pushToast = useToastStore((s) => s.push);
@@ -101,14 +104,16 @@ export function PasswordForm({
         change.mutate(payload, {
             onSuccess: () => onDone?.(),
             onError: (e: unknown) => {
-                const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+                const response = (e as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } })?.response;
+                const data = response?.data;
                 const server: Partial<Record<FieldKey, string>> = {};
                 if (data?.errors?.current_password?.[0]) server.current = data.errors.current_password[0];
                 if (data?.errors?.password?.[0]) server.next = data.errors.password[0];
                 if (Object.keys(server).length) {
                     showErrors(server);
                 } else {
-                    setFormError(data?.message ?? t('pwd_change_failed'));
+                    // Locked after too many wrong passwords: the sign-in wording with the wait
+                    setFormError(response?.status === 429 ? loginErrorText(e, t, fmtN) : (data?.message ?? t('pwd_change_failed')));
                     setFormErrorCount((n) => n + 1);
                 }
             },
