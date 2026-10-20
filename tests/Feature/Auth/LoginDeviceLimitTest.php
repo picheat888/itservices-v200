@@ -344,14 +344,14 @@ class LoginDeviceLimitTest extends TestCase
         $this->assertSame(0, UserDevice::count());
     }
 
-    public function test_an_unknown_username_records_failed_with_the_typed_name(): void
+    public function test_an_unknown_username_records_failed_with_the_typed_name_and_its_last_four_characters_hidden(): void
     {
         $this->failSignIn('Ghost.User')->assertStatus(422)->assertJsonValidationErrors('login');
 
         $event = LoginEvent::query()->sole();
         $this->assertSame(LoginEventType::Failed, $event->event);
         $this->assertNull($event->user_id);
-        $this->assertSame('Ghost.User', $event->login_name);
+        $this->assertSame('Ghost.••••', $event->login_name);
         $this->assertNull($event->reason);
         $this->assertSame([self::OFFICE_IP, 'Linux', 'Firefox'], [$event->ip, $event->os, $event->browser]);
     }
