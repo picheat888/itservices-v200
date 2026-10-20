@@ -17,16 +17,7 @@ interface SaveButtonProps extends ButtonProps {
 /** How long the success checkmark stays before reverting to the idle label. */
 const SUCCESS_DURATION_MS = 2000;
 
-/**
- * Save button with three states: idle (label), loading (spinner), and success
- * (a checkmark that pops in). The checkmark fires when the parent flags `success`
- * — and only then — and reverts to the idle label on its own. Used across the
- * Settings tabs.
- *
- * It used to also fire whenever the spinner stopped, which is just as true of a
- * save the server refused: the button said "Saved" over a failed save. A spinner
- * stopping says the request ended, not how.
- */
+/** Save button: idle label, spinner while loading, and a checkmark only when the parent flags `success` (never just because loading stopped). */
 export function SaveButton({ loading, success, loadingLabel, disabled, children, className, ...props }: SaveButtonProps) {
     const t = useT();
     const [showSuccess, setShowSuccess] = useState(false);

@@ -836,6 +836,8 @@ npm run build                      # build frontend
 npm run lint                       # eslint --fix
 ```
 
+> **ห้ามล้าง cache ช่วงเวลาทำงานบนเครื่องจริง** (`cache:clear`, `optimize:clear` หรือ deploy ที่ล้าง cache) นาฬิกาเวลาไม่ใช้งานของทุกคนเก็บใน cache นาฬิกาที่หายนับว่าหมดเวลา (ตั้งใจ เพื่อไม่ให้ใครยืดเวลาได้) ทุกคนที่ไม่ได้ติ๊ก "จดจำฉันไว้" จะถูกออกจากระบบพร้อมกัน ให้ deploy นอกเวลาทำงาน หรือใช้ `config:cache` / `route:cache` / `view:cache` แทนการล้างทั้งหมด
+
 ---
 
 ## 🕗 รอทำ (Pending / TODO) — อัปเดต 2026-08-13
@@ -6695,3 +6697,19 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 **ตรวจแล้ว** tsc eslint pint ผ่าน `npm run test:js` 423 ข้อผ่าน `tests/Feature/Auth` 246 ผ่าน 1 ไม่ผ่าน (`TrackDeviceTest` "a device kept alive only by polls is signed out after its lifetime" ไม่เกี่ยวกับงานนี้ ไม่ได้แตะ TrackDevice) เปิดดูใน Chrome ที่ localhost. (ไม่มี cookie) คอมพิวเตอร์สองโหมด iPad 768 × 1024 และ 1024 × 768 จำลอง 422 กับ 409 ในหน้า
 
 **ยังไม่ทำ** D3 หัว Dialog 4 แบบ กับ D8 ฉากหลัง CenteredAlert รอคำตอบงาน Dialog audit, ข้อ C ที่เป็นตรรกะ (C1 C3 C4 C5 C6–C11), หมวด S ทั้งหมด
+
+## Login: ข้อ C จากรายงานตรวจ ยกเว้น C1 C7 (2026-10-20)
+
+ผู้ใช้สั่งทำทุกข้อ C ที่ยังเหลือยกเว้น C1 (ลิงก์ไฟล์ได้ JSON ดิบ) กับ C7 (เวลาไม่ใช้งานเกินอายุ session) รายงาน https://claude.ai/artifact/SmL5jdhQBCVQtPbQdNSdUJ
+
+- **C3 C4 C5 คำ error ของหน้า Login** ย้ายไป `modules/auth/lib/login-error.ts` (ฟังก์ชันล้วน มีเทส `tests/js/login-error.test.ts`) ไม่มีคำตอบ = คำเรื่องการเชื่อมต่อ, 5xx = `err_server_body`, 503 = `err_maintenance_later`, 419 = ให้โหลดหน้าใหม่ ภาษาอังกฤษขึ้น "1 minute" / "1 second" ถูกพหูพจน์ แถบ error ทุกแบบ mark ว่าแสดงในหน้าแล้ว จึงไม่มี toast ซ้ำ
+- **C4 แยก 429 สองแบบ** ล็อกบัญชี (5 ครั้งต่อชื่อและ IP, 10 ครั้งข้าม IP) ยังเป็น `too_many_attempts` ส่วนเพดาน 50 ครั้งต่อ IP และเพดานของ Dialog จำกัดเครื่องเปลี่ยนเป็น `too_many_sign_ins` หน้าเว็บขึ้น "มีการเข้าสู่ระบบจำนวนมากในขณะนี้" แทน "ลองผิดหลายครั้งเกินไป"
+- **C6 จดจำหมดอายุกลางทาง** UserResource ส่ง `remember_expires_at` ของเครื่องปัจจุบัน `useStillRemembered` ตั้งเวลาให้หน้าเว็บเริ่มนับเวลาไม่ใช้งานเมื่อจดจำหมด เหมือน server
+- **C8 เข้าสู่ระบบทับบัญชีเดิมในเบราว์เซอร์เดียวกัน** (แท็บ Login ที่เปิดค้าง) จบเครื่องของ session เดิมก่อน (`signed_out`) และลบ cookie จดจำที่เบราว์เซอร์ส่งมา บัญชีเดิมจึงไม่ค้างที่นั่งและไม่กลับมาเองเมื่อบัญชีใหม่หมดเวลา
+- **C9** cookie จดจำของบัญชีที่ปิดแล้วไม่บันทึกแถว "เข้าสู่ระบบ" ใน Login log (`reattach` / `start` รับ `recordEvent`) BlockResignedEmployees ยังจบเครื่องเป็น `account_closed`
+- **C10** เพิ่มคำเตือนห้ามล้าง cache ช่วงเวลาทำงานใต้หัวข้อคำสั่งที่ใช้บ่อย
+- **C11** CheckPasswordExpiry เรียก `User::isPasswordExpired()` กติกาอยู่ที่เดียว
+- **C13** ย่อ comment ยาวใน use-auth.ts, save-button.tsx และ AuthController
+- **C15** `phpunit.xml` กำหนด `SESSION_LIFETIME=120` เทสไม่ขึ้นกับ `.env` ของเครื่อง (ตอนนี้ .env เป็น 1200)
+
+**ตรวจแล้ว** tsc eslint pint ผ่าน `npm run test:js` 440 ข้อผ่าน `tests/Feature/Auth` 251 ข้อผ่าน (รวมเทสใหม่ C4 C6 C8 C9 และเทสอายุเครื่องที่เคยไม่ผ่าน) เทสรหัสผ่านหมดอายุ 3 ไฟล์ผ่าน `SessionTimeoutTest` "a get request does not count as activity" ล้มครั้งเดียวในการรันรวมรอบแรก รันซ้ำ 4 ครั้งผ่านหมด (ขึ้นกับจังหวะเวลา) ยังไม่ได้เปิดดูใน Chrome รอบนี้เพราะ extension หลุด หน้าตาไม่ได้เปลี่ยน เปลี่ยนแค่คำ

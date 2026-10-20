@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Settings\AppSetting;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,31 +9,16 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckPasswordExpiry
 {
     /**
-     * Reject authenticated requests when the user's password has exceeded the
-     * configured expiry period. Returns 403 with message "password_expired" so
-     * the frontend can redirect the user to the change-password flow.
+     * 403 "password_expired" while the account owes a password change, so the SPA opens its change-password wall.
      *
      * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Admin-forced change (reset/creation with force_change) applies regardless of the policy.
-        if ($request->user()?->must_change_password) {
-            return response()->json(['message' => 'password_expired'], 403);
-        }
+        $user = $request->user();
 
-        $days = (int) AppSetting::get('password_expiry_days', '0');
-
-        if ($days <= 0 || ! $request->user()) {
-            return $next($request);
-        }
-
-        $changedAt = $request->user()->password_changed_at;
-
-        // Treat "never changed" as expired when policy is enabled.
-        $isExpired = $changedAt === null || $changedAt->addDays($days)->isPast();
-
-        if ($isExpired) {
+        // An admin-forced change applies whatever the policy; the expiry rule itself lives on the model
+        if ($user?->must_change_password || $user?->isPasswordExpired()) {
             return response()->json(['message' => 'password_expired'], 403);
         }
 

@@ -47,6 +47,8 @@ export interface User {
     must_change_password: boolean;
     /** This sign-in was made with "remember me" — it lasts the cookie's 7 days, not the idle window. */
     remembered: boolean;
+    /** When that remember period ends (ISO); null when not remembered. */
+    remember_expires_at?: string | null;
 }
 
 export interface ApiEnvelope<T> {

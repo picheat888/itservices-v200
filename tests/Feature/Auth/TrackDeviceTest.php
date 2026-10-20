@@ -280,6 +280,18 @@ class TrackDeviceTest extends TestCase
         $this->assertSame(DeviceEndReason::AccountClosed, $device->fresh()->end_reason);
     }
 
+    public function test_a_closed_accounts_remember_cookie_is_not_logged_as_a_sign_in(): void
+    {
+        $employee = Employee::create(['first_name' => 'Leaver', 'status' => EmployeeStatus::Resigned, 'last_day' => now()->subWeek()->toDateString()]);
+        $user = User::factory()->create(['employee_id' => $employee->id]);
+        $device = $this->rememberedDevice($user, 'leaver-token');
+
+        $this->meWithRememberCookie($this->cookieFor($user, 'leaver-token'))->assertUnauthorized()->assertJsonPath('message', 'account_closed');
+
+        $this->assertSame(0, LoginEvent::query()->where(['event' => 'signed_in', 'device_id' => $device->id])->count());
+        $this->assertSame(DeviceEndReason::AccountClosed, $device->fresh()->end_reason);
+    }
+
     public function test_web_file_routes_are_tracked_too(): void
     {
         $employee = Employee::create(['first_name' => 'Photo', 'photo_path' => 'employees/photo.jpg']);

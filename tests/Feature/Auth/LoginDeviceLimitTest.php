@@ -362,7 +362,7 @@ class LoginDeviceLimitTest extends TestCase
             $this->failSignIn("nobody{$i}")->assertStatus(422);
         }
 
-        $response = $this->failSignIn('nobody51')->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+        $response = $this->failSignIn('nobody51')->assertStatus(429)->assertJsonPath('message', 'too_many_sign_ins');
 
         $this->assertGreaterThan(0, $response->json('retry_after'));
         $this->assertGreaterThan(0, (int) $response->headers->get('Retry-After'));
@@ -538,7 +538,7 @@ class LoginDeviceLimitTest extends TestCase
             $this->signOutDevice(1, $first)->assertForbidden();
         }
 
-        $this->signOutDevice(1, $first)->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+        $this->signOutDevice(1, $first)->assertStatus(429)->assertJsonPath('message', 'too_many_sign_ins');
 
         // Another sign-in from the same office IP has its own ten
         for ($i = 0; $i < 10; $i++) {
@@ -553,7 +553,7 @@ class LoginDeviceLimitTest extends TestCase
             $this->signOutDevice(1, Str::random(40))->assertForbidden();
         }
 
-        $response = $this->signOutDevice(1, Str::random(40))->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+        $response = $this->signOutDevice(1, Str::random(40))->assertStatus(429)->assertJsonPath('message', 'too_many_sign_ins');
 
         $this->assertGreaterThan(0, $response->json('retry_after'));
         $this->browser(self::BROWSER_A, '198.51.100.20')->postJson('/api/login/devices/1/sign-out', ['pending' => Str::random(40)])->assertForbidden();
@@ -571,5 +571,52 @@ class LoginDeviceLimitTest extends TestCase
         $this->assertNotNull($device->ended_at);
         $this->assertSame(DeviceEndReason::SignedOut, $device->end_reason);
         $this->assertTrue(LoginEvent::query()->where('event', LoginEventType::SignedOut)->where('device_id', $device->id)->exists());
+    }
+
+    public function test_signing_in_over_another_account_in_the_same_browser_ends_that_accounts_device(): void
+    {
+        $previous = User::factory()->create();
+        $previousDevice = UserDevice::factory()->for($previous)->remembered()->create();
+        $next = User::factory()->create();
+
+        // A login tab left open in a browser that is still signed in as someone else
+        $response = $this->browser(self::BROWSER_A)
+            ->withSession([DeviceService::SESSION_KEY => $previousDevice->id])
+            ->withCookie(Auth::guard('web')->getRecallerName(), 'the-previous-accounts-cookie')
+            ->postJson('/api/login', ['login' => $next->email, 'password' => 'password'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $next->id);
+
+        $previousDevice->refresh();
+        $this->assertNotNull($previousDevice->ended_at);
+        $this->assertSame(DeviceEndReason::SignedOut, $previousDevice->end_reason);
+        $this->assertSame(1, $this->activeCount($next));
+        $response->assertCookieExpired(Auth::guard('web')->getRecallerName());
+    }
+
+    public function test_signing_in_again_in_the_same_browser_keeps_one_device(): void
+    {
+        $user = User::factory()->create();
+        $earlier = UserDevice::factory()->for($user)->create();
+
+        $this->browser(self::BROWSER_A)
+            ->withSession([DeviceService::SESSION_KEY => $earlier->id])
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertOk();
+
+        $this->assertNotNull($earlier->fresh()->ended_at);
+        $this->assertSame(1, $this->activeCount($user));
+    }
+
+    public function test_a_remembered_sign_in_tells_the_spa_when_remembering_ends(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->signIn($user, self::BROWSER_A, ['remember' => true])->assertOk();
+
+        $device = UserDevice::query()->where('user_id', $user->id)->sole();
+        $this->assertNotNull($device->remember_expires_at);
+        $this->assertSame($device->remember_expires_at->toIso8601String(), $response->json('data.remember_expires_at'));
+        $this->signIn(User::factory()->create(), self::BROWSER_B)->assertOk()->assertJsonPath('data.remember_expires_at', null);
     }
 }

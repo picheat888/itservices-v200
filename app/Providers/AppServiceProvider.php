@@ -104,11 +104,15 @@ class AppServiceProvider extends ServiceProvider
         return $request->ip().'|'.(is_string($token) && $token !== '' ? sha1($token) : '');
     }
 
-    /** @param  array<string, int|string>  $headers */
+    /**
+     * Sign-ins busy from one IP or one device dialog: worded apart from an account lockout (too_many_attempts), since nobody typed a wrong password.
+     *
+     * @param  array<string, int|string>  $headers
+     */
     private static function tooManySignIns(Request $request, array $headers): JsonResponse
     {
         return response()->json([
-            'message' => 'too_many_attempts',
+            'message' => 'too_many_sign_ins',
             'retry_after' => (int) ($headers['Retry-After'] ?? 0),
         ], 429, $headers);
     }

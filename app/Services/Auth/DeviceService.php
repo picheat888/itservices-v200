@@ -105,7 +105,7 @@ class DeviceService
     }
 
     /** After a remember-cookie sign-in: the device moves to the new session and is described afresh. */
-    public function reattach(UserDevice $device, Request $request): void
+    public function reattach(UserDevice $device, Request $request, bool $recordEvent = true): void
     {
         $device->forceFill([
             'session_id' => $request->session()->getId(),
@@ -117,7 +117,9 @@ class DeviceService
         $request->session()->put(self::SESSION_KEY, $device->id);
         $this->current->set($device);
 
-        $this->events->record(LoginEventType::SignedIn, $device->user, $request, ['device' => $device, 'remembered' => true]);
+        if ($recordEvent) {
+            $this->events->record(LoginEventType::SignedIn, $device->user, $request, ['device' => $device, 'remembered' => true]);
+        }
     }
 
     /** A remembered device carries on with a new token and a full remember lifetime, on its new session id. */

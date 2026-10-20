@@ -21,10 +21,7 @@ export function useAuth() {
     });
 
     const user = query.data ?? null;
-    // The all-access role bypasses permission checks rather than being granted keys,
-    // exactly as User::hasPermission does on the server. Keeping that here means no
-    // screen has to remember it, and none of them break if a key is ever added to the
-    // catalogue before it reaches the role.
+    // The all-access role passes every permission check, as User::hasPermission does on the server
     const isSuper = user?.role === SUPER_ROLE;
 
     return {
@@ -51,22 +48,11 @@ export function useLogin() {
     });
 }
 
-/**
- * Signing out leaves through a full page load, the same way the idle-timeout
- * logout does — the cache dies with the document, so there is nothing to clean
- * up by hand.
- *
- * Emptying the cache in place instead was worse than the problem it solved: the
- * app shell is still mounted at that moment, so every query on screen refetched
- * against a session the server had just destroyed, and each 401 sent the axios
- * interceptor after its own redirect while React was mid-navigation.
- */
+/** Signing out leaves through a full page load, as the idle-timeout logout does, so the cache goes with the document. */
 export function useLogout() {
     return useMutation({
         mutationFn: () => authApi.logout(),
-        // onSettled, not onSuccess: a logout call that errors out still means the user
-        // asked to leave, and the login screen bounces them back if the session somehow
-        // survived. Leaving them on a dead-looking dashboard is the worse answer.
+        // onSettled: a failed logout call still leaves; the login page sends them back if the session survived
         onSettled: () => {
             window.location.href = '/login';
         },
