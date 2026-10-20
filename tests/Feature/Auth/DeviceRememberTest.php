@@ -216,6 +216,32 @@ class DeviceRememberTest extends TestCase
         $this->meWithCookie($newCookie)->assertOk()->assertJsonPath('data.remembered', true);
     }
 
+    /** Not remembered: the session gets a new id, a copy of the old session cookie is signed out, and the device follows. */
+    public function test_changing_the_password_moves_this_session_to_a_new_id(): void
+    {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create();
+        $this->inSession(Str::random(40))
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertOk();
+        $oldSessionId = session()->getId();
+        $device = UserDevice::query()->sole();
+
+        $response = $this->inSession($oldSessionId)
+            ->putJson('/api/password', ['current_password' => 'password', 'password' => 'N3w-Passw0rd!', 'password_confirmation' => 'N3w-Passw0rd!'])
+            ->assertOk();
+        $newSessionId = $response->getCookie(config('session.cookie'))->getValue();
+
+        $this->assertNotSame($oldSessionId, $newSessionId);
+        $device->refresh();
+        $this->assertNull($device->ended_at);
+        $this->assertSame($newSessionId, $device->session_id);
+        $this->assertDatabaseMissing('sessions', ['id' => $oldSessionId]);
+
+        $this->inSession($oldSessionId)->getJson('/api/me')->assertUnauthorized();
+        $this->inSession($newSessionId)->getJson('/api/me')->assertOk();
+    }
+
     public function test_logout_retires_a_cookie_from_before_devices(): void
     {
         $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
