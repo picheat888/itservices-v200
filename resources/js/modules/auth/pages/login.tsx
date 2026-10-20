@@ -184,7 +184,7 @@ export default function LoginPage() {
 
     return (
         // --login-top: the line the brand panel text and the form title share, the panel text centred on screen
-        <div className="bg-background text-foreground split:grid split:grid-cols-2 relative min-h-dvh w-full [--login-top:max(8.5rem,calc(50dvh-15rem))]">
+        <div className="bg-background text-foreground split:grid split:grid-cols-2 relative min-h-dvh w-full [--login-top:max(8.5rem,calc(50dvh-13rem))]">
             <LoginBrandPanel />
 
             <main className="relative flex min-h-dvh min-w-0 flex-col">

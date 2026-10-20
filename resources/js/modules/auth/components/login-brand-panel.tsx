@@ -32,9 +32,10 @@ export function LoginBrandPanel() {
             </div>
 
             {/* Starts on the form title's line (--login-top, set on the page; 6.25rem = top padding + logo row) */}
-            <div className="mt-[calc(var(--login-top)-6.25rem)] grid max-w-[560px] gap-9">
+            <div className="mt-[calc(var(--login-top)-6.25rem)] grid gap-9">
                 <div className="grid gap-3.5">
-                    <p className="text-[2.625rem] leading-[1.38] font-semibold text-balance whitespace-pre-line [&:lang(en)]:leading-[1.18]">
+                    {/* One line on every panel width: the Thai line is about 18 font-sizes wide, the panel text area 50vw - 8rem */}
+                    <p className="text-[length:min(2.25rem,calc((50vw-8rem)/18))] leading-[1.3] font-semibold whitespace-nowrap">
                         {t('login_tagline')}
                     </p>
                     <p className="max-w-[44ch] text-base leading-relaxed dark:text-[hsl(220_30%_84%)]">{t('login_hero_desc')}</p>
