@@ -102,12 +102,12 @@ export function CenteredAlert({
     const shown: Shown = open ? current : retained.current;
     const { Icon } = shown;
 
-    // The record box is read with the description: its id joins Radix's own description id
-    useEffect(() => {
-        const content = contentRef.current;
+    // The record box is read with the description: its id joins Radix's own description id as the content node attaches
+    const attachContent = (node: HTMLDivElement | null) => {
+        contentRef.current = node;
         const desc = descRef.current;
-        if (content && desc) content.setAttribute('aria-describedby', shown.entity ? `${desc.id} ${entityId}` : desc.id);
-    });
+        if (node && desc) node.setAttribute('aria-describedby', shown.entity ? `${desc.id} ${entityId}` : desc.id);
+    };
 
     // Row menus get their button back on close, after this alert's own focus rule (as DialogContent does)
     const { handleOpen, handleClose } = useMenuReturnFocus(
@@ -151,7 +151,7 @@ export function CenteredAlert({
                 {/* The standard overlay and open motion, as BlockingDialog and every other dialog */}
                 <DialogOverlay />
                 <DialogPrimitive.Content
-                    ref={contentRef}
+                    ref={attachContent}
                     role="alertdialog"
                     onOpenAutoFocus={handleOpen}
                     onCloseAutoFocus={handleClose}
@@ -169,7 +169,7 @@ export function CenteredAlert({
                         </DialogDescription>
                     </div>
                     {shown.entity && (
-                        <div id={entityId} className="bg-muted/50 rounded-lg border px-3.5 py-2.5">
+                        <div id={entityId} className="bg-muted/50 min-w-0 rounded-lg border px-3.5 py-2.5">
                             <p className="text-foreground truncate text-sm font-medium">{shown.entity.name}</p>
                             {shown.entity.sub && <p className="text-muted-foreground mt-0.5 truncate text-xs">{shown.entity.sub}</p>}
                         </div>
