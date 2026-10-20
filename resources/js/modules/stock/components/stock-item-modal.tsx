@@ -13,7 +13,7 @@ import { digitsOnly } from '@/shared/lib/number';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
@@ -131,7 +131,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="!flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl flex-col gap-0 overflow-visible p-0">
+            <FormDialogContent>
                 <FocusDialogHeader icon={Package} eyebrow={t('stock')} title={dialogTitle} code={item?.sku} srDescription={dialogTitle} />
                 <DialogBody className="space-y-3">
                     {/* SKU is system-generated; always read-only */}
@@ -225,7 +225,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} disabled={!saved && (!isValid || !isDirty)} />
                 </DialogFooterBar>
-            </DialogContent>
+            </FormDialogContent>
         </Dialog>
     );
 }

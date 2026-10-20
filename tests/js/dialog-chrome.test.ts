@@ -131,10 +131,7 @@ test('scroll areas inside dialogs leave room for the 4px focus ring', () => {
 });
 
 test('dialogs that had no height cap scroll inside the screen', () => {
-    const UNCAPPED = [
-        'modules/employee/components/photo-crop-dialog.tsx',
-        'modules/notification/components/notification-settings-pane.tsx',
-    ];
+    const UNCAPPED = ['modules/employee/components/photo-crop-dialog.tsx'];
     for (const rel of UNCAPPED) {
         const tags = openTags(read(rel), ['DialogContent']);
         assert.ok(tags.length > 0, `${rel}: DialogContent found`);

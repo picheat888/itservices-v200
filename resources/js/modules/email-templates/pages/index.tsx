@@ -1776,7 +1776,7 @@ function EditorDialog({
                     requestClose();
                 }}
                 onFocusOutside={(e) => e.preventDefault()}
-                className="flex h-[min(900px,90dvh)] w-[min(1500px,92vw)] max-w-[min(1500px,92vw)] flex-col gap-0 overflow-hidden p-0"
+                className="!flex h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1500px] flex-col gap-0 overflow-hidden p-0"
             >
                 {shown && (
                     <>
@@ -1874,7 +1874,7 @@ function EditorDialog({
                         </div>
 
                         {/* Footer: test and reset left, cancel and save right */}
-                        <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t px-6 py-3">
+                        <DialogFooterBar className="flex-wrap justify-between">
                             <span role="status" className="sr-only">
                                 {announcement}
                             </span>
@@ -1936,7 +1936,7 @@ function EditorDialog({
                                     </SaveButton>
                                 )}
                             </div>
-                        </div>
+                        </DialogFooterBar>
                     </>
                 )}
             </DialogContent>

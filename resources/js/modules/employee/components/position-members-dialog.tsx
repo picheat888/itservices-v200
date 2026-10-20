@@ -5,7 +5,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Position } from '@/shared/types';
-import { Dialog, DialogContent, focusDialogOnOpen } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -73,7 +73,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
 
     return (
         <Dialog open={!!position} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 p-0" onOpenAutoFocus={focusDialogOnOpen}>
+            <DialogContent className={mediumDialogContentClass} onOpenAutoFocus={focusDialogOnOpen}>
                 <FocusDialogHeader
                     icon={Users}
                     eyebrow={t('employees')}

@@ -103,8 +103,9 @@ test('the resign form keeps the calendar visible', () => {
     assert.doesNotMatch(resolvedTag('modules/employee/components/resign-modal.tsx'), /overflow-hidden/);
 });
 
-test('the template editor keeps its own size', () => {
-    assert.match(resolvedTag('modules/email-templates/pages/index.tsx', 1), /min\(1500px,92vw\)/);
+test('the template editor keeps 1500 wide with the shared gutter and fixed height', () => {
+    const tag = resolvedTag('modules/email-templates/pages/index.tsx', 1);
+    for (const t of ['max-w-[1500px]', 'w-[calc(100vw-2rem)]', `h-[${CAP}]`]) assert.ok(tag.includes(t), `template editor: ${t}`);
 });
 
 test('large and medium content-height classes share the fixed class cap and gutter', () => {

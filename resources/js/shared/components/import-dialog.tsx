@@ -5,7 +5,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn, downloadBlob } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { AlertCircle, CheckCircle2, Download, Loader2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -166,12 +166,7 @@ export function ImportDialog<Row>({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !importPending && guardClose(onClose)}>
-            <DialogContent
-                className={cn(
-                    'flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] flex-col gap-0 p-0',
-                    result ? 'max-w-3xl' : guide ? 'max-w-2xl' : 'max-w-lg',
-                )}
-            >
+            <DialogContent className={mediumDialogContentClass}>
                 <FocusDialogHeader
                     icon={Upload}
                     eyebrow={eyebrow}
