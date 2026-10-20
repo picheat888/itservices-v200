@@ -20,7 +20,7 @@ import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
@@ -254,7 +254,7 @@ export function RequestCreateDialog({
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !submit.isPending && guardClose(onClose)}>
             {/* Fixed height so the dialog never resizes between steps */}
-            <DialogContent className="!flex h-[min(760px,calc(100dvh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 <FocusDialogHeader
                     icon={HeaderIcon}
                     accent={type ? REQUEST_TYPE_META[type].color : undefined}

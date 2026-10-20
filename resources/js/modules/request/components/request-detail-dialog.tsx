@@ -24,7 +24,7 @@ import { cn } from '@/shared/lib/utils';
 import type { RequestAttachment, ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Ban, Check, PackageCheck, Ticket as TicketIcon, UserPlus, X } from 'lucide-react';
@@ -60,12 +60,7 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
     return (
         <>
             <Dialog open={requestId != null} onOpenChange={(o) => !o && onClose()}>
-                <DialogContent
-                    className={cn(
-                        '!flex h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[980px] flex-col gap-0 overflow-hidden p-0',
-                        isError && !request && recordMissingContentClass,
-                    )}
-                >
+                <DialogContent className={cn(largeDialogContentClass, isError && !request && recordMissingContentClass)}>
                     {request ? (
                         <RequestDetailBody
                             request={request}

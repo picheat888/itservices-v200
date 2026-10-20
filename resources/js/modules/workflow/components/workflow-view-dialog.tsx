@@ -8,7 +8,7 @@ import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { Workflow } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { Flag, Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { WorkflowStrip } from './workflow-strip';
@@ -45,7 +45,7 @@ export function WorkflowViewDialog({
 
     return (
         <Dialog open={!!workflow} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex max-h-[min(860px,calc(100dvh-72px))] max-w-[760px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={mediumDialogContentClass}>
                 <FocusDialogHeader
                     icon={WorkflowIcon}
                     eyebrow={t(REQUEST_TYPE_META[wf.request_type].labelKey)}

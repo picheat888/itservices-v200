@@ -14,7 +14,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
@@ -239,7 +239,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
     return (
         <Dialog open={!!workflow} onOpenChange={(o) => !o && !update.isPending && guardClose(onClose)}>
-            <DialogContent className="!flex h-[min(860px,calc(100dvh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 <FocusDialogHeader
                     icon={WorkflowIcon}
                     eyebrow={t('wf_editor_eyebrow')}
