@@ -12,7 +12,7 @@ const tsxFiles = (dir: string): string[] =>
         e.isDirectory() ? tsxFiles(join(dir, e.name)) : e.name.endsWith('.tsx') ? [join(dir, e.name)] : [],
     );
 
-// Opening tags of these components, read to the '>' that closes them outside {...} and quotes
+// Opening tags of these components, read to the '>' that closes them outside {...}, quotes and comments
 const openTags = (src: string, names: string[]): string[] => {
     const found: string[] = [];
     const start = new RegExp(`<(${names.map((n) => n.replace('.', '\\.')).join('|')})\\b`, 'g');
@@ -20,10 +20,17 @@ const openTags = (src: string, names: string[]): string[] => {
         const from = m.index ?? 0;
         let depth = 0;
         let quote = '';
-        for (let i = from; i < src.length; i++) {
+        let end = -1;
+        for (let i = from; i < src.length && end < 0; i++) {
             const c = src[i];
             if (quote) {
                 if (c === quote && src[i - 1] !== '\\') quote = '';
+            } else if (c === '/' && src[i + 1] === '/') {
+                i = src.indexOf('\n', i);
+                if (i < 0) break;
+            } else if (c === '/' && src[i + 1] === '*') {
+                i = src.indexOf('*/', i + 2) + 1;
+                if (i < 1) break;
             } else if (c === '"' || c === "'" || c === '`') {
                 quote = c;
             } else if (c === '{') {
@@ -31,13 +38,20 @@ const openTags = (src: string, names: string[]): string[] => {
             } else if (c === '}') {
                 depth--;
             } else if (c === '>' && depth === 0) {
-                found.push(src.slice(from, i + 1));
-                break;
+                end = i;
             }
         }
+        assert.ok(end >= 0, `unclosed <${m[1]} tag at offset ${from}`);
+        found.push(src.slice(from, end + 1));
     }
     return found;
 };
+
+test('the tag reader skips comments inside a tag and fails on a tag it cannot close', () => {
+    const src = '<FormDialogContent\n    // so don\'t raise the keyboard\n    /* a > b */\n    className="x"\n>body</FormDialogContent>';
+    assert.deepEqual(openTags(src, ['FormDialogContent']), [src.slice(0, src.indexOf('>body') + 1)]);
+    assert.throws(() => openTags('<DialogContent className="x"', ['DialogContent']));
+});
 
 test('the tag reader reads past arrow functions inside a tag', () => {
     assert.deepEqual(openTags('<DialogContent onX={(e) => e} className="a b">x</DialogContent>', ['DialogContent']), [
