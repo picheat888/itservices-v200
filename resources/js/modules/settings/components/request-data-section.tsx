@@ -25,6 +25,7 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowUp, GripVertical, Inbox, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useListDialog } from '../hooks/use-list-dialog';
 import { useRequestOptionLists, useRequestOptionMutations } from '../hooks/use-master-data';
 
 /** Fill `{name}`-style placeholders in a translated string. */
@@ -68,8 +69,8 @@ export function RequestDataSection() {
         return map;
     }, [data]);
 
-    const [editing, setEditing] = useState<RequestOption | null>(null);
-    const [adding, setAdding] = useState(false);
+    const dialog = useListDialog(rows, !isLoading);
+    const editing = dialog.editing;
     const [announcement, setAnnouncement] = useState('');
 
     const onError = (e: unknown) => {
@@ -149,7 +150,7 @@ export function RequestDataSection() {
                     {ordered.length > 1 && (reorder.isPending ? t('rd_saving_order') : t('rd_drag_hint'))}
                     <span className="sr-only">{announcement}</span>
                 </p>
-                <Button disabled={!active} onClick={() => setAdding(true)}>
+                <Button disabled={!active} onClick={dialog.add}>
                     <Plus className="h-4 w-4" />
                     {t('rd_add')}
                 </Button>
@@ -221,7 +222,7 @@ export function RequestDataSection() {
                                     </div>
 
                                     <div className="flex shrink-0 gap-1">
-                                        <IconBtn label={fill(t('rd_edit_aria'), { name })} title={t('edit')} onClick={() => setEditing(o)}>
+                                        <IconBtn label={fill(t('rd_edit_aria'), { name })} title={t('edit')} onClick={() => dialog.edit(o)}>
                                             <Pencil className="h-3.5 w-3.5" />
                                         </IconBtn>
                                         <IconBtn
@@ -250,14 +251,11 @@ export function RequestDataSection() {
             </div>
 
             <OptionModal
-                open={adding || editing !== null}
+                open={dialog.open}
                 option={editing}
                 list={active}
                 saving={create.isPending || update.isPending}
-                onClose={() => {
-                    setAdding(false);
-                    setEditing(null);
-                }}
+                onClose={dialog.close}
                 onSave={async (form) => {
                     if (editing) {
                         await update.mutateAsync({ id: editing.id, ...form });
