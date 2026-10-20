@@ -64,7 +64,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 // Sizing for the full-size centered "focus" dialogs (`!flex` overrides the base grid)
 const focusDialogContentClass = '!flex h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0';
 
-// Large dialogs whose content does not change while open: 1100 wide, as tall as the content up to the same cap
+// Large dialogs whose content stays put while open: 1100 wide, as tall as the content up to the same cap
 const largeDialogContentClass = '!flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0';
 
 // Medium dialogs (a chain to read, one sent email): 768 wide, content height up to the same cap
