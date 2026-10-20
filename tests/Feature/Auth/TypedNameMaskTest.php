@@ -9,18 +9,24 @@ use App\Services\Auth\LoginEventRecorder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-// A name typed at sign-in that matches no account is kept with its last 4 characters hidden, new rows and old alike.
+// A name typed at sign-in that matches no account is kept with its last 4 characters hidden once it is 8 or more
+// characters long (a password is never shorter), new rows and old alike.
 class TypedNameMaskTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_last_four_characters_are_hidden(): void
+    public function test_the_last_four_characters_are_hidden_from_eight_characters_up(): void
     {
         $this->assertSame('Inaba@2••••', LoginEventRecorder::maskTail('Inaba@2026!'));
-        $this->assertSame('a••••', LoginEventRecorder::maskTail('admin'));
-        $this->assertSame('••••', LoginEventRecorder::maskTail('abcd'));
-        $this->assertSame('•••', LoginEventRecorder::maskTail('abc'));
+        $this->assertSame('Abcd••••', LoginEventRecorder::maskTail('Abcd12!x'));
         $this->assertSame('สมชาย••••', LoginEventRecorder::maskTail('สมชายใจดี'));
+    }
+
+    public function test_text_shorter_than_a_password_is_kept_as_typed(): void
+    {
+        $this->assertSame('somchai', LoginEventRecorder::maskTail('somchai'));
+        $this->assertSame('admin', LoginEventRecorder::maskTail('admin'));
+        $this->assertSame('abc', LoginEventRecorder::maskTail('abc'));
         $this->assertSame('', LoginEventRecorder::maskTail(''));
     }
 
@@ -28,7 +34,7 @@ class TypedNameMaskTest extends TestCase
     {
         $user = User::factory()->create();
         $unknown = $this->event(['event' => LoginEventType::Failed, 'login_name' => 'Inaba@2026!']);
-        $short = $this->event(['event' => LoginEventType::Locked, 'login_name' => 'abc']);
+        $short = $this->event(['event' => LoginEventType::Locked, 'login_name' => 'admin']);
         $known = $this->event(['event' => LoginEventType::Failed, 'login_name' => $user->email, 'user_id' => $user->id]);
         $signedIn = $this->event(['event' => LoginEventType::SignedIn, 'login_name' => null, 'user_id' => $user->id]);
 
@@ -37,7 +43,7 @@ class TypedNameMaskTest extends TestCase
         $migration->up();
 
         $this->assertSame('Inaba@2••••', $unknown->refresh()->login_name);
-        $this->assertSame('•••', $short->refresh()->login_name);
+        $this->assertSame('admin', $short->refresh()->login_name);
         $this->assertSame($user->email, $known->refresh()->login_name);
         $this->assertNull($signedIn->refresh()->login_name);
     }
