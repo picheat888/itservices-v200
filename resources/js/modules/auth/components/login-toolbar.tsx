@@ -4,6 +4,7 @@ import type { Lang } from '@/lang/types';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Moon, Sun } from 'lucide-react';
+import { useState } from 'react';
 
 const LANGUAGES: { code: Lang; label: string }[] = [
     { code: 'en', label: 'EN' },
@@ -19,6 +20,8 @@ export function LoginToolbar() {
     const setLang = useUiStore((s) => s.setLang);
     const toggleDark = useUiStore((s) => s.toggleDark);
     const markLoginPref = useUiStore((s) => s.markLoginPref);
+    // The icon turns in only after a click, not on the first paint (as the Topbar's)
+    const [themeTurned, setThemeTurned] = useState(false);
 
     const chooseLang = (next: Lang) => {
         setLang(next);
@@ -27,6 +30,7 @@ export function LoginToolbar() {
     const chooseDark = () => {
         toggleDark();
         markLoginPref('dark');
+        setThemeTurned(true);
     };
 
     return (
@@ -63,7 +67,9 @@ export function LoginToolbar() {
                     FOCUS,
                 )}
             >
-                {dark ? <Sun className="size-[18px]" aria-hidden /> : <Moon className="size-[18px]" aria-hidden />}
+                <span key={dark ? 'sun' : 'moon'} className={cn('flex', themeTurned && 'theme-icon-in')}>
+                    {dark ? <Sun className="size-[18px]" aria-hidden /> : <Moon className="size-[18px]" aria-hidden />}
+                </span>
             </button>
         </div>
     );
