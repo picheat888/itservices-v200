@@ -34,10 +34,11 @@ const part = (from: string, to: string) => {
 };
 const frame = () => part('// Frame', '// useConfirm');
 
-test('the round icon has a red tone for deletes', () => {
+test('the round icon has a red tone for deletes and a grey one for plain notices', () => {
     const icon = part('// Round icon', '// Frame');
-    assert.match(read(FILE), /export type AlertTone = 'brand' \| 'warn' \| 'danger'/);
+    assert.match(read(FILE), /export type AlertTone = 'brand' \| 'warn' \| 'danger' \| 'neutral'/);
     assert.match(icon, /bg-destructive\/15 text-destructive/);
+    assert.match(icon, /neutral: 'bg-muted text-muted-foreground'/);
 });
 
 test('the frame takes a tone, a record name, a first focus and an opener', () => {

@@ -1,7 +1,8 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { AlertCircle, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { AlertCircle, Crop, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Area, Point } from 'react-easy-crop';
 import Cropper from 'react-easy-crop';
@@ -90,14 +91,10 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
         // Nested Radix dialog: portals above the parent and becomes the active layer
         <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
             <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm gap-0 overflow-y-auto p-0 [&>button]:hidden">
-                {/* Header */}
-                <div className="border-border border-b px-4 py-3">
-                    <DialogTitle className="text-sm font-semibold">{t('photo_crop_title')}</DialogTitle>
-                    <DialogDescription className="mt-1 text-xs">{t('photo_crop_hint')}</DialogDescription>
-                </div>
+                <FocusDialogHeader icon={Crop} eyebrow={t('employees')} title={t('photo_crop_title')} srDescription={t('photo_crop_hint')} />
 
                 {/* Cropper — fixed square */}
-                <div className="bg-muted/30 relative h-72 w-full">
+                <div className="bg-muted/30 relative h-72 w-full border-t">
                     <Cropper
                         image={src ?? ''}
                         crop={crop}
@@ -112,40 +109,42 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                     />
                 </div>
 
-                {/* Zoom row */}
-                <div className="border-border flex items-center gap-2 border-t px-4 py-3">
-                    <ZoomOut className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
-                    <input
-                        name="zoom"
-                        type="range"
-                        min={1}
-                        max={3}
-                        step={0.1}
-                        value={zoom}
-                        onChange={(e) => setZoom(Number(e.target.value))}
-                        aria-label={t('photo_crop_zoom')}
-                        className="accent-brand flex-1"
-                    />
-                    <ZoomIn className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
+                {/* Zoom row and hint */}
+                <div className="border-border space-y-2 border-t px-6 py-3.5">
+                    <div className="flex items-center gap-2">
+                        <ZoomOut className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
+                        <input
+                            name="zoom"
+                            type="range"
+                            min={1}
+                            max={3}
+                            step={0.1}
+                            value={zoom}
+                            onChange={(e) => setZoom(Number(e.target.value))}
+                            aria-label={t('photo_crop_zoom')}
+                            className="accent-brand flex-1"
+                        />
+                        <ZoomIn className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
+                    </div>
+                    <p className="text-muted-foreground text-xs">{t('photo_crop_hint')}</p>
                 </div>
 
                 {failed && (
-                    <p role="alert" className="text-destructive flex items-center gap-1.5 border-t px-4 py-2 text-xs">
+                    <p role="alert" className="text-destructive flex items-center gap-1.5 border-t px-6 py-2 text-xs">
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         {t('photo_crop_failed')}
                     </p>
                 )}
 
-                {/* Actions */}
-                <div className="border-border flex justify-end gap-2 border-t px-4 py-3">
-                    <Button variant="outline" size="sm" onClick={onCancel} disabled={applying}>
+                <DialogFooterBar>
+                    <Button variant="outline" onClick={onCancel} disabled={applying}>
                         {t('cancel')}
                     </Button>
-                    <Button size="sm" onClick={apply} disabled={applying || !croppedPixels}>
+                    <Button onClick={apply} disabled={applying || !croppedPixels}>
                         {applying && <Loader2 className="h-4 w-4 animate-spin" />}
                         {applying ? t('photo_crop_applying') : t('photo_crop_apply')}
                     </Button>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );
