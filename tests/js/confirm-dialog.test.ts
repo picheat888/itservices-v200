@@ -27,3 +27,31 @@ test('the centred frame lives in the confirm dialog file and the old path is gon
         assert.doesNotMatch(read(rel), /shared\/components\/centered-alert/, `${rel}: old import path`);
     }
 });
+
+const part = (from: string, to: string) => {
+    const src = read(FILE);
+    return src.slice(src.indexOf(from), src.indexOf(to));
+};
+const frame = () => part('// Frame', '// useConfirm');
+
+test('the round icon has a red tone for deletes', () => {
+    const icon = part('// Round icon', '// Frame');
+    assert.match(read(FILE), /export type AlertTone = 'brand' \| 'warn' \| 'danger'/);
+    assert.match(icon, /bg-destructive\/15 text-destructive/);
+});
+
+test('the frame takes a tone, a record box, a first focus and an opener', () => {
+    const props = frame().match(/export function CenteredAlert\(\{([\s\S]*?)\}: \{/)?.[1] ?? '';
+    for (const p of ['tone', 'entity', 'initialFocus', 'opener']) assert.match(props, new RegExp(`\\b${p}\\b`), p);
+});
+
+test('the record box is read with the description, and written line breaks stay', () => {
+    const src = frame();
+    assert.match(src, /aria-describedby/);
+    assert.match(src, /whitespace-pre-line/);
+    assert.match(src, /bg-muted\/50 rounded-lg border px-3\.5 py-2\.5/);
+});
+
+test('the frame returns focus to a row menu like every other dialog', () => {
+    assert.match(frame(), /useMenuReturnFocus\(/);
+});
