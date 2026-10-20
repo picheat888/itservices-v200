@@ -137,5 +137,8 @@ function isAccountClosed(body: unknown): boolean {
 /** A server file link (/files/…, /pdf/…) to reopen after sign-in, from ?next=; anything else is ignored so the login page never sends people off-site. */
 export function serverFileTarget(next: string | null): string | null {
     if (!next || !/^\/(files|pdf)\/[^/]/.test(next) || next.includes('//') || next.includes('\\')) return null;
+    // No dot segments in the path: the browser would resolve /files/x/../../api/me to another page
+    const path = next.split(/[?#]/)[0];
+    if (path.includes('..') || /%2e/i.test(path)) return null;
     return next;
 }
