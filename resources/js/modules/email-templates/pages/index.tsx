@@ -1776,7 +1776,7 @@ function EditorDialog({
                     requestClose();
                 }}
                 onFocusOutside={(e) => e.preventDefault()}
-                className="flex h-[min(900px,90dvh)] w-[min(1500px,92vw)] max-w-[min(1500px,92vw)] flex-col gap-0 overflow-hidden rounded-2xl p-0"
+                className="flex h-[min(900px,90dvh)] w-[min(1500px,92vw)] max-w-[min(1500px,92vw)] flex-col gap-0 overflow-hidden p-0"
             >
                 {shown && (
                     <>
