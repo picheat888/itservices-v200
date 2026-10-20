@@ -2,6 +2,7 @@ import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { EmptyState } from '@/shared/components/empty-state';
 import { PageTabs } from '@/shared/components/page-tabs';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ListSkeleton } from '@/shared/components/skeletons';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -18,7 +19,7 @@ import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Briefcase, Check, LayoutDashboard, Loader2, Lock, PencilLine, Plus, Save, Search, Shield, ShieldCheck } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Lock, PencilLine, Plus, Save, Search, Shield, ShieldCheck } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { RoleRow } from '../api/permissionApi';
@@ -507,21 +508,15 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                         <Button variant="outline" className="w-full" disabled={saveStep !== 'confirm'} onClick={() => setSaveStep('idle')}>
                             {t('cancel')}
                         </Button>
-                        <Button className="w-full font-semibold" disabled={saveStep !== 'confirm'} onClick={runSave}>
-                            {saveStep === 'saving' ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('saving')}
-                                </>
-                            ) : saveStep === 'done' ? (
-                                <>
-                                    <Check className="h-4 w-4" />
-                                    {t('saved')}
-                                </>
-                            ) : (
-                                t('perm_save')
-                            )}
-                        </Button>
+                        <SaveButton
+                            className="w-full font-semibold disabled:opacity-100"
+                            loading={saveStep === 'saving'}
+                            success={saveStep === 'done'}
+                            disabled={saveStep !== 'confirm'}
+                            onClick={runSave}
+                        >
+                            {t('perm_save')}
+                        </SaveButton>
                     </>
                 }
             >

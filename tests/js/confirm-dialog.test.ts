@@ -90,3 +90,20 @@ test('delete focuses Cancel, the window locks while working, failures and replac
     assert.match(src, /closest[^(]*\('\[role="dialog"\]'\)/);
     assert.match(read(FILE), /resolver\.current\?\.\(false\)/);
 });
+
+test('permission save alerts keep the save button in full colour while saving and saved', () => {
+    const FILES = [
+        'modules/permission/pages/index.tsx',
+        'modules/permission/components/group-roles-tab.tsx',
+        'modules/permission/components/group-role-dialog.tsx',
+    ];
+    for (const rel of FILES) {
+        const saving = (read(rel).match(/<CenteredAlert\b[\s\S]*?<\/CenteredAlert>/g) ?? []).filter((a) => /\bbusy=/.test(a));
+        assert.ok(saving.length > 0, `${rel}: a save alert`);
+        for (const alert of saving) {
+            assert.doesNotMatch(alert, /Loader2/, `${rel}: hand-written spinner`);
+            assert.match(alert, /<SaveButton\b/, `${rel}: SaveButton`);
+            assert.match(alert, /disabled:opacity-100/, `${rel}: full colour while disabled`);
+        }
+    }
+});
