@@ -112,10 +112,10 @@ class ProductionSeedTest extends TestCase
             Role::orderBy('key')->pluck('name', 'key')->all(),
         );
 
-        // The templates as the company set them up (2026-09-26): how many keys each grants.
+        // The templates as the company set them up: how many keys each grants (IT Supervisor/Leader includes the Login tab).
         $granted = fn (string $key) => RolePermission::where('role_id', Role::where('key', $key)->value('id'))->where('allowed', true)->count();
         $this->assertSame(
-            ['admin' => 94, 'hr' => 34, 'user' => 19, 'it_supervisorleader' => 151, 'it_stock' => 63],
+            ['admin' => 94, 'hr' => 34, 'user' => 19, 'it_supervisorleader' => 152, 'it_stock' => 63],
             collect(['admin', 'hr', 'user', 'it_supervisorleader', 'it_stock'])->mapWithKeys(fn ($key) => [$key => $granted($key)])->all(),
         );
 
