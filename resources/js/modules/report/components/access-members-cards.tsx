@@ -9,7 +9,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Dialog, DialogContent, DialogFooter, largeDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
 import { Download, FileText, Folder, Globe, Loader2, type LucideIcon, Package, Users, X } from 'lucide-react';
@@ -685,7 +685,7 @@ function ReviewSheetDialog({ sheet, open, onOpenChange }: { sheet: Sheet; open: 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={cn(largeDialogContentClass, 'gap-4')}>
+            <DialogContent className={largeDialogContentClass}>
                 <FocusDialogHeader
                     icon={FileText}
                     eyebrow={t('rep_ar_sheet_title')}
@@ -693,10 +693,10 @@ function ReviewSheetDialog({ sheet, open, onOpenChange }: { sheet: Sheet; open: 
                     code={sheet.code ?? undefined}
                     srDescription={t('rep_ar_sheet_title')}
                 />
-                <div className="bg-muted max-h-[calc(100dvh-14rem)] overflow-y-auto px-6 py-4">
+                <div className="bg-muted min-h-0 flex-1 overflow-y-auto border-t px-6 py-4">
                     <SheetPaper sheet={sheet} />
                 </div>
-                <DialogFooter className="border-border items-center border-t px-6 py-4 sm:justify-between">
+                <DialogFooterBar className="justify-between">
                     <span className="text-muted-foreground text-xs">{t('rep_ar_sheet_footnote')}</span>
                     <span className="flex gap-2">
                         <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -709,7 +709,7 @@ function ReviewSheetDialog({ sheet, open, onOpenChange }: { sheet: Sheet; open: 
                             </Button>
                         </DisabledReason>
                     </span>
-                </DialogFooter>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

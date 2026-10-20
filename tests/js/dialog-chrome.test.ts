@@ -145,3 +145,19 @@ test('dialogs that had no height cap scroll inside the screen', () => {
     }
     assert.match(read('shared/ui/confirm-dialog.tsx'), /max-h-\[calc\(100dvh-2rem\)\] [^']*overflow-y-auto/, 'useConfirm frame: height cap');
 });
+
+test('no dialog keeps the bar-less DialogFooter', () => {
+    for (const rel of ['modules', 'shared', 'app'].flatMap(tsxFiles)) {
+        if (rel.replaceAll('\\', '/') === 'shared/ui/dialog.tsx') continue;
+        assert.doesNotMatch(read(rel), /<DialogFooter\b/, `${rel}: DialogFooter instead of DialogFooterBar`);
+    }
+});
+
+test('the member review sheet joins header, preview and footer with rules, no white gaps', () => {
+    const src = read('modules/report/components/access-members-cards.tsx');
+    const content = openTags(src, ['DialogContent']).find((tag) => tag.includes('largeDialogContentClass')) ?? '';
+    assert.ok(content, 'review sheet DialogContent');
+    assert.doesNotMatch(content, /gap-4/, 'review sheet: white gap between parts');
+    const preview = classesWith('modules/report/components/access-members-cards.tsx', 'bg-muted min-h-0');
+    for (const t of ['border-t', 'flex-1', 'overflow-y-auto']) assert.ok(preview.includes(t), `review sheet preview: ${t}`);
+});
