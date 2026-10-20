@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -14,7 +15,7 @@ import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
@@ -274,23 +275,13 @@ export function AssetFormDrawer({
             {/* Fixed height: switching purchased and rented swaps fields without the dialog jumping */}
             <DialogContent className={focusDialogContentClass}>
                 {/* Header */}
-                <div className="flex items-center gap-3 px-6 pt-4 pb-3">
-                    <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                        <PackagePlus className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{t('asset_label')}</div>
-                        <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
-                            <span>{editing ? t('edit_asset') : t('register_asset')}</span>
-                            {editing && (
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">
-                                    {editing.asset_code}
-                                </span>
-                            )}
-                        </DialogTitle>
-                    </div>
-                    <DialogDescription className="sr-only">{t('assets_sub')}</DialogDescription>
-                </div>
+                <FocusDialogHeader
+                    icon={PackagePlus}
+                    eyebrow={t('asset_label')}
+                    title={editing ? t('edit_asset') : t('register_asset')}
+                    code={editing?.asset_code}
+                    srDescription={t('assets_sub')}
+                />
 
                 {/* Body */}
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">

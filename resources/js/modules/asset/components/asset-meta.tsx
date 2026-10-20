@@ -3,7 +3,7 @@ import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
 import type { AssetStatus, AssetType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
-import { Box, Laptop, Monitor, Network, Printer, Server, Smartphone } from 'lucide-react';
+import { Box, Laptop, Monitor, Network, Printer, Server, Smartphone, type LucideIcon } from 'lucide-react';
 
 type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'gray';
 
@@ -61,8 +61,13 @@ const LEGACY_ICON: Record<string, typeof Box> = {
  * icon for pre-migration values, then a generic box.
  */
 export function AssetTypeIcon({ type, className }: { type: AssetType; className?: string }) {
+    const Icon = useAssetTypeIcon(type);
+    return <Icon className={className} />;
+}
+
+/** The icon component itself, for a header that draws the icon in its own tile. */
+export function useAssetTypeIcon(type: AssetType): LucideIcon {
     const { data: categories = [] } = useCategories();
     const iconName = categories.find((c) => c.name === type)?.icon;
-    const Icon = getLucideIcon(iconName) ?? LEGACY_ICON[type] ?? Box;
-    return <Icon className={className} />;
+    return getLucideIcon(iconName) ?? LEGACY_ICON[type] ?? Box;
 }

@@ -1,24 +1,25 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Check, Eye, FlaskConicalOff, MapPin, RotateCcw, Share2, SquarePen, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAsset, useAssetMutations } from '../hooks/use-assets';
 import { AssetHistoryTab } from './asset-history-tab';
 import { AssetLocationDialog } from './asset-location-dialog';
-import { AssetStatusBadge, AssetTypeIcon } from './asset-meta';
+import { AssetStatusBadge, useAssetTypeIcon } from './asset-meta';
 import { AssetTicketsTab } from './asset-tickets-tab';
 import { ContractPeekDialog } from './contract-peek-dialog';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type TabId = 'overview' | 'tickets' | 'history';
 
@@ -172,6 +173,7 @@ export function AssetDetailDrawer({
     const [relocating, setRelocating] = useState(false);
 
     const a = asset ?? shown;
+    const TypeIcon = useAssetTypeIcon(a?.type ?? '');
     if (!a) return null;
 
     const enriched = full && full.id === a.id ? full : null;
@@ -194,15 +196,14 @@ export function AssetDetailDrawer({
             <Dialog open={!!asset} onOpenChange={(o) => !o && onClose()}>
                 <DialogContent className={focusDialogContentClass}>
                     {/* Header */}
-                    <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-                        <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                            <AssetTypeIcon type={a.type} className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                            <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{t('asset_label')}</div>
-                            <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
-                                <span className="truncate">{a.model}</span>
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{a.asset_code}</span>
+                    <FocusDialogHeader
+                        icon={TypeIcon}
+                        eyebrow={t('asset_label')}
+                        title={a.model ?? ''}
+                        code={a.asset_code}
+                        srDescription={a.model ?? undefined}
+                        titleSuffix={
+                            <>
                                 {a.tag && (
                                     <span className="bg-accent text-foreground inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
                                         <Tag className="h-3 w-3 opacity-60" />
@@ -222,23 +223,24 @@ export function AssetDetailDrawer({
                                 >
                                     {rented ? t('asset_lease') : t('asset_purchase')}
                                 </span>
-                            </DialogTitle>
-                        </div>
-                        <div className="ml-auto flex shrink-0 flex-col items-end gap-1 pr-8">
-                            <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
-                            <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
-                                <div>
-                                    {t('asset_registered')}: {fmt.date(a.registered_date)}
-                                    {a.created_by_name && ` ${t('asset_by')} ${localPair(a.created_by_name, a.created_by_name_th, lang)}`}
-                                </div>
-                                <div>
-                                    {t('asset_last_update')}: {fmt.date(a.updated_at)}
-                                    {a.updated_by_name && ` ${t('asset_by')} ${localPair(a.updated_by_name, a.updated_by_name_th, lang)}`}
+                            </>
+                        }
+                        headerRight={
+                            <div className="flex flex-col items-end gap-1">
+                                <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
+                                <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
+                                    <div>
+                                        {t('asset_registered')}: {fmt.date(a.registered_date)}
+                                        {a.created_by_name && ` ${t('asset_by')} ${localPair(a.created_by_name, a.created_by_name_th, lang)}`}
+                                    </div>
+                                    <div>
+                                        {t('asset_last_update')}: {fmt.date(a.updated_at)}
+                                        {a.updated_by_name && ` ${t('asset_by')} ${localPair(a.updated_by_name, a.updated_by_name_th, lang)}`}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <DialogDescription className="sr-only">{a.model}</DialogDescription>
-                    </div>
+                        }
+                    />
 
                     {/* Tab bar */}
                     <DialogTabs className="px-6" tabs={tabs} active={tab} onChange={setTab} />
