@@ -6874,9 +6874,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `migrate:rollback` แล้ว migrate ซ้ำ ได้โครงสร้างเดิม
 - Seeder บนฐานใหม่: `db:seed` กับ Department / Position / Section / MasterData รันผ่าน รันซ้ำไม่เพิ่มแถว template อีเมล 39, bell 50, workflow 13, ตัวเลือกคำขอ 10, SLA 13, เหตุผลตัดจำหน่าย 6 ตรงกับ itservices_perf ทุกแถว
 - เทสที่เกี่ยวข้อง 1006 ข้อผ่าน (Auth, Report, Seeder ทั้งหมดรวม DemoSeederTest, Stock, Asset, Notification, Audit, Email)
+- ตาราง `migrations` ของ itservices_perf ผู้ใช้ลบ 28 แถวของไฟล์ที่ไม่มีแล้ว เหลือ 18 แถว baseline `migrate` = Nothing to migrate
 
 **ยังไม่ได้ทำ**
-- ตาราง `migrations` ของ itservices_perf ยังมี 28 แถวของไฟล์ที่ไม่มีแล้ว ไม่กระทบ `migrate` แต่ `migrate:rollback` จะเตือนหาไฟล์ไม่เจอ ลบได้ด้วย `DELETE FROM migrations WHERE migration NOT LIKE '0001\_01\_01\_%'`
 - ฐาน `itservices` ตัวเก่า (ไม่ได้ใช้ตั้งแต่ 2026-10-17) ยังไม่มีการเปลี่ยนแปลงของ 13 ไฟล์นี้
 
 ## ลองด้วยตาตอนล็อกอินจริง: S9 ซ่อมเครื่องซ้ำ และ Dashboard โหลดเองหลังตั้งรหัส (2026-10-20)
