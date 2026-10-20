@@ -9,7 +9,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
 import { Download, FileText, Folder, Globe, Loader2, type LucideIcon, Package, Users, X } from 'lucide-react';
@@ -685,7 +685,7 @@ function ReviewSheetDialog({ sheet, open, onOpenChange }: { sheet: Sheet; open: 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl p-0 sm:max-w-4xl">
+            <DialogContent className={cn(largeDialogContentClass, 'gap-4')}>
                 <FocusDialogHeader
                     icon={FileText}
                     eyebrow={t('rep_ar_sheet_title')}

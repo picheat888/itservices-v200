@@ -14,7 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
@@ -274,7 +274,7 @@ export function AssetFormDrawer({
             {/* Fixed height + centered: same size for rented & purchased, and tall enough that the
                 (taller) purchased form shows in full on desktop without an inner scroll. Caps at 92dvh
                 on short viewports so it never spills off-screen. */}
-            <DialogContent className="!flex h-[min(880px,92dvh)] w-full max-w-[880px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={largeDialogContentClass}>
                 {/* Header */}
                 <div className="flex items-center gap-3 px-6 pt-4 pb-3">
                     <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
