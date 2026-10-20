@@ -1,5 +1,6 @@
 // Add or edit one network name (IP or range + name); saves on its own and shows the server's refusal under the field it names.
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
@@ -7,8 +8,9 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { fieldError, hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Shield } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { NetworkName } from '../api/settingsApi';
 import { useNetworkNameMutations } from '../hooks/use-network-names';
@@ -84,13 +86,16 @@ export function NetworkNameModal({ open, network, onClose }: { open: boolean; ne
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{network ? t('net_edit_title') : t('net_add_title')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>
-                </DialogHeader>
-                <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
-                <div className="space-y-3">
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Shield}
+                    eyebrow={t('set_security')}
+                    title={network ? t('net_edit_title') : t('net_add_title')}
+                    code={network?.name}
+                    srDescription={t('md_modal_desc')}
+                />
+                <DialogBody>
+                    <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('net_col_cidr')} required error={cidrError}>
                         <Input
                             ref={cidrRef}
@@ -121,14 +126,14 @@ export function NetworkNameModal({ open, network, onClose }: { open: boolean; ne
                             onKeyDown={onEnter}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} />
-                </DialogFooter>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
