@@ -1195,6 +1195,8 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
 }
 
 const SECURITY_KEY = ['security-settings'] as const;
+// Idle timeout choices; those longer than the server session are left out
+const SESSION_TIMEOUT_PRESETS = [1, 5, 10, 15, 30, 60, 120];
 // Focus target after the device-limit confirm
 const DEVICE_LIMIT_CONTROL_ID = 'security-device-limit';
 
@@ -1206,6 +1208,8 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
 
     const [form, setForm] = useState<SecuritySettings>({
         session_timeout_minutes: 0,
+        session_lifetime_minutes: 1440,
+        session_timeout_effective_minutes: 0,
         password_expiry_days: 0,
         email_log_body_days: 0,
         email_log_days: 0,
@@ -1270,10 +1274,14 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                     <>
                         <SecurityPolicyRow
                             label={t('set_session_timeout')}
-                            sub={t('set_session_timeout_help')}
+                            sub={
+                                form.session_timeout_minutes > form.session_lifetime_minutes
+                                    ? `${t('set_session_timeout_help')} ${t('set_session_timeout_capped').replace('{n}', String(form.session_lifetime_minutes))}`
+                                    : t('set_session_timeout_help')
+                            }
                             value={form.session_timeout_minutes}
-                            presets={[1, 5, 10, 15, 30, 60, 120]}
-                            defaultValue={30}
+                            presets={SESSION_TIMEOUT_PRESETS.filter((n) => n <= form.session_lifetime_minutes)}
+                            defaultValue={Math.min(30, form.session_lifetime_minutes)}
                             unit={t('unit_minutes')}
                             onChange={(v) => setVal('session_timeout_minutes', v)}
                         />

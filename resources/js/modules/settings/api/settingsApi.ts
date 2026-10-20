@@ -123,6 +123,9 @@ export type DateTimePayload = Pick<SettingsData, 'date_format' | 'date_era' | 't
 // Security policy — 0 disables the respective rule.
 export interface SecuritySettings {
     session_timeout_minutes: number;
+    // Read-only: the server session's lifetime (the longest timeout allowed) and the timeout it really enforces
+    session_lifetime_minutes: number;
+    session_timeout_effective_minutes: number;
     password_expiry_days: number;
     // Data-retention windows the nightly prune reads. 0 here reads as "keep forever".
     email_log_body_days: number;
@@ -136,8 +139,8 @@ export interface SecuritySettings {
     geoip_updated_at: string | null;
 }
 
-// What PUT /settings/security accepts: every setting except the read-only GeoIP date.
-export type SecurityPayload = Omit<SecuritySettings, 'geoip_updated_at'>;
+// What PUT /settings/security accepts: every setting except the read-only ones.
+export type SecurityPayload = Omit<SecuritySettings, 'geoip_updated_at' | 'session_lifetime_minutes' | 'session_timeout_effective_minutes'>;
 
 // A security setting the page edits as a number.
 export type SecurityPolicyKey = keyof SecurityPayload;

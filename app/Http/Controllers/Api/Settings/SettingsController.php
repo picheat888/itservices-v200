@@ -395,7 +395,8 @@ class SettingsController extends Controller
     {
         $data = $request->validate([
             // 0 turns the policy off; for the retention windows that means keep forever
-            'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
+            // No longer than the server session: a device ends with its session, before a longer timeout could warn
+            'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:'.self::sessionLifetimeMinutes()],
             'password_expiry_days' => ['required', 'integer', 'min:0', 'max:3650'],
             // Later-added keys are `sometimes`, so a client sending only the first two keeps working
             'email_log_body_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
@@ -440,15 +441,26 @@ class SettingsController extends Controller
         $devices->trimTo($newLimit, $devices->currentOf($request->user(), $request)?->id);
     }
 
+    /** The longest idle timeout that can hold: the server session's lifetime (SESSION_LIFETIME), at most a day. */
+    private static function sessionLifetimeMinutes(): int
+    {
+        return min(1440, (int) config('session.lifetime'));
+    }
+
     /**
-     * @return array{session_timeout_minutes: int, password_expiry_days: int, email_log_body_days: int, email_log_days: int, audit_log_days: int, notification_days: int, login_log_days: int, device_limit: int, geoip_updated_at: string|null}
+     * @return array{session_timeout_minutes: int, session_lifetime_minutes: int, session_timeout_effective_minutes: int, password_expiry_days: int, email_log_body_days: int, email_log_days: int, audit_log_days: int, notification_days: int, login_log_days: int, device_limit: int, geoip_updated_at: string|null}
      */
     private function securityPayload(): array
     {
         $retention = app(LogRetentionService::class);
+        $timeout = (int) AppSetting::get('session_timeout_minutes', '0');
+        $lifetime = self::sessionLifetimeMinutes();
 
         return [
-            'session_timeout_minutes' => (int) AppSetting::get('session_timeout_minutes', '0'),
+            'session_timeout_minutes' => $timeout,
+            // Read-only: the cap, and the timeout the server really enforces (what the SPA's idle timer counts)
+            'session_lifetime_minutes' => $lifetime,
+            'session_timeout_effective_minutes' => $timeout > 0 ? min($timeout, $lifetime) : 0,
             'password_expiry_days' => (int) AppSetting::get('password_expiry_days', '0'),
             // Defaults live on the service that enforces them, so the screen and the nightly sweep agree
             'email_log_body_days' => $retention->days('email_log_body_days'),

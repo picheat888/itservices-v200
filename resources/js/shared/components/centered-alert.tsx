@@ -67,7 +67,8 @@ export function CenteredAlert({
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
             <DialogPortal>
-                <DialogOverlay className="bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]" />
+                {/* The standard overlay and open motion, as BlockingDialog and every other dialog */}
+                <DialogOverlay />
                 <DialogPrimitive.Content
                     ref={contentRef}
                     role="alertdialog"
@@ -84,7 +85,7 @@ export function CenteredAlert({
                         else returnFocus?.()?.focus();
                     }}
                     className={cn(
-                        'border-border bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-[0.97] data-[state=closed]:zoom-out-[0.97] fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[14px] border p-6 text-center shadow-2xl duration-200 focus:outline-hidden',
+                        'motion-sheet border-border bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[14px] border p-6 text-center shadow-2xl focus:outline-hidden',
                         className,
                     )}
                 >

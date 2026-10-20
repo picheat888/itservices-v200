@@ -54,6 +54,37 @@ class SecuritySettingsTest extends TestCase
         $this->assertSame('90', AppSetting::get('password_expiry_days'));
     }
 
+    public function test_the_session_timeout_cannot_outlast_the_server_session(): void
+    {
+        config(['session.lifetime' => 120]);
+        $this->actingAs($this->super());
+
+        $this->putJson('/api/settings/security', ['session_timeout_minutes' => 240, 'password_expiry_days' => 0])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('session_timeout_minutes');
+        $this->putJson('/api/settings/security', ['session_timeout_minutes' => 120, 'password_expiry_days' => 0])->assertOk();
+    }
+
+    public function test_security_settings_report_the_timeout_the_server_enforces(): void
+    {
+        config(['session.lifetime' => 120]);
+        $this->actingAs($this->super());
+
+        // A value saved before the cap (or before the session lifetime was lowered) is cut to the session lifetime
+        AppSetting::put('session_timeout_minutes', '240');
+        $this->getJson('/api/settings/security')
+            ->assertOk()
+            ->assertJsonPath('data.session_timeout_minutes', 240)
+            ->assertJsonPath('data.session_lifetime_minutes', 120)
+            ->assertJsonPath('data.session_timeout_effective_minutes', 120);
+
+        AppSetting::put('session_timeout_minutes', '30');
+        $this->getJson('/api/settings/security')->assertJsonPath('data.session_timeout_effective_minutes', 30);
+
+        AppSetting::put('session_timeout_minutes', '0');
+        $this->getJson('/api/settings/security')->assertJsonPath('data.session_timeout_effective_minutes', 0);
+    }
+
     public function test_non_super_cannot_update_security_settings(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'user']));

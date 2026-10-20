@@ -50,7 +50,7 @@ export function AppShell() {
     });
     // Remembered sign-ins skip the idle timer until their remember period ends, as the server does; a tab blocked by an account switch stops it, or it would sign the new account out
     const remembered = useStillRemembered(user);
-    const idleMinutes = remembered || switchedTo ? 0 : (security?.session_timeout_minutes ?? 0);
+    const idleMinutes = remembered || switchedTo ? 0 : (security?.session_timeout_effective_minutes ?? security?.session_timeout_minutes ?? 0);
     // Every sign-in pings on activity, remembered or not: the server ends a device after about 2 h without a write or ping
     const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !switchedTo);
     // Shell mounted
