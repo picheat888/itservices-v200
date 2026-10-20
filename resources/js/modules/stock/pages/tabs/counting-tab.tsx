@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
@@ -20,12 +21,12 @@ import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Check, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
+import { AlertTriangle, Check, ClipboardCheck, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
@@ -398,12 +399,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
             <Dialog open={creating} onOpenChange={(o) => !o && guardPickerClose(resetPicker)}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{t('stock_new_count')}</DialogTitle>
-                        <DialogDescription>{t('stock_new_count_desc')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
+                <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-2xl flex-col gap-0 overflow-visible p-0">
+                    <FocusDialogHeader
+                        icon={ClipboardCheck}
+                        eyebrow={t('stock')}
+                        title={t('stock_new_count')}
+                        srDescription={t('stock_new_count_desc')}
+                        subtitle={<span className="text-muted-foreground text-sm">{t('stock_new_count_desc')}</span>}
+                    />
+                    <DialogBody className="space-y-4">
                         {/* Scope: warehouse + category (counts show what actually has stock) */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -502,8 +506,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 )}
                             </div>
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </DialogBody>
+                    <DialogFooterBar>
                         <Button variant="outline" onClick={() => guardPickerClose(resetPicker)}>
                             {t('cancel')}
                         </Button>
@@ -511,7 +515,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             {t('stock_count_start')}
                             {selectedSkus.length > 0 && ` (${fmtN(selectedSkus.length)})`}
                         </Button>
-                    </DialogFooter>
+                    </DialogFooterBar>
                 </DialogContent>
             </Dialog>
 
@@ -519,318 +523,328 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             <Dialog open={sheetOpen} onOpenChange={(o) => !o && guardSheetClose(closeSheet)}>
                 <DialogContent
                     className={cn(
-                        'flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col',
-                        !session && sessionMissing && cn(recordMissingContentClass, 'gap-0 p-0'),
+                        'flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 p-0',
+                        !session && sessionMissing && recordMissingContentClass,
                     )}
                 >
                     {session ? (
                         <>
-                            <DialogHeader>
-                                <DialogTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
-                                    {t('stock_count_sheet_title')}
-                                    <StatusBadge tone={statusTone(session.status)}>
-                                        {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
-                                    </StatusBadge>
-                                    {session.status === 'committed' && session.adjust_mode && (
-                                        <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-normal">
-                                            {session.adjust_mode === 'manual' ? (
-                                                <FileText className="h-3 w-3" aria-hidden />
-                                            ) : (
-                                                <Zap className="h-3 w-3" aria-hidden />
+                            <FocusDialogHeader
+                                icon={ClipboardCheck}
+                                eyebrow={session.reference}
+                                title={t('stock_count_sheet_title')}
+                                srDescription={`${session.reference} ${session.warehouse || t('stock_count_all_wh')}`}
+                                subtitle={<span className="text-muted-foreground text-sm">{session.warehouse || t('stock_count_all_wh')}</span>}
+                                titleSuffix={
+                                    <>
+                                        <StatusBadge tone={statusTone(session.status)}>
+                                            {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
+                                        </StatusBadge>
+                                        {session.status === 'committed' && session.adjust_mode && (
+                                            <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-normal">
+                                                {session.adjust_mode === 'manual' ? (
+                                                    <FileText className="h-3 w-3" aria-hidden />
+                                                ) : (
+                                                    <Zap className="h-3 w-3" aria-hidden />
+                                                )}
+                                                {session.adjust_mode === 'manual'
+                                                    ? t('stock_count_mode_badge_manual')
+                                                    : t('stock_count_mode_badge_auto')}
+                                            </span>
+                                        )}
+                                    </>
+                                }
+                            />
+                            <div className="flex min-h-0 flex-1 flex-col gap-4 border-t px-6 py-6">
+                                {/* Audit summary — counted progress, discrepancy count, net variance. */}
+                                <div className="border-border grid shrink-0 grid-cols-3 gap-px overflow-hidden rounded-lg border">
+                                    <div className="bg-card px-3 py-2 text-center">
+                                        <div className={EYEBROW}>{t('stock_count_sum_progress')}</div>
+                                        <div className="mt-0.5 text-sm font-semibold tabular-nums">
+                                            {fmtN(countSummary.counted)}
+                                            <span className="text-muted-foreground">/{fmtN(countSummary.total)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-card px-3 py-2 text-center">
+                                        <div className={EYEBROW}>{t('stock_count_sum_discrepancies')}</div>
+                                        <div
+                                            className={cn(
+                                                'mt-0.5 text-sm font-semibold tabular-nums',
+                                                countSummary.discrepancies > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
                                             )}
-                                            {session.adjust_mode === 'manual' ? t('stock_count_mode_badge_manual') : t('stock_count_mode_badge_auto')}
-                                        </span>
-                                    )}
-                                </DialogTitle>
-                                <DialogDescription className="flex flex-wrap items-center gap-2 text-xs">
-                                    <span className="font-semibold">{session.reference}</span>
-                                    <span>{session.warehouse || t('stock_count_all_wh')}</span>
-                                </DialogDescription>
-                            </DialogHeader>
+                                        >
+                                            {fmtN(countSummary.discrepancies)}
+                                        </div>
+                                    </div>
+                                    <div className="bg-card px-3 py-2 text-center">
+                                        <div className={EYEBROW}>{t('stock_count_sum_net')}</div>
+                                        <div
+                                            className={cn(
+                                                'mt-0.5 text-sm font-semibold tabular-nums',
+                                                countSummary.net > 0
+                                                    ? 'text-emerald-700 dark:text-emerald-400'
+                                                    : countSummary.net < 0
+                                                      ? 'text-destructive'
+                                                      : 'text-muted-foreground',
+                                            )}
+                                        >
+                                            {countSummary.net > 0 ? `+${fmtN(countSummary.net)}` : fmtN(countSummary.net)}
+                                        </div>
+                                    </div>
+                                </div>
 
-                            {/* Audit summary — counted progress, discrepancy count, net variance. */}
-                            <div className="border-border grid shrink-0 grid-cols-3 gap-px overflow-hidden rounded-lg border">
-                                <div className="bg-card px-3 py-2 text-center">
-                                    <div className={EYEBROW}>{t('stock_count_sum_progress')}</div>
-                                    <div className="mt-0.5 text-sm font-semibold tabular-nums">
-                                        {fmtN(countSummary.counted)}
-                                        <span className="text-muted-foreground">/{fmtN(countSummary.total)}</span>
-                                    </div>
-                                </div>
-                                <div className="bg-card px-3 py-2 text-center">
-                                    <div className={EYEBROW}>{t('stock_count_sum_discrepancies')}</div>
-                                    <div
-                                        className={cn(
-                                            'mt-0.5 text-sm font-semibold tabular-nums',
-                                            countSummary.discrepancies > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
-                                        )}
-                                    >
-                                        {fmtN(countSummary.discrepancies)}
-                                    </div>
-                                </div>
-                                <div className="bg-card px-3 py-2 text-center">
-                                    <div className={EYEBROW}>{t('stock_count_sum_net')}</div>
-                                    <div
-                                        className={cn(
-                                            'mt-0.5 text-sm font-semibold tabular-nums',
-                                            countSummary.net > 0
-                                                ? 'text-emerald-700 dark:text-emerald-400'
-                                                : countSummary.net < 0
-                                                  ? 'text-destructive'
-                                                  : 'text-muted-foreground',
-                                        )}
-                                    >
-                                        {countSummary.net > 0 ? `+${fmtN(countSummary.net)}` : fmtN(countSummary.net)}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="min-h-[8rem] flex-1 overflow-auto overscroll-contain">
-                                <table className="w-full table-fixed text-sm">
-                                    <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10 backdrop-blur')}>
-                                        <tr className="border-border text-muted-foreground border-b text-left text-xs font-semibold">
-                                            <th scope="col" className="px-3 py-2">
-                                                {t('stock_item')}
-                                            </th>
-                                            <th scope="col" className="w-24 px-3 py-2 text-right whitespace-nowrap">
-                                                {t('stock_count_system')}
-                                            </th>
-                                            <th scope="col" className="w-28 px-3 py-2 text-right whitespace-nowrap">
-                                                {t('stock_count_counted')}
-                                            </th>
-                                            <th scope="col" className="w-28 px-3 py-2 text-right whitespace-nowrap">
-                                                {t('stock_count_variance')}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(session.lines ?? []).map((l) => {
-                                            const entered = entries[l.id] ?? '';
-                                            const variance = isDraft
-                                                ? entered.trim() === ''
-                                                    ? null
-                                                    : (parseInt(entered, 10) || 0) - l.system_qty
-                                                : l.variance;
-                                            return (
-                                                <tr
-                                                    key={l.id}
-                                                    className={cn(
-                                                        'border-border/60 border-b transition-colors last:border-0',
-                                                        variance !== null && variance !== 0
-                                                            ? variance > 0
-                                                                ? 'bg-emerald-50/50 dark:bg-emerald-950/20'
-                                                                : 'bg-red-50/40 dark:bg-red-950/20'
-                                                            : 'hover:bg-muted/30',
-                                                    )}
-                                                >
-                                                    <td className="px-3 py-2">
-                                                        <div className="flex items-center gap-2">
-                                                            {/* State dot: hollow = uncounted, green = over, red = short, grey = matched. */}
-                                                            <span
-                                                                aria-hidden
-                                                                className={cn(
-                                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
-                                                                    variance === null
-                                                                        ? 'border-muted-foreground/40 border'
-                                                                        : variance > 0
-                                                                          ? 'bg-emerald-500'
-                                                                          : variance < 0
-                                                                            ? 'bg-destructive'
-                                                                            : 'bg-muted-foreground/40',
-                                                                )}
-                                                            />
-                                                            <div className="min-w-0">
-                                                                <div className="truncate text-xs font-medium">{l.sku}</div>
-                                                                <div className="text-muted-foreground truncate text-xs">{l.name}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="text-muted-foreground px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                                                        {fmtN(l.system_qty)}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right">
-                                                        {isDraft ? (
-                                                            <Input
-                                                                inputMode="numeric"
-                                                                name={`count-${l.id}`}
-                                                                autoComplete="off"
-                                                                aria-label={`${t('stock_count_counted')} ${l.sku ?? ''}`}
-                                                                value={entered}
-                                                                placeholder="0"
-                                                                onChange={(e) => {
-                                                                    typedRef.current = true;
-                                                                    setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }));
-                                                                }}
-                                                                className={cn(
-                                                                    'ml-auto h-8 w-20 scroll-mt-10 text-right tabular-nums',
-                                                                    variance !== null && variance !== 0 && 'border-primary/50',
-                                                                )}
-                                                            />
-                                                        ) : (
-                                                            <span className="tabular-nums">{l.counted_qty === null ? '—' : fmtN(l.counted_qty)}</span>
+                                <div className="min-h-[8rem] flex-1 overflow-auto overscroll-contain">
+                                    <table className="w-full table-fixed text-sm">
+                                        <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10 backdrop-blur')}>
+                                            <tr className="border-border text-muted-foreground border-b text-left text-xs font-semibold">
+                                                <th scope="col" className="px-3 py-2">
+                                                    {t('stock_item')}
+                                                </th>
+                                                <th scope="col" className="w-24 px-3 py-2 text-right whitespace-nowrap">
+                                                    {t('stock_count_system')}
+                                                </th>
+                                                <th scope="col" className="w-28 px-3 py-2 text-right whitespace-nowrap">
+                                                    {t('stock_count_counted')}
+                                                </th>
+                                                <th scope="col" className="w-28 px-3 py-2 text-right whitespace-nowrap">
+                                                    {t('stock_count_variance')}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(session.lines ?? []).map((l) => {
+                                                const entered = entries[l.id] ?? '';
+                                                const variance = isDraft
+                                                    ? entered.trim() === ''
+                                                        ? null
+                                                        : (parseInt(entered, 10) || 0) - l.system_qty
+                                                    : l.variance;
+                                                return (
+                                                    <tr
+                                                        key={l.id}
+                                                        className={cn(
+                                                            'border-border/60 border-b transition-colors last:border-0',
+                                                            variance !== null && variance !== 0
+                                                                ? variance > 0
+                                                                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20'
+                                                                    : 'bg-red-50/40 dark:bg-red-950/20'
+                                                                : 'hover:bg-muted/30',
                                                         )}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right">
-                                                        {variance === null ? (
-                                                            <span className="text-muted-foreground">—</span>
-                                                        ) : (
-                                                            <span
+                                                    >
+                                                        <td className="px-3 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {/* State dot: hollow = uncounted, green = over, red = short, grey = matched. */}
+                                                                <span
+                                                                    aria-hidden
+                                                                    className={cn(
+                                                                        'h-1.5 w-1.5 shrink-0 rounded-full',
+                                                                        variance === null
+                                                                            ? 'border-muted-foreground/40 border'
+                                                                            : variance > 0
+                                                                              ? 'bg-emerald-500'
+                                                                              : variance < 0
+                                                                                ? 'bg-destructive'
+                                                                                : 'bg-muted-foreground/40',
+                                                                    )}
+                                                                />
+                                                                <div className="min-w-0">
+                                                                    <div className="truncate text-xs font-medium">{l.sku}</div>
+                                                                    <div className="text-muted-foreground truncate text-xs">{l.name}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="text-muted-foreground px-3 py-2 text-right whitespace-nowrap tabular-nums">
+                                                            {fmtN(l.system_qty)}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-right">
+                                                            {isDraft ? (
+                                                                <Input
+                                                                    inputMode="numeric"
+                                                                    name={`count-${l.id}`}
+                                                                    autoComplete="off"
+                                                                    aria-label={`${t('stock_count_counted')} ${l.sku ?? ''}`}
+                                                                    value={entered}
+                                                                    placeholder="0"
+                                                                    onChange={(e) => {
+                                                                        typedRef.current = true;
+                                                                        setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }));
+                                                                    }}
+                                                                    className={cn(
+                                                                        'ml-auto h-8 w-20 scroll-mt-10 text-right tabular-nums',
+                                                                        variance !== null && variance !== 0 && 'border-primary/50',
+                                                                    )}
+                                                                />
+                                                            ) : (
+                                                                <span className="tabular-nums">
+                                                                    {l.counted_qty === null ? '—' : fmtN(l.counted_qty)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2 text-right">
+                                                            {variance === null ? (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            ) : (
+                                                                <span
+                                                                    className={cn(
+                                                                        'inline-flex min-w-[2.75rem] justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums',
+                                                                        variance > 0
+                                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                                            : variance < 0
+                                                                              ? 'text-destructive bg-red-100 dark:bg-red-950/40'
+                                                                              : 'text-muted-foreground bg-muted',
+                                                                    )}
+                                                                >
+                                                                    {variance > 0 ? `+${fmtN(variance)}` : fmtN(variance)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {(isDraft || committedFlash) && can('view_count') && (
+                                    <>
+                                        {isDraft && (
+                                            <p className="text-muted-foreground flex items-start gap-2 text-xs leading-snug">
+                                                <Lock className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                <span>{t('stock_count_freeze_note').replace('{n}', fmtN(session?.lines?.length ?? 0))}</span>
+                                            </p>
+                                        )}
+                                        {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
+                                        {isDraft && (
+                                            <div className="border-border space-y-2.5 rounded-lg border p-3">
+                                                <div className={EYEBROW}>{t('stock_count_mode_label')}</div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {(['auto', 'manual'] as const).map((m) => {
+                                                        const active = mode === m;
+                                                        const disabled = m === 'manual' && hasSerial;
+                                                        const Icon = m === 'auto' ? Zap : FileText;
+                                                        return (
+                                                            <button
+                                                                key={m}
+                                                                type="button"
+                                                                disabled={disabled}
+                                                                onClick={() => !disabled && setMode(m)}
+                                                                aria-pressed={active}
                                                                 className={cn(
-                                                                    'inline-flex min-w-[2.75rem] justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums',
-                                                                    variance > 0
-                                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                                                        : variance < 0
-                                                                          ? 'text-destructive bg-red-100 dark:bg-red-950/40'
-                                                                          : 'text-muted-foreground bg-muted',
+                                                                    'flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-semibold transition',
+                                                                    disabled
+                                                                        ? 'border-border text-muted-foreground/40 cursor-not-allowed'
+                                                                        : active
+                                                                          ? m === 'manual'
+                                                                              ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-950/30 dark:text-amber-400'
+                                                                              : 'border-brand bg-brand/5 text-brand'
+                                                                          : 'border-border text-muted-foreground hover:bg-muted/50',
                                                                 )}
                                                             >
-                                                                {variance > 0 ? `+${fmtN(variance)}` : fmtN(variance)}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                                <Icon className="h-4 w-4" aria-hidden />
+                                                                {t(m === 'auto' ? 'stock_count_mode_auto_name' : 'stock_count_mode_manual_name')}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {hasSerial && (
+                                                    <div className="text-muted-foreground text-[11px]">{t('stock_count_serial_only_auto')}</div>
+                                                )}
+                                                {/* Hint stays mounted so selecting Manual never shifts the layout. */}
+                                                <div
+                                                    className={cn(
+                                                        'flex items-start gap-2 text-[11px] leading-snug transition-colors',
+                                                        mode === 'manual' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                                                    )}
+                                                >
+                                                    {mode === 'manual' ? (
+                                                        <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                    ) : (
+                                                        <Zap className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                    )}
+                                                    <span>
+                                                        {mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                             {(isDraft || committedFlash) && can('view_count') && (
-                                <>
+                                <DialogFooterBar className="justify-between">
                                     {isDraft && (
-                                        <p className="text-muted-foreground flex items-start gap-2 text-xs leading-snug">
-                                            <Lock className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                                            <span>{t('stock_count_freeze_note').replace('{n}', fmtN(session?.lines?.length ?? 0))}</span>
-                                        </p>
-                                    )}
-                                    {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
-                                    {isDraft && (
-                                        <div className="border-border space-y-2.5 rounded-lg border p-3">
-                                            <div className={EYEBROW}>{t('stock_count_mode_label')}</div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {(['auto', 'manual'] as const).map((m) => {
-                                                    const active = mode === m;
-                                                    const disabled = m === 'manual' && hasSerial;
-                                                    const Icon = m === 'auto' ? Zap : FileText;
-                                                    return (
-                                                        <button
-                                                            key={m}
-                                                            type="button"
-                                                            disabled={disabled}
-                                                            onClick={() => !disabled && setMode(m)}
-                                                            aria-pressed={active}
-                                                            className={cn(
-                                                                'flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-semibold transition',
-                                                                disabled
-                                                                    ? 'border-border text-muted-foreground/40 cursor-not-allowed'
-                                                                    : active
-                                                                      ? m === 'manual'
-                                                                          ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-950/30 dark:text-amber-400'
-                                                                          : 'border-brand bg-brand/5 text-brand'
-                                                                      : 'border-border text-muted-foreground hover:bg-muted/50',
-                                                            )}
-                                                        >
-                                                            <Icon className="h-4 w-4" aria-hidden />
-                                                            {t(m === 'auto' ? 'stock_count_mode_auto_name' : 'stock_count_mode_manual_name')}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            {hasSerial && (
-                                                <div className="text-muted-foreground text-[11px]">{t('stock_count_serial_only_auto')}</div>
-                                            )}
-                                            {/* Hint stays mounted so selecting Manual never shifts the layout. */}
-                                            <div
-                                                className={cn(
-                                                    'flex items-start gap-2 text-[11px] leading-snug transition-colors',
-                                                    mode === 'manual' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
-                                                )}
-                                            >
-                                                {mode === 'manual' ? (
-                                                    <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                                                ) : (
-                                                    <Zap className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                                                )}
-                                                <span>{mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <DialogFooter className="sm:justify-between">
-                                        {isDraft && (
-                                            <Button
-                                                variant="outline"
-                                                disabled={savingDraft || committing}
-                                                onClick={async () => {
-                                                    setSavingDraft(true);
-                                                    try {
-                                                        await save.mutateAsync({ id: session.id, counts: countsPayload() });
-                                                    } catch (e) {
-                                                        onError(e);
-                                                    } finally {
-                                                        setSavingDraft(false);
-                                                    }
-                                                }}
-                                            >
-                                                {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
-                                                {savingDraft ? t('saving') : t('stock_count_save')}
-                                            </Button>
-                                        )}
                                         <Button
-                                            className="sm:ml-auto"
-                                            disabled={!anyCounted || savingDraft || committing || committedFlash}
+                                            variant="outline"
+                                            disabled={savingDraft || committing}
                                             onClick={async () => {
-                                                // Serialized lines that came up short must have their missing units ticked first.
-                                                const shorts: SerialCheckItem[] = (session.lines ?? [])
-                                                    .filter((l) => l.track_serial)
-                                                    .map((l) => {
-                                                        const entered = entries[l.id] ?? '';
-                                                        const variance = entered.trim() === '' ? 0 : (parseInt(entered, 10) || 0) - l.system_qty;
-                                                        return { l, variance };
-                                                    })
-                                                    .filter((x) => x.variance < 0)
-                                                    .map((x) => ({
-                                                        stock_item_id: x.l.stock_item_id,
-                                                        sku: x.l.sku,
-                                                        name: x.l.name,
-                                                        need: -x.variance,
-                                                        serials: x.l.serials ?? [],
-                                                    }));
-
-                                                // Shorts need ticking in the serial-verify dialog (which then commits).
-                                                if (shorts.length > 0) {
-                                                    setMissingByItem({});
-                                                    setSerialCheck(shorts);
-                                                    setSerialOpen(true);
-                                                    return;
+                                                setSavingDraft(true);
+                                                try {
+                                                    await save.mutateAsync({ id: session.id, counts: countsPayload() });
+                                                } catch (e) {
+                                                    onError(e);
+                                                } finally {
+                                                    setSavingDraft(false);
                                                 }
-
-                                                // No shorts — confirm once more and let the dialog own the save+commit steps.
-                                                await confirm({
-                                                    variant: 'warn',
-                                                    title: t('stock_count_commit_confirm'),
-                                                    description:
-                                                        mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint'),
-                                                    entity: { name: session.reference },
-                                                    confirmText: t('stock_count_commit'),
-                                                    cancelText: t('stock_count_back'),
-                                                    errorMessage: (e) => stockRefusalText(e, t),
-                                                    action: async () => {
-                                                        await save.mutateAsync({ id: session.id, counts: countsPayload() });
-                                                        await commit.mutateAsync({ id: session.id, mode, missingSerials: {} });
-                                                        setCommittedFlash(true);
-                                                        window.setTimeout(() => setCommittedFlash(false), 1200);
-                                                    },
-                                                });
                                             }}
                                         >
-                                            {committing ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                                            ) : committedFlash ? (
-                                                <Check className="h-3.5 w-3.5" aria-hidden />
-                                            ) : null}
-                                            {committing ? t('saving') : committedFlash ? t('stock_count_committed') : t('stock_count_commit')}
+                                            {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                                            {savingDraft ? t('saving') : t('stock_count_save')}
                                         </Button>
-                                    </DialogFooter>
-                                </>
+                                    )}
+                                    <Button
+                                        className="sm:ml-auto"
+                                        disabled={!anyCounted || savingDraft || committing || committedFlash}
+                                        onClick={async () => {
+                                            // Serialized lines that came up short must have their missing units ticked first.
+                                            const shorts: SerialCheckItem[] = (session.lines ?? [])
+                                                .filter((l) => l.track_serial)
+                                                .map((l) => {
+                                                    const entered = entries[l.id] ?? '';
+                                                    const variance = entered.trim() === '' ? 0 : (parseInt(entered, 10) || 0) - l.system_qty;
+                                                    return { l, variance };
+                                                })
+                                                .filter((x) => x.variance < 0)
+                                                .map((x) => ({
+                                                    stock_item_id: x.l.stock_item_id,
+                                                    sku: x.l.sku,
+                                                    name: x.l.name,
+                                                    need: -x.variance,
+                                                    serials: x.l.serials ?? [],
+                                                }));
+
+                                            // Shorts need ticking in the serial-verify dialog (which then commits).
+                                            if (shorts.length > 0) {
+                                                setMissingByItem({});
+                                                setSerialCheck(shorts);
+                                                setSerialOpen(true);
+                                                return;
+                                            }
+
+                                            // No shorts — confirm once more and let the dialog own the save+commit steps.
+                                            await confirm({
+                                                variant: 'warn',
+                                                title: t('stock_count_commit_confirm'),
+                                                description: mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint'),
+                                                entity: { name: session.reference },
+                                                confirmText: t('stock_count_commit'),
+                                                cancelText: t('stock_count_back'),
+                                                errorMessage: (e) => stockRefusalText(e, t),
+                                                action: async () => {
+                                                    await save.mutateAsync({ id: session.id, counts: countsPayload() });
+                                                    await commit.mutateAsync({ id: session.id, mode, missingSerials: {} });
+                                                    setCommittedFlash(true);
+                                                    window.setTimeout(() => setCommittedFlash(false), 1200);
+                                                },
+                                            });
+                                        }}
+                                    >
+                                        {committing ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                        ) : committedFlash ? (
+                                            <Check className="h-3.5 w-3.5" aria-hidden />
+                                        ) : null}
+                                        {committing ? t('saving') : committedFlash ? t('stock_count_committed') : t('stock_count_commit')}
+                                    </Button>
+                                </DialogFooterBar>
                             )}
                         </>
                     ) : sessionMissing ? (
@@ -838,28 +852,32 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                     ) : (
                         <>
                             {/* Radix requires a DialogTitle even while the session loads. */}
-                            <DialogHeader>
-                                <DialogTitle className="text-base font-semibold">{t('stock_count_sheet_title')}</DialogTitle>
-                                <DialogDescription className="sr-only">{t('loading')}</DialogDescription>
-                            </DialogHeader>
-                            {sessionFailed ? (
-                                <LoadFailedPanel onRetry={() => void refetchSession()} />
-                            ) : (
-                                <div role="status" className="space-y-3">
-                                    {/* Summary strip + sheet rows */}
-                                    <div className="grid grid-cols-3 gap-2" aria-hidden>
-                                        {Array.from({ length: 3 }, (_, i) => (
-                                            <Skeleton key={i} className="h-12" />
-                                        ))}
+                            <FocusDialogHeader
+                                icon={ClipboardCheck}
+                                eyebrow={t('stock')}
+                                title={t('stock_count_sheet_title')}
+                                srDescription={t('loading')}
+                            />
+                            <div className="border-t px-6 py-6">
+                                {sessionFailed ? (
+                                    <LoadFailedPanel onRetry={() => void refetchSession()} />
+                                ) : (
+                                    <div role="status" className="space-y-3">
+                                        {/* Summary strip + sheet rows */}
+                                        <div className="grid grid-cols-3 gap-2" aria-hidden>
+                                            {Array.from({ length: 3 }, (_, i) => (
+                                                <Skeleton key={i} className="h-12" />
+                                            ))}
+                                        </div>
+                                        <div className="space-y-2" aria-hidden>
+                                            {Array.from({ length: 6 }, (_, i) => (
+                                                <Skeleton key={i} className="h-9" />
+                                            ))}
+                                        </div>
+                                        <span className="sr-only">{t('loading')}</span>
                                     </div>
-                                    <div className="space-y-2" aria-hidden>
-                                        {Array.from({ length: 6 }, (_, i) => (
-                                            <Skeleton key={i} className="h-9" />
-                                        ))}
-                                    </div>
-                                    <span className="sr-only">{t('loading')}</span>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </>
                     )}
                 </DialogContent>
@@ -867,12 +885,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Serial verification — tick the not-found units before an Auto commit adjusts stock. */}
             <Dialog open={serialOpen} onOpenChange={(o) => !o && setSerialOpen(false)}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>{t('stock_count_serial_verify_title')}</DialogTitle>
-                        <DialogDescription className="text-xs">{t('stock_count_serial_verify_hint')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="max-h-[60dvh] space-y-3 overflow-auto overscroll-contain">
+                <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-lg flex-col gap-0 p-0">
+                    <FocusDialogHeader
+                        icon={ClipboardCheck}
+                        eyebrow={session?.reference ?? t('stock')}
+                        title={t('stock_count_serial_verify_title')}
+                        srDescription={t('stock_count_serial_verify_hint')}
+                        subtitle={<span className="text-muted-foreground text-sm">{t('stock_count_serial_verify_hint')}</span>}
+                    />
+                    <DialogBody className="space-y-3 overscroll-contain">
                         {(serialCheck ?? []).map((it) => {
                             const ticked = missingByItem[it.stock_item_id] ?? [];
                             const ok = ticked.length === it.need;
@@ -919,8 +940,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 </div>
                             );
                         })}
-                    </div>
-                    <DialogFooter>
+                    </DialogBody>
+                    <DialogFooterBar>
                         <Button variant="outline" onClick={() => setSerialOpen(false)}>
                             {t('stock_count_back')}
                         </Button>
@@ -932,7 +953,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             )}
                             {committing ? t('saving') : t('stock_count_commit')}
                         </Button>
-                    </DialogFooter>
+                    </DialogFooterBar>
                 </DialogContent>
             </Dialog>
         </div>

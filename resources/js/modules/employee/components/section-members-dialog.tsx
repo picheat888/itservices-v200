@@ -1,10 +1,11 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Section } from '@/shared/types';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, focusDialogOnOpen } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogOnOpen } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -70,38 +71,42 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     return (
         <Dialog open={!!section} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col" onOpenAutoFocus={focusDialogOnOpen}>
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Users className="text-muted-foreground h-4 w-4" />
-                        {sectionName}
-                        {view?.code && <span className="text-muted-foreground text-xs font-normal">{view.code}</span>}
-                    </DialogTitle>
-                    <DialogDescription className="flex flex-wrap gap-x-3" aria-busy={isLoading || undefined}>
-                        {deptName && <span>{deptName}</span>}
-                        <span>
-                            {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('section_members')}
+            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 p-0" onOpenAutoFocus={focusDialogOnOpen}>
+                <FocusDialogHeader
+                    icon={Users}
+                    eyebrow={t('employees')}
+                    title={sectionName}
+                    code={view?.code || undefined}
+                    srDescription={sectionName}
+                    subtitle={
+                        <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs" aria-busy={isLoading || undefined}>
+                            {deptName && <span>{deptName}</span>}
+                            <span>
+                                {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('section_members')}
+                            </span>
                         </span>
-                    </DialogDescription>
-                </DialogHeader>
-
-                <DataTable
-                    columns={columns}
-                    rows={members}
-                    rowKey={(m) => m.id}
-                    loading={loadingMembers}
-                    loadingRows={expected ? Math.min(expected, 20) : undefined}
-                    loadingAvatar
-                    maxBodyHeight="52dvh"
-                    search={{ value: query, onChange: setQuery }}
-                    empty={
-                        query
-                            ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
-                            : { kind: 'empty', title: t('emp_empty_section_members'), hint: t('emp_empty_section_members_hint') }
                     }
-                    searchPlaceholder={t('emp_search_by_position')}
-                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
                 />
+
+                <div className="min-h-0 border-t px-6 py-5">
+                    <DataTable
+                        columns={columns}
+                        rows={members}
+                        rowKey={(m) => m.id}
+                        loading={loadingMembers}
+                        loadingRows={expected ? Math.min(expected, 20) : undefined}
+                        loadingAvatar
+                        maxBodyHeight="52dvh"
+                        search={{ value: query, onChange: setQuery }}
+                        empty={
+                            query
+                                ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
+                                : { kind: 'empty', title: t('emp_empty_section_members'), hint: t('emp_empty_section_members_hint') }
+                        }
+                        searchPlaceholder={t('emp_search_by_position')}
+                        searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
+                    />
+                </div>
             </DialogContent>
         </Dialog>
     );

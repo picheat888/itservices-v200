@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -11,7 +12,7 @@ import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Box, ChevronLeft, ChevronRight, Laptop, Loader2, Tag, UserMinus } from 'lucide-react';
@@ -112,19 +113,19 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* No overflow here: DateInput portals its calendar into this node; the body scrolls instead */}
-            <DialogContent className="flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1100px] flex-col">
-                <DialogHeader>
-                    <div className="flex items-start gap-4">
-                        <AlertTriangle className="mt-0.5 h-11 w-11 shrink-0 stroke-[1.75] text-amber-500 dark:text-amber-400" />
-                        <div className="min-w-0">
-                            <DialogTitle className="text-2xl leading-tight tracking-tight">{t('resign_title')}</DialogTitle>
-                            <DialogDescription className="mt-1.5 text-[15px]">{t('resign_desc')}</DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
+            <DialogContent className="flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 p-0">
+                <FocusDialogHeader
+                    icon={AlertTriangle}
+                    tone="warn"
+                    eyebrow={t('employees')}
+                    title={t('resign_title')}
+                    code={shown?.code}
+                    srDescription={t('resign_desc')}
+                    subtitle={<span className="text-muted-foreground text-sm">{t('resign_desc')}</span>}
+                />
 
-                {/* Body: the only scroll container; -mx-2/px-2 leaves room for focus rings */}
-                <div className="-mx-2 -mb-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-2">
+                {/* Body: the only scroll container */}
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t px-6 py-6">
                     <div className="flex items-center gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-2.5 text-sm text-amber-700 dark:text-amber-400">
                         <AlertTriangle className="h-4 w-4 shrink-0" />
                         <span>{t('resign_warn')}</span>
@@ -220,7 +221,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                     </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
@@ -228,7 +229,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                         {resign.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
                         {resign.isPending ? t('saving') : t('resign_submit')}
                     </Button>
-                </DialogFooter>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

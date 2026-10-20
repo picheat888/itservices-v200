@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -12,10 +13,11 @@ import { digitsOnly } from '@/shared/lib/number';
 import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
+import { Package } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { StockItemPayload } from '../api/stockApi';
 import { useStockItemMutations } from '../hooks/use-stock';
@@ -129,12 +131,9 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{dialogTitle}</DialogTitle>
-                    <DialogDescription className="sr-only">{dialogTitle}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
+            <DialogContent className="!flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl flex-col gap-0 overflow-visible p-0">
+                <FocusDialogHeader icon={Package} eyebrow={t('stock')} title={dialogTitle} code={item?.sku} srDescription={dialogTitle} />
+                <DialogBody className="space-y-3">
                     {/* SKU is system-generated; always read-only */}
                     <Field label={t('stock_sku')} required={!!item}>
                         <Input name="sku" value={form.sku} disabled placeholder={t('stock_sku_auto')} />
@@ -219,13 +218,13 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             options={warranties.map((w) => ({ value: String(w.id), label: w.name, search: w.name }))}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
                     <SaveButton loading={saving} success={saved} onClick={submit} disabled={!saved && (!isValid || !isDirty)} />
-                </DialogFooter>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );
