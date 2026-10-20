@@ -177,7 +177,8 @@ class SecuritySettingsTest extends TestCase
     /** Builds a session-backed request for the given user to drive the middleware directly. */
     private function sessionRequest(User $user, ?int $lastActivity): Request
     {
-        $request = Request::create('/api/me', 'GET');
+        // The SPA's request: a browser tab gets the login page instead (C1)
+        $request = Request::create('/api/me', 'GET', server: ['HTTP_ACCEPT' => 'application/json']);
         $session = new Store('test', new ArraySessionHandler(120));
         if ($lastActivity !== null) {
             $session->put(CheckSessionTimeout::IDLE_CLOCK, 'test-clock');
