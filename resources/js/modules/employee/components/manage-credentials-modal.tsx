@@ -187,7 +187,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-md gap-0 overflow-y-auto p-0">
                 <FocusDialogHeader
                     icon={ShieldCheck}
                     eyebrow={t('emp_cred_manage_title')}

@@ -101,7 +101,7 @@ export function AssetReceiveModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="max-w-md gap-0 p-0">
+            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-md gap-0 overflow-y-auto p-0">
                 <div className="flex items-center gap-3 px-5 pt-5 pb-1">
                     <div
                         className={

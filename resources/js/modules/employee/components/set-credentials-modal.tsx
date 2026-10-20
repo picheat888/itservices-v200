@@ -177,7 +177,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     return (
         <>
             <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-md overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <ShieldCheck className="text-brand h-5 w-5" />
@@ -299,7 +299,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
 
             {/* Stacked reveal after a successful save; closing it ends the whole flow */}
             <Dialog open={!!savedCreds} onOpenChange={(o) => !o && closeReveal()}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <ShieldCheck className="text-brand h-5 w-5" />

@@ -129,7 +129,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{dialogTitle}</DialogTitle>
                     <DialogDescription className="sr-only">{dialogTitle}</DialogDescription>

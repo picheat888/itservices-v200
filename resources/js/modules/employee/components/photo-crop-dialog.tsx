@@ -89,7 +89,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
     return (
         // Nested Radix dialog: portals above the parent and becomes the active layer
         <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
-            <DialogContent className="max-w-sm gap-0 overflow-hidden p-0 [&>button]:hidden">
+            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm gap-0 overflow-y-auto p-0 [&>button]:hidden">
                 {/* Header */}
                 <div className="border-border border-b px-4 py-3">
                     <DialogTitle className="text-sm font-semibold">{t('photo_crop_title')}</DialogTitle>
