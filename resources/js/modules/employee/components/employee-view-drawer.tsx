@@ -13,7 +13,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooterBar, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import {
     Briefcase,
@@ -400,7 +400,7 @@ export function EmployeeViewDrawer({
                 </div>
 
                 {/* Footer */}
-                <div className="border-border bg-card flex shrink-0 items-center justify-between gap-2.5 border-t px-5 py-3">
+                <DialogFooterBar className="shrink-0 justify-between px-5 lg:px-7">
                     {/* Delete sits far left; disabled with its blockers in a hint once the person has history */}
                     {canDelete && (
                         <div className="flex items-center gap-1.5">
@@ -439,7 +439,7 @@ export function EmployeeViewDrawer({
                             </Button>
                         )}
                     </div>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

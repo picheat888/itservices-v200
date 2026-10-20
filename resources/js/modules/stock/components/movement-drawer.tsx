@@ -13,7 +13,7 @@ import { digitsOnly, formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
@@ -417,7 +417,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     if (done) {
         return (
             <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-                <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-lg flex-col gap-0 p-0">
+                <FormDialogContent>
                     <FocusDialogHeader
                         icon={Check}
                         tone="success"
@@ -486,14 +486,14 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             {t('stock_done')}
                         </Button>
                     </DialogFooterBar>
-                </DialogContent>
+                </FormDialogContent>
             </Dialog>
         );
     }
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-xl flex-col gap-0 overflow-visible p-0">
+            <FormDialogContent>
                 <FocusDialogHeader
                     icon={k ? KIND_ICON[k] : ArrowDownToLine}
                     eyebrow={t('stock')}
@@ -1058,7 +1058,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                         </SaveButton>
                     </DisabledReason>
                 </DialogFooterBar>
-            </DialogContent>
+            </FormDialogContent>
         </Dialog>
     );
 }

@@ -23,7 +23,7 @@ import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
@@ -208,7 +208,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
     return (
         <Dialog open={open && !!bell} onOpenChange={(o) => !o && guardClose(onClose)}>
             {bell && (
-                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
+                <FormDialogContent>
                     <FocusDialogHeader
                         icon={PenLine}
                         eyebrow={t(notificationGroupLabel(bell.module))}
@@ -226,7 +226,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                         }
                     />
 
-                    <div className="mt-4 space-y-5">
+                    <DialogBody className="space-y-5">
                         <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                         {/* On / off */}
@@ -296,9 +296,9 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                             </div>
                             <BellPreview bell={bell} message={lang === 'th' ? th : en} />
                         </div>
-                    </div>
+                    </DialogBody>
 
-                    <div className="mt-6 flex flex-row gap-2">
+                    <DialogFooterBar>
                         {/* Test sends the saved wording */}
                         <DisabledReason reason={rights.test ? null : t('notification_no_test_right')} label={t('notification_test')}>
                             <Button variant="outline" onClick={() => test.mutate(bell.key)} disabled={busy || saved || !rights.test}>
@@ -328,8 +328,8 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
                                 disabled={reset.isPending || test.isPending || saved || !en.trim() || !th.trim()}
                             />
                         )}
-                    </div>
-                </DialogContent>
+                    </DialogFooterBar>
+                </FormDialogContent>
             )}
         </Dialog>
     );

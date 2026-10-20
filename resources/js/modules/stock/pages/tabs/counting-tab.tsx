@@ -21,7 +21,7 @@ import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooterBar, FormDialogContent, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
@@ -399,7 +399,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
             <Dialog open={creating} onOpenChange={(o) => !o && guardPickerClose(resetPicker)}>
-                <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-2xl flex-col gap-0 overflow-visible p-0">
+                <DialogContent className={cn(mediumDialogContentClass, 'overflow-visible')}>
                     <FocusDialogHeader
                         icon={ClipboardCheck}
                         eyebrow={t('stock')}
@@ -521,12 +521,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
             <Dialog open={sheetOpen} onOpenChange={(o) => !o && guardSheetClose(closeSheet)}>
-                <DialogContent
-                    className={cn(
-                        'flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 p-0',
-                        !session && sessionMissing && recordMissingContentClass,
-                    )}
-                >
+                <DialogContent className={cn(mediumDialogContentClass, !session && sessionMissing && recordMissingContentClass)}>
                     {session ? (
                         <>
                             <FocusDialogHeader
@@ -885,7 +880,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Serial verification — tick the not-found units before an Auto commit adjusts stock. */}
             <Dialog open={serialOpen} onOpenChange={(o) => !o && setSerialOpen(false)}>
-                <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-lg flex-col gap-0 p-0">
+                <FormDialogContent>
                     <FocusDialogHeader
                         icon={ClipboardCheck}
                         eyebrow={session?.reference ?? t('stock')}
@@ -954,7 +949,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                             {committing ? t('saving') : t('stock_count_commit')}
                         </Button>
                     </DialogFooterBar>
-                </DialogContent>
+                </FormDialogContent>
             </Dialog>
         </div>
     );

@@ -15,7 +15,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, EmployeeOption, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { Dialog, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
@@ -426,8 +426,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent
-                className={cn('gap-0 p-0', curKind === 'software' ? 'sm:max-w-[600px]' : 'sm:max-w-[540px]')}
+            <FormDialogContent
                 // Start on the first text field (the name), not the logo picker that sits before it.
                 onOpenAutoFocus={(e) => {
                     const first = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('input:not([type=file]):not([type=color])');
@@ -737,7 +736,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                         <SaveButton loading={create.isPending || update.isPending} onClick={submit} disabled={!!row && !isDirty} />
                     </div>
                 </DialogFooterBar>
-            </DialogContent>
+            </FormDialogContent>
 
             {/* Logo crop — shared 1:1 cropper, same as the employee photo flow. */}
             <PhotoCropDialog

@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { Download, File, FileArchive, FileSpreadsheet, FileText, Presentation, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useRef } from 'react';
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
@@ -88,7 +88,7 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
     return (
         <Dialog open={!!file} onOpenChange={(o) => !o && onClose()}>
             {/* The title is the file name and the body is the file: no description, stated explicitly */}
-            <DialogContent aria-describedby={undefined} className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
+            <DialogContent aria-describedby={undefined} className={cn(mediumDialogContentClass, '[&>button]:hidden')}>
                 <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
                     <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{pv?.name}</DialogTitle>
                     {pv && isImage && (

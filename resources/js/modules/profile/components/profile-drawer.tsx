@@ -16,7 +16,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooterBar, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import {
@@ -450,7 +450,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                 </div>
 
                 {/* Save belongs to the details tab; the others are read-only */}
-                <div className="border-border flex shrink-0 items-center justify-end gap-3 border-t px-5 py-4 lg:px-7">
+                <DialogFooterBar className="shrink-0 px-5 lg:px-7">
                     {/* Opens over the drawer (?dialog=password); the drawer and its edits stay underneath */}
                     <Button variant="outline" className="mr-auto" onClick={onChangePassword}>
                         <KeyRound className="h-4 w-4" aria-hidden />
@@ -460,7 +460,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                         {t('close')}
                     </Button>
                     {canEdit && tab === 'profile' && <SaveButton onClick={save} loading={update.isPending} success={saved} />}
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

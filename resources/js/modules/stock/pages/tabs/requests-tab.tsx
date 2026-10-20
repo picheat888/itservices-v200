@@ -20,7 +20,7 @@ import { cn } from '@/shared/lib/utils';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, X } from 'lucide-react';
@@ -372,7 +372,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
             <Dialog open={fulfillOpen} onOpenChange={(o) => !o && guardFulfillClose(closeFulfill)}>
-                <DialogContent className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] flex-col gap-0 overflow-visible p-0">
+                <FormDialogContent>
                     <FocusDialogHeader
                         icon={ArrowUpFromLine}
                         accent={FULFIL_ACCENT}
@@ -566,7 +566,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             </Button>
                         </DisabledReason>
                     </DialogFooterBar>
-                </DialogContent>
+                </FormDialogContent>
             </Dialog>
         </div>
     );
