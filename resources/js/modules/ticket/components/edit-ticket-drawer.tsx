@@ -12,7 +12,7 @@ import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Pencil, Save } from 'lucide-react';
@@ -189,7 +189,7 @@ export function EditTicketDrawer({
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && guardClose(onClose)}>
             <DialogContent
-                className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0"
+                className={largeDialogContentClass}
                 onOpenAutoFocus={(e) => {
                     const card = ticket ? cardRefs.current[ticket.category] : null;
                     if (card) {
