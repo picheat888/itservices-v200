@@ -160,7 +160,7 @@
     --secondary: hsl(210, 20%, 96%);
     --secondary-foreground: hsl(222, 25%, 20%);
     --muted: hsl(210, 20%, 96%);
-    --muted-foreground: hsl(215, 16%, 45%);
+    --muted-foreground: hsl(215, 17%, 39%);
     --accent: hsl(210, 24%, 95%);
     --accent-foreground: hsl(222, 25%, 20%);
     /* Table row hover / keyboard focus */
@@ -196,7 +196,7 @@
     --chart-pair-violet-ink: #6447c9;
     --radius: 0.625rem;
     --sidebar-background: hsl(0, 0%, 100%);
-    --sidebar-foreground: hsl(215, 20%, 35%);
+    --sidebar-foreground: hsl(215, 22%, 28%);
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: var(--brand-foreground);
     --sidebar-accent: hsl(214, 32%, 95%);
@@ -231,7 +231,7 @@
     --secondary: hsl(217, 19%, 17%);
     --secondary-foreground: hsl(210, 20%, 96%);
     --muted: hsl(217, 19%, 15%);
-    --muted-foreground: hsl(215, 15%, 65%);
+    --muted-foreground: hsl(215, 16%, 71%);
     --accent: hsl(217, 19%, 18%);
     --accent-foreground: hsl(210, 20%, 96%);
     --row-hover: color-mix(in oklab, var(--accent) 50%, transparent);
@@ -263,7 +263,7 @@
     --chart-pair-rose-ink: #f29bba;
     --chart-pair-violet-ink: #c2b2f8;
     --sidebar-background: hsl(222, 24%, 10%);
-    --sidebar-foreground: hsl(215, 16%, 70%);
+    --sidebar-foreground: hsl(215, 18%, 77%);
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: var(--brand-foreground);
     --sidebar-accent: hsl(217, 19%, 14%);
