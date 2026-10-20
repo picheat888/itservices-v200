@@ -5,6 +5,7 @@ import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoHint } from '@/shared/components/info-hint';
 import { LoadFailed } from '@/shared/components/load-failed';
+import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -15,7 +16,7 @@ import { cn, toRecordId } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { ArrowUpDown, Check, Loader2, Plus, Shield, ShieldCheck, Users } from 'lucide-react';
+import { ArrowUpDown, Plus, Shield, ShieldCheck, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
@@ -322,21 +323,15 @@ export function GroupRolesTab() {
                         >
                             {t('cancel')}
                         </Button>
-                        <Button className="w-full font-semibold" disabled={defaultChange?.step !== 'confirm'} onClick={() => void runDefault()}>
-                            {defaultChange?.step === 'saving' ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t('saving')}
-                                </>
-                            ) : defaultChange?.step === 'done' ? (
-                                <>
-                                    <Check className="h-4 w-4" />
-                                    {t('saved')}
-                                </>
-                            ) : (
-                                t('save')
-                            )}
-                        </Button>
+                        <SaveButton
+                            className="w-full font-semibold disabled:opacity-100"
+                            loading={defaultChange?.step === 'saving'}
+                            success={defaultChange?.step === 'done'}
+                            disabled={defaultChange?.step !== 'confirm'}
+                            onClick={() => void runDefault()}
+                        >
+                            {t('save')}
+                        </SaveButton>
                     </>
                 }
             >

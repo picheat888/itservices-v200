@@ -404,7 +404,7 @@ export function GroupRoleDialog({
                             {t('cancel')}
                         </Button>
                         <SaveButton
-                            className="w-full font-semibold"
+                            className="w-full font-semibold disabled:opacity-100"
                             loading={saveStep === 'saving'}
                             success={saveStep === 'done'}
                             disabled={saveStep !== 'confirm'}
