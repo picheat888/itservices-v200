@@ -61,21 +61,31 @@ const resolvedTag = (rel: string, nth = 0): string => {
     );
 };
 
-const LARGE: { rel: string; width: 1100 | 768; nth?: number }[] = [
-    { rel: 'modules/request/components/request-create-dialog.tsx', width: 1100 },
-    { rel: 'modules/request/components/request-detail-dialog.tsx', width: 1100 },
-    { rel: 'modules/workflow/components/workflow-editor-dialog.tsx', width: 1100 },
-    { rel: 'modules/workflow/components/workflow-view-dialog.tsx', width: 768 },
-    { rel: 'modules/employee/components/employee-view-drawer.tsx', width: 1100 },
-    { rel: 'modules/profile/components/profile-drawer.tsx', width: 1100 },
-    { rel: 'modules/employee/components/edit-employee-dialog.tsx', width: 1100 },
-    { rel: 'modules/employee/components/resign-modal.tsx', width: 1100 },
-    { rel: 'modules/ticket/components/create-ticket-drawer.tsx', width: 1100 },
-    { rel: 'modules/ticket/components/edit-ticket-drawer.tsx', width: 1100 },
-    { rel: 'modules/asset/components/asset-form-drawer.tsx', width: 1100 },
-    { rel: 'modules/report/components/access-members-cards.tsx', width: 1100 },
-    { rel: 'modules/email-templates/pages/index.tsx', width: 768, nth: 0 },
+// height 'fixed' when the content changes while open (steps, tabs, a form that swaps fields, a body that loads), else 'content'
+const LARGE: { rel: string; width: 1100 | 768; height: 'fixed' | 'content'; nth?: number; keep?: string[] }[] = [
+    { rel: 'modules/request/components/request-create-dialog.tsx', width: 1100, height: 'fixed' },
+    { rel: 'modules/request/components/request-detail-dialog.tsx', width: 1100, height: 'fixed', keep: ['recordMissingContentClass'] },
+    { rel: 'modules/workflow/components/workflow-editor-dialog.tsx', width: 1100, height: 'fixed' },
+    { rel: 'modules/workflow/components/workflow-view-dialog.tsx', width: 768, height: 'content' },
+    { rel: 'modules/employee/components/employee-view-drawer.tsx', width: 1100, height: 'fixed' },
+    { rel: 'modules/profile/components/profile-drawer.tsx', width: 1100, height: 'fixed', keep: ['outline-none'] },
+    { rel: 'modules/employee/components/edit-employee-dialog.tsx', width: 1100, height: 'content' },
+    { rel: 'modules/employee/components/resign-modal.tsx', width: 1100, height: 'content' },
+    { rel: 'modules/ticket/components/create-ticket-drawer.tsx', width: 1100, height: 'content' },
+    { rel: 'modules/ticket/components/edit-ticket-drawer.tsx', width: 1100, height: 'content' },
+    { rel: 'modules/asset/components/asset-form-drawer.tsx', width: 1100, height: 'fixed' },
+    { rel: 'modules/report/components/access-members-cards.tsx', width: 1100, height: 'content', keep: ['gap-4'] },
+    { rel: 'modules/email-templates/pages/index.tsx', width: 768, height: 'content', nth: 0 },
 ];
+
+test('large dialogs whose content changes while open keep one height; the rest grow with their content', () => {
+    for (const { rel, height, nth, keep = [] } of LARGE) {
+        const tag = resolvedTag(rel, nth);
+        const fixed = tag.includes(`h-[${CAP}]`) && !tag.includes(`max-h-[${CAP}]`);
+        assert.equal(fixed, height === 'fixed', `${rel}: ${height} height`);
+        for (const extra of keep) assert.ok(tag.includes(extra), `${rel}: keeps ${extra}`);
+    }
+});
 
 test('every large dialog is 1100 or 768 wide with the gutter and the shared cap', () => {
     for (const { rel, width, nth } of LARGE) {
