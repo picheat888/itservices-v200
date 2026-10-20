@@ -55,3 +55,38 @@ test('the record box is read with the description, and written line breaks stay'
 test('the frame returns focus to a row menu like every other dialog', () => {
     assert.match(frame(), /useMenuReturnFocus\(/);
 });
+
+const provider = () => {
+    const src = read(FILE);
+    return src.slice(src.indexOf('export function ConfirmProvider'));
+};
+
+test('useConfirm draws through the centred frame', () => {
+    assert.doesNotMatch(read(FILE), /<DialogContent\b/);
+    assert.match(provider(), /<CenteredAlert\b/);
+});
+
+test('each variant picks its icon colour', () => {
+    const src = read(FILE);
+    assert.match(src, /danger:\s*\{[^}]*tone:\s*'danger'/);
+    assert.match(src, /edit:\s*\{[^}]*tone:\s*'brand'/);
+    assert.match(src, /warn:\s*\{[^}]*tone:\s*'warn'/);
+});
+
+test('buttons split the row and the action keeps full colour while busy', () => {
+    const src = provider();
+    const action = src.match(/className="([^"]*disabled:opacity-100[^"]*)"/)?.[1].split(/\s+/) ?? [];
+    for (const t of ['w-full', 'font-semibold']) assert.ok(action.includes(t), `action: ${t}`);
+    const cancel = src.match(/<Button\s+ref=\{cancelRef\}[\s\S]*?className="([^"]*)"/)?.[1].split(/\s+/) ?? [];
+    assert.ok(cancel.includes('w-full'), 'cancel: w-full');
+});
+
+test('delete focuses Cancel, the window locks while working, failures and replaced prompts behave as before', () => {
+    const src = provider();
+    assert.match(src, /initialFocus=/);
+    assert.match(src, /busy=\{loading \|\| done\}/);
+    assert.match(src, /opts\.errorMessage\?\.\(e\) \?\? t\('cd_error'\)/);
+    assert.match(src, /setTimeout\(\(\) => settle\(true\), 850\)/);
+    assert.match(src, /closest[^(]*\('\[role="dialog"\]'\)/);
+    assert.match(read(FILE), /resolver\.current\?\.\(false\)/);
+});

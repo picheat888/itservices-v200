@@ -5,7 +5,7 @@ import { useMenuReturnFocus } from '@/shared/hooks/use-menu-return-focus';
 import { editConfirmEntity, type EditConfirmTarget } from '@/shared/lib/edit-confirm';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '@/shared/ui/dialog';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AlertTriangle, Check, Loader2, PencilLine, Trash2, type LucideIcon } from 'lucide-react';
 import * as React from 'react';
@@ -204,25 +204,16 @@ export interface ConfirmOptions {
     hideCancel?: boolean;
     /** Override the medallion icon. */
     icon?: LucideIcon;
-    /**
-     * Optional async work to run on confirm. When provided, the dialog shows a
-     * spinner while it runs and stays open (showing the error) if it throws —
-     * so the caller doesn't have to juggle loading state. The resolved value is
-     * ignored (so a mutation's `mutateAsync` can be passed directly).
-     */
+    /** Async work run on confirm: spinner while it runs, ✓ then close, or the window stays open with the error. */
     action?: () => unknown | Promise<unknown>;
-    /**
-     * Turns an error thrown by `action` into the reason shown in the dialog. Return
-     * undefined to fall back to the generic message. Kept as a callback so the module
-     * that knows what the server means also owns the wording (and its lang keys).
-     */
+    /** Words an error thrown by `action`; undefined falls back to the generic message. */
     errorMessage?: (error: unknown) => React.ReactNode | undefined;
 }
 
-const VARIANT: Record<ConfirmVariant, { icon: LucideIcon; tint: string; fg: string; btn: 'destructive' | 'default' }> = {
-    danger: { icon: Trash2, tint: 'bg-destructive/10', fg: 'text-destructive', btn: 'destructive' },
-    edit: { icon: PencilLine, tint: 'bg-primary/10', fg: 'text-primary', btn: 'default' },
-    warn: { icon: AlertTriangle, tint: 'bg-amber-500/10', fg: 'text-amber-600 dark:text-amber-400', btn: 'default' },
+const VARIANT: Record<ConfirmVariant, { icon: LucideIcon; tone: AlertTone; btn: 'destructive' | 'default' }> = {
+    danger: { icon: Trash2, tone: 'danger', btn: 'destructive' },
+    edit: { icon: PencilLine, tone: 'brand', btn: 'default' },
+    warn: { icon: AlertTriangle, tone: 'warn', btn: 'default' },
 };
 
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
@@ -271,18 +262,8 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     const [error, setError] = React.useState<React.ReactNode>(null);
     const resolver = React.useRef<((v: boolean) => void) | null>(null);
     const cancelRef = React.useRef<HTMLButtonElement>(null);
-    const entityId = React.useId();
-    const descRef = React.useRef<HTMLParagraphElement>(null);
     // Opened without a trigger: remember what had focus so closing returns there.
     const returnFocus = React.useRef<HTMLElement | null>(null);
-    const contentRef = React.useRef<HTMLDivElement>(null);
-    const hasEntity = !!opts?.entity;
-    // The entity box is read with the description: added to Radix's own description id once the dialog node exists
-    const attachContent = (node: HTMLDivElement | null) => {
-        contentRef.current = node;
-        const desc = descRef.current;
-        if (node && desc) node.setAttribute('aria-describedby', hasEntity ? `${desc.id} ${entityId}` : desc.id);
-    };
 
     const settle = React.useCallback((result: boolean) => {
         resolver.current?.(result);
@@ -346,64 +327,26 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     return (
         <ConfirmContext.Provider value={confirm}>
             {children}
-            <Dialog
+            <CenteredAlert
                 open={open}
-                onOpenChange={(o) => {
-                    if (loading || done) return; // don't dismiss mid-action or during the success flash
-                    if (!o) settle(false);
+                icon={Icon}
+                tone={v.tone}
+                title={opts?.title ?? defaults.title}
+                entity={opts?.entity}
+                busy={loading || done}
+                errorText={error}
+                // Delete focuses Cancel so a stray Enter is safe
+                initialFocus={variant === 'danger' ? () => cancelRef.current : undefined}
+                opener={() => returnFocus.current}
+                returnFocus={() => {
+                    const target = returnFocus.current;
+                    return target?.isConnected && target.matches(':disabled') ? target.closest<HTMLElement>('[role="dialog"]') : null;
                 }}
-            >
-                <DialogContent
-                    ref={attachContent}
-                    className="max-w-md gap-4"
-                    onCloseAutoFocus={(e) => {
-                        e.preventDefault();
-                        const target = returnFocus.current;
-                        const active = document.activeElement;
-                        // Leave focus where the caller already put it (e.g. a field with a server error)
-                        const elsewhere = active && active !== document.body && !contentRef.current?.contains(active);
-                        if (elsewhere || !target?.isConnected) return;
-                        if (target.matches(':disabled')) (target.closest('[role="dialog"]') as HTMLElement | null)?.focus();
-                        else target.focus();
-                    }}
-                    onOpenAutoFocus={(e) => {
-                        // Focus Cancel (not the destructive action) so a stray Enter is safe.
-                        if (variant === 'danger') {
-                            e.preventDefault();
-                            cancelRef.current?.focus();
-                        }
-                    }}
-                >
-                    <div className="flex items-start gap-3.5">
-                        <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg', v.tint, v.fg)}>
-                            <Icon className="h-5 w-5" aria-hidden />
-                        </span>
-                        <div className="min-w-0 flex-1 space-y-1.5 pt-0.5 text-left">
-                            <DialogTitle className="text-lg">{opts?.title ?? defaults.title}</DialogTitle>
-                            <DialogDescription ref={descRef} className="leading-relaxed whitespace-pre-line">
-                                {opts?.description ?? defaults.description}
-                            </DialogDescription>
-                        </div>
-                    </div>
-
-                    {opts?.entity && (
-                        <div id={entityId} className="bg-muted/50 rounded-lg border px-3.5 py-2.5">
-                            <p className="text-foreground truncate text-sm font-medium">{opts.entity.name}</p>
-                            {opts.entity.sub && <p className="text-muted-foreground mt-0.5 truncate text-xs">{opts.entity.sub}</p>}
-                        </div>
-                    )}
-
-                    {error && (
-                        <p role="alert" className="text-destructive flex items-center gap-1.5 text-sm">
-                            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-                            {error}
-                        </p>
-                    )}
-
-                    {/* reverseButtons convention: Cancel left, primary action right. */}
-                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                onClose={() => settle(false)}
+                actions={
+                    <>
                         {!opts?.hideCancel && (
-                            <Button ref={cancelRef} variant="outline" onClick={() => settle(false)} disabled={loading || done}>
+                            <Button ref={cancelRef} variant="outline" className="w-full" onClick={() => settle(false)} disabled={loading || done}>
                                 {opts?.cancelText ?? t('cancel')}
                             </Button>
                         )}
@@ -412,7 +355,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                             onClick={handleConfirm}
                             disabled={loading || done}
                             aria-busy={loading || undefined}
-                            className="min-w-24 disabled:opacity-100"
+                            className="w-full font-semibold disabled:opacity-100"
                         >
                             {loading ? (
                                 <>
@@ -428,9 +371,11 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                                 (opts?.confirmText ?? defaults.confirm)
                             )}
                         </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                    </>
+                }
+            >
+                {opts?.description ?? defaults.description}
+            </CenteredAlert>
         </ConfirmContext.Provider>
     );
 }
