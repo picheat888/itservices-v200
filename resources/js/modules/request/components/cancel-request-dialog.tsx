@@ -71,6 +71,7 @@ export function CancelRequestDialog({
             <FormDialogContent>
                 <FocusDialogHeader
                     icon={XCircle}
+                    tone="danger"
                     eyebrow={ctx.reference}
                     title={t('req_cancel_title')}
                     subtitle={<span className="text-muted-foreground text-sm">{t('req_cancel_hint')}</span>}

@@ -74,7 +74,13 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <FormDialogContent>
-                <FocusDialogHeader icon={FlaskConicalOff} eyebrow={selectedCount} title={t('asset_writeoff_title')} srDescription={selectedCount} />
+                <FocusDialogHeader
+                    icon={FlaskConicalOff}
+                    tone="danger"
+                    eyebrow={selectedCount}
+                    title={t('asset_writeoff_title')}
+                    srDescription={selectedCount}
+                />
 
                 <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />

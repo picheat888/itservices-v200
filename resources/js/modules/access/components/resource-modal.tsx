@@ -440,7 +440,6 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                 <FocusDialogHeader
                     icon={HEAD[curKind].icon}
                     accent={HEAD[curKind].color}
-                    round
                     eyebrow={titleByKind[curKind]}
                     title={curKind === 'software' ? t(curRow ? 'access_edit_software' : 'access_add_software') : curRow ? t('edit') : t('access_add')}
                     code={curRow?.code ?? undefined}
