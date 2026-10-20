@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useSettings } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
@@ -9,19 +10,16 @@ import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Check, Copy, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
 
-/**
- * Dialog for a permitted user (employees.set_credentials) to provision a
- * login account — username + password — for an employee who has none yet.
- */
+/** Create a login (username + password) for an employee who has none yet; needs employees.set_credentials. */
 export function SetCredentialsModal({ employee, onClose }: { employee: Employee | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -177,17 +175,14 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     return (
         <>
             <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
-                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-md overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <ShieldCheck className="text-brand h-5 w-5" />
-                            {t('cred_set_title')}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {empName}
-                            {shown?.code ? ` (${shown.code})` : ''}
-                        </DialogDescription>
-                    </DialogHeader>
+                <FormDialogContent>
+                    <FocusDialogHeader
+                        icon={ShieldCheck}
+                        eyebrow={t('cred_set_title')}
+                        title={empName}
+                        code={shown?.code ?? undefined}
+                        srDescription={t('cred_set_title')}
+                    />
 
                     <form
                         noValidate
@@ -197,7 +192,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             void handleSubmit();
                         }}
                     >
-                        <div className="space-y-3">
+                        <DialogBody>
                             <FormErrorBanner message={formError} shakeKey={formErrorCount} />
 
                             {/* Install has no default role: no account can be created */}
@@ -278,9 +273,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 <span className="text-sm">{t('emp_cred_force_change')}</span>
                                 <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                             </div>
-                        </div>
+                        </DialogBody>
 
-                        <DialogFooter>
+                        <DialogFooterBar>
                             <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                                 {t('cancel')}
                             </Button>
@@ -292,60 +287,73 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 ) : null}
                                 {setCredentials.isPending ? t('saving') : saved ? t('saved') : t('save')}
                             </Button>
-                        </DialogFooter>
+                        </DialogFooterBar>
                     </form>
-                </DialogContent>
+                </FormDialogContent>
             </Dialog>
 
             {/* Stacked reveal after a successful save; closing it ends the whole flow */}
             <Dialog open={!!savedCreds} onOpenChange={(o) => !o && closeReveal()}>
-                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <ShieldCheck className="text-brand h-5 w-5" />
-                            {t('cred_saved_title')}
-                        </DialogTitle>
-                        <DialogDescription>{t('cred_share_hint')}</DialogDescription>
-                    </DialogHeader>
+                <FormDialogContent>
+                    <FocusDialogHeader
+                        icon={ShieldCheck}
+                        eyebrow={t('cred_set_title')}
+                        title={empName}
+                        code={shown?.code ?? undefined}
+                        srDescription={t('cred_saved_title')}
+                    />
 
-                    <div className="space-y-2">
-                        {[
-                            { key: 'u', label: t('cred_username'), value: shownCreds?.username ?? '' },
-                            { key: 'p', label: t('cred_password'), value: shownCreds?.password ?? '' },
-                        ].map((row) => (
-                            <div key={row.key} className="border-border bg-muted/40 flex items-center gap-3 rounded-lg border px-3 py-2">
-                                <div className="min-w-0 flex-1">
-                                    <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">{row.label}</div>
-                                    <div className="truncate text-sm font-semibold">{row.value}</div>
+                    <DialogBody className="space-y-4">
+                        <div role="status" className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="h-[18px] w-[18px] shrink-0" aria-hidden />
+                            <p className="text-sm font-semibold">{t('cred_saved_title')}</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            {[
+                                { key: 'u', label: t('cred_username'), value: shownCreds?.username ?? '' },
+                                { key: 'p', label: t('cred_password'), value: shownCreds?.password ?? '' },
+                            ].map((row) => (
+                                <div key={row.key} className="border-border bg-muted/40 flex items-center gap-3 rounded-lg border px-3 py-2">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">{row.label}</div>
+                                        <div className="truncate text-sm font-semibold">{row.value}</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => void copy(row.value, row.key)}
+                                        title={copied === row.key ? t('cred_copied') : t('cred_copy')}
+                                        aria-label={copied === row.key ? t('cred_copied') : `${t('cred_copy')} ${row.label}`}
+                                        className={cn(
+                                            'hover:bg-accent focus-visible:ring-ring grid h-8 w-8 shrink-0 place-items-center rounded-md transition focus-visible:ring-2 focus-visible:outline-hidden',
+                                            copied === row.key ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
+                                        )}
+                                    >
+                                        {copied === row.key ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => void copy(row.value, row.key)}
-                                    title={copied === row.key ? t('cred_copied') : t('cred_copy')}
-                                    aria-label={copied === row.key ? t('cred_copied') : `${t('cred_copy')} ${row.label}`}
-                                    className={cn(
-                                        'hover:bg-accent focus-visible:ring-ring grid h-8 w-8 shrink-0 place-items-center rounded-md transition focus-visible:ring-2 focus-visible:outline-hidden',
-                                        copied === row.key ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
-                                    )}
-                                >
-                                    {copied === row.key ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    {/* Announces a successful copy */}
-                    <span className="sr-only" aria-live="polite">
-                        {copied ? t('cred_copied') : ''}
-                    </span>
+                        <p className="text-muted-foreground text-xs">{t('cred_share_hint')}</p>
 
-                    <DialogFooter>
-                        <Button onClick={() => void copy(`Username: ${shownCreds?.username ?? ''}\nPassword: ${shownCreds?.password ?? ''}`, 'all')}>
+                        {/* Announces a successful copy */}
+                        <span className="sr-only" aria-live="polite">
+                            {copied ? t('cred_copied') : ''}
+                        </span>
+                    </DialogBody>
+
+                    <DialogFooterBar>
+                        <Button
+                            variant="outline"
+                            onClick={() => void copy(`Username: ${shownCreds?.username ?? ''}\nPassword: ${shownCreds?.password ?? ''}`, 'all')}
+                        >
                             {copied === 'all' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             {copied === 'all' ? t('cred_copied') : t('cred_copy')}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
+                        <Button onClick={closeReveal}>{t('emp_cred_done')}</Button>
+                    </DialogFooterBar>
+                </FormDialogContent>
             </Dialog>
         </>
     );

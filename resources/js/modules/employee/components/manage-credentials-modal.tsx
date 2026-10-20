@@ -12,7 +12,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
@@ -21,13 +21,7 @@ import { useEffect, useId, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
 
-/**
- * "จัดการบัญชี" dialog for an employee who already has a login account.
- * Two independent sections, gated per permission:
- *  - Username (employees.set_credentials): edit + save the login name.
- *  - Reset password (employees.reset_password): a typed or generated password plus a
- *    force-change-at-next-sign-in switch; reveals the new password with copy afterwards.
- */
+/** Manage an existing login: rename (employees.set_credentials) and reset the password (employees.reset_password), each gated on its own. */
 export function ManageCredentialsModal({ employee, onClose }: { employee: Employee | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -187,7 +181,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-md gap-0 overflow-y-auto p-0">
+            <FormDialogContent>
                 <FocusDialogHeader
                     icon={ShieldCheck}
                     eyebrow={t('emp_cred_manage_title')}
@@ -198,7 +192,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
 
                 {/* After a reset the only job left is handing over the new password */}
                 {newPassword ? (
-                    <div className="space-y-4 border-t px-6 py-5">
+                    <DialogBody className="space-y-4">
                         <div role="status" className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                             <CheckCircle2 className="h-[18px] w-[18px] shrink-0" aria-hidden />
                             <p className="text-sm font-semibold">{t('reset_password_success')}</p>
@@ -239,9 +233,9 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                         <span className="sr-only" aria-live="polite">
                             {copied ? t('cred_copied') : ''}
                         </span>
-                    </div>
+                    </DialogBody>
                 ) : (
-                    <div className="space-y-5 border-t px-6 py-5">
+                    <DialogBody>
                         <FormErrorBanner message={formError} shakeKey={formErrorCount} />
 
                         {/* Username */}
@@ -351,15 +345,15 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                 </div>
                             </form>
                         )}
-                    </div>
+                    </DialogBody>
                 )}
 
-                <div className="border-border bg-muted/20 flex justify-end border-t px-6 py-3.5">
+                <DialogFooterBar>
                     <Button variant={newPassword ? 'default' : 'outline'} onClick={() => guardClose(onClose)}>
                         {newPassword ? t('emp_cred_done') : t('close')}
                     </Button>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }

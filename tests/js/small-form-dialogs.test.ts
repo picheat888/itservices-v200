@@ -60,11 +60,49 @@ const RECORD_4A = [
     'modules/request/components/decision-dialog.tsx',
     'modules/stock/components/request-drawer.tsx',
 ];
-const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_4A, ...RECORD_4A];
+const TYPE6_4B = [
+    'modules/asset/components/asset-receive-modal.tsx',
+    'modules/employee/components/manage-credentials-modal.tsx',
+    'modules/employee/components/set-credentials-modal.tsx',
+];
+const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_4A, ...RECORD_4A, ...TYPE6_4B];
 
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
 
-test('28 small forms are on the shell', () => assert.equal(ALL.length, 28));
+test('31 small forms are on the shell', () => assert.equal(ALL.length, 31));
+
+test('receive and recall name the asset in the header instead of a record box', () => {
+    const src = read('modules/asset/components/asset-receive-modal.tsx');
+    assert.match(src, /icon=\{Box\}/, 'assets menu icon');
+    assert.match(src, /shownAsset\?\.asset_code/, 'asset code on top');
+    assert.match(src, /code=\{isBulk \? undefined : shownAsset\?\.model\b/, 'model as the chip');
+    assert.match(src, /t\('asset_bulk_count'\)/, 'bulk count on top');
+    assert.doesNotMatch(src, /asset_from|bg-muted\/40|<Warehouse\b/, 'no record box');
+    assert.match(src, /help=\{t\(isRecall \? 'asset_recall_hint' : 'asset_receive_hint'\)\}/, 'hint under the warehouse field');
+});
+
+test('account dialogs share one header: the action on top, the employee as title and code chip', () => {
+    const manage = read('modules/employee/components/manage-credentials-modal.tsx');
+    assert.match(manage, /eyebrow=\{t\('emp_cred_manage_title'\)\}/);
+    const set = read('modules/employee/components/set-credentials-modal.tsx');
+    assert.equal((set.match(/<FormDialogContent\b/g) ?? []).length, 2, 'form and reveal on the shell');
+    const headers = set.match(/<FocusDialogHeader\b[\s\S]*?\/>/g) ?? [];
+    assert.equal(headers.length, 2, 'form and reveal headers');
+    for (const h of headers) {
+        assert.match(h, /icon=\{ShieldCheck\}/);
+        assert.match(h, /eyebrow=\{t\('cred_set_title'\)\}/);
+        assert.match(h, /title=\{empName\}/);
+        assert.match(h, /code=\{shown\?\.code\b/);
+    }
+});
+
+test('the saved-account reveal says it worked and ends with a Done button like the reset result', () => {
+    const src = read('modules/employee/components/set-credentials-modal.tsx');
+    const reveal = src.slice(src.indexOf('open={!!savedCreds}'));
+    assert.match(reveal, /role="status"[\s\S]*?t\('cred_saved_title'\)/, 'status line');
+    assert.match(reveal, /t\('cred_share_hint'\)/, 'share hint');
+    assert.match(reveal, /onClick=\{closeReveal\}[^>]*>\s*\{t\('emp_cred_done'\)\}/, 'Done button');
+});
 
 test('network names sit under security, with the network name as the edit chip', () => {
     const src = read('modules/settings/components/network-name-modal.tsx');

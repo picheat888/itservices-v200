@@ -79,7 +79,12 @@ test('the sheet close button is a 32px target with the icon 24px from the corner
 });
 
 test('dialogs use two corner radii: 14px for the centred alert windows, the 10px default for the rest', () => {
-    const ALERTS = ['shared/components/blocking-dialog.tsx', 'shared/ui/confirm-dialog.tsx', 'modules/auth/components/change-password-dialog.tsx'];
+    const ALERTS = [
+        'shared/components/blocking-dialog.tsx',
+        'shared/ui/confirm-dialog.tsx',
+        'modules/auth/components/change-password-dialog.tsx',
+        'shared/components/record-missing.tsx',
+    ];
     for (const rel of ['modules', 'shared', 'app'].flatMap(tsxFiles)) {
         const src = read(rel);
         const contents = openTags(src, ['DialogContent', 'FormDialogContent', 'SheetContent', 'DialogPrimitive.Content']);
@@ -114,10 +119,7 @@ test('scroll areas inside dialogs leave room for the 4px focus ring', () => {
 
 test('dialogs that had no height cap scroll inside the screen', () => {
     const UNCAPPED = [
-        'modules/asset/components/asset-receive-modal.tsx',
-        'modules/employee/components/manage-credentials-modal.tsx',
         'modules/employee/components/photo-crop-dialog.tsx',
-        'modules/employee/components/set-credentials-modal.tsx',
         'modules/notification/components/notification-settings-pane.tsx',
         'modules/stock/components/stock-item-modal.tsx',
     ];

@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useWarehouses } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -8,17 +9,12 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { Check, RotateCcw, Warehouse } from 'lucide-react';
+import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
+import { Box, Check, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
 
-/**
- * Put assets back into the pool via a destination-warehouse picker. Serves both the
- * single-asset flow (`asset`) and the bulk flow (`ids` + `open`). Two modes:
- *  - 'receive': a returned asset (pending_return → ready).
- *  - 'recall': cancel a hand-over / pull a shared (or, with force, any) asset back.
- */
+/** Put assets back into a warehouse: 'receive' a returned asset, or 'recall' a hand-over; single (`asset`) or bulk (`ids` + `open`). */
 export function AssetReceiveModal({
     asset,
     ids,
@@ -41,8 +37,7 @@ export function AssetReceiveModal({
     const [warehouse, setWarehouse] = useState('');
     const formError = useFormError();
     const clearFormError = formError.clear;
-    // Retain the last single asset so its info card keeps rendering while the dialog animates
-    // closed — clearing `asset` on close otherwise blanks the card mid-animation.
+    // The last single asset stays shown through the exit animation
     const [shownAsset, setShownAsset] = useState<Asset | null>(asset ?? null);
 
     const isRecall = mode === 'recall';
@@ -54,8 +49,7 @@ export function AssetReceiveModal({
         if (asset) setShownAsset(asset);
     }, [asset]);
 
-    // Default the picker to the asset's current warehouse when the dialog opens; leave the value
-    // alone while it's closing so it doesn't blank out during the exit animation (single flow only).
+    // The picker starts on the asset's own warehouse; left alone while closing
     useEffect(() => {
         if (!isOpen) return;
         setWarehouse(asset?.warehouse ?? '');
@@ -79,8 +73,7 @@ export function AssetReceiveModal({
             await single.mutateAsync({ id: asset.id, warehouse: warehouse.trim() });
             onClose();
         } catch (err) {
-            // A 422 on a single recall usually means the recipient accepted the hand-over
-            // before IT could pull it back — surface that; otherwise a generic failure.
+            // A 422 on a single recall: the recipient accepted before IT pulled it back
             const status = (err as { response?: { status?: number } }).response?.status;
             if (isRecall && !isBulk && status === 422) {
                 formError.show(t('asset_recall_stale'));
@@ -97,48 +90,25 @@ export function AssetReceiveModal({
         : isRecall
           ? t('asset_recall_title')
           : t('asset_receive_title');
-    const sub = isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : isRecall ? t('asset_recall_sub') : t('asset_receive_sub');
+    // Asset code (or the selected count) on top, the model as the chip
+    const eyebrow = isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : (shownAsset?.asset_code ?? '');
+    const note = isBulk ? null : isRecall ? t('asset_recall_sub') : t('asset_receive_sub');
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-md gap-0 overflow-y-auto p-0">
-                <div className="flex items-center gap-3 px-5 pt-5 pb-1">
-                    <div
-                        className={
-                            isRecall
-                                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-600 dark:text-amber-400'
-                                : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-600 dark:text-emerald-400'
-                        }
-                    >
-                        {isRecall ? <RotateCcw className="h-5 w-5" /> : <Check className="h-5 w-5" />}
-                    </div>
-                    <div>
-                        <DialogTitle className="text-base font-extrabold">{title}</DialogTitle>
-                        <DialogDescription className="text-muted-foreground mt-0.5 text-xs">{sub}</DialogDescription>
-                    </div>
-                </div>
+            <FormDialogContent>
+                <FocusDialogHeader
+                    icon={Box}
+                    eyebrow={eyebrow}
+                    title={title}
+                    code={isBulk ? undefined : shownAsset?.model || undefined}
+                    srDescription={note ?? eyebrow}
+                />
 
-                <div className="space-y-4 px-5 py-4">
+                <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
-
-                    {shownAsset && !isBulk && (
-                        <div className="border-border bg-muted/40 flex items-center gap-2.5 rounded-lg border px-3 py-2.5">
-                            <Warehouse className="text-brand h-4 w-4 shrink-0" />
-                            <div className="min-w-0">
-                                <div className="truncate text-sm font-semibold">{shownAsset.model}</div>
-                                <div className="text-muted-foreground flex flex-wrap gap-x-3 text-[11px]">
-                                    <span>{shownAsset.asset_code}</span>
-                                    {shownAsset.warehouse && (
-                                        <span>
-                                            {t('asset_from')}: {shownAsset.warehouse}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <Field label={t('asset_warehouse')} required>
+                    {note && <p className="text-muted-foreground text-sm">{note}</p>}
+                    <Field label={t('asset_warehouse')} required help={t(isRecall ? 'asset_recall_hint' : 'asset_receive_hint')}>
                         <SearchableSelect
                             value={warehouse}
                             onChange={setWarehouse}
@@ -147,10 +117,9 @@ export function AssetReceiveModal({
                             placeholder={t('asset_select_destination_warehouse')}
                         />
                     </Field>
-                    <p className="text-muted-foreground text-xs">{t(isRecall ? 'asset_recall_hint' : 'asset_receive_hint')}</p>
-                </div>
+                </DialogBody>
 
-                <div className="border-border/60 bg-muted/30 flex justify-end gap-2 border-t px-5 py-3">
+                <DialogFooterBar>
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
@@ -158,8 +127,8 @@ export function AssetReceiveModal({
                         {isRecall ? <RotateCcw className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         {t(isRecall ? 'asset_recall_action' : 'asset_mark_received')}
                     </SaveButton>
-                </div>
-            </DialogContent>
+                </DialogFooterBar>
+            </FormDialogContent>
         </Dialog>
     );
 }
