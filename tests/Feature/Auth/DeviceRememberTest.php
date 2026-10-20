@@ -278,6 +278,29 @@ class DeviceRememberTest extends TestCase
         $this->meWithCookie($newCookie)->assertOk();
     }
 
+    /** A browser reopened on the app page: the page load leaves the remember cookie alone, the first API call moves the device and replaces the token. */
+    public function test_a_page_load_does_not_use_the_remember_cookie_outside_device_tracking(): void
+    {
+        $this->withoutVite();
+        $user = User::factory()->create();
+        $device = $this->rememberedDevice($user, 'laptop-token');
+        $recaller = Auth::guard('web')->getRecallerName();
+        $cookie = $this->cookieFor($user, 'laptop-token');
+
+        $this->freshBrowser();
+        $page = $this->withCookie($recaller, $cookie)->get('/')->assertOk();
+
+        $me = $this->inSession($page->getCookie(config('session.cookie'))->getValue())
+            ->withCookie($recaller, $cookie)
+            ->getJson('/api/me')
+            ->assertOk();
+
+        $this->assertSame(1, UserDevice::query()->whereNull('ended_at')->count());
+        $this->assertSame($device->id, UserDevice::query()->whereNull('ended_at')->sole()->id);
+        $this->assertSame(hash('sha256', explode('|', $me->getCookie($recaller)->getValue())[1]), $device->fresh()->remember_token_hash);
+        $this->assertSame(1, LoginEvent::query()->where('event', 'signed_in')->count());
+    }
+
     public function test_logout_retires_a_cookie_from_before_devices(): void
     {
         $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
