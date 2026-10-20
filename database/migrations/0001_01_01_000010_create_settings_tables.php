@@ -5,18 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 11/18 — admin-managed configuration, none of which belongs in .env.
- *
- *  app_settings    — loose key/value for branding, company details, SLA and
- *                    asset options edited in Settings.
- *  mail_settings   — the SMTP credentials (singleton row id=1, password encrypted
- *                    at rest). Every send overrides config('mail.*') from here;
- *                    .env is only the fallback when this is left unconfigured.
- *  email_templates — one editable template per event key, with an enabled flag and
- *                    a cadence, plus last_sent_at for the Notifications screen.
- *  email_logs      — one row per delivery attempt, keeping the SMTP error verbatim
- *                    when it fails.
- *
+ * Baseline 11/18 — admin-managed configuration that does not belong in .env: app settings,
+ * SMTP (mail_settings row id=1), email templates, the delivery log and named networks.
  * No foreign keys here on purpose: settings must survive whatever they describe.
  */
 return new class extends Migration
@@ -55,30 +45,37 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
         });
 
+        // One row per delivery attempt, skipped sends included (hence the nullable address)
         Schema::create('email_logs', function (Blueprint $table) {
             $table->id();
             $table->string('template_key')->nullable();
-            // Nullable because a SKIPPED send is logged too, and the whole point of
-            // those rows is that there was no address to send to.
             $table->string('to_email')->nullable();
             $table->string('recipient_name')->nullable();
             $table->string('subject');
-            // What actually went out, kept so a log entry can be reopened and read
-            // rather than only reporting that something was sent.
-            $table->text('body_html')->nullable();
+            $table->mediumText('body_html')->nullable();
+            // null = not recorded; [] = no button; {url, label} = the button sent
+            $table->json('action')->nullable();
             $table->string('status', 10)->default('sent');
+            $table->boolean('is_test')->default(false);
             $table->text('error')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->index(['status', 'created_at']);
-            // The nightly prune (logs:prune) works on created_at alone, which the index
-            // above cannot serve because status leads it. This table is the one that grows
-            // fastest — bodies are kept — so the sweep must not scan it whole every night.
+            // Nightly prune (logs:prune) filters on created_at alone
             $table->index('created_at', 'email_logs_created_at_index');
+        });
+
+        // Admin-named CIDR ranges shown as a sign-in's location instead of a geo lookup
+        Schema::create('network_names', function (Blueprint $table) {
+            $table->id();
+            $table->string('cidr', 64)->unique();
+            $table->string('name', 100);
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('network_names');
         Schema::dropIfExists('email_logs');
         Schema::dropIfExists('email_templates');
         Schema::dropIfExists('mail_settings');

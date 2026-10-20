@@ -5,20 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 18/18 — the Report Center.
- *
- * report_pins: the reports a person pinned to the top of the Report Center.
- *
- * report_exports: files built on the queue ("ไฟล์ส่งออกของฉัน"). A row is created when someone
- * asks for a file (queued), the GenerateReportExport job builds it (running → ready | failed), and
- * reports:prune-exports removes the file and the row once `expires_at` passes (7 days).
- * `filters` / `columns` are the validated request, so a retry builds the same file. The file lives
- * on the private `local` disk under file_path.
- *
- * report_schedules: reports sent by email on a schedule — which report, the file format, the
- * screen's filters (date filters are replaced by the rolling period when it runs — see
- * App\Models\Report\ReportSchedule), how often and at what hour, and who receives it (any email
- * addresses). reports:send-scheduled picks up rows whose `next_run_at` has passed.
+ * Baseline 18/18 — the Report Center: pinned reports, files built on the queue (pruned once
+ * expires_at passes) and reports emailed on a schedule.
  */
 return new class extends Migration
 {
@@ -38,8 +26,11 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->string('report_key', 64);
             $table->string('format', 8);
+            // The validated request, so a retry builds the same file
             $table->json('filters')->nullable();
             $table->json('columns')->nullable();
+            // Recipient account emails who may open a scheduled run's file from its link
+            $table->json('shared_with')->nullable();
             $table->string('status', 16)->default('queued');
             $table->string('file_name')->nullable();
             $table->string('file_path')->nullable();

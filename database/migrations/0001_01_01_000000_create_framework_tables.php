@@ -5,13 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 1/18 — tables Laravel itself owns: the cache store, the database
- * queue, session storage, Sanctum tokens, and the notifications table behind the
- * in-app bell. Nothing here references an application table, so it goes first.
- *
- * This file is part of the squashed baseline that replaced the original 121
- * incremental migrations. It reproduces the schema those migrations ended at,
- * verified column-for-column against a database built from them.
+ * Baseline 1/18 — tables Laravel itself owns: cache, queue, sessions, Sanctum tokens and the
+ * notifications behind the in-app bell. Nothing here references an application table.
  */
 return new class extends Migration
 {
@@ -93,16 +88,18 @@ return new class extends Migration
         Schema::create('notifications', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('type');
+            // "type|module" of the bell row, so the tray counts and pages in SQL
+            $table->string('kind', 150)->default('|');
             $table->string('notifiable_type');
             $table->unsignedBigInteger('notifiable_id');
             $table->text('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
             $table->index(['notifiable_type', 'notifiable_id']);
-            // For the nightly prune, which deletes notifications that have been READ and are
-            // older than the retention window. read_at leads because it is the selective half:
-            // an unread bell is never pruned however old it gets.
+            // Nightly prune of read bells; read_at leads because unread rows are never pruned
             $table->index(['read_at', 'created_at'], 'notifications_read_at_created_at_index');
+            $table->index(['notifiable_type', 'notifiable_id', 'kind'], 'notifications_notifiable_kind_index');
+            $table->index(['notifiable_type', 'notifiable_id', 'created_at'], 'notifications_notifiable_created_index');
         });
     }
 

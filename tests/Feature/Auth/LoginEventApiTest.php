@@ -1,6 +1,6 @@
 <?php
 
-// The Login log tab API (system.view_logins): gate, search, filters, paging, and the migration that hands the key to audit viewers.
+// The Login log tab API (system.view_logins): gate, search, filters and paging.
 
 namespace Tests\Feature\Auth;
 
@@ -12,7 +12,6 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\Permissions;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -213,66 +212,5 @@ class LoginEventApiTest extends TestCase
         $this->assertContains('system.view_logins', Permissions::all());
         $this->assertContains('system.view_logins', Permissions::defaults()['it_supervisorleader']);
         $this->assertNotContains('system.view_logins', Permissions::defaults()['admin']);
-    }
-
-    private function migration(): Migration
-    {
-        return require database_path('migrations/2026_10_20_000004_grant_view_logins_to_audit_viewers.php');
-    }
-
-    /** @param  list<string>  $held */
-    private function roleHolding(string $key, array $held, bool $allowed = true): Role
-    {
-        $role = Role::create(['key' => $key, 'name' => ucfirst($key), 'is_system' => false]);
-        foreach ($held as $permission) {
-            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => $allowed]);
-        }
-
-        return $role;
-    }
-
-    private function holdsLogins(Role $role): bool
-    {
-        return RolePermission::where('role_id', $role->id)->where('permission', 'system.view_logins')->where('allowed', true)->exists();
-    }
-
-    public function test_the_migration_grants_the_key_to_audit_viewers_only(): void
-    {
-        $auditor = $this->roleHolding('auditor', ['system.manage_permissions', 'system.view_audit']);
-        $switchedOff = $this->roleHolding('switched_off', ['system.view_audit'], allowed: false);
-        $editor = $this->roleHolding('editor', ['system.manage_permissions', 'system.manage_roles', 'tickets.view_all']);
-        $alreadyOff = $this->roleHolding('already_off', ['system.view_audit']);
-        RolePermission::create(['role_id' => $alreadyOff->id, 'permission' => 'system.view_logins', 'allowed' => false]);
-
-        $this->migration()->up();
-
-        $this->assertTrue($this->holdsLogins($auditor));
-        $this->assertTrue($this->holdsLogins($alreadyOff), 'a template save that wrote the key as off is turned on');
-        $this->assertFalse($this->holdsLogins($switchedOff));
-        $this->assertFalse($this->holdsLogins($editor));
-        $this->assertSame(2, RolePermission::where('permission', 'system.view_logins')->where('allowed', true)->count());
-    }
-
-    public function test_the_migration_can_run_twice_and_leaves_other_grants_alone(): void
-    {
-        $auditor = $this->roleHolding('auditor', ['system.manage_permissions', 'system.view_audit']);
-
-        $this->migration()->up();
-        $this->migration()->up();
-
-        $this->assertSame(1, RolePermission::where('role_id', $auditor->id)->where('permission', 'system.view_logins')->count());
-        $this->assertSame(3, RolePermission::where('role_id', $auditor->id)->count());
-        $this->assertTrue(RolePermission::where('role_id', $auditor->id)->where('permission', 'system.view_audit')->value('allowed'));
-    }
-
-    public function test_rolling_the_migration_back_removes_only_that_key(): void
-    {
-        $auditor = $this->roleHolding('auditor', ['system.manage_permissions', 'system.view_audit']);
-        $this->migration()->up();
-
-        $this->migration()->down();
-
-        $this->assertFalse(RolePermission::where('permission', 'system.view_logins')->exists());
-        $this->assertSame(2, RolePermission::where('role_id', $auditor->id)->count());
     }
 }
