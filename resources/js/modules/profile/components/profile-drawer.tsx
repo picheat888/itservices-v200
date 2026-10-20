@@ -268,7 +268,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent
-                className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0 outline-none"
+                className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden p-0 outline-none"
                 // Focus rests on the dialog itself, with no ring on any control, until the reader presses Tab
                 onOpenAutoFocus={(e) => {
                     e.preventDefault();

@@ -31,8 +31,8 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Content>,
-    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { closeClassName?: string }
->(({ className, closeClassName, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
     const t = useT();
     const { handleOpen, handleClose } = useMenuReturnFocus(onOpenAutoFocus, onCloseAutoFocus);
     return (
@@ -50,12 +50,8 @@ const DialogContent = React.forwardRef<
                 {...props}
             >
                 {children}
-                <DialogPrimitive.Close
-                    className={cn(
-                        'ring-offset-background focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none',
-                        closeClassName,
-                    )}
-                >
+                {/* 32px hit area; the 16px icon sits 16px from the top and right edges */}
+                <DialogPrimitive.Close className="ring-offset-background focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-2 right-2 grid size-8 place-items-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none">
                     <X className="h-4 w-4" />
                     <span className="sr-only">{t('close')}</span>
                 </DialogPrimitive.Close>
@@ -71,13 +67,8 @@ const focusDialogContentClass = '!flex h-[min(860px,calc(100dvh-72px))] w-[calc(
 // Small form dialogs: 560 wide, height capped, the body scrolls between header and footer bar
 const formDialogContentClass = '!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0';
 
-// 32px hit area, the icon stays where the base close button puts it
-const formDialogCloseClass = 'top-2 right-2 grid size-8 place-items-center rounded-md';
-
 const FormDialogContent = React.forwardRef<React.ElementRef<typeof DialogContent>, React.ComponentPropsWithoutRef<typeof DialogContent>>(
-    ({ className, ...props }, ref) => (
-        <DialogContent ref={ref} className={cn(formDialogContentClass, className)} closeClassName={formDialogCloseClass} {...props} />
-    ),
+    ({ className, ...props }, ref) => <DialogContent ref={ref} className={cn(formDialogContentClass, className)} {...props} />,
 );
 FormDialogContent.displayName = 'FormDialogContent';
 

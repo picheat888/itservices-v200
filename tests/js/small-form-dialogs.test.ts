@@ -110,8 +110,6 @@ test('the shared shell is 560 wide, capped, with a 32px close button and the lar
     assert.match(src, /export \{[^}]*\bFormDialogContent\b[^}]*\}/s);
     assert.match(src, /export \{[^}]*\bDialogBody\b[^}]*\}/s);
     assert.match(src, /export \{[^}]*\bDialogFooterBar\b[^}]*\}/s);
-    // Every other dialog keeps today's close button
-    assert.ok(src.includes('absolute top-4 right-4'), 'base close button unchanged');
 });
 
 test('a long edit chip truncates inside the title row instead of spilling past the dialog edge', () => {
