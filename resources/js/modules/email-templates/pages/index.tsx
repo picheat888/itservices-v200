@@ -1185,7 +1185,7 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
 
     return (
         <Dialog open={logId != null} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[820px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
+            <DialogContent className="!flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[820px] flex-col gap-0 overflow-hidden p-0">
                 {log && meta ? (
                     <FocusDialogHeader
                         icon={Mail}
