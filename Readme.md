@@ -6853,3 +6853,28 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `showsOwnThrottle()` นับ `/password` เป็นหน้าที่บอกเวลารอเอง 429 จากหน้าต่างนี้จึงไม่ขึ้น toast (ทางรีเซ็ตรหัสของผู้ดูแล `/employees/{id}/password` ยังขึ้นตามเดิม)
 - ตอน 429 ล้าง error ของช่องที่ค้างจากครั้งก่อน เหลือแถบบอกเวลารอแถบเดียว
 - ลองซ้ำในแอปจริงแล้ว ครั้งที่ 6 ขึ้น "Too many attempts. Try again in 49 seconds." แถบเดียว `npm run test:js` 449 ข้อผ่าน
+
+## รวม migration เข้า baseline 0001 (ครั้งที่ 3, 2026-10-20)
+
+`database/migrations` เหลือ 18 ไฟล์ baseline `0001_01_01_000000…000017` อีกครั้ง ไฟล์ลงวันที่ 13 ตัวตั้งแต่ 2026-10-17 ถูกรวมหรือลบ
+- ย้ายโครงสร้าง 9 ตัวเข้าไฟล์โดเมนของตาราง คอลัมน์อยู่ตำแหน่งเดิมและ index เรียงเหมือนเดิม
+  - 000000 `notifications.kind` + index 2 ตัว
+  - 000002 index `audit_user_name_idx`, ตาราง `user_devices` และ `login_events`
+  - 000005 `asset_transfers.performed_by_user_id`
+  - 000006 `stock_movements.from_warehouse_id` / `to_warehouse_id` + index `moved_at`, `stock_counts.warehouse_id`
+  - 000010 `email_logs` (`body_html` เป็น MEDIUMTEXT, `action`, `is_test`) และตาราง `network_names`
+  - 000017 `report_exports.shared_with`
+- ลบ migration ที่แก้ข้อมูลอย่างเดียว 4 ตัว (backfill สิทธิ์รายงาน, ให้ `system.view_logins` กับผู้ดู audit, ธง `is_test` ของ log เก่า, ปิดท้ายชื่อที่พิมพ์ไม่ตรงบัญชี) ติดตั้งใหม่ได้สิทธิ์จาก `Permissions::defaults()` ผ่าน seeder ส่วน itservices_perf ได้ผลของทั้ง 4 ตัวครบแล้ว
+- ลบเทสที่ `require` ไฟล์ migration เหล่านั้น (ผู้ใช้อนุมัติ) คือ `ReportPermissionBackfillTest` ทั้งไฟล์, เทส migration 3 ข้อใน `LoginEventApiTest`, 1 ข้อใน `TypedNameMaskTest`, 1 ข้อใน `EmailDeliveryRecordTest`
+- comment ยาวในไฟล์ baseline ที่แก้ ย่อเหลือหัวไฟล์ 1–3 บรรทัดและป้ายบรรทัดเดียว
+- หัวข้อ "ขึ้น server" ของจำกัดจำนวนเครื่อง ไม่ต้องรัน migration `2026_10_20_000001`–`000005` แยกแล้ว ตารางอยู่ใน baseline
+
+**ตรวจแล้ว**
+- ฐานทดลอง migrate จากไฟล์ชุดเดิม กับฐานทดลอง migrate จาก baseline ใหม่ `mariadb-dump --no-data` (ตัด AUTO_INCREMENT) ตรงกันทุกบรรทัด และตรงกับ itservices_perf ด้วย
+- `migrate:rollback` แล้ว migrate ซ้ำ ได้โครงสร้างเดิม
+- Seeder บนฐานใหม่: `db:seed` กับ Department / Position / Section / MasterData รันผ่าน รันซ้ำไม่เพิ่มแถว template อีเมล 39, bell 50, workflow 13, ตัวเลือกคำขอ 10, SLA 13, เหตุผลตัดจำหน่าย 6 ตรงกับ itservices_perf ทุกแถว
+- เทสที่เกี่ยวข้อง 1006 ข้อผ่าน (Auth, Report, Seeder ทั้งหมดรวม DemoSeederTest, Stock, Asset, Notification, Audit, Email)
+
+**ยังไม่ได้ทำ**
+- ตาราง `migrations` ของ itservices_perf ยังมี 28 แถวของไฟล์ที่ไม่มีแล้ว ไม่กระทบ `migrate` แต่ `migrate:rollback` จะเตือนหาไฟล์ไม่เจอ ลบได้ด้วย `DELETE FROM migrations WHERE migration NOT LIKE '0001\_01\_01\_%'`
+- ฐาน `itservices` ตัวเก่า (ไม่ได้ใช้ตั้งแต่ 2026-10-17) ยังไม่มีการเปลี่ยนแปลงของ 13 ไฟล์นี้
