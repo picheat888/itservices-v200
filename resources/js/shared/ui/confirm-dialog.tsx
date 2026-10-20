@@ -13,15 +13,16 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 
 // Round icon
 
-export type AlertTone = 'brand' | 'warn' | 'danger';
+export type AlertTone = 'brand' | 'warn' | 'danger' | 'neutral';
 
 const TONE: Record<AlertTone, string> = {
     brand: 'bg-brand/15 text-brand-ink',
     warn: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
     danger: 'bg-destructive/15 text-destructive',
+    neutral: 'bg-muted text-muted-foreground',
 };
 
-/** The round icon on top of a centred dialog: brand for a step to take, amber for a warning, red for a delete. */
+/** The round icon on top of a centred dialog: brand for a step to take, amber for a warning, red for a delete, grey for a plain notice. */
 export function AlertIconCircle({ icon: Icon, tone = 'brand', className }: { icon: LucideIcon; tone?: AlertTone; className?: string }) {
     return (
         <div className={cn('mx-auto flex h-12 w-12 items-center justify-center rounded-full', TONE[tone], className)} aria-hidden>

@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -14,12 +15,12 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
-import { MV_META, MV_TONE_BG } from '../shared';
+import { MV_META, MV_TONE_HEX } from '../shared';
 
 // Types offered by the filter (and accepted from ?type=).
 const MOVEMENT_TYPES: StockMovementType[] = ['receive', 'issue', 'return', 'transfer'];
@@ -200,48 +201,29 @@ export function MovementsTab() {
 
             {/* Movement detail — the per-entry audit-log view. */}
             <Dialog open={moveOpen} onOpenChange={(o) => !o && setMoveOpen(false)}>
-                <DialogContent className="max-w-md">
+                <FormDialogContent>
                     {viewMove &&
                         (() => {
                             const meta = MV_META[viewMove.type];
-                            const Icon = meta.icon;
                             const inbound = ['receive', 'return', 'adjust_up'].includes(viewMove.type);
                             return (
                                 <>
-                                    <DialogHeader>
-                                        <div className="flex items-start gap-3 pt-4 text-left">
-                                            {/* Type icon — tinted by movement tone. */}
-                                            <span
-                                                className={cn(
-                                                    'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
-                                                    MV_TONE_BG[meta.tone],
-                                                )}
-                                                aria-hidden
-                                            >
-                                                <Icon className="h-6 w-6" />
-                                            </span>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <DialogTitle className="min-w-0 truncate text-base leading-tight font-semibold">
-                                                        {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}
-                                                    </DialogTitle>
-                                                    <span className="text-muted-foreground shrink-0 text-[11px]">
-                                                        {fmt.dateTime(viewMove.moved_at)}
-                                                    </span>
-                                                </div>
-                                                <DialogDescription className="mt-0.5 text-[11px]">
-                                                    {t('stock_doc_no')}: {viewMove.doc_no ?? '—'}
-                                                </DialogDescription>
-                                                {viewMove.reference && (
-                                                    <div className="text-muted-foreground text-[11px]">
-                                                        {t('stock_reference')}: {viewMove.reference}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </DialogHeader>
+                                    <FocusDialogHeader
+                                        icon={meta.icon}
+                                        accent={MV_TONE_HEX[meta.tone]}
+                                        eyebrow={viewMove.doc_no ?? '—'}
+                                        title={t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}
+                                        subtitle={
+                                            viewMove.reference ? (
+                                                <span className="text-muted-foreground text-xs">
+                                                    {t('stock_reference')} {viewMove.reference}
+                                                </span>
+                                            ) : undefined
+                                        }
+                                        headerRight={<span className="text-muted-foreground text-xs">{fmt.dateTime(viewMove.moved_at)}</span>}
+                                    />
 
-                                    <div className="max-h-[72dvh] space-y-4 overflow-auto overscroll-contain">
+                                    <DialogBody className="overscroll-contain">
                                         {/* Item + signed quantity */}
                                         <div className="border-border flex items-center justify-between gap-3 rounded-xl border p-3.5">
                                             <div className="min-w-0">
@@ -365,11 +347,11 @@ export function MovementsTab() {
                                             </div>
                                             <div className="text-sm">{pairOf(viewMove.recorded_by, viewMove.recorded_by_th) || '—'}</div>
                                         </div>
-                                    </div>
+                                    </DialogBody>
                                 </>
                             );
                         })()}
-                </DialogContent>
+                </FormDialogContent>
             </Dialog>
         </div>
     );

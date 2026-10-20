@@ -14,6 +14,14 @@ export const MV_META: Record<StockMovementType, { tone: MovementTone; icon: type
     adjust_down: { tone: 'amber', icon: ArrowUpFromLine, sign: -1 },
 };
 
+/** The same tones as hex, for FocusDialogHeader's accent tile in the movement detail. */
+export const MV_TONE_HEX: Record<MovementTone, string> = {
+    green: '#10b981',
+    violet: '#8b5cf6',
+    blue: '#3b82f6',
+    amber: '#f59e0b',
+};
+
 /** Tinted icon backgrounds for the movement feed, keyed by the MV_META tone. */
 export const MV_TONE_BG: Record<MovementTone, string> = {
     green: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400',
