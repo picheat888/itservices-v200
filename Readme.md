@@ -6814,3 +6814,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - C1 ทำให้เทสเดิม 1 ข้อใน `SecuritySettingsTest` ที่สร้างคำขอเองต้องส่ง Accept JSON (`29d9f8b7`)
 
 **ตรวจแล้ว** เทสใหม่ S10 3 ข้อ (`GuestAccessTest`), S4 1 ข้อ, S9 2 ข้อ (`DeviceRememberTest`), S3 4 ข้อ (`PasswordUpdateTest`) เทส Auth และเทสรหัสผ่าน/ตั้งค่า/ลาออก 329 ข้อผ่านบน sqlite pint eslint tsc ผ่าน ยังไม่ได้ลองด้วยตาในแอปจริงเพราะต้องเข้าสู่ระบบ
+
+## ปุ่ม ✕ ทุก Dialog กับมุมโค้ง 2 ค่า (2026-10-20)
+
+ข้อ W1 กับ D5 จากรายงานตรวจ Dialog https://claude.ai/artifact/2dbE2QEjM6VH42VcYBGR3a (`fe4fd6a7`)
+- **ปุ่ม ✕ (W1)** ทุก Dialog ที่ใช้ `DialogContent` กดได้ 32px ไอคอน 16px ยังห่างขอบบนและขวา 16px เท่าเดิม หน้าตาไม่เปลี่ยน แค่กดโดนง่ายขึ้นบน iPad ทำที่ตัวกลางครั้งเดียว จึงเอา prop `closeClassName` ที่ฟอร์มเล็กเคยใช้ออก Sheet ก็กดได้ 32px โดยไอคอนห่างขอบ 24px เท่าเดิม
+- **มุมโค้ง (D5)** เหลือ 2 ค่า Dialog ทั่วไป 10px (ค่าเริ่มต้น) หน้าต่างแจ้งเตือนกลางจอ BlockingDialog, CenteredAlert และเปลี่ยนรหัสผ่าน 14px ตามที่งานหน้า Error ตกลงไว้ หน้าดูพนักงาน โปรไฟล์ และแก้เทมเพลตอีเมล จาก 16px เป็น 10px
+- เทส `tests/js/dialog-chrome.test.ts` เช็กปุ่ม ✕ ของ Dialog และ Sheet และไล่ทุกไฟล์ว่าไม่มี Dialog ที่มุมโค้งค่าอื่น ส่วน 14px ใช้ได้เฉพาะ 3 ไฟล์ข้างบน `npm run test:js` ผ่าน 449 ข้อ tsc และ eslint ผ่าน
+- ยังไม่ได้เปิดดูใน Chrome เพราะเบราว์เซอร์ออกจากระบบไปแล้ว
