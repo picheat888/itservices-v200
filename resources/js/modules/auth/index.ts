@@ -13,6 +13,7 @@ export { default as LoginPage } from './pages/login';
 // Components
 export { AccountSwitchedDialog } from './components/account-switched-dialog';
 export { ChangePasswordDialog } from './components/change-password-dialog';
+export { PasswordWall } from './components/password-wall';
 export { ProtectedRoute } from './components/protected-route';
 export { NoAccess, RequirePermission } from './components/require-permission';
 export { SessionTimeoutModal } from './components/session-timeout-modal';

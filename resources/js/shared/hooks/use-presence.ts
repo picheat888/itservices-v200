@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 /** Exit time of the shared pop-out animation (app.css --motion-pop-out). */
 export const POP_OUT_MS = 120;
 
+/** Exit time of motion-sheet dialogs (app.css --motion-close). */
+export const SHEET_CLOSE_MS = 180;
+
 /** `mounted` stays true for `exitMs` after `open` turns false; `closing` is true during that time. */
 export function usePresence(open: boolean, exitMs = POP_OUT_MS): { mounted: boolean; closing: boolean } {
     const [mounted, setMounted] = useState(open);

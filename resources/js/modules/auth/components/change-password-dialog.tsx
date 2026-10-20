@@ -7,8 +7,8 @@ import { KeyRound, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { PasswordDialogHead, PasswordForm } from './password-form';
 
-/** Change password: the expired-password wall (sign out only), or with `onClose` the form the user asked for. */
-export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {}) {
+/** Change password: the expired-password wall (sign out only; `open` false plays its close), or with `onClose` the form the user asked for. */
+export function ChangePasswordDialog({ onClose, open = true }: { onClose?: () => void; open?: boolean } = {}) {
     const t = useT();
     const logout = useLogout();
 
@@ -25,7 +25,7 @@ export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {})
 
     if (!onClose) {
         return (
-            <BlockingDialog>
+            <BlockingDialog open={open}>
                 <div className="p-6">
                     <PasswordDialogHead icon={ShieldAlert} warn title={t('pwd_expired_title')} desc={t('pwd_expired_desc')} />
                     <PasswordForm

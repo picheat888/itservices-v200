@@ -6,6 +6,7 @@ import { CountdownRing } from '@/shared/components/countdown-ring';
 import { ErrorIcon, ErrorState } from '@/shared/components/error-state';
 import { useConnectionRecovery } from '@/shared/hooks/use-connection-recovery';
 import { useCountdown } from '@/shared/hooks/use-countdown';
+import { SHEET_CLOSE_MS, usePresence } from '@/shared/hooks/use-presence';
 import { retryFailedQueries } from '@/shared/lib/app-error-actions';
 import { clock, elapsedShare } from '@/shared/lib/countdown';
 import { formatNumber } from '@/shared/lib/number';
@@ -13,6 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
 import { Hourglass, Loader2, ServerCrash, Users, WifiOff, Wrench, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 
 const RING_TONE = {
     wait: 'text-amber-600 dark:text-amber-400',
@@ -22,19 +24,29 @@ const RING_TONE = {
 
 export function AppErrorDialog() {
     const kind = useAppErrorStore((s) => s.kind);
+    const retryAfter = useAppErrorStore((s) => s.retryAfter);
+    const reference = useAppErrorStore((s) => s.reference);
     // Waits in the store under the idle warning or account switch, so their buttons keep working
     const topDialogOpen = useTopDialogOpen();
+    const open = !!kind && !topDialogOpen;
+    const { mounted } = usePresence(open, SHEET_CLOSE_MS);
 
-    if (!kind || topDialogOpen) return null;
+    // The error on screen, kept after the store clears so the dialog closes with its own words
+    const [shown, setShown] = useState({ kind, retryAfter, reference });
+    if (kind && (kind !== shown.kind || retryAfter !== shown.retryAfter || reference !== shown.reference)) {
+        setShown({ kind, retryAfter, reference });
+    }
+
+    if (!mounted || !shown.kind) return null;
 
     return (
-        <BlockingDialog layer="wall">
+        <BlockingDialog open={open} layer="wall">
             <div className="p-6">
-                {kind === 'server' && <ServerBody />}
-                {kind === 'network' && <NetworkBody />}
-                {kind === 'rate-limit' && <RateLimitBody />}
-                {kind === 'busy' && <BusyBody />}
-                {kind === 'maintenance' && <MaintenanceBody />}
+                {shown.kind === 'server' && <ServerBody reference={shown.reference} />}
+                {shown.kind === 'network' && <NetworkBody />}
+                {shown.kind === 'rate-limit' && <RateLimitBody retryAfter={shown.retryAfter} />}
+                {shown.kind === 'busy' && <BusyBody retryAfter={shown.retryAfter} />}
+                {shown.kind === 'maintenance' && <MaintenanceBody retryAfter={shown.retryAfter} />}
             </div>
         </BlockingDialog>
     );
@@ -49,9 +61,8 @@ function LiveRegion({ text }: { text: string }) {
     );
 }
 
-function ServerBody() {
+function ServerBody({ reference }: { reference: string | null }) {
     const t = useT();
-    const reference = useAppErrorStore((s) => s.reference);
     const shellMounted = useAppErrorStore((s) => s.shellMounted);
     const dismiss = useAppErrorStore((s) => s.dismiss);
 
@@ -109,27 +120,27 @@ function NetworkBody() {
     );
 }
 
-function RateLimitBody() {
+function RateLimitBody({ retryAfter }: { retryAfter: number | null }) {
     const t = useT();
-    return <WaitBody icon={Hourglass} tone="wait" title={t('err_throttle_title')} line={t('err_throttle_body')} />;
+    return <WaitBody icon={Hourglass} tone="wait" title={t('err_throttle_title')} line={t('err_throttle_body')} retryAfter={retryAfter} />;
 }
 
-function BusyBody() {
+function BusyBody({ retryAfter }: { retryAfter: number | null }) {
     const t = useT();
-    return <WaitBody icon={Users} tone="wait" title={t('err_busy_title')} line={t('err_busy_body')} />;
+    return <WaitBody icon={Users} tone="wait" title={t('err_busy_title')} line={t('err_busy_body')} retryAfter={retryAfter} />;
 }
 
-function MaintenanceBody() {
+function MaintenanceBody({ retryAfter }: { retryAfter: number | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const retryAfter = useAppErrorStore((s) => s.retryAfter);
     const line =
         retryAfter === null ? t('err_maintenance_later') : t('err_maintenance_body').replace('{n}', formatNumber(Math.ceil(retryAfter / 60), lang));
 
-    return <WaitBody icon={Wrench} tone="info" title={t('err_maintenance_title')} line={line} />;
+    return <WaitBody icon={Wrench} tone="info" title={t('err_maintenance_title')} line={line} retryAfter={retryAfter} />;
 }
 
 interface WaitBodyProps {
+    retryAfter: number | null;
     icon: LucideIcon;
     tone: 'wait' | 'info';
     title: string;
@@ -137,9 +148,8 @@ interface WaitBodyProps {
 }
 
 // Rate limit, busy server and maintenance: a ring counts down the server's Retry-After; without one, the plain icon and Retry at once
-function WaitBody({ icon, tone, title, line }: WaitBodyProps) {
+function WaitBody({ retryAfter, icon, tone, title, line }: WaitBodyProps) {
     const t = useT();
-    const retryAfter = useAppErrorStore((s) => s.retryAfter);
     const { left, done } = useCountdown(retryAfter);
     const counted = retryAfter !== null;
 
