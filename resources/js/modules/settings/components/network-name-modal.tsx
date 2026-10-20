@@ -84,7 +84,7 @@ export function NetworkNameModal({ open, network, onClose }: { open: boolean; ne
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent>
+            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{network ? t('net_edit_title') : t('net_add_title')}</DialogTitle>
                     <DialogDescription className="sr-only">{t('md_modal_desc')}</DialogDescription>

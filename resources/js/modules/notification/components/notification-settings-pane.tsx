@@ -208,7 +208,7 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
     return (
         <Dialog open={open && !!bell} onOpenChange={(o) => !o && guardClose(onClose)}>
             {bell && (
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
                     <FocusDialogHeader
                         icon={PenLine}
                         eyebrow={t(notificationGroupLabel(bell.module))}

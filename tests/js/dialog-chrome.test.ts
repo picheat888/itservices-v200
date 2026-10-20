@@ -48,3 +48,23 @@ test('dialogs use two corner radii: 14px for the centred alert windows, the 10px
         }
     }
 });
+
+test('dialogs that had no height cap scroll inside the screen (useConfirm waits for its redesign)', () => {
+    const UNCAPPED = [
+        'modules/asset/components/asset-receive-modal.tsx',
+        'modules/employee/components/manage-credentials-modal.tsx',
+        'modules/employee/components/photo-crop-dialog.tsx',
+        'modules/employee/components/set-credentials-modal.tsx',
+        'modules/notification/components/notification-settings-pane.tsx',
+        'modules/settings/components/network-name-modal.tsx',
+        'modules/stock/components/stock-item-modal.tsx',
+    ];
+    for (const rel of UNCAPPED) {
+        const tags = read(rel).match(/<DialogContent\b[^>]*>/g) ?? [];
+        assert.ok(tags.length > 0, `${rel}: DialogContent found`);
+        for (const tag of tags) {
+            assert.ok(tag.includes('max-h-[calc(100dvh-2rem)]'), `${rel}: height cap`);
+            assert.ok(tag.includes('overflow-y-auto'), `${rel}: scrolls when capped`);
+        }
+    }
+});
