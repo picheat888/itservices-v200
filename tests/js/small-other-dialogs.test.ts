@@ -1,6 +1,6 @@
 // Type-6 small dialogs outside the small-form shell: record missing (centred alert look), photo crop and stock movement detail (4ข header and footer).
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
@@ -31,6 +31,22 @@ test('record missing shows a grey round icon and one full-width Close button', (
 
 test('record missing moves focus to Close when it replaces an open dialog body, since the hidden cross drops it', () => {
     assert.match(read(MISSING), /<Button autoFocus className="w-full font-semibold"/);
+});
+
+const tsxFiles = (dir: string): string[] =>
+    readdirSync(join(import.meta.dirname, '../../resources/js', dir), { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? tsxFiles(join(dir, e.name)) : e.name.endsWith('.tsx') ? [join(dir, e.name)] : [],
+    );
+
+test('every dialog that shows the record-missing panel as its body switches to the alert frame', () => {
+    const hosts = tsxFiles('modules').filter((rel) => /<RecordMissing\s/.test(read(rel)));
+    assert.ok(hosts.length >= 3, 'request, stock item and stock count hosts found');
+    for (const rel of hosts) assert.match(read(rel), /recordMissingContentClass/, `${rel}: alert frame`);
+});
+
+test('the stock count sheet shows record missing alone, without its own loading title above it', () => {
+    const src = read('modules/stock/pages/tabs/counting-tab.tsx');
+    assert.match(src, /\) : sessionMissing \? \(\s*<RecordMissing onClose=\{closeSheet\} \/>\s*\) : \(/);
 });
 
 test('photo crop keeps its 384 frame without a cross, and takes the 4ข header and footer bar', () => {
