@@ -10,6 +10,7 @@ use App\Models\Auth\UserDevice;
 use App\Models\User;
 use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DeviceService;
+use App\Support\LoginRedirect;
 use Closure;
 use Illuminate\Auth\Recaller;
 use Illuminate\Http\Request;
@@ -101,7 +102,7 @@ class TrackDevice
                 );
             }
 
-            return redirect('/login?reason='.rawurlencode($reason));
+            return LoginRedirect::to($request, $reason);
         }
 
         if ($request->hasSession()) {

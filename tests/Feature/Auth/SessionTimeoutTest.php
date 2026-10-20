@@ -102,6 +102,30 @@ class SessionTimeoutTest extends TestCase
             ->assertJsonPath('message', 'session_expired');
     }
 
+    public function test_a_file_link_past_the_window_goes_to_the_login_page_and_back_to_the_file(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        $url = '/files/employees/1/photo';
+
+        $this->actingAs(User::factory()->create())
+            ->idleFor(40 * 60)
+            ->get($url)
+            ->assertRedirect('/login?reason=idle_timeout&next='.rawurlencode($url));
+
+        $this->assertNull($this->lastActivity());
+    }
+
+    public function test_a_pdf_link_past_the_window_goes_to_the_login_page_and_back_to_the_pdf(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        $url = '/pdf/stock-items/1/history';
+
+        $this->actingAs(User::factory()->create())
+            ->idleFor(40 * 60)
+            ->get($url)
+            ->assertRedirect('/login?reason=idle_timeout&next='.rawurlencode($url));
+    }
+
     /** The browser pings on real activity. */
     public function test_the_ping_counts_as_activity(): void
     {

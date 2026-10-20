@@ -126,6 +126,18 @@ class ResignedAccountAccessTest extends TestCase
             ->assertUnauthorized()->assertJsonPath('message', 'account_closed');
     }
 
+    /** Opened in a tab, a file or PDF link goes to the login page that says why; no next, the account cannot sign in again. */
+    public function test_a_file_or_pdf_link_of_a_closed_account_goes_to_the_login_page(): void
+    {
+        $user = $this->staff('gone.tab', EmployeeStatus::Resigned, now()->subDay()->toDateString());
+        $item = StockItem::create(['sku' => 'SKU-0000002', 'name' => 'Toner', 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 10]);
+
+        $this->actingAs($user)->get("/files/employees/{$user->employee_id}/photo")
+            ->assertRedirect('/login?reason=account_closed');
+        $this->actingAs($user)->get("/pdf/stock-items/{$item->id}/history")
+            ->assertRedirect('/login?reason=account_closed');
+    }
+
     public function test_somebody_shut_out_can_still_clear_their_own_session(): void
     {
         // logout opts out of the guard: without that, the one route that tidies up after
