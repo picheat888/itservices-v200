@@ -175,11 +175,11 @@ export function ImportDialog<Row>({
                     subtitle={<span className="text-muted-foreground text-sm">{description}</span>}
                 />
 
-                <div className="flex min-h-0 flex-1 flex-col gap-4 border-t px-6 py-6">
+                <div className="flex min-h-0 flex-1 scroll-py-2 flex-col gap-4 overflow-y-auto border-t px-6 py-6">
                     {/* What this import will not do — said before a file is even chosen. */}
                     {notice}
 
-                    <div className="-mx-2 max-h-[min(58dvh,640px)] scroll-py-2 space-y-3 overflow-y-auto px-2 py-1">
+                    <div className="space-y-3">
                         <div className={cn('grid gap-2', downloads.length > 1 && 'sm:grid-cols-2')}>
                             {downloads.map((download) => (
                                 <button
