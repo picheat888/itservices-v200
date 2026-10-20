@@ -40,6 +40,7 @@ const SETTINGS_4A = [
     'modules/settings/components/location-modal.tsx',
     'modules/settings/components/lookup-section.tsx',
     'modules/settings/components/request-data-section.tsx',
+    'modules/settings/components/network-name-modal.tsx',
 ];
 const PEOPLE_4A = [
     'modules/employee/components/department-modal.tsx',
@@ -63,7 +64,14 @@ const ALL = [...TICKET_4B, ...REPORT_4B, ...SETTINGS_4A, ...PEOPLE_4A, ...ASSET_
 
 test('every listed small form uses the shared shell and the 4ข header', () => ALL.forEach(assertSmallForm));
 
-test('27 small forms are on the shell', () => assert.equal(ALL.length, 27));
+test('28 small forms are on the shell', () => assert.equal(ALL.length, 28));
+
+test('network names sit under security, with the network name as the edit chip', () => {
+    const src = read('modules/settings/components/network-name-modal.tsx');
+    assert.match(src, /icon=\{Shield\}/, 'Shield icon');
+    assert.match(src, /eyebrow=\{t\('set_security'\)\}/, 'security eyebrow');
+    assert.match(src, /code=\{network\?\.name\}/, 'edit chip');
+});
 
 test('ticket small forms use the shared shell', () => TICKET_4B.forEach(assertSmallForm));
 

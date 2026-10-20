@@ -52,7 +52,6 @@ test('dialogs that had no height cap scroll inside the screen', () => {
         'modules/employee/components/photo-crop-dialog.tsx',
         'modules/employee/components/set-credentials-modal.tsx',
         'modules/notification/components/notification-settings-pane.tsx',
-        'modules/settings/components/network-name-modal.tsx',
         'modules/stock/components/stock-item-modal.tsx',
     ];
     for (const rel of UNCAPPED) {
