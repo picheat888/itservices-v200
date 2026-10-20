@@ -32,11 +32,7 @@ test('the sheet close button is a 32px target with the icon 24px from the corner
 });
 
 test('dialogs use two corner radii: 14px for the centred alert windows, the 10px default for the rest', () => {
-    const ALERTS = [
-        'shared/components/blocking-dialog.tsx',
-        'shared/components/centered-alert.tsx',
-        'modules/auth/components/change-password-dialog.tsx',
-    ];
+    const ALERTS = ['shared/components/blocking-dialog.tsx', 'shared/ui/confirm-dialog.tsx', 'modules/auth/components/change-password-dialog.tsx'];
     for (const rel of ['modules', 'shared', 'app'].flatMap(tsxFiles)) {
         const src = read(rel);
         const contents = src.match(/<(DialogContent|FormDialogContent|SheetContent|DialogPrimitive\.Content)\b[\s\S]*?>/g) ?? [];
