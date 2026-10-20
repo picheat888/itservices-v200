@@ -67,7 +67,7 @@ const focusDialogContentClass = '!flex h-[min(860px,calc(100dvh-72px))] w-[calc(
 // Large dialogs whose content stays put while open: 1100 wide, as tall as the content up to the same cap
 const largeDialogContentClass = '!flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0';
 
-// Medium dialogs (a chain to read, one sent email): 768 wide, content height up to the same cap
+// Medium dialogs (an approval chain to read): 768 wide, content height up to the same cap
 const mediumDialogContentClass = '!flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[768px] flex-col gap-0 overflow-hidden p-0';
 
 // Small form dialogs: 560 wide, height capped, the body scrolls between header and footer bar

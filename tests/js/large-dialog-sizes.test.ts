@@ -75,7 +75,7 @@ const LARGE: { rel: string; width: 1100 | 768; height: 'fixed' | 'content'; nth?
     { rel: 'modules/ticket/components/edit-ticket-drawer.tsx', width: 1100, height: 'content' },
     { rel: 'modules/asset/components/asset-form-drawer.tsx', width: 1100, height: 'fixed' },
     { rel: 'modules/report/components/access-members-cards.tsx', width: 1100, height: 'content', keep: ['gap-4'] },
-    { rel: 'modules/email-templates/pages/index.tsx', width: 768, height: 'content', nth: 0 },
+    { rel: 'modules/email-templates/pages/index.tsx', width: 1100, height: 'content', nth: 0 },
 ];
 
 test('large dialogs whose content changes while open keep one height; the rest grow with their content', () => {

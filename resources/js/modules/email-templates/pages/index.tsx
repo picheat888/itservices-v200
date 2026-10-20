@@ -35,7 +35,7 @@ import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, mediumDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -1185,7 +1185,7 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
 
     return (
         <Dialog open={logId != null} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className={mediumDialogContentClass}>
+            <DialogContent className={largeDialogContentClass}>
                 {log && meta ? (
                     <FocusDialogHeader
                         icon={Mail}
