@@ -300,6 +300,11 @@
     }
 }
 
+/* Thai has no letter case: uppercase labels keep the surrounding spacing so vowels and tone marks stay on their consonants */
+.uppercase:lang(th) {
+    letter-spacing: inherit;
+}
+
 /* Density scale — applied on the shell wrapper via [data-density] */
 [data-density='compact'] {
     --row-py: 0.375rem;
