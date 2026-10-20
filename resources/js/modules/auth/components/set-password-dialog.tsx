@@ -5,12 +5,12 @@ import { KeyRound } from 'lucide-react';
 import { PasswordDialogHead, PasswordForm } from './password-form';
 
 /** Set your password: blocks an account whose password someone else set (new account or admin reset) until it has its own. */
-export function SetPasswordDialog() {
+export function SetPasswordDialog({ open = true }: { open?: boolean } = {}) {
     const t = useT();
     const logout = useLogout();
 
     return (
-        <BlockingDialog>
+        <BlockingDialog open={open}>
             <div className="p-6">
                 {/* Brand tint, not a warning: a setup step, not a fault */}
                 <PasswordDialogHead icon={KeyRound} title={t('pwd_set_title')} desc={t('pwd_set_desc')} />

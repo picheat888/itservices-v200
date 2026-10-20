@@ -2,8 +2,8 @@ import { useT } from '@/lang';
 import {
     AccountSwitchedDialog,
     ChangePasswordDialog,
+    PasswordWall,
     SessionTimeoutModal,
-    SetPasswordDialog,
     useAccountSync,
     useAuth,
     useSessionTimeout,
@@ -134,15 +134,10 @@ export function AppShell() {
             />
 
             {switchedTo && <AccountSwitchedDialog user={switchedTo} />}
-            {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} warnSeconds={warnSeconds} onStay={extendSession} onLogout={doLogout} />}
+            <SessionTimeoutModal open={showWarning} secondsLeft={secondsLeft} warnSeconds={warnSeconds} onStay={extendSession} onLogout={doLogout} />
             {/* Forced password changes first; the voluntary one is dismissable */}
-            {user?.must_change_password ? (
-                <SetPasswordDialog />
-            ) : user?.password_expired ? (
-                <ChangePasswordDialog />
-            ) : shellDialog === 'password' ? (
-                <ChangePasswordDialog onClose={() => setShellDialog(null)} />
-            ) : null}
+            <PasswordWall user={user} />
+            {!passwordOwed && shellDialog === 'password' && <ChangePasswordDialog onClose={() => setShellDialog(null)} />}
         </div>
     );
 }

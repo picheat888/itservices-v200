@@ -13,9 +13,17 @@ export function useTopDialogOpen(): boolean {
     return useSyncExternalStore(subscribeTopDialogs, isTopDialogOpen);
 }
 
-export function BlockingDialog({ layer = 'wall', className, children }: { layer?: 'wall' | 'top'; className?: string; children: ReactNode }) {
+interface BlockingDialogProps {
+    /** False plays the close animation; keep it mounted that long with usePresence(open, SHEET_CLOSE_MS). */
+    open?: boolean;
+    layer?: 'wall' | 'top';
+    className?: string;
+    children: ReactNode;
+}
+
+export function BlockingDialog({ open = true, layer = 'wall', className, children }: BlockingDialogProps) {
     const z = layer === 'top' ? 'z-[10000]' : 'z-[9999]';
-    useLayoutEffect(() => (layer === 'top' ? holdTopDialog() : undefined), [layer]);
+    useLayoutEffect(() => (layer === 'top' && open ? holdTopDialog() : undefined), [layer, open]);
     // No Trigger to hand focus back to, so return it to whatever had it before the dialog opened
     const [returnFocusTo] = useState(() => document.activeElement as HTMLElement | null);
     const restoreFocus = (e: Event) => {
@@ -24,7 +32,7 @@ export function BlockingDialog({ layer = 'wall', className, children }: { layer?
     };
 
     return (
-        <Dialog open>
+        <Dialog open={open}>
             <DialogPortal>
                 <DialogOverlay className={z} />
                 <DialogPrimitive.Content

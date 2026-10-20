@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '@/modules/auth/lib/session-warning';
 import { BlockingDialog } from '@/shared/components/blocking-dialog';
 import { CountdownRing } from '@/shared/components/countdown-ring';
+import { SHEET_CLOSE_MS, usePresence } from '@/shared/hooks/use-presence';
 import { clock, elapsedShare } from '@/shared/lib/countdown';
 import { formatNumber } from '@/shared/lib/number';
 import { Button } from '@/shared/ui/button';
@@ -11,6 +12,7 @@ import { Clock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface Props {
+    open: boolean;
     secondsLeft: number;
     /** How long the warning runs in total; the ring fills over this. */
     warnSeconds: number;
@@ -35,27 +37,37 @@ function spokenLeft(t: ReturnType<typeof useT>, seconds: number): string {
 }
 
 // Idle warning with a countdown: stay signed in or sign out now. Its own top layer, so it works over any open dialog.
-export function SessionTimeoutModal({ secondsLeft, warnSeconds, onStay, onLogout }: Props) {
+export function SessionTimeoutModal(props: Props) {
+    const { mounted } = usePresence(props.open, SHEET_CLOSE_MS);
+    // Unmounted after the close animation, so each warning starts fresh
+    return mounted ? <TimeoutWarning {...props} /> : null;
+}
+
+function TimeoutWarning({ open, secondsLeft, warnSeconds, onStay, onLogout }: Props) {
     const t = useT();
+
+    // The time on screen, held while the dialog closes so the ring does not jump
+    const [shownSeconds, setShownSeconds] = useState(secondsLeft);
+    if (open && secondsLeft !== shownSeconds) setShownSeconds(secondsLeft);
 
     // Read with the description when the dialog opens; later milestones go to the live region
     const [openingTime] = useState(() => spokenLeft(t, secondsLeft));
     const [announcement, setAnnouncement] = useState('');
-    const previous = useRef(secondsLeft);
+    const previous = useRef(shownSeconds);
     useEffect(() => {
-        const milestone = crossedAnnouncement(previous.current, secondsLeft);
-        previous.current = secondsLeft;
-        if (milestone !== null) setAnnouncement(spokenLeft(t, secondsLeft));
-    }, [secondsLeft, t]);
+        const milestone = crossedAnnouncement(previous.current, shownSeconds);
+        previous.current = shownSeconds;
+        if (milestone !== null) setAnnouncement(spokenLeft(t, shownSeconds));
+    }, [shownSeconds, t]);
 
-    const progress = elapsedShare(secondsLeft, warnSeconds);
-    const tone = TONE_CLASS[toneFor(secondsLeft, warnSeconds)];
+    const progress = elapsedShare(shownSeconds, warnSeconds);
+    const tone = TONE_CLASS[toneFor(shownSeconds, warnSeconds)];
 
     return (
-        <BlockingDialog layer="top">
+        <BlockingDialog open={open} layer="top">
             <div className="p-6">
                 <div className="mb-4 flex justify-center">
-                    <CountdownRing progress={progress} label={clock(secondsLeft)} toneClass={tone} icon={Clock} />
+                    <CountdownRing progress={progress} label={clock(shownSeconds)} toneClass={tone} icon={Clock} />
                 </div>
 
                 <DialogTitle className="mb-1 text-center text-base leading-normal font-semibold tracking-normal">
