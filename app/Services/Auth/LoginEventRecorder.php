@@ -19,6 +19,9 @@ class LoginEventRecorder
 
     public const MASKED_TAIL = 4;
 
+    /** Shorter text cannot be a password (min 8 characters), so it is kept as typed. */
+    public const MASK_FROM_LENGTH = 8;
+
     public function __construct(private readonly LocationResolver $locations) {}
 
     /**
@@ -65,13 +68,15 @@ class LoginEventRecorder
         ];
     }
 
-    /** The typed text with its last 4 characters hidden (all of it when it is 4 or shorter). */
+    /** The typed text with its last 4 characters hidden once it is long enough to be a password. */
     public static function maskTail(string $text): string
     {
         $length = mb_strlen($text);
-        $shown = max(0, $length - self::MASKED_TAIL);
+        if ($length < self::MASK_FROM_LENGTH) {
+            return $text;
+        }
 
-        return mb_substr($text, 0, $shown).str_repeat('•', $length - $shown);
+        return mb_substr($text, 0, $length - self::MASKED_TAIL).str_repeat('•', self::MASKED_TAIL);
     }
 
     /** @return array{ip: ?string, location: ?string, os: string, browser: string} */
