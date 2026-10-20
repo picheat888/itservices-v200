@@ -1,10 +1,11 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { FileDropZone } from '@/shared/components/file-drop-zone';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn, downloadBlob } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { AlertCircle, CheckCircle2, Download, Loader2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -45,6 +46,7 @@ export interface ImportPreviewConfig<Row> {
 export function ImportDialog<Row>({
     open,
     onClose,
+    eyebrow,
     title,
     description,
     hint,
@@ -60,6 +62,8 @@ export function ImportDialog<Row>({
 }: {
     open: boolean;
     onClose: () => void;
+    /** The module that opens the import, shown above the title. */
+    eyebrow: ReactNode;
     title: string;
     description: string;
     /** The line under the drop zone naming the columns this import expects. */
@@ -162,141 +166,148 @@ export function ImportDialog<Row>({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && !importPending && guardClose(onClose)}>
-            <DialogContent className={cn(result ? 'max-w-3xl' : guide ? 'max-w-2xl' : 'max-w-lg')}>
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Upload className="text-brand h-5 w-5" />
-                        {title}
-                    </DialogTitle>
-                    <DialogDescription>{description}</DialogDescription>
-                </DialogHeader>
+            <DialogContent
+                className={cn(
+                    'flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] flex-col gap-0 p-0',
+                    result ? 'max-w-3xl' : guide ? 'max-w-2xl' : 'max-w-lg',
+                )}
+            >
+                <FocusDialogHeader
+                    icon={Upload}
+                    eyebrow={eyebrow}
+                    title={title}
+                    srDescription={description}
+                    subtitle={<span className="text-muted-foreground text-sm">{description}</span>}
+                />
 
-                {/* What this import will not do — said before a file is even chosen. */}
-                {notice}
+                <div className="flex min-h-0 flex-1 flex-col gap-4 border-t px-6 py-6">
+                    {/* What this import will not do — said before a file is even chosen. */}
+                    {notice}
 
-                <div className="-mx-2 max-h-[min(58dvh,640px)] scroll-py-2 space-y-3 overflow-y-auto px-2 py-1">
-                    <div className={cn('grid gap-2', downloads.length > 1 && 'sm:grid-cols-2')}>
-                        {downloads.map((download) => (
-                            <button
-                                key={download.fileName}
-                                type="button"
-                                onClick={() => handleDownload(download.fetch, download.fileName)}
-                                className="border-border hover:bg-accent flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
-                            >
-                                <Download className="text-brand h-4 w-4 shrink-0" />
-                                {download.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* How to fill the file in */}
-                    {guide}
-
-                    <FileDropZone
-                        // Matches what readImportFile() accepts
-                        accept={['csv', 'txt']}
-                        hint={hint}
-                        compact={file !== null}
-                        disabled={importPending}
-                        onPick={(list) => handleChoose(Array.from(list)[0] ?? null)}
-                    />
-                    {file && <p className="text-muted-foreground truncate text-center text-xs font-medium">{file.name}</p>}
-
-                    {preview?.pending && (
-                        <div role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            {t('import_checking')}
+                    <div className="-mx-2 max-h-[min(58dvh,640px)] scroll-py-2 space-y-3 overflow-y-auto px-2 py-1">
+                        <div className={cn('grid gap-2', downloads.length > 1 && 'sm:grid-cols-2')}>
+                            {downloads.map((download) => (
+                                <button
+                                    key={download.fileName}
+                                    type="button"
+                                    onClick={() => handleDownload(download.fetch, download.fileName)}
+                                    className="border-border hover:bg-accent flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
+                                >
+                                    <Download className="text-brand h-4 w-4 shrink-0" />
+                                    {download.label}
+                                </button>
+                            ))}
                         </div>
-                    )}
 
-                    {success != null && (
-                        <div
-                            role="alert"
-                            className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
-                        >
-                            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-                            {successMessage(success)}
-                        </div>
-                    )}
+                        {/* How to fill the file in */}
+                        {guide}
 
-                    {generalError && (
-                        <div
-                            role="alert"
-                            className="bg-destructive/10 dark:text-destructive flex items-start gap-2 rounded-lg px-3 py-2 text-sm text-red-700"
-                        >
-                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                            {generalError}
-                        </div>
-                    )}
+                        <FileDropZone
+                            // Matches what readImportFile() accepts
+                            accept={['csv', 'txt']}
+                            hint={hint}
+                            compact={file !== null}
+                            disabled={importPending}
+                            onPick={(list) => handleChoose(Array.from(list)[0] ?? null)}
+                        />
+                        {file && <p className="text-muted-foreground truncate text-center text-xs font-medium">{file.name}</p>}
 
-                    {result && preview && (
-                        <div className="space-y-2">
-                            <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="font-semibold">{t('import_preview_title')}</span>
-                                <span className="bg-muted rounded-full px-2 py-0.5">
-                                    {t('import_preview_total')}: {fmtN(result.meta.total)}
-                                </span>
-                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">
-                                    {t('import_preview_valid')}: {fmtN(result.meta.valid)}
-                                </span>
-                                {result.meta.invalid > 0 && (
-                                    <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-red-700">
-                                        {t('import_preview_invalid')}: {fmtN(result.meta.invalid)}
-                                    </span>
-                                )}
+                        {preview?.pending && (
+                            <div role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('import_checking')}
                             </div>
+                        )}
 
-                            {result.meta.ignored_columns.length > 0 && (
-                                <p className="text-muted-foreground text-xs">
-                                    {t('import_ignored_columns')} {result.meta.ignored_columns.join(', ')}
-                                </p>
-                            )}
-
-                            {preview.render(result.data)}
-
-                            {/* A capped listing has to say so, or the table reads as the whole file. */}
-                            {truncated && (
-                                <p className="text-muted-foreground text-xs">
-                                    {t('import_preview_truncated')
-                                        .replace('{shown}', fmtN(result.meta.shown ?? 0))
-                                        .replace('{total}', fmtN(result.meta.total))}
-                                </p>
-                            )}
-
-                            {result.meta.invalid > 0 && (
-                                <p className="text-destructive flex items-start gap-1 text-xs">
-                                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                    {t('import_preview_blocked')}
-                                </p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Server-side rejection of a file the preview thought was clean (data changed in between). */}
-                    {errors.length > 0 && (
-                        <div className="border-destructive/30 bg-destructive/5 rounded-lg border">
+                        {success != null && (
                             <div
                                 role="alert"
-                                className="border-destructive/20 dark:text-destructive flex items-center gap-2 border-b px-3 py-2 text-sm font-semibold text-red-700"
+                                className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
                             >
-                                <AlertCircle className="h-4 w-4" aria-hidden />
-                                {t('import_errors_found')} ({fmtN(errors.length)})
+                                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+                                {successMessage(success)}
                             </div>
-                            <div className="max-h-48 overflow-y-auto px-3 py-2">
-                                {errors.map((rowError) => (
-                                    <div key={rowError.row} className="py-0.5 text-xs">
-                                        <span className="text-destructive font-semibold">
-                                            {t('import_row')} {rowError.row}:
-                                        </span>{' '}
-                                        <span className="text-muted-foreground">{rowError.message}</span>
-                                    </div>
-                                ))}
+                        )}
+
+                        {generalError && (
+                            <div
+                                role="alert"
+                                className="bg-destructive/10 dark:text-destructive flex items-start gap-2 rounded-lg px-3 py-2 text-sm text-red-700"
+                            >
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                {generalError}
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {result && preview && (
+                            <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2 text-xs">
+                                    <span className="font-semibold">{t('import_preview_title')}</span>
+                                    <span className="bg-muted rounded-full px-2 py-0.5">
+                                        {t('import_preview_total')}: {fmtN(result.meta.total)}
+                                    </span>
+                                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">
+                                        {t('import_preview_valid')}: {fmtN(result.meta.valid)}
+                                    </span>
+                                    {result.meta.invalid > 0 && (
+                                        <span className="bg-destructive/10 dark:text-destructive rounded-full px-2 py-0.5 text-red-700">
+                                            {t('import_preview_invalid')}: {fmtN(result.meta.invalid)}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {result.meta.ignored_columns.length > 0 && (
+                                    <p className="text-muted-foreground text-xs">
+                                        {t('import_ignored_columns')} {result.meta.ignored_columns.join(', ')}
+                                    </p>
+                                )}
+
+                                {preview.render(result.data)}
+
+                                {/* A capped listing has to say so, or the table reads as the whole file. */}
+                                {truncated && (
+                                    <p className="text-muted-foreground text-xs">
+                                        {t('import_preview_truncated')
+                                            .replace('{shown}', fmtN(result.meta.shown ?? 0))
+                                            .replace('{total}', fmtN(result.meta.total))}
+                                    </p>
+                                )}
+
+                                {result.meta.invalid > 0 && (
+                                    <p className="text-destructive flex items-start gap-1 text-xs">
+                                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                        {t('import_preview_blocked')}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Server-side rejection of a file the preview thought was clean (data changed in between). */}
+                        {errors.length > 0 && (
+                            <div className="border-destructive/30 bg-destructive/5 rounded-lg border">
+                                <div
+                                    role="alert"
+                                    className="border-destructive/20 dark:text-destructive flex items-center gap-2 border-b px-3 py-2 text-sm font-semibold text-red-700"
+                                >
+                                    <AlertCircle className="h-4 w-4" aria-hidden />
+                                    {t('import_errors_found')} ({fmtN(errors.length)})
+                                </div>
+                                <div className="max-h-48 overflow-y-auto px-3 py-2">
+                                    {errors.map((rowError) => (
+                                        <div key={rowError.row} className="py-0.5 text-xs">
+                                            <span className="text-destructive font-semibold">
+                                                {t('import_row')} {rowError.row}:
+                                            </span>{' '}
+                                            <span className="text-muted-foreground">{rowError.message}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooterBar>
                     <Button variant="ghost" onClick={() => guardClose(onClose)} disabled={importPending}>
                         {success != null ? t('import_close') : t('cancel')}
                     </Button>
@@ -304,7 +315,7 @@ export function ImportDialog<Row>({
                         {importPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                         {importPending ? t('import_running') : t('import_run')}
                     </Button>
-                </DialogFooter>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

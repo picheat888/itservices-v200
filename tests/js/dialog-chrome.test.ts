@@ -134,7 +134,6 @@ test('dialogs that had no height cap scroll inside the screen', () => {
     const UNCAPPED = [
         'modules/employee/components/photo-crop-dialog.tsx',
         'modules/notification/components/notification-settings-pane.tsx',
-        'modules/stock/components/stock-item-modal.tsx',
     ];
     for (const rel of UNCAPPED) {
         const tags = openTags(read(rel), ['DialogContent']);

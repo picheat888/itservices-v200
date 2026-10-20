@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useVendors, useWarehouses } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
@@ -12,12 +13,27 @@ import { digitsOnly, formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
+import {
+    AlertTriangle,
+    ArrowDownToLine,
+    ArrowLeftRight,
+    ArrowRight,
+    Box,
+    Check,
+    Pencil,
+    Plus,
+    Printer,
+    RotateCcw,
+    ShieldCheck,
+    Trash2,
+    Zap,
+    type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { countLockFor } from '../lib/count-lock';
@@ -47,6 +63,9 @@ function primaryWarehouse(item?: StockItem): string {
  * Receiving a serialized SKU captures one serial per unit (typed or scanned) and ends on a printable receipt.
  */
 export type MovementKind = Extract<StockMovementType, 'receive' | 'return' | 'transfer'>;
+
+// Same icons as the movement buttons on the stock page
+const KIND_ICON: Record<MovementKind, LucideIcon> = { receive: ArrowDownToLine, return: RotateCcw, transfer: ArrowLeftRight };
 
 export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; onClose: () => void }) {
     const t = useT();
@@ -88,7 +107,14 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     const serialStatusId = useId();
 
     // Receipt step (receive only)
-    const [done, setDone] = useState<{ item: StockItem; serials: string[]; qty: number; prevStock: number; movementId: number } | null>(null);
+    const [done, setDone] = useState<{
+        item: StockItem;
+        serials: string[];
+        qty: number;
+        prevStock: number;
+        movementId: number;
+        docNo: string | null;
+    } | null>(null);
     // Form snapshot taken right after seeding; null = capture on the next render
     const [baseline, setBaseline] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
@@ -368,6 +394,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     qty: effectiveQty,
                     prevStock: selected.current_stock,
                     movementId: movement.id,
+                    docNo: movement.doc_no,
                 });
             } else {
                 setSaved(true);
@@ -390,15 +417,16 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     if (done) {
         return (
             <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                            <Check className="h-5 w-5" aria-hidden />
-                            {t('stock_received_ok')}
-                        </DialogTitle>
-                        <DialogDescription className="sr-only">{t('stock_received_ok')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
+                <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-lg flex-col gap-0 p-0">
+                    <FocusDialogHeader
+                        icon={Check}
+                        tone="success"
+                        eyebrow={t('stock')}
+                        title={t('stock_received_ok')}
+                        code={done.docNo ?? undefined}
+                        srDescription={t('stock_received_ok')}
+                    />
+                    <DialogBody className="space-y-4">
                         <div className="flex flex-col items-center gap-1 py-2 text-center">
                             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                                 <ArrowDownToLine className="h-6 w-6" aria-hidden />
@@ -437,8 +465,8 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                 </div>
                             </div>
                         )}
-                    </div>
-                    <DialogFooter>
+                    </DialogBody>
+                    <DialogFooterBar>
                         <Button
                             variant="outline"
                             onClick={() => {
@@ -457,7 +485,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             <Check className="h-4 w-4" aria-hidden />
                             {t('stock_done')}
                         </Button>
-                    </DialogFooter>
+                    </DialogFooterBar>
                 </DialogContent>
             </Dialog>
         );
@@ -465,13 +493,16 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className="max-w-xl">
-                <DialogHeader>
-                    <DialogTitle>{dialogTitle}</DialogTitle>
-                    <DialogDescription className="sr-only">{dialogTitle}</DialogDescription>
-                </DialogHeader>
-                {/* -mx-2/px-2 keeps focus rings inside the scroll clip */}
-                <div className="-mx-2 max-h-[70dvh] space-y-3 overflow-y-auto overscroll-contain px-2 py-1.5">
+            <DialogContent className="flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-xl flex-col gap-0 overflow-visible p-0">
+                <FocusDialogHeader
+                    icon={k ? KIND_ICON[k] : ArrowDownToLine}
+                    eyebrow={t('stock')}
+                    title={dialogTitle}
+                    code={selected?.sku}
+                    srDescription={dialogTitle}
+                    subtitle={selected && <span className="text-muted-foreground text-sm">{selected.name}</span>}
+                />
+                <DialogBody className="space-y-3 overscroll-contain">
                     <Field label={t('stock_item')} required help={isTransfer ? t('stock_mv_doc_auto') : undefined}>
                         <SearchableSelect value={sku} onChange={onSkuChange} placeholder={t('stock_select_sku')} options={skuOptions} />
                     </Field>
@@ -1011,8 +1042,8 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             onChange={(e) => setNotes(e.target.value)}
                         />
                     </Field>
-                </div>
-                <DialogFooter>
+                </DialogBody>
+                <DialogFooterBar>
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={record.isPending}>
                         {t('cancel')}
                     </Button>
@@ -1026,7 +1057,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             {actionLabel}
                         </SaveButton>
                     </DisabledReason>
-                </DialogFooter>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

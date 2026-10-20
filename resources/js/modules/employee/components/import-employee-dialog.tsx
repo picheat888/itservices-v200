@@ -1,10 +1,10 @@
 import { useT } from '@/lang';
 import { ImportDialog } from '@/shared/components/import-dialog';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { employeeApi, type ImportPreviewRow } from '../api/employeeApi';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { ImportAccountNotice, ImportEmployeeGuide } from './import-guide';
 import { ImportPreviewTable } from './import-preview-table';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /**
  * Bulk-import employees from a CSV. The shared ImportDialog does the file handling;
@@ -21,6 +21,7 @@ export function ImportEmployeeDialog({ open, onClose }: { open: boolean; onClose
         <ImportDialog<ImportPreviewRow>
             open={open}
             onClose={onClose}
+            eyebrow={t('employees')}
             title={t('import_employee')}
             description={t('import_desc')}
             hint={t('import_hint')}
