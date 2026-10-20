@@ -220,7 +220,7 @@ function RequestDetailBody({
                 </div>
             )}
 
-            <div className="border-border/60 grid flex-1 content-start gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
+            <div className="border-border/60 grid flex-1 scroll-py-2 content-start gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
                 {/* Left — summary + typed fields */}
                 <div className="min-w-0 space-y-5">
                     <div>

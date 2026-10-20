@@ -218,7 +218,7 @@ function ValidValues() {
                 </div>
             </div>
 
-            <div className="max-h-56 overflow-y-auto px-2 pb-2">
+            <div className="max-h-56 scroll-py-2 overflow-y-auto px-2 pt-0.5 pb-2">
                 {shown.length === 0 ? (
                     <EmptyState
                         kind="search"
