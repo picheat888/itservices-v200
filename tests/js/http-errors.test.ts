@@ -93,9 +93,11 @@ test('leaving the page where the server dialog was closed re-arms it', () => {
     assert.equal(quietPathAfterMove(null, '/assets'), null);
 });
 
-test('a 429 from the sign-in form or its device dialog is left to them, any other raises the wait screen', () => {
+test('a 429 from the sign-in form, its device dialog or the password form is left to them, any other raises the wait screen', () => {
     assert.equal(showsOwnThrottle('/login'), true);
     assert.equal(showsOwnThrottle('/login/devices/12/sign-out'), true);
+    assert.equal(showsOwnThrottle('/password'), true);
+    assert.equal(showsOwnThrottle('/employees/7/password'), false);
     assert.equal(showsOwnThrottle('/tickets'), false);
     assert.equal(showsOwnThrottle('/login-events'), false);
     assert.equal(showsOwnThrottle('/me/login-events'), false);

@@ -112,7 +112,8 @@ export function PasswordForm({
                 if (Object.keys(server).length) {
                     showErrors(server);
                 } else {
-                    // Locked after too many wrong passwords: the sign-in wording with the wait
+                    // Locked after too many wrong passwords: the sign-in wording with the wait, in place of the last field error
+                    if (response?.status === 429) setErrors({});
                     setFormError(response?.status === 429 ? loginErrorText(e, t, fmtN) : (data?.message ?? t('pwd_change_failed')));
                     setFormErrorCount((n) => n + 1);
                 }
