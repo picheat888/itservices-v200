@@ -55,6 +55,15 @@ test('only a server file link is reopened after sign-in', () => {
     assert.equal(serverFileTarget('/files/\\evil'), null);
 });
 
+test('a file link that climbs out of /files or /pdf is ignored', () => {
+    assert.equal(serverFileTarget('/files/x/../../api/me'), null);
+    assert.equal(serverFileTarget('/pdf/a/..'), null);
+    assert.equal(serverFileTarget('/files/x/%2e%2e/%2E%2E/api/me'), null);
+    assert.equal(serverFileTarget('/files/x/.%2e/api/me'), null);
+    assert.equal(serverFileTarget('/files/report-exports/5?expires=1&next=..'), '/files/report-exports/5?expires=1&next=..');
+    assert.equal(serverFileTarget('/files/employees/7/photo'), '/files/employees/7/photo');
+});
+
 // Device sign-out reasons and the device that took the session's place
 
 type FakeStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
