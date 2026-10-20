@@ -3,13 +3,14 @@
 import { useT } from '@/lang';
 import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
 import { useAuth } from '@/modules/auth/hooks/use-auth';
+import { AlertIconCircle } from '@/shared/components/centered-alert';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
 import { SaveButton } from '@/shared/components/save-button';
 import { isValidPassword } from '@/shared/lib/password-policy';
 import { ME_KEY } from '@/shared/lib/query-client';
-import { cn, focusFirstError } from '@/shared/lib/utils';
+import { focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -21,11 +22,7 @@ import { useEffect, useId, useState } from 'react';
 export function PasswordDialogHead({ icon: Icon, warn, title, desc }: { icon: LucideIcon; warn?: boolean; title: string; desc: string }) {
     return (
         <>
-            <div className="mb-4 flex justify-center">
-                <div className={cn('flex h-12 w-12 items-center justify-center rounded-full', warn ? 'bg-amber-500/10' : 'bg-brand/10')}>
-                    <Icon className={cn('h-6 w-6', warn ? 'text-amber-500 dark:text-amber-400' : 'text-brand')} aria-hidden />
-                </div>
-            </div>
+            <AlertIconCircle icon={Icon} tone={warn ? 'warn' : 'brand'} className="mb-4" />
             <DialogTitle className="mb-1 text-center text-base leading-normal font-semibold tracking-normal">{title}</DialogTitle>
             <DialogDescription className="mb-5 text-center">{desc}</DialogDescription>
         </>
