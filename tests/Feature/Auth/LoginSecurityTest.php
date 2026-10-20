@@ -44,6 +44,46 @@ class LoginSecurityTest extends TestCase
         $this->assertGuest();
     }
 
+    /** Invisible characters typed into the name do not buy new attempts: every spelling of the account shares one counter. */
+    public function test_invisible_characters_in_the_name_share_the_accounts_counter(): void
+    {
+        $user = User::factory()->create(['username' => 'admin']);
+        $spellings = ["ad\u{200B}min", "\u{200B}admin", "admin\u{200D}", "a\u{2060}dmin", "adm\u{FEFF}in"];
+
+        foreach ($spellings as $spelling) {
+            $this->postJson('/api/login', ['login' => $spelling, 'password' => 'wrong-password'])->assertStatus(422);
+        }
+
+        $this->postJson('/api/login', ['login' => 'admin', 'password' => 'password'])
+            ->assertStatus(429)
+            ->assertJsonPath('message', 'too_many_attempts');
+        $this->assertSame('admin', $user->username);
+    }
+
+    /** Refused by length before any lookup, not answered as a wrong password. */
+    public function test_a_name_longer_than_255_characters_is_refused(): void
+    {
+        $response = $this->postJson('/api/login', ['login' => str_repeat('a', 256), 'password' => 'wrong-password'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('login');
+
+        $this->assertNotSame(__('auth.failed'), $response->json('errors.login.0'));
+    }
+
+    /** The counter keys stay short whatever was typed, so the database cache can always store them. */
+    public function test_counter_keys_stay_short_for_a_long_name(): void
+    {
+        User::factory()->create(['username' => 'admin']);
+        $long = LoginRequest::create('/api/login', 'POST', ['login' => str_repeat('x', 255)]);
+        $padded = LoginRequest::create('/api/login', 'POST', ['login' => 'admin'.str_repeat("\u{200B}", 240)]);
+        $plain = LoginRequest::create('/api/login', 'POST', ['login' => 'admin']);
+
+        $this->assertLessThan(120, strlen($long->throttleKey()));
+        $this->assertLessThan(120, strlen($long->loginThrottleKey()));
+        $this->assertSame($plain->throttleKey(), $padded->throttleKey());
+        $this->assertSame($plain->loginThrottleKey(), $padded->loginThrottleKey());
+    }
+
     /** An unknown user and a wrong password return the SAME error — no account enumeration. */
     public function test_login_does_not_leak_whether_an_account_exists(): void
     {
