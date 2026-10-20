@@ -445,9 +445,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     srDescription={titleByKind[curKind]}
                 />
 
-                <div
-                    className={cn('max-h-[calc(100dvh-10rem)] overflow-y-auto px-6', curKind === 'software' ? 'space-y-3.5 py-4' : 'space-y-4 py-5')}
-                >
+                <div className={cn('min-h-0 flex-1 overflow-y-auto px-6', curKind === 'software' ? 'space-y-3.5 py-4' : 'space-y-4 py-5')}>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     {/* Software and Social lead with their logo beside the name instead of the shared Name. */}
                     {(curKind === 'email-groups' || curKind === 'file-shares') && (

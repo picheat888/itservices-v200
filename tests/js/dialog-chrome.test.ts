@@ -118,9 +118,9 @@ const classesWith = (rel: string, token: string): string[] => {
 };
 
 test('scroll areas inside dialogs leave room for the 4px focus ring', () => {
-    // Full-width buttons in the import guide: side padding, cancelled by a negative margin so the layout stays put
-    const guide = classesWith('shared/components/import-dialog.tsx', 'max-h-[min(58dvh,640px)]');
-    for (const t of ['-mx-2', 'px-2', 'scroll-py-2']) assert.ok(guide.includes(t), `import guide: ${t}`);
+    // The import body scrolls as a whole; its 24px side padding leaves room for the full-width buttons' rings
+    const guide = classesWith('shared/components/import-dialog.tsx', 'flex min-h-0 flex-1');
+    for (const t of ['px-6', 'scroll-py-2', 'overflow-y-auto']) assert.ok(guide.includes(t), `import body: ${t}`);
     const units = classesWith('modules/employee/components/import-guide.tsx', 'max-h-56');
     for (const t of ['scroll-py-2', 'pt-0.5']) assert.ok(units.includes(t), `import guide unit list: ${t}`);
     // Checkbox list in a new stock count: keyboard focus scrolls an item in with room for its ring

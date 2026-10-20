@@ -88,8 +88,11 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
     return (
         <Dialog open={!!file} onOpenChange={(o) => !o && onClose()}>
             {/* The title is the file name and the body is the file: no description, stated explicitly */}
-            <DialogContent aria-describedby={undefined} className={cn(mediumDialogContentClass, '[&>button]:hidden')}>
-                <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
+            <DialogContent
+                aria-describedby={undefined}
+                className={cn(mediumDialogContentClass, 'h-[min(860px,calc(100dvh-72px))] [&>button]:hidden')}
+            >
+                <div className="border-border flex shrink-0 items-center gap-3 border-b px-4 py-2.5">
                     <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{pv?.name}</DialogTitle>
                     {pv && isImage && (
                         <div className="flex shrink-0 items-center gap-0.5">
@@ -127,7 +130,7 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
                     </button>
                 </div>
                 <div
-                    className="bg-muted/30 flex items-center justify-center overflow-hidden"
+                    className="bg-muted/30 flex min-h-0 flex-1 items-center justify-center overflow-hidden"
                     onWheelCapture={(e) => {
                         const inst = zoomRef.current?.instance;
                         if (!inst) return;
@@ -147,19 +150,16 @@ export function AttachmentPreview({ file, onClose, meta }: { file: PreviewFile |
                                 zoomAnimation={{ animationTime: 250, animationType: 'easeOutCubic' }}
                                 centerOnInit
                             >
-                                <TransformComponent
-                                    wrapperClass="!h-[72dvh] !w-full"
-                                    contentClass="!flex !h-full !w-full items-center justify-center"
-                                >
-                                    <img src={pv.url} alt={pv.name} draggable={false} className="max-h-[70dvh] w-auto object-contain select-none" />
+                                <TransformComponent wrapperClass="!h-full !w-full" contentClass="!flex !h-full !w-full items-center justify-center">
+                                    <img src={pv.url} alt={pv.name} draggable={false} className="max-h-full w-auto object-contain select-none" />
                                 </TransformComponent>
                             </TransformWrapper>
                         ) : isPdf ? (
-                            <iframe src={pv.url} title={pv.name} className="h-[72dvh] w-full border-0" />
+                            <iframe src={pv.url} title={pv.name} className="h-full w-full border-0" />
                         ) : (
                             // Office / archive / other: no inline render — show a file card with a download action.
                             kindMeta && (
-                                <div className="flex h-[60dvh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-5 p-8 text-center">
                                     <div className="flex flex-col items-center gap-2">
                                         <kindMeta.Icon strokeWidth={1.5} className={cn('h-20 w-20', FILE_TONE)} />
                                         <span
