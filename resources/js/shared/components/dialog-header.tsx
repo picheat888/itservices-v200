@@ -5,18 +5,17 @@ import { useUiStore } from '@/stores/ui';
 import { type LucideIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
-/**
- * Shared header for the app's centered focus dialogs (contract View/Edit, access
- * Manage, …): a type-icon tile, an uppercase eyebrow, the title with an optional
- * code chip and title-suffix slot, an optional sub-line, an optional
- * right-edge slot, and an sr-only description.
- *
- * The eyebrow is tracked-out capitals in English only: Thai has no case, and letter-spacing
- * pulls its vowels and tone marks away from their consonants, so in Thai it is plain small text.
- *
- * The tile + code chip use the brand accent by default; pass `accent` (a hex) to
- * tint them with a resource-type colour instead (e.g. email-group violet).
- */
+export type HeaderTone = 'brand' | 'danger' | 'warn' | 'success';
+
+// Icon colour by meaning: routine work, cannot be undone, take care, done
+const TONE: Record<HeaderTone, string> = {
+    brand: 'text-brand',
+    danger: 'text-destructive',
+    warn: 'text-amber-600 dark:text-amber-400',
+    success: 'text-emerald-600 dark:text-emerald-400',
+};
+
+/** Shared header for the centred focus dialogs: a bare line icon coloured by meaning, an eyebrow (spaced capitals in English only), the title with an optional code chip, sub-line and right-edge slot. */
 export function FocusDialogHeader({
     icon: Icon,
     eyebrow,
@@ -26,9 +25,9 @@ export function FocusDialogHeader({
     subtitle,
     titleSuffix,
     headerRight,
+    tone = 'brand',
     accent,
     image,
-    round,
     tileSize = 'md',
 }: {
     icon: LucideIcon;
@@ -43,22 +42,21 @@ export function FocusDialogHeader({
     titleSuffix?: React.ReactNode;
     /** Rendered at the header's right edge, left of the dialog's ✕ close button (e.g. status badge). */
     headerRight?: React.ReactNode;
-    /** Optional hex accent for the tile + code chip; defaults to the brand colour. */
+    /** Icon colour by meaning; `accent` overrides it with a category colour. */
+    tone?: HeaderTone;
+    /** Optional hex category colour for the icon + code chip (e.g. email-group violet). */
     accent?: string;
-    /** Optional logo URL — when set, a round profile-style image replaces the icon tile. */
+    /** Optional logo URL; a round image replaces the icon. */
     image?: string | null;
-    /** Render the icon tile as a circle (profile style) instead of a rounded square. */
-    round?: boolean;
-    /** Icon-tile size: `md` (default, 40px) or `lg` (56px). */
+    /** Icon slot: `md` (default, 40px, 32px icon) or `lg` (56px, 44px icon). */
     tileSize?: 'md' | 'lg';
 }) {
     const lang = useUiStore((s) => s.lang);
-    // Icon tile: the accent kept at 3:1 on its tint in both themes
-    const tintStyle = accent
+    // Bare icon: the accent kept at 3:1 on the dialog background in both themes
+    const iconStyle = accent
         ? ({
-              background: `${accent}18`,
-              '--ink': readableInk(accent, LIGHT_GROUND, 0x18 / 255, 3),
-              '--ink-dark': readableInk(accent, DARK_GROUND, 0x18 / 255, 3),
+              '--ink': readableInk(accent, LIGHT_GROUND, 0, 3),
+              '--ink-dark': readableInk(accent, DARK_GROUND, 0, 3),
           } as CSSProperties)
         : undefined;
     // Code chip text: the accent darkened/lightened only as far as 4.5:1 on its tint needs.
@@ -70,7 +68,7 @@ export function FocusDialogHeader({
           } as CSSProperties)
         : undefined;
     const boxCls = tileSize === 'lg' ? 'h-14 w-14' : 'h-10 w-10';
-    const iconCls = tileSize === 'lg' ? 'h-7 w-7' : 'h-5 w-5';
+    const iconCls = tileSize === 'lg' ? 'h-11 w-11' : 'h-8 w-8';
     return (
         <div className="flex items-center gap-3 px-6 pt-5 pb-4">
             {image ? (
@@ -80,12 +78,12 @@ export function FocusDialogHeader({
                     className={cn(
                         'flex shrink-0 items-center justify-center',
                         boxCls,
-                        round ? 'rounded-full' : 'rounded-xl',
-                        accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : 'bg-brand/10 text-brand',
+                        accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : TONE[tone],
                     )}
-                    style={tintStyle}
+                    style={iconStyle}
+                    aria-hidden
                 >
-                    <Icon className={iconCls} />
+                    <Icon className={iconCls} strokeWidth={1.75} />
                 </div>
             )}
             <div className="min-w-0">

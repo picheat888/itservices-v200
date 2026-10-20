@@ -58,6 +58,7 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
             <FormDialogContent>
                 <FocusDialogHeader
                     icon={Ban}
+                    tone="danger"
                     eyebrow={named?.code}
                     title={t('contract_cancel_confirm_title')}
                     subtitle={named ? <span className="text-muted-foreground text-sm">{named.name}</span> : undefined}

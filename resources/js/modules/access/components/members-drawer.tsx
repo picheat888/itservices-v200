@@ -16,7 +16,7 @@ import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass, focusDialogOnOpen } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToastStore, type ToastIcon } from '@/stores/toast';
 import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, TriangleAlert, User, Users } from 'lucide-react';
@@ -354,7 +354,7 @@ export function MembersDrawer({
 
     return (
         <Dialog open={!!target} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <DialogContent className={focusDialogContentClass}>
+            <DialogContent className={focusDialogContentClass} onOpenAutoFocus={focusDialogOnOpen}>
                 {tgt && (
                     <>
                         {/* Header — shared focus-dialog header (same as contract View/Edit) */}
@@ -362,7 +362,6 @@ export function MembersDrawer({
                             icon={Icon}
                             accent={tileColor}
                             image={tgt.logo ?? undefined}
-                            round
                             tileSize="lg"
                             eyebrow={t(meta.eyebrow)}
                             title={tgt.name}

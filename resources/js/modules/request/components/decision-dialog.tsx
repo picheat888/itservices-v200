@@ -90,6 +90,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
             <FormDialogContent>
                 <FocusDialogHeader
                     icon={rejecting ? XCircle : CheckCircle2}
+                    tone={rejecting ? 'danger' : 'brand'}
                     eyebrow={ctx.request.reference}
                     title={rejecting ? t('req_decide_reject') : t('req_decide_approve')}
                     subtitle={
