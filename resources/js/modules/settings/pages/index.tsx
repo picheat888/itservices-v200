@@ -69,6 +69,7 @@ import { SEGMENT_LEGEND } from '../components/segmented-radio';
 import { TicketsSlaTab } from '../components/tickets-sla-tab';
 import { VendorModal } from '../components/vendor-modal';
 import { WarehouseModal } from '../components/warehouse-modal';
+import { useListDialog } from '../hooks/use-list-dialog';
 import {
     useAssetModelMutations,
     useAssetModels,
@@ -414,8 +415,7 @@ function BrandsList() {
     const list = useListParams();
     const { data: brands = [], isLoading } = useBrands();
     const { remove } = useBrandMutations();
-    const [addOpen, setAddOpen] = useState(false);
-    const [editBrand, setEditBrand] = useState<Brand | null>(null);
+    const dialog = useListDialog(brands, !isLoading);
 
     const columns: Column<Brand>[] = [
         {
@@ -435,7 +435,7 @@ function BrandsList() {
             render: (b) => (
                 <RowActions
                     name={b.name}
-                    onEdit={() => setEditBrand(b)}
+                    onEdit={() => dialog.edit(b)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: b.name } }))) return;
                         try {
@@ -462,20 +462,13 @@ function BrandsList() {
                 searchable={(b) => `${b.name} ${b.description ?? ''}`}
                 empty={masterDataEmpty(t, 'brands', list.table.search.value.trim() !== '', t('md_add_brand'))}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {t('md_add_brand')}
                     </Button>
                 }
             />
-            <BrandModal
-                open={addOpen || !!editBrand}
-                brand={editBrand}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditBrand(null);
-                }}
-            />
+            <BrandModal open={dialog.open} brand={dialog.editing} onClose={dialog.close} />
         </div>
     );
 }
@@ -487,8 +480,7 @@ function ModelsList() {
     const list = useListParams();
     const { data: models = [], isLoading } = useAssetModels();
     const { remove } = useAssetModelMutations();
-    const [addOpen, setAddOpen] = useState(false);
-    const [editModel, setEditModel] = useState<AssetModel | null>(null);
+    const dialog = useListDialog(models, !isLoading);
 
     // Brand has its own column, so a leading "Brand " prefix is dropped
     const displayName = (m: AssetModel) => {
@@ -519,7 +511,7 @@ function ModelsList() {
             render: (m) => (
                 <RowActions
                     name={displayName(m)}
-                    onEdit={() => setEditModel(m)}
+                    onEdit={() => dialog.edit(m)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: displayName(m) } }))) return;
                         try {
@@ -546,20 +538,13 @@ function ModelsList() {
                 searchable={(m) => `${m.name} ${m.brand?.name ?? ''}`}
                 empty={masterDataEmpty(t, 'models', list.table.search.value.trim() !== '', t('md_add_model'))}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {t('md_add_model')}
                     </Button>
                 }
             />
-            <ModelModal
-                open={addOpen || !!editModel}
-                model={editModel}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditModel(null);
-                }}
-            />
+            <ModelModal open={dialog.open} model={dialog.editing} onClose={dialog.close} />
         </div>
     );
 }
@@ -572,8 +557,7 @@ function CategoriesList() {
     const lang = useUiStore((s) => s.lang);
     const { data: categories = [], isLoading } = useCategories();
     const { remove } = useCategoryMutations();
-    const [addOpen, setAddOpen] = useState(false);
-    const [editCategory, setEditCategory] = useState<Category | null>(null);
+    const dialog = useListDialog(categories, !isLoading);
 
     // Display the category name in the active UI language (Thai falls back to the English name).
     const displayName = (c: Category) => localPair(c.name, c.name_th, lang) || '—';
@@ -604,7 +588,7 @@ function CategoriesList() {
             render: (c) => (
                 <RowActions
                     name={displayName(c)}
-                    onEdit={() => setEditCategory(c)}
+                    onEdit={() => dialog.edit(c)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: displayName(c) } }))) return;
                         try {
@@ -631,20 +615,13 @@ function CategoriesList() {
                 searchable={(c) => `${c.name} ${c.name_th ?? ''} ${c.description ?? ''}`}
                 empty={masterDataEmpty(t, 'categories', list.table.search.value.trim() !== '', t('md_add_category'))}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {t('md_add_category')}
                     </Button>
                 }
             />
-            <CategoryModal
-                open={addOpen || !!editCategory}
-                category={editCategory}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditCategory(null);
-                }}
-            />
+            <CategoryModal open={dialog.open} category={dialog.editing} onClose={dialog.close} />
         </div>
     );
 }
@@ -657,8 +634,7 @@ function VendorsList() {
     const lang = useUiStore((s) => s.lang);
     const { data: vendors = [], isLoading } = useVendors();
     const { remove } = useVendorMutations();
-    const [addOpen, setAddOpen] = useState(false);
-    const [editVendor, setEditVendor] = useState<Vendor | null>(null);
+    const dialog = useListDialog(vendors, !isLoading);
 
     // Display the vendor name in the active UI language (Thai falls back to the English name).
     const displayName = (v: Vendor) => localPair(v.name, v.name_th, lang) || '—';
@@ -696,7 +672,7 @@ function VendorsList() {
             render: (v) => (
                 <RowActions
                     name={displayName(v)}
-                    onEdit={() => setEditVendor(v)}
+                    onEdit={() => dialog.edit(v)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: displayName(v) } }))) return;
                         try {
@@ -723,20 +699,13 @@ function VendorsList() {
                 searchable={(v) => `${v.name} ${v.name_th ?? ''} ${v.contact ?? ''} ${v.email ?? ''} ${v.phone ?? ''}`}
                 empty={masterDataEmpty(t, 'vendors', list.table.search.value.trim() !== '', t('md_add_vendor'))}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {t('md_add_vendor')}
                     </Button>
                 }
             />
-            <VendorModal
-                open={addOpen || !!editVendor}
-                vendor={editVendor}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditVendor(null);
-                }}
-            />
+            <VendorModal open={dialog.open} vendor={dialog.editing} onClose={dialog.close} />
         </div>
     );
 }
@@ -748,8 +717,7 @@ function WarehousesList() {
     const list = useListParams();
     const { data: warehouses = [], isLoading } = useWarehouses();
     const { remove } = useWarehouseMutations();
-    const [addOpen, setAddOpen] = useState(false);
-    const [editWarehouse, setEditWarehouse] = useState<Warehouse | null>(null);
+    const dialog = useListDialog(warehouses, !isLoading);
 
     const columns: Column<Warehouse>[] = [
         {
@@ -769,7 +737,7 @@ function WarehousesList() {
             render: (w) => (
                 <RowActions
                     name={w.name}
-                    onEdit={() => setEditWarehouse(w)}
+                    onEdit={() => dialog.edit(w)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: w.name } }))) return;
                         try {
@@ -796,20 +764,13 @@ function WarehousesList() {
                 searchable={(w) => `${w.name} ${w.description ?? ''}`}
                 empty={masterDataEmpty(t, 'warehouses', list.table.search.value.trim() !== '', t('md_add_warehouse'))}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {t('md_add_warehouse')}
                     </Button>
                 }
             />
-            <WarehouseModal
-                open={addOpen || !!editWarehouse}
-                warehouse={editWarehouse}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditWarehouse(null);
-                }}
-            />
+            <WarehouseModal open={dialog.open} warehouse={dialog.editing} onClose={dialog.close} />
         </div>
     );
 }
@@ -822,8 +783,7 @@ function LocationsList() {
     const list = useListParams();
     const { data: locations = [], isLoading } = useLocations();
     const { remove } = useLocationMutations();
-    const [addOpen, setAddOpen] = useState(false);
-    const [editLocation, setEditLocation] = useState<LocationItem | null>(null);
+    const dialog = useListDialog(locations, !isLoading);
 
     const columns: Column<LocationItem>[] = [
         {
@@ -843,7 +803,7 @@ function LocationsList() {
             render: (loc) => (
                 <RowActions
                     name={loc.name}
-                    onEdit={() => setEditLocation(loc)}
+                    onEdit={() => dialog.edit(loc)}
                     onDelete={async () => {
                         if (!(await confirm({ variant: 'danger', entity: { name: loc.name } }))) return;
                         try {
@@ -870,20 +830,13 @@ function LocationsList() {
                 searchable={(loc) => loc.name}
                 empty={masterDataEmpty(t, 'locations', list.table.search.value.trim() !== '', t('add_location'))}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {t('add_location')}
                     </Button>
                 }
             />
-            <LocationModal
-                open={addOpen || !!editLocation}
-                location={editLocation}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditLocation(null);
-                }}
-            />
+            <LocationModal open={dialog.open} location={dialog.editing} onClose={dialog.close} />
         </div>
     );
 }

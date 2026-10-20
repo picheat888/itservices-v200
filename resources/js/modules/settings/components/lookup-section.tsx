@@ -15,6 +15,7 @@ import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { Pencil, Plus, Trash2, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useListDialog } from '../hooks/use-list-dialog';
 
 /** A simple {id, name, description} master-data row. */
 export interface LookupItem {
@@ -78,8 +79,7 @@ export function LookupSection({
     const confirm = useConfirm();
     const list = useListParams();
     const { create, update, remove } = mutations;
-    const [addOpen, setAddOpen] = useState(false);
-    const [editItem, setEditItem] = useState<LookupItem | null>(null);
+    const dialog = useListDialog(rows, !loading);
 
     const columns: Column<LookupItem>[] = [
         { key: 'name', header: nameLabel, render: (r) => <span className="text-sm font-medium">{r.name}</span> },
@@ -97,7 +97,7 @@ export function LookupSection({
                     {/* Icon-only row actions, labelled per row */}
                     <button
                         type="button"
-                        onClick={() => setEditItem(r)}
+                        onClick={() => dialog.edit(r)}
                         aria-label={`${t('edit')} ${r.name}`}
                         className="hover:bg-accent focus-visible:ring-ring/50 flex h-8 w-8 items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-2"
                     >
@@ -136,15 +136,15 @@ export function LookupSection({
                 searchable={(r) => `${r.name} ${r.description ?? ''}`}
                 empty={masterDataEmpty(t, emptyName, list.table.search.value.trim() !== '', addButtonLabel)}
                 actions={
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button onClick={dialog.add}>
                         <Plus className="h-4 w-4" />
                         {addButtonLabel}
                     </Button>
                 }
             />
             <LookupModal
-                open={addOpen || !!editItem}
-                item={editItem}
+                open={dialog.open}
+                item={dialog.editing}
                 addLabel={addLabel}
                 editLabel={editLabel}
                 nameLabel={nameLabel}
@@ -152,10 +152,7 @@ export function LookupSection({
                 eyebrow={eyebrow}
                 create={create}
                 update={update}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditItem(null);
-                }}
+                onClose={dialog.close}
             />
         </div>
     );
