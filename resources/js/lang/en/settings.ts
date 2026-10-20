@@ -131,7 +131,7 @@ export const settings: Dict = {
     set_wo_reason_edit: 'Edit reason',
     set_wo_reason_name: 'Reason',
     set_security: 'Security',
-    set_security_desc: 'Session timeout, password expiry and devices signed in at once.',
+    set_security_desc: 'Session timeout, password expiry, devices signed in at once and sign-in history.',
     set_session_timeout: 'Session timeout',
     set_session_timeout_help: 'Auto sign-out after the selected minutes of inactivity. A sign-in with "Remember me" ticked stays for 7 days instead.',
     set_password_expiry: 'Password expiration',
@@ -338,27 +338,27 @@ export const settings: Dict = {
     // pages/index.tsx — Security tab: device limit and login history
     set_device_limit: 'Devices signed in at once',
     set_device_limit_help:
-        'Applies to every account. Signing in on a new device over this number means signing out at least 1 existing device first. Tabs in the same browser count as 1 device.',
+        'Applies to every account, administrators included. Signing in on a new device when the account is already at this number means signing out at least 1 existing device first. Tabs in the same browser count as 1 device.',
     unit_devices: 'devices',
     set_device_limit_confirm_title: 'Limit to {n} device(s)',
     set_device_limit_confirm_text: 'Accounts signed in on more devices than this keep only their most recently used ones.',
     set_login_log_days: 'Login history',
     set_login_log_days_help:
-        'Delete sign-in history older than this. The last 90 days tell whether an account has signed in from an IP before, so it cannot be set lower than 90 days.',
+        'Delete sign-in history older than this. The system uses the last 90 days to remember which IPs each account has signed in from, so it cannot be set lower than 90 days.',
 
     // network-names-section.tsx, network-name-modal.tsx — network names
     net_title: 'Network names',
     net_desc:
-        "Enter each site's public IP. The system shows this name in the Login tab and the profile; other IPs show a place from the GeoIP database.",
+        "Enter each site's public IP with a name. The Login tab and the profile show that name as the location; other IPs get a location from the GeoIP database.",
     net_col_cidr: 'IP or IP range',
     net_col_name: 'Name',
     net_search: 'Search IP or name…',
-    net_add: 'Add IP',
+    net_add: 'Add network name',
     net_add_title: 'Add network name',
     net_edit_title: 'Edit network name',
     net_cidr_ph: 'e.g. 203.150.12.80/29',
     net_name_ph: 'e.g. Head office',
-    net_geoip_updated: 'GeoIP database last updated {date}. It updates itself every month.',
-    net_geoip_none: 'No GeoIP database yet. It updates itself every month.',
+    net_geoip_updated: 'GeoIP database last updated {date}. The system downloads a new one every month.',
+    net_geoip_none: 'No GeoIP database yet. The system downloads one every month.',
     net_geoip_credit: 'IP Geolocation by DB-IP',
 };

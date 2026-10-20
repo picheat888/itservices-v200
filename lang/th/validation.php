@@ -34,7 +34,7 @@ return [
     'current_password' => 'รหัสผ่านปัจจุบันไม่ถูกต้อง',
     'password_reused' => 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน',
     'invalid_network' => 'ใส่ IP หรือช่วง IP เช่น 203.150.12.80/29',
-    'login_log_days_min' => 'เก็บประวัติการเข้าสู่ระบบอย่างน้อย :days วัน หรือเก็บตลอดไป',
+    'login_log_days_min' => 'ตั้งได้อย่างน้อย :days วัน หรือใส่ 0 เพื่อเก็บไว้ตลอด',
     'date' => ':attribute ต้องเป็นวันที่ที่ถูกต้อง',
     'date_equals' => ':attribute ต้องเป็นวันที่ :date',
     'date_format' => ':attribute ต้องอยู่ในรูปแบบ :format',

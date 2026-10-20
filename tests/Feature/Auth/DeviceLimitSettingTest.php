@@ -231,6 +231,6 @@ class DeviceLimitSettingTest extends TestCase
         $this->withHeader('X-Locale', 'en')->save(['login_log_days' => 45])
             ->assertJsonPath('errors.login_log_days.0', 'Keep the login history for at least 90 days, or keep it forever (0).');
         $this->withHeader('X-Locale', 'th')->save(['login_log_days' => 45])
-            ->assertJsonPath('errors.login_log_days.0', 'เก็บประวัติการเข้าสู่ระบบอย่างน้อย 90 วัน หรือเก็บตลอดไป');
+            ->assertJsonPath('errors.login_log_days.0', 'ตั้งได้อย่างน้อย 90 วัน หรือใส่ 0 เพื่อเก็บไว้ตลอด');
     }
 }
