@@ -9,7 +9,7 @@ export const permission: Dict = {
     perm_audit: 'Audit logs',
     perm_audit_search: 'Search action, item or user…',
     perm_logins: 'Login',
-    perm_logins_search: 'Search employee name, username, IP or place…',
+    perm_logins_search: 'Search employee name, username, IP or location…',
     perm_load_failed: 'Could not load the permissions. Please try again.',
     perm_members: 'members',
     perm_enabled: 'permissions enabled',

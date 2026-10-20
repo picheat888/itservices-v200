@@ -39,8 +39,9 @@ export const auth: Dict = {
     login_notice_by: '{device} in {location} at {time}',
     login_notice_by_no_location: '{device} at {time}',
     login_notice_profile: "This device was signed out from this account's profile page.",
-    login_notice_limit: 'An administrator limited how many devices can be used at once. Only the device you used last was kept.',
-    login_pending_expired: 'Confirmation timed out. Please sign in again.',
+    login_notice_limit:
+        'An administrator limited how many devices can be used at once, so this account keeps only the device used last. This device was signed out.',
+    login_pending_expired: 'Sign-in timed out. Please enter your password again.',
     login_field_placeholder: 'Username or email',
     login_caps_on: 'Caps Lock is on',
     login_forgot: 'Forgot password?',
@@ -62,8 +63,8 @@ export const auth: Dict = {
     device_other: 'Other',
     // lib/login-events.ts — event and reason words of a login-log row
     login_event_signed_in: 'Signed in',
-    login_event_failed: 'Wrong password',
-    login_event_locked: 'Locked',
+    login_event_failed: 'Sign-in failed',
+    login_event_locked: 'Temporarily locked',
     login_event_signed_out: 'Signed out',
     login_event_forced_out: 'Forced out',
     login_reason_third_device: 'Signed in on a new device',
@@ -72,6 +73,6 @@ export const auth: Dict = {
     login_reason_idle_timeout: 'Idle timeout',
     login_reason_password_changed: 'Password changed',
     login_reason_account_closed: 'Account closed',
-    login_reason_remembered: 'Remembered',
+    login_reason_remembered: 'Signed in automatically (Remember me)',
     login_reason_unknown_account: 'Account not found',
 };

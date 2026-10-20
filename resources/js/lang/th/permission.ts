@@ -133,7 +133,7 @@ export const permission: Dict = {
     perm_login_col_event: 'เหตุการณ์',
     perm_login_col_ip: 'IP',
     perm_login_col_place: 'ที่ตั้ง',
-    perm_login_col_device: 'อุปกรณ์',
+    perm_login_col_device: 'เครื่อง',
     permission_level: 'ระดับสิทธิ์',
 
     // modules/permissions/lib/permission-labels.ts — ป้ายชื่อในผังสิทธิ์
@@ -361,7 +361,8 @@ export const permission: Dict = {
     'perm_desc_system.view_audit':
         'เห็นบันทึกการตรวจสอบของทุกโมดูล รวมถึงข้อมูลที่ถูกลบไปแล้ว เช่น อีเมลและเบอร์โทรของพนักงาน ควรให้เฉพาะผู้ดูแลระบบ',
     'perm_act_system.view_logins': 'ดูประวัติการเข้าสู่ระบบ',
-    'perm_desc_system.view_logins': 'เห็นแท็บ Login ในหน้าสิทธิ์การใช้งาน ว่าใครเข้าสู่ระบบเมื่อไร จาก IP และที่ตั้งไหน ด้วยอุปกรณ์อะไร',
+    'perm_desc_system.view_logins':
+        'เห็นแท็บ Login ในหน้าสิทธิ์การใช้งาน ว่าใครเข้าสู่ระบบเมื่อไร จาก IP และที่ตั้งไหน ใช้เครื่องอะไร ควรให้เฉพาะผู้ดูแลระบบ',
     // ผังสิทธิ์ — Reports
     perm_mod_reports: 'รายงาน',
     'perm_act_reports.module': 'เข้าศูนย์รายงาน',
@@ -755,7 +756,7 @@ export const permission: Dict = {
     perm_empty_audit_search: 'ไม่พบกิจกรรมที่ตรงกับคำค้นหรือตัวกรอง',
     perm_empty_audit_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
     perm_empty_logins: 'ยังไม่มีประวัติการเข้าสู่ระบบ',
-    perm_empty_logins_hint: 'การเข้าสู่ระบบ ออกจากระบบ และการเข้าที่ไม่สำเร็จจะบันทึกไว้ที่นี่',
+    perm_empty_logins_hint: 'การเข้าและออกจากระบบทุกครั้ง รวมครั้งที่ไม่สำเร็จ จะบันทึกไว้ที่นี่',
     perm_empty_logins_search: 'ไม่พบประวัติที่ตรงกับคำค้นหรือตัวกรอง',
     perm_empty_logins_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
 };

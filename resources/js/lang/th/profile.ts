@@ -39,7 +39,7 @@ export const profile: Dict = {
     profile_logins_heading: 'ประวัติการเข้าสู่ระบบล่าสุด',
     profile_logins_col_time: 'เวลา',
     profile_logins_col_event: 'เหตุการณ์',
-    profile_logins_col_device: 'อุปกรณ์',
+    profile_logins_col_device: 'เครื่อง',
     profile_logins_col_place: 'ที่ตั้ง',
     profile_logins_hint: 'แสดง 10 ครั้งล่าสุดของบัญชีนี้ ถ้าเห็นการเข้าที่ไม่ใช่คุณ ให้เปลี่ยนรหัสผ่านและแจ้ง IT',
 
