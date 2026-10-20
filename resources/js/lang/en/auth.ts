@@ -42,13 +42,12 @@ export const auth: Dict = {
     login_notice_by: '{device} in {location} at {time}',
     login_notice_by_no_location: '{device} at {time}',
     login_notice_profile: "This device was signed out from this account's profile page.",
-    login_notice_limit:
-        'An administrator limited how many devices can be used at once, so this account keeps only the device used last. This device was signed out.',
+    login_notice_limit: 'An administrator limited how many devices can be used at once. This device was signed out.',
     login_pending_expired: 'Sign-in timed out. Please enter your password again.',
     login_field_placeholder: 'Username or email',
     login_caps_on: 'Caps Lock is on',
     login_forgot: 'Forgot password?',
-    login_forgot_help: "Passwords can't be reset here. Ask the IT team for a temporary password, then set your own after you sign in.",
+    login_forgot_help: "You can't reset your password yourself. Ask the IT team for a new one.",
     // components/login-brand-panel.tsx, sample-ticket-card.tsx — brand panel and its sample ticket
     login_hero_desc: 'Every request you send to IT gets a reference number and a status you can check anytime.',
     login_sample_title: 'Floor 3 internet is down',
