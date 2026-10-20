@@ -86,7 +86,9 @@ Route::post('login', [AuthController::class, 'login'])->middleware('throttle:log
 // Device-limit dialog: sign a device out with the pending token, before this browser has a session
 Route::post('login/devices/{device}/sign-out', [LoginDeviceController::class, 'signOut'])
     ->whereNumber('device')->middleware('throttle:login-pending')->withoutMiddleware('throttle:api')->name('api.login.devices.sign-out');
-Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.show');
+// Public for the login page's theme; a signed-in session passes the same idle, device and closed-account checks as the API below
+Route::get('settings', [SettingsController::class, 'show'])
+    ->middleware([CheckSessionTimeout::class, TrackDevice::class, BlockResignedEmployees::class])->name('api.settings.show');
 // Browser errors from the SPA, guests included (logs/frontend)
 Route::post('client-errors', [ClientErrorController::class, 'store'])
     ->middleware('throttle:client-errors')->name('api.client-errors.store');
