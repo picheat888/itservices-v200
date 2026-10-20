@@ -50,7 +50,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'login' => ['required_without:pending', 'nullable', 'string'],
+            'login' => ['required_without:pending', 'nullable', 'string', 'max:255'],
             'password' => ['required_without:pending', 'nullable', 'string'],
             'pending' => ['nullable', 'string', 'max:100'],
             'touch' => ['nullable', 'boolean'],
@@ -149,7 +149,7 @@ class LoginRequest extends FormRequest
     private function account(): ?User
     {
         if (! $this->namedAccountLookedUp) {
-            $login = $this->loginName();
+            $login = $this->cleanLoginName();
             $found = $login === null ? null : Auth::guard('web')->getProvider()->retrieveByCredentials([$this->loginField() => $login]);
             $this->namedAccount = $found instanceof User ? $found : null;
             $this->namedAccountLookedUp = true;
@@ -271,9 +271,16 @@ class LoginRequest extends FormRequest
         return $locked;
     }
 
+    /**
+     * Per-IP counter: one per account however its name was typed (the database collation ignores some invisible
+     * characters), else per normalised typed name; hashed, so a long name never outgrows the cache key column.
+     */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('login')).'|'.$this->ip());
+        $user = $this->account();
+        $who = $user !== null ? 'id:'.$user->id : 'name:'.hash('sha256', $this->normalisedLoginName());
+
+        return 'login-ip:'.$who.'|'.$this->ip();
     }
 
     /** Cross-IP counter: one per account (email and username alike), else per normalised typed name, hashed so no name can match an account key. */
@@ -284,9 +291,21 @@ class LoginRequest extends FormRequest
             return self::accountThrottleKey($user);
         }
 
-        $typed = preg_replace('/\p{Cf}+/u', '', (string) $this->loginName()) ?? '';
+        return 'login-user:name:'.hash('sha256', $this->normalisedLoginName());
+    }
 
-        return 'login-user:name:'.hash('sha256', Str::transliterate(Str::lower(trim($typed))));
+    /** The typed login without invisible format characters (zero-width spaces and the like), which no username or email holds. */
+    private function cleanLoginName(): ?string
+    {
+        $clean = preg_replace('/\p{Cf}+/u', '', (string) $this->loginName()) ?? '';
+
+        return $clean === '' ? null : $clean;
+    }
+
+    /** The cleaned login as one key: lower case, trimmed, transliterated. */
+    private function normalisedLoginName(): string
+    {
+        return Str::transliterate(Str::lower(trim((string) $this->cleanLoginName())));
     }
 
     private function loginName(): ?string
@@ -298,6 +317,6 @@ class LoginRequest extends FormRequest
 
     private function loginField(): string
     {
-        return filter_var($this->loginName(), FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        return filter_var($this->cleanLoginName(), FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
     }
 }
