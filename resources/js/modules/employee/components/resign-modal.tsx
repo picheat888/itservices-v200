@@ -112,7 +112,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* No overflow here: DateInput portals its calendar into this node; the body scrolls instead */}
-            <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-4xl flex-col">
+            <DialogContent className="flex max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[1100px] flex-col">
                 <DialogHeader>
                     <div className="flex items-start gap-4">
                         <AlertTriangle className="mt-0.5 h-11 w-11 shrink-0 stroke-[1.75] text-amber-500 dark:text-amber-400" />

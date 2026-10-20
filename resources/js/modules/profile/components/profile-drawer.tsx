@@ -16,7 +16,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import {
@@ -268,7 +268,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent
-                className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden p-0 outline-none"
+                className={cn(focusDialogContentClass, 'outline-none')}
                 // Focus rests on the dialog itself, with no ring on any control, until the reader presses Tab
                 onOpenAutoFocus={(e) => {
                     e.preventDefault();

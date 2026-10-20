@@ -14,7 +14,7 @@ import type { Employee, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, ArrowRight, Briefcase, Check, SquarePen, Upload, User, X } from 'lucide-react';
@@ -561,7 +561,7 @@ export function EditEmployeeDialog({
                 }}
             >
                 <DialogContent
-                    className="!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0"
+                    className={largeDialogContentClass}
                     onKeyDown={(e) => {
                         // Enter submits, except on controls with their own Enter handling
                         const tag = (e.target as HTMLElement).tagName;

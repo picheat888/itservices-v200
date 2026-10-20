@@ -13,7 +13,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import {
     Briefcase,
@@ -185,7 +185,7 @@ export function EmployeeViewDrawer({
     ];
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex h-[88dvh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 <DialogTitle className="sr-only">{name}</DialogTitle>
                 <DialogDescription className="sr-only">
                     {[emp.position, localPair(emp.department, emp.department_th, lang)].filter(Boolean).join(', ')}
