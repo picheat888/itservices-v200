@@ -12,6 +12,39 @@ const tsxFiles = (dir: string): string[] =>
         e.isDirectory() ? tsxFiles(join(dir, e.name)) : e.name.endsWith('.tsx') ? [join(dir, e.name)] : [],
     );
 
+// Opening tags of these components, read to the '>' that closes them outside {...} and quotes
+const openTags = (src: string, names: string[]): string[] => {
+    const found: string[] = [];
+    const start = new RegExp(`<(${names.map((n) => n.replace('.', '\\.')).join('|')})\\b`, 'g');
+    for (const m of src.matchAll(start)) {
+        const from = m.index ?? 0;
+        let depth = 0;
+        let quote = '';
+        for (let i = from; i < src.length; i++) {
+            const c = src[i];
+            if (quote) {
+                if (c === quote && src[i - 1] !== '\\') quote = '';
+            } else if (c === '"' || c === "'" || c === '`') {
+                quote = c;
+            } else if (c === '{') {
+                depth++;
+            } else if (c === '}') {
+                depth--;
+            } else if (c === '>' && depth === 0) {
+                found.push(src.slice(from, i + 1));
+                break;
+            }
+        }
+    }
+    return found;
+};
+
+test('the tag reader reads past arrow functions inside a tag', () => {
+    assert.deepEqual(openTags('<DialogContent onX={(e) => e} className="a b">x</DialogContent>', ['DialogContent']), [
+        '<DialogContent onX={(e) => e} className="a b">',
+    ]);
+});
+
 // The class string of the close button: the literal that carries ring-offset-background
 const closeTokens = (rel: string): string[] => {
     const found = read(rel).match(/'([^']*ring-offset-background[^']*)'|"([^"]*ring-offset-background[^"]*)"/);
@@ -35,7 +68,7 @@ test('dialogs use two corner radii: 14px for the centred alert windows, the 10px
     const ALERTS = ['shared/components/blocking-dialog.tsx', 'shared/ui/confirm-dialog.tsx', 'modules/auth/components/change-password-dialog.tsx'];
     for (const rel of ['modules', 'shared', 'app'].flatMap(tsxFiles)) {
         const src = read(rel);
-        const contents = src.match(/<(DialogContent|FormDialogContent|SheetContent|DialogPrimitive\.Content)\b[\s\S]*?>/g) ?? [];
+        const contents = openTags(src, ['DialogContent', 'FormDialogContent', 'SheetContent', 'DialogPrimitive.Content']);
         for (const tag of contents) {
             assert.doesNotMatch(tag, /rounded-(xl|2xl|3xl)\b/, `${rel}: dialog radius other than 10px or 14px`);
         }
@@ -55,7 +88,7 @@ test('dialogs that had no height cap scroll inside the screen', () => {
         'modules/stock/components/stock-item-modal.tsx',
     ];
     for (const rel of UNCAPPED) {
-        const tags = read(rel).match(/<DialogContent\b[^>]*>/g) ?? [];
+        const tags = openTags(read(rel), ['DialogContent']);
         assert.ok(tags.length > 0, `${rel}: DialogContent found`);
         for (const tag of tags) {
             assert.ok(tag.includes('max-h-[calc(100dvh-2rem)]'), `${rel}: height cap`);
