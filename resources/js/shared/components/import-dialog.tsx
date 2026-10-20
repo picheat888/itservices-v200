@@ -174,7 +174,7 @@ export function ImportDialog<Row>({
                 {/* What this import will not do — said before a file is even chosen. */}
                 {notice}
 
-                <div className="max-h-[min(58dvh,640px)] space-y-3 overflow-y-auto py-1">
+                <div className="-mx-2 max-h-[min(58dvh,640px)] scroll-py-2 space-y-3 overflow-y-auto px-2 py-1">
                     <div className={cn('grid gap-2', downloads.length > 1 && 'sm:grid-cols-2')}>
                         {downloads.map((download) => (
                             <button

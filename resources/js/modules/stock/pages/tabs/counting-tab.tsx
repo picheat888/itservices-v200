@@ -457,7 +457,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     />
                                 </div>
                             </div>
-                            <div className="max-h-72 overflow-auto overscroll-contain">
+                            <div className="max-h-72 scroll-py-2 overflow-auto overscroll-contain">
                                 {skuList.length === 0 ? (
                                     skuSearch.trim() !== '' ? (
                                         <EmptyState

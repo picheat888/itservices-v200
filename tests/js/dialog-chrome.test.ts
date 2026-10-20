@@ -92,6 +92,26 @@ test('dialogs use two corner radii: 14px for the centred alert windows, the 10px
     }
 });
 
+// Classes of the element that carries this exact token
+const classesWith = (rel: string, token: string): string[] => {
+    const found = read(rel).match(new RegExp(`className="([^"]*${token.replace(/[[\]().]/g, '\\$&')}[^"]*)"`));
+    assert.ok(found, `${rel}: element with ${token}`);
+    return found[1].split(/\s+/);
+};
+
+test('scroll areas inside dialogs leave room for the 4px focus ring', () => {
+    // Full-width buttons in the import guide: side padding, cancelled by a negative margin so the layout stays put
+    const guide = classesWith('shared/components/import-dialog.tsx', 'max-h-[min(58dvh,640px)]');
+    for (const t of ['-mx-2', 'px-2', 'scroll-py-2']) assert.ok(guide.includes(t), `import guide: ${t}`);
+    const units = classesWith('modules/employee/components/import-guide.tsx', 'max-h-56');
+    for (const t of ['scroll-py-2', 'pt-0.5']) assert.ok(units.includes(t), `import guide unit list: ${t}`);
+    // Checkbox list in a new stock count: keyboard focus scrolls an item in with room for its ring
+    const requestBody = classesWith('modules/request/components/request-detail-dialog.tsx', 'content-start gap-8 overflow-y-auto');
+    assert.ok(requestBody.includes('scroll-py-2'), 'request detail body: scroll-py-2');
+    const skus = classesWith('modules/stock/pages/tabs/counting-tab.tsx', 'max-h-72');
+    assert.ok(skus.includes('scroll-py-2'), 'stock count list: scroll-py-2');
+});
+
 test('dialogs that had no height cap scroll inside the screen', () => {
     const UNCAPPED = [
         'modules/asset/components/asset-receive-modal.tsx',
