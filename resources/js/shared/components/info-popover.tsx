@@ -1,6 +1,7 @@
 // Shared note on a figure: opens on hover, tap (iPad) or Enter/Space, so touch and keyboard reach it too.
 // A click can run onActivate instead (e.g. open the record) while a tap still shows the note.
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { claimOpenNote, releaseOpenNote } from '@/shared/lib/one-open-note';
 import { cn } from '@/shared/lib/utils';
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -68,6 +69,13 @@ export function InfoPopover({
 }) {
     const [openState, setOpen] = useState(false);
     const open = (openState || shown) && !inactive;
+    const close = useCallback(() => setOpen(false), []);
+    // One note at a time: opening this one closes the last
+    useEffect(() => {
+        if (!open) return;
+        claimOpenNote(close);
+        return () => releaseOpenNote(close);
+    }, [open, close]);
     const [place, setPlace] = useState<Side>(side);
     const closing = useRef<number | null>(null);
     const openedByHover = useRef(false);
