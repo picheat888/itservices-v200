@@ -13,6 +13,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
@@ -30,6 +32,8 @@ class LoginRequest extends FormRequest
 
     /** An IP the account signed in from within this many days is exempt from the cross-IP lock. */
     public const KNOWN_IP_DAYS = 90;
+
+    public const STAND_IN_HASH_KEY = 'login-stand-in-hash';
 
     private ?User $namedAccount = null;
 
@@ -102,7 +106,8 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Checked inside a timebox (auth.timebox_duration), so an unknown login answers as slowly as a wrong password.
+     * An unknown login is checked against a stand-in hash, so it costs the same hash check as a wrong password
+     * however busy the server is; the timebox (auth.timebox_duration) evens out what is left.
      *
      * @param  array{password: string}  $credentials
      *
@@ -113,13 +118,31 @@ class LoginRequest extends FormRequest
         $provider = Auth::guard('web')->getProvider();
 
         return app(Timebox::class)->call(function (Timebox $timebox) use ($user, $credentials, $provider): bool {
-            $matches = $user !== null && $provider->validateCredentials($user, $credentials);
+            if ($user === null) {
+                Hash::check($credentials['password'], self::standInHash());
+
+                return false;
+            }
+
+            $matches = $provider->validateCredentials($user, $credentials);
             if ($matches) {
                 $timebox->returnEarly();
             }
 
             return $matches;
         }, (int) config('auth.timebox_duration', 200000));
+    }
+
+    /** A hash of a password nobody types, made once at the current hashing cost and made again when that cost changes. */
+    public static function standInHash(): string
+    {
+        $hash = Cache::get(self::STAND_IN_HASH_KEY);
+        if (! is_string($hash) || Hash::needsRehash($hash)) {
+            $hash = Hash::make(Str::random(40));
+            Cache::forever(self::STAND_IN_HASH_KEY, $hash);
+        }
+
+        return $hash;
     }
 
     /** The account the typed login names, looked up once per request; null when none. */
