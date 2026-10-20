@@ -138,7 +138,8 @@ class RateLimitPerPersonTest extends TestCase
     {
         $user = User::factory()->create();
         $request = Request::create('/pdf/stock-items/1/history');
-        $request->setUserResolver(fn () => $user);
+        // Signed in by the route's auth middleware; the limiter only reads that user, it never signs one in
+        $this->actingAs($user);
 
         foreach (['api' => 300, 'page' => 120, 'pdf' => 20, 'files' => 600] as $limiter => $perMinute) {
             $limits = $this->limitsFor($limiter, $request);

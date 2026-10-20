@@ -112,7 +112,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private static function perPerson(Request $request, int $perMinute): Limit|array
     {
-        $userId = $request->user()?->getAuthIdentifier();
+        $userId = self::signedInId($request);
         if ($userId !== null) {
             return Limit::perMinute($perMinute)->by('user:'.$userId);
         }
@@ -123,6 +123,19 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute($perMinute)->by($browser),
             Limit::perMinute(self::SIGNED_OUT_IP_PER_MINUTE)->by('ip:'.$request->ip()),
         ];
+    }
+
+    /**
+     * The account this request is already signed in as, read without signing anyone in: a remember cookie
+     * is left to the API, where TrackDevice moves its device and replaces its token.
+     */
+    private static function signedInId(Request $request): int|string|null
+    {
+        if (Auth::hasUser()) {
+            return Auth::id();
+        }
+
+        return $request->hasSession() ? $request->session()->get(Auth::guard('web')->getName()) : null;
     }
 
     /** One device-limit dialog: the IP plus a hash of its pending token (body field `pending`); the trailing `|` keeps it apart from the 50/IP key. */
