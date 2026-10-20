@@ -49,7 +49,26 @@ test('the record box is read with the description, and written line breaks stay'
     const src = frame();
     assert.match(src, /aria-describedby/);
     assert.match(src, /whitespace-pre-line/);
-    assert.match(src, /bg-muted\/50 rounded-lg border px-3\.5 py-2\.5/);
+    const box = src.match(/id=\{entityId\} className="([^"]*)"/)?.[1].split(/\s+/) ?? [];
+    for (const t of ['bg-muted/50', 'rounded-lg', 'border', 'px-3.5', 'py-2.5']) assert.ok(box.includes(t), `record box: ${t}`);
+});
+
+test('a long record name ends in an ellipsis instead of widening the window', () => {
+    // A grid child keeps min-width:auto, so truncate needs min-w-0 on the box
+    const box =
+        frame()
+            .match(/id=\{entityId\} className="([^"]*)"/)?.[1]
+            .split(/\s+/) ?? [];
+    assert.ok(box.includes('min-w-0'), 'record box: min-w-0');
+});
+
+test('the record box id joins aria-describedby when the content node attaches, not in a later effect', () => {
+    // Radix's portal mounts the content after the alert's own effects have run
+    const src = frame();
+    assert.match(src, /ref=\{attachContent\}/);
+    const attach = src.slice(src.indexOf('const attachContent'), src.indexOf('};', src.indexOf('const attachContent')));
+    assert.match(attach, /setAttribute\('aria-describedby'/);
+    assert.doesNotMatch(src, /useEffect\(\(\) => \{\s*const content = contentRef\.current;\s*const desc/);
 });
 
 test('the frame returns focus to a row menu like every other dialog', () => {
