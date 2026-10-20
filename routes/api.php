@@ -81,10 +81,11 @@ use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Middleware\TrackDevice;
 use Illuminate\Support\Facades\Route;
 
-Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login')->name('api.login');
+// Sign-in counts only against its own limiters, never the shared API budget
+Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login')->withoutMiddleware('throttle:api')->name('api.login');
 // Device-limit dialog: sign a device out with the pending token, before this browser has a session
 Route::post('login/devices/{device}/sign-out', [LoginDeviceController::class, 'signOut'])
-    ->whereNumber('device')->middleware('throttle:login-pending')->name('api.login.devices.sign-out');
+    ->whereNumber('device')->middleware('throttle:login-pending')->withoutMiddleware('throttle:api')->name('api.login.devices.sign-out');
 Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.show');
 // Browser errors from the SPA, guests included (logs/frontend)
 Route::post('client-errors', [ClientErrorController::class, 'store'])
