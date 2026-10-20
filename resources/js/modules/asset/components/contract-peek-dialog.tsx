@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -8,7 +9,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Clock, Cog, FileText, Laptop, Loader2, type LucideIcon, Package, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -161,40 +162,38 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className={focusDialogContentClass}>
                 {/* Header */}
-                <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-                    <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                        <TypeIcon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{t('asset_contract')}</div>
-                        <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
-                            <span className="truncate">{c ? c.name || c.details || '—' : '—'}</span>
-                            {c?.code && (
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">{c.code}</span>
-                            )}
+                <FocusDialogHeader
+                    icon={TypeIcon}
+                    eyebrow={t('asset_contract')}
+                    title={c ? c.name || c.details || '—' : '—'}
+                    code={c?.code || undefined}
+                    srDescription={c?.name ?? ''}
+                    titleSuffix={
+                        <>
                             {c && (
                                 <span className="bg-accent text-muted-foreground shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
                                     {t(`contract_type_${c.type}`)}
                                 </span>
                             )}
                             {daysBadge}
-                        </DialogTitle>
-                    </div>
-                    {c && (
-                        <div className="ml-auto flex shrink-0 flex-col items-end gap-1 pr-8">
-                            <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
-                            <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
-                                <div>
-                                    {t('contract_created')}: {fmt.date(c.created_at)}
-                                </div>
-                                <div>
-                                    {t('contract_updated')}: {fmt.date(c.updated_at)}
+                        </>
+                    }
+                    headerRight={
+                        c && (
+                            <div className="flex flex-col items-end gap-1">
+                                <StatusBadge tone={tone}>{statusLabel}</StatusBadge>
+                                <div className="text-muted-foreground text-right text-[10.5px] leading-tight">
+                                    <div>
+                                        {t('contract_created')}: {fmt.date(c.created_at)}
+                                    </div>
+                                    <div>
+                                        {t('contract_updated')}: {fmt.date(c.updated_at)}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                    <DialogDescription className="sr-only">{c?.name ?? ''}</DialogDescription>
-                </div>
+                        )
+                    }
+                />
 
                 {/* Tab bar */}
                 <DialogTabs className="px-6" tabs={tabs} active={tab} onChange={setTab} />
