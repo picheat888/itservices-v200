@@ -125,13 +125,20 @@ class DeviceService
     /** A remembered device carries on with a new token and a full remember lifetime, on its new session id. */
     public function rememberAgain(UserDevice $device, string $token, string $sessionId): void
     {
-        $previousSessionId = $device->session_id;
-
         $device->forceFill([
-            'session_id' => $sessionId,
             'remember_token_hash' => self::rememberTokenHash($token),
             'remember_expires_at' => $this->rememberExpiry(),
-        ])->save();
+        ]);
+
+        $this->moveToSession($device, $sessionId);
+    }
+
+    /** The device follows its browser to a new session id (the old id was regenerated away). */
+    public function moveToSession(UserDevice $device, string $sessionId): void
+    {
+        $previousSessionId = $device->session_id;
+
+        $device->forceFill(['session_id' => $sessionId])->save();
 
         if ($previousSessionId !== null && $previousSessionId !== $sessionId) {
             Cache::forget(self::stateCacheKey($previousSessionId));

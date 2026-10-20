@@ -248,6 +248,8 @@ class AuthController extends Controller
         $user->signOutEverywhere($session?->getId());
         if ($session?->get(CheckSessionTimeout::REMEMBERED) === true) {
             $this->rememberThisDeviceAgain($request, $user, $devices);
+        } elseif ($session !== null) {
+            $this->moveThisDeviceToANewSessionId($request, $user, $devices);
         }
 
         AuditLog::record('Changed own password');
@@ -256,6 +258,18 @@ class AuthController extends Controller
     }
 
     /** The device that changed the password stays remembered: a new device token and cookie, on the new session id. */
+    /** A copy of the old session cookie stops working: the session gets a new id, the old one is destroyed, the device follows. */
+    private function moveThisDeviceToANewSessionId(Request $request, User $user, DeviceService $devices): void
+    {
+        $device = $devices->currentOf($user, $request);
+        // migrate(), not regenerate(): the CSRF token stays, so requests already in flight are not refused with 419
+        $request->session()->migrate(true);
+
+        if ($device !== null) {
+            $devices->moveToSession($device, $request->session()->getId());
+        }
+    }
+
     private function rememberThisDeviceAgain(Request $request, User $user, DeviceService $devices): void
     {
         $device = $devices->currentOf($user, $request);
