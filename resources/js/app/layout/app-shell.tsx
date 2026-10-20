@@ -7,6 +7,7 @@ import {
     useAccountSync,
     useAuth,
     useSessionTimeout,
+    useStillRemembered,
     useUserPreferences,
 } from '@/modules/auth';
 import { PROFILE_SECTION_PARAM, ProfileDrawer } from '@/modules/profile';
@@ -47,8 +48,9 @@ export function AppShell() {
         queryFn: settingsApi.getSecurity,
         staleTime: 5 * 60_000,
     });
-    // Remembered sign-ins skip the idle timer, as the server does; a tab blocked by an account switch stops it, or it would sign the new account out
-    const idleMinutes = user?.remembered || switchedTo ? 0 : (security?.session_timeout_minutes ?? 0);
+    // Remembered sign-ins skip the idle timer until their remember period ends, as the server does; a tab blocked by an account switch stops it, or it would sign the new account out
+    const remembered = useStillRemembered(user);
+    const idleMinutes = remembered || switchedTo ? 0 : (security?.session_timeout_minutes ?? 0);
     // Every sign-in pings on activity, remembered or not: the server ends a device after about 2 h without a write or ping
     const { showWarning, secondsLeft, warnSeconds, extendSession, doLogout } = useSessionTimeout(idleMinutes, !switchedTo);
     // Shell mounted

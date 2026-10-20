@@ -199,12 +199,18 @@ class TrackDevice
 
         // Requests fired together after a wake-up record one sign-in; the others join the same device
         if (Cache::add('device-restored:'.$device->getKey(), true, self::RESTORE_WINDOW_SECONDS)) {
-            $this->devices->reattach($device, $request);
+            $this->devices->reattach($device, $request, recordEvent: ! self::isClosed($user));
         } else {
             $request->session()->put(DeviceService::SESSION_KEY, $device->getKey());
         }
 
         return $device;
+    }
+
+    /** A closed account's remember cookie is not a sign-in: BlockResignedEmployees ends the device right after. */
+    private static function isClosed(User $user): bool
+    {
+        return $user->employee?->hasLeft() === true;
     }
 
     /** A remember cookie from before devices: this browser gets a device with its own cookie, and the old cookie stops working. */
@@ -225,7 +231,7 @@ class TrackDevice
                 }
 
                 $token = $this->devices->issueRememberToken($user);
-                $device = $this->devices->start($user, $request, $token);
+                $device = $this->devices->start($user, $request, $token, recordEvent: ! self::isClosed($user));
                 Cookie::queue(
                     Auth::guard('web')->getRecallerName(),
                     $user->getKey().'|'.$token.'|'.$user->getAuthPassword(),

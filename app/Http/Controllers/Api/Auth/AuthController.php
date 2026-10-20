@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\Auth\UserDeviceResource;
 use App\Http\Resources\Auth\UserResource;
 use App\Models\AuditLog;
+use App\Models\Auth\UserDevice;
 use App\Models\User;
 use App\Notifications\PasswordExpiringNotification;
 use App\Services\Auth\DeviceService;
@@ -18,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
@@ -59,6 +61,8 @@ class AuthController extends Controller
             throw LoginRequest::pendingExpired();
         }
 
+        $this->endThisBrowsersSignIn($request, $devices);
+
         $limit = $devices->limit();
         $active = $devices->active($user);
         if ($limit > 0 && $active->count() >= $limit) {
@@ -87,23 +91,22 @@ class AuthController extends Controller
         return null;
     }
 
-    /**
-     * Put a notice in the tray when the expiry policy is about to lock this account out.
-     *
-     * Sign-in is the trigger because the deadline is per-account and moves whenever
-     * somebody changes their password — there is no day on which a sweep could usefully
-     * ask the question for everyone, and arriving is the one moment the notice is certain
-     * to be seen.
-     *
-     * Says nothing once the password has actually expired: CheckPasswordExpiry already
-     * refuses every route by then, and the SPA puts up a dialog that cannot be dismissed.
-     * The same goes for an account owing an administrator-forced change — it is being
-     * asked in a louder way already.
-     *
-     * The previous notice is deleted first, so the tray holds one of these at a time. The
-     * warning is meant to come back at every sign-in until it is acted on, and a notice
-     * that returns has to carry today's count rather than the count it was born with.
-     */
+    /** A sign-in from a login tab left open in a signed-in browser ends that browser's device first: its seat frees and its remember cookie goes. */
+    private function endThisBrowsersSignIn(Request $request, DeviceService $devices): void
+    {
+        $deviceId = $request->hasSession() ? $request->session()->get(DeviceService::SESSION_KEY) : null;
+        $device = $deviceId === null ? null : UserDevice::query()->whereNull('ended_at')->find($deviceId);
+        if ($device !== null) {
+            $devices->end($device, DeviceEndReason::SignedOut);
+        }
+
+        $recaller = Auth::guard('web')->getRecallerName();
+        if ($request->cookies->has($recaller)) {
+            Cookie::queue(Cookie::forget($recaller));
+        }
+    }
+
+    /** At each sign-in near the expiry, one tray notice with today's day count; none once a password change is already owed. */
     private function warnAboutPasswordExpiry(User $user): void
     {
         if ($user->must_change_password || $user->isPasswordExpired()) {

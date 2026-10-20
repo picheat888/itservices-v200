@@ -5,6 +5,7 @@ import { LoginBrandPanel } from '@/modules/auth/components/login-brand-panel';
 import { LoginToolbar } from '@/modules/auth/components/login-toolbar';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { deviceLimitOf, isPendingExpired, signedOutByLine } from '@/modules/auth/lib/device-limit';
+import { loginErrorText } from '@/modules/auth/lib/login-error';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordInput } from '@/shared/components/password-input';
 import { SaveButton } from '@/shared/components/save-button';
@@ -104,43 +105,8 @@ export default function LoginPage() {
 
     if (!isLoading && isAuthenticated) return fileTarget ? null : <Navigate to={target} replace />;
 
-    // A failed sign-in in the reader's language: lockout, wrong credentials, closed account, expired confirmation or no server
-    const errorMessage = (error: unknown): string => {
-        const res = (
-            error as {
-                response?: { status?: number; data?: { retry_after?: number; message?: string }; headers?: Record<string, string> };
-            } | null
-        )?.response;
-        if (!res) {
-            return t('login_err_server');
-        }
-        if (res.status === 429) {
-            // The sign-in lockout sends retry_after; the app-wide limiter only sends the Retry-After header
-            const header = Number(res.headers?.['retry-after']);
-            const seconds = res.data?.retry_after ?? (Number.isFinite(header) ? header : 0);
-            if (seconds <= 0) {
-                return t('login_err_throttled_wait');
-            }
-            const wait =
-                seconds >= 60
-                    ? t('login_time_minutes').replace('{n}', fmtN(Math.ceil(seconds / 60)))
-                    : t('login_time_seconds').replace('{n}', fmtN(seconds));
-
-            return t('login_err_throttled').replace('{time}', wait);
-        }
-        // A right password on a closed account is not a typo
-        if (res.status === 403 && res.data?.message === 'account_closed') {
-            return t('login_err_closed');
-        }
-        if (isPendingExpired(error)) {
-            return t('login_pending_expired');
-        }
-        if (res.status === 422) {
-            return t('login_error');
-        }
-
-        return t('login_err_server');
-    };
+    // A failed sign-in in the reader's language
+    const errorMessage = (error: unknown): string => loginErrorText(error, t, fmtN);
 
     // The device dialog is open while a 409 answer or a failure of its own sign-in is on screen
     const failure = login.isError && deviceLimitOf(login.error) === null ? login.error : null;
@@ -155,9 +121,9 @@ export default function LoginPage() {
             setDeviceLimit(refusal);
             return;
         }
+        // The banner or the dialog words every failure, so no toast repeats it
+        markShownInline(error);
         if (fromDialog && !isPendingExpired(error)) {
-            // The dialog words this one
-            markShownInline(error);
             return;
         }
         setDeviceLimit(null);

@@ -52,6 +52,13 @@ export function shouldShareActivity(now: number, lastShared: number): boolean {
     return now - lastShared >= ACTIVITY_SHARE_MS;
 }
 
+/** Whether a remembered sign-in still is: past its end the idle timeout takes over, as the server does. */
+export function stillRemembered(remembered: boolean, expiresAt: string | null | undefined, now: number): boolean {
+    if (!remembered) return false;
+    const end = expiresAt ? Date.parse(expiresAt) : NaN;
+    return !Number.isFinite(end) || now < end;
+}
+
 /** Activity anywhere after the warning opened means the person is still here. */
 export function dismissesWarning(warningOpenedAt: number, activityAt: number): boolean {
     return activityAt > warningOpenedAt;

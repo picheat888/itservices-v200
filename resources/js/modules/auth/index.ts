@@ -4,6 +4,7 @@
 export * from './hooks/use-account-sync';
 export * from './hooks/use-auth';
 export * from './hooks/use-session-timeout';
+export * from './hooks/use-still-remembered';
 export * from './hooks/use-user-preferences';
 
 // Page (default export re-exported as a named export so callers use: import { LoginPage } from '@/modules/auth')

@@ -5,6 +5,7 @@ namespace App\Http\Resources\Auth;
 use App\Http\Middleware\CheckSessionTimeout;
 use App\Models\Employee\Employee;
 use App\Models\User;
+use App\Services\Auth\DeviceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,12 +20,14 @@ class UserResource extends JsonResource
         // Profile fields (photo/phone/name_th) come from the linked Employee record.
         $employee = $this->linkedEmployee();
 
+        $remembered = $request->hasSession() && $request->session()->get(CheckSessionTimeout::REMEMBERED) === true;
+
         return [
             'id' => $this->id,
-            // Whether the viewer's own sign-in was remembered — the SPA's idle-logout timer
-            // stands down for it, as the server's does. Only ever describes the session this
-            // request came in on: this resource is the signed-in account, never somebody else's.
-            'remembered' => $request->hasSession() && $request->session()->get(CheckSessionTimeout::REMEMBERED) === true,
+            // The viewer's own sign-in (this resource is only ever the signed-in account): the SPA's idle timer stands down while remembered
+            'remembered' => $remembered,
+            // When remembering ends, so the SPA turns its idle timer on then, as the server does
+            'remember_expires_at' => $remembered ? app(DeviceService::class)->currentOf($this->resource, $request)?->remember_expires_at?->toIso8601String() : null,
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,

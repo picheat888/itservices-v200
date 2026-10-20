@@ -11,6 +11,7 @@ import {
     pingDelay,
     shouldShareActivity,
     spokenTime,
+    stillRemembered,
     toneFor,
     warnSecondsFor,
 } from '../../resources/js/modules/auth/lib/session-warning.ts';
@@ -119,3 +120,12 @@ test('a ping goes out now, or once the last one is a heartbeat old', () => {
     assert.equal(pingDelay(100_000, 40_000, 60_000), 0);
     assert.equal(pingDelay(100_000, 70_000, 60_000), 30_000);
 });
+
+test('a sign-in without remember me is never remembered', () => assert.equal(stillRemembered(false, null, 0), false));
+test('remember me without an end date stays remembered', () => assert.equal(stillRemembered(true, null, Date.now()), true));
+test('remember me counts until its end, then the idle timeout takes over', () => {
+    const end = '2026-10-27T09:00:00+07:00';
+    assert.equal(stillRemembered(true, end, Date.parse('2026-10-27T08:59:59+07:00')), true);
+    assert.equal(stillRemembered(true, end, Date.parse('2026-10-27T09:00:00+07:00')), false);
+});
+test('an unreadable end date keeps the sign-in remembered', () => assert.equal(stillRemembered(true, 'soon', Date.now()), true));
