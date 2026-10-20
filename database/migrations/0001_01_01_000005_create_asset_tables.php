@@ -5,17 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 6/18 — IT assets and the hand-over trail behind them.
- *
- * An asset holds both `owner` (the label shown, which may name a shared use
- * rather than a person) and `owner_employee_id` (the FK, set only when a person
- * actually holds it) — the pair is what lets "Common / shared" deployments exist
- * alongside personal ones.
- *
- * asset_transfers keeps the tag and model as text on purpose: the row has to stay
- * readable as history even after the asset itself is renamed or re-modelled. Its
- * asset_id is restrictOnDelete for the same reason: an asset handed out even once can
- * no longer be deleted, so the custody trail can never vanish under it.
+ * Baseline 6/18 — IT assets and the hand-over trail behind them. asset_transfers keeps tag,
+ * model and performer as text so a row reads as history after renames.
  */
 return new class extends Migration
 {
@@ -31,6 +22,7 @@ return new class extends Migration
             $table->string('serial')->nullable();
             $table->string('source')->default('purchased');
             $table->string('status')->default('ready');
+            // Label shown (may name a shared use); owner_employee_id is set only for a person
             $table->string('owner')->nullable();
             $table->unsignedBigInteger('owner_employee_id')->nullable();
             $table->unsignedBigInteger('location_id')->nullable();
@@ -53,8 +45,7 @@ return new class extends Migration
             $table->timestamps();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
-            // Keeps the index name the column used to carry, from when the code
-            // lived in `tag` — renaming it would be churn for no gain.
+            // Index name kept from when the code lived in `tag`
             $table->unique(['asset_code'], 'assets_tag_unique');
             $table->foreign('category_id')->references('id')->on('categories')->restrictOnDelete();
             $table->foreign('brand_id')->references('id')->on('brands')->restrictOnDelete();
@@ -77,17 +68,18 @@ return new class extends Migration
             $table->unsignedBigInteger('asset_id');
             $table->string('asset_tag');
             $table->string('asset_model');
-            // handover / return / recall — read off its own column instead of being
-            // parsed back out of the free-text reason. Indexed with the timestamp
-            // because every question asked of this table is "the recent X events".
+            // handover / return / recall, indexed with the time for "recent X events"
             $table->string('kind', 12)->default('handover');
             $table->index(['kind', 'created_at']);
             $table->string('from_owner')->nullable();
             $table->string('to_owner');
             $table->string('reason')->nullable();
             $table->string('performed_by')->nullable();
+            $table->unsignedBigInteger('performed_by_user_id')->nullable();
             $table->timestamps();
+            // Restrict: an asset handed out once can no longer be deleted
             $table->foreign('asset_id')->references('id')->on('assets')->restrictOnDelete();
+            $table->foreign('performed_by_user_id')->references('id')->on('users')->nullOnDelete();
         });
     }
 

@@ -5,15 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 7/18 — the spare-parts store.
- *
- * stock_movements is the ledger every other table here answers to: lots carry the
- * FIFO cost layers it created, balances the per-warehouse totals it moved, and
- * serials the individual units it brought in or issued out. stock_items keeps a
- * denormalised current_stock for list screens; the movements remain the truth.
- *
- * stock_alert_logs is one row per (item, alert type) so the daily low/out/over
- * sweep alerts once per state rather than every run.
+ * Baseline 7/18 — the spare-parts store. stock_movements is the ledger the lots, balances and
+ * serials answer to; stock_items.current_stock is only a denormalised total for list screens.
  */
 return new class extends Migration
 {
@@ -47,9 +40,7 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
         });
 
-        // The ledger. stock_item_id is restrictOnDelete: once a SKU has moved even once,
-        // it can no longer be deleted — the ledger (and the lots, serials and serial events
-        // that hang off it) is the audit trail, and a delete must never take it silently.
+        // The ledger; restrict on stock_item_id so a SKU that has moved can never be deleted
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
             $table->string('doc_no', 30)->nullable()->unique();
@@ -57,8 +48,11 @@ return new class extends Migration
             $table->unsignedBigInteger('stock_item_id');
             $table->integer('qty');
             $table->decimal('unit_cost', 12, 2)->nullable();
+            // Labels stay the names of the day; the warehouse ids link them
             $table->string('from_label', 200)->nullable();
             $table->string('to_label', 200)->nullable();
+            $table->unsignedBigInteger('from_warehouse_id')->nullable();
+            $table->unsignedBigInteger('to_warehouse_id')->nullable();
             $table->string('reference', 100)->nullable();
             $table->string('recorded_by', 120)->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
@@ -67,6 +61,10 @@ return new class extends Migration
             $table->timestamps();
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->restrictOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('from_warehouse_id')->references('id')->on('warehouses')->nullOnDelete();
+            $table->foreign('to_warehouse_id')->references('id')->on('warehouses')->nullOnDelete();
+            $table->index('moved_at');
+            $table->index(['stock_item_id', 'moved_at']);
         });
 
         Schema::create('stock_lots', function (Blueprint $table) {
@@ -155,13 +153,9 @@ return new class extends Migration
         Schema::create('stock_counts', function (Blueprint $table) {
             $table->id();
             $table->string('reference')->unique();
-            // The filter the session was opened with, kept as text on purpose — not a foreign
-            // key that was forgotten. StockCountService::open() resolves these names to items
-            // once, inside the same transaction that writes the lines, and nothing reads them
-            // as a lookup afterwards. So the sheet keeps naming the warehouse and category as
-            // they read on the day it was counted, the same way asset_transfers keeps the tag
-            // and model of the device it moved.
+            // Filter names as they read on the count day; warehouse_id links the warehouse
             $table->string('warehouse')->nullable();
+            $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->string('category')->nullable();
             $table->string('status')->default('draft');
             $table->string('adjust_mode')->nullable();
@@ -170,6 +164,7 @@ return new class extends Migration
             $table->timestamp('committed_at')->nullable();
             $table->timestamps();
             $table->foreign('counted_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('warehouse_id')->references('id')->on('warehouses')->nullOnDelete();
         });
 
         Schema::create('stock_count_lines', function (Blueprint $table) {
@@ -183,6 +178,7 @@ return new class extends Migration
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();
         });
 
+        // One row per (item, alert type) so the daily sweep alerts once per state
         Schema::create('stock_alert_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('stock_item_id');

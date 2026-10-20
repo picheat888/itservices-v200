@@ -5,14 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 3/18 — who can sign in and what they may do: roles, the login
- * accounts attached to an employee record, the per-role permission grants, and
- * the audit trail.
- *
- * role_permissions holds one row per (role, permission key) with an explicit
- * allowed flag rather than only the granted ones, so revoking is a value change.
- * The catalogue of keys itself lives in App\Support\Permissions, which is what
- * the seeder reads — no migration needs to know the list.
+ * Baseline 3/18 — who can sign in and what they may do: roles, login accounts, per-role
+ * permission grants (keys live in App\Support\Permissions), the audit trail, signed-in devices
+ * and the sign-in history.
  */
 return new class extends Migration
 {
@@ -47,6 +42,7 @@ return new class extends Migration
             $table->foreign('role_id')->references('id')->on('roles')->restrictOnDelete();
         });
 
+        // One row per (role, key) incl. denied ones, so revoking is a value change
         Schema::create('role_permissions', function (Blueprint $table) {
             $table->id();
             $table->string('permission');
@@ -54,10 +50,7 @@ return new class extends Migration
             $table->timestamps();
             $table->unsignedBigInteger('role_id')->nullable();
             $table->unique(['role_id', 'permission']);
-            // No index on `allowed` on purpose. Both queries that read it were measured:
-            // the per-request lookup (role_id + allowed) takes the unique index above,
-            // and the permission-matrix page (allowed alone, half the table) is a scan the
-            // optimizer chooses over any index. One on `allowed` is only a false signal.
+            // No index on `allowed`: measured, the unique index above serves every lookup
             $table->foreign('role_id')->references('id')->on('roles')->cascadeOnDelete();
         });
 
@@ -74,6 +67,7 @@ return new class extends Migration
             $table->index(['created_at'], 'audit_created_at_idx');
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->index(['subject_type', 'subject_id']);
+            $table->index('user_name', 'audit_user_name_idx');
         });
 
         // Who created / last changed an org record — the columns live in 000001, created before users.
@@ -83,10 +77,52 @@ return new class extends Migration
                 $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
             });
         }
+
+        // One row per browser sign-in: what the device limit counts and the profile Devices tab lists
+        Schema::create('user_devices', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('session_id')->nullable()->index();
+            $table->char('remember_token_hash', 64)->nullable()->unique();
+            $table->timestamp('remember_expires_at')->nullable();
+            $table->string('ip', 45)->nullable();
+            $table->string('location', 120)->nullable();
+            $table->string('os', 20);
+            $table->string('browser', 20);
+            $table->string('user_agent', 300)->nullable();
+            $table->timestamp('signed_in_at');
+            $table->timestamp('last_active_at');
+            $table->timestamp('ended_at')->nullable();
+            $table->string('end_reason', 30)->nullable();
+            $table->json('ended_by')->nullable();
+
+            $table->index(['user_id', 'ended_at']);
+        });
+
+        // Append-only sign-in history behind the Login tabs
+        Schema::create('login_events', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('login_name')->nullable();
+            $table->string('event', 20);
+            $table->string('reason', 30)->nullable();
+            $table->boolean('remembered')->default(false);
+            $table->foreignId('device_id')->nullable()->constrained('user_devices')->nullOnDelete();
+            $table->string('ip', 45)->nullable();
+            $table->string('location', 120)->nullable();
+            $table->string('os', 20)->nullable();
+            $table->string('browser', 20)->nullable();
+            $table->timestamp('created_at')->index();
+
+            $table->index(['user_id', 'created_at']);
+            $table->index(['event', 'created_at']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('login_events');
+        Schema::dropIfExists('user_devices');
         foreach (self::ORG_ACTOR_TABLES as $name) {
             Schema::table($name, function (Blueprint $table) {
                 $table->dropForeign(['created_by']);
