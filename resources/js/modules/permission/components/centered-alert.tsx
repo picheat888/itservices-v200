@@ -1,6 +1,6 @@
 // Permission-module face of the shared centred alert: the same props as before, with a failed save worded by the server's refusal code.
 import { useT } from '@/lang';
-import { CenteredAlert as SharedCenteredAlert } from '@/shared/components/centered-alert';
+import { CenteredAlert as SharedCenteredAlert } from '@/shared/ui/confirm-dialog';
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { permissionRefusalText } from '../lib/refusal';

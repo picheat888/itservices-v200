@@ -1,7 +1,6 @@
 import { useT } from '@/lang';
 import { NoAccess, useAuth } from '@/modules/auth';
 import { useLocationMutations, useLocations } from '@/modules/employee';
-import { CenteredAlert } from '@/shared/components/centered-alert';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { PageTabs } from '@/shared/components/page-tabs';
@@ -20,7 +19,7 @@ import { cn, isEmail } from '@/shared/lib/utils';
 import type { AssetModel, Brand, Category, LocationItem, Vendor, Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
+import { CenteredAlert, useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Skeleton } from '@/shared/ui/skeleton';
