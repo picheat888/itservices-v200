@@ -26,6 +26,9 @@ class DeviceService
 
     private const REMEMBER_TOKEN_LENGTH = 60;
 
+    /** How long a replaced remember token still signs in, for requests already sent with it. */
+    public const ROTATED_TOKEN_GRACE_SECONDS = 60;
+
     private const IPAD_OS = 'iPadOS';
 
     /** Whether the sessions table exists, asked once per instance (a schema query on MariaDB). */
@@ -60,6 +63,12 @@ class DeviceService
         return hash('sha256', $token);
     }
 
+    /** Cache key of a remember token replaced moments ago, pointing at its device for requests sent alongside the one that replaced it. */
+    public static function rotatedTokenCacheKey(string $tokenHash): string
+    {
+        return 'device-rotated-token:'.$tokenHash;
+    }
+
     /** The per-account device limit; 0 = off. */
     public function limit(): int
     {
@@ -71,6 +80,17 @@ class DeviceService
     {
         $token = Str::random(self::REMEMBER_TOKEN_LENGTH);
         $this->holdRememberTokenInMemory($user, $token);
+
+        return $token;
+    }
+
+    /** A new remember token for a device whose cookie was just used to sign in; the used one keeps working for a minute. */
+    public function rotateRememberToken(UserDevice $device, User $user, string $usedToken): string
+    {
+        $token = $this->issueRememberToken($user);
+        $device->forceFill(['remember_token_hash' => self::rememberTokenHash($token)])->save();
+
+        Cache::put(self::rotatedTokenCacheKey(self::rememberTokenHash($usedToken)), $device->getKey(), self::ROTATED_TOKEN_GRACE_SECONDS);
 
         return $token;
     }

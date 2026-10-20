@@ -198,14 +198,33 @@ class TrackDevice
             return $this->movedLegacyCookie($user, $request);
         }
 
-        // Requests fired together after a wake-up record one sign-in; the others join the same device
-        if (Cache::add('device-restored:'.$device->getKey(), true, self::RESTORE_WINDOW_SECONDS)) {
+        // Requests fired together after a wake-up record one sign-in; the others, and a cookie already replaced, join the same device
+        $usedToken = (string) $user->getRememberToken();
+        $replaced = $device->remember_token_hash !== DeviceService::rememberTokenHash($usedToken);
+        if (! $replaced && Cache::add('device-restored:'.$device->getKey(), true, self::RESTORE_WINDOW_SECONDS)) {
             $this->devices->reattach($device, $request, recordEvent: ! self::isClosed($user));
+            $this->replaceRememberCookie($user, $device, $usedToken);
         } else {
             $request->session()->put(DeviceService::SESSION_KEY, $device->getKey());
         }
 
         return $device;
+    }
+
+    /** A used remember cookie gets a new token for the rest of its period, so a copy of the old one stops working within a minute. */
+    private function replaceRememberCookie(User $user, UserDevice $device, string $usedToken): void
+    {
+        $expiresAt = $device->remember_expires_at;
+        if ($expiresAt === null || ! $expiresAt->isFuture() || self::isClosed($user)) {
+            return;
+        }
+
+        $token = $this->devices->rotateRememberToken($device, $user, $usedToken);
+        Cookie::queue(
+            Auth::guard('web')->getRecallerName(),
+            $user->getKey().'|'.$token.'|'.$user->getAuthPassword(),
+            max(1, (int) ceil(now()->diffInSeconds($expiresAt) / 60)),
+        );
     }
 
     /** A closed account's remember cookie is not a sign-in: BlockResignedEmployees ends the device right after. */
