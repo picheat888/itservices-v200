@@ -134,6 +134,7 @@ export const settings: Dict = {
     set_security_desc: 'Session timeout, password expiry, devices signed in at once and sign-in history.',
     set_session_timeout: 'Session timeout',
     set_session_timeout_help: 'Auto sign-out after the selected minutes of inactivity. A sign-in with "Remember me" ticked stays for 7 days instead.',
+    set_session_timeout_capped: 'The server applies {n} minutes, the length of its session. Pick a value no longer than that.',
     set_password_expiry: 'Password expiration',
     set_password_expiry_help: 'Force a password change after the selected number of days.',
     unit_minutes: 'minutes',
