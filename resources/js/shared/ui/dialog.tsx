@@ -111,6 +111,12 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => <DialogPrimitive.Description ref={ref} className={cn('text-muted-foreground text-sm', className)} {...props} />);
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
+// onOpenAutoFocus for view dialogs: focus rests on the dialog, so a search box first in line never raises the iPad keyboard
+const focusDialogOnOpen = (event: Event) => {
+    event.preventDefault();
+    (event.currentTarget as HTMLElement | null)?.focus({ preventScroll: true });
+};
+
 export {
     Dialog,
     DialogBody,
@@ -125,6 +131,7 @@ export {
     DialogTitle,
     DialogTrigger,
     focusDialogContentClass,
+    focusDialogOnOpen,
     FormDialogContent,
     formDialogContentClass,
     largeDialogContentClass,

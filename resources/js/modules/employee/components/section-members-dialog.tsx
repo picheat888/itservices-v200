@@ -4,7 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Section } from '@/shared/types';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, focusDialogOnOpen } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -70,7 +70,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     return (
         <Dialog open={!!section} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col">
+            <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col" onOpenAutoFocus={focusDialogOnOpen}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Users className="text-muted-foreground h-4 w-4" />

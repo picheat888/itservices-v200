@@ -16,7 +16,7 @@ import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass, focusDialogOnOpen } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { CalendarClock, Filter, Mail, Pause, Play, Trash2, UserMinus, X } from 'lucide-react';
@@ -302,6 +302,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className={focusDialogContentClass}
+                onOpenAutoFocus={focusDialogOnOpen}
                 // Escape closes the slide-over first, then the dialog
                 onEscapeKeyDown={(e) => {
                     if (panelOpen) {
