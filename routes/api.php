@@ -184,7 +184,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::post('reports/tabular/{key}/export', [TabularReportController::class, 'export'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.export');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])
-        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');
+        ->middleware('throttle:password-change')->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');
     Route::put('settings/company', [SettingsController::class, 'updateCompany'])
         ->middleware('permission:settings.company')->name('api.settings.company');
     Route::put('settings/branding', [SettingsController::class, 'updateBranding'])

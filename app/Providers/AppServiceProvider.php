@@ -96,6 +96,11 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(50)->by($request->ip())->response(self::tooManySignIns(...)),
         ]);
 
+        // Password change: 5 tries a minute per account; its wrong current passwords also count toward the sign-in lockout
+        RateLimiter::for('password-change', fn (Request $request) => Limit::perMinute(5)
+            ->by('password-change:'.$request->user()?->getAuthIdentifier())
+            ->response(self::tooManyAttempts(...)));
+
         // Scheduled report mails: a backlog goes out one run per minute
         RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
     }
@@ -126,6 +131,19 @@ class AppServiceProvider extends ServiceProvider
         $token = $request->input('pending');
 
         return $request->ip().'|'.(is_string($token) && $token !== '' ? sha1($token) : '');
+    }
+
+    /**
+     * Too many password-change tries: worded as the account lockout, since each one checks the current password.
+     *
+     * @param  array<string, int|string>  $headers
+     */
+    private static function tooManyAttempts(Request $request, array $headers): JsonResponse
+    {
+        return response()->json([
+            'message' => 'too_many_attempts',
+            'retry_after' => (int) ($headers['Retry-After'] ?? 0),
+        ], 429, $headers);
     }
 
     /**

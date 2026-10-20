@@ -24,9 +24,9 @@ class LoginRequest extends FormRequest
     private const MAX_ATTEMPTS_PER_IP = 5;
 
     /** Failed attempts on one login from every IP together before a 15-minute lockout. */
-    private const MAX_ATTEMPTS_PER_LOGIN = 10;
+    public const MAX_ATTEMPTS_PER_LOGIN = 10;
 
-    private const LOGIN_LOCKOUT_SECONDS = 900;
+    public const LOGIN_LOCKOUT_SECONDS = 900;
 
     /** An IP the account signed in from within this many days is exempt from the cross-IP lock. */
     public const KNOWN_IP_DAYS = 90;
@@ -177,18 +177,8 @@ class LoginRequest extends FormRequest
     /** Counts the failure on both throttles and logs it; the failure that trips a throttle also logs Locked. */
     private function recordFailure(?User $user): void
     {
-        $loginKey = $this->loginThrottleKey();
-        $wasLocked = RateLimiter::tooManyAttempts($loginKey, self::MAX_ATTEMPTS_PER_LOGIN);
-
         RateLimiter::hit($this->throttleKey());
-        RateLimiter::hit($loginKey, self::LOGIN_LOCKOUT_SECONDS);
-
-        $loginLocked = ! $wasLocked && RateLimiter::tooManyAttempts($loginKey, self::MAX_ATTEMPTS_PER_LOGIN);
-        if ($loginLocked) {
-            // The lock runs a full 15 minutes from this failure
-            RateLimiter::clear($loginKey);
-            RateLimiter::increment($loginKey, self::LOGIN_LOCKOUT_SECONDS, self::MAX_ATTEMPTS_PER_LOGIN);
-        }
+        $loginLocked = self::countLoginFailure($this->loginThrottleKey());
 
         $events = app(LoginEventRecorder::class);
         $extra = ['login_name' => $this->loginName()];
@@ -237,6 +227,27 @@ class LoginRequest extends FormRequest
         return $throttles;
     }
 
+    /** An account's cross-IP counter, shared by sign-in and the current-password check of a password change. */
+    public static function accountThrottleKey(User $user): string
+    {
+        return 'login-user:id:'.$user->id;
+    }
+
+    /** One failure on a cross-IP counter; true when it trips the lock, which then runs a full 15 minutes from this failure. */
+    public static function countLoginFailure(string $loginKey): bool
+    {
+        $wasLocked = RateLimiter::tooManyAttempts($loginKey, self::MAX_ATTEMPTS_PER_LOGIN);
+        RateLimiter::hit($loginKey, self::LOGIN_LOCKOUT_SECONDS);
+
+        $locked = ! $wasLocked && RateLimiter::tooManyAttempts($loginKey, self::MAX_ATTEMPTS_PER_LOGIN);
+        if ($locked) {
+            RateLimiter::clear($loginKey);
+            RateLimiter::increment($loginKey, self::LOGIN_LOCKOUT_SECONDS, self::MAX_ATTEMPTS_PER_LOGIN);
+        }
+
+        return $locked;
+    }
+
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('login')).'|'.$this->ip());
@@ -247,7 +258,7 @@ class LoginRequest extends FormRequest
     {
         $user = $this->account();
         if ($user !== null) {
-            return 'login-user:id:'.$user->id;
+            return self::accountThrottleKey($user);
         }
 
         $typed = preg_replace('/\p{Cf}+/u', '', (string) $this->loginName()) ?? '';
