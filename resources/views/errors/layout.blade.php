@@ -98,7 +98,7 @@
             color-scheme: light;
             --background: hsl(0, 0%, 100%);
             --foreground: hsl(222, 30%, 12%);
-            --muted-foreground: hsl(215, 16%, 45%);
+            --muted-foreground: hsl(215, 17%, 39%);
             --accent: hsl(210, 24%, 95%);
             --danger: #dc2626;
             --wait: #d97706;
@@ -111,7 +111,7 @@
             color-scheme: dark;
             --background: hsl(222, 24%, 10%);
             --foreground: hsl(210, 20%, 96%);
-            --muted-foreground: hsl(215, 15%, 65%);
+            --muted-foreground: hsl(215, 16%, 71%);
             --accent: hsl(217, 19%, 18%);
             --danger: #f87171;
             --wait: #fbbf24;
@@ -125,7 +125,7 @@
                 color-scheme: dark;
                 --background: hsl(222, 24%, 10%);
                 --foreground: hsl(210, 20%, 96%);
-                --muted-foreground: hsl(215, 15%, 65%);
+                --muted-foreground: hsl(215, 16%, 71%);
                 --accent: hsl(217, 19%, 18%);
                 --danger: #f87171;
                 --wait: #fbbf24;
