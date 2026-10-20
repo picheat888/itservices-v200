@@ -3,7 +3,7 @@ import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
-import { RecordMissing } from '@/shared/components/record-missing';
+import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -517,7 +517,12 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
             <Dialog open={sheetOpen} onOpenChange={(o) => !o && guardSheetClose(closeSheet)}>
-                <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col">
+                <DialogContent
+                    className={cn(
+                        'flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col',
+                        !session && sessionMissing && cn(recordMissingContentClass, 'gap-0 p-0'),
+                    )}
+                >
                     {session ? (
                         <>
                             <DialogHeader>
@@ -828,6 +833,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 </>
                             )}
                         </>
+                    ) : sessionMissing ? (
+                        <RecordMissing onClose={closeSheet} />
                     ) : (
                         <>
                             {/* Radix requires a DialogTitle even while the session loads. */}
@@ -835,9 +842,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <DialogTitle className="text-base font-semibold">{t('stock_count_sheet_title')}</DialogTitle>
                                 <DialogDescription className="sr-only">{t('loading')}</DialogDescription>
                             </DialogHeader>
-                            {sessionMissing ? (
-                                <RecordMissing onClose={closeSheet} />
-                            ) : sessionFailed ? (
+                            {sessionFailed ? (
                                 <LoadFailedPanel onRetry={() => void refetchSession()} />
                             ) : (
                                 <div role="status" className="space-y-3">
