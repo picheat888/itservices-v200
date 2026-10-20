@@ -183,13 +183,14 @@ export default function LoginPage() {
     const readCaps = (e: React.KeyboardEvent) => setCapsOn(e.getModifierState('CapsLock'));
 
     return (
-        <div className="bg-background text-foreground split:grid split:grid-cols-2 relative min-h-dvh w-full">
+        // --login-top: the line the brand panel text and the form title share, the panel text centred on screen
+        <div className="bg-background text-foreground split:grid split:grid-cols-2 relative min-h-dvh w-full [--login-top:max(8.5rem,calc(50dvh-15rem))]">
             <LoginBrandPanel />
 
             <main className="relative flex min-h-dvh min-w-0 flex-col">
                 <LoginToolbar />
 
-                <div className="touch:px-8 flex flex-1 justify-center px-6 pt-[max(5.5rem,calc(50dvh-18rem))] pb-12">
+                <div className="touch:px-8 split:pt-(--login-top) flex flex-1 justify-center px-6 pt-[max(5.5rem,calc(50dvh-18rem))] pb-12">
                     <div className="animate-in fade-in split:max-w-[25rem] w-full max-w-[30rem] [animation-duration:var(--motion-open)]">
                         {/* Brand header where the panel is hidden (iPad, narrow windows); short screens tighten the gaps */}
                         <div className="split:hidden mb-10 flex items-center gap-4 [@media(max-height:50rem)]:mb-7">

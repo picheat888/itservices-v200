@@ -13,7 +13,7 @@ export function LoginBrandPanel() {
     const dark = useUiStore((s) => s.dark);
 
     return (
-        <aside className="group/panel bg-brand text-brand-foreground split:flex relative isolate hidden min-w-0 flex-col justify-between gap-8 overflow-hidden px-16 pt-12 pb-9 [--edge:rgb(255_255_255/0.26)] [--grid:rgb(255_255_255/0.13)] [--tile:rgb(255_255_255/0.14)] dark:bg-[color-mix(in_oklab,var(--brand)_30%,hsl(225_42%_7%))] dark:text-[hsl(220_40%_97%)] dark:[--edge:rgb(175_195_245/0.18)] dark:[--grid:rgb(175_195_245/0.085)] dark:[--tile:rgb(175_195_245/0.08)]">
+        <aside className="group/panel bg-brand text-brand-foreground split:flex relative isolate hidden min-w-0 flex-col overflow-hidden px-16 pt-12 pb-9 [--edge:rgb(255_255_255/0.26)] [--grid:rgb(255_255_255/0.13)] [--tile:rgb(255_255_255/0.14)] dark:bg-[color-mix(in_oklab,var(--brand)_30%,hsl(225_42%_7%))] dark:text-[hsl(220_40%_97%)] dark:[--edge:rgb(175_195_245/0.18)] dark:[--grid:rgb(175_195_245/0.085)] dark:[--tile:rgb(175_195_245/0.08)]">
             {/* Still grid; the lens canvas takes over under a mouse */}
             <div
                 aria-hidden
@@ -31,7 +31,8 @@ export function LoginBrandPanel() {
                 </div>
             </div>
 
-            <div className="grid max-w-[560px] gap-9">
+            {/* Starts on the form title's line (--login-top, set on the page; 6.25rem = top padding + logo row) */}
+            <div className="mt-[calc(var(--login-top)-6.25rem)] grid max-w-[560px] gap-9">
                 <div className="grid gap-3.5">
                     <p className="text-[2.625rem] leading-[1.38] font-semibold text-balance whitespace-pre-line [&:lang(en)]:leading-[1.18]">
                         {t('login_tagline')}
@@ -41,7 +42,7 @@ export function LoginBrandPanel() {
                 <SampleTicketCard />
             </div>
 
-            <div className="text-xs dark:text-[hsl(220_30%_84%)]">
+            <div className="mt-auto pt-8 text-xs dark:text-[hsl(220_30%_84%)]">
                 © {new Date().getFullYear()} {brandName}
             </div>
         </aside>

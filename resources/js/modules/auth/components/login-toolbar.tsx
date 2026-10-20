@@ -30,7 +30,8 @@ export function LoginToolbar() {
     };
 
     return (
-        <div className="absolute top-5 right-6 z-10 flex items-center gap-2">
+        // Beside the brand panel: centred on its logo row (48px + 52px / 2) and 64px from the edge, mirroring it
+        <div className="split:top-[53px] split:right-16 absolute top-5 right-6 z-10 flex items-center gap-2">
             {/* Both languages stay visible, the active one filled in */}
             <div
                 role="group"
