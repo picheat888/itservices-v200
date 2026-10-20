@@ -76,12 +76,16 @@ class AppServiceProvider extends ServiceProvider
         )));
     }
 
-    /** API throttle 300/min per user (client IP when signed out), plus the named limiters below. */
+    /** Every request out of all browsers sharing one IP when signed out; only a flood that drops its cookies gets near it. */
+    public const SIGNED_OUT_IP_PER_MINUTE = 3000;
+
+    /** API 300/min per person, web pages, PDFs and files per person, plus the sign-in and other named limiters below. */
     private function configureRateLimiting(): void
     {
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
-        });
+        RateLimiter::for('api', fn (Request $request) => self::perPerson($request, 300));
+        RateLimiter::for('page', fn (Request $request) => self::perPerson($request, 120));
+        RateLimiter::for('pdf', fn (Request $request) => self::perPerson($request, 20));
+        RateLimiter::for('files', fn (Request $request) => self::perPerson($request, 600));
 
         RateLimiter::for('client-errors', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
 
@@ -94,6 +98,26 @@ class AppServiceProvider extends ServiceProvider
 
         // Scheduled report mails: a backlog goes out one run per minute
         RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
+    }
+
+    /**
+     * Signed in: one count per account. Signed out: one per browser session, plus a shared per-IP ceiling.
+     *
+     * @return Limit|list<Limit>
+     */
+    private static function perPerson(Request $request, int $perMinute): Limit|array
+    {
+        $userId = $request->user()?->getAuthIdentifier();
+        if ($userId !== null) {
+            return Limit::perMinute($perMinute)->by('user:'.$userId);
+        }
+
+        $browser = $request->hasSession() ? 'browser:'.$request->session()->getId() : 'no-session:'.$request->ip();
+
+        return [
+            Limit::perMinute($perMinute)->by($browser),
+            Limit::perMinute(self::SIGNED_OUT_IP_PER_MINUTE)->by('ip:'.$request->ip()),
+        ];
     }
 
     /** One device-limit dialog: the IP plus a hash of its pending token (body field `pending`); the trailing `|` keeps it apart from the 50/IP key. */

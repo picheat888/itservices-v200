@@ -3,6 +3,7 @@
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Middleware\EnsurePermission;
+use App\Http\Middleware\LogRateLimitHits;
 use App\Http\Middleware\SetRequestLocale;
 use App\Http\Middleware\TrackDevice;
 use App\Support\DatabaseBusy;
@@ -24,10 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(AssignRequestId::class);
+        $middleware->append(LogRateLimitHits::class);
         // Cloudflare Tunnel runs on this machine, so only loopback may name the client IP.
         $middleware->trustProxies(at: ['127.0.0.1', '::1'], headers: Request::HEADER_X_FORWARDED_FOR);
         $middleware->statefulApi();
-        // Apply the standard 'api' rate limiter (300/min, AppServiceProvider) to every API route.
+        // Apply the standard 'api' rate limiter (300/min per person, AppServiceProvider) to every API route.
         $middleware->api(append: ['throttle:api', SetRequestLocale::class]);
         $middleware->alias([
             'permission' => EnsurePermission::class,

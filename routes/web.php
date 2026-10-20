@@ -15,13 +15,13 @@ use Illuminate\Support\Facades\Route;
 $signedIn = ['auth:sanctum', CheckSessionTimeout::class, TrackDevice::class, BlockResignedEmployees::class, CheckPasswordExpiry::class];
 
 // Server-rendered PDFs (dompdf), opened in a browser tab; each controller checks its permission
-Route::middleware($signedIn)->prefix('pdf')->group(function () {
+Route::middleware([...$signedIn, 'throttle:pdf'])->prefix('pdf')->group(function () {
     Route::get('stock-items/{stockItem}/history', [StockItemController::class, 'historyPdf'])->name('pdf.stock-items.history');
     Route::get('stock-movements/{movement}/labels', [StockMovementController::class, 'labelsPdf'])->name('pdf.stock-movements.labels');
 });
 
 // Private uploads, each gated to the record's viewers (company branding stays public)
-Route::middleware($signedIn)->prefix('files')->group(function () {
+Route::middleware([...$signedIn, 'throttle:files'])->prefix('files')->group(function () {
     Route::get('tickets/attachments/{attachment}', [FileController::class, 'ticketAttachment'])->name('files.ticket-attachment');
     Route::get('contracts/attachments/{attachment}', [FileController::class, 'contractAttachment'])->name('files.contract-attachment');
     Route::get('service-requests/attachments/{attachment}', [FileController::class, 'requestAttachment'])->name('files.request-attachment');
@@ -34,4 +34,4 @@ Route::middleware($signedIn)->prefix('files')->group(function () {
 // SPA entry for every other path; the brand travels with the page (read here, not in the Blade view)
 Route::get('/{any?}', function () {
     return view('app', ['brand' => AppSetting::brand()]);
-})->where('any', '^(?!api|sanctum|storage|build|pdf|files).*$')->name('spa');
+})->where('any', '^(?!api|sanctum|storage|build|pdf|files).*$')->middleware('throttle:page')->name('spa');
