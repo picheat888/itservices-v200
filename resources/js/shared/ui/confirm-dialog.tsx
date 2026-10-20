@@ -68,7 +68,7 @@ export function CenteredAlert({
     tone?: AlertTone;
     title: ReactNode;
     children: ReactNode;
-    /** The record the action applies to, in a bordered box read together with the description. */
+    /** The record the action applies to: its name under the title, a second line in grey after it. */
     entity?: AlertEntity;
     /** Content under the text that is not part of the description a screen reader reads on open (a list with its own buttons). */
     body?: ReactNode;
@@ -102,11 +102,11 @@ export function CenteredAlert({
     const shown: Shown = open ? current : retained.current;
     const { Icon } = shown;
 
-    // The record box is read with the description: its id joins Radix's own description id as the content node attaches
+    // The record line is read before the description, as shown; set as the content node attaches
     const attachContent = (node: HTMLDivElement | null) => {
         contentRef.current = node;
         const desc = descRef.current;
-        if (node && desc) node.setAttribute('aria-describedby', shown.entity ? `${desc.id} ${entityId}` : desc.id);
+        if (node && desc) node.setAttribute('aria-describedby', shown.entity ? `${entityId} ${desc.id}` : desc.id);
     };
 
     // Row menus get their button back on close, after this alert's own focus rule (as DialogContent does)
@@ -161,19 +161,27 @@ export function CenteredAlert({
                     )}
                 >
                     <AlertIconCircle icon={Icon} tone={shown.tone} />
-                    <div>
+                    <div className="min-w-0">
                         <DialogTitle className="mb-1 text-base leading-normal font-semibold tracking-normal text-balance">{shown.title}</DialogTitle>
-                        <DialogDescription ref={descRef} className="text-muted-foreground text-sm text-pretty whitespace-pre-line">
+                        {shown.entity && (
+                            <p id={entityId} className="text-foreground text-sm font-medium text-balance break-words">
+                                {shown.entity.name}
+                                {shown.entity.sub && (
+                                    <>
+                                        {' '}
+                                        <span className="text-muted-foreground inline-block max-w-full font-normal">{shown.entity.sub}</span>
+                                    </>
+                                )}
+                            </p>
+                        )}
+                        <DialogDescription
+                            ref={descRef}
+                            className={cn('text-muted-foreground text-sm text-pretty whitespace-pre-line', shown.entity && 'mt-2')}
+                        >
                             {shown.children}
                             {shown.body == null && error}
                         </DialogDescription>
                     </div>
-                    {shown.entity && (
-                        <div id={entityId} className="bg-muted/50 min-w-0 rounded-lg border px-3.5 py-2.5">
-                            <p className="text-foreground truncate text-sm font-medium">{shown.entity.name}</p>
-                            {shown.entity.sub && <p className="text-muted-foreground mt-0.5 truncate text-xs">{shown.entity.sub}</p>}
-                        </div>
-                    )}
                     {shown.body != null && (
                         <div className="text-sm">
                             {shown.body}
@@ -196,7 +204,7 @@ export interface ConfirmOptions {
     variant?: ConfirmVariant;
     title?: React.ReactNode;
     description?: React.ReactNode;
-    /** Highlighted record the action applies to — shown in a bordered panel. */
+    /** The record the action applies to, named under the title. */
     entity?: { name: React.ReactNode; sub?: React.ReactNode };
     confirmText?: React.ReactNode;
     cancelText?: React.ReactNode;
