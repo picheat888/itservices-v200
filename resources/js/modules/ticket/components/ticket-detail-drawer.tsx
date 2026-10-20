@@ -14,7 +14,7 @@ import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import {
     ArrowRightLeft,
@@ -803,7 +803,7 @@ export function TicketDetailDrawer({
                          on it. Close only appears when the desk's buttons do not: putting it
                          beside "Close the case" would be two buttons whose labels agree and
                          whose consequences do not. */}
-                    <div className="border-border bg-muted/20 flex flex-row flex-wrap items-center gap-2 border-t px-6 py-3.5">
+                    <DialogFooterBar className="flex-wrap justify-start">
                         {canEdit && (
                             <Button variant="outline" onClick={() => onEdit(view)}>
                                 <Pencil className="h-4 w-4" />
@@ -851,7 +851,7 @@ export function TicketDetailDrawer({
                                 </Button>
                             </>
                         )}
-                    </div>
+                    </DialogFooterBar>
                 </DialogContent>
             </Dialog>
 

@@ -35,7 +35,7 @@ import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm, useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -1253,11 +1253,11 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
                     )}
                 </div>
 
-                <div className="border-border/60 bg-muted/30 flex items-center justify-end border-t px-6 py-3.5">
+                <DialogFooterBar>
                     <Button variant="outline" onClick={onClose}>
                         {t('close')}
                     </Button>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

@@ -20,7 +20,7 @@ import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
@@ -533,7 +533,7 @@ export function RequestCreateDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
+                <DialogFooterBar className="justify-start">
                     <Button variant="outline" onClick={step === 0 ? () => guardClose(onClose) : () => goToStep(step - 1)} disabled={submit.isPending}>
                         {step === 0 ? (
                             t('cancel')
@@ -574,7 +574,7 @@ export function RequestCreateDialog({
                             {saveState === 'done' ? t('req_submitted') : t('req_submit')}
                         </SaveButton>
                     )}
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

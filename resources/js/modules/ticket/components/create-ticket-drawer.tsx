@@ -11,7 +11,7 @@ import { cn } from '@/shared/lib/utils';
 import type { TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
-import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { AlertCircle, MessageSquarePlus, Send } from 'lucide-react';
@@ -278,7 +278,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                 </div>
 
                 {/* Footer: actions */}
-                <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
+                <DialogFooterBar className="flex-wrap">
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={pending}>
                         {t('cancel')}
                     </Button>
@@ -286,7 +286,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                         <Send className="h-4 w-4" />
                         {t('submit_ticket')}
                     </SaveButton>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

@@ -24,7 +24,7 @@ import { cn } from '@/shared/lib/utils';
 import type { RequestAttachment, ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooterBar, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Ban, Check, PackageCheck, Ticket as TicketIcon, UserPlus, X } from 'lucide-react';
@@ -288,7 +288,7 @@ function RequestDetailBody({
             </div>
 
             {/* Footer — viewer-relative actions */}
-            <div className="border-border/60 bg-muted/30 flex items-center gap-2.5 border-t px-6 py-3.5">
+            <DialogFooterBar className="justify-start">
                 {awaitingCase && request.ticket && (
                     <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <TicketIcon className="h-3.5 w-3.5 shrink-0" />
@@ -324,7 +324,7 @@ function RequestDetailBody({
                         </>
                     )}
                 </div>
-            </div>
+            </DialogFooterBar>
         </>
     );
 }

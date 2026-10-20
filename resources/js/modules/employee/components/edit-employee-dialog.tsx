@@ -14,7 +14,7 @@ import type { Employee, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, ArrowRight, Briefcase, Check, SquarePen, Upload, User, X } from 'lucide-react';
@@ -618,7 +618,7 @@ export function EditEmployeeDialog({
                                     ))}
                                 </div>
                             </div>
-                            <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                            <DialogFooterBar>
                                 <Button
                                     variant="outline"
                                     onClick={() => {
@@ -633,7 +633,7 @@ export function EditEmployeeDialog({
                                     <Check className="h-4 w-4" />
                                     {t('emp_org_confirm')}
                                 </SaveButton>
-                            </div>
+                            </DialogFooterBar>
                         </>
                     )}
 
@@ -691,7 +691,7 @@ export function EditEmployeeDialog({
                             </div>
 
                             {/* ── Footer ── */}
-                            <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
+                            <DialogFooterBar className="flex-wrap">
                                 <Button variant="outline" onClick={() => guardClose(onClose)}>
                                     {t('cancel')}
                                 </Button>
@@ -702,7 +702,7 @@ export function EditEmployeeDialog({
                                     success={saved}
                                     disabled={saved || !isDirty}
                                 />
-                            </div>
+                            </DialogFooterBar>
                         </>
                     )}
                 </DialogContent>

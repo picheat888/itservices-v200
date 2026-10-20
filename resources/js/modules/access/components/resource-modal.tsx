@@ -15,7 +15,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, EmployeeOption, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
@@ -726,7 +726,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     )}
                 </div>
 
-                <div className="border-border/60 bg-muted/30 flex items-center justify-between gap-2 border-t px-6 py-3 sm:rounded-b-lg">
+                <DialogFooterBar className="justify-between">
                     <span className="text-muted-foreground text-[12.5px]">
                         <span className="text-destructive">*</span> {t('access_required_note')}
                     </span>
@@ -736,7 +736,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                         </Button>
                         <SaveButton loading={create.isPending || update.isPending} onClick={submit} disabled={!!row && !isDirty} />
                     </div>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
 
             {/* Logo crop — shared 1:1 cropper, same as the employee photo flow. */}

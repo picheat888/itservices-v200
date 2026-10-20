@@ -97,6 +97,19 @@ test('dialogs use two corner radii: 14px for the centred alert windows, the 10px
     }
 });
 
+test('dialog footers use DialogFooterBar instead of a hand-written grey bar', () => {
+    // Side panels, the photo cropper and a stock widget share the grey ground but are not footers
+    const NOT_FOOTER = ['lg:border-r', 'sm:border-l', 'px-3 py-2', 'h-72'];
+    for (const rel of ['modules', 'shared', 'app'].flatMap(tsxFiles)) {
+        if (rel.replaceAll('\\', '/') === 'shared/ui/dialog.tsx') continue;
+        for (const m of read(rel).matchAll(/<div className="([^"]*)">/g)) {
+            const cls = m[1].split(/\s+/);
+            const greyBar = cls.includes('border-t') && (cls.includes('bg-muted/30') || cls.includes('bg-muted/20'));
+            if (greyBar && !NOT_FOOTER.some((t) => m[1].includes(t))) assert.fail(`${rel}: hand-written footer bar "${m[1]}"`);
+        }
+    }
+});
+
 // Classes of the element that carries this exact token
 const classesWith = (rel: string, token: string): string[] => {
     const found = read(rel).match(new RegExp(`className="([^"]*${token.replace(/[[\]().]/g, '\\$&')}[^"]*)"`));

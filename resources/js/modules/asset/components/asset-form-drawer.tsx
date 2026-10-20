@@ -15,7 +15,7 @@ import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
@@ -500,7 +500,7 @@ export function AssetFormDrawer({
                 </div>
 
                 {/* Footer */}
-                <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                <DialogFooterBar className="justify-start">
                     <span className="text-muted-foreground mr-auto text-xs">
                         <span className="text-destructive">*</span> {t('asset_err_required')}
                     </span>
@@ -511,7 +511,7 @@ export function AssetFormDrawer({
                         <Check className="h-4 w-4" />
                         {saveState === 'done' ? t('asset_saved') : editing ? t('save') : t('register')}
                     </SaveButton>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

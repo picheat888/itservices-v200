@@ -19,7 +19,7 @@ import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
@@ -971,7 +971,7 @@ export function ContractFormDrawer({
                 </div>
 
                 {/* Footer — Back / Next / Save */}
-                <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
+                <DialogFooterBar className="justify-start">
                     <Button variant="outline" onClick={step === 0 ? () => guardClose(onClose) : goBack} disabled={saving}>
                         {step === 0 ? (
                             t('cancel')
@@ -986,7 +986,13 @@ export function ContractFormDrawer({
                     {/* Step dots */}
                     <div className="mx-auto flex gap-1.5">
                         {steps.map((_, i) => (
-                            <span key={i} className={cn('h-1.5 rounded-full transition-[width,background-color] duration-150 motion-reduce:transition-none', i === step ? 'bg-brand w-5' : 'bg-border w-1.5')} />
+                            <span
+                                key={i}
+                                className={cn(
+                                    'h-1.5 rounded-full transition-[width,background-color] duration-150 motion-reduce:transition-none',
+                                    i === step ? 'bg-brand w-5' : 'bg-border w-1.5',
+                                )}
+                            />
                         ))}
                     </div>
 
@@ -1007,7 +1013,7 @@ export function ContractFormDrawer({
                                     : t('save')}
                         </Button>
                     )}
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

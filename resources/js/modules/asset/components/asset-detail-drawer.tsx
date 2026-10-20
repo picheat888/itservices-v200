@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Check, Eye, FlaskConicalOff, MapPin, RotateCcw, Share2, SquarePen, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -393,7 +393,7 @@ export function AssetDetailDrawer({
                         (canCancelWriteoff && a.status === 'writeoff') ||
                         (canRetire && a.status === 'ready' && (onWriteoff || onReturnToVendor)) ||
                         (canDelete && a.status === 'ready' && !a.contract_id)) && (
-                        <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                        <DialogFooterBar className="justify-start">
                             {isRecipient && (
                                 <Button onClick={() => accept.mutate(a.id, { onSuccess: onClose })} disabled={accept.isPending}>
                                     <Check className="h-4 w-4" />
@@ -491,7 +491,7 @@ export function AssetDetailDrawer({
                                     {t('edit')}
                                 </Button>
                             )}
-                        </div>
+                        </DialogFooterBar>
                     )}
                 </DialogContent>
             </Dialog>

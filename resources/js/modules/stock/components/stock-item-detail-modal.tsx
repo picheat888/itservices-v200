@@ -16,7 +16,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooterBar, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Box, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
 import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
@@ -513,7 +513,7 @@ export function StockItemDetailModal({
                         </div>
 
                         {/* Footer — full history (left) / Edit (right) */}
-                        <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                        <DialogFooterBar className="justify-start">
                             <a
                                 href={`/stock/items/${item.id}/history`}
                                 target="_blank"
@@ -531,7 +531,7 @@ export function StockItemDetailModal({
                                     {t('edit')}
                                 </Button>
                             )}
-                        </div>
+                        </DialogFooterBar>
                     </>
                 )}
             </DialogContent>

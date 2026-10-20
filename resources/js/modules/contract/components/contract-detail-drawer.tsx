@@ -10,7 +10,7 @@ import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Trash2, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -278,7 +278,7 @@ export function ContractDetailDrawer({
                     {c.status !== 'cancelled' &&
                         c.status !== 'expired' &&
                         ((canCancel && c.status === 'active') || (canExpire && c.status === 'overdue') || (canDelete && deletable) || canEdit) && (
-                            <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                            <DialogFooterBar className="justify-start">
                                 {canCancel && c.status === 'active' && (
                                     <Button variant="destructive" onClick={() => actions.startCancel(c)}>
                                         <Ban className="h-4 w-4" />
@@ -308,18 +308,18 @@ export function ContractDetailDrawer({
                                         {t('edit')}
                                     </Button>
                                 )}
-                            </div>
+                            </DialogFooterBar>
                         )}
 
                     {/* Terminal contracts (cancelled or expired) are read-only — a user with the
                         Reactivate permission can reopen them (clears cancelled_at / expired_at). */}
                     {terminal && canReactivate && (
-                        <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                        <DialogFooterBar className="justify-start">
                             <Button variant="outline" onClick={() => actions.startReactivate(c)} disabled={actions.pending.reactivate}>
                                 <RotateCcw className="h-4 w-4" />
                                 {t('contract_reactivate')}
                             </Button>
-                        </div>
+                        </DialogFooterBar>
                     )}
                 </DialogContent>
             </Dialog>
