@@ -17,6 +17,8 @@ class LoginEventRecorder
 
     private const LOCATION_MAX = 120;
 
+    public const MASKED_TAIL = 4;
+
     public function __construct(private readonly LocationResolver $locations) {}
 
     /**
@@ -25,11 +27,17 @@ class LoginEventRecorder
     public function record(LoginEventType $event, ?User $user, Request $request, array $extra = []): LoginEvent
     {
         $device = $extra['device'] ?? null;
+        $userId = $user?->getKey() ?? $device?->user_id;
         $loginName = $extra['login_name'] ?? null;
+        if ($loginName !== null) {
+            $loginName = mb_substr($loginName, 0, self::LOGIN_NAME_MAX);
+            // A name matching no account may be a password typed into the wrong box
+            $loginName = $userId === null ? self::maskTail($loginName) : $loginName;
+        }
 
         return LoginEvent::create([
-            'user_id' => $user?->getKey() ?? $device?->user_id,
-            'login_name' => $loginName === null ? null : mb_substr($loginName, 0, self::LOGIN_NAME_MAX),
+            'user_id' => $userId,
+            'login_name' => $loginName,
             'event' => $event,
             'reason' => $extra['reason'] ?? null,
             'remembered' => (bool) ($extra['remembered'] ?? false),
@@ -55,6 +63,15 @@ class LoginEventRecorder
             'os' => $labels['os'],
             'browser' => $labels['browser'],
         ];
+    }
+
+    /** The typed text with its last 4 characters hidden (all of it when it is 4 or shorter). */
+    public static function maskTail(string $text): string
+    {
+        $length = mb_strlen($text);
+        $shown = max(0, $length - self::MASKED_TAIL);
+
+        return mb_substr($text, 0, $shown).str_repeat('•', $length - $shown);
     }
 
     /** @return array{ip: ?string, location: ?string, os: string, browser: string} */
