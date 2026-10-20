@@ -242,6 +242,42 @@ class DeviceRememberTest extends TestCase
         $this->inSession($newSessionId)->getJson('/api/me')->assertOk();
     }
 
+    /** A remember cookie that signs a browser back in is replaced with a new token for the rest of its period. */
+    public function test_a_used_remember_cookie_is_replaced_with_a_new_token(): void
+    {
+        $user = User::factory()->create();
+        $device = $this->rememberedDevice($user, 'laptop-token');
+        $recaller = Auth::guard('web')->getRecallerName();
+
+        $cookie = $this->meWithCookie($this->cookieFor($user, 'laptop-token'))->assertOk()->getCookie($recaller);
+
+        $this->assertNotNull($cookie);
+        $newToken = explode('|', $cookie->getValue())[1];
+        $this->assertNotSame('laptop-token', $newToken);
+        $this->assertSame(hash('sha256', $newToken), $device->fresh()->remember_token_hash);
+        $this->assertEqualsWithDelta($device->remember_expires_at->getTimestamp(), $cookie->getExpiresTime(), 60);
+        $this->assertNotSame($newToken, $user->fresh()->getRememberToken());
+    }
+
+    /** Requests sent alongside the one that replaced the cookie still get in; after a minute the old cookie, or a copy of it, does not. */
+    public function test_a_replaced_cookie_works_for_a_minute_then_stops(): void
+    {
+        $user = User::factory()->create();
+        $this->rememberedDevice($user, 'laptop-token');
+        $recaller = Auth::guard('web')->getRecallerName();
+        $oldCookie = $this->cookieFor($user, 'laptop-token');
+        $newCookie = $this->meWithCookie($oldCookie)->assertOk()->getCookie($recaller)->getValue();
+
+        // Joins the device: no second sign-in, no second new token
+        $this->meWithCookie($oldCookie)->assertOk();
+        $this->assertSame(hash('sha256', explode('|', $newCookie)[1]), UserDevice::query()->sole()->remember_token_hash);
+        $this->assertSame(1, LoginEvent::query()->where('event', 'signed_in')->count());
+
+        $this->travel(DeviceService::ROTATED_TOKEN_GRACE_SECONDS + 1)->seconds();
+        $this->meWithCookie($oldCookie)->assertUnauthorized();
+        $this->meWithCookie($newCookie)->assertOk();
+    }
+
     public function test_logout_retires_a_cookie_from_before_devices(): void
     {
         $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
