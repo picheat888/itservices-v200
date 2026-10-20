@@ -24,7 +24,7 @@ export const auth: Dict = {
     login_signed_out: 'ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้ง',
     login_time_seconds: '{n} วินาที',
     login_time_minutes: '{n} นาที',
-    login_tagline: 'แจ้งปัญหา และติดตามงาน\nครบจบในที่เดียว',
+    login_tagline: 'แจ้งปัญหา และติดตามงาน ครบจบในที่เดียว',
     login_theme_to_dark: 'เปลี่ยนเป็นโหมดมืด',
     login_theme_to_light: 'เปลี่ยนเป็นโหมดสว่าง',
     login_language: 'เปลี่ยนภาษา',
