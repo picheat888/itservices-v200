@@ -12,7 +12,7 @@ import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, largeDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, largeDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Pencil, Save } from 'lucide-react';
@@ -326,7 +326,7 @@ export function EditTicketDrawer({
                 </div>
 
                 {/* Footer: actions */}
-                <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
+                <DialogFooterBar className="flex-wrap">
                     {/* One save-progress bar covering upload (byte %) + delete (per-file step). */}
                     {saving && totalOps > 0 && (
                         <div className="mr-auto flex items-center gap-2">
@@ -346,7 +346,7 @@ export function EditTicketDrawer({
                         <Save className="h-4 w-4" />
                         {t('save')}
                     </SaveButton>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

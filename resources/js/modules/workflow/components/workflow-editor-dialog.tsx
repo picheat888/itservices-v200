@@ -14,7 +14,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
@@ -511,7 +511,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                     </div>
                 </div>
 
-                <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
+                <DialogFooterBar className="justify-start">
                     {serverError && (
                         <div
                             key={serverError}
@@ -533,7 +533,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                             disabled={saveState === 'done' || hasEmptyRung || hasIncompleteDepartment}
                         />
                     </div>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

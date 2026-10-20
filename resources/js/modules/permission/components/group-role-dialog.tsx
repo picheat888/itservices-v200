@@ -8,7 +8,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Lock, PencilLine, Trash2, Users } from 'lucide-react';
@@ -342,7 +342,7 @@ export function GroupRoleDialog({
                         </div>
                     </div>
 
-                    <div className="border-border bg-muted/30 flex items-center justify-end gap-2 border-t px-6 py-3">
+                    <DialogFooterBar>
                         {group !== null && !readOnly && (
                             <span className="mr-auto flex items-center gap-1">
                                 <Button
@@ -387,7 +387,7 @@ export function GroupRoleDialog({
                                 {t('save')}
                             </Button>
                         )}
-                    </div>
+                    </DialogFooterBar>
                 </DialogContent>
             </Dialog>
 

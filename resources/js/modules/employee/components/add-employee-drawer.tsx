@@ -10,7 +10,7 @@ import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
@@ -844,7 +844,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 </div>
 
                 {/* Footer — Cancel/Back · step dots · Next/Save */}
-                <div className="border-border/60 bg-muted/30 flex items-center gap-3 border-t px-6 py-3.5">
+                <DialogFooterBar className="justify-start">
                     <Button variant="outline" onClick={step === 1 ? () => guardClose(onClose) : back} disabled={create.isPending}>
                         {step === 1 ? (
                             t('cancel')
@@ -880,7 +880,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                             {create.isPending ? t('saving') : t('save')}
                         </Button>
                     )}
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

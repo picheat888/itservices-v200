@@ -8,7 +8,7 @@ import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { Workflow } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, mediumDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { Flag, Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { WorkflowStrip } from './workflow-strip';
@@ -143,7 +143,7 @@ export function WorkflowViewDialog({
                     </div>
                 </div>
 
-                <div className="border-border/60 bg-muted/30 flex items-center justify-end gap-3 border-t px-6 py-3.5">
+                <DialogFooterBar>
                     <Button variant="outline" onClick={onClose}>
                         {t('close')}
                     </Button>
@@ -151,7 +151,7 @@ export function WorkflowViewDialog({
                         <Pencil className="h-4 w-4" />
                         {t('wf_edit')}
                     </Button>
-                </div>
+                </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );

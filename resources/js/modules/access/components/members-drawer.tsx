@@ -16,7 +16,7 @@ import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember, EmployeeOption } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, focusDialogContentClass, focusDialogOnOpen } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass, focusDialogOnOpen } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToastStore, type ToastIcon } from '@/stores/toast';
 import { Folder, Globe, Package, Pencil, Plus, SquarePen, Trash2, TriangleAlert, User, Users } from 'lucide-react';
@@ -525,7 +525,7 @@ export function MembersDrawer({
                         {/* Footer — delete the whole resource (subtle, left; delete key) + edit its
                             own details (right; edit key). Hidden entirely when neither is granted. */}
                         {(mayEdit || mayDelete) && (
-                            <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                            <DialogFooterBar className="justify-start">
                                 {mayDelete && (
                                     <>
                                         <Button
@@ -547,7 +547,7 @@ export function MembersDrawer({
                                         <SquarePen className="h-4 w-4" /> {t('edit')}
                                     </Button>
                                 )}
-                            </div>
+                            </DialogFooterBar>
                         )}
                     </>
                 )}
