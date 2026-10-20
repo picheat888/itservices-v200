@@ -1,4 +1,5 @@
-// Centred alert in the Account Switched shell (ring icon, centred title and text, full-width buttons): save confirms, notices and the device-limit dialog.
+// Centred alert (round icon, centred title and text, full-width buttons): save confirms, notices and the device-limit dialog.
+// Its round icon, AlertIconCircle, also heads the password dialogs.
 import { cn } from '@/shared/lib/utils';
 import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '@/shared/ui/dialog';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
@@ -6,6 +7,22 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 type Shown = { Icon: LucideIcon; title: ReactNode; children: ReactNode; body: ReactNode; actions: ReactNode; errorText: ReactNode };
+
+/** The round icon on top of a centred dialog: brand for a step to take, amber for a warning. */
+export function AlertIconCircle({ icon: Icon, tone = 'brand', className }: { icon: LucideIcon; tone?: 'brand' | 'warn'; className?: string }) {
+    return (
+        <div
+            className={cn(
+                'mx-auto flex h-12 w-12 items-center justify-center rounded-full',
+                tone === 'warn' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-brand/15 text-brand-ink',
+                className,
+            )}
+            aria-hidden
+        >
+            <Icon className="h-6 w-6" />
+        </div>
+    );
+}
 
 export function CenteredAlert({
     open,
@@ -89,9 +106,7 @@ export function CenteredAlert({
                         className,
                     )}
                 >
-                    <div className="bg-brand/15 text-brand-ink mx-auto flex h-12 w-12 items-center justify-center rounded-full" aria-hidden>
-                        <Icon className="h-6 w-6" />
-                    </div>
+                    <AlertIconCircle icon={Icon} />
                     <div>
                         <DialogTitle className="mb-1 text-base leading-normal font-semibold tracking-normal text-balance">{shown.title}</DialogTitle>
                         <DialogDescription className="text-muted-foreground text-sm text-pretty">
