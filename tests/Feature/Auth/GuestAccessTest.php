@@ -2,8 +2,17 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\Auth\DeviceEndReason;
+use App\Enums\Employee\EmployeeStatus;
+use App\Http\Middleware\CheckSessionTimeout;
+use App\Models\Auth\UserDevice;
+use App\Models\Employee\Employee;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Services\Auth\DeviceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -16,6 +25,9 @@ use Tests\TestCase;
 class GuestAccessTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** The SPA's origin: it is what gives an API request its session. */
+    private const ORIGIN = 'http://localhost:8000';
 
     /** A representative protected GET endpoint from every major module. */
     public static function protectedEndpoints(): array
@@ -87,5 +99,43 @@ class GuestAccessTest extends TestCase
         foreach (['company_name', 'legal_name', 'tax_id', 'address', 'ticket_sla'] as $key) {
             $this->assertArrayHasKey($key, $signedIn);
         }
+    }
+
+    /** A session past the idle timeout is answered like every other API call, not with the full settings. */
+    public function test_an_idle_session_gets_session_expired_from_settings(): void
+    {
+        AppSetting::put('session_timeout_minutes', '30');
+        Cache::put(CheckSessionTimeout::clockKey('idle-clock'), time() - 40 * 60, 3600);
+
+        $this->actingAs(User::factory()->create())
+            ->withHeader('Origin', self::ORIGIN)
+            ->withSession([CheckSessionTimeout::IDLE_CLOCK => 'idle-clock'])
+            ->getJson('/api/settings')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'session_expired');
+    }
+
+    public function test_a_closed_account_gets_account_closed_from_settings(): void
+    {
+        $employee = Employee::create(['first_name' => 'Leaver', 'status' => EmployeeStatus::Resigned, 'last_day' => now()->subWeek()->toDateString()]);
+
+        $this->actingAs(User::factory()->create(['employee_id' => $employee->id]))
+            ->getJson('/api/settings')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'account_closed');
+    }
+
+    public function test_an_ended_device_gets_its_reason_from_settings(): void
+    {
+        $device = UserDevice::factory()->ended(DeviceEndReason::Profile)->create();
+
+        $this->actingAs($device->user)
+            ->withHeader('Origin', self::ORIGIN)
+            ->withCredentials()
+            ->withCookie(config('session.cookie'), Str::random(40))
+            ->withSession([DeviceService::SESSION_KEY => $device->id])
+            ->getJson('/api/settings')
+            ->assertUnauthorized()
+            ->assertJsonPath('reason', 'profile');
     }
 }

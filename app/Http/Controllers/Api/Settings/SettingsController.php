@@ -72,9 +72,8 @@ class SettingsController extends Controller
     private const PUBLIC_KEYS = ['brand_name', 'brand_sub', 'logo_url', 'theme_accent', 'theme_density', 'theme_radius'];
 
     /**
-     * The route sits outside the sign-in check because the login page themes itself from
-     * it. A guest therefore gets PUBLIC_KEYS only; the company's legal details, the SLA
-     * rules and the rest come back once a session exists (the SPA refetches after login).
+     * Outside the sign-in check because the login page themes itself from it: a guest gets PUBLIC_KEYS only.
+     * The rest comes back to a session that passed the route's idle, device and closed-account checks.
      */
     public function show(?Request $request = null): JsonResponse
     {
