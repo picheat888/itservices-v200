@@ -1,4 +1,6 @@
+import { TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import type { RefreshMark } from '@/shared/lib/refresh-mark';
 import { cn } from '@/shared/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { useId, useRef, type KeyboardEvent } from 'react';
@@ -16,6 +18,8 @@ export interface DialogTab<T extends string> {
      * because an icon that cannot distinguish anything is decoration. Opt in per bar.
      */
     icon?: LucideIcon;
+    /** Refresh mark of the tab's data (useRefreshMark); any tab setting it reserves room on every tab. */
+    refresh?: RefreshMark;
 }
 
 /** The DOM id DialogTabs gives a tab, for a panel's `aria-labelledby`. */
@@ -44,6 +48,7 @@ export function DialogTabs<T extends string>({
     panelId?: string;
 }) {
     const fmtN = useNumberFormat();
+    const reserveMark = tabs.some((tb) => tb.refresh !== undefined);
     const fallbackId = useId();
     const base = panelId ?? fallbackId;
     const listRef = useRef<HTMLDivElement>(null);
@@ -88,6 +93,7 @@ export function DialogTabs<T extends string>({
                         className={cn(
                             'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
                             selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                            reserveMark && 'pr-8 lg:pr-8',
                         )}
                     >
                         {/* Icons show from lg up */}
@@ -106,6 +112,7 @@ export function DialogTabs<T extends string>({
                         )}
                         {/* Underline inside the scrolling bar */}
                         {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
+                        {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
                     </button>
                 );
             })}

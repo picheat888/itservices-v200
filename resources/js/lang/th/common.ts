@@ -291,6 +291,8 @@ export const common: Dict = {
     cmn_empty_search_select_hint: 'ลองค้นด้วยคำอื่น',
     cmn_empty_searchable_select: 'ไม่พบรายการ',
     cmn_empty_searchable_select_hint: 'ลองค้นด้วยคำอื่น',
+    cmn_refreshing: 'กำลังอัปเดต…',
+    cmn_refreshed: 'อัปเดตแล้ว',
     cmn_empty_icon_picker: 'ไม่พบไอคอน',
     cmn_empty_icon_picker_hint: 'ลองค้นด้วยคำภาษาอังกฤษ เช่น laptop',
 };

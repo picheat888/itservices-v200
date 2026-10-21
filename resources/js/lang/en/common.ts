@@ -291,6 +291,8 @@ export const common: Dict = {
     cmn_empty_search_select_hint: 'Try other words.',
     cmn_empty_searchable_select: 'No match',
     cmn_empty_searchable_select_hint: 'Try other words.',
+    cmn_refreshing: 'Updating…',
+    cmn_refreshed: 'Updated',
     cmn_empty_icon_picker: 'No icon found',
     cmn_empty_icon_picker_hint: 'Try an English word, e.g. laptop.',
 };

@@ -1,4 +1,6 @@
+import { TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import type { RefreshMark } from '@/shared/lib/refresh-mark';
 import { cn } from '@/shared/lib/utils';
 import { useEffect, useRef } from 'react';
 
@@ -14,6 +16,8 @@ export interface PageTab<T extends string> {
     tone?: 'alert' | 'warn' | 'muted';
     /** Tooltip on the count pill. */
     countTitle?: string;
+    /** Refresh mark of the tab's data (useRefreshMark); any tab setting it reserves room on every tab. */
+    refresh?: RefreshMark;
 }
 
 const TONES: Record<NonNullable<PageTab<string>['tone']>, string> = {
@@ -40,6 +44,7 @@ export function PageTabs<T extends string>({
     className?: string;
 }) {
     const fmtN = useNumberFormat();
+    const reserveMark = tabs.some((tb) => tb.refresh !== undefined);
     // One row that scrolls sideways when it runs out of room (a tablet in portrait), rather
     // than wrapping into a second row that reads as a second set of tabs. The active tab is
     // kept in view, so a deep link to the last tab doesn't open on a tab you can't see.
@@ -67,6 +72,7 @@ export function PageTabs<T extends string>({
                         className={cn(
                             'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
                             selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                            reserveMark && 'pr-8',
                         )}
                     >
                         {tb.label}
@@ -77,6 +83,7 @@ export function PageTabs<T extends string>({
                         )}
                         {/* bottom-0, not -bottom-px: the strip scrolls, so anything below its edge is clipped. */}
                         {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
+                        {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
                     </button>
                 );
             })}
