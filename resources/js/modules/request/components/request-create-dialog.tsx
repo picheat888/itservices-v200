@@ -32,6 +32,7 @@ import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Se
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { type RequestManagedChoice, type RequestTypeOption } from '../api/requestApi';
 import { requestFieldOptionsKey, useRequestFieldOptions, useRequestMutations, useRequestOptions } from '../hooks/use-requests';
+import { choiceGone, findChoice } from '../lib/field-choices';
 
 const LAST_STEP = 2;
 
@@ -133,6 +134,10 @@ export function RequestCreateDialog({
             return next;
         });
 
+    // A chosen item the field's reloaded list no longer holds
+    const choiceLost = (f: RequestFieldSchema) =>
+        choiceGone((fields[f.key] ?? '').trim(), queryClient.getQueryData(requestFieldOptionsKey(type ?? '', f.key)));
+
     const buildErrors = (): Record<string, string> => {
         const e: Record<string, string> = {};
         if (!type) e.type = t('req_err_pick_service');
@@ -142,11 +147,16 @@ export function RequestCreateDialog({
             // An either/or pair passes as long as one of the two sides is filled.
             if (f.allow_other) {
                 if (!(fields[f.key] ?? '').trim() && !(fields[f.allow_other] ?? '').trim()) e[`field_${f.key}`] = requiredMsg;
+                else if (choiceLost(f)) e[`field_${f.key}`] = t('cmn_item_removed');
                 continue;
             }
             const filled = (fields[f.key] ?? '').trim();
             if (f.required && !filled) {
                 e[`field_${f.key}`] = requiredMsg;
+                continue;
+            }
+            if (choiceLost(f)) {
+                e[`field_${f.key}`] = t('cmn_item_removed');
                 continue;
             }
             if (f.input === 'email' && filled && !isEmail(filled)) e[`field_${f.key}`] = t('req_bad_email');
@@ -954,13 +964,11 @@ function displayValue(
     reloaded?: (RequestSourceOption | RequestManagedChoice)[],
 ): string {
     if (f.input === 'select') {
-        const choices = f.managed && reloaded ? (reloaded as RequestManagedChoice[]) : (f.options ?? []);
-        const opt = choices.find((o) => o.value === raw);
+        const opt = findChoice(raw, f.managed ? (reloaded as RequestManagedChoice[] | undefined) : undefined, f.options);
         return opt ? localLabel(opt, lang) : raw;
     }
     if (f.input === 'source') {
-        const rows = (reloaded as RequestSourceOption[] | undefined) ?? sources?.[f.source ?? ''];
-        return rows?.find((o) => String(o.id) === raw)?.label ?? raw;
+        return findChoice(raw, reloaded as RequestSourceOption[] | undefined, sources?.[f.source ?? ''])?.label ?? raw;
     }
     return raw;
 }

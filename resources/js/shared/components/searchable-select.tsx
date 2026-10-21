@@ -4,6 +4,7 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { usePresence } from '@/shared/hooks/use-presence';
 import type { SelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
+import { menuMinWidth, searchGetsFocus } from '@/shared/lib/select-menu';
 import { isRemovedValue, menuBody, nextActiveIndex, tabLeavesMenu } from '@/shared/lib/select-refresh';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -100,6 +101,8 @@ export function SearchableSelect({
     // Keyboard-highlighted option; shown only after an arrow key so mouse use looks unchanged
     const [activeIndex, setActiveIndex] = useState(0);
     const [keyboardNav, setKeyboardNav] = useState(false);
+    // Off for a short list on a touch screen, so opening it doesn't raise the on-screen keyboard
+    const [focusSearch, setFocusSearch] = useState(true);
     // Open upward when the trigger sits too close to the bottom.
     const [dropUp, setDropUp] = useState(false);
     // Option-list max height, capped to the room available so the menu is never clipped.
@@ -137,6 +140,8 @@ export function SearchableSelect({
     const removed = flagRemoved && !refresh?.refreshing && isRemovedValue(value, options, refresh?.loaded ?? true);
     const removedLabel = lastLabel.current?.value === value ? lastLabel.current.label : t('cmn_no_longer_available');
     const removedNoteId = useId();
+    // Once the form flags the field, its red error says the same, so the amber note steps aside
+    const showRemovedNote = removed && !ariaInvalid;
     const body = menuBody({
         count: filtered.length,
         query: q,
@@ -276,9 +281,18 @@ export function SearchableSelect({
                 ),
             );
             if (reloading) refresh.refresh(false);
+            const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+            setFocusSearch(searchGetsFocus({ coarsePointer, isAsync, optionCount: options.length }));
         }
         setOpen((o) => !o);
     };
+
+    // Without the search box focused, the menu itself holds focus so Escape and Tab still work
+    useEffect(() => {
+        if (open && !focusSearch) {
+            menuRef.current?.focus();
+        }
+    }, [open, focusSearch]);
 
     // Keep the portaled menu glued to the trigger while the dialog body scrolls or the window resizes.
     useEffect(() => {
@@ -355,7 +369,7 @@ export function SearchableSelect({
                     name="search"
                     autoComplete="off"
                     spellCheck={false}
-                    autoFocus
+                    autoFocus={focusSearch}
                     value={q}
                     onChange={(e) => {
                         setQ(e.target.value);
@@ -500,7 +514,7 @@ export function SearchableSelect({
                         }
                     }}
                     aria-invalid={ariaInvalid}
-                    aria-describedby={cn(ariaDescribedBy, removed && removedNoteId) || undefined}
+                    aria-describedby={cn(ariaDescribedBy, showRemovedNote && removedNoteId) || undefined}
                     aria-required={ariaRequired}
                     aria-haspopup="listbox"
                     aria-expanded={open}
@@ -508,7 +522,7 @@ export function SearchableSelect({
                     className={cn(
                         'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
                         active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
-                        removed && 'border-amber-600 dark:border-amber-400',
+                        showRemovedNote && 'border-amber-600 dark:border-amber-400',
                         // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).
                         open && 'border-brand ring-brand/15 ring-[3px]',
                     )}
@@ -563,12 +577,13 @@ export function SearchableSelect({
                         createPortal(
                             <div
                                 ref={menuRef}
+                                tabIndex={-1}
                                 onKeyDown={onMenuKeyDown}
                                 style={{
                                     position: 'absolute',
                                     left: coords.left,
                                     // Trigger width is a floor, so a narrow column doesn't cut option labels
-                                    minWidth: coords.width,
+                                    minWidth: menuMinWidth(coords.width, reloading),
                                     maxWidth: 320,
                                     width: 'max-content',
                                     top: coords.top,
@@ -576,7 +591,7 @@ export function SearchableSelect({
                                     zIndex: 50,
                                 }}
                                 className={cn(
-                                    'border-border bg-popover overflow-hidden rounded-md border shadow-md',
+                                    'border-border bg-popover overflow-hidden rounded-md border shadow-md outline-none',
                                     coords.bottom !== undefined ? 'origin-bottom' : 'origin-top',
                                     closing ? 'motion-pop-out' : 'motion-pop-in',
                                 )}
@@ -588,9 +603,11 @@ export function SearchableSelect({
                     ) : (
                         <div
                             ref={menuRef}
+                            tabIndex={-1}
                             onKeyDown={onMenuKeyDown}
                             className={cn(
-                                'border-border bg-popover absolute z-50 w-max max-w-[320px] min-w-full overflow-hidden rounded-md border shadow-md',
+                                'border-border bg-popover absolute z-50 w-max max-w-[320px] overflow-hidden rounded-md border shadow-md outline-none',
+                                reloading ? 'min-w-[max(100%,18rem)]' : 'min-w-full',
                                 dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
                                 closing ? 'motion-pop-out' : 'motion-pop-in',
                             )}
@@ -599,7 +616,7 @@ export function SearchableSelect({
                         </div>
                     ))}
             </div>
-            {removed && (
+            {showRemovedNote && (
                 <p id={removedNoteId} className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
                     <TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {t('cmn_item_removed')}

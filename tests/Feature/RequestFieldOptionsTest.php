@@ -7,7 +7,10 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
+use App\Services\Request\RequestSourceService;
+use App\Support\RequestSchemas;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 // One list of the New Request form, reloaded on its own: current rows, gated by the request type.
@@ -83,5 +86,22 @@ class RequestFieldOptionsTest extends TestCase
 
         $this->assertArrayHasKey('email_groups', $sources);
         $this->assertArrayNotHasKey('file_shares', $sources);
+    }
+
+    public function test_one_managed_list_is_read_with_one_query(): void
+    {
+        RequestOption::create(['request_type' => 'hardware', 'field_key' => 'device_id', 'label_en' => 'Monitor', 'label_th' => null, 'sort_order' => 1, 'active' => true]);
+        RequestSchemas::flushManagedCache();
+
+        DB::enableQueryLog();
+        $choices = app(RequestSourceService::class)->field('hardware', 'device_id');
+
+        $this->assertCount(1, $choices);
+        $this->assertCount(1, DB::getQueryLog());
+    }
+
+    public function test_an_unknown_source_has_no_rows(): void
+    {
+        $this->assertSame([], app(RequestSourceService::class)->rows('nope'));
     }
 }

@@ -37,6 +37,7 @@ class RequestSourceService
                 ])->all(),
             'locations' => Location::orderBy('name')->get(['id', 'name'])
                 ->map(fn ($l) => ['id' => $l->id, 'label' => $l->name, 'detail' => null])->all(),
+            default => [],
         };
     }
 
@@ -65,8 +66,7 @@ class RequestSourceService
      */
     public function field(string $type, string $field): ?array
     {
-        $requestType = RequestType::tryFrom($type);
-        $schema = $requestType === null ? null : collect(RequestSchemas::for($requestType))->firstWhere('key', $field);
+        $schema = collect(RequestSchemas::all()[$type] ?? [])->firstWhere('key', $field);
 
         if ($schema === null) {
             return null;
