@@ -16,6 +16,8 @@ export const useRequests = (params: RequestListParams, enabled = true) =>
                 type: params.type || undefined,
             }),
         placeholderData: (prev) => prev,
+        staleTime: FRESH_MS,
+        refetchOnWindowFocus: true,
         enabled,
     });
 

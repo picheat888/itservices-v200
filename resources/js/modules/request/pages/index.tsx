@@ -15,6 +15,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefreshMark } from '@/shared/hooks/use-refresh-mark';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -176,10 +177,16 @@ export default function RequestsPage() {
     const {
         data: queueData,
         isLoading: queueLoading,
+        isFetching: queueFetching,
         isError: queueError,
         refetch: refetchQueue,
     } = useRequests({ page: 1, per_page: 4, scope: 'approvals', sort: 'oldest' }, tab === 'overview');
     const queue = queueData?.data ?? [];
+
+    // Tab marks: background refetches only; a first load or a new filter shows its own skeleton
+    const listBackground = isFetching && !isLoading && !isPlaceholderData;
+    const overviewMark = useRefreshMark(tab === 'overview' && (listBackground || (queueFetching && !queueLoading)));
+    const listMark = useRefreshMark(tab !== 'overview' && listBackground);
 
     // Dialogs: create via ?add=1, detail via ?view=<id> (a malformed id leaves the list alone).
     const adding = searchParams.get('add') === '1';
@@ -393,8 +400,8 @@ export default function RequestsPage() {
             <Card className="overflow-clip p-0">
                 <PageTabs<Tab>
                     tabs={[
-                        { id: 'overview', label: t('requests_tab_overview') },
-                        { id: 'all', label: t('requests_tab_list'), count: attention },
+                        { id: 'overview', label: t('requests_tab_overview'), refresh: overviewMark },
+                        { id: 'all', label: t('requests_tab_list'), count: attention, refresh: listMark },
                     ]}
                     active={isListTab ? 'all' : 'overview'}
                     onChange={(next) => switchTab(next)}
