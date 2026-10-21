@@ -7049,3 +7049,17 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - หน้า error แบบ Blade ใช้สีตัวรองเดียวกัน
 - เมนูที่เลือก ตัวนับ สีหลัก และพื้นหลังไม่เปลี่ยน
 - เทส `tests/js/text-tones.test.ts` `npm run test:js` ผ่าน 517 ข้อ `ErrorPagesTest` ผ่าน 25 ข้อ วัดใน Chrome ทั้งสองโหมดแล้วตรงตามค่า (สลับธีมด้วยปุ่มของแอปแล้วสลับกลับ)
+
+## อัปเดตไลบรารีที่มีประกาศช่องโหว่ (2026-10-21)
+
+จากผลตรวจทั้งระบบ (https://claude.ai/artifact/7rJtKsrbj1f93a66FaDBbM หัวข้อไลบรารี) อัปเดตเฉพาะ patch และ minor ในเวอร์ชันหลักเดิม ไม่ขึ้น major
+- Composer อัปเดตเฉพาะแพ็กเกจที่มีประกาศกับของที่มันพึ่งพา รวม 57 แพ็กเกจ ด้วย `composer update <แพ็กเกจ> --with-dependencies` ไม่ใช้ `composer update` ทั้งหมด เพราะจะลากเครื่องมือ dev ขึ้น major ด้วย (laravel/mcp 0.7 → 1.1, laravel/roster 0.5 → 1.0)
+  - laravel/framework 12.60.2 → 12.70.0, dompdf/dompdf 3.1.5 → 3.1.6, guzzlehttp/guzzle 7.10.3 → 7.16.0, guzzlehttp/psr7 2.10.1 → 2.13.2, league/commonmark 2.8.2 → 2.10.4, league/flysystem 3.34.0 → 3.36.0, symfony 7.4.8 ถึง 7.4.12 → 7.4.17 ถึง 7.4.21, nesbot/carbon 3.11.4 → 3.15.0, monolog 3.10.0 → 3.12.1
+  - `composer audit` จาก 39 ประกาศใน 10 แพ็กเกจ เหลือ 0
+- npm ใช้ `npm audit fix` ไม่ใช้ --force เปลี่ยนเฉพาะ package-lock.json (package.json เดิม)
+  - axios 1.16.1 → 1.20.0, react-router และ react-router-dom 7.15.1 → 7.18.4, vite 6.1.1 → 6.4.4, esbuild 0.24.2 → 0.25.12, rollup 4.34.8 → 4.64.12, eslint 9.21.0 → 9.39.5, typescript-eslint 8.24.1 → 8.72.0, shell-quote 1.8.2 → 1.12.0 (มากับ concurrently)
+  - `npm audit` จาก 34 รายการ (วิกฤต 1 สูง 25) เหลือ 0 ตัวที่ไปถึงเบราว์เซอร์มีแค่ axios กับ react-router ที่เหลือใช้ตอน build หรือรัน dev
+- ยังเป็น Laravel 12 ซึ่งตอนนี้ได้แค่แพตช์ความปลอดภัย ถึงราว 24 ก.พ. 2027 การขึ้น Laravel 13 เป็นงานแยก
+- ตรวจหลังอัปเดต PHPUnit บน sqlite ผ่าน 2,857 บน MariaDB (ฐานแยก `itservices_test`) ผ่าน 2,840 ล้ม 17 ตัวเดิมก่อนอัปเดต ไม่มีตัวที่ล้มเพิ่ม (DB-1 กับเทสต์ที่ผูก sqlite ตามผลตรวจ), tsc ผ่าน, eslint warning เดิม 1 จุด, เทสต์ JS ผ่าน 517, `vite build` ผ่าน
+- หลังอัปเดตต้องปิดแล้วเปิด `composer run demo` ใหม่ เพราะ opcache กับ vite watch ยังถือไลบรารีชุดเดิม บน production ต้อง `composer install --no-dev` และ build หน้าเว็บใหม่
+- ข้อควรรู้ ระหว่าง `composer update` vendor อยู่ครึ่งทาง แอป error ทุกหน้าชั่วคราว ถ้ายกเลิกคำสั่งใน Claude Code แล้ว process ยังรันต่อ ให้รอจนจบ อย่าฆ่ากลางทาง
