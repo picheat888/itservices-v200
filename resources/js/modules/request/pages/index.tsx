@@ -167,7 +167,7 @@ export default function RequestsPage() {
               : tab === 'all'
                 ? { page, per_page: perPage, search: sentSearch, status, type, ...filed }
                 : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
-    const { data: pageData, isLoading, isFetching, isPlaceholderData, isError, refetch } = useRequests(listParams);
+    const { data: pageData, isLoading, isFetching, isPlaceholderData, isError, refetch, dataUpdatedAt } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
     const metaPeriod = useShownPeriod(period, isPlaceholderData);
@@ -179,14 +179,15 @@ export default function RequestsPage() {
         isLoading: queueLoading,
         isFetching: queueFetching,
         isError: queueError,
+        dataUpdatedAt: queueUpdatedAt,
         refetch: refetchQueue,
     } = useRequests({ page: 1, per_page: 4, scope: 'approvals', sort: 'oldest' }, tab === 'overview');
     const queue = queueData?.data ?? [];
 
     // Tab marks: background refetches only; a first load or a new filter shows its own skeleton
     const listBackground = isFetching && !isLoading && !isPlaceholderData;
-    const overviewMark = useRefreshMark(tab === 'overview' && (listBackground || (queueFetching && !queueLoading)));
-    const listMark = useRefreshMark(tab !== 'overview' && listBackground);
+    const overviewMark = useRefreshMark(tab === 'overview' && (listBackground || (queueFetching && !queueLoading)), dataUpdatedAt + queueUpdatedAt);
+    const listMark = useRefreshMark(tab !== 'overview' && listBackground, dataUpdatedAt);
 
     // Dialogs: create via ?add=1, detail via ?view=<id> (a malformed id leaves the list alone).
     const adding = searchParams.get('add') === '1';

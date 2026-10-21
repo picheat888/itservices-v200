@@ -4,7 +4,7 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { usePresence } from '@/shared/hooks/use-presence';
 import type { SelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
-import { isRemovedValue, keepActiveIndex } from '@/shared/lib/select-refresh';
+import { isRemovedValue, menuBody, nextActiveIndex, tabLeavesMenu } from '@/shared/lib/select-refresh';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { AlertCircle, ChevronsUpDown, Loader2, RotateCw, TriangleAlert, X } from 'lucide-react';
@@ -111,6 +111,7 @@ export function SearchableSelect({
     const ref = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const searchRef = useRef<HTMLInputElement>(null);
 
     const isAsync = onSearch !== undefined;
     const selected = options.find((o) => o.value === value) ?? (selectedOption?.value === value ? selectedOption : undefined);
@@ -125,7 +126,7 @@ export function SearchableSelect({
     const lastFiltered = useRef(filtered);
     const optionsKey = options.map((o) => o.value).join('\u0000');
     useEffect(() => {
-        if (open) setActiveIndex((i) => keepActiveIndex(lastFiltered.current, filtered, i));
+        if (open) setActiveIndex((i) => nextActiveIndex(reloading, lastFiltered.current, filtered, i));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [optionsKey]);
     useEffect(() => {
@@ -136,6 +137,19 @@ export function SearchableSelect({
     const removed = flagRemoved && !refresh?.refreshing && isRemovedValue(value, options, refresh?.loaded ?? true);
     const removedLabel = lastLabel.current?.value === value ? lastLabel.current.label : t('cmn_no_longer_available');
     const removedNoteId = useId();
+    const body = menuBody({
+        count: filtered.length,
+        query: q,
+        reloading,
+        loaded: refresh?.loaded ?? true,
+        failed: refresh?.failed ?? false,
+        asyncLoading: isAsync && loading,
+    });
+    // Retry and Reload unmount once the list arrives, so focus goes back to the search box first
+    const reload = () => {
+        searchRef.current?.focus();
+        refresh?.refresh(true);
+    };
 
     // Clear the query whenever the menu closes so a stale search never hides every option.
     useEffect(() => {
@@ -315,8 +329,16 @@ export function SearchableSelect({
             }
             return;
         }
-        if (e.key === 'Tab') {
-            // Hand focus back to the trigger; the browser's Tab then moves on from there
+    };
+
+    // Tab moves through the search box and any reload button, then hands focus back to the trigger; the browser's Tab moves on from there
+    const onMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key !== 'Tab') {
+            return;
+        }
+        const controls = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('input, button:not([tabindex="-1"]):not(:disabled)') ?? []);
+        const index = controls.indexOf(e.target as HTMLElement);
+        if (index < 0 || tabLeavesMenu(index, controls.length, e.shiftKey)) {
             setOpen(false);
             triggerRef.current?.focus();
         }
@@ -329,6 +351,7 @@ export function SearchableSelect({
         <>
             <div className={cn('border-border border-b p-2', reloading && 'flex items-center gap-2')}>
                 <input
+                    ref={searchRef}
                     name="search"
                     autoComplete="off"
                     spellCheck={false}
@@ -373,8 +396,8 @@ export function SearchableSelect({
                         {refresh.failed && (
                             <button
                                 type="button"
-                                onClick={() => refresh.refresh(true)}
-                                className="text-brand focus-visible:ring-brand/40 touch:h-10 h-7 shrink-0 rounded px-1 text-xs font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-hidden"
+                                onClick={reload}
+                                className="text-brand hover:bg-accent focus-visible:ring-brand/40 touch:h-10 h-7 shrink-0 rounded px-1 text-xs font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-hidden"
                             >
                                 {t('retry')}
                             </button>
@@ -388,17 +411,17 @@ export function SearchableSelect({
                 className="overflow-y-auto py-1"
                 style={{ maxHeight: rowsMaxH ? Math.min(listMaxH, rowsMaxH) : listMaxH }}
             >
-                {isAsync && loading && filtered.length === 0 && (
+                {body === 'skeleton' && (
                     <div className="space-y-2 px-3 py-2" aria-busy>
                         {[0, 1, 2].map((i) => (
                             <div key={i} className="flex items-center gap-2.5">
-                                <div className="bg-muted h-7 w-7 shrink-0 animate-pulse rounded-full" />
+                                {isAsync && <div className="bg-muted h-7 w-7 shrink-0 animate-pulse rounded-full" />}
                                 <div className="bg-muted h-4 w-3/5 animate-pulse rounded" />
                             </div>
                         ))}
                     </div>
                 )}
-                {!(isAsync && loading) && filtered.length === 0 && (q !== '' || reloading) && (
+                {body === 'empty' && (
                     <EmptyState
                         kind="search"
                         title={t('cmn_empty_searchable_select')}
@@ -406,14 +429,7 @@ export function SearchableSelect({
                         className="min-h-0 py-3"
                     >
                         {refresh && !isAsync && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-10"
-                                disabled={refresh.refreshing}
-                                onClick={() => refresh.refresh(true)}
-                            >
+                            <Button type="button" variant="outline" size="sm" className="h-10" disabled={refresh.refreshing} onClick={reload}>
                                 {refresh.refreshing ? (
                                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                                 ) : (
@@ -424,9 +440,7 @@ export function SearchableSelect({
                         )}
                     </EmptyState>
                 )}
-                {!(isAsync && loading) && filtered.length === 0 && q === '' && !reloading && (
-                    <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>
-                )}
+                {body === 'dash' && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
                 {filtered.map((o, index) => (
                     <button
                         key={o.value}
@@ -525,6 +539,11 @@ export function SearchableSelect({
                         <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
                     </span>
                 </button>
+                {flagRemoved && (
+                    <span role="status" className="sr-only">
+                        {removed ? t('cmn_item_removed') : ''}
+                    </span>
+                )}
                 {showClear && (
                     <button
                         type="button"
@@ -544,6 +563,7 @@ export function SearchableSelect({
                         createPortal(
                             <div
                                 ref={menuRef}
+                                onKeyDown={onMenuKeyDown}
                                 style={{
                                     position: 'absolute',
                                     left: coords.left,
@@ -568,6 +588,7 @@ export function SearchableSelect({
                     ) : (
                         <div
                             ref={menuRef}
+                            onKeyDown={onMenuKeyDown}
                             className={cn(
                                 'border-border bg-popover absolute z-50 w-max max-w-[320px] min-w-full overflow-hidden rounded-md border shadow-md',
                                 dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
@@ -579,7 +600,7 @@ export function SearchableSelect({
                     ))}
             </div>
             {removed && (
-                <p id={removedNoteId} role="status" className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                <p id={removedNoteId} className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
                     <TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {t('cmn_item_removed')}
                 </p>

@@ -291,12 +291,14 @@ export const common: Dict = {
     cmn_empty_search_select_hint: 'Try other words.',
     cmn_empty_searchable_select: 'No match',
     cmn_empty_searchable_select_hint: 'Try other words.',
+    cmn_empty_icon_picker: 'No icon found',
+    cmn_empty_icon_picker_hint: 'Try an English word, e.g. laptop.',
+
+    // searchable-select.tsx, tab-refresh-mark.tsx — อัปเดตรายการในช่องเลือกและแท็บ
     cmn_refreshing: 'Updating…',
     cmn_refreshed: 'Updated',
     cmn_refresh_failed: "Couldn't update",
     cmn_reload_list: 'Reload list',
     cmn_item_removed: 'This item no longer exists. Choose again.',
     cmn_no_longer_available: 'No longer available',
-    cmn_empty_icon_picker: 'No icon found',
-    cmn_empty_icon_picker_hint: 'Try an English word, e.g. laptop.',
 };

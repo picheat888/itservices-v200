@@ -1,4 +1,4 @@
-import { TabRefreshMark } from '@/shared/components/tab-refresh-mark';
+import { TabBarStatus, TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { RefreshMark } from '@/shared/lib/refresh-mark';
 import { cn } from '@/shared/lib/utils';
@@ -71,51 +71,54 @@ export function DialogTabs<T extends string>({
     };
 
     return (
-        <div
-            ref={listRef}
-            role="tablist"
-            aria-label={label}
-            className={cn('border-border/60 flex shrink-0 gap-1 overflow-x-auto border-b [scrollbar-width:thin]', className)}
-        >
-            {tabs.map((tb) => {
-                const selected = active === tb.id;
-                return (
-                    <button
-                        key={tb.id}
-                        id={dialogTabId(base, tb.id)}
-                        type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        aria-controls={panelId}
-                        tabIndex={selected ? 0 : -1}
-                        onClick={() => onChange(tb.id)}
-                        onKeyDown={onKeyDown}
-                        className={cn(
-                            'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
-                            selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                            reserveMark && 'pr-8 lg:pr-8',
-                        )}
-                    >
-                        {/* Icons show from lg up */}
-                        {tb.icon && <tb.icon className="hidden h-4 w-4 shrink-0 lg:block" aria-hidden="true" />}
-                        {tb.label}
-                        {((tb.count != null && tb.count > 0) || tb.dot) && (
-                            <span
-                                className={cn(
-                                    'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
-                                    selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
-                                )}
-                            >
-                                {tb.count != null && tb.count > 0 && fmtN(tb.count)}
-                                {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                            </span>
-                        )}
-                        {/* Underline inside the scrolling bar */}
-                        {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
-                        {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
-                    </button>
-                );
-            })}
-        </div>
+        <>
+            {reserveMark && <TabBarStatus marks={tabs.map((tb) => tb.refresh)} />}
+            <div
+                ref={listRef}
+                role="tablist"
+                aria-label={label}
+                className={cn('border-border/60 flex shrink-0 gap-1 overflow-x-auto border-b [scrollbar-width:thin]', className)}
+            >
+                {tabs.map((tb) => {
+                    const selected = active === tb.id;
+                    return (
+                        <button
+                            key={tb.id}
+                            id={dialogTabId(base, tb.id)}
+                            type="button"
+                            role="tab"
+                            aria-selected={selected}
+                            aria-controls={panelId}
+                            tabIndex={selected ? 0 : -1}
+                            onClick={() => onChange(tb.id)}
+                            onKeyDown={onKeyDown}
+                            className={cn(
+                                'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
+                                selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                                reserveMark && 'pr-8 lg:pr-8',
+                            )}
+                        >
+                            {/* Icons show from lg up */}
+                            {tb.icon && <tb.icon className="hidden h-4 w-4 shrink-0 lg:block" aria-hidden="true" />}
+                            {tb.label}
+                            {((tb.count != null && tb.count > 0) || tb.dot) && (
+                                <span
+                                    className={cn(
+                                        'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
+                                        selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
+                                    )}
+                                >
+                                    {tb.count != null && tb.count > 0 && fmtN(tb.count)}
+                                    {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                                </span>
+                            )}
+                            {/* Underline inside the scrolling bar */}
+                            {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
+                            {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
+                        </button>
+                    );
+                })}
+            </div>
+        </>
     );
 }

@@ -6,3 +6,8 @@ export const FRESH_MS = 5000;
 export function shouldRefetch(force: boolean, dataUpdatedAt: number, now: number): boolean {
     return force || dataUpdatedAt === 0 || now - dataUpdatedAt >= FRESH_MS;
 }
+
+/** shouldRefetch, but never while a request for the same data is still running. */
+export function shouldRequest(force: boolean, fetching: boolean, dataUpdatedAt: number, now: number): boolean {
+    return !fetching && shouldRefetch(force, dataUpdatedAt, now);
+}

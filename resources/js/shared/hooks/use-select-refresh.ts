@@ -1,5 +1,5 @@
 // Wires a dropdown's React Query list to SearchableSelect's `refresh`: refetch on open under the five-second rule, plus its state.
-import { shouldRefetch } from '@/shared/lib/freshness';
+import { shouldRequest } from '@/shared/lib/freshness';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 export interface SelectRefresh {
@@ -17,7 +17,7 @@ export function useSelectRefresh(query: Pick<UseQueryResult<unknown>, 'isFetchin
         failed: query.isError && !query.isFetching,
         loaded: query.dataUpdatedAt > 0,
         refresh: (force = false) => {
-            if (shouldRefetch(force, query.dataUpdatedAt, Date.now())) {
+            if (shouldRequest(force, query.isFetching, query.dataUpdatedAt, Date.now())) {
                 void query.refetch();
             }
         },

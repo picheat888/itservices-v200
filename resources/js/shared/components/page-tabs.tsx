@@ -1,4 +1,4 @@
-import { TabRefreshMark } from '@/shared/components/tab-refresh-mark';
+import { TabBarStatus, TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { RefreshMark } from '@/shared/lib/refresh-mark';
 import { cn } from '@/shared/lib/utils';
@@ -55,38 +55,44 @@ export function PageTabs<T extends string>({
     }, [active]);
 
     return (
-        <div
-            ref={listRef}
-            role="tablist"
-            className={cn('border-border flex gap-1 overflow-x-auto border-b px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', className)}
-        >
-            {tabs.map((tb) => {
-                const selected = active === tb.id;
-                return (
-                    <button
-                        key={tb.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        onClick={() => onChange(tb.id)}
-                        className={cn(
-                            'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-                            selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                            reserveMark && 'pr-8',
-                        )}
-                    >
-                        {tb.label}
-                        {tb.count != null && tb.count > 0 && (
-                            <span title={tb.countTitle} className={cn('rounded-full px-1.5 py-0.5 text-[11px]', TONES[tb.tone ?? 'muted'])}>
-                                {fmtN(tb.count)}
-                            </span>
-                        )}
-                        {/* bottom-0, not -bottom-px: the strip scrolls, so anything below its edge is clipped. */}
-                        {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
-                        {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
-                    </button>
-                );
-            })}
-        </div>
+        <>
+            {reserveMark && <TabBarStatus marks={tabs.map((tb) => tb.refresh)} />}
+            <div
+                ref={listRef}
+                role="tablist"
+                className={cn(
+                    'border-border flex gap-1 overflow-x-auto border-b px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                    className,
+                )}
+            >
+                {tabs.map((tb) => {
+                    const selected = active === tb.id;
+                    return (
+                        <button
+                            key={tb.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={selected}
+                            onClick={() => onChange(tb.id)}
+                            className={cn(
+                                'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+                                selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                                reserveMark && 'pr-8',
+                            )}
+                        >
+                            {tb.label}
+                            {tb.count != null && tb.count > 0 && (
+                                <span title={tb.countTitle} className={cn('rounded-full px-1.5 py-0.5 text-[11px]', TONES[tb.tone ?? 'muted'])}>
+                                    {fmtN(tb.count)}
+                                </span>
+                            )}
+                            {/* bottom-0, not -bottom-px: the strip scrolls, so anything below its edge is clipped. */}
+                            {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
+                            {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
+                        </button>
+                    );
+                })}
+            </div>
+        </>
     );
 }
