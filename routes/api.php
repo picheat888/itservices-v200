@@ -373,6 +373,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     // Request module (IT service requests) — options + transitions before the
     // resource so `{serviceRequest}` cannot swallow them.
     Route::get('service-requests/options', [RequestOptionsController::class, 'index'])->name('api.service-requests.options');
+    Route::get('service-requests/options/{type}/{field}', [RequestOptionsController::class, 'field'])->name('api.service-requests.options.field');
     Route::post('service-requests/{serviceRequest}/approve', [RequestController::class, 'approve'])->name('api.service-requests.approve');
     Route::post('service-requests/{serviceRequest}/reject', [RequestController::class, 'reject'])->name('api.service-requests.reject');
     Route::post('service-requests/{serviceRequest}/complete', [RequestController::class, 'complete'])->name('api.service-requests.complete');

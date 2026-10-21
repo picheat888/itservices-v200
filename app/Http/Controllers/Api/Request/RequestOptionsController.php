@@ -4,13 +4,9 @@ namespace App\Http\Controllers\Api\Request;
 
 use App\Enums\Request\RequestType;
 use App\Http\Controllers\Controller;
-use App\Models\Access\EmailGroup;
-use App\Models\Access\FileShare;
-use App\Models\Access\SocialPlatform;
-use App\Models\Access\Software;
-use App\Models\Settings\Location;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\RequestAttachmentService;
+use App\Services\Request\RequestSourceService;
 use App\Support\Permissions;
 use App\Support\RequestSchemas;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +21,7 @@ use Illuminate\Http\Request;
  */
 class RequestOptionsController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, RequestSourceService $sources): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('requests.submit'), 403);
 
@@ -67,24 +63,23 @@ class RequestOptionsController extends Controller
                     'max_size_kb' => RequestAttachmentService::MAX_SIZE_KB,
                     'extensions' => explode(',', RequestAttachmentService::ALLOWED_EXTENSIONS),
                 ],
-                'sources' => [
-                    'email_groups' => EmailGroup::orderBy('name')->get(['id', 'name', 'email'])
-                        ->map(fn ($g) => ['id' => $g->id, 'label' => $g->email ?: $g->name, 'detail' => $g->name]),
-                    'file_shares' => FileShare::orderBy('path')->get(['id', 'name', 'path'])
-                        ->map(fn ($s) => ['id' => $s->id, 'label' => $s->path, 'detail' => $s->name]),
-                    'social_platforms' => SocialPlatform::orderBy('name')->get(['id', 'name'])
-                        ->map(fn ($p) => ['id' => $p->id, 'label' => $p->name, 'detail' => null]),
-                    // Brand + name, straight from the Access Directory catalogue.
-                    'softwares' => Software::with('brand')->orderBy('name')->get()
-                        ->map(fn (Software $s) => [
-                            'id' => $s->id,
-                            'label' => trim(($s->brand?->name ? $s->brand->name.' ' : '').$s->name),
-                            'detail' => $s->license_type?->value,
-                        ]),
-                    'locations' => Location::orderBy('name')->get(['id', 'name'])
-                        ->map(fn ($l) => ['id' => $l->id, 'label' => $l->name, 'detail' => null]),
-                ],
+                // Only the sources the types this user may file draw from.
+                'sources' => $sources->forTypes(Permissions::requestTypesFor($request->user())),
             ],
         ]);
+    }
+
+    /**
+     * One field's list, reloaded when its dropdown opens: the user must be able to file that type.
+     */
+    public function field(Request $request, RequestSourceService $sources, string $type, string $field): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless((bool) $user?->hasPermission('requests.submit') && $user->hasPermission("requests.submit_{$type}"), 403);
+
+        $rows = $sources->field($type, $field);
+        abort_if($rows === null, 404);
+
+        return response()->json(['data' => $rows]);
     }
 }
