@@ -16,6 +16,7 @@ class MailSettingSeeder extends Seeder
     {
         if (DB::table('mail_settings')->count() === 0) {
             DB::table('mail_settings')->insert([
+                'id' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

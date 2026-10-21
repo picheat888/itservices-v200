@@ -17,7 +17,7 @@ class MailSetting extends Model
     protected function casts(): array
     {
         return [
-            'port'     => 'integer',
+            'port' => 'integer',
             'password' => 'encrypted',
         ];
     }
@@ -25,7 +25,7 @@ class MailSetting extends Model
     /** Returns the single settings row, creating it if missing. */
     public static function current(): self
     {
-        return static::query()->firstOrCreate(['id' => 1]);
+        return static::unguarded(fn () => static::query()->firstOrCreate(['id' => 1]));
     }
 
     /** True when enough is configured to attempt an SMTP send. */
