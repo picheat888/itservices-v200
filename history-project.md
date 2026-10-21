@@ -1,0 +1,7060 @@
+# ประวัติการพัฒนา (Project history)
+
+บันทึกการแก้ไขและเหตุผลของแต่ละรอบ เรียงจากเก่าไปใหม่ รายการใหม่ต่อท้ายไฟล์
+ย้ายมาจาก Readme.md เมื่อ 2026-10-21 เนื้อหาเดิมไม่ได้แก้ ส่วนต้นไฟล์คือภาพรวมของ Readme เดิม (บางส่วนล้าสมัย ดูของปัจจุบันใน Readme.md)
+
+
+ระบบ **IT Service Desk** สำหรับจัดการงาน IT ภายในองค์กร (Inaba Foods)
+พัฒนาด้วย **Laravel 12 + React 19 (SPA) + TypeScript + Tailwind CSS v4**
+
+> สถานะปัจจุบัน: **ถึง Phase-11** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts) + Master Data lookups + Stock/Inventory (Items + Min/Max alerts + Dashboard + RBAC + Movements + Request workflow) + **Assets Management (Inventory + Dashboard + Transfer/Accept/Return + Bulk + Asset→Stock + Contract link)** + Org Approval Chain (foundation: manager tree → VP ceiling) + Org Chart tab + Sections (หน่วยงาน)
+
+---
+
+## สถาปัตยกรรม (Architecture)
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Laravel 12 (PHP 8.2+) |
+| Auth | **Laravel Sanctum** (cookie-based SPA) |
+| Frontend | React 19 + TypeScript (**SPA**, ไม่ใช่ Inertia) |
+| Routing (FE) | react-router-dom |
+| Server state | **TanStack React Query** |
+| UI state | **Zustand** (persist) |
+| HTTP | axios (`withCredentials` + CSRF) |
+| Styling | Tailwind CSS v4 + shadcn/ui (Radix) |
+| Icons | lucide-react |
+| Database | MySQL |
+
+> **หมายเหตุ:** โปรเจกต์เริ่มจาก Laravel React Starter Kit (Inertia) แต่ได้ **ถอด Inertia + Ziggy ออกทั้งหมด** แล้วเปลี่ยนเป็น Sanctum SPA + React Query ตามที่กำหนดใน `CLAUDE.md`
+
+---
+
+## Phase-1 — Foundation (สิ่งที่ทำเสร็จแล้ว)
+
+### Backend
+- ติดตั้งและตั้งค่า **Sanctum SPA** — stateful API, CORS `supports_credentials`, stateful domains ใน `.env`
+- **ถอด Inertia + Ziggy** ออกหมด (composer/npm packages, middleware, controllers, ssr, blade)
+- **Auth API** (response format มาตรฐาน `{ data, message }`)
+  - `POST /api/login` · `POST /api/logout` · `GET /api/me`
+  - `GET /sanctum/csrf-cookie`
+- `routes/web.php` เป็น **SPA catch-all**, `app.blade.php` mount React ที่ `#app`
+- **Role system** — `App\Enums\UserRole` (super / admin / hr / user) + column `users.role`
+- Seeder สร้าง demo users 4 role
+
+### Frontend
+- **SPA bootstrap** — react-router + React Query + axios (`services/http.ts` มี `ensureCsrf`) + `ProtectedRoute` ตาม role
+- **Theme** — ฟอนต์ Noto Sans Thai ตัวเดียวทั้งแอป, accent น้ำเงิน (slate enterprise), dark mode, density, radius scale
+- **i18n EN/TH** (`lib/i18n.ts`) + ปุ่มสลับภาษาธงชาติ
+- **Zustand UI store** (`stores/ui.ts`) — dark / lang / density / radius / sidebar style / branding (persist)
+- **App Shell**
+  - Sidebar: nav แยกตาม role, collapse/icon mode, brand mark, ปุ่ม sign out
+  - Topbar: hamburger, breadcrumb, search, ปุ่มภาษา 🇬🇧/🇹🇭, dark toggle 🌙/☀️, กระดิ่ง, Tweaks
+  - Notifications dropdown · Profile drawer · Tweaks panel
+- **Shared UI** — DataTable (search + pagination 20/50/100), StatusBadge, Field
+- หน้า Login + Dashboard (foundation) + placeholder ของ 11 โมดูล
+
+### ผลการตรวจสอบ
+- ✅ `npm run build` (Vite) — ผ่าน
+- ✅ `tsc --noEmit` — สะอาด
+- ✅ `eslint` — สะอาด
+- ✅ Auth flow (curl): login → me → logout → 401 หลัง logout — ถูกต้อง
+- ✅ ตรวจ UI ในเบราว์เซอร์ (Playwright): login, dashboard, dark mode, ภาษาไทย, Tweaks panel — ทำงานครบ
+
+---
+
+## Phase-2 (สิ่งที่ทำเสร็จแล้ว)
+
+### 1. Employee module
+- **Backend**: ตาราง `departments` / `positions` / `employees` + Models + `EmployeeStatus` enum + `OrgSeeder` (ข้อมูลจาก prototype) + API CRUD + endpoint `POST /api/employees/{id}/resign` + `EmployeeService`
+- **Frontend** (`/employees`): 4 sub-tabs — Dashboard (KPI + headcount + recent hires), รายชื่อพนักงาน (DataTable + filter แผนก), Positions (CRUD), Departments (cards + ดูสมาชิก + CRUD); employee view drawer, Add Employee form, position/department modals
+- **สิทธิ์**: super จัดการ Positions/Departments ได้; super + HR จัดการพนักงานได้
+- บันทึกลาออก → เปลี่ยนสถานะเป็น Resigned (การคืน asset รอโมดูล Assets)
+
+### 2. Settings module
+- **Branding** (ใช้งานได้จริง): แก้ชื่อแบรนด์ / ข้อความรอง / สีธีม (accent 7 สี) บันทึกลงตาราง `app_settings` ผ่าน `SettingsController` (เฉพาะ super) แล้ว hydrate ทั้งระบบด้วย `useHydrateSettings` — เปลี่ยนแล้วมีผลทันทีที่ sidebar / login / แท็บเบราว์เซอร์ และคงอยู่หลัง reload
+- sub-tabs อื่น (Tickets/SLA, Assets, Email, Security) เป็น placeholder รอโมดูลที่เกี่ยวข้อง
+
+### 3. Dynamic page titles
+- ชื่อแท็บเบราว์เซอร์เปลี่ยนตามเมนู รูปแบบ **"`<Module>` - IT Services V2.0"** (`useDocumentTitle`)
+
+**ส่วนที่รอโมดูลอื่น (deferred):** การกำหนด role/group ตอนเพิ่มพนักงาน → Permissions · onboarding requests → Requests · คืน asset ตอนลาออก → Assets
+
+**ตรวจสอบ**: `tsc` ✅ · `eslint` ✅ · `build` ✅ · API (curl) ✅ · UI ในเบราว์เซอร์ (Playwright): Employee 4 tabs + view drawer, Settings branding เปลี่ยนสี+persist หลัง reload ✅
+
+---
+
+## Phase-2.1 – 2.13 (การปรับย่อยที่ทำเพิ่ม)
+
+**Settings & Display**
+- **Branding**: เพิ่มอัปโหลด **โลโก้** (PNG/SVG ≤2MB, ใช้เป็น favicon + brand mark), เพิ่ม **Company information** (ชื่อบริษัท/legal/tax/อุตสาหกรรม/ที่อยู่/ประเทศ/สกุลเงิน/เขตเวลา) — ทุกอย่างกด **Save** เสมอ
+- **Display** (per-user): Theme color / Density / Corner radius เก็บใน `users.preferences` (JSON) ผ่าน `PUT /api/preferences` — คงค่าหลัง sign out; ย้ายออกจาก topbar มาไว้ในเมนู Settings (กด Save), เอา Dark/Language/Sidebar ออก (มีปุ่มบน topbar แล้ว)
+- **Locations**: lookup ใหม่ — ตาราง `locations` + `/api/locations` CRUD (เขียนเฉพาะ super) จัดการที่ Settings → Locations นำไปใช้ที่อื่นได้ (เช่น dropdown Location ของแผนก)
+- Settings เป็น **Card เดียว** (nav ซ้าย + เนื้อหาขวา), active = สีธีม; ลำดับ: Company → Branding → Display → Locations → (placeholder)
+
+**Shell / Theme**
+- Sidebar + Header สีขาว, body canvas **#F6F8FB**; active module ใช้สีธีม; ย่อ sidebar ซ่อนปุ่ม Sign out
+- ปรับ typography/ตาราง/search ให้ใกล้ Claude Design (uppercase table header, ช่องค้นหา + ⌘K, letter-spacing)
+
+**Overview Dashboard**
+- KPI cards มีไอคอน (Open tickets / Pending requests / Total assets / Contracts expiring); Recent tickets เป็นการ์ดขาว + ไอคอน (หัวการ์ด + แต่ละแถว); การ์ดที่ยังไม่มีข้อมูล (Tickets overview / Team workload / Recent activity) แสดง **Coming soon**
+
+**Employee Module**
+- Tabs อยู่ใน Card เดียวกับเนื้อหา (ไม่มี scroll); KPI cards มีไอคอน
+- รายชื่อพนักงาน: คอลัมน์ Email / Joined / Actions (⋯), หัว ID = "รหัสพนักงาน", ช่องค้นหา (ชื่อ/รหัส) อยู่บรรทัดเดียวกับ filter แผนก
+- **Add/Edit Employee**: wizard 3 step (Personal / Work / System Access) + อัปโหลดรูป/อวตารเริ่มต้น + validate ไทย + Start date (format ซ้าย, ปฏิทินขวา); แก้ไขผ่าน ⋯ menu และปุ่ม Edit ใน view drawer
+- **Record resignation**: modal เตือน + Last working day* + Reason* + Assets to return (Coming soon)
+- Positions/Departments: toolbar "All … across the organization" ซ้าย + ปุ่มเพิ่มขวา; Department modal: Department (EN)/(TH), Head = dropdown ค้นหาพนักงาน, Location = dropdown จาก Settings; เอาลูกศรหลังจำนวน member ออก
+
+**ไฟล์ที่เพิ่ม**: `services/preferencesApi.ts`, `services/settingsApi.ts`, `services/orgApi.ts` · `hooks/use-user-preferences.ts`, `use-settings.ts`, `use-org.ts` · `components/shared/searchable-select.tsx` · `app/Models/{Location,AppSetting}.php` · `app/Http/Controllers/Api/{Settings,Location}Controller.php`
+
+> ทุก Phase ผ่าน `tsc` / `eslint` / `build` และตรวจ UI ในเบราว์เซอร์ (Playwright) แล้ว
+
+---
+
+## Phase-3 — Permission Management (#7) + Login & Employee Credentials (เสร็จสมบูรณ์)
+
+> รวมงานย่อย Phase-3.1 – 3.13 และส่วนที่สั่งปรับเพิ่มทั้งหมดไว้ในสรุปเดียว
+
+### 1. Login & Authentication
+- รับ **Email หรือ Username** ช่องเดียว + password (`username` unique ใน `users`); `LoginRequest` ตรวจว่าเป็นอีเมลหรือ username แล้ว `Auth::attempt` ตามนั้น
+- `users.email` เป็น **nullable** เพื่อรองรับบัญชีแบบ username-only
+- **Demo accounts** (password: `password`, ล็อกอินด้วย username หรืออีเมลก็ได้, คลิกเลือกได้ในหน้า login):
+  | กลุ่ม | username | email |
+  |------|----------|-------|
+  | Super Admin | `super` | super@inaba.co.th |
+  | IT Technician | `it` | it@inaba.co.th |
+  | HR Officer | `hr` | hr@inaba.co.th |
+  | Employee | `user` | user@inaba.co.th |
+
+### 2. RBAC (Roles & Permissions)
+- **Catalog** สิทธิ์ 6 โมดูล = **34 keys** (`App\Support\Permissions`); ตาราง `role_permissions` (role/permission/allowed)
+  - Employee scope 9 keys: `view · add · import · edit · edit_own · reset_password · resign · cancel_resign · set_credentials`
+- `User::permissions()` / `hasPermission()` — Super = สิทธิ์เต็มเสมอ (bypass); role อื่นอ่านจาก DB
+- หน้า **Permissions → Roles**: เลือก role → matrix toggle ตามการ์ดโมดูล + Save (persist, super ล็อก); ปรับแล้ว**คุมการเข้าถึงจริง**
+- ค่าเริ่มต้น 4 กลุ่ม: Super=ทั้งหมด · IT=สิทธิ์ปฏิบัติการกว้าง (รวม reset_password/resign/cancel_resign/set_credentials) · HR=Employee เต็ม + ticket/request ตัวเอง · Employee=ticket/request ตัวเอง + แก้โปรไฟล์
+- **Nav/เข้าถึง** อิง permission แทน role hardcode (เช่น Employee เห็นแค่ Dashboard/Tickets/Requests)
+- `lib/permission-labels.ts` มี `LIVE` set แยกสิทธิ์ที่บังคับใช้จริง vs. ติดป้าย "(เร็ว ๆ นี้)"
+
+### 3. Group Roles (Role Template)
+- ตาราง `group_roles` + `group_role_employee` (pivot); `GroupRole` model + `GroupRoleController`
+- แท็บ **Permissions → Groups**: สร้าง/แก้/ลบ group, เลือก role template, กำหนดสมาชิก, ตั้ง default group
+- **Auto-sync User.role**: เมื่อพนักงานเข้า/ออก group → `users.role` อัปเดตอัตโนมัติ
+- Default group: พนักงานใหม่ถูกเพิ่มเข้า group นี้อัตโนมัติเมื่อ Add Employee (`default_employee_group_id` ใน `app_settings`)
+
+### 4. Employee Credential Flow
+- ผู้มีสิทธิ์ `employees.set_credentials` เป็นผู้ตั้ง **Username/Password** ผ่าน **Dialog** (เปิดจากเมนู ⋯ ใน Employee list เมื่อ `has_account=false` หรือจาก view drawer) — *ไม่มี*การสร้าง User อัตโนมัติแล้ว
+- Employee list / view drawer แสดง badge **"มีบัญชีแล้ว / ยังไม่มีบัญชี"**
+- `EmployeeController` enforce permission จริง: `resetPassword` · `resign` · `cancelResign` · `credentials`
+
+### 5. Resignation & Cancel Resignation
+- **บันทึกลาออก** (`employees.resign`): modal เตือน + Last working day + Reason → สถานะเป็น `Resigned`
+- **ยกเลิกการลาออก** (`employees.cancel_resign`): `EmployeeService::cancelResign()` คืนสถานะ `Active` + ล้าง `resign_reason`/`last_day`; controller ตรวจว่าสถานะ `resigned` ก่อน + audit "Cancelled resignation"; route `POST /api/employees/{employee}/cancel-resign`
+- **UI**: เมื่อพนักงานลาออก → **ซ่อนปุ่ม/เมนู Edit** และแสดงปุ่ม **"ยกเลิกการลาออก"** (เขียว, ใน view drawer + เมนู ⋯) เฉพาะผู้มีสิทธิ์ พร้อม confirm
+
+### 6. Notifications (in-app)
+- ตาราง `notifications` (Laravel standard); `NewEmployeeNotification` (database + mail, queued)
+- `NotificationController`: GET `/notifications` (30 ล่าสุด + unread count) · PUT `/notifications/{id}/read` · PUT `/notifications/read-all`
+- **Bell icon** บน topbar (unread count, poll 60 วิ) + **dropdown** รายการจริง, คลิก → mark read + navigate ไปหน้า employees พร้อม highlight (amber = ต้องตั้ง credentials, brand = พร้อมใช้)
+
+### 7. Audit Log
+- ตาราง `audit_logs` + `AuditLog::record()`; log login/logout, แก้สิทธิ์, สร้าง/แก้/ลบพนักงาน, resign/cancel-resign; หน้า **Permissions → Audit log** แสดงตารางจริง (เวลา/ผู้ใช้/การกระทำ/เป้าหมาย)
+
+### 8. Settings Bug Fixes (ระหว่าง phase)
+- Reset Logo deferred (รอ Save ค่อย call API), re-upload ไฟล์เดิมได้หลัง Reset, Settings tab hash (`#branding`/`#company`/…) คงค่าหลัง reload
+
+### 9. Demo Data (`OrgSeeder`)
+- พนักงานสถานะ **ลาออก 2 คน** (`EMP-2208`, `EMP-2301`) พร้อม reason/last_day เพื่อทดสอบ cancel-resign
+- `seedGroupRoles()`: 3 group (All Staff / IT Team / HR Team), ผูกพนักงาน active เข้า All Staff, ผูก IT/HR ตามแผนก, ตั้ง default group
+- ใช้ `updateOrCreate` + `syncWithoutDetaching` (idempotent) — `php artisan db:seed` ซ้ำได้โดยไม่ทับข้อมูลจริง
+
+**ไฟล์หลัก**: `app/Support/Permissions.php` · `app/Models/{RolePermission,AuditLog,GroupRole,Employee}.php` · `app/Services/EmployeeService.php` · `app/Http/Controllers/Api/{RolePermission,AuditLog,GroupRole,Employee,Notification}Controller.php` · `app/Notifications/NewEmployeeNotification.php` · `database/seeders/OrgSeeder.php` · `routes/api.php` · `resources/js/services/{permissionApi,notificationApi,orgApi}.ts` · `hooks/{use-permissions,use-notifications,use-org}.ts` · `lib/{permission-labels,i18n}.ts` · `components/shell/{notifications-dropdown,topbar}.tsx` · `components/employees/employee-view-drawer.tsx` · `pages/{permissions,employees,settings}/index.tsx`
+
+**ตรวจสอบ**: `tsc --noEmit` ✅ · `eslint` ✅ · `build` ✅ · `route:list` ✅ · migration ✅ · `db:seed` (idempotent) ✅ · API (curl): login by username, matrix get/update · เบราว์เซอร์: matrix, audit log จริง, nav จำกัดสิทธิ์, credential dialog, resign/cancel-resign ✅
+
+---
+
+## Phase-4 — Email Notifications Module (#9) (เสร็จแล้ว)
+
+สร้างตาม design bundle (module **08 Email Notifications**) + กลไกส่งอีเมลจริง (scope B) — spec: `docs/superpowers/specs/2026-05-24-phase-4-email-notifications-design.md`
+
+### หน้า Email Notifications (`/email-templates`)
+- หัวข้อ + ปุ่ม **Send test email** / **New template**; 4 StatCards: Templates · Enabled · Sent today · Delivery rate (ค่าจริงจาก `email_logs`)
+- ตาราง: `ID (ET-xx) | Template | Trigger (badge) | Last sent | Enabled (toggle) | Actions` + ช่องค้นหา
+- **Preview drawer**: เรนเดอร์อีเมลจริง (From/To, subject `[Brand] …`, body, ตัวแปร `{{…}}`) + ปุ่มส่งทดสอบรายเทมเพลต
+- **Edit drawer** (subject/body/enabled) + **Create dialog** (template ใหม่)
+- nav item "Email Templates" gate ด้วย `system.configure_notifications`
+
+### Engine การส่ง (ตาม CLAUDE.md)
+- `mail_settings` (single row, password เข้ารหัส) แก้ที่ **Settings → Email** (host/port/user/pass/encryption/from)
+- `MailConfigService::apply()` override `config('mail.*')` จาก DB ก่อนส่งทุกครั้ง (`.env` เป็น fallback)
+- `TemplatedMail` (Mailable) + `SendTemplatedEmail` (queued Job) → event-driven ส่งผ่าน **Queue**; test email ส่งแบบ synchronous เพื่อ feedback ทันที
+- `EmailNotificationService`: `sendTemplate(key,to,vars)` (queued) · `sendTest(to)` · `deliver()` (apply config → ส่ง → log → bump `last_sent_at`)
+- `email_logs` บันทึกทุกการส่ง (sent/failed) → ใช้คำนวณ stat cards
+
+### ข้อมูล + การเชื่อม event
+- seed **13 templates** (ติ๊กเก็ต/คำขอ/สัญญา/ทรัพย์สิน/digest ตาม design + `employee.account_needed` ของจริง)
+- เชื่อม event "พนักงานใหม่": แจ้งเตือนในเว็บ (database, sync) + ส่งอีเมลผ่าน template (queued) ให้ผู้มีสิทธิ์ตั้ง credentials
+- triggers จากโมดูลที่ยังไม่สร้าง (tickets/requests/contracts/assets) จัดการ/เปิด-ปิดได้ แต่จะยิงจริงเมื่อมีโมดูลนั้น
+
+**ไฟล์เพิ่ม/แก้**: migrations `*_create_mail_settings/email_templates/email_logs` · `app/Models/{MailSetting,EmailTemplate,EmailLog}.php` · `app/Services/{MailConfigService,EmailNotificationService}.php` · `app/Mail/TemplatedMail.php` · `app/Jobs/SendTemplatedEmail.php` · `app/Http/Controllers/Api/EmailTemplateController.php` · `app/Http/Resources/EmailTemplateResource.php` · `SettingsController` (mail settings + test) · `EmployeeService` (wire email) · `routes/api.php` · `pages/email-templates/index.tsx` · `pages/settings/index.tsx` (EmailTab) · `services/{emailTemplateApi,settingsApi}.ts` · `hooks/use-email-templates.ts` · `app.tsx` · `lib/i18n.ts`
+
+**ตรวจสอบ**: `tsc --noEmit` ✅ · `npm run build` ✅ · migration ✅ · tinker (encrypt/config-override/queue/send) ✅ · test suite ไม่มี fail ใหม่
+
+> **หมายเหตุ dev**: อีเมล event-driven ส่งผ่าน Queue (`QUEUE_CONNECTION=database`) — ต้องรัน `php artisan queue:work` ถึงจะประมวลผล; `MAIL_MAILER=log` จะเขียนลง `storage/logs/laravel.log`
+
+---
+
+## Phase-5 — Employee Import, Notifications UX & Bug Fixes (เสร็จแล้ว)
+
+### 1. Employee — Import & Directory UX
+- **Bulk Import (CSV)**: ปุ่ม "นำเข้า" → Dialog: ดาวน์โหลด **template CSV** + เลือกไฟล์ + Save
+  - `EmployeeService::importRows()` validate ทุกแถวแบบ **all-or-nothing** (มี error แม้แถวเดียว = ไม่ import เลย พร้อมรายงาน error รายแถว), match แผนก/ตำแหน่งด้วย **code**, เช็ค code/email ซ้ำ (กับ DB + ในไฟล์), ผูก default group, ไม่สร้าง account/ไม่ยิง notification (กัน spam)
+  - `GET /employees/import-template` (CSV + UTF-8 BOM), `POST /employees/import`
+- **Status filter** (ค่าเริ่มต้น All Status) พร้อม**จุดสีนำหน้า**: All / Active (เขียว) / Has account (น้ำเงิน) / No account (เหลือง) / Resigned (แดง) — กรองฝั่ง server (pagination ถูกต้อง), `no_account`/`has_account` ใช้ `whereNotExists`/`whereExists` เทียบ users
+- **เรียงลำดับ**: No account ขึ้นก่อน → Has account → Resigned ท้ายสุด (ในแต่ละกลุ่มเรียงตามชื่อ)
+- เปลี่ยน label filter แผนกเป็น **"All Departments"**; Department cards แสดง **4 ใบ/แถว** (xl)
+- View drawer เพิ่มบรรทัดสถานะ **"ยังไม่มีบัญชีใช้งาน"** (คู่กับ "มีบัญชีใช้งาน")
+
+### 2. Notifications (#8) — UX
+- **Tabs แยกตามโมดูล**: ทั้งหมด · Employee (live) · Ticket/Request/Asset/Contract (Coming soon) — `moduleOf(type)` รองรับ type อนาคตอัตโนมัติ
+- **ปิดทีละรายการ** (ปุ่ม X ต่อรายการ) — `DELETE /notifications/{id}`; ไอคอน **เทาเมื่ออ่านแล้ว** / เหลืองเมื่อยังไม่อ่าน
+- ขยาย dropdown ให้พอดี 6 แท็บ; **แก้บั๊ก** คลิก notification แล้วค้างหน้า Dashboard → ตอนนี้เด้งไปแท็บ Directory + เปิด view drawer ของพนักงานนั้น (อ่าน `?highlight=<id>`)
+
+### 3. Demo Data
+- `NotificationDemoSeeder` — สร้าง notification ทดสอบ (มี read/unread + เวลาไล่ระดับ) ให้ผู้มีสิทธิ์ set_credentials, idempotent ผ่าน marker
+- `OrgSeeder::linkDemoAccounts()` — ผูก 4 demo user (super/it/hr/user) เข้ากับ employee (match username) → **แก้บั๊ก** ที่ทุกคนขึ้น "No account" ทั้งที่ login ได้
+- `AvatarDemoSeeder` — avatar **การ์ตูนคน** (SVG flat: หน้า/ผม/เสื้อ, 3 ทรงผม short/long/bun) ให้ 3 demo user; wire เข้า `DatabaseSeeder` แล้ว
+
+### Fix Bug
+- **Display setting เป็น System (ไม่ใช่ per-user)**: ย้าย theme accent/density/radius จาก `users.preferences` → `app_settings` (ใช้ร่วมทุกคน เหมือน Company/Branding/Email); `useUserPreferences` เหลือเฉพาะ dark/lang/sidebar
+- **โหมดมืดชนกับ Theme Color ดำ**: `lib/brand-color.ts` คำนวณ luminance — สีเกือบดำในโหมดมืดถูก lighten เป็นเทาอ่านออก + ตั้ง `--brand-foreground` ตามความสว่าง (ปุ่ม/ข้อความ brand อ่านออกทุกสี/โหมด); swatch ใน Display แสดงสีที่ใช้จริง
+- **ปุ่ม Save (Settings)**: 3 สถานะ — ปกติ / spinner หมุน / ติ๊กถูกเด้ง (`SaveButton` + tailwindcss-animate) ใช้ทุกแท็บ
+- **favicon ค้าง / default logo**: blade ใส่ `<link rel="icon">` ชี้ `logo.svg` + `setFavicon` fallback เป็น default (favicon.ico เดิมว่าง 0 bytes ไม่ถูกใช้แล้ว); **default web logo** ทั้ง sidebar/login/Branding preview ใช้ `public/logo.svg` แทนตัวอักษรย่อ
+- **รูปโปรไฟล์ไม่ขึ้นที่ Sidebar**: `User::employeePhotoUrl()` ดึงรูปจาก employee ที่ลิงก์ (email/username) → `UserResource.photo_url`; sidebar + profile drawer render `AvatarImage`
+- **สิทธิ์ Add/Edit Employee ไม่ถูกบังคับใช้จริง (Role Template ไม่มีผล)**: เดิม store/update/import เช็คด้วย role ตายตัว `canManageEmployees() = hasRole('super','hr')` ทำให้ toggle `employees.add`/`employees.edit` ใน Permission Module ไม่มีผล (HR ปิด edit ก็ยังแก้ได้) และปุ่ม Edit จุดไข่ปลาใช้ตัวแปรผิด (`canManageEmployees` แทน `canEdit`) IT จึงไม่เห็นเลยแม้เปิดสิทธิ์ — แก้โดย `StoreEmployeeRequest::authorize()` แยกเป็น `employees.add` (store) / `employees.edit` (update) ผ่าน `hasPermission()`, import/template ใช้ `employees.add`, frontend แยก `canAdd`/`canEdit` อิงสิทธิ์จริง (super bypass) ใช้กับปุ่ม header/card/dropdown/drawer ให้ตรงกัน
+- **Sidebar แสดง Permission level จาก Role Group**: เดิมแสดง role label ของ Template (เช่น "IT Technician Template") เปลี่ยนเป็นชื่อ Role Group ที่ผู้ใช้สังกัด (เช่น IT Team / HR Team / All Staff) ซึ่งเป็นที่มาของ role จริง — `UserResource.group_name` เลือกกลุ่มที่ `role` ตรงกับ role ของผู้ใช้ (ผู้ใช้อยู่หลายกลุ่มได้ เช่น All Staff + IT Team), fallback เป็นกลุ่มแรก แล้วเป็น role label ถ้าไม่มีกลุ่ม (บัญชี system)
+- **My Profile drawer แสดงข้อมูลครบ**: ดึง employee เต็มผ่าน `useEmployee(user.employee_id)` เพิ่มส่วนอ่านอย่างเดียว — รายละเอียดพนักงาน (รหัส/เริ่มงาน/ตำแหน่ง/แผนก) + บัญชีและสิทธิ์ (อีเมล/username/วิธีเข้าระบบ/ระดับสิทธิ์) + badge สถานะ Active/Resigned; ช่องแก้ไข (gate ด้วย `employees.edit_own`) แยก **first/last name ทั้งไทยและอังกฤษ ให้ตรงกับฟอร์ม Add Employee** แล้ว join เป็น `name`/`name_th` ตอนบันทึก (คำแรก=ชื่อ ที่เหลือ=นามสกุล) เพื่อให้ split กลับสอดคล้องกัน + เบอร์/รูป
+- **ป้ายช่องชื่อ-นามสกุลภาษาอังกฤษเติม "(English)"**: ปรับ i18n key ร่วม `emp_first_name`/`emp_last_name` → "First name (English)"/"ชื่อ (อังกฤษ)" ให้สมมาตรกับ "(Thai)" มีผลทั้งฟอร์ม Add Employee และ My Profile
+- **badge "Has account" กลายเป็นสีส้ม**: tone `blue` ใน `StatusBadge` เดิมผูกกับ `--brand` (`bg-brand/10 text-brand`) ทำให้เปลี่ยนตามสี theme ของผู้ใช้ (theme ส้ม → badge ส้ม ชนกับ "No account" amber) — แก้เป็นสีฟ้าจริง `bg-blue-500/10 text-blue-600` ตรงกับจุดสีฟ้าใน status filter และไม่ผูก theme อีก (tone `blue` ถูกใช้ที่ badge นี้ที่เดียว)
+- **Permission ควบคุม Import พนักงานแยกต่างหาก**: เพิ่ม key `employees.import` (catalog → 34 keys / Employee 9 keys) เดิม import ผูกกับ `employees.add` — แยกเป็นสิทธิ์เฉพาะ, controller `import`/`importTemplate` gate ด้วย `employees.import`, frontend แยกปุ่ม Import (gate `canImport`) ออกจาก Add, เพิ่ม default ให้ admin/hr + backfill `role_permissions` ให้ role ที่เคยมี `employees.add` (รักษาความสามารถเดิม), live ใน Permission Module
+
+**ไฟล์หลัก**: `app/Http/Controllers/Api/{Employee,Notification,Settings}Controller.php` · `app/Http/Requests/StoreEmployeeRequest.php` · `app/Services/EmployeeService.php` · `app/Models/User.php` · `app/Http/Resources/UserResource.php` · `database/seeders/{OrgSeeder,NotificationDemoSeeder,AvatarDemoSeeder,DatabaseSeeder}.php` · `routes/api.php` · `resources/views/app.blade.php` · `resources/js/lib/brand-color.ts` · `hooks/{use-apply-theme,use-settings,use-user-preferences,use-org,use-notifications}.ts` · `services/{orgApi,settingsApi,notificationApi}.ts` · `components/shared/{save-button,status-badge}.tsx` · `components/employees/import-employee-dialog.tsx` · `components/shell/{sidebar,profile-drawer,notifications-dropdown}.tsx` · `pages/{employees,settings}/index.tsx` · `lib/i18n.ts`
+
+**ตรวจสอบ**: `tsc --noEmit` ✅ · `route:list` ✅ · seeders idempotent ✅ · tinker (import all-or-nothing, status filter counts, photo resolve, theme payload) ✅
+
+---
+
+## Phase 6 — Contract & Rental Module (#5) (เสร็จแล้ว)
+
+สร้างตาม design bundle (module **05 Contracts** — `window.ContractsPage`) — โมดูลจัดการสัญญากับผู้ขาย/ผู้ให้บริการ พร้อมการติดตามวันหมดอายุ
+
+### หน้า Contracts (`/contracts`) — gate ด้วย `contracts.view`
+- หัวข้อ + ปุ่ม **Export** (Coming soon) / **New contract** (gate `contracts.create`)
+- 4 StatCards: สัญญาทั้งหมด · ใช้งาน · ใกล้หมดอายุ (60 วัน) · มูลค่ารายปี — **ค่าจริงจาก DB** (มูลค่ารายปี normalize รายเดือน×12 / ไตรมาส×4)
+- **แบนเนอร์เตือน** เมื่อมีสัญญาใกล้หมดอายุภายใน 60 วัน
+- **3 แท็บ**:
+  - **Dashboard**: ไทม์ไลน์การหมดอายุ 12 เดือน (จุดสีไล่ตามความเร่งด่วน คลิกเปิดรายละเอียด) + ผู้ขายที่ใช้จ่ายสูงสุด (bar) + คิวต้องดำเนินการ
+  - **All contracts**: ตาราง (ID/ผู้ขาย/ชื่อ/เริ่ม/สิ้นสุด/วันที่เหลือ/มูลค่า/สถานะ) + ค้นหา (ผู้ขาย/ชื่อ/รหัส) + pagination 20/50/100; คอลัมน์ **Days remaining** ใช้สี — **น้ำเงิน** (ยังไม่ถึงกำหนด >60 วัน) / **ส้ม** (อยู่ในช่วงเตือน ≤60 วัน) / **แดง** (หมดอายุแล้ว)
+  - **Expiring soon**: กรองเฉพาะใกล้หมดอายุ ≤ 60 วัน (กรองฝั่ง server)
+- **Detail drawer**: ข้อมูลสัญญา + badge สถานะ/นับถอยหลัง + กำหนดการแจ้งเตือน 6 ระดับ + ปุ่ม **Edit** (gate `contracts.edit`) / **Renew** (gate `contracts.renew`, ขยายอายุ +12 เดือน)
+- **Create/Edit drawer**: **เลขที่สัญญา** (กรอกเองหรือเว้นว่างให้ auto `CT-YYYY-NNN`) + radio ประเภท (Software/Hardware/Service/Connectivity) + ผู้ขาย/ชื่อ/วันเริ่ม-สิ้นสุด/มูลค่า/รอบเรียกเก็บ/ผู้รับผิดชอบ (ค้นหาพนักงาน) + auto-renew toggle + chips แจ้งเตือน **150/120/60/45/30/7 วัน** + validate ไทย
+
+### Backend (ตาม CLAUDE.md: Migration → Model → Service → Request → Resource → Controller → Route)
+- ตาราง `contracts` (code/vendor/name/type/start_date/end_date/value/billing_cycle/auto_renew/owner_id/notify_60/30/7/notes); **days_remaining + status (active/expired) คำนวณสด** จาก end_date ไม่เก็บค่าตาย
+- `ContractType` enum · `Contract` model (auto code `CT-YYYY-NNN`, owner relation, `annualValue()`) · `ContractService` (create/update/renew) · `StoreContractRequest` (authorize แยก create/edit) · `ContractResource` (value_display `฿x/yr`) · `ContractController` (index paginate+tab, summary stats, CRUD, renew) — ทุก action gate ด้วย permission `contracts.*`
+- คอลัมน์แจ้งเตือน 6 ระดับ: `notify_150/120/60/45/30/7` (โยกย้ายเพิ่ม 150/120/45 ภายหลัง) · `code` กรอกเองได้ (unique, blank = auto-gen, แก้ไขแล้วไม่ทับของเดิม)
+- `ContractSeeder` — **19 สัญญา demo ครบทุกแบบ**: 8 จาก design (วันที่คงที่) + ชุด coverage (วันที่อิง now() ให้ตกทุกช่วงเตือน 150/120/60/45/30/7 + far-out + **สัญญา delay/overdue 4 ฉบับ**) ครบทุกประเภท/รอบเรียกเก็บ/auto-renew/owner — idempotent updateOrCreate by code, wire เข้า `DatabaseSeeder`
+
+### Permission & ส่วนที่ Coming soon
+- `contracts.view/create/edit/renew/alerts` เป็น **live** ทั้งหมด (บังคับใช้จริงทั้ง backend + UI); `contracts.alerts` (Contract Expiry Notification) ควบคุมว่าใครได้รับแจ้งเตือนหมดอายุ (กระดิ่ง + อีเมล) ผ่าน cron รายวัน
+- **Coming soon**: Export, อัปโหลดเอกสารแนบ, Linked assets (รอโมดูล Assets)
+
+**ไฟล์เพิ่ม/แก้**: migration `*_create_contracts_table` · `app/Enums/ContractType.php` · `app/Models/Contract.php` · `app/Services/ContractService.php` · `app/Http/Requests/StoreContractRequest.php` · `app/Http/Resources/ContractResource.php` · `app/Http/Controllers/Api/ContractController.php` · `database/seeders/{ContractSeeder,DatabaseSeeder}.php` · `routes/api.php` · `resources/js/types/index.ts` · `services/contractApi.ts` · `hooks/use-contracts.ts` · `pages/contracts/index.tsx` · `components/contracts/{contract-detail-drawer,contract-form-drawer}.tsx` · `app.tsx` · `lib/{i18n,permission-labels}.ts`
+
+**ตรวจสอบ**: `tsc --noEmit` ✅ · `eslint` ✅ · `npm run build` ✅ · `route:list` (7 routes) ✅ · migration + seed ✅ · **PHPUnit `ContractApiTest` 6 ผ่าน** (guest 401, create+list, summary counts, expiring tab, permission 403, renew) ✅
+
+> หมายเหตุ: test ที่ fail 17 รายการเป็นของ starter-kit เดิม (auth/settings แบบ Inertia ที่ถอดออกตั้งแต่ Phase-1) — ไม่เกี่ยวกับโมดูลนี้
+
+---
+
+## Phase 7 — Contract Expiry Alerts + Administrator Protection (เสร็จแล้ว)
+
+> รวมงานย่อยใน session เดียว — spec/plan: `docs/superpowers/specs/2026-05-26-contract-expiry-alerts-design.md` · `docs/superpowers/plans/2026-05-26-contract-expiry-alerts.md`
+
+### 1. Contract Expiry Alerts (`contracts.alerts` → live)
+- เดิม `contracts.alerts` เป็น Coming soon (toggle มีแต่ไม่ยิงจริง) — ตอนนี้**ทำงานจริง**: เมื่อสัญญาข้ามเกณฑ์เตือนที่เปิดไว้ จะแจ้งผู้ใช้ที่ role เปิดสิทธิ์ `contracts.alerts` ทั้ง **กระดิ่งในเว็บ + อีเมล**
+- **`contracts:send-expiry-alerts`** (Artisan command) ตั้งเวลารายวัน 08:00 ใน `routes/console.php` → เรียก `ContractExpiryAlertService::run()`
+- **`ContractExpiryAlertService`**: หาสัญญา active ที่ `daysRemaining ≤ threshold` ที่เปิดไว้และยังไม่เคยแจ้ง → ส่ง **1 ครั้งต่อสัญญา** (ที่จุดด่วนสุด) + บันทึกทุก threshold ที่ข้ามลง `contract_alert_logs` กันยิงซ้ำ
+- **กันแจ้งซ้ำ**: ตาราง `contract_alert_logs` (unique `contract_id` + `threshold`) — แจ้งครั้งเดียวต่อ threshold ต่อ cycle; **ต่ออายุ (renew) ล้าง ledger** ให้เริ่ม cycle ใหม่
+- **Email**: แทน 3 template เดิม (`contract.expire.60d/30d/7d`) ด้วย template เดียว `contract.expiry_alert` ที่มีตัวแปร `{{contract.days_remaining}}` ครอบทุก threshold (150/120/60/45/30/7); ส่งผ่าน queue ตาม engine Phase-4
+- **กระดิ่ง (Notifications #8)**: `ContractExpiryNotification` (database channel) → แท็บ **Contracts ใน dropdown เปลี่ยนเป็น live** แสดง vendor (รหัส) + "หมดอายุในอีก N วัน" (ไอคอน `CalendarClock`) คลิกไปหน้า `/contracts`
+
+### 2. Administrator Protection (Permission #7)
+- กันผู้ใช้ที่**ไม่ใช่ super** ทำสิ่งที่กระทบ Administrator (role `super`) บังคับที่ **backend** + mirror UI:
+  - **แก้ข้อมูลพนักงานที่เป็น Admin**: `EmployeeController::update` → 403 ถ้า employee ผูกกับบัญชี super และผู้กดไม่ใช่ super (`Employee::isSuperAdmin()`, `EmployeeResource.is_super_admin`); UI ปิดเมนู Edit + tooltip
+  - **Role Group Administrator**: `GroupRoleController` (store/update/destroy) → 403 ถ้ากลุ่มมี role `super` (ทั้งเดิม/ที่จะตั้ง) และผู้กดไม่ใช่ super — ปิดทั้งการ "ปลด admin" และ "ยกตัวเองเป็น admin" (escalation); UI การ์ดกลุ่ม Administrator ปิดปุ่ม Edit/Delete + tooltip
+  - **เปลี่ยนสิทธิ์ Admin**: มี `abort_if($role === 'super')` ใน `RolePermissionController` อยู่แล้ว
+- **ปลดล็อกแก้ข้อมูลตัวเองจากหน้า Employee**: ผู้มีสิทธิ์ `employees.edit` แก้ record ของตัวเองได้แล้ว (เดิมถูกบังคับให้แก้ผ่าน Profile เท่านั้น)
+
+### 3. Profile drawer — SaveButton
+- ปุ่ม Save ในหน้าโปรไฟล์ใช้ `SaveButton` ร่วม (ปกติ / spinner / ติ๊กถูก) เหมือนหน้า Settings
+
+**ไฟล์เพิ่ม**: migrations `*_create_contract_alert_logs_table` · `*_replace_contract_expiry_email_templates` · `app/Models/ContractAlertLog.php` · `app/Notifications/ContractExpiryNotification.php` · `app/Services/ContractExpiryAlertService.php` · `app/Console/Commands/SendContractExpiryAlerts.php` · `tests/Feature/{ContractExpiryAlertTest,AdminProtectionTest}.php`
+**ไฟล์แก้**: `routes/console.php` · `app/Http/Controllers/Api/{Contract,Employee,GroupRole}Controller.php` · `app/Models/Employee.php` · `app/Http/Resources/EmployeeResource.php` · `resources/js/services/notificationApi.ts` · `resources/js/components/shell/{notifications-dropdown,profile-drawer}.tsx` · `resources/js/components/employees/employee-view-drawer.tsx` · `resources/js/pages/{employees,permissions}/index.tsx` · `resources/js/types/index.ts` · `lib/i18n.ts`
+
+**ตรวจสอบ**: `tsc --noEmit` ✅ (ไฟล์ที่แก้สะอาด) · `vendor/bin/pint` ✅ · migration ✅ · `schedule:list` (08:00 daily) ✅ · **PHPUnit: ContractExpiryAlertTest 8 + AdminProtectionTest 7 + ContractApiTest 10 = 25 ผ่าน** ✅
+
+> **หมายเหตุ dev**: alert ยิงผ่าน scheduler — บน XAMPP/Windows ต้องตั้ง Task Scheduler ให้รัน `php artisan schedule:run` ทุกนาที (หรือรัน `php artisan contracts:send-expiry-alerts` เองเพื่อทดสอบ); อีเมลส่งผ่าน queue (`php artisan queue:work`)
+> test ที่ fail เป็นของ starter-kit เดิม (auth/settings/dashboard แบบ Inertia ที่ถอดออกตั้งแต่ Phase-1) — ไม่เกี่ยวกับงานนี้
+
+---
+
+## Phase 8 — Master Data (Settings module) (เสร็จแล้ว)
+
+> spec: `docs/superpowers/specs/2026-05-27-master-data-design.md` · plan: `docs/superpowers/plans/2026-05-27-master-data.md`
+
+เพิ่มแท็บ **Master Data** ใน Settings module เป็น lookup table กลางที่ใช้ร่วมกันโดย Assets, Contract และ Stock — มี 6 sub-tab: Brands, Models, Categories, Supplier/Vendor, Warehouse และ Locations (ย้ายมาจากแท็บ Locations เดิม)
+
+### 1. เปลี่ยน Navigation
+- ลบแท็บ **Locations** ออกจาก Settings nav (top-level)
+- เพิ่มแท็บ **Master Data** (`Boxes` icon) แทน — Locations กลายเป็น sub-tab ที่ 6 ใน Master Data
+
+### 2. Backend
+
+| Entity | Table | Fields |
+|--------|-------|--------|
+| Brand | `brands` | name (unique), description? |
+| Model | `asset_models` | name, brand_id (FK→brands nullable nullOnDelete), description? |
+| Category | `categories` | name, type ENUM(asset/contract/stock), description? |
+| Vendor | `vendors` | name, contact?, phone?, email?, address? |
+| Warehouse | `warehouses` | name (unique), description? |
+
+- **Migrations**: 5 ตาราง (`2026_05_27_030700..030704_create_*.php`)
+- **`App\Enums\CategoryType`**: backed enum (`asset`/`contract`/`stock`) — ใช้ `Rule::enum(CategoryType::class)` ใน validation กัน hardcoded string ที่ไม่ sync
+- **Models**: `Brand` · `AssetModel` (belongsTo Brand) · `Category` (cast `type` → `CategoryType`) · `Vendor` · `Warehouse` — `$fillable` ครบ, ไม่มี soft deletes
+- **Controllers** (`app/Http/Controllers/Api/`): `BrandController`, `AssetModelController`, `CategoryController`, `VendorController`, `WarehouseController` — แต่ละตัวมี `index/store/update/destroy`, gate ด้วย `abort_unless($user->isSuper())`, บันทึก `AuditLog::record()` ทุก write
+- **Routes** (`routes/api.php`): `apiResource('brands/asset-models/categories/vendors/warehouses')→except(['show'])` ภายใต้ `auth:sanctum`
+- **API Resources**: `BrandResource` · `AssetModelResource` (eager-load brand) · `CategoryResource` · `VendorResource` · `WarehouseResource`
+
+### 3. Frontend
+
+- **Types** (`resources/js/types/index.ts`): เพิ่ม `Brand`, `AssetModel`, `CategoryType`, `Category`, `Vendor`, `Warehouse`
+- **API service** (`resources/js/services/masterDataApi.ts`): 5 object (brandApi / assetModelApi / categoryApi / vendorApi / warehouseApi) — list/create/update/remove ผ่าน `mutate<T>` helper เดิม
+- **Hooks** (`resources/js/hooks/use-master-data.ts`): 5 query hooks + 5 mutation factories ด้วย query key constants (`['brands'] as const`) + `onSuccess: invalidate`
+- **i18n** (`resources/js/lib/i18n.ts`): เพิ่ม 26 keys ทั้ง EN/TH — `set_master_data`, `md_brands`…`md_warehouses`, `md_add_brand`…`md_add_warehouse`, field labels, type labels
+- **`MasterDataTab`** (ใน `pages/settings/index.tsx`): horizontal pill-tab bar (6 tabs) + render รายการด้านล่าง
+  - `BrandsList` — name + description (muted); inline-edit row
+  - `ModelsList` — name + brand dropdown (SearchSelect); add/edit form 2 fields + clear-brand option (`—`)
+  - `CategoriesList` — name + type badge สี (`asset`=น้ำเงิน / `contract`=ม่วง / `stock`=เขียว)
+  - `VendorsList` — name + phone/email secondary line; form 5 fields
+  - `WarehousesList` — name + description; inline-edit row
+  - `LocationsList` — logic เดิมของ LocationsTab ไม่เปลี่ยน (แค่ย้าย + ลบ inner heading ซ้ำ)
+- ทุก `add()` / `saveEdit()` ครอบด้วย try/catch + `Swal.fire({ icon: 'error', … })` เมื่อ mutation ล้มเหลว (เช่น FK constraint / unique violation)
+
+### 4. Tests
+
+- **`tests/Feature/MasterDataTest.php`**: 31 tests, 53 assertions
+  - Guest 401 (5 tests, 1 ต่อ resource)
+  - Non-super forbidden 403 (5 tests)
+  - Brand CRUD + uniqueness (5 tests)
+  - AssetModel with/without brand (4 tests)
+  - Category type validation (3 tests)
+  - Vendor email validation (3 tests)
+  - Warehouse CRUD + uniqueness (3 tests)
+  - Update/Delete ครอบ Brand + AssetModel (3 tests)
+
+**ไฟล์เพิ่ม**: `database/migrations/2026_05_27_030700..030704_create_*.php` · `app/Enums/CategoryType.php` · `app/Models/{Brand,AssetModel,Category,Vendor,Warehouse}.php` · `app/Http/Controllers/Api/{Brand,AssetModel,Category,Vendor,Warehouse}Controller.php` · `app/Http/Resources/{Brand,AssetModel,Category,Vendor,Warehouse}Resource.php` · `resources/js/services/masterDataApi.ts` · `resources/js/hooks/use-master-data.ts` · `tests/Feature/MasterDataTest.php` · `docs/superpowers/specs/2026-05-27-master-data-design.md` · `docs/superpowers/plans/2026-05-27-master-data.md`
+**ไฟล์แก้**: `routes/api.php` · `resources/js/types/index.ts` · `resources/js/lib/i18n.ts` · `resources/js/pages/settings/index.tsx`
+
+**ตรวจสอบ**: migration ✅ · `vendor/bin/pint` ✅ · **PHPUnit `MasterDataTest` 31 ผ่าน** ✅
+
+> หมายเหตุ: test ที่ fail 17 รายการเป็นของ starter-kit เดิม (auth/settings แบบ Inertia ที่ถอดออกตั้งแต่ Phase-1) — ไม่เกี่ยวกับงานนี้
+
+---
+
+## โครงสร้างโปรเจกต์ (Frontend)
+
+```
+resources/js/
+├── app.tsx                       # SPA entry: providers + router
+├── lib/
+│   ├── i18n.ts                   # EN/TH dictionaries + useT()
+│   ├── nav.ts                    # role-aware nav config
+│   └── utils.ts                  # cn()
+├── services/
+│   ├── http.ts                   # axios instance + ensureCsrf()
+│   └── authApi.ts                # login / logout / me
+├── stores/
+│   └── ui.ts                     # Zustand UI/tweaks store
+├── hooks/
+│   ├── use-auth.ts               # React Query auth hooks
+│   └── use-apply-theme.ts        # apply dark/brand/radius to DOM
+├── components/
+│   ├── auth/protected-route.tsx
+│   ├── shell/                    # app-shell, sidebar, topbar, ...
+│   ├── shared/                   # data-table, status-badge, field, flags
+│   └── ui/                       # shadcn/ui primitives
+├── pages/
+│   ├── login.tsx
+│   ├── dashboard.tsx
+│   └── placeholder.tsx
+└── types/index.ts
+```
+
+---
+
+## การติดตั้งและรัน (Getting Started)
+
+```bash
+# 1. ติดตั้ง dependencies
+composer install
+npm install
+
+# 2. ตั้งค่า .env (ตั้งค่า DB ให้ตรงกับเครื่อง) แล้วรัน migration + seed
+php artisan migrate --seed
+
+# 3. รัน dev servers (ต้องรันทั้งคู่)
+php artisan serve          # http://localhost:8000
+npm run dev                # Vite (HMR)
+
+# เปิดเบราว์เซอร์ที่ http://localhost:8000
+```
+
+### Build สำหรับ production
+```bash
+npm run build
+```
+
+### Demo accounts (password: `password`)
+
+| Email | Role |
+|-------|------|
+| super@inaba.co.th | Super Administrator |
+| it@inaba.co.th | IT Staff |
+| hr@inaba.co.th | HR Officer |
+| user@inaba.co.th | Employee |
+
+> สลับ role โดยล็อกอินด้วยบัญชีคนละตัว — เมนู sidebar จะเปลี่ยนตามสิทธิ์อัตโนมัติ
+
+---
+
+## สถานะโมดูล
+
+| # | Module | สถานะ |
+|---|--------|-------|
+| 0 | Overall Dashboard (แยกตาม role) | ⏳ รอ |
+| 1 | Employee Management (พนักงาน / ตำแหน่ง / แผนก) | ✅ Phase-2 · Phase-5 (resign/cancel, CSV import, filters, avatar) |
+| 2 | Ticket System (เปิด/รับ/อัปเดตเคส) | ⏳ รอ |
+| 3 | Request Workflow (คำขออนุมัติ) | ✅ 2026-08-01 (Request module **11 ประเภท** + Workflow engine ตามสายบังคับบัญชา/Owner + Auto Ticket + Bell/Email ทุกขั้น + หน้า Workflows admin) · 2026-08-03 ปรับ UX ตามการใช้งานจริง + Master data "ข้อมูลคำขอ" · Export/สร้าง workflow ใหม่ Coming soon |
+| 4 | Asset Management (ทรัพย์สิน / โอนย้าย / รับคืน) | ⏳ รอ |
+| 5 | Contract & Rental (สัญญา + แจ้งเตือนหมดอายุ) | ✅ Phase-6 (CRUD + dashboard/timeline + expiring filter + renew) · Phase-7 (expiry alerts: bell + email + scheduled command) · attachments/linked-assets Coming soon |
+| 6 | Stock Management (คลังอะไหล่) | 🟡 Phase-9 (Master Data lookups + Stock Items + Min/Max alerts + Dashboard + RBAC) · Movements/Requests/Audit/Notifications รอเฟสถัดไป |
+| 7 | Permission Management | ✅ Phase-3 (Roles+matrix, Groups, Audit log) · Phase-7 (Administrator protection: กัน non-super แก้ admin/role group/escalation) |
+| 8 | Notifications System (in-app) | 🟡 Bell + dropdown + tabs ตามโมดูล + ปิดทีละรายการ + event พนักงานใหม่ (Phase-5) + contract expiry (Phase-7) + **service request ทุก transition (2026-08-01, แท็บ Requests live)** · trigger ticket/asset รอ |
+| 9 | Email Notifications | ✅ Phase-4 (template library + SMTP + queued send) |
+| 10 | Report / Export | ⏳ รอ |
+| 11 | Settings | 🟡 Display/Branding/Company/Email/Security เสร็จ · **Master Data** (Brands/Models/Categories/Vendors/Warehouses/Locations + **Units/Stock statuses/Warranty types** Phase-9) · ส่วนอื่นรอโมดูล |
+
+---
+
+## Phase-9 — Stock / Inventory Module (IT)
+
+โมดูลคลังพัสดุไอที ต่อจาก Contract Module อิงดีไซน์จาก Claude Design bundle (`pages-5.jsx`)
+รายงานสถานะตามหัวข้อที่ร้องขอ (12 ข้อ):
+
+| # | หัวข้อ | สถานะ | รายละเอียด |
+|---|--------|-------|-----------|
+| 1 | **Master Data ส่วนกลาง** | ✅ เสร็จ | ใช้ร่วมกับ Asset/Contract: Brand, Model, Category, Vendor, Warehouse มีอยู่แล้ว · **เพิ่มใหม่** ที่ Settings → Master Data: **Unit, Stock Status, Warranty Type** (ตาราง + model + controller + routes + UI ครบ พร้อม seed ค่าเริ่มต้น) |
+| 2 | **Stock Item Management** | ✅ เสร็จ | `stock_items`: SKU, Serial, Brand, Model, Category, Unit, Cost, Current/Min/Max, Warehouse, Supplier, Warranty · CRUD + filters (search/category/warehouse/status) + add/edit dialog (Save loading→✓) |
+| 3 | **Stock Movement** (Receive/Issue/Return/Transfer) | ✅ Phase-10 | `stock_movements` + endpoint list/create · ปรับ `current_stock` อัตโนมัติ (receive/return +, issue/transfer −) กันสต็อกติดลบ · RBAC ต่อชนิด (receive→stock.receive, issue→fulfill, return→return, transfer→transfer) · แท็บ Movements + drawer แยกชนิด |
+| 4 | **Min–Max Alert** | ✅ เสร็จ | สถานะ derive อัตโนมัติ: out (=0) / low (<Min) / over (>Max) / dead (ไม่เคลื่อนไหว >90 วัน) / ok · Dashboard มีแบนเนอร์แจ้งเตือน + KPI + endpoint `summary` แยก low/over/dead buckets · มี Min/Max bar ในตาราง |
+| 5 | **Stock Request** (workflow เบิกจ่าย) | ✅ Phase-10 | `stock_requests` workflow: submit (stock.request) → approve/reject (stock.approve) → fulfill (stock.fulfill) · fulfill สร้าง movement `issue` + ตัดสต็อกอัตโนมัติ · ผู้ขอเห็นเฉพาะคำขอตัวเอง, ผู้อนุมัติ/จ่ายเห็นทั้งหมด · แท็บ Requests + drawer |
+| 8 | **Transfer Stock** | ✅ Phase-10 | เป็น movement ชนิด `transfer` (RBAC stock.transfer) |
+| 9 | **Dashboard / Report** | 🟡 บางส่วน | Dashboard: KPI (SKU/มูลค่า/ต่ำกว่า Min/Overstock), Stock by warehouse, Stock by category, Min/Max alerts · Export/Report ยังไม่ทำ |
+| 10 | **Audit / Stock Count** | ⏳ รอเฟสถัดไป | แท็บ placeholder ในหน้า Stock |
+| 11 | **RBAC Permission** | ✅ เสร็จ | module `stock` ปรับเป็น **tree 15 สิทธิ์**: master `stock.module` (คุม sidebar icon) → View ต่อแท็บ (`view_dashboard`/`view`/`view_request`/`view_count`/`view_events`) → Management children (manage_items/receive/return/transfer · request/approve/fulfill · count · events) · หน้า Permissions แสดง Stock เป็นการ์ด tree (master→view→management, cascade ปิด+ล็อกลูก) · เซฟผ่าน `Permissions::normalizeStock()` บังคับลำดับชั้นฝั่ง server · controller re-gate read endpoint ตามแท็บ (summary→view_dashboard, requests→view_request, movements→view_events, serials→events, count list→view_count / actions→count) · migration grant key ใหม่ให้ role เดิมกันสิทธิ์หาย · (เลิกใช้ manage_warehouse/audit/delete) |
+| 12 | **Notification** (email + bell) | ✅ เสร็จ | `StockNotificationService` ยิง **bell (DB notification) + email (template queue)** ครบ 8 เหตุการณ์ · ผู้รับผูกตาม permission: alerts (out/low/over)→`stock.module`, New Request/Waiting→`stock.approve`, Approved/Rejected/Fulfilled→เจ้าของคำขอ, Counting draft→`stock.view_count` (bell อย่างเดียว) · ทริกเกอร์ **real-time** หลัง movement/fulfill/commit + **command รายวัน** `stock:send-notifications` (ย้ำ overwrite จนกลับ Normal/Fulfilled/Committed) · dedup ledger `stock_alert_logs` · แท็บ Stock ใน bell เปิด live แล้ว |
+
+### Backend (Phase-9 เสร็จ)
+- Migrations: `units`, `stock_statuses`, `warranty_types`, `stock_items`
+- Models: `Unit`, `StockStatus`, `WarrantyType`, `StockItem` (มี `status()` + `daysSinceLastMove()` derive)
+- Controllers: `UnitController`, `StockStatusController`, `WarrantyTypeController` (mirror Warehouse), `StockItemController` (index/show/store/update/destroy + `summary`)
+- Routes: `units`, `stock-statuses`, `warranty-types`, `stock-items` (+ `stock-items/summary`)
+- Seeders: ค่าเริ่มต้น Unit/Status/Warranty + `StockSeeder` (16 รายการ demo ครอบคลุมทุกสถานะ)
+- Permissions: เพิ่ม `stock.*` ใน `app/Support/Permissions.php`
+- Tests: `tests/Feature/StockItemTest.php` (6 ผ่าน — list/summary/status derive/CRUD/RBAC)
+
+### Frontend (Phase-9 เสร็จ)
+- `pages/stock/index.tsx` — หน้า Stock (KPI + Min/Max alert banner + แท็บ Dashboard/Items + placeholder Movements/Requests/Audit)
+- `components/stock/stock-item-modal.tsx` — add/edit ดึง dropdown จาก Master Data
+- `components/settings/lookup-section.tsx` — list+dialog ใช้ซ้ำสำหรับ Unit/Stock Status/Warranty Type
+- types/api/hooks: `StockItem`, `StockSummary`, `stockApi`, `useStock*` · nav gate `stock.view`
+
+### Backend (Phase-10 เสร็จ — Movement + Request workflow)
+- Migrations: `stock_movements` (type/qty/from/to/ref/by/moved_at), `stock_requests` (workflow + timestamps)
+- Models: `StockMovement` (`delta()`, INBOUND), `StockRequest` · `StockItem::movements()`
+- Controllers: `StockMovementController` (index + store, ปรับสต็อกใน transaction + lockForUpdate กันติดลบ + RBAC ต่อชนิด), `StockRequestController` (index visibility + store + approve/reject/fulfill)
+- Routes: `stock-movements` (GET/POST), `stock-requests` (GET/POST + `/approve` `/reject` `/fulfill`)
+- Tests: `tests/Feature/StockWorkflowTest.php` (6 ผ่าน — receive/issue เพิ่ม-ลดสต็อก, กันสต็อกไม่พอ, RBAC ต่อชนิด, workflow submit→approve→fulfill สร้าง issue movement, กัน fulfill ก่อน approve, visibility)
+
+### Frontend (Phase-10 เสร็จ)
+- แท็บ Movements (ตาราง + filter ชนิด + ปุ่มสร้างต่อชนิดตามสิทธิ์) + `components/stock/movement-drawer.tsx`
+- แท็บ Requests (ตาราง + ปุ่ม approve/reject/fulfill ตามสิทธิ์ + สถานะ) + `components/stock/request-drawer.tsx`
+- ปุ่ม Request / Receive บน header · hooks `useStockMovements`, `useRecordMovement`, `useStockRequests`, `useStockRequestActions`
+- เปิด stock.* เป็น live ในหน้า Permissions (request/approve/fulfill/receive/transfer/return)
+
+### หมายเหตุการติดตั้ง
+- สิทธิ์ `stock.*` ใหม่: **super เห็นอัตโนมัติ** · role อื่น (admin/hr/user) ต้อง grant ผ่าน Settings → Permissions หรือ sync defaults (อย่ารัน `migrate:fresh` บนข้อมูลจริง)
+- ค่า Master Data ใหม่ seed ด้วย `php artisan db:seed --class=MasterDataSeeder` · stock demo: `--class=StockSeeder`
+
+---
+
+## Assets Management Module (Phase-11 เสร็จ)
+
+โมดูลจัดการทรัพย์สิน IT (คอม/อุปกรณ์ ทั้งซื้อและเช่า) อิงดีไซน์จาก Claude Design bundle (`pages-3.jsx`) — ทำครบ 4 เฟสย่อยในรอบเดียว
+
+### ภาพรวมฟีเจอร์
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| **Inventory** | ตารางทรัพย์สิน + ค้นหา (tag/model/owner/serial) + filter ประเภท/การได้มา/สถานะ + pagination + เลือกหลายรายการ (bulk) |
+| **Dashboard** | KPI (ทั้งหมด/ใช้งาน/รอรับมอบ/รอรับคืน) + แยกตามประเภท (bar) + ทรัพย์สินมูลค่าสูงสุด |
+| **Register / Edit** | drawer ลงทะเบียน/แก้ไข · สลับ ซื้อ/เช่า · auto-generate tag (INB-/RNT-XX-NNNNN) |
+| **Detail view** | drawer แสดงข้อมูลครบ (ทั่วไป/การครอบครอง/การได้มา/หมายเหตุ) |
+| **Workflow** | โอน (Transfer→Pending acceptance) · รับมอบ (Accept→Deployed) · รับคืน (Mark received→Ready, owner Pool — IT) · สลับซ่อมบำรุง · ตัดจำหน่าย |
+| **Bulk** | เลือกหลายรายการ → ตั้งซ่อมบำรุง / ตัดจำหน่าย |
+| **Transfer log** | แท็บประวัติการโอน (บันทึก from/to/เหตุผล/ผู้ทำ ทุกครั้งที่โอน/รับคืน) |
+| **Contract link** | ทรัพย์สินเช่าผูกกับสัญญา (vendor contract) — แสดงรหัสสัญญาในหน้า detail |
+| **Asset → Stock** | แปลงทรัพย์สินเป็นรายการคลังพัสดุ (สร้าง stock item + เปลี่ยนสถานะเป็น Pending stock) |
+| **RBAC** | `assets.view/register/transfer/retire/edit` — super + IT admin (มีอยู่ใน catalog เดิมแล้ว) |
+
+### Backend
+- Migrations: `assets` (tag, type, brand, model, serial, source, status, owner, initial_owner, department, location, value, supplier, purchase/warranty/lease dates, `contract_id` FK→contracts, registered_date, notes, last_reason), `asset_transfers` (ประวัติการโอน)
+- Enums: `AssetType` (laptop/desktop/mobile/printer/server/network/other), `AssetSource` (purchased/rented), `AssetStatus` (ready/pending_acceptance/deployed/pending_return/maintenance/writeoff/pending_stock)
+- Models: `Asset` (auto-tag, contract relation, annualValue), `AssetTransfer`
+- Service: `AssetService` (CRUD + transfer/accept/requestReturn/markReceived/toggleMaintenance/retire/bulkSetStatus/convertToStock)
+- Controller: `AssetController` (index+filters, summary, CRUD, transfers log, transfer/accept/receive/maintenance/to-stock/bulk) — gating ต่อ action
+- Resource/Request: `AssetResource`, `StoreAssetRequest` (assets.register/edit)
+- Routes: `assets` apiResource + `summary` `transfers` `bulk` `{asset}/transfer|accept|receive|maintenance|to-stock`
+- Factory + `AssetSeeder` (16 รายการ demo อิงดีไซน์ ครอบคลุมทุกสถานะ)
+- Tests: `tests/Feature/AssetApiTest.php` (13 ผ่าน — CRUD/RBAC/auto-tag/value display/transfer+log/accept/receive/bulk/summary/to-stock)
+
+### Frontend
+- `pages/assets/index.tsx` — หน้า Assets (KPI + แท็บ Dashboard/Inventory/Transfer log)
+- `components/assets/` — `asset-meta` (status badge + type icon), `asset-form-drawer`, `asset-detail-drawer`, `asset-transfer-drawer`, `asset-to-stock-modal`
+- types/api/hooks: `Asset`, `AssetSummary`, `AssetTransferLog`, `assetApi`, `useAssets`/`useAssetSummary`/`useAssetTransfers`/`useAssetMutations`
+- i18n EN/TH ครบ · route `/assets` (แทน placeholder เดิม) · nav gate `assets.view`
+
+### หมายเหตุการติดตั้ง
+- รัน `php artisan migrate` เพื่อสร้างตาราง `assets` + `asset_transfers`
+- seed demo: `php artisan db:seed --class=AssetSeeder` (idempotent ตาม tag — ปลอดภัยกับข้อมูลจริง)
+- สิทธิ์ `assets.*` มีใน catalog อยู่แล้ว: **super เห็นอัตโนมัติ · admin (IT) ได้ครบ** · role อื่นต้อง grant เอง
+
+---
+
+## Ticket Module (โมดูล 2 — แจ้งปัญหา IT)
+
+สร้างตามดีไซน์ handoff (Inaba IT Service Desk) — ลำดับงาน Open → In progress → Completed / Canceled
+
+### Backend
+- Enums: `TicketStatus` (open/in_progress/completed/canceled), `TicketCategory` (hardware/software/network/other), `TicketPriority` (critical/high/medium/low)
+- ตาราง `tickets`: `ticket_no` (TKT-#### auto), subject/subject_th/description, category, priority (nullable), status, `requester_id`→employees, `assignee_id`→users (nullable), callback_phone, `related_asset_id`→assets (nullable), take_note, resolution, resolved_at
+- `TicketService` + `TicketController` ครอบคลุม flow: สร้าง (requester = พนักงานของ user ปัจจุบัน), รับเคส/take (IT รับเอง + กำหนด priority), assign (super → staff), resolve (assignee ปิด/ยกเลิก + resolution ≥10), ลบ
+- RBAC ผ่าน `tickets.*`: ผู้แจ้งเห็นเฉพาะตั๋วตัวเอง · IT (`tickets.view_all`) เห็นทั้งหมด · summary + staff endpoint
+- Factory + `TicketSeeder` (5 demo ตรงดีไซน์) · Tests: `tests/Feature/TicketApiTest.php` (13 ผ่าน — create/take/assign/resolve/cancel/RBAC/scoping)
+
+### Frontend
+- `pages/tickets/index.tsx` — IT เห็น dashboard (สถิติสถานะ + แท่ง by-category) + แท็บ All/Mine + filter; พนักงานทั่วไปเห็นเฉพาะตั๋วตัวเอง
+- `components/tickets/` — `ticket-meta` (badges/icons), `create-ticket-drawer`, `ticket-detail-drawer`, `take-case-modal`, `assign-ticket-modal`, `resolve-ticket-modal`
+- types/api/hooks: `Ticket`/`TicketSummary`, `ticketApi`, `useTickets`/`useTicketSummary`/`useTicketStaff`/`useTicketMutations`
+- i18n EN/TH ครบ · route `/tickets` (แทน placeholder เดิม) · nav gate `tickets.create`
+
+### หมายเหตุการติดตั้ง
+- รัน `php artisan migrate` เพื่อสร้างตาราง `tickets`
+- seed demo: `php artisan db:seed --class=TicketSeeder` (idempotent ตาม ticket_no — ต้อง seed employees/users ก่อน)
+- สิทธิ์ `tickets.*` มีใน catalog อยู่แล้ว: **super เห็นอัตโนมัติ · admin (IT) ได้ครบ** · role อื่นได้ `tickets.create` ตาม default
+
+### ไฟล์แนบ (Attachments)
+- ตาราง `ticket_attachments` + `TicketAttachment` model + `TicketAttachmentController` (store/destroy) บน public disk `tickets/{id}` — รับ PNG/JPG/PDF ≤20MB สูงสุด 10 ไฟล์/ตั๋ว
+- สิทธิ์: ผู้แจ้งแนบ/ลบไฟล์ตั๋วตัวเองได้ · IT (`tickets.view_all`) ได้ทุกตั๋ว
+- Frontend: file picker จริงใน create drawer (อัปโหลดหลังสร้างตั๋ว) + รายการ download/ลบใน detail drawer · Tests: `TicketAttachmentTest` (5 ผ่าน)
+
+### SLA (real metrics)
+- เป้า SLA ต่อ priority ปรับได้ที่ **Settings → Tickets** (response นาที + resolve ชั่วโมง) เก็บใน `app_settings.ticket_sla` (JSON) · default: Critical 4h / High 8h / Medium 24h / Low 72h — ดู `App\Support\TicketSla`
+- เพิ่ม `tickets.responded_at` (set ตอน take/assign) → คำนวณ **Avg response** (created→responded) จริง
+- `tickets/summary` คืน `avg_response_minutes` + `sla_met_pct` (% ตั๋ว completed ที่ปิดทันเป้า resolve ตาม priority) — dashboard cards ใช้ค่าจริงแล้ว · Tests: `TicketSlaTest` (5 ผ่าน)
+
+---
+
+## Permission Module — สิทธิ์ Administration Settings แบบละเอียด (โมดูล 7)
+
+แยกสิทธิ์ `system.edit_settings` เดิม (ตัวเดียวคุมทุก section) เป็น **9 สิทธิ์ย่อยต่อ section** ใน namespace `settings.*` พร้อม enforce จริงทั้ง backend และ UI
+
+### Backend
+- catalog `app/Support/Permissions.php`: เพิ่มกลุ่ม `settings` 9 keys — `company, branding, display, masterdata, email, sla, assets, workflows, security`; ลบ `system.edit_settings`
+- middleware ใหม่ `EnsurePermission` (alias `permission`) — ใช้ `->middleware('permission:settings.x')` abort 403 ถ้าไม่มีสิทธิ์ (super bypass ผ่าน `User::hasPermission()`)
+- แตก `SettingsController::update()` (monolithic) เป็น method ต่อ section: `updateCompany / updateBranding / updateDisplay / updateAssets / updateSla`; mail → `settings.email`, security (PUT) → `settings.security`, logo → `settings.branding`
+- routes: `PUT /settings/{company,branding,display,assets,sla}` + mail/security/logo แต่ละตัว gate ด้วย `settings.*`; `GET /settings` และ `GET /settings/security` ยังเปิด (theme/branding + session-timeout hook โหลดทุก request)
+- Master Data (brands, asset-models, categories, vendors, warehouses, units, stock-statuses, warranty-types, locations): **read เปิด** (โมดูลอื่นใช้ร่วม) · **write gate ด้วย `settings.masterdata`** — warehouse ย้ายจาก `stock.manage_warehouse` มาที่นี่ (key เดิมคงไว้ใน catalog เป็น reserved ไม่ enforce แล้ว)
+- Tests: `SettingsPermissionsTest`, `EnsurePermissionMiddlewareTest`, `SettingsSectionPermissionsTest` + อัปเดต `AssetStatusColorsTest`/`TicketSlaTest`/`SecuritySettingsTest`/`MasterDataTest` — full suite **228 ผ่าน**
+
+### Frontend
+- `permission-labels.ts` + matrix (`permissions/index.tsx`): การ์ด "Setting" แสดง 9 toggle ใช้งานจริง (ไม่มีป้าย Coming soon)
+- `settingsApi.ts` / `use-settings.ts`: แยก endpoint ต่อ section (`updateCompany`→/company, `updateBranding`→/branding, `updateDisplay`→/display, `updateAssetColors`→/assets, `updateTicketSla`→/sla)
+- หน้า Settings (`pages/settings/index.tsx`): ซ่อน tab ที่ไม่มีสิทธิ์ (filter ด้วย `can()` + super) · ไม่มีสิทธิ์เลย → `NoAccess` · route guard (`app.tsx`) ใช้ `anyOf` 9 keys
+- เมนู Settings ใน sidebar: เพิ่ม `anyOf` ใน `NavItem` → ลิงก์แสดงเมื่อมีสิทธิ์ `settings.*` ตัวใดตัวหนึ่ง
+
+### หมายเหตุการติดตั้ง
+- รัน `php artisan migrate` — migration `drop_edit_settings_permission` ลบ row `system.edit_settings` เดิมออกจาก `role_permissions` (ปลอดภัยกับข้อมูลจริง ไม่ reset)
+- สิทธิ์ `settings.*` **default = super เท่านั้น** (bypass) · admin / role อื่นต้อง grant เองผ่านหน้า Permission matrix
+- หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`) ให้เห็นผล
+
+---
+
+## Stock Module — คลังแยกตามคลัง (per-warehouse balances) + Transfer ใหม่ (โมดูล 6)
+
+ทำให้ stock ติดตามยอดคงเหลือ **แยกตามคลังจริง** การย้ายคลัง (Transfer) ถูกต้องตามหลัก inventory และแก้บั๊กที่ transfer เดิมทำของหาย
+
+### Backend
+- ตารางใหม่ `stock_balances` (SKU × warehouse × qty) — ยอดคงเหลือต่อคลัง; `stock_items.current_stock` ยังเป็นยอดรวม cached (= SUM ของ balances) อัปเดตใน transaction เดียวกัน
+- `StockBalanceService` (`add/remove/move/rebuildFor`) — กันยอดติดลบรายคลัง + กันย้ายคลังเดียวกัน; migration backfill สร้าง balance 1 แถวต่อ item จาก current_stock (ปลอดภัยกับข้อมูลจริง)
+- 🔴 **แก้บั๊ก Transfer:** เดิม transfer ถูกคิดเป็น outbound → ลด `current_stock` + consume FIFO lot (ของหาย). ตอนนี้ transfer **stock- และ cost-neutral** — `delta()` = 0, ไม่แตะ lot, แค่ `balances->move(from→to)` + ย้าย `warehouse` ของ serial ที่เลือก
+- เลขเอกสารอัตโนมัติทุก movement: `RCV/ISS/RET/TRF-yyyy-xxx` (column `doc_no` + `App\Support\DocNumber`)
+- `record()` warehouse-aware: receive/return `+qty` ที่ปลายทาง (fallback คลังบ้าน item), issue/transfer หักรายคลัง; transfer ต้องมี `from_label`+`to_label` (422 ถ้าขาด)
+- `fulfill` (เบิก) เลือก **คลังต้นทาง** ที่ตัดของ + `doc_no`; dashboard `by_warehouse` คิดจาก `stock_balances` จริง; `StockItemResource` เปิดเผย `balances`
+- Tests: `StockTransferTest`, `StockBalanceTest`, `DocNumberTest` + อัปเดต `StockFifoCostingTest` (เปลี่ยน FIFO consumption test จาก transfer → issue/fulfill), `StockWorkflowTest`, `StockSerialReceiveTest` — full suite **243 ผ่าน**
+
+### Frontend
+- **Transfer dialog ใหม่** (`movement-drawer.tsx`): ตัด field Reference/PO ออก (โชว์ว่า TRF-… ออกอัตโนมัติ) · เลือก **From → To คลัง** · qty-only โชว์คงเหลือคลังต้นทาง + cap จำนวน · serialized เลือก serial เฉพาะที่อยู่คลังต้นทาง · กันย้ายคลังเดียวกัน/เกินคงเหลือ
+- Fulfill dialog: เพิ่ม **เลือกคลังต้นทาง** + serial scope ตามคลัง + แผงคงเหลือสะท้อนยอดคลังที่เลือก (ไม่ใช่ยอดรวม)
+- types/api/hooks: `StockBalance`, `doc_no`, `serial_ids` (transfer), `from_warehouse` (fulfill)
+
+### หมายเหตุการติดตั้ง
+- รัน `php artisan migrate` — สร้าง `stock_balances` + column `doc_no` + backfill (ปลอดภัยกับข้อมูลจริง ไม่ reset)
+- หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
+- หมายเหตุ: per-warehouse cost (มูลค่าแยกคลัง) ยังไม่ทำ — FIFO เป็นระดับ SKU; min/max reorder ยังคิดจากยอดรวม
+
+---
+
+## Org Approval Chain — สายอนุมัติตามผังบังคับบัญชา (manager walk to root)
+
+> spec: `docs/superpowers/specs/2026-06-08-org-approval-chain-design.md` · plan: `docs/superpowers/plans/2026-06-08-org-approval-chain.md`
+> demo org redesign plan: `docs/superpowers/plans/2026-06-10-org-demo-data-14-levels.md` · spec: `docs/superpowers/specs/2026-06-10-org-demo-data-14-levels-design.md`
+
+วางรากฐานการคำนวณ **สายอนุมัติ** ของพนักงานโดยไต่ตามผังบังคับบัญชา (manager reporting tree) จากพนักงานขึ้นไปถึงรากต้นไม้ (VP) — เป็นฐานสำหรับ Request Workflow (โมดูล 3) ในอนาคต
+
+### แนวทาง (manager tree เป็น source of truth เดียว)
+- `employees.manager_id` (self-FK, nullable, `nullOnDelete`) เป็นต้นไม้รายงานตัวเดียว
+- `ApprovalChainService::chainFor()` ไต่ `manager_id` จากผู้ยื่น **ขึ้นจนถึงรากต้นไม้** (คนที่ `manager_id = null`) เก็บทุกหัวหน้าตามลำดับ (หัวหน้าตรงก่อน) — **ไม่มีเพดาน level** ระดับกลางที่ขาดหายข้ามไปเฉยๆ มี **guard กันวน (cycle)** ด้วย seen-set
+- `positions.level` (1–14) ใช้เป็น**ลำดับตำแหน่งแสดงผลเท่านั้น** ไม่มีผลต่อการหยุดสายอนุมัติ
+- **ลบ `approval_ceiling_level` setting และ UI card / endpoint `GET|PUT /settings/approval` ออกแล้ว** — ไม่มีเพดานระดับอีกต่อไป; chain หยุดที่รากต้นไม้เสมอ
+- **ลบฟิลด์ `departments.head` (Supervisor แบบ text) ออกแล้ว** (migration `drop_head_from_departments`) — หัวหน้าทั้งหมดมาจาก `manager_id` แหล่งเดียว
+
+### Backend
+- Migrations: `add_level_to_positions_table`, `add_manager_id_to_employees_table` (ปลอดภัยกับข้อมูลจริง — เพิ่ม column nullable, ไม่ reset)
+- Models: `Position.level` (fillable, max=14) · `Employee` — `manager()`/`subordinates()` relations + `isAncestorOf()` (กันวนตอนตั้งหัวหน้า)
+- Service: `ApprovalChainService::chainFor()` — walk `manager_id` to root; ไม่มี `ceilingLevel` แล้ว
+- Validation: `StoreEmployeeRequest` — `manager_id` (exists) + `withValidator` ปฏิเสธ self / descendant (กัน loop) · `positions.level` max=14
+- API: `GET /employees/{employee}/approval-chain` (`ApproverNodeResource`, gate `employees.view`)
+- Resources: `EmployeeResource`/`PositionResource` เปิดเผย `manager_id`/`level`
+- Tests: `tests/Feature/ApprovalChainTest.php` (9 ผ่าน — climb-to-root/no-manager/cycle/endpoint auth+permission/level-cap-14) · `tests/Feature/EmployeeApiTest.php` (3 ผ่าน — self/descendant/valid manager) · `tests/Feature/ApprovalChainDemoSeederTest.php` (4 ผ่าน — OrgSeeder 14 levels/VP at root/chain-to-VP/idempotent)
+
+### Frontend
+- types: `Position.level`, `Employee.manager_id`, `ApproverNode`
+- Position modal: ช่อง **Level** (1–14) · Add/Edit Employee: ช่อง **หัวหน้า** (SearchableSelect, ตัดตัวเองออก — descendant กันที่ server)
+- Employee view drawer: ส่วน **สายอนุมัติ** แสดงหัวหน้าตามลำดับ (ลูกศรขึ้น) + ป้าย "ลาออก" ถ้าหัวหน้าลาออก · ว่าง = "ไม่มีผู้อนุมัติเหนือกว่า"
+- Settings → Master Data: **ลบ** การ์ด "ระดับสูงสุดของสายอนุมัติ" ออกแล้ว (ไม่มีเพดานอีกต่อไป)
+
+### ข้อมูล Demo (`OrgSeeder`) — 11 แผนก / 26 หน่วยงาน / 14 ตำแหน่ง / 30 พนักงาน
+- **14 ตำแหน่ง** level 1 (Subcontract) → 14 (Vice President) — ใช้เป็นลำดับแสดงผล ไม่เป็นเพดาน
+- **ต้นไม้ต้นเดียว**: EMP-0001 (VP) ที่ราก → EMP-0002 (Director/PD) → … → EMP-0014 (Subcontract/PD) ครบ 14 ระดับ + สาขา Corporate Director (EMP-0015) → managers ของ 10 แผนกที่เหลือ + staff ย่อย
+- `OrgSeeder` เป็น idempotent (`updateOrCreate`) — รันซ้ำได้ปลอดภัย
+
+### หมายเหตุการติดตั้ง
+- รัน `php artisan migrate` เพื่อเพิ่ม `positions.level` + `employees.manager_id` (ปลอดภัยกับข้อมูลจริง)
+- `manager_id` เป็น**ข้อมูลปฏิบัติการ** — กรอกผ่านช่องหัวหน้าใน Add/Edit Employee; `OrgSeeder` wire ให้อัตโนมัติสำหรับ demo
+- หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
+
+**ตรวจสอบ**: `php artisan test --compact` 426 ผ่าน · `tsc --noEmit` ✅ · `npm run build` ✅ · `vendor/bin/pint` ✅
+
+---
+
+## Org Chart (ผังองค์กร) — แท็บผังองค์กรแบบโต้ตอบ
+
+> spec: `docs/superpowers/specs/2026-06-09-org-chart-tab-design.md` · plan: `docs/superpowers/plans/2026-06-09-org-chart-tab.md`
+
+- แท็บใหม่ในหน้า Employees แสดงผังบังคับบัญชาจาก `employees.manager_id` แบบ **forest** (คนไม่มีหัวหน้า = ต้นไม้แยก), ซ่อนคนลาออกเสมอ
+- สร้างด้วย **React Flow (`@xyflow/react`) + `@dagrejs/dagre`** (layout บนลงล่าง) · node การ์ดละเอียด (รูป/ชื่อ EN+TH/ตำแหน่ง/แผนก/level/จำนวนลูกน้อง)
+- โต้ตอบ: scroll = zoom · ลาก = pan · คลิกการ์ด = โฟกัส/center · ป้ายจำนวนลูกน้อง = ยุบ/ขยายกิ่ง · ค้นหา = กระโดด+ไฮไลต์ · มี MiniMap + Controls
+- **Backend**: `GET /api/employees/org-chart` (gate `employees.view`, ตัด resigned, นับ `reports_count` เฉพาะลูกน้อง active) · `OrgChartNodeResource`
+- **Frontend**: `lib/org-tree.ts` (helper บริสุทธิ์ — forest / prune / dagre layout + cycle guard) · `components/employees/org-chart/*` (tab, node, toolbar) · `useOrgChart`
+- มุมมองโฟกัสรายคน (Design B) ถูก note ไว้สำหรับหน้า Details ในอนาคต (ดับเบิลคลิก node)
+- **ตรวจสอบ**: `OrgChartTest` 5 ผ่าน · `tsc` ✅ · `npm run build` ✅
+
+---
+
+## Sections (หน่วยงาน) — ชั้นหน่วยงานระหว่างแผนก↔พนักงาน
+
+> spec: `docs/superpowers/specs/2026-06-09-employee-sections-design.md` · plan: `docs/superpowers/plans/2026-06-09-employee-sections.md`
+
+- โครงสร้าง: **แผนก → หน่วยงาน (Section) → พนักงาน** · `sections` (department_id FK, ลบแผนก = ลบ section ตาม) · `employees.section_id` (nullable, ลบ section = null)
+- section ที่เลือกให้พนักงานต้องอยู่ใน**แผนกเดียวกัน** (ตรวจที่ `StoreEmployeeRequest`)
+- แท็บ **"หน่วยงาน"** ในหน้า Employees: ตารางหน่วยงาน (แผนก/ชื่อ/จำนวนสมาชิก) เพิ่ม/แก้/ลบ · ฟอร์มพนักงานเลือกแผนก→หน่วยงานแบบ cascading (เปลี่ยนแผนกล้าง section)
+- Backend: `sections` API (`SectionController`/`SectionResource`/`StoreSectionRequest`) · Frontend: `sections-tab`, `section-modal`, `useSections`/`useSectionMutations`
+- **ผังองค์กรยังไม่แตะ** (section เป็นข้อมูล HR แยกจาก manager tree — รวมเข้าผังเป็นเฟสถัดไป)
+- **ตรวจสอบ**: `SectionApiTest` + `EmployeeApiTest` ผ่าน · `tsc` ✅ · `npm run build` ✅
+
+---
+
+## UI Confirmations + Section Code/Filter + Dev Setup (2026-06-13)
+
+### Confirm Dialog (มาตรฐานใหม่ แทน SweetAlert2 / window.confirm)
+- `resources/js/components/ui/confirm-dialog.tsx` — `<ConfirmProvider>` (mount ที่ root) + hook `useConfirm()` คืน `Promise<boolean>`
+- 3 variant: **danger** (ลบ/แดง), **edit** (บันทึก/น้ำเงิน), **warn** (เตือน/เหลือง) · ดีไซน์ minimal (icon chip 40px, `text-lg`, shadow-lg) · ปุ่ม Cancel→Confirm · danger โฟกัส Cancel กัน Enter พลาด
+- ส่ง `action` ได้ → dialog โชว์ **spinner → ✓** เองแล้วปิด (จับ error ในตัว) · `hideCancel` สำหรับ notice ปุ่มเดียว · `entity` ไฮไลต์ record · description รองรับขึ้นบรรทัด (`\n`)
+- **แปลง confirm/Swal ทั้งโปรเจกต์** (Settings, Employees, Permissions, Contracts, Stock, Email) → `useConfirm()` · error/success popup → toast (`useToastStore`) · `sweetalert2` ไม่ถูก import ในโค้ดแล้ว
+- `DataTable` เพิ่ม slot **`filters`** (ฝั่งซ้ายติดช่องค้นหา) แยกจาก `actions` (ขวา)
+- mockup: `docs/mockup/confirm-dialog.html`
+
+### Employee — View Detail drawer (ครบขึ้น)
+- โชว์ชื่ออีกภาษา (ใต้ title), `username` (ต่อท้ายบรรทัดบัญชี), ป้าย **Administrator** (super admin), การ์ด **รายละเอียดลาออก** (วันสุดท้าย + เหตุผล) เฉพาะตอน resigned
+
+### Section (หน่วยงาน)
+- **รหัส `SEC-####`**: migration เพิ่มคอลัมน์ `code` (unique) + backfill ของเดิม · auto-gen ใน `Section::booted()` ตอน create · ส่งใน `SectionResource` + type · คอลัมน์ "รหัส" ในตาราง + แก้ที่หัวข้อ modal
+- **กันลบเมื่อยังมีพนักงาน**: `SectionController::destroy` ตอบ 422 ถ้า `employees()->exists()` (FK เป็น nullOnDelete) · frontend เด้ง dialog (`warn`, ปุ่มเดียว) ให้ย้าย/ลบพนักงานก่อน
+- **Filter + Order by**: กรองตามแผนก + เรียงตาม (รหัส / แผนก / ชื่อ / สมาชิก) + ค้นหา · สลับคอลัมน์ให้ หน่วยงาน มาก่อน แผนก
+
+### Dev setup / fixes
+- รองรับ **MariaDB**: แก้ `config/database.php` deprecation `PDO::MYSQL_ATTR_SSL_CA` (PHP 8.5) แบบเลือกค่าตามเวอร์ชัน
+- แก้ **login ผ่าน `localhost`**: เพิ่ม `SANCTUM_STATEFUL_DOMAINS` ใน `.env`
+- **Auto-install script**: `docs/install-server-dev/install-dev.sh` (idempotent) + `readme.txt` (troubleshooting)
+
+**ตรวจสอบ**: `tsc` ✅ · `eslint` (เฉพาะไฟล์ที่แก้) 0 error ✅ · `php -l` ✅ · migration + auto-gen รหัสทดสอบแล้ว ✅
+
+---
+
+## Position — เปลี่ยนจาก "Level" เป็น "ลำดับชั้น" (Rank ladder) — 2026-06-13
+
+เดิม Position มีฟิลด์ `level` (เลข 1–14 เลือกเอง) ใช้แสดงผลอย่างเดียว ไม่ผูกกับ logic ใด ๆ
+เปลี่ยนเป็น **บันไดเรียงลำดับเส้นเดียว `rank`** (ไม่ซ้ำ ต่อเนื่อง, **rank 1 = สูงสุด**) แล้วใช้ตรวจสายบังคับบัญชา
+
+### หลักการ
+- ตำแหน่งใหม่ต่อท้ายบันไดอัตโนมัติ (`rank = max+1`) — ไม่ต้องกรอกเลขเอง
+- จัดลำดับผ่านหน้า **"ลำดับชั้นตำแหน่ง"** (เลื่อนขึ้น-ลง แล้วบันทึก) แทนปุ่ม 1–14 เดิม
+- เทียบกัน: A สูงกว่า B เมื่อ `A.rank < B.rank` (`Position::outranks()`)
+
+### กฎการเช็ค (หัวหน้าต้องสูงกว่าลูกน้องเสมอ — เช็คลูกน้องทุกชั้นใต้คนนั้น)
+1. **เปลี่ยน Position พนักงาน** → บล็อก ถ้าลูกน้อง (ทุกระดับ) มี `rank ≤` ตำแหน่งใหม่ (`StoreEmployeeRequest`)
+2. **เปลี่ยนหัวหน้า (manager)** → บล็อก ถ้าตำแหน่งหัวหน้าใหม่ `rank ≥` ตำแหน่งพนักงาน
+3. **จัดลำดับ Position ใหม่** → เตือน: `PUT /api/positions/reorder` ตรวจหา conflict ก่อน, ตอบ 422 (`reorder_conflict` + รายชื่อ) ให้ frontend เด้ง confirm แล้วส่งซ้ำด้วย `force`
+- ฝั่งใดไม่มี position → ข้ามการเช็ค
+
+### ไฟล์หลัก
+- **DB**: migration `..._rename_position_level_to_rank` (rename + backfill level สูง→rank 1 + unique) · `Position` model (`rank`, auto-append, `outranks()`) · `Employee::descendantIds()`
+- **API**: `PositionController@reorder` (dry-run/`force`, two-phase write กัน unique ชน) · route `positions/reorder` (ก่อน apiResource) · `StorePositionRequest` ตัด rule `level` · `PositionResource` `level→rank` · เอา `level` ออกจาก `OrgChartNodeResource`/`ApproverNodeResource`
+- **FE**: `position-modal` (ชื่ออย่างเดียว) · **`position-ladder-dialog`** (แทน `position-level-preview` เดิม) · types/`orgApi`/`use-org` (`reorder`) · เอา badge "Lv" ออกจาก org chart + approval chain · i18n + audit-format
+- **Seed**: `OrgSeeder` เรียง position บน→ล่าง กำหนด rank ตามลำดับ (VP = rank 1)
+
+### หมายเหตุ
+- รัน `php artisan migrate` บน DB จริงเพื่อ rename `level→rank` (ข้อมูลถูก backfill อัตโนมัติ)
+- **แถม (แก้ที่ต้นเหตุ)**: บน sqlite (เทส) migration rename `code→tag` ไม่ได้ rename ชื่อ index ทำให้ `departments_code_unique` ค้างอยู่บน `tag` แล้วชนกับ index ที่ `..._add_code_to_departments_table` สร้างใหม่ → เทสทั้งชุดรันไม่ได้ · แก้โดยให้ migration rename เพิ่ม `renameIndex('departments_code_unique','departments_tag_unique')` (ตามคอลัมน์) แล้ว `add_code` ใช้ชื่อ default ได้สะอาดทั้ง sqlite + MariaDB · ผลลัพธ์ fresh: `departments_code_unique → code`, `departments_tag_unique → tag`
+
+**ตรวจสอบ**: `php artisan test` 436 passed ✅ (รวม `PositionRankTest` 8 เคสใหม่) · fresh sqlite migrate index สะอาด ✅ · `tsc --noEmit` 0 error ✅ · `npm run build` ✅
+
+---
+
+## Position — ปรับจากบันไดเส้นเดียวเป็น Tree (parent_id) — 2026-06-13
+
+> **แทนที่หัวข้อ Rank ladder ด้านบน** — บันไดเส้นเดียว (rank ไม่ซ้ำ) บังคับให้ทุกตำแหน่งต่างระดับกันหมด แต่จริง ๆ มีตำแหน่ง**ระดับเดียวกัน (เสมอกัน)** จึงเปลี่ยนเป็นลำดับชั้นแบบต้นไม้
+
+### หลักการ
+- ทุก position มี **`parent_id`** (ชี้ตำแหน่งที่สูงกว่า, null = ระดับบนสุด) — เป็น tree
+- **ระดับ = ความลึก (depth) จาก root** (root = 0) · ตำแหน่งที่ลึกเท่ากัน = **ระดับเดียวกัน (เสมอกันได้)**
+- เทียบกัน: A สูงกว่า B เมื่อ `depth(A) < depth(B)` (`Position::outranks()`) · depth คำนวณสด + cache ต่อ request (`Position::depthMap()`)
+- ตั้ง parent ตอนสร้างได้ในฟอร์ม · ย้ายตำแหน่งทีหลังผ่านหน้า **"ผังลำดับชั้นตำแหน่ง"**
+
+### กฎการเช็ค (หัวหน้าต้องลึก<ลูกน้องเสมอ — เท่ากัน=บล็อก, เช็คลูกน้องทุกชั้น)
+1. **เปลี่ยน Position พนักงาน** → บล็อก ถ้าลูกน้อง (ทุกระดับ) มี `depth ≤` ตำแหน่งใหม่ (`StoreEmployeeRequest`)
+2. **เปลี่ยนหัวหน้า (manager)** → บล็อก ถ้าตำแหน่งหัวหน้าใหม่ `depth ≥` ตำแหน่งพนักงาน
+3. **ย้าย Position (เปลี่ยน parent)** → `PUT /api/positions/{id}/parent` · cycle (ลงใต้ตัวเอง/ลูกหลาน) = บล็อกถาวร 422 · ขัดสายบังคับบัญชา = 422 `parent_conflict` + รายชื่อ → frontend เด้ง confirm → ส่งซ้ำ `force`
+
+### ไฟล์หลัก (เปลี่ยนจากเวอร์ชัน rank)
+- **DB**: migration `..._convert_positions_rank_to_parent_tree` (เพิ่ม `parent_id` self-FK nullOnDelete + backfill chain จาก rank + drop rank)
+- **Model**: `Position` (`parent_id`, `parent()`/`children()`, `depthMap()` memoized+override, `depth()`, `descendantIds()`, `outranks()` by depth)
+- **API**: `PositionController@setParent` (cycle + conflict by depth) แทน `@reorder` · route `positions/{position}/parent` · `update` เหลือ rename อย่างเดียว · `PositionResource` → `parent_id` + **`level`** (1-based, root = Level 1; = depthMap+1) — เปิดเผยไว้ให้ **Workflow Approve** อ้างอิง (ตำแหน่ง level เดียวกัน = เสมอกันในขั้นอนุมัติ)
+- **FE (Tier lanes)**: `position-modal` (เลือก parent ตอนสร้าง) · `position-ladder-dialog` → **มุมมอง Tier lanes** (1 แถว = 1 ระดับ, ระดับ 1 บนสุด, **ไม่มีเส้นเชื่อม** แบ่งกลุ่มตาม level) · pill ลากวางบน pill อื่น = ให้ขึ้นกับตำแหน่งนั้น (level เปลี่ยนตาม) · ใช้ **`@dnd-kit/core`** (pointer/touch/keyboard) + DragOverlay · กัน cycle โดยปิด droppable ของ self+ลูกหลาน · มี rail "ตั้งเป็นระดับ 1" · types `parent_id`+`level` · `setParent` ใน orgApi/use-org
+- **deps ใหม่**: `@dnd-kit/core` ^6.3.1, `@dnd-kit/utilities` ^3.2.2 (รองรับ React 19)
+- **Seed**: `OrgSeeder` seed เป็น chain (VP = Level 1 → … → Subcontract = Level 14)
+- **Mockup สำรวจดีไซน์**: `docs/mockup/position-hierarchy-layouts.html` (4 เลย์เอาต์: Nested / Org chart / **Tier lanes (เลือกใช้)** / Sunburst), `position-hierarchy-boxchain.html`, `position-hierarchy.html`
+
+**ตรวจสอบ**: `php artisan test` **438 passed** ✅ (`PositionRankTest` 10 เคส: demote/manager/same-level/cycle/conflict-force/permission) · `tsc --noEmit` 0 ✅ · `npm run build` ✅ (ไม่ต้อง migrate — `level` คำนวณจาก tree ที่มีอยู่)
+
+---
+
+## ⛔ ยกเลิกฟีเจอร์ Position levels/hierarchy ทั้งหมด — 2026-06-13
+
+> **ลบทิ้งทั้งหมด** (แทนที่ทุกหัวข้อ Position ด้านบน: Rank ladder, Tree/parent_id, Tier lanes) ตามที่ตัดสินใจไม่ใช้แนวคิด level/hierarchy ของตำแหน่ง · **Position = แบน เหลือแค่ `code` + `title`**
+
+- **DB**: ลบ migration `add_level_to_positions`, `rename_position_level_to_rank`, `convert_positions_rank_to_parent_tree` · ตาราง `positions` เหลือ `id, code, title, timestamps` · รัน `migrate:fresh --seed` แล้ว
+- **Backend**: `Position` model เหลือ `code/title` + auto-code + `employees()` · `PositionResource` เหลือ `id/code/title/employees_count` · `PositionController` กลับเป็น CRUD ปกติ (เอา `setParent`/conflict/cycle ออก) · ลบ route `positions/{position}/parent` · `StoreEmployeeRequest` เอาเช็ค rank/depth ออก (เหลือ section + manager loop) · `Employee::descendantIds()` ลบ · `OrgSeeder` seed positions แบบแบน
+- **Frontend**: ลบ `position-ladder-dialog.tsx` · `position-modal` เหลือกรอกชื่อ · types/`orgApi`/`use-org` เอา level/parent/setParent ออก · ลบปุ่ม + dialog ในหน้า Employees · เอา i18n keys (`pos_tree*`, `pos_reorder*`, `pos_parent*`, ฯลฯ) + audit-format `rank` ออก
+- **ถอด dependency**: `@dnd-kit/core`, `@dnd-kit/utilities`
+- **ลบ mockup**: `docs/mockup/position-hierarchy*.html` ทั้งหมด
+- **Tests**: ลบ `PositionRankTest` · ปรับ `ApprovalChainTest` + `OrgSeederTest` เป็นแบบ flat
+- คงไว้: บั๊กฟิกซ์ index `departments_code_unique → departments_tag_unique` (คนละเรื่องกับ position levels)
+
+**ตรวจสอบ**: `php artisan test` **428 passed** ✅ · `tsc --noEmit` 0 ✅ · `eslint` 0 ✅ · `npm run build` ✅ · `positions` = `id, code, title` ✅
+
+---
+
+## 🐞 Bugfix — Confirm "ยืนยันการย้าย" เด้งแวบหายเอง (Edit พนักงาน) — 2026-06-14
+
+**อาการ:** แก้ไขพนักงานแล้วเปลี่ยน org (ตำแหน่ง/แผนก/หัวหน้า) → กด Save → dialog
+"Confirm organizational change / ยืนยันการย้าย" **โผล่แวบ ~0.5 วิแล้วหายเอง** ตอนฟอร์มปิด ไม่เคยกดยืนยันได้จริง
+
+**Root cause:** org-change confirm ถูก render เป็น Radix `<Dialog>` แยก **ซ้อนทับ** edit dialog
+(sibling) → 2 dialog ซ้อนกันทำให้ Radix แย่ง focus-trap กัน ตัวในถูกกดทับไว้ แล้ว exit-animate
+(แวบ) ตอน `open` กลายเป็น false — **บั๊กชนิดเดียวกับ manager-loop Warning ที่แก้ไปก่อนหน้า**
+(ซึ่งแก้ด้วยการทำเป็น inline ตามคอมเมนต์ใน `add-employee-drawer.tsx`) แต่ตัว confirm ยังเป็น dialog ซ้อนอยู่
+
+**แก้:** `resources/js/components/employees/add-employee-drawer.tsx` (edit branch)
+- ย้าย org-change confirm มาเป็น **inline step ใน edit dialog เดียว** — สลับ body/footer
+  เป็นหน้า confirm เมื่อ `orgConfirm=true` (ครอบ form ด้วย `{!orgConfirm && …}` + panel `{orgConfirm && …}`)
+- **ลบ** sibling `<Dialog open={orgConfirm && open}>` ที่เป็นต้นเหตุ flash ออก
+- เหลือ Radix Dialog ตัวเดียวตลอด → ไม่มี flash, กด Confirm & Save / Cancel ได้จริง
+- backend/validation ไม่แตะ (`StoreEmployeeRequest` + `Employee::isAncestorOf` ทำงานถูกอยู่แล้ว)
+
+**ตรวจสอบ:** `tsc --noEmit` 0 ✅ · `eslint` 0 ✅ — verify ใน UI: แก้หัวหน้าเป็นคนปกติ→confirm
+แสดงในฟอร์มกดได้, แก้เป็นลูกน้องตัวเอง→confirm→Save→manager-loop warning เด้ง inline, เปิด Edit
+แล้วปิดเฉย ๆ→ไม่มี dialog แวบ
+
+---
+
+## คำสั่งที่ใช้บ่อย
+
+```bash
+php artisan migrate:fresh --seed   # reset + seed ใหม่
+php artisan optimize:clear         # ล้าง cache ทั้งหมด
+php artisan route:list             # ดู routes ทั้งหมด
+npm run build                      # build frontend
+npm run lint                       # eslint --fix
+```
+
+> **ห้ามล้าง cache ช่วงเวลาทำงานบนเครื่องจริง** (`cache:clear`, `optimize:clear` หรือ deploy ที่ล้าง cache) นาฬิกาเวลาไม่ใช้งานของทุกคนเก็บใน cache นาฬิกาที่หายนับว่าหมดเวลา (ตั้งใจ เพื่อไม่ให้ใครยืดเวลาได้) ทุกคนที่ไม่ได้ติ๊ก "จดจำฉันไว้" จะถูกออกจากระบบพร้อมกัน ให้ deploy นอกเวลาทำงาน หรือใช้ `config:cache` / `route:cache` / `view:cache` แทนการล้างทั้งหมด
+
+---
+
+## 🔧 ปรับปรุง UI — อัปเดต 2026-06-14 (Org Chart + Employee view detail)
+
+ไฟล์ที่แก้: `resources/js/components/employees/org-chart/org-chart-tab.tsx`, `resources/js/components/employees/employee-view-drawer.tsx`
+
+### Org Chart Tab
+1. **Touchpad zoom ลื่นขึ้น** — pinch บน touchpad มาเป็น `wheel` event ที่ `ctrlKey=true` แต่ delta เล็กมาก เลยขยับช้า ตอนนี้แยกค่า sensitivity: `PINCH_SENSITIVITY = 0.02` (pinch/⌘+wheel — ตามนิ้ว) กับ `WHEEL_SENSITIVITY = 0.003` (mouse wheel ปกติ — คงเดิม)
+2. **Auto-fit ตามการขยายของผัง** — เดิม refit เฉพาะตอนสลับแนว; เพิ่ม refit แบบ debounce (120ms, animate) เมื่อจำนวน node ที่มองเห็นเปลี่ยน (expand/collapse/collapse-all) มี `skipFit` guard กันชนกับ "jump to person" (ค่า fit = `padding 0.12`, ตอนโหลด `0.16`)
+
+### Employee view detail (dialog)
+3. **สีระบบแทนสีตาม Tag** — ส่วนหัว/chrome ของ dialog เป็น **neutral** (cover, avatar ring, แท็ก code+แผนก, การ์ด Overview ใช้สี border/muted/card ไม่มีน้ำเงิน) คงสี `var(--brand)` ไว้เฉพาะ **แท็บ active + ปุ่ม Edit** ส่วนสีตามแผนกใช้เฉพาะการ์ดในแท็บ **Organization**. รูป avatar เปลี่ยนเป็น **วงกลม** (`rounded-full`)
+4. **แท็บ Organization = org explorer สไตล์ Microsoft Teams** (ตาม `docs/mockup/org-focus.png`) — การ์ดแนวนอนเต็มกว้าง: สายบังคับบัญชา (บน) → คนที่ดู (การ์ดใหญ่ มี count ใต้สังกัด/โดยตรง) → ลูกน้อง (grid 2 คอลัมน์ ใต้หัวข้อ "People reporting to …")
+   - **ไม่ show ทั้งหมด** — สายบังคับบัญชาโชว์แค่ 2 ระดับใกล้สุด ที่เหลือยุบเป็นปุ่ม **"Show N more"** (มี avatar stack) ด้านบน; ลูกน้องโชว์ 6 คน เกินนั้นมีปุ่ม "Show N more"
+   - **คลิกการ์ดหัวหน้า/ลูกน้องเพื่อเดินไปดูผังของคนนั้นต่อ** + ปุ่ม **Home / Back / Next** มุมซ้ายบน (navigation history)
+   - **ปุ่ม "View profile"** บนการ์ดโฟกัส → สลับ dialog ไปดูพนักงานคนนั้นเต็มรูปแบบเลย (หน้า page โหลดด้วย `useEmployee(id)` แล้ว `setViewEmp`)
+   - 👥 = จำนวนคนใต้สังกัดทั้งหมด (คำนวณ subtree จาก `orgNodes`), avatar ใช้ `photo_url` ถ้ามี ไม่งั้นเป็นตัวย่อ
+5. **Footer** — เอา email มุมซ้ายล่างออก, ย้ายปุ่ม **Cancel** ไปไว้ซ้าย
+6. **Badge สถานะบัญชี** — ย้าย "No login account / Has login account" จาก rail มาเป็น badge ข้าง badge สถานะ (active/resigned) บน cover
+7. **เอา section "ACCOUNT & ACCESS" ออก** — ย้ายปุ่ม **Reset password / Resign / Cancel resignation** ไปไว้ที่ footer ข้างปุ่ม Edit (Set credentials ยังเป็นการ์ดเตือนเดิม)
+
+✅ ผ่าน `tsc --noEmit` และ `eslint` ทั้งสองไฟล์
+
+---
+
+## 🧩 ฟีเจอร์ — อัปเดต 2026-06-14 (Position: Allow Special Position + ปรับ Edit dialog)
+
+### Position "Allow Special Position" (สวิตช์ต่อตำแหน่ง)
+ตำแหน่งที่เปิดสวิตช์นี้ = **ตำแหน่งพิเศษ** พนักงานในตำแหน่งนั้นบันทึกได้โดย**ไม่ต้องมีทั้ง Department และ Report to** (เช่นตำแหน่งระดับสูงสุด/ไม่สังกัด)
+- **DB**: คอลัมน์ `positions.allow_special_position` (boolean, default false) — migration สร้าง `allow_no_department` แล้ว rename เป็น `allow_special_position`
+- **Model/Resource/Request**: `Position` fillable+cast, `PositionResource` ส่งค่า, `StorePositionRequest` validate boolean
+- **Validation พนักงาน** (`StoreEmployeeRequest`): เลือก position ปกติ → **`department_id` และ `manager_id` required**; เลือก position พิเศษ (หรือไม่เลือก position) → ทั้งคู่ optional
+- **UI**: 
+  - คอมโพเนนต์ใหม่ `components/ui/switch.tsx` (toggle h-5×w-9)
+  - **Position modal**: สวิตช์ "Allow Special Position" + **Warning confirm** ตอน toggle (ทั้ง add/edit)
+  - **ตาราง Position tab**: คอลัมน์ toggle กดสลับได้ทันที (กั้นสิทธิ์ org-manage) + **Warning confirm** + **icon (i) tooltip** อธิบายที่หัวคอลัมน์ (`Column.header` รับ ReactNode ได้แล้ว)
+  - **ฟอร์ม Add/Edit พนักงาน**: ช่อง Department **และ Report to** ตัด required อัตโนมัติเมื่อ position ที่เลือกเป็นพิเศษ (Report to = required ปกติ)
+  - label **Manager → "Report to"**
+- **Tests**: `EmployeeApiTest` 2 เคส (ตำแหน่งปกติ require dept+report-to / ตำแหน่งพิเศษข้ามทั้งคู่) — รวมทั้งชุด **440 passed**
+
+### Edit employee dialog — ปรับ UX
+- สี chrome เป็น **neutral/system** (ไม่ตามแผนก), เอาสี+avatar ออกจาก header
+- ปุ่ม Save lifecycle: **ยังไม่แก้ → จางๆ ไม่มี icon** · **กำลังบันทึก → spinner "Saving…"** · **สำเร็จ → ✓ "Saved"** (โชว์ 1.2s แล้วปิด) ผ่าน `isDirty` + `saved` state
+- label **Manager → "Report to"** (`emp_manager`, `emp_org_change_manager`)
+- Department dropdown ค้นหาได้ (`SearchableSelect`)
+
+---
+
+## 🔐 Permission — อัปเดต 2026-07-01 (Employee Control = tree แบบ Stock + full enforcement)
+
+ปรับ card สิทธิ์ **Employee** ในหน้า Role Template จาก list ธรรมดาให้เป็น **master → view → management tree with cascade** เหมือน Stock Module พร้อม enforce จริงทั้ง frontend + backend
+
+### โครงสร้างสิทธิ์ (catalog `employees.*` — 25 keys)
+```
+employees.module               ← MASTER (คุมโมดูล + ไอคอน sidebar เหมือน stock.module)
+├─ view_dashboard   (tab Dashboard)          [single-switch]
+├─ view             (tab Directory)  [View]  → add · import · edit · reset_password · resign · cancel_resign · set_credentials
+├─ view_section     (tab Sections)  [View]   → section_add · section_edit · section_delete
+├─ view_department  (tab Departments)[View]  → department_add · department_edit · department_delete
+├─ view_position    (tab Positions) [View]   → position_add · position_edit · position_delete · position_special
+├─ view_org         (tab Org chart)          [single-switch]
+└─ edit_own         ← STANDALONE (ไม่ถูก master ปิด — self-service ทุกผู้ใช้แก้โปรไฟล์ตัวเองได้)
+```
+
+### Backend
+- `Permissions.php`: catalog 25 keys, `employeeHierarchy()` + `normalizeEmployees()` (mirror `stockHierarchy`/`normalizeStock`; `edit_own` เป็น standalone ไม่ถูกตัดแม้ไม่มี master), defaults admin/hr ได้ module + view groups (org CRUD = super เท่านั้น)
+- `RolePermissionController::update` เรียก `normalizeEmployees()` ตอน save (ต่อจาก normalizeStock/normalizeSettings)
+- **Write enforcement** (mirror Stock): Section/Department/Position `store`/`update`/`destroy` gate ด้วยสิทธิ์ granular (`*_add`/`*_edit`/`*_delete`) ผ่าน `FormRequest::authorize()` (แยก store/update ด้วย route binding) + controller; `allow_special_position` toggle gate ด้วย `position_special` ผ่าน `guardSpecialFlag()` (403 เฉพาะเมื่อค่าจะเปลี่ยน)
+- **View enforcement**: `employees/summary`→`view_dashboard`, `employees/org-chart`→`view_org`, directory browse (`?page=`)→`view`. **คง reference reads เปิดไว้** (dropdown departments/positions/sections + employee picker ที่โมดูลอื่นใช้) — ไม่ gate เพื่อไม่ให้ฟอร์ม Asset/Contract/Ticket พัง
+- **Migration** `backfill_employee_module_permissions` (idempotent): grant `module`/`view_dashboard`/`view_org` ให้ทุก role ที่มี `employees.view` อยู่แล้ว เพื่อไม่ให้เมนู/แท็บหายหลัง deploy
+
+### Frontend
+- คอมโพเนนต์ใหม่ `components/permissions/employee-permission-tree.tsx` (mirror `stock-permission-tree.tsx` + แถว standalone `edit_own` ที่ master ไม่ lock)
+- `pages/permissions/index.tsx` render tree แทน fallback card สำหรับ module `employees`
+- `permission-labels.ts`: label en/th + LIVE flags ครบ 16 key ใหม่
+- `nav.ts`: เมนู `/employees` gate ด้วย `employees.module`
+- `pages/employees/index.tsx`: แทน `canManageOrg` (super-only) ด้วยสิทธิ์ granular — ซ่อน tab ตาม `view_*`, ปุ่ม add/edit/delete/special ตามสิทธิ์; fallback ไป tab แรกที่มองเห็นได้; `sections-tab.tsx` prop `canManage` → `canAdd`/`canEdit`/`canDelete`
+
+### Tests
+- `tests/Unit/EmployeePermissionHierarchyTest` (catalog 25 keys, cascade/normalize, edit_own standalone, defaults consistent)
+- `tests/Feature/EmployeePermissionGatingTest` (normalize on save, write 403/200 ต่อสิทธิ์, `position_special` toggle, reference reads เปิด, dashboard/org/directory browse gating)
+- ✅ ชุดที่เกี่ยวข้อง 40 passed (151 assertions); `tsc --noEmit` + `npm run build` ผ่าน; EmployeeApiTest/OrgChartTest เดิมไม่กระทบ (ใช้ super)
+
+## 🏗️ Modular Restructure Migration (Frontend + Backend) — อัปเดต 2026-07-02
+
+ย้ายโครงสร้างทั้งโปรเจกต์จาก **layer-based มาตรฐาน** → **Feature-First Modular (frontend)** + **Domain sub-namespace (backend)** ตามสัญญาโครงสร้างใน `CLAUDE.md` แบบ **ไม่ big-bang** — ทำทีละเฟส, ทุกการย้ายใช้ `git mv` (คง history), และแต่ละเฟส build/test เขียวก่อนไปต่อ **ไม่เปลี่ยน public behavior**
+
+### Frontend — `resources/js/` เป็น feature-first
+- **i18n รวมศูนย์** → `lang/<locale>/<module>.ts` + `lang/index.ts` (merge + `useT()`); parity-verified กับ dict เดิมทุก key/ค่า
+- **ของกลาง/เชลล์** → `shared/{ui,components,hooks,lib,types}` + `app/{App.tsx,router,providers,nav,layout}`
+- **12 โมดูลฟีเจอร์** → `modules/<feature>/{components,pages,hooks,api,types,index.ts}` — import ข้ามโมดูลผ่าน **barrel `@/modules/<x>`** เท่านั้น
+- โครงสุดท้าย: `resources/js/{app, modules, shared, lang, stores}` — ไม่มี `pages/ components/ services/ hooks/ lib/` แบบ flat เดิม
+
+### Backend — `app/` เป็น domain sub-namespace `App\<Layer>\<Domain>\`
+- ย้ายทีละโดเมน (เล็ก→ใหญ่): **Auth → Access → Notification → Email → Permission → Settings → Ticket → Contract → Asset → Employee → Stock**
+- แต่ละโดเมนจัดกลุ่มครบทุก layer: `Models/ Http/Controllers/Api/ Http/Requests/ Http/Resources/ Services/ Enums/` ใต้ `<Domain>/`
+- **Master data** (Brand/Category/AssetModel/Vendor/WarrantyType/Unit/Location) → รวมใน **`Settings` domain** (ตรงกับ frontend ที่จัดการ master data ใต้ settings + gate `settings.masterdata`); Warehouse → `Stock`
+- **Cross-cutting คงไว้ระดับบน** (ไม่เข้าโดเมน): `App\Models\User`, `App\Models\AuditLog`, `App\Enums\UserRole`, ทั้ง `App\Support\*`, `App\Jobs\*`, `App\Mail\*`, `App\Notifications\*`, `App\Console\*`, `App\Http\Middleware\*`, `App\Http\Controllers\Controller`
+- ผลลัพธ์: `app/Models/` เหลือแค่ `User.php` + `AuditLog.php`; ทุก layer เป็น domain-namespaced
+
+### Naming alignment — FE ↔ BE เอกพจน์ให้ตรงกัน
+- Rename `modules/{assets,contracts,employees,notifications,permissions,tickets}` และ `lang/<locale>/*.ts` → **เอกพจน์** ให้ตรงกับ backend domain (`Asset/Contract/Employee/Notification/Permission/Ticket`)
+- คงไว้ตามตั้งใจ: `email-templates` (FE) ↔ `Email` (BE), และ `dashboard`/`requests` (FE-only)
+
+### Gotchas / บทเรียน (backend)
+- **Model ที่มี factory + ย้าย sub-namespace** (Ticket, Asset) → auto-discovery หา factory ไม่เจอ ต้องใส่ `protected $model` ใน factory + `newFactory()` ใน model
+- **โฟลเดอร์ชื่อตรงกับคลาส** (Ticket/Asset/Contract/Employee) → แทน FQCN ต้องทำ **ก่อน** แก้ namespace declaration ไม่งั้น `namespace App\Models\Ticket` โดนซ้อนเป็น `...\Ticket\Ticket`
+- **bare same-namespace refs** (`User::class`, `Employee::class` ฯลฯ ในไฟล์ที่ย้าย/ที่คงไว้) มองไม่เห็นด้วย grep FQCN → ต้องเพิ่ม `use` ให้ครบ; **ชุดเทสต์คือตาข่ายจับ**
+
+### Verification (ทุกเฟสต้องเขียว)
+- **Backend**: `php artisan test --compact` = **466 passed / 0 failed** ทุกโดเมน + `vendor/bin/pint --dirty` + `composer dump-autoload`
+- **Frontend**: `npx tsc --noEmit` (exit 0) + `npm run build` (green) ทุกโมดูล
+- **1 เฟส = 1 commit** (git mv คง history) — rollback ต่อเฟสได้ ไม่มีการแก้ DB/migration
+
+---
+
+## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-07 (Phase 1–6 ✅ ครบทุกเฟส)
+
+Master data ที่เคยถูก **ก๊อปเป็น string** ลงตารางอ้างอิง (เช่น `assets.location`, `stock_items.unit`) เปลี่ยนมา **ผูกด้วย FK id** ไปตาราง master — แก้ชื่อ master ที่เดียวสะท้อนทุกที่, ลบ master ที่ยังถูกใช้ไม่ได้, ไม่มีข้อมูลค้าง/สะกดเพี้ยน แผนเต็ม 6 เฟสอยู่ที่ `docs/superpowers/plans/2026-07-06-master-data-fk-normalization.md`
+
+### Pattern มาตรฐาน (ใช้ซ้ำทุกเฟส)
+- **Migration ต่อคอลัมน์**: (1) สร้าง master ที่ขาดจากชื่อเดิม (`updateOrInsert` บนชื่อ trim) → (2) เพิ่ม `*_id` (nullable, `constrained()->restrictOnDelete()`) → (3) backfill id ด้วย **correlated subquery** บน `TRIM(name)` (SQLite-safe, ห้าม `UPDATE…JOIN`) → (4) drop คอลัมน์ string เดิม · `down()` สร้างคอลัมน์คืน + backfill ชื่อจาก relation
+- **API Resource** คงคีย์ชื่อเดิมไว้ (resolve ผ่าน relation → auto-reflect rename) **บวก** `*_id` ใหม่ — display code เดิมไม่ต้องแก้; forms/filters ส่ง id
+- **กันลบเมื่อถูกใช้**: guard ที่ **app layer → HTTP 409** (SQLite ไม่ enforce `restrictOnDelete` ใน test) + FK เป็น defense-in-depth
+- **Eager-load** relation บน list/show เพื่อกัน N+1
+
+### Phase 1 — Locations (`assets.location` → `location_id`)
+- `Asset::location()` relation + `AssetResource` ส่ง `location`(ชื่อ)+`location_id`; transfer drawer + `AssetService::transfer()` เลือกด้วย id; `LocationController::destroy` → 409 เมื่อมี asset ใช้อยู่
+- แยก migration: FK conversion + **unique index บน `locations.name`** + dedup ชื่อซ้ำก่อน backfill (self-healing บน MariaDB — กัน subquery คืนหลายแถว)
+- Tests: rename propagation + delete-restrict ใน `AssetApiTest`; `LocationFkMigrationTest` พิสูจน์ dedup path (rollback → seed ชื่อซ้ำ → re-migrate)
+
+### Phase 2 — Units + Warranty Types (`stock_items.unit`/`warranty` → `unit_id`/`warranty_type_id`)
+- `StockItem::unit()` / `warrantyType()` relations; `StockItemResource` ส่ง `unit`/`warranty`(ชื่อ)+`unit_id`/`warranty_type_id`; `stock-item-modal.tsx` เลือกด้วย id
+- **required-ness ต่างกันตามฟอร์ม**: `unit_id` = **nullable** (ฟอร์มไม่บังคับ) · `warranty_type_id` = **required** (คง behavior เดิม)
+- `UnitController`/`WarrantyTypeController` `destroy` → 409 เมื่อมี stock item ใช้อยู่; eager-load `unit`,`warrantyType` บน index/show
+- `StockSeeder` resolve ชื่อ→id ด้วย `firstOrCreate`; `LocationFkMigrationTest` เปลี่ยน rollback เป็น loop-จนกว่า `assets.location` กลับมา (robust ต่อ migration เฟสถัดไป)
+- Tests: rename propagation + delete-restrict (unit/warranty) ใน `StockItemTest`
+
+### Phase 3 — Brands + Asset Models (`assets`+`stock_items` `.brand`/`.model` → `brand_id`/`model_id`)
+เฟสใหญ่สุด — แตะ **สองตาราง** และ model ผูกกับ brand (cascade). plan: `docs/superpowers/plans/2026-07-06-phase3-brands-models-fk.md`
+- `Asset`/`StockItem` เพิ่ม relation `brand()` (→Brand) + `model()` (→AssetModel); resource ส่ง `brand`/`model` (ชื่อผ่าน relation) + `brand_id`/`model_id`; ฟอร์ม `asset-form-drawer`/`stock-item-modal` เลือกด้วย id พร้อม **cascade** (เลือกยี่ห้อ → กรองรุ่นตาม `brand_id`)
+- **Model backfill ด้วย (name + brand_id) null-safe** เพราะชื่อรุ่นไม่ unique ทั้งตาราง (scoped ต่อ brand) — ไม่ match ชื่อเดี่ยว
+- **ข้อมูลจริง model เป็น free-text ที่ไม่ align กับ master** (asset 6/21, stock 0/16 ตรง) — เจ้าของระบบเลือกทำเต็มแบบ create-missing → migration auto-สร้าง brand ที่ขาด 7 ยี่ห้อ (Canon/Belkin/Kingston/Logitech/…) + asset_models เพิ่ม ~29 แถวจากค่าเดิม
+- ตัวอ่านชื่อ brand/model ทั้ง backend เปลี่ยนเป็น `?->name`: AssetResource · StockItemResource · AssetService (snapshot โอน) · AssetController (picker/search `whereHas`/AuditLog) · ContractResource (linked assets) · 2 Notifications · TicketResource; search เปลี่ยนเป็น `orWhereHas` + eager-load กัน N+1
+- `BrandController`/`AssetModelController` `destroy` → 409 เมื่อมี asset **หรือ** stock item อ้างอิง; `AssetFactory`/`AssetSeeder`/`StockSeeder` resolve ชื่อ→id (model scoped ต่อ brand)
+
+### Phase 4 — Categories (`assets.type` + `stock_items.category` → `category_id`)
+plan: `docs/superpowers/plans/2026-07-06-phase4-categories-fk.md`
+- `Asset`/`StockItem` เพิ่ม relation `category()`; resource ส่ง `type`/`category` (ชื่อผ่าน relation) + `category_id`; ฟอร์ม asset/stock เลือกด้วย id
+- **`AssetTypeIcon` อ่าน icon จาก `categories.icon` อยู่แล้ว** (match ตามชื่อ) — resource คืนชื่อ category จึงทำงานต่อได้ทันที
+- `assets.type` เดิมปนค่า enum อังกฤษ (`laptop`…) กับชื่อ category ไทย — เจ้าของเลือก **map enum→category ไทยที่มีอยู่** ใน migration (laptop→แล็ปท็อป …) → **ไม่เกิด category ซ้ำ** (คงที่ 20 ตัว); `stock_items.category` ตรง master 100% อยู่แล้ว
+- filter (asset type / stock category) **ยังส่งชื่อ** → backend match ผ่าน `whereHas('category', name)` (UI filter/chip ไม่ต้องแก้); dashboard by-type/by-category group ตามชื่อ category ผ่าน relation
+- `CategoryController::destroy` → 409 เมื่อมี asset **หรือ** stock อ้างอิง; ContractController eager-load `assets.{brand,model,category}` กัน N+1
+
+### Phase 5 — Vendors (`assets.supplier` + `contracts.vendor` → `vendor_id`)
+master ร่วม 2 โมดูล; plan: `docs/superpowers/plans/2026-07-06-phase5-vendors-fk.md`
+- `Asset`/`Contract` เพิ่ม relation `vendor()`; resource ส่ง `supplier`/`vendor` (ชื่อผ่าน relation) + `vendor_id`; ฟอร์ม asset (supplier) + contract (multi-step vendor) เลือกด้วย id
+- **match/display ด้วย `vendors.name`** (อังกฤษ) — ข้อมูลจริง supplier/vendor ตรง name เท่านั้น ไม่เคยตรง name_th
+- `contracts.vendor` ส่วนใหญ่เป็น free-text (18/21 ไม่มีใน master — Fortinet/Zoom/Adobe/Oracle… เป็น vendor จริง) + `assets.supplier` มี junk 2 ตัว → **create-missing by name** (เหมือน Phase 3)
+- ตัวอ่าน `$x->supplier`/`$x->vendor` เปลี่ยนเป็น `?->name` ทั้งหมด: AssetService (rented derive), Contract dashboard (topVendors/timeline/actionQueue), search→whereHas, ContractExpiryNotification + ContractExpiryAlertService
+- **Contract import (CSV ยังเป็นชื่อ)** — `ContractService::importRows` validate ชื่อใน master แล้ว resolve → vendor_id; `VendorController::destroy` → 409 เมื่อมี asset **หรือ** contract อ้างอิง
+- `AssetService::create` rented → คัด `vendor_id` จาก contract; seeders (ContractSeeder) resolve ชื่อ→id
+
+### Phase 6 — Warehouses (`assets`/`serials`/`balances`.`warehouse` → `warehouse_id`) — เฟสสุดท้าย
+plan: `docs/superpowers/plans/2026-07-07-phase6-warehouses-fk.md`
+- **หลักการ current vs log:** FK เฉพาะตาราง current-state — `assets.warehouse`, `stock_item_serials.warehouse`, `stock_balances.warehouse` (+ เปลี่ยน unique เป็น `(stock_item_id, warehouse_id)`); **คง string** ตาราง log/snapshot — `stock_item_serial_events.warehouse`, `stock_counts.warehouse` (audit log ควรบันทึกชื่อ ณ เวลานั้น ไม่ให้ rename ย้อนหลัง). `stock_items` ไม่มีคอลัมน์ warehouse อยู่แล้ว; `stock_movements.from_label/to_label` เป็น free-text — ไม่แตะ
+- **sentinel `'Unassigned'` → `warehouse_id = NULL`** ทุกที่ (ไม่สร้างคลังปลอมใน master); `Warehouse::resolveId()` เป็นตัวแปลงชื่อ→id กลาง
+- **`StockBalanceService` คง API รับชื่อ** แล้ว resolve เป็น id ภายใน → call-site ใน movement/request/count flow ไม่ต้องแก้ (ลดความเสี่ยง); serial `->warehouse` (relation) readers เปลี่ยนเป็น `?->name`; filter/summary by-warehouse ใช้ join/whereHas by name
+- `WarehouseController::destroy` → 409 เมื่อมี asset/serial/balance อ้างอิง; models เพิ่ม `warehouse()` relation; asset form เลือกด้วย id (stock/receive drawers คงส่งชื่อ)
+
+### Verification
+- **Backend**: `php artisan test --compact` = **509 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **รัน migration บน DB จริงแล้ว** (Phase 1–6 ครบ): backfill สมบูรณ์ — assets 7 + serials 22/22 + balances 14/14 ผูก warehouse_id; warehouses คงที่ 5 (ข้อมูลสะอาด ไม่สร้างซ้ำ)
+- **🎉 Master Data FK Normalization เสร็จครบทั้ง 6 เฟส** — location · unit · warranty_type · brand · asset_model · category · vendor · warehouse ทั้งหมดผูกด้วย FK id แล้ว (rename propagate + delete-guard 409 ทุกตัว)
+
+---
+
+## 📄 Contract Lifecycle Rework — อัปเดต 2026-07-07
+
+เปลี่ยนสถานะสัญญาที่เลย `end_date` จาก auto-"expired" เป็น **overdue** (ยังเปิดอยู่ ยังแก้ไข/ต่ออายุได้) และเพิ่ม action **Expired** ที่ admin สั่งเองแบบถาวร แยกจากการหมดอายุตามวันที่ plan: `docs/superpowers/plans/2026-07-07-contract-lifecycle-rework.md`
+
+- **Derived status ใหม่ 4 ค่า** — `active` (ยังไม่ถึงกำหนด) › `overdue` (เลย end_date แต่ยังไม่ถูกปิด) › `cancelled` (`cancelled_at`, ยกเลิกได้/reactivate ได้) › `expired` (`expired_at`, admin สั่งปิดถาวร — ไม่มี un-expire) ลำดับความสำคัญ: `expired` > `cancelled` > `active`/`overdue` ตามวันที่ — ยังเป็น derived attribute บน model ไม่มีคอลัมน์ status เก็บตาย
+- **Action ใหม่ "Expired"** ในหน้า detail drawer — ปิดสัญญาถาวรแยกจาก Cancel (reversible) คุมด้วย permission ใหม่ `contracts.cancel` (คุม Cancel/Reactivate) และ `contracts.expire` (คุม Expired) — role `admin` **ไม่ได้รับ** 2 สิทธิ์นี้โดยดีฟอลต์ (ต้องมอบสิทธิ์เพิ่มเอง), `super` bypass เสมอ
+- **Write-off guard generalize ทุกประเภทสัญญา** — เดิมกันเฉพาะสัญญา hardware ตอนนี้สัญญาทุกประเภทที่มี asset ผูกอยู่ (status ≠ `writeoff`) จะถูกกันทั้ง Cancel และ Expired (422) จนกว่าจะ write-off asset ที่ผูกอยู่ให้ครบก่อน
+- **ตัด `auto_renew`** ออกทั้งระบบ — drop คอลัมน์ + ฟอร์ม + import template + i18n hint ไม่มีการต่ออายุอัตโนมัติอีกต่อไป (ต่ออายุทำผ่าน action Renew เท่านั้น)
+- **Alert เตือนหมดอายุ relabel เป็น "overdue"** — เทมเพลตอีเมล `contract.expired_alert` (คีย์เดิม, wording ใหม่) และ `ContractExpiryAlertService` เปลี่ยนไปไม่แจ้งเตือนสัญญาที่ถูก admin สั่ง expired ไปแล้ว (กันเตือนซ้ำสัญญาที่ปิดไปแล้ว)
+- **Verification**: `php artisan test --compact` = **524 passed / 0 failed** · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+
+---
+
+## 🔄 Transfer Asset Redesign — อัปเดต 2026-07-08
+
+เลิกผูกเจ้าของทรัพย์สินด้วย string อิสระ เปลี่ยนมาใช้ FK `assets.owner_employee_id` เป็น "ข้อเท็จจริงว่าใครถือครองอยู่" + หน้าโอนเป็น Dialog 2 โหมด + กันการ write-off ทรัพย์สินที่ยังมีพนักงานถือครอง
+spec: `docs/superpowers/specs/2026-07-08-transfer-asset-redesign-design.md` · plan: `docs/superpowers/plans/2026-07-08-transfer-asset-redesign.md`
+
+- **Data model** — เพิ่มคอลัมน์ `assets.owner_employee_id` (FK → `employees`, nullable, `nullOnDelete`) + **backfill** จาก `owner` ที่ตรง `employees.code` ใน migration เดียว (label ที่ไม่ตรง = ของกลาง คง FK เป็น null); คง `owner` string ไว้เป็น **display label** (โหมดพนักงาน = code, ของกลาง = ชื่อเรียก, pool = null) — หลัก current-vs-log เดิม (`initial_owner`/`asset_transfers` ยังเป็น snapshot string)
+- **Model** — `Asset::ownerEmployee()` relation (ตั้งชื่อไม่ชน column `owner`), helper `heldByEmployee()`; resource เพิ่ม `owner_employee_id` + `owner_name` (ชื่อพนักงานในโหมดพนักงาน / label ของกลาง / null) โดย `owner` เดิมคงไว้ back-compat
+- **Transfer 2 โหมด** — `AssetService::transfer(Asset, array, ?string)`: **พนักงาน** → เลือกจากรายการ (ไม่พิมพ์ ID), status `pending_acceptance`, ตั้ง FK, แจ้งเตือนผู้รับ (resolve email ผ่าน FK) · **ของกลาง (ของส่วนกลาง)** → Location + ชื่อเรียก, status `deployed` ทันที (ไม่มีคนกดรับ), FK = null, ไม่แจ้งเตือน; validate แบบ mutually-exclusive (`mode` + `required_if`)
+- **Consumer ผูกกับ FK** — `mine`/`accept`/`requestReturn` เช็คจาก `owner_employee_id` แทน string; `markReceived` (คืนเข้า pool) เคลียร์ FK; `create()`/`update()` resolve FK จาก `owner` code ที่ตรง master ด้วย (กัน API/import สร้างของกำพร้า); คง `orWhere('owner','like')` เป็น search แบบ display เท่านั้น; eager-load `ownerEmployee` ใน index/show/mine
+- **Write-off guard** — `bulkSetStatus(writeoff)` (+ `retire()` เชิงป้องกัน) reject 422 เมื่อ asset ใดถูกพนักงานถือครองอยู่ (`owner_employee_id != null`) โดยยกเลิกทั้ง batch พร้อมลิสต์ tag ที่ติด; ของกลาง/pool/คืนแล้ว (FK null) write-off ได้ — **ประกอบกับกฎ contract เดิม** (ต้อง write-off asset ที่ผูกให้ครบก่อนปิดสัญญา): asset พนักงานต้องคืนก่อน, ของกลาง write-off ได้เลย
+- **UI** — เปลี่ยน `asset-transfer-drawer.tsx` (Sheet) → `asset-transfer-dialog.tsx` (Dialog กลางจอ) มี segmented toggle พนักงาน/ของกลาง, โหมดพนักงานใช้ `SearchableSelect` (ค้นด้วยชื่อ/รหัส/แผนก), reuse form-validation UX; types/api/hook/barrel/i18n (en+th) อัปเดต ไม่มี hardcode string
+- **Verification**: `php artisan test --compact --filter=AssetApiTest` = **51 passed / 0 failed** (159 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **Rollout**: migration additive + backfill (`down()` สะอาด rollback ได้) — **ยังไม่ได้รันบน DB จริง** รอยืนยันจากเจ้าของ; หลังรันควรตรวจ assets ที่ `owner IS NOT NULL AND owner_employee_id IS NULL` (label ของกลาง = ปกติ; ถ้าเป็นพนักงานจริงที่ code ไม่ตรงต้องแก้)
+
+---
+
+## 📝 Contract Cancel Reason — อัปเดต 2026-07-08
+
+บังคับให้ระบุ **หมายเหตุ (เหตุผล)** ตอนยกเลิกสัญญา พร้อม validate — เพื่อให้มีบันทึกว่าทำไมถึงยกเลิก
+spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · plan: `docs/superpowers/plans/2026-07-08-contract-cancel-reason.md`
+
+- **Data model** — เพิ่มคอลัมน์ `contracts.cancel_reason` (text, nullable, ต่อจาก `expired_at`) + `$fillable`; resource คืนค่า `cancel_reason`
+- **Validation แบบ direction-aware** — endpoint `cancel` เป็น toggle: ตอน**ยกเลิก** (`cancelled_at === null`) `reason` = `required|string|max:500` (whitespace-only ถูก TrimStrings ตัดเหลือ null → required ไม่ผ่าน = 422); ตอน**เปิดใช้ใหม่** (reactivate) ไม่ต้องมี reason และ**เคลียร์** `cancel_reason` กลับเป็น null → ยกเลิกครั้งใหม่ต้องกรอกเหตุผลใหม่เสมอ
+- **Service** — `ContractService::toggleCancel(Contract, ?string $reason)` คำนวณทิศทางครั้งเดียว เซ็ต `cancelled_at` + `cancel_reason` พร้อมกัน (ไม่มี state ที่ค้างครึ่ง ๆ); guard เดิม (`assertNoPendingAssets` — asset ที่ผูกต้อง write-off ครบก่อน) ยังทำงานเฉพาะทิศ active→cancelled; **Expire ไม่แตะ** (ตามที่เจ้าของเลือก เฉพาะ Cancel)
+- **Audit log** — บันทึกเหตุผลไปกับ entry "Cancelled contract"
+- **UI** — เปลี่ยนจาก confirm dialog เดิมเป็น `contract-cancel-dialog.tsx` (Dialog เฉพาะ มี textarea เหตุผล **บังคับ** ตามสไตล์ resign-modal); guard เช็ก asset ยังทำงานก่อนเปิด dialog; types/api/hook + i18n (en+th) อัปเดต ไม่มี hardcode string
+
+## Contract — ปุ่มเปิดใช้สัญญาอีกครั้ง (Reactivate) ใน UI (2026-07-09)
+- เดิม `contracts.cancel` ครอบทั้ง "ยกเลิก/เปิดใช้อีกครั้ง" แต่ **มีแค่ปุ่มยกเลิก** — พอสัญญาถูก cancel แล้ว footer ของ detail drawer ถูกซ่อน เลยไม่มีทางกดเปิดใช้ใหม่ (backend `toggleCancel` + endpoint + mutation รองรับอยู่แล้ว)
+- เพิ่ม **footer เฉพาะสัญญา cancelled** ในdrawer: ปุ่ม **"เปิดใช้อีกครั้ง"** (`RotateCcw`, gate `canCancel`) → confirm → `cancel.mutateAsync({ id })` (ไม่ส่ง reason = reactivate, เคลียร์ `cancelled_at`+เหตุผล); expired = ปิดถาวร ไม่มีปุ่ม (ตามดีไซน์)
+- **สัญญา cancelled = อ่านอย่างเดียว (แก้ไขไม่ได้)** — ไม่มีปุ่ม Edit ในสถานะนี้ ต้อง **Reactivate ก่อน** สัญญาจึงกลับมาแก้ไขได้ (ปุ่ม Edit อยู่เฉพาะ footer ของสัญญา active/overdue)
+- **Cancel เฉพาะตอน active, Expired เฉพาะตอน overdue** — แยกหน้าที่ชัดเจนตามช่วงชีวิตสัญญา:
+  - `active` (ยังไม่ครบ period) → กดได้แค่ **Cancel** (ยุติก่อนกำหนด) + Edit
+  - `overdue` (ครบ period แล้ว) → กดได้แค่ **Expired** (ปิดเมื่อจบเทอม) + Edit
+  - บังคับ 2 ชั้น: ปุ่มโชว์ตามสถานะ + backend `toggleCancel` โยน 422 ถ้า cancel สัญญาที่ `daysRemaining() <= 0`, และ `expire()` โยน 422 ถ้า expire สัญญาที่ `daysRemaining() > 0` (ยังไม่ครบ period)
+- i18n `contract_reactivate` (en "Reactivate" / th "เปิดใช้อีกครั้ง"); backend reactivate test เดิมยังเขียว
+- **Verification**: `php artisan test --compact --filter=ContractApiTest` = **26 passed / 0 failed** (101 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **Rollout**: migration additive (`down()` drop คอลัมน์ rollback ได้) — รันบน DB จริงได้เลย ไม่มี backfill; สัญญาที่ยกเลิกไปก่อนหน้านี้ `cancel_reason` เป็น null (ปกติ)
+
+## Contract — rename `title`→`details` + จัด View Details เป็นกลุ่มสัดส่วน (2026-07-09)
+
+**เหตุผล:** คอลัมน์ `contracts.title` จริง ๆ ถือ "รายละเอียด" (คำอธิบายยาว) ส่วน `name` คือ "ชื่อสัญญา" — แต่ทั้งชื่อคอลัมน์และ label เดิมสลับ/ชวนสับสน
+
+**Phase 1 — rename end-to-end (แก้ DB ก่อน):**
+- **Migration** `renameColumn('title','details')` (rename ตรง ๆ ไม่มี backfill, `down()` rollback ได้; รันบน DB จริงแล้ว ข้อมูลอยู่ครบ)
+- **Backend** — model fillable, ค้นหาใน `ContractController::index`, `StoreContractRequest` rule, `ContractResource`, `ContractSeeder`
+- **Frontend** — `Contract` type, `ContractPayload` (เพิ่ม `details` ที่เดิมตกหล่น), form/drawer/list + `asset-form-drawer` (cross-module)
+- **แก้ label ที่สลับ** — `name`="ชื่อสัญญา"/Contract name, `details`="รายละเอียด"/Details (en+th); dialog header โชว์ `name` เป็นหัวข้อ
+
+**Phase 2 — จัด Contract View Details (drawer) เป็นกลุ่มเรียงเต็มกว้าง + แยกแท็บการแจ้งเตือน:**
+- **Overview** เรียงกลุ่มลงมาเต็มความกว้าง (ไม่มีเส้นขอบการ์ด, field จัดแถวละ 3 ช่อง): **ข้อมูลสัญญา** (ประเภท / เลขที่·ผู้ขาย·ชื่อสัญญา / รายละเอียด / หมายเหตุ) → **ระยะเวลา & มูลค่า** (เริ่ม·สิ้นสุด·ระยะเวลา[เดือน] / รอบเรียกเก็บ·มูลค่าต่อรอบ·มูลค่าทั้งหมด) — เอา "วันคงเหลือ" ออก (มี badge บน header แล้ว) แทนด้วยระยะเวลาสัญญา `duration_months` + `duration_days` (calendar diff จริง **นับแบบ inclusive** = วันสิ้นสุดคือวันสุดท้ายที่สัญญายังมีผล → คำนวณถึง end+1 วัน: `durationMonths()` = ปี×12+เดือน, `durationDays()` = วันที่เหลือ) แสดงแบบ "24 เดือน" / "18 เดือน 15 วัน" / "1 วัน" — เช่น 1 ม.ค.–31 ธ.ค. = 12 เดือน, สัญญาวันเดียว (เริ่ม=จบ) = 1 วัน → **ยกเลิก & สิ้นสุดสัญญา** (เฉพาะ cancelled/expired)
+- **การแจ้งเตือน** ย้ายไปเป็น **แท็บใหม่** (แท็บ: ภาพรวม / การแจ้งเตือน / ทรัพย์สิน / เอกสารแนบ) — Overview ไม่ยาวเกิน
+- **มูลค่าทั้งหมด = ช่องกรอกเอง (manual)** ไม่ใช่คำนวณ — ยอดรวมจริงของแต่ละสัญญาไม่ตายตัว (ขึ้นกับดีลผู้ให้บริการ) จึงให้ผู้ใช้กรอกเอง. คอลัมน์ `contracts.total_value` (decimal nullable) → `total_value` + `total_value_display` (null = แสดง "—"); คู่กับ `value_display` = มูลค่าต่อรอบ
+- **Validate** — `total_value` **required ตอนเพิ่มใหม่ (POST)**, optional ตอนแก้ไข (PUT) เพื่อไม่บล็อกสัญญาเดิมที่ยังไม่มียอดรวม; numeric ≥ 0. ฟอร์ม required เฉพาะตอน add (`required={!editing}`)
+- **ประมาณการช่วยกรอก (ตอนเพิ่ม)** — หลังกรอกมูลค่า/รอบ + วันที่ ฟอร์มโชว์ **ประมาณการ Total คร่าว ๆ** (value × จำนวนรอบจาก start→end) ใต้ช่อง กดใช้ค่านี้เพื่อเติมได้ ให้ admin เช็ค/ปรับก่อนบันทึก — ช่อง Total value ยังเป็นค่าที่กรอกเองเสมอ
+- **ฟอร์ม Add/Edit** — ช่องมูลค่าเดิม label "มูลค่า/รอบ" + ช่อง "มูลค่าทั้งหมด" (กรอกเอง) ในสเต็ป Term & Value และแสดงในสเต็ป Review
+- **รองรับทศนิยม** — ช่องมูลค่าทั้งสอง (value/รอบ + total) พิมพ์ทศนิยมได้สูงสุด 2 ตำแหน่ง (`sanitizeMoney`/`displayMoney` — คั่นหลักพัน + คงจุดทศนิยมระหว่างพิมพ์, `inputMode=decimal`); ฝั่งแสดงผล `value_display`/`total_value_display` เป็น `number_format(x, 2)` (2 ตำแหน่งเสมอ)
+- **created/updated** ย้ายไปมุมขวาบนใต้ StatusBadge; หัวข้อกลุ่ม + field ใหม่ใช้ i18n (`contract_section_*`, `contract_total_value`, `contract_value_per_cycle`, `contract_notes`) en+th ไม่มี hardcode
+- **Sidebar badge fix** — ตัวเลข "ต้องจัดการ" ข้าง sidebar Contracts เปลี่ยนจากนับ `expired` → `overdue` (สัญญาที่ปิดถาวรแล้วไม่นับ) ให้ตรงกับ dashboard banner
+
+**Verification**: full suite **541 passed / 0 failed** · `tsc --noEmit` (0) · `npm run build` (green) · `pint` passed
+
+## Access Directory — เพิ่มแท็บ "ภาพรวม" (Overview/Dashboard) (2026-07-21)
+
+**เหตุผล:** หน้าทะเบียนการเข้าถึงเดิมมีแค่การ์ด KPI 5 ใบด้านบน + 4 แท็บทะเบียน ยังไม่มีภาพรวมเชิงกำกับดูแล (ใครเข้าถึงกระจุกที่ไหน / มีอะไรต้องตรวจ) — เพิ่มแท็บภาพรวมเป็นแท็บแรก (ค่าเริ่มต้น) และย้ายสรุปทั้งหมดเข้าไป
+
+**Backend:**
+- `AccessService::dashboard()` — รวมสถิติต่อช่องทาง (resources / active grants / เพิ่มในรอบ 30 วัน), ยอดสิทธิ์รวม, สุขอนามัยการกำกับดูแล (file share ที่ไม่มีสมาชิก + ชื่อตัวอย่าง, resource ที่ไม่มีเจ้าของ, พนักงานลาออกที่ยังถือสิทธิ์, เพิ่มใน 30 วัน), และ `top_resources` (จัดอันดับตาม active grant ข้ามทั้ง 4 ตาราง พร้อม `kind` สำหรับลิงก์ไปแท็บ)
+- `AccessController::dashboard()` + route `GET /api/access/dashboard` (gate `access.view` เดิม)
+
+**Frontend (`modules/access`):**
+- `accessApi.summary()` + `useAccessSummary()` (barrel export) + type `AccessSummary`/`AccessChannelStat`/`AccessTopResource` ใน `shared/types`
+- `components/access-dashboard.tsx` — KPI 4 ใบ (นับต่อช่องทาง + delta **net change 30 วัน** = ให้ใหม่−ถอน: บวก↑เขียว / ลบ↓แดง / 0 เทา), การ์ด **"อัตราส่วนการเข้าถึง"** (แถบแยกช่องทาง + % ของยอดรวม), การ์ด **"สถานะการเข้าถึง"** (checklist ⚠/ⓘ/✓ + ป้าย "ล่าสุด"), ตาราง **"Resource ที่เข้าถึงมากที่สุด"** — ทั้งหมดใช้ `Card`/ตารางสไตล์เดียวกับหน้า Dashboard เดิม (หัวการ์ด `text-sm font-semibold` ตามแท็บ dashboard ของ Stock/Employee), คลิกการ์ด/แถวเพื่อกระโดดไปแท็บทะเบียน, มี pulse skeleton ตอนโหลด
+- `pages/index.tsx` — เพิ่มแท็บ `dashboard` เป็นแท็บแรก/ค่าเริ่มต้น, ย้าย overview เข้าไป, เอาแถว KPI StatCard เดิมด้านบนออก (ซ้ำกับแท็บใหม่); count บนแท็บเป็น optional
+- i18n `access_tab_overview` + `access_dash_*` (en+th) ไม่มี hardcode string; ชื่อประเภททรัพยากรใช้คีย์เดิมที่เป็นอังกฤษตาม product decision
+- สีช่องทางใช้ hex เดิมจาก NameCell (email #7c3aed · file #0d9488 · social #6366f1 · software #f59e0b)
+
+**Verification**: `php artisan test --compact tests/Feature/AccessControlTest.php` = **20 passed** (118 assertions, มีเทสต์ใหม่ครอบ gating + channels + governance + top) · `tsc --noEmit` (0) · `npm run build` (green) · `pint` passed
+
+## Access — Social platform รองรับอัปโหลดโลโก้ (2026-07-21)
+
+ให้ Social/Internet platform อัปโหลดโลโก้ได้เหมือน Software (โชว์ในตาราง + ฟอร์ม add/edit)
+- **Backend**: migration เพิ่ม `social_platforms.logo_path` (additive, `down()` rollback ได้); `SocialPlatform` model (`logo_path` fillable + `getLogoUrlAttribute`); `StoreSocialPlatformRequest` เพิ่ม rule `logo` (image, png/jpg/webp, ≤2MB) + `remove_logo`; `SocialPlatformResource` คืน `logo_url`; `SocialPlatformController::handleLogo()` เก็บที่ `social-logos` (ลบไฟล์เก่าเมื่อแทน/ลบ) ใช้ใน store/update — pattern เดียวกับ SoftwareController
+- **Frontend**: type `SocialPlatform.logo_url/logo_path`; แยก `LogoField` เป็นคอมโพเนนต์ย่อยใน `resource-modal.tsx` (ลดโค้ดซ้ำ) ใช้ทั้ง software + social (fallback icon: Package / Globe); ตาราง social โชว์โลโก้ผ่าน `NameCell logoUrl`; อัปโหลดผ่าน crop dialog เดิม, ส่ง multipart อัตโนมัติเมื่อมีไฟล์ (`accessApi.hasFile`)
+- ใช้คีย์ i18n `access_logo*` เดิมร่วมกัน ไม่มีคีย์ใหม่
+- **Verification**: `AccessControlTest` = **21 passed** (122 assertions, +เทสต์ `test_social_platform_logo_upload_is_stored`) · tsc 0 · build green · pint passed
+
+## Employee Dashboard — เพิ่ม 3 การ์ดสรุป (2026-07-22)
+
+เพิ่มการ์ดสรุปในแท็บ Dashboard ของ Employee: แนวโน้มการรับเข้า · สถานะพนักงาน · ลาออกล่าสุด (ดีไซน์ผ่าน mockup `docs/mockup/employee-dashboard-cards.html`)
+
+**Backend** (`EmployeeController::summary()`):
+- เพิ่ม `active` / `resigned` (นับตาม `status`) + `resigned_this_year` (`whereYear('last_day', ปีปัจจุบัน)`)
+- `hires_by_month` — นับพนักงานเริ่มงานต่อเดือน **12 เดือนล่าสุด** (fixed rolling window, zero-filled, จบที่เดือนปัจจุบัน) — **จัดกลุ่มใน PHP** (พอร์ตได้ทั้ง MariaDB + SQLite เทสต์ ไม่ใช้ `DATE_FORMAT`)
+- `recent_resignations` — พนักงานลาออก 5 คนล่าสุด (เรียงตาม `last_day`) ผ่าน `EmployeeResource`
+
+**Frontend** (`modules/employee`):
+- `components/hires-trend-card.tsx` — กราฟแท่ง **12 เดือนล่าสุด (คงที่ ไม่มี scroll)** เต็มความกว้าง; **ไฮไลต์เดือนปัจจุบัน** (แท่งทึบ brand + label สี brand ตัดกับอดีตที่ `bg-brand/35`), legend "ปัจจุบัน" (แท่งทุกคอลัมน์สูงเท่ากัน)
+- การ์ด **สถานะพนักงาน** — เลขใหญ่ active + แถบแยกสัดส่วน active/ลาออก (ไม่มี %) + legend + ท้ายการ์ดชู "ลาออกในปี YYYY" (สี destructive)
+- การ์ด **ลาออกล่าสุด** — รายการ avatar + ชื่อ + ตำแหน่ง·แผนก + วันสุดท้าย (คู่กับ "เข้าใหม่")
+- type `EmployeeSummary` + `EmployeeHiresMonth`; i18n `emp_*` (en+th)
+- ทุกการ์ดใช้ header เส้นคั่น + ไอคอนเทา `text-sm font-semibold` ตามชุด Access/Stock/Contract/Asset
+
+**Verification**: `EmployeePermissionGatingTest` = **10 passed** (31 assertions, +เทสต์ status/hires/resignations) · tsc 0 · pint passed · build green
+
+> อัปเดต (2026-07-22): เปลี่ยน `hires_by_month` จาก "เดือนแรกใน DB → ปัจจุบัน (เลื่อนได้)" เป็น **12 เดือนล่าสุดคงที่** เพราะข้อมูลจริงเก่า (2016–2020) ทำให้กราฟเปิดมาที่ช่วงว่างแล้วต้องเลื่อนไกล — 12 เดือนล่าสุดอ่านง่ายกว่าและเป็น trend มาตรฐาน
+
+## Deep-link + UX consistency ทั้งระบบ (2026-07-22)
+
+ยกมาตรฐานจาก Access Directory ไปใช้ทุกโมดูล (Contract · Asset · Ticket · Stock · Employee)
+
+**Deep-link (URL เป็น single source of truth):**
+- **`?view=<id>`** เปิด record/detail drawer แบบค้างถาวร — reload ยังเปิดอยู่ + แชร์ลิงก์ได้ + คลิกแถวเขียน URL + ปิดล้าง param (เดิมเป็น consume-once ที่ล้าง URL ทิ้ง). โมดูลที่ drawer รับ object (Asset/Ticket/Employee) → seed React Query cache ตอนคลิกเพื่อเปิดทันทีไม่รอ fetch; ที่รับ id (Contract/Stock) → derive ตรง. Employee: `?highlight=` เดิม redirect เป็น `?view=` อัตโนมัติ
+- **`?add=1`** เปิดฟอร์มสร้างแบบ URL — reload/แชร์ได้ (add-only: Ticket/Employee; ใช้ร่วม add+edit: Contract/Asset/Stock โดย add=URL / edit=local)
+- Access: rename `?open=` → `?view=` ให้ param มาตรฐานเดียวกันทั้งระบบ; ค่า `?tab=` ติดไปด้วยเสมอ (merge params) → `?tab=<x>&view=<id>`
+- **Edit ซ้อน detail + bounce-back**: กด Edit จาก detail → ฟอร์ม/dialog ซ้อนทับ (detail ค้างข้างหลัง เพราะ drawer ทุกตัวเป็น Dialog กลางจอ) → ปิดแล้วกลับมา detail เดิม (เอา closeAsset/closeEmp ที่ปิด view ออก)
+
+**Skeleton loading ครบทุก Dashboard** (Access/Asset/Employee/Stock/Contract) — mirror layout จริง (header เส้นคั่น + rows) แทนกล่องเทาเปล่า/empty วูบ
+
+**ความสม่ำเสมอของ UI:**
+- หัวการ์ด dashboard ทุกโมดูลใช้ header เส้นคั่น + ไอคอนเทา + `text-sm font-semibold`
+- แถวข้อมูลในการ์ด (Stock: คลัง/คิวงาน/ความเคลื่อนไหว · Contract: ต้องดำเนินการ) ใช้ `divide-y divide-border/60 p-2` + row `px-3 py-2.5` แบบการ์ด "สถานะการเข้าถึง" ของ Access (เลิกกล่อง border รายแถว)
+- avatar/โลโก้เป็นวงกลม (โปรไฟล์สไตล์), หัว dialog รองรับ `image`/`round`/`tileSize`
+- crop รูปโปรไฟล์/โลโก้ export เป็น WebP (เล็กลงมากกว่า PNG เดิม)
+- Stock: fold recent movements เข้า `/stock/summary` (การ์ดโหลดพร้อมกัน ไม่มีอันช้า) · แท็บ Requests ไม่ reload/ลืมหน้าเมื่อสลับแท็บ (loading=isLoading + lift page state + staleTime)
+- Asset: ชื่อประเภท (Master Data) สลับ TH/EN ทั้ง dashboard/ตาราง/ตัวกรอง/ฟอร์ม
+- เอา staggered fade-in (cf-row/sc-row) ออกจาก Contract/Stock; EmployeeViewDrawer retain content ให้มี fade-out ตอนปิด
+
+**Verification**: `php artisan test --compact` = **632 passed / 2400 assertions / 0 failed** · tsc 0 · eslint clean · build green · pint passed
+
+## 🔑 Credentials Management + Employee module cleanup (2026-07-31)
+
+Spec: `docs/superpowers/specs/2026-07-30-credentials-management-design.md` · Plan: `docs/superpowers/plans/2026-07-30-credentials-management.md`
+
+**ปัญหาเดิม**: สร้างบัญชีแล้วแก้ `username` ไม่ได้เลย · "Reset Password" ตั้งรหัสเป็น**รหัสพนักงาน**แล้วจบ (ไม่บังคับเปลี่ยนครั้งถัดไป ทั้งที่รหัสพนักงานเป็นข้อมูลสาธารณะ เดาได้)
+
+### 1. Credentials Management
+
+**Backend**
+- migration `users.must_change_password` (boolean, default false) — **แยกอิสระจาก policy `password_expiry_days`**
+- `UserResource.password_expired` = `must_change_password || isPasswordExpired()` → หน้าบังคับเปลี่ยนรหัสเดิม (`ChangePasswordDialog` ที่ `app-shell`) ทำงานทันที **โดยไม่ต้องแก้ frontend ฝั่ง auth เลย**; `AuthController@changePassword` เคลียร์ flag เมื่อสำเร็จ; `CheckPasswordExpiry` เช็ค flag ด้วย
+- **`PUT /employees/{employee}/credentials`** (`updateCredentials`) — แก้ username และ/หรือ reset password ใน request เดียว **gate แยกรายฟิลด์**: username → `employees.set_credentials`, password → `employees.reset_password`; 422 `no_account` เมื่อไม่มีบัญชี; **ลบ `POST reset-password` + `ResetPasswordModal` เดิมทิ้ง**
+- **นโยบายรหัสผ่าน** `Password::min(8)->mixedCase()->numbers()->symbols()` (ชุด complexity แบบ AD) ใช้ทั้งตอนสร้างและตอน reset — ตรงกับ `min:8` ที่ `changePassword` บังคับอยู่แล้ว
+- **กฎ username** `^[A-Za-z][A-Za-z0-9._-]*[A-Za-z0-9]$` max 30 — อังกฤษเท่านั้น ขึ้นต้นด้วยตัวอักษร ลงท้ายด้วยตัวอักษร/ตัวเลข ใช้ `. _ -` ตรงกลาง (ชุดที่ AD/POSIX รับ); ขั้นต่ำ 2 ตัวเพื่อไม่ตัดบัญชีร่วมที่ใช้จริง (`hr`, `it`)
+- **normalize username เป็นตัวพิมพ์เล็กก่อน validate** — ความ unique แบบไม่สนตัวพิมพ์เดิมพึ่ง collation `utf8mb4_unicode_ci` ของ MariaDB ทำให้ SQLite (เทสต์) ปล่อย `John_Do` ผ่าน `john_do` ได้ ตอนนี้การันตีจากโค้ด
+- reset ที่ไม่ส่งรหัสมา → `generatePassword()` สุ่มรหัสที่ผ่าน policy เสมอ (หยิบตัวแทนครบทุกคลาสก่อนแล้วสับ) — **เลิกใช้รหัสพนักงานเป็นค่าเริ่มต้น**
+
+**Frontend** (`modules/employee`)
+- **`manage-credentials-modal.tsx`** — dialog "จัดการบัญชี" แทนปุ่ม Reset Password เดิม (footer drawer + เมนู ⋮ ในตาราง): แก้ username + reset password แสดงตามสิทธิ์รายส่วน, **สวิตช์บังคับเปลี่ยนรหัสครั้งถัดไป** (default เปิด), เผยรหัสใหม่พร้อมปุ่มคัดลอกหลัง reset
+- **ยืนยันก่อนลงมือทั้งสองการกระทำ** ผ่าน `useConfirm()` — rename เปลี่ยนวิธีล็อกอินของคนอื่น · reset ย้อนกลับไม่ได้
+- `set-credentials-modal.tsx` — สวิตช์เดียวกัน + **Auto Gen สุ่มรหัส 14 ตัว** (เดิมใช้รหัสพนักงาน) + เผยคู่ user/pass **หลังบันทึกสำเร็จ** แทน popup ซ้ำตอนกด Gen
+- `lib/credentials.ts` — กฎ username + policy + ตัวสุ่ม mirror จาก controller ที่เดียว; `password-checklist.tsx` — checklist 5 ข้อติ๊กเขียวสด **แสดงตลอดเวลาเพื่อไม่ให้ฟอร์มขยับตอนพิมพ์**
+- ปุ่ม Reset ต้องมีรหัสที่ผ่านเกณฑ์ก่อนจึงกดได้ · ปุ่ม Save ปิดจนกว่า username จะเปลี่ยนจริง
+
+### 2. Employee detail drawer — แท็บใช้งานได้จริง
+
+- **Tickets tab** (ใหม่): `GET /employees/{employee}/tickets` gate ด้วย `employees.view` — ตาราง Request at · Subject/เลขที่ · Category · Status ใช้ badge จากโมดูล ticket ผ่าน barrel; `useTicketMutations` invalidate `['employee-tickets']` ให้รีเฟรชสด
+- **Access tab**: ย้าย `GET /employees/{employee}/access` จาก `AccessController` (gate `access.module`) มาไว้ที่ `EmployeeController` gate ด้วย `employees.view` — คนที่ดูแลพนักงานแต่ไม่มีสิทธิ์ Access Directory จึงเปิดดูได้ (own-module peek pattern เดียวกับ Assets tab) + แสดงโลโก้ Social/Software (`resource_logo`)
+- แถบซ้ายเพิ่มกลุ่ม **Credentials** (Username อย่างเดียว) แยกจากข้อมูลติดต่อ
+- **i18n**: ย้ายสตริง hardcode 49 จุดใน `employee-view-drawer` + `edit-employee-dialog` เข้า `lang/{en,th}/employee.ts` (`emp_v_*`) — ลบ helper `L(th, en)` ที่เลี่ยงระบบ i18n ทิ้ง
+
+### 3. Module restructure + Edit dialog
+
+- `hooks/use-org.ts` (196 บรรทัด) → `use-employees` · `use-departments` · `use-positions` · `use-sections` · `use-locations` + `query-keys.ts`; `api/orgApi.ts` (174 บรรทัด) → `employeeApi` · `departmentApi` · `positionApi` · `sectionApi` · `locationApi` + `http-helpers.ts` — ชื่อไฟล์ตรงกับเนื้อใน (เดิมชื่อ "org" แต่เป็น hook/api กลางของทั้งโมดูล ใช้ข้าม 6 โมดูล) · barrel รับภาระ re-export ให้ผู้เรียกภายนอกไม่ต้องแก้
+- **`edit-employee-dialog` เป็น focus drawer 2 คอลัมน์** แบบ Open Ticket: `FocusDialogHeader` + `SectionLabel` กลาง · ซ้าย = ตัวตน (รูป/รหัส/ชื่อ/ติดต่อ) ขวา = การจ้างงาน · กว้าง 1100px · validate ทุกช่องรวดเดียว (เดิม `!validateStep(1) || !validateStep(2)` ตัดวงจร ทำให้เห็น error ทีละคอลัมน์)
+- phone: validate แบบเดียวกับ `callback_phone` ของ Ticket (`regex:/(\D*\d){3,}/`) — พิมพ์ "ext. 1305" ได้ แต่ต้องมีตัวเลข ≥3 ตัว
+
+### 4. Bug fixes
+
+- **My Assets**: กดรับหลายรายการต่อเนื่อง spinner ของรายการแรกดับ — `accept.variables` จำได้แค่คำสั่งล่าสุด เปลี่ยนเป็น `Set<number>` ต่อแถว (บั๊กชนิดเดียวกันเกิดซ้ำที่ปุ่ม Save/Reset ใน dialog จัดการบัญชี → แยก state `busy`)
+- **Enter ในช่องค้นหา `SearchableSelect` สั่งบันทึกทั้งฟอร์ม** — dialog ดัก Enter โดยข้ามเฉพาะ `TEXTAREA/BUTTON/SELECT/OPTION` ไม่มี `INPUT`; แก้ที่ต้นเหตุด้วย `stopPropagation` ในช่องค้นหา (มีผลทุกฟอร์มที่ใช้ component นี้)
+- **Dialog เนื้อหาหายก่อน fade-out** — retain `shown` copy ใน credential dialogs ทั้ง 3 ตัว (ตามมาตรฐานเดิมของ view drawer)
+- **`Switch` สถานะปิดจมพื้นหลัง** ทั้ง light/dark — `bg-muted` เป็น token เดียวกับพื้นกล่อง เปลี่ยนเป็น `bg-muted-foreground/35` (มีผลทุก switch ในระบบ)
+- `Field` รองรับ `action` slot (ปุ่มบนบรรทัด label) — ใช้กับปุ่ม Auto Gen ที่เดิมลอยไม่มีที่ยึด
+
+**Verification**: `php artisan test --compact` = **732 passed / 2791 assertions / 0 failed** · tsc 0 · build green · pint passed (`--dirty`)
+
+> บทเรียน: `git add` แบบระบุชื่อไฟล์ทีละตัวทำให้ไฟล์ใหม่ 11 ไฟล์ (hooks/api ที่แยกออกมา + เทสต์) ตกหล่นไม่เข้า git ทั้งที่ commit อื่นอ้างถึงอยู่ — `tsc`/Vite อ่านจากดิสก์จึงไม่ฟ้อง ตรวจเจอตอนจะ push ด้วยการ clone repo จาก git ล้วนแล้วไล่ตรวจว่าทุก import ชี้ไปยังไฟล์ที่มีจริง
+
+---
+
+## Sidebar badges — รวมเป็น endpoint เดียว + badge "ยังไม่มีบัญชี" (2026-07-31)
+
+### 1. Employee list — ลำดับการเรียงใหม่
+
+`EmployeeController@index` เพิ่ม `orderByDesc('code')` เป็นคีย์ที่ 3 — ลำดับเต็มคือ
+active ก่อน resigned → คนที่ยังไม่มีบัญชีก่อน → **รหัสพนักงานใหม่ก่อน (68xxxx ก่อน 52xxxx)** → ชื่อ → นามสกุล
+(หมายเหตุ: `code` เป็น string การเรียงจึงถูกต้องเมื่อรหัสยาวเท่ากัน)
+
+### 2. Badge "พนักงานที่ยังไม่มี Account"
+
+- `employees/summary` เพิ่มฟิลด์ `no_account` = active + `whereDoesntHave('user')` (กติกาเดียวกับ filter `?status=no_account`)
+- แท็บ **Directory** เปลี่ยนตัวเลขจาก "จำนวนพนักงานทั้งหมด" เป็นจำนวนคนที่ยังไม่มีบัญชี — pill สีอำพัน + tooltip, ซ่อนเมื่อเป็น 0
+- เมนู **Employees** บน sidebar แสดงตัวเลขเดียวกัน
+
+### 3. `GET /api/sidebar-badges` — badge ทุกตัวใน request เดียว
+
+**ปัญหาเดิม**: badge แต่ละเมนูยิง endpoint ของตัวเอง (9 requests ตอน mount) ตัวเลขจึงโผล่ทีละอัน และเห็นชัดมากบน `php artisan serve` ที่มี worker เดียว (คิวเรียงกัน)
+
+**Backend**
+- `app/Services/Sidebar/SidebarBadgeService.php` — นับทุก badge (`employees · access · tickets · assets · my_assets · contracts · stock`) พร้อม gate รายตัวในตัวเอง: สิทธิ์ไม่ถึง = คืน 0 (ไม่ใช่ 403) เท่ากับ effective permission เดิมของแต่ละ endpoint
+- `app/Http/Controllers/Api/Sidebar/SidebarBadgeController.php` + route `GET sidebar-badges` (ใต้ `auth:sanctum`)
+- ปรับให้เบาพอจะ poll ได้: stock alerts ใช้ `StockItem::withDerivedStatus('alerts')->count()` (SQL) แทนโหลดทุก SKU; access anomalies นับตรงแทนเรียก `AccessService::dashboard()` ที่สร้าง drill-down list ทั้งชุด
+- `Permissions::ticketLevelsFor()` (ย้ายจาก private `TicketController::levelsFor`) และ `TicketController@badge` เรียก service ตัวเดียวกัน — ticket badge เหลือกติกาเดียว
+
+**Frontend**
+- `shared/hooks/use-sidebar-badges.ts` — hook เดียว (poll 15s เท่า notification, background ด้วย) + export `SIDEBAR_BADGES_KEY`
+- ลบ `use*SidebarBadge` ทั้ง 7 ตัวออกจากโมดูล (stock/contract/asset×2/access/ticket/employee) และ barrel — เหลือแหล่งเดียว
+- mutation ของทุกโมดูลที่กระทบตัวเลข invalidate `SIDEBAR_BADGES_KEY` → badge อัปเดตทันทีหลังทำรายการ ไม่ต้องรอ poll
+
+**Test**: `tests/Feature/SidebarBadgeTest.php` — parity ทุกตัวเลขกับ endpoint เดิม (`employees/summary`, `contracts/summary`, `assets/summary`, `tickets/badge`, `access/dashboard`, `stock-items/summary`, `stock-requests`, `stock-counts`, `assets/mine`) + เคสสิทธิ์ไม่ถึงต้องได้ 0 · `EmployeeAccountLinkTest` เพิ่มเคสลำดับตาม code · `EmployeePermissionGatingTest` เพิ่มเคส `no_account`
+
+**Verification**: `php artisan test --compact` = **740 passed / 2855 assertions** · `tsc --noEmit` 0 · eslint 0 (ไฟล์ที่แก้) · pint passed
+
+---
+
+## Request + Workflow Modules (#3) — คำขอบริการ IT + สายการอนุมัติ (2026-08-01)
+
+สร้างสองโมดูลที่ทำงานร่วมกันตาม design mockup (Claude Design `IT Service Desk.html`) และ diagram `Request&Workflow.drawio`: **Workflow** เป็น engine กำหนดสายอนุมัติต่อประเภทคำขอ → **Request** วิ่งตามสายนั้นทีละขั้นจนถึงมือทีม IT
+
+### แนวคิดหลัก
+
+- **คำขอ 10 ประเภท** (computer, mobile, email, social, fileshare, mailgroup, software, recovery, telephone, other) แต่ละประเภทมี dynamic fields ของตัวเอง — schema กลางอยู่ที่ `app/Support/RequestSchemas.php` ใช้ทั้ง validation และ UI (ไม่มีวัน drift)
+- **Resolve ผู้อนุมัติตอน submit แล้ว freeze เป็น snapshot** (`request_approvals`): ขั้น chain = ผู้บังคับบัญชาลำดับ 1/2/3 ตาม `manager_id` (ผ่าน `ApprovalChainService` เดิม, กรองเฉพาะ active + มีบัญชี login) · สายสั้น → คนสุดท้ายควบหลายขั้น (merge label + SLA สูงสุด) · ไม่มีหัวหน้า → ข้ามพร้อม note · ขั้น Owner = `owner_employee_id` ของ EmailGroup/FileShare ที่เลือก (เจ้าของเป็นผู้ขอเอง/ไม่มีเจ้าของ → ข้าม) · ขั้น it_staff = คิวของผู้ถือ `requests.fulfill` — **แก้ workflow ภายหลังไม่กระทบคำขอที่วิ่งอยู่** (มี test พิสูจน์)
+- **สิทธิ์ตัดสินเป็นราย "คน" ไม่ใช่ permission**: เฉพาะ approver ของแถว current เท่านั้นที่ approve/reject ได้ (super admin ก็ 403 — ทุกการตัดสินระบุตัวคนได้เสมอ) · Remark บังคับเฉพาะ Reject (ส่งกลับผู้ขอ) · ผู้ขอ cancel คำขอตัวเองได้ระหว่าง pending
+- **Auto Ticket**: อนุมัติครบ + workflow เปิด auto_ticket (snapshot ตอน submit) → เปิด Ticket จริงผ่าน `TicketService::create()` ใน transaction เดียวกับ approve (พังก็ rollback ทั้งคู่, กดใหม่ได้) · map ประเภท→TicketCategory · เก็บ `ticket_id` ผูกกลับ + ลิงก์ในหน้า detail
+- **Bell + Email ทุก hop ตาม diagram**: submit→approver แรก · อนุมัติ→ขั้นถัดไป · ครบ→ผู้ขอ + คิว IT · reject→ผู้ขอพร้อม remark · fulfill→ผู้ขอ (`RequestNotificationService` โครงเดียวกับ Stock; reuse template `request.approval_needed/approved/rejected` เดิม + เพิ่ม `request.submitted/ready_to_fulfill/fulfilled`)
+
+### Backend
+
+- Migrations: `workflows`, `workflow_steps`, `service_requests` (reference `RQ-YYYY-NNNN` — เลี่ยง REQ- ที่ Stock ใช้), `request_approvals` (unique ต่อ position + index `(approver_employee_id,status)` ขับ badge), `restructure_request_permission_keys` (backfill role เดิม)
+- โดเมนใหม่ `App\{Models,Services,Http}\Request\*` + `App\Models\Workflow\*` + Enums 6 ตัว · `DefaultWorkflows` + `WorkflowSeeder` (firstOrCreate — ไม่ทับของที่แอดมินแก้)
+- Routes: `service-requests` (index/store/show + approve/reject/fulfill/cancel + options) · `workflows` (index/update/preview/employee-options ใต้ `permission:workflows.manage`)
+- Permissions: `requests => [submit, view_all, fulfill]` + `workflows => [manage]` (ตัด approve_manager/approve_it/reject ที่ไม่เคยถูกใช้จริง) · sidebar badge `requests` = ขั้นที่รอฉัน + คิว fulfill · AuditLog ทุก mutation + FK labels ใหม่
+- `fields` json เก็บทั้งค่า raw และ `_display` (label 2 ภาษา + ค่า resolve แล้ว ณ ตอนยื่น — point-in-time เหมือน requester_name)
+
+### Frontend (Focus Dialog เป็นหลัก ตามแพทเทิร์น Contract)
+
+- โมดูลใหม่ `modules/request/`: หน้า Requests (KPI 4 ใบ + แท็บ Dashboard/ทั้งหมด/รออนุมัติจากฉัน ผ่าน `?tab=` + localStorage) · Dashboard = คิวรอตัดสิน (อนุมัติ/ไม่อนุมัติ inline) + Service catalog (คลิกการ์ด → เปิด wizard พร้อมเลือกประเภทให้) + ความเคลื่อนไหวล่าสุด · ตาราง server-paginated (DataTable server mode + FilterPopover สถานะ/ประเภท + shimmer)
+- **New Request = Focus Dialog wizard 3 ขั้น** (reuse โครง `contract-form-drawer`: FocusDialogHeader + stepper + footer): ①เลือกบริการ+เห็นสายอนุมัติ ②กรอกรายละเอียด+ฟิลด์เฉพาะประเภท (SearchableSelect สำหรับ resource) ③รีวิว+ส่ง · validate แบบ STEP_FIELDS + map error 422 กลับ field
+- **Detail = Focus Dialog** (แทน right-sheet ของ mockup): badges + ข้อมูล + ฟิลด์ (แสดงจาก `_display`) + **RequestTrail** timeline (done/current/rejected/skipped + remark + SLA + overdue) + การ์ด Ticket ที่ผูก → `/tickets?view=` · ปุ่มตามสิทธิ์จริงจาก API (`can_approve/can_fulfill/can_cancel`) · deep-link `?view=<id>` จาก bell
+- โมดูลใหม่ `modules/workflow/`: หน้า Workflows (stat 4 ใบ + การ์ดพร้อม **WorkflowStrip**) · View dialog (read-only) · **Editor dialog**: toggle Active/Auto-ticket, แก้/เรียง/เพิ่ม/ลบ step, strip สด, **"ทดสอบกับพนักงาน"** — เลือกพนักงานจริงแล้วเห็นสายที่ resolve แล้ว (merge/ข้าม เหมือนตอน submit จริง)
+- i18n เต็มชุด `lang/{en,th}/requests.ts` (~150 คีย์) + `workflow.ts` ใหม่ + `notif_request_*` · badge/notification wiring ครบ (แท็บ Requests ใน bell = live)
+
+### Coming Soon (v1) — สถานะ ณ 2026-08-13
+
+| รายการ | สถานะ |
+|---|---|
+| ปิด Ticket แล้ว auto-fulfill คำขอ | ✅ ทำแล้ว 2026-08-08 (`RequestService::settleFromTicket()`) |
+| ปุ่มสร้าง workflow ใหม่ | ❌ ไม่ทำ — ตัดสินใจ 2026-08-06 (โมดูลนี้**ปรับ**เส้นทางของประเภทคำขอที่มีอยู่ ไม่สร้างใหม่) |
+| daily SLA reminder sweep | ❌ ตกไปเอง — SLA ถูกลบออกจากฐาน 2026-08-06 จึงไม่มีเส้นตายให้เตือนถึง (ถ้าจะทำต้องเป็นฟีเจอร์ใหม่: เตือนคำขอที่ค้างเกิน N วัน ซึ่งวัดจากเวลาที่ผ่านไป ไม่ใช่กำหนดส่ง) |
+| แนบไฟล์ในคำขอ | ❌ ไม่ทำ — ตัดสินใจ 2026-08-13 |
+| ปุ่ม Export หน้า Requests | 🕗 ยังไม่ทำ — รวมอยู่ในเรื่อง Export ทั้งระบบ (ยังไม่มี `maatwebsite/excel` ในโปรเจกต์) |
+
+### Tests / Verification
+
+`RequestResolutionTest` (7) · `RequestWorkflowTest` (11) · `RequestAutoTicketTest` (3) · `WorkflowAdminTest` (3) · `RequestNotificationTest` (6) — รวม 30 tests ใหม่
+**ทั้ง suite: `php artisan test --compact` = 770 passed / 3023 assertions** · `tsc --noEmit` = 0 · `npm run build` ผ่าน · pint ผ่าน · `php artisan migrate` + `WorkflowSeeder` (10 workflows / 31 steps) รันบนฐานจริงแล้ว
+
+---
+
+## Request + Workflow — ปรับตามการใช้งานจริง + Master data "ข้อมูลคำขอ" (2026-08-03)
+
+รอบปรับปรุงหลังส่งมอบ (รวบยอดหลายรอบย่อยไว้ที่เดียว) — ทุกข้อมาจากการลองใช้จริงแล้วสั่งแก้
+
+### 1. จัดให้เข้าธีมเดิมของระบบ
+
+ตอนสร้างครั้งแรกยกค่าจาก mockup มาตรง ๆ (px ดิบ, การ์ดที่ hand-roll เอง) ทำให้ดู "ตัวเล็กกว่าโมดูลอื่น" และ "ไม่สะอาด" — แก้ที่ต้นเหตุทั้งหมด: ใช้ type scale ของแอป (`text-2xl` h1 · `text-3xl` ค่า KPI · `text-sm` เนื้อหา · `text-xs` meta), เปลี่ยนการ์ดทุกใบมาใช้ `<Card>` ร่วม, ใช้ `SectionLabel` ตัวกลางแทนของที่เขียนเอง, tab bar ใช้คลาสชุดเดียวกับ Access, ไอคอน KPI เป็นสีธีมวางขวา, และเลิกซ้อน border/รัศมีลูกเกินพ่อ
+
+### 2. ตัดของซ้ำและของที่ไม่ได้ใช้
+
+- **SLA เลิกเป็นตัวชี้วัดที่มองเห็น** — เดิมโผล่ 7 จุด (strip/trail/การ์ด/ตาราง) เหลือแค่การ์ด KPI "เวลาตัดสินเฉลี่ย" ใบเดียว เพราะจริง ๆ การอนุมัติมีที่มาหลายทาง วัดเป็นตัวเลขเดียวไม่ได้
+- ลบ Service catalog ที่ซ้ำกับตอนกดขอ, ลบชื่อบริการที่ซ้ำในแถวตาราง, ตัดฟิลด์ **หัวข้อ** ออก (สร้างเองเป็น `Request + ชื่อบริการ`) พร้อมตัด **ความสำคัญ / มูลค่าโดยประมาณ** ออกทุกประเภท
+- Sidebar: "สายการอนุมัติ" → **Workflow** · เก็บ dead i18n key ที่ค้างจากการตัดออกให้หมดทุกรอบ
+
+### 3. New Request wizard
+
+ขนาด dialog คงที่ (`h-[min(760px,100vh-72px)]` × `max-w-[1100px]`) เลิกกระโดดตามเนื้อหา · ขั้น ① จัดการ์ดบริการกลางจอ ไอคอน 40px บนหัว คลิกแล้วไปขั้นถัดไปเลย (ไม่มีปุ่ม Next) · ขั้น ② จำนวนคอลัมน์**ต่อบริการ** ไม่ใช่เดาจากจำนวนฟิลด์ (`RequestSchemas::layouts()`) · ขั้น ③ รีวิวสั้นลงเหลือของที่ต้องตรวจจริง
+
+**ฟิลด์ที่เหลือต่อบริการ** (ตัดตามที่ใช้จริง): คอมพิวเตอร์ 1 คอลัมน์ (ประเภทเครื่อง) · Hardware 1 (อุปกรณ์) · อีเมล 1 · Social 2 · Files Share 2 (สิทธิ์เหลือ read/write ตาม Access Directory) · Mail Group 1 · Software 2 (**ดึงรายชื่อจาก Access Directory: Brand + ชื่อ Software** ไม่มีในรายการก็ติ๊ก "อื่น ๆ" แล้วพิมพ์เอง — `required_without` สองทาง) · กู้ข้อมูล 1 (เหลือเหตุผลเท่านั้น) · โทรศัพท์ 2 · อื่น ๆ 1
+
+### 4. แยก Hardware ออกจาก Computer (10 → 11 ประเภท)
+
+`RequestType::Hardware` + workflow ตัวที่ 11 (ใช้ step ชุดเดียวกับ Mobile) — คำขอจอภาพ/เครื่องพิมพ์/อุปกรณ์เสริมไม่ต้องไปปนกับคำขอเครื่องคอมอีก
+
+### 5. Settings → **ข้อมูลคำขอ** (หมวดของตัวเอง)
+
+รายการตัวเลือกในฟอร์มคำขอที่แอดมินแก้เองได้ 2 ภาษา ไม่ต้องแก้โค้ด
+
+- **เป็นหมวด Settings ของตัวเอง ต่อจาก Ticket & SLA** (`#request-data`) — ตอนแรกวางเป็นแท็บย่อยที่ 9 ของ Master data แต่ที่นั่นเป็นตารางอ้างอิงที่ใช้ร่วมกันของ ทรัพย์สิน/สัญญา/คลัง ส่วนนี่เป็นของโมดูล Request โมดูลเดียว อยู่ปนกันแล้วสับสน
+- **permission ของตัวเอง `settings.requestdata`** (migration grant ให้ทุก role ที่เคยถือ `settings.masterdata` — ไม่มีใครเสียสิทธิ์เพราะหน้าย้ายที่) · API endpoints ทั้งหมดย้ายมาใช้ gate นี้ · ยังถูกปิดตาม master key `settings.access` เหมือนคีย์ settings อื่น
+- **โครงหน้า**: sub-tab แบบ pill ของรายการ (ทรง/สีเดียวกับแท็บย่อยที่โมดูลอื่นใช้) → แถบ toolbar (คำใบ้ลากซ้าย + ปุ่มเพิ่มขวา แบบเดียวกับ DataTable) → กรอบ `rounded-xl` เดียวที่ถือแถวทั้งหมด — ก่อนหน้านี้เคยทำเป็น master-detail ที่มี side nav 220px ของตัวเองในการ์ดซ้อนการ์ด ซึ่งไปวางข้าง side nav ของหน้า Settings เองแล้วดูเป็นพาเนลลอยในพาเนล
+- แถวแสดงชื่อภาษาเดียวตามภาษา UI (ปุ่มธงที่ topbar สลับให้ เหมือน master data ตัวอื่น) · ถ้าตัวไหนยังไม่มีชื่อไทยจะแสดงชื่ออังกฤษพร้อมป้าย "ยังไม่ได้แปล"
+- ตาราง `request_options` + `App\Models\Settings\RequestOption` · ฟิลด์ใน `RequestSchemas` ที่ประกาศ `managed` จะถูก overlay ด้วยค่าจากตารางนี้ (query เดียวต่อ page load, ตัวที่ปิดไว้หลุดจากทั้ง UI และ validation พร้อมกัน) — ปัจจุบัน 3 รายการ: `hardware.device`, `mobile.device`, `telephone.device_type`
+- **คำขออ้างถึงตัวเลือกด้วย FK จริงในฐานข้อมูล** — เดิมเก็บ slug (`monitor`) ลง `fields` json ซึ่งเป็น soft link 2 ชั้น: (1) เป็น identity ที่สองของแถวที่มี id อยู่แล้ว (2) อยู่ใน json ซึ่ง MariaDB ผูก FOREIGN KEY ไม่ได้เลย ลบตัวเลือกทิ้งแล้วคำขอชี้ไป id ที่ไม่มีอยู่โดยฐานไม่ร้อง แก้ 2 ขั้น: เปลี่ยน key เป็น `*_id` แล้ว**ย้าย reference ทุกตัวออกจาก json ไปเป็นคอลัมน์จริงพร้อม FK**
+  - `service_requests` ได้ 6 คอลัมน์ใหม่ `request_option_id` · `file_share_id` · `email_group_id` · `social_platform_id` · `software_id` · `location_id` → FK `ON DELETE SET NULL` ทั้งหมด (รวมกับของเดิมเป็น **10 FK** บนตารางนี้) · json เหลือแต่ของที่ไม่มีตารางรองรับ (`access_level`, `address`, `sim`) + `_display`
+  - ได้ relation จริง: `$request->requestOption->label_th` · ถามย้อนกลับได้ `ServiceRequest::where('request_option_id', $id)` แทนการไล่ scan json
+  - `RequestSchemas::referenceColumns()` เป็นตัวบอกว่า field ไหนลงคอลัมน์ไหน (managed ทุกตัว → `request_option_id` เพราะเป็นแถวของตารางเดียวกัน) · `ServiceRequestResource` รวมคอลัมน์กลับเข้า `fields` map ตอนส่งออก API จึงไม่กระทบ frontend
+  - **กันลบตัวเลือกที่ถูกอ้างถึง 2 ชั้น**: controller คืน `409 {message:'in_use', count:N}` เหมือน master data ทั้ง 7 ตัว (ฝั่งหน้าเว็บใช้ `toastDeleteError` ตัวเดิม โชว์ "ยังถูกใช้งานอยู่ N รายการ") · และ FK `request_option_id` เป็น **`ON DELETE RESTRICT`** ฐานปฏิเสธเองด้วย — เดิมเป็น `SET NULL` ซึ่งลบผ่านแล้วตัดคำขอออกจากสิ่งที่มันขอแบบเงียบ ๆ (label ยังอยู่ใน `_display` แต่ link ที่ตอบว่า "คำขอไหนขอตัวนี้" หายถาวรโดยไม่มีใครเตือน)
+  - เลิกใช้ตัวเลือกให้ปิดเป็น **"ซ่อน"** (`active=false`) — หลุดจากฟอร์มและ validation ทันที ส่วนคำขอที่เลือกไว้แล้วยังถือ reference ครบ · ตัวเลือกที่ยังไม่มีคำขอไหนใช้ลบได้ปกติ
+  - ทดสอบพิสูจน์ระดับฐาน: ยิงผ่าน service ตรง ๆ (เลี่ยง validation) ด้วย id ที่ไม่มี → `FOREIGN KEY constraint failed` · ลบตัวเลือกที่ถูกอ้าง → คอลัมน์เป็น null แต่ `_display` ยังอ่านชื่อเดิมได้
+  - `hardware.device` → `device_id` · `mobile.device` → `device_id` · `telephone.device_type` → `device_type_id` (migration ย้าย field_key ของ option โดยคง id เดิม + ย้าย key ใน `fields` json ของคำขอรวมถึงแถว `_display`) · `device_id`/`device_type_id` ใช้คอลัมน์ `request_option_id` ร่วมกัน เพราะ 1 ประเภทมี managed list ได้ 1 อัน
+  - validate ด้วย `Rule::exists('request_options','id')` ที่ **scope ตาม (request_type, field_key, active)** → id ที่ยืมจากรายการอื่นถูกปฏิเสธ (มี test ยืนยัน) ซึ่ง `in:` บน slug ทำไม่ได้
+  - ทิ้งคอลัมน์ `value` · unique ย้ายไป `(request_type, field_key, label_en)` — ชื่อซ้ำในรายการเดียวกันถูกปฏิเสธตรง ๆ แทนที่จะเงียบ ๆ ต่อท้าย `_2`
+  - `castReferences()` แปลงค่าจากฟอร์มเป็น int ก่อนบันทึก ทั้ง managed และ source (FK ที่เก็บเป็น `"7"` เทียบกับ id ที่เป็นตัวเลขไม่ติด)
+  - ลบตัวเลือกได้อย่างปลอดภัยเพราะคำขอเก่าอ่านจาก `_display` snapshot ของตัวเอง · เปลี่ยนชื่อได้เสรีเพราะ link เป็น id
+- **ลำดับใช้การลากสลับ** ไม่ใช่กรอกเลข: ลากแล้วแถวเลื่อนตามเมาส์ทันที ปล่อยแล้ว `POST request-options/reorder` เขียนลำดับใหม่ทั้งรายการใน transaction (ส่งไม่ครบ = 422 ไม่ยอมทำครึ่ง ๆ) · react-query เขียน cache แบบ optimistic แถวจึงไม่เด้งกลับ · มีปุ่มลูกศรขึ้น/ลงคู่กันไว้ให้คีย์บอร์ด · ตัวเลือกใหม่ไปต่อท้ายรายการเอง (native HTML5 drag — ไม่เพิ่ม dependency)
+
+### 6. เลิกประกอบคีย์ i18n ตอน runtime (soft link → คีย์จริง)
+
+เดิมโค้ดใหม่เรียก `t(\`req_${type}\`)` / `t(\`req_status_${status}\`)` 16 จุด ซึ่ง `grep req_hardware` หาที่ใช้ไม่เจอ, เพิ่มประเภทใหม่แล้ว compile ผ่านแต่หน้าจอโชว์ชื่อคีย์ดิบ (เพราะ `translate()` คืนคีย์เมื่อหาไม่เจอ)
+
+- ย้ายเป็น registry ที่เขียนคีย์ไว้ตรง ๆ แบบเดียวกับ `labelKey` ของฟอร์ม Contract: `shared/lib/request-meta.ts` → `REQUEST_TYPE_META` (icon + สี + labelKey) · `REQUEST_STATUS_META` (tone + labelKey) · `REQUEST_TYPES` / `REQUEST_STATUSES`
+- เป็น `Record<ServiceRequestType, …>` → **เพิ่มประเภทที่ 12 แล้ว build ไม่ผ่านจนใส่คีย์ให้** (ทดสอบด้วยการเพิ่ม type ปลอมแล้วได้ TS2741 จริง)
+- state ของ filter เปลี่ยนจาก `useState('')` เป็น `ServiceRequestStatus | ''` / `ServiceRequestType | ''` เพื่อ index registry ได้ตรง ๆ · แจ้งเตือน `notif_request_*` ใช้ map คีย์จริงพร้อม fallback (subtype แปลก ๆ จะไม่พิมพ์ชื่อคีย์ออกจอ)
+- registry วางที่ `shared/` เพราะ 3 โมดูลอ่าน (request/workflow/settings) และเป็นคำศัพท์ของ type ที่อยู่ใน `shared/types` อยู่แล้ว — ถ้าวางไว้ในโมดูล request จะเกิด **circular import** กับ workflow (request ดึง `WorkflowStrip`, workflow ดึง registry)
+
+### Tests / Verification
+
+`RequestOptionTest` (16) รวมลำดับ/ลาก/สิทธิ์/FK ข้ามรายการ/FK ระดับฐานข้อมูล/กันลบตัวที่ถูกใช้ · `SettingsPermissionsTest` อัปเดตเป็น 9 คีย์ · **ทั้ง suite = 788 passed / 3,090 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · migrate + `RequestOptionSeeder` รันบนฐานจริงแล้ว
+
+---
+
+## Employee Import v2 — ตามผังองค์กรจริง + ตรวจก่อนนำเข้า (2026-08-05)
+
+ตัว import เดิมเขียนไว้ก่อนที่ระบบจะมี **section** และ **สายบังคับบัญชา** จึงนำเข้าได้แค่ 10 คอลัมน์และสร้างพนักงานที่ไม่มีหน่วยงาน/ไม่มีผู้บังคับบัญชา — คนที่ import เข้ามาไม่ขึ้นบนผังองค์กรและผิดกฎที่ฟอร์มปกติบังคับอยู่ (`StoreEmployeeRequest`) รอบนี้ยกเครื่องทั้งเส้น
+
+### 1. Template ใหม่ 12 คอลัมน์ (จับคู่ master data ด้วย "ข้อความ")
+
+`employee_code, first_name, last_name, first_name_th, last_name_th, email, phone, department, section, position, joined_at, report_to_employee_code`
+
+- เดิมบังคับกรอก **รหัส** (`department` = tag, `position` = `PST-0002`) ซึ่งคนกรอกไฟล์ไม่มีทางรู้ — ตอนนี้ทั้งสามช่องรับ **ข้อความที่คนใช้จริง**: department = tag / `DEP-####` / ชื่อ EN / ชื่อไทย · section = ชื่อ หรือ `SEC-####` · position = ชื่อตำแหน่ง (`Manager`) หรือ `PST-####` — ตัดช่องว่างและไม่สนตัวพิมพ์ใหญ่เล็ก
+- **section หาเฉพาะในแผนกของแถวนั้น** ไม่ใช่ทั้งระบบ (กฎเดียวกับฟอร์ม) — `department=It, section=Quality Control` ถูกปฏิเสธ เพราะ Quality Control เป็นหน่วยงานของแผนก QC
+- **ข้อความที่ตรงกับ 2 รายการ = error ไม่ใช่เดา** (index เก็บทุก id ที่คำนั้นชี้ไป) — ผังจริงตอนนี้ไม่มีคำกำกวมเลย และมีเทสต์ seed master data จริงคุมไว้ ถ้าวันหนึ่งมีชื่อชนกัน เทสต์จะแตกก่อนที่คนจะถูกใส่ผิดหน่วยงาน
+- `employee_code` เว้นว่าง = ระบบออก `EMP-####` ให้ · header เดิมชื่อ `code` ยังใช้ได้ (ไฟล์ที่โหลดไปก่อนหน้านี้ไม่พัง)
+- ตัวอย่างในไฟล์ template **ดึงจาก master data ที่มีจริง** (tag แผนกแรก, หน่วยงานของแผนกนั้น, ตำแหน่งปกติตัวแรก, รหัสคนบนสุดของผัง) ไฟล์จึงบอกตัวสะกดที่ระบบต้องการด้วยตัวเอง
+
+### 2. สายบังคับบัญชามาพร้อมไฟล์
+
+- `report_to_employee_code` ชี้ด้วยรหัสพนักงาน — **หัวหน้าอยู่แถวล่างกว่าลูกน้องได้** เพราะเขียนสองรอบใน transaction เดียว (สร้างทุกคนก่อน แล้วผูก `manager_id`)
+- ปฏิเสธก่อนเขียน: รหัสที่ไม่มีทั้งในฐานและในไฟล์ · ชี้ตัวเอง · **วนเป็นลูป** (A→B, B→A) ตามกฎกันลูปของฟอร์ม
+- กฎ **special position** เหมือนฟอร์มเป๊ะ: ตำแหน่งปกติต้องมี department + section + report_to ครบ · Vice President (`allow_special_position`) เว้นได้ทั้งสามช่องเพราะเป็นยอดของผัง
+
+### 3. ตรวจก่อนนำเข้า (dry-run) แทนการเดา
+
+- `POST employees/import/preview` — กฎเดียวกับของจริง ไม่เขียนอะไรเลย คืนทุกแถวพร้อม **หน่วยงาน/ตำแหน่ง/หัวหน้าที่ resolve ได้แล้ว** + เหตุผลที่แถวนั้นผ่านไม่ได้ · ไฟล์ที่ผิดยังตอบ 200 (เป็นรายงาน ไม่ใช่คำสั่งที่ล้มเหลว)
+- Dialog เลือกไฟล์แล้ว preview ขึ้นเอง: ชิปนับ ทั้งหมด / พร้อมนำเข้า / มีข้อผิดพลาด → ตาราง `ImportPreviewTable` (แถวผิดแดงพร้อมข้อความใต้แถว) → ปุ่มนำเข้าปลดล็อกเมื่อไฟล์สะอาดทั้งไฟล์ (ฝั่งเซิร์ฟเวอร์ยัง all-or-nothing เหมือนเดิม)
+- **คอลัมน์แปลกในไฟล์ HR ไม่ทำให้ทั้งไฟล์ตก** — ระบบข้ามให้แล้วบอกชื่อคอลัมน์ที่ข้าม (`meta.ignored_columns`) ไม่ให้ใครเข้าใจผิดว่าเงินเดือนถูกบันทึกไปด้วย
+- เลิก hardcode ข้อความในคอมโพเนนต์ (เดิม `lang === 'th' ? … : …`) → คีย์ `import_*` ครบทั้ง en/th
+
+### 4. โครงโค้ด
+
+`importRows` ย้ายออกจาก `EmployeeService` (ที่ทำ 6 หน้าที่อยู่แล้ว) ไปเป็น **`App\Services\Employee\EmployeeImportService`** — index ของ master data, กฎต่อแถว, ตรวจลูป, เขียนสองรอบ อยู่ที่เดียว · `EmployeeImportService::COLUMNS` เป็นต้นทางเดียวของหัวตาราง (template, การเช็คคอลัมน์แปลก, และเทสต์ อ่านจากค่านี้)
+
+### Tests / Verification
+
+`EmployeeImportTest` (17 tests / 72 assertions) — text matching ทั้งสามช่อง · section ผิดแผนก · ข้อความกำกวม · กฎ special position · หัวหน้าอยู่ท้ายไฟล์ · ลูป · header เดิม `code` · dry-run ไม่เขียน · endpoint preview/import/template · และ **เทสต์ที่ seed ผังองค์กรจริง** (`EmployeeDepartmentSeeder`/`EmployeeSectionSeeder`/`EmployeePositionSeeder`) แล้วยืนยันว่าคำที่ HR พิมพ์ resolve ได้ตัวเดียว
+**ทั้ง suite = 839 passed / 3,265 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน
+
+---
+
+## Add Employee → Focus Dialog wizard (2026-08-06)
+
+**Edit** พนักงานเป็น Focus Dialog อยู่แล้ว (`edit-employee-dialog.tsx`) แต่ **Add** ยังเป็น Sheet ด้านขวา 600px — เพิ่มกับแก้คนเดียวกันเลยคนละหน้าตา รอบนี้ย้าย Add มาอยู่กรอบเดียวกัน โดยยังเป็น wizard 3 ขั้นตามที่ใช้จริง
+
+- **กรอบ**: `Sheet side="right"` → `Dialog` + `focusDialogContentClass` (`h-[min(860px,100vh-72px)]` × `max-w-[1100px]`) + `FocusDialogHeader` (ไอคอน `UserPlus` · eyebrow "เพิ่มพนักงาน" · title = ชื่อที่กำลังพิมพ์ ถ้ายังว่างใช้ "พนักงานใหม่" — หัวข้อเปลี่ยนตามที่กรอก)
+- **Stepper แนวนอน** ①②③ พร้อมเส้นเชื่อมที่เปลี่ยนเป็นสีแบรนด์เมื่อผ่าน + ติ๊กถูก (คลาสชุดเดียวกับ `contract-form-drawer`) แทนการ์ดสเต็ป 3 ใบแบบเดิม · คลิกย้อนได้เสมอ กระโดดข้ามไปข้างหน้าต้อง validate ทุกขั้นที่ข้าม (`goToStep`)
+- **ใช้ความกว้าง 1100px เป็น 2 คอลัมน์** (เดิม 600px บังคับเรียงลงล่างทีเดียว): ขั้น ① รูป+อัปโหลดอยู่ในกรอบพาดเต็มกว้าง แล้วชื่อ EN / ชื่อไทย / ติดต่อ เรียงเป็นคู่ · ขั้น ② ซ้าย แผนก-หน่วยงาน-ตำแหน่ง ขวา Report to-วันเริ่มงาน-รหัสพนักงาน · ขั้น ③ กล่องแจ้งสิทธิ์เริ่มต้น + บัญชีรอตั้ง วางคู่กัน แล้วการ์ดบริการ onboarding เรียง 3 คอลัมน์
+- **หัวขั้น `StepHead`** (ขั้นที่ N → หัวข้อตัวหนา → คำอธิบาย) ใช้ `t()` ทั้งหมด ไม่ใช่ `lang === 'th' ? … : …` แบบที่ contract ทำ · เพิ่มคีย์ en+th 5 ตัว: `emp_step_n` · `emp_new_person` · `emp_personal_sub` · `emp_work_sub` · `emp_access_sub`
+- **Footer** `border-t bg-muted/30`: ยกเลิก/ย้อนกลับ · step dots · ถัดไป/บันทึก (spinner ตอนบันทึก)
+- **Enter-to-advance เข้มขึ้น**: เดิมกันแค่ `TEXTAREA` — ในกรอบใหม่ที่ stepper และการ์ดบริการเป็น `<button>` อยู่ในกรอบเดียวกัน การกด Enter จะทั้งกดปุ่มนั้นและข้ามขั้นพร้อมกัน จึงกัน `BUTTON`/`SELECT`/`OPTION` เพิ่ม (ชุดเดียวกับ Edit dialog)
+- **กดบันทึกแล้วเจอ error ของขั้นก่อน จะเด้งกลับไปขั้นนั้น** ไม่ใช่แค่โชว์ error ที่มองไม่เห็น (เดิม `submit()` validate ทั้งสองขั้นแต่ค้างอยู่หน้าเดิม)
+- ไม่แตะ form state / กฎ special position / map error 422 → field / `PhotoCropDialog` / payload — และตัวเลือกบริการ onboarding **ยังไม่ได้ส่งไป API เหมือนเดิม** (`emp_onboarding_deferred`)
+
+### Tests / Verification
+
+`tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · `npm run build` ผ่าน (ฝั่ง frontend โปรเจกต์นี้ไม่มี test runner) · ไม่มีไฟล์ PHP เปลี่ยน suite เดิมจึงยังเป็น 839 passed
+
+---
+
+## Onboarding requests → ต่อเข้า Workflow อนุมัติจริง (2026-08-06)
+
+ขั้น ③ ของหน้าเพิ่มพนักงานเคยเป็น UI เปล่า — ติ๊กบริการแล้วค่าหายไปกับ state (คำว่า `onboarding` ไม่เคยปรากฏในไฟล์ PHP ไฟล์ใดเลย) ตอนนี้ติ๊กแล้ว **ยื่นคำขอเข้าโมดูล Request จริง 1 ใบต่อ 1 บริการ** โดยคำขอเป็นของพนักงานใหม่ ไม่ใช่ของ HR ที่กด
+
+### 1. แยก "เจ้าของคำขอ" ออกจาก "คนกดยื่น"
+
+เดิม `user_id` เป็นทั้งสองอย่างในคอลัมน์เดียว ซึ่งพังทันทีเมื่อ HR ยื่นแทน: คนที่เป็นเจ้าของยังไม่มีบัญชี (`user_id` = null) migration `add_origin_to_service_requests` เพิ่ม 3 คอลัมน์
+
+- `origin` (`direct` / `onboarding` — enum `RequestOrigin`; ใช้ค่า `direct` เพราะ PHP ห้ามตั้งชื่อ enum case ว่า `self`) · `submitted_by_user_id` (FK users, null on delete) · `submitted_by_name` (snapshot เหมือน `requester_name`)
+- `user_id`/`employee_id` ยังหมายถึงเจ้าของคำขอ → **สายอนุมัติไต่ manager ของพนักงานใหม่** ที่กรอกไว้ในขั้น ② ไม่ใช่สายของ HR
+- `RequestService::submit()` (ยื่นเอง) กับ **`submitFor(Employee $subject, User $actor, …)`** (ยื่นแทน) เรียก private `create()` ตัวเดียวกัน — ตรรกะ snapshot/resolver/activate ไม่ได้ถูกคัดลอก
+- **`EmployeeOnboardingService`** วนบริการที่ติ๊ก (computer / mobile / email) ยิงทีละใบ · **workflow ที่ปิดอยู่ไม่ทำให้เสียพนักงาน**: สร้าง Employee ให้เสร็จก่อน แล้วจับ error ต่อรายการ ตอบกลับ `onboarding: {created, failed}` ให้ dialog ขึ้น toast บอกว่าใบไหนยื่นไม่ได้ (แทนที่จะ rollback การจ้างคนเพราะ workflow ปิด)
+- คำขอ onboarding ไม่มีฟิลด์เฉพาะประเภท (หน้าเพิ่มพนักงานไม่ได้ถามรุ่นเครื่อง) — `title` = "Computer for <ชื่อ>" · `reason` = หมายเหตุที่ HR กรอก หรือข้อความบอกว่าให้ยืนยันรายละเอียดกับหัวหน้า
+- **สิทธิ์**: ใช้ `employees.add` ที่คนกดถืออยู่แล้ว ไม่บังคับสิทธิ์โมดูล Request (แต่ถ้าจะ *เปิดดู* คำขอในหน้า Requests ยังต้องมีสิทธิ์อ่านของโมดูลนั้นตามปกติ)
+
+### 2. สองบั๊กที่โผล่เพราะมี "คำขอที่เจ้าของไม่มีบัญชี"
+
+- `can_cancel` + `RequestService::cancel()` เช็คแค่ `user_id === actor` → คำขอที่ HR ยื่นแทน **ไม่มีใครยกเลิกได้เลย** เพราะเจ้าของยังไม่มี login ตอนนี้คนที่ยื่นแทนยกเลิกได้
+- visibility ของ `RequestController@index`, `scope=mine` และ `show()` ก็เช็คแค่ `user_id` → HR ยื่นแล้วหาคำขอของตัวเองไม่เจอและเปิดไม่ได้ ตอนนี้รวม `submitted_by_user_id`
+- แจ้งเตือนทุกชนิดของ Request เคยส่งไปที่ `$request->user` เท่านั้น → คำขอ onboarding จะไม่มีใครได้รับเลย เพิ่ม `follower()` = เจ้าของ หรือ (ถ้าเป็นการยื่นแทน) คนที่ยื่น
+
+### 3. ป้าย "พนักงานใหม่" สี violet — 4 ที่ที่ผู้อนุมัติเจอคำขอ
+
+violet เป็นโทนเดียวใน `StatusBadge` ที่ไม่มีสถานะไหนใช้ จึงไม่ชนกับ pending/approved/rejected
+
+1. **ตารางคำขอ** — badge ใต้ชื่อผู้ขอ + **แถบ violet ซ้ายแถว** (เพิ่ม prop `rowClassName?: (row) => string` ให้ `DataTable` — optional ไม่กระทบตารางอื่น)
+2. **การ์ดรออนุมัติ / กิจกรรมล่าสุด** — badge ข้างหัวเรื่อง + แถบซ้ายการ์ด
+3. **หน้า detail** — แบนเนอร์ violet ใต้ header (`คำขอสำหรับพนักงานใหม่ · ยื่นแทนโดย <ชื่อ> · <วันที่>`) + แถว KV "ยื่นแทนโดย"
+4. **กระดิ่ง + อีเมล** — bell payload มี `origin` แล้วข้อความนำหน้าด้วย "พนักงานใหม่ ·" · อีเมลใส่ `[New employee]` หน้าหัวเรื่อง (เทมเพลตไม่มีฟิลด์ origin ให้ผูก)
+
+`isOnBehalfRequest()` / `REQUEST_ONBOARDING_BADGE` / `REQUEST_ONBOARDING_ROW` อยู่ที่ `shared/lib/request-meta.ts` ที่เดียว — อ่าน `origin` ไม่ใช่เดาจาก "user_id เป็น null"
+
+### 4. "ยังไม่มีบัญชี" ไม่ใช่เหตุผลที่จะข้ามการอนุมัติ (เปลี่ยน policy)
+
+ลองใช้จริงแล้วเจอว่าคำขอ onboarding ทั้ง 3 ใบขึ้นเป็น **approved ทันทีโดยไม่มีใครอนุมัติ** พร้อมแถว `Skipped — requester has no manager configured.` ทั้งที่พนักงานใหม่มี `manager_id` ครบ
+
+สาเหตุ: `WorkflowResolverService::isEligible()` เดิมนับคนเป็นผู้อนุมัติได้เมื่อ **active + มีบัญชี login** — ฐานจริงยังไม่มีพนักงานคนไหนมีบัญชีเลย (บัญชีถูกตั้งทีหลังผ่าน set-credentials) → chain ว่าง → chain step ทุกขั้นถูกรวบเป็นแถว skipped → ไม่มีแถวที่กดได้ → `activateNextApproval()` ข้ามไป fulfillment แล้ว `finalize()` ทันที
+
+แก้เป็น: **มีหัวหน้าคือรอหัวหน้าคนนั้น** ไม่ว่าบัญชีจะสร้างแล้วหรือยัง
+
+- แยกความหมายออกเป็น 2 อย่าง: `canHoldAStep()` = ถือขั้นนั้นได้ (active เท่านั้น — **ไม่ต้องมีบัญชี**) · `canActNow()` = กดได้ตอนนี้ (มีบัญชี) ใช้แค่ตอนใส่หมายเหตุ
+- แถวที่ผู้อนุมัติยังไม่มีบัญชี = สถานะ `waiting`/`current` ตามปกติ → คำขอค้างเป็น **pending** จนกว่าจะตั้งบัญชีให้เขา แล้วเขาล็อกอินมากดเอง (แถวผูกด้วย `approver_employee_id` อยู่แล้ว จึงเด้งขึ้น "รออนุมัติของฉัน" ทันทีที่บัญชีถูกผูก)
+- **เหตุผลที่ข้ามขั้นเก็บเป็นรหัส ไม่ใช่ประโยค** — เพิ่มคอลัมน์ `request_approvals.skip_reason` + enum `ApprovalSkipReason` 3 ค่า: `no_manager` (ผู้ขอไม่มีหัวหน้าเลย) · `no_resource_owner` (resource ไม่มีเจ้าของ หรือเจ้าของลาออก) · `requester_is_owner` (ผู้ขอเป็นเจ้าของเอง — ต่างจากข้อก่อนหน้าเพราะ "ตั้งแล้วแต่ชนตัวเอง") · เป็น snapshot ถูกต้องเพราะเป็นข้อเท็จจริงตอนยื่น แต่ **ถ้อยคำเป็นเรื่องการแสดงผล** จึงย้ายไปที่ `req_skip_*` ใน `lang/` (`REQUEST_SKIP_REASON_LABEL` map รหัส→คีย์แบบเขียนตรง ไม่ประกอบคีย์ตอน runtime) · migration backfill รหัสจากประโยคเดิมแล้วล้างประโยคออก · หลังจากนี้ **`note` มีความหมายเดียวคือ "สิ่งที่คนเขียน"**
+- **ตัดประโยค `Also covers "…" — the same person resolved for both steps.` ออกจาก note ด้วย** — เมื่อหลายขั้นได้หัวหน้าคนเดียวกัน แถวจะยุบเป็นใบเดียวและ **label ก็เรียงชื่อทุกขั้นที่มันคลุมไว้แล้ว** (`Supervisor / Head · Manager / Asst. Manager · Vice President`) การเขียนประโยคอังกฤษซ้ำสิ่งที่ label พูดอยู่จึงเป็นส่วนเกิน · note เหลือไว้ให้เหตุผล skip กับ remark ที่คนเขียนเท่านั้น · migration `clear_merged_step_notes` ล้างของเก่าที่ค้างในฐาน (คง remark/skip reason บนแถวเดียวกันไว้ครบ)
+- **ข้อความ "ยังไม่มีบัญชี" ไม่ถูก snapshot ลง `request_approvals.note`** — ตอนแรกทำเป็น note แล้วเห็นว่าผิด เพราะแถวอนุมัติเป็นภาพนิ่ง แต่ "ยังไม่มีบัญชี" ไม่ใช่: พอ HR สร้างบัญชีให้ note จะโกหกทันที · เปลี่ยนเป็น `RequestApprovalResource` คำนวณสด ๆ เป็น `awaiting_account` (เฉพาะแถว approval ที่ยังไม่ตัดสิน + มีตัวบุคคล + ยังไม่มี user) → หน้า trail แสดงบรรทัด **"รอ - ผู้อนุมัติรายนี้ยังไม่มีบัญชีผู้ใช้งาน" / "Waiting - this approver has no login account yet"** เป็นแถบสีเหลืองพร้อมไอคอนกุญแจ แยกจากกรอบ remark ของคน (ได้ภาษาตาม UI ด้วย ซึ่ง note ที่เก็บเป็น string ในฐานทำไม่ได้) · endpoint ทุกตัว eager-load `approvals.approver.user` กัน N+1
+- **คนที่ลาออกยังถูกข้าม** (ไต่ขึ้นหัวหน้าคนถัดไป) เพราะเขาไม่กลับมากดแล้วจริง ๆ — ต่างจากบัญชีที่ยังไม่ได้สร้าง
+- ไม่มีหัวหน้าเลย (`manager_id` ว่าง เช่นตำแหน่งพิเศษบนยอดผัง) ยังรวบเป็นแถว skipped เหมือนเดิม เพราะไม่มีใครให้รอ
+- owner step ของ Access resource ใช้กฎเดียวกัน (เจ้าของที่ยังไม่มีบัญชี = รอ ไม่ใช่ข้าม)
+
+**ปิดช่องว่างแล้ว (2026-08-07):** เดิมถ้าผู้อนุมัติยังไม่มีบัญชี **ไม่มีแจ้งเตือนออกไปหาใครเลย** (`notifyApprover()` ออกทันทีเมื่อหา user ไม่เจอ) คำขอค้างเงียบ ๆ — ตอนนี้ยิง bell subtype `blocked_no_account` ไปหาผู้ถือ `employees.set_credentials` พร้อมชื่อคนที่ต้องตั้งบัญชี และกดแล้วเปิด**หน้าพนักงานคนนั้น** (`/employees?highlight=`) ไม่ใช่หน้าคำขอที่ยังกดอะไรไม่ได้ · แถว `it_staff` (คิว IT) ไม่ยิง เพราะไม่ได้ระบุตัวบุคคล
+
+---
+
+## แจ้งเตือน 2 จุดที่หายไปทั้งที่ควรมี (2026-08-07)
+
+เจอจากการใช้จริง: ทดสอบ Manager ถูกเพิ่มเข้าระบบแต่ยังไม่ถูกตั้งบัญชี · HR เพิ่มพนักงานใหม่ที่ report to เขา · คำขอ 3 ใบถูกสร้างจริง · แต่พอตั้งบัญชีให้ Manager แล้วล็อกอินเข้าไป **ไม่มี bell และ sidebar ไม่มีตัวเลขรออนุมัติ**
+
+### 1. Sidebar badge ของโมดูล Request ไม่เคยขึ้นเลย (บั๊ก)
+
+`SidebarBadgeService` ส่ง `requests` มาถูกต้อง (ยิงจริงกับบัญชีที่มีปัญหาได้ 2) แต่ `sidebar.tsx` แผนที่ที่แปลง count → badge **ไม่มีคีย์ `requests`** → `badges[item.id] ?? 0` ตกเป็น 0 ตลอด ไม่เกี่ยวกับสิทธิ์หรือ cache · `SidebarBadgeTest` assert badge อื่นครบทุกตัวยกเว้นตัวนี้ เลยไม่มีใครจับได้ — เพิ่มเทสต์แล้ว (ฝั่ง map เองไม่มี test runner ให้ครอบ)
+
+### 2. คำขอค้างเพราะผู้อนุมัติไม่มีบัญชี = ไม่มีใครรู้ (ช่องว่าง)
+
+แจ้งเตือนเป็น push ครั้งเดียวตอนเกิดเหตุการณ์ — ตอนยื่น `notifyApprover()` หา user ไม่เจอก็ `return` และไม่มีอะไรย้อนมาส่งใหม่ตอนสร้างบัญชีทีหลัง เพิ่ม 2 อย่าง:
+
+- **`blocked_no_account`** — bell ใหม่ไปหาผู้ถือ `employees.set_credentials` เมื่อขั้นที่เป็น `current` ชี้ไปที่คนที่ยังไม่มี login (เกิดทั้งตอนยื่นและตอนขั้นก่อนหน้าอนุมัติผ่าน) · payload พา `employee_id` ไปด้วยเพื่อให้กดแล้วเปิดหน้าพนักงานคนนั้น ไม่ใช่คำขอที่ยังกดอะไรไม่ได้ · ไอคอนกุญแจสีเหลือง แยกจาก bell อนุมัติ · แถวคิว IT ไม่ยิง (ไม่มีตัวบุคคล)
+- **bell "ต้องตั้งบัญชี" เลิกตัดคนที่กดเพิ่มพนักงานออก** — เดิม `recipientsWithPermission(..., $actor)` ตัด actor ทิ้ง ในฐานจริงที่ `super` เป็นคนเดียวที่ถือสิทธิ์นี้ → รายชื่อว่าง → ไม่ส่งอะไรเลย (ตาราง notifications ไม่มี `new_employee` แม้แถวเดียว) · bell นี้เป็น **to-do ไม่ใช่ข่าวประกาศ** — เพิ่มพนักงานกับตั้งบัญชีเป็น 2 งานแยกกัน คนเพิ่มมักเป็นคนทำต่อ · การแจ้งลาออกยังตัด actor ตามเดิมเพราะเป็นข่าวสารจริง
+
+### 3. พอสร้างบัญชีแล้ว ส่งของที่ค้างให้ทันที
+
+ใช้จริงแล้วเจอต่อ: คำขอเกิด 09:49 (ยังไม่มีบัญชี → bell ไปหา `super` ว่าค้าง) · สร้างบัญชี 09:59 · ผู้อนุมัติล็อกอินเข้ามา **sidebar ขึ้น 3 แต่กระดิ่งว่างเปล่า** เพราะแจ้งเตือนเป็น push ครั้งเดียวและไม่มีอะไร replay
+
+`RequestNotificationService::deliverPendingApprovals(Employee)` ส่ง bell "รอการตัดสินของคุณ" ของทุกขั้นที่เป็น `current` ของคนนั้น เรียกจาก `EmployeeService::createUserWithCredentials()` — **วินาทีแรกที่มีกล่องข้อความให้ส่งถึง** · ถ้าไม่มีอะไรค้างก็ไม่ส่งอะไร
+
+### 4. พนักงานใหม่อ่านคำขอของตัวเองได้
+
+คำขอ onboarding มี `employee_id` = พนักงานใหม่ แต่ `user_id` เป็น null (ตอนยื่นเขายังไม่มีบัญชี) และเงื่อนไขการมองเห็นทั้งหมดดูที่ `user_id` / `submitted_by_user_id` / การเป็นผู้อนุมัติ — **เจ้าตัวจึงมองไม่เห็นคำขอที่ HR ขอให้เขาเลย** ลิสต์ว่างและเปิดดูได้ 403
+
+เพิ่มเงื่อนไข `employee_id = ตัวเอง` ที่ 3 จุด: visibility ของ `index`, `scope=mine`, และการเช็คผู้เกี่ยวข้องใน `show()` — นิยามของ "คำขอของฉัน" คือ **เกี่ยวกับฉัน หรือ ฉันเป็นคนยื่น** · `can_cancel` **ไม่เปลี่ยน**: onboarding เป็นของคนที่รันมันคือ HR พนักงานใหม่ติดตามได้แต่ไม่ถอนคำขอคอมที่ HR ขอให้ในวันแรก (มีเทสต์คุมทั้งสองข้อ)
+
+### 5. อัปเดตคำขอไปถึงทั้งเจ้าตัวและคนที่ยื่นให้
+
+`follower()` เดิมเลือกผู้รับ**คนเดียว** — เจ้าของบัญชี ถ้าไม่มีจึงตกไปที่คนยื่นแทน ผลคือคำขอ onboarding ทุกใบรายงานผลให้ HR ตลอดชีวิต แม้พนักงานจะมีบัญชีแล้ว
+
+เปลี่ยนเป็น `followers()` คืน **หลายคน**: คนที่คำขอเป็นของเขา + คนที่ยื่นแทน (ถ้าเป็นการยื่นแทน)
+
+- หา account ของเจ้าตัวผ่าน **`employee->user` ไม่ใช่แค่ `user_id`** — คำขอ onboarding ยื่นก่อนบัญชีจะมี ดังนั้นดูสด ๆ ทุกครั้ง **วันที่ตั้งบัญชีเสร็จเขาก็เริ่มได้รับข่าวคำขอตัวเองทันที ไม่ต้องเขียน `user_id` ย้อนหลัง**
+- ยื่นเอง (เจ้าของ = คนยื่น) รายชื่อยุบเหลือคนเดียว **ไม่มีใครได้ 2 ใบ** (มีเทสต์คุม)
+- คิว fulfill ตัดคนที่เป็น follower ออก (เพิ่งได้ bell "อนุมัติครบ" ไปแล้ว) เดิมตัดแค่ `user_id`
+
+ครอบทั้ง 5 เหตุการณ์: ยื่น · ผ่านขั้น · อนุมัติครบ · ไม่อนุมัติ · ปิดงาน — ทั้ง bell และอีเมล
+
+### ที่ยังไม่ทำ
+
+**Toast ไม่เด้งตอนล็อกอินครั้งแรก** — `notification-toaster.tsx` ตั้งใจ seed "เห็นแล้ว" จากการดึงครั้งแรกของหน้า (กัน reload แล้วเด้งรวด 13 ใบ) ผลคือแจ้งเตือนที่เกิดก่อนล็อกอินจะไม่เด้งเลย เห็นได้แต่ในกระดิ่ง · ทางแก้ที่คิดไว้คือ toast สรุปใบเดียว ("มีแจ้งเตือนที่ยังไม่ได้อ่าน N รายการ") แต่ยังติดว่ากดแล้วควรไปไหน — กระดิ่งเป็น dropdown ใน topbar ไม่ใช่ route
+
+### Tests / Verification
+
+`RequestNotificationTest` +2 (คำขอค้าง → คนตั้งบัญชีได้ bell พร้อม employee_id · แถวคิว IT ไม่ยิง) · `EmployeeApiTest` +1 (คนที่กดเพิ่มพนักงานได้ bell ด้วย) · `SidebarBadgeTest` +1 · `EmployeeOnboardingRequestTest` +2 (สร้างบัญชีแล้วได้ bell ที่ค้างครบทุกใบ · ไม่มีอะไรค้างก็ไม่ส่ง) · **ทุกตัวยืนยันด้วยการปิดโค้ดใหม่ชั่วคราวแล้วเห็น fail ก่อนคืนกลับ**
+`EmployeeOnboardingRequestTest` +4 (พนักงานใหม่อ่านคำขอของตัวเองได้ทั้งลิสต์/mine/detail · แต่ยกเลิกไม่ได้ · ผลลัพธ์ไปถึงทั้งเจ้าตัวและ HR · ยื่นเองได้ใบเดียว)
+**ทั้ง suite = 872 passed / 3,384 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน
+
+---
+
+## Workflow Engine — เลือกผู้อนุมัติจาก "ตำแหน่งจริง" ไม่ใช่หัวหน้าคนที่ N (2026-08-06)
+
+อาการที่รายงาน: พนักงาน Staff ขอคอม แล้วสายอนุมัติออกมาเป็น **Leader → Supervisor** ทั้งที่ workflow เขียนว่า Supervisor/Head → Manager/Asst. Manager
+
+สาเหตุคือดีไซน์เดิม: `StepActorType::Chain` เขียนไว้ตรง ๆ ว่า *"positional along the requester's manager line (label is display only)"* — engine หยิบ **หัวหน้าคนที่ N** ไม่เคยดูตำแหน่ง ทั้งที่ชื่อขั้นทุกขั้นเป็นชื่อตำแหน่ง
+
+### กฎใหม่: ขั้น = "ระดับตำแหน่ง" แล้วไต่ report-to หาคนที่ถือตำแหน่งนั้น
+
+- ตาราง pivot **`workflow_step_positions`** (FK ทั้งสองข้าง · `positions` เป็น `restrictOnDelete` — ตำแหน่งที่ workflow อ้างอยู่ลบไม่ได้) · **1 ขั้นรับได้หลายตำแหน่ง** ตามที่ `/` ในชื่อขั้นสื่อไว้แต่แรก
+- Default 3 ระดับใน `DefaultWorkflows::RUNGS`: **Supervisor** {Asst. Supervisor · Supervisor · Senior Supervisor} → **Manager** {Asst. Manager · Manager · Senior Manager} → **Executive** {Vice President · Director} · **Leader ลงมาไม่อยู่ในระดับใดเลย** (ไม่ใช่ผู้อนุมัติ ตามที่ตกลง)
+- resolver ไต่สายขึ้นไป **ต่อจากคนที่ขั้นก่อนหน้าจับได้** (คนเดียวเป็น 2 ระดับไม่ได้) · เจอคนแรกที่ตำแหน่งอยู่ในชุดของขั้นนั้น
+- **ไม่มีใครในสายถือตำแหน่งนั้น = ข้ามขั้นนั้น** (`skip_reason` ใหม่ `no_matching_position` + คำแปล en/th) — เช่น Supervisor ยื่นเอง ก็ไม่ต้องมี Supervisor อนุมัติตัวเอง ขึ้น Manager เลย
+- **กันชนห้าม bypass**: ถ้าทุกขั้นหาคนไม่เจอเลย แต่ในสายมีคนอยู่ → **หัวหน้าคนบนสุดของสายเซ็น 1 ขั้น** ไม่ปล่อยให้คำขออนุมัติตัวเองผ่าน
+- คนลาออกยังถูกข้ามเหมือนเดิม · คนที่ยังไม่มีบัญชี login ยังถือขั้นไว้และรอ (จากรอบก่อน)
+
+### ตัวแก้ไข + seeder
+
+- **หน้าแก้ Workflow ออกแบบใหม่เป็น "บันได"** — ขั้นเรียงบนรางแนวตั้ง หมายเลขอยู่บนราง ขั้นสุดท้ายเป็นธง (ไม่ใช่เลข เพราะไม่ใช่ระดับอนุมัติ) · แต่ละขั้นบอก "เซ็นโดย" เป็นชิปตำแหน่งที่เลือกไว้จริง แล้วกด "แก้" เปิดรายการทั้งหมด **ทีละขั้น** พร้อม **ชุดสำเร็จ 3 ระดับ** (ระดับ Supervisor / ระดับ Manager / ผู้บริหาร) ที่ดึงจาก `DefaultWorkflows::RUNGS` ตัวเดียวกับ seeder — เดิมวาดปุ่มตำแหน่งทั้ง 14 ตัวซ้ำทุกขั้น (3 ขั้น = 42 ปุ่มในจอเดียว)
+- **ตัด dropdown "ชนิดขั้นตอน" ออก** เพราะคำนวณได้จากผู้ดำเนินการอยู่แล้ว (ทีม IT = ขั้นดำเนินการ อย่างอื่น = ขั้นอนุมัติ) และ validation ก็บังคับอยู่ — เก็บไว้เท่ากับเปิดทางเลือกค่าที่บันทึกไม่ผ่าน · **ตัด strip พรีวิวในตัวแก้ไขออก** (บันไดคือลำดับอยู่แล้ว และ strip ยังอยู่ที่หน้า list/view) · ปุ่มบันทึกปิดตัวเองเมื่อมีขั้นที่ยังไม่เลือกตำแหน่ง แทนที่จะให้ยิงไปโดน 422
+- endpoint ใหม่ `workflows/position-options` (peek ใต้ gate `workflows.manage` ไม่ต้องมีสิทธิ์จัดการตำแหน่ง) ส่งทั้งรายการตำแหน่งและ preset 3 ระดับ · **validation: chain ต้องมี ≥1 ตำแหน่ง** ทั้ง `UpdateWorkflowRequest` และ preview · หน้า view โชว์ตำแหน่งของแต่ละขั้นเป็น chip
+- แก้ป้ายผิดที่เจอตอนรีวิว: ช่องชื่อ workflow ใช้คีย์ `wf_step_label` ("ป้ายที่แสดง" ของขั้นตอน) → เปลี่ยนเป็น `wf_name` · ข้อความ `wf_resolve_hint` ยังอธิบายกฎเก่า ("สายสั้นคนเดียวอนุมัติแทนหลายขั้น") → เขียนใหม่ตามกฎจริง
+- `WorkflowSeeder` ผูกตำแหน่งให้ตอน seed (fresh install ใช้งานได้ทันที) และ **เติมย้อนหลังให้ขั้นที่ยังไม่มีตำแหน่งเลย** เมื่อรันซ้ำ — ขั้นที่แอดมินตั้งค่าไว้แล้วไม่ถูกแตะ
+- migration `create_workflow_step_positions` backfill จากชื่อขั้นเดิมให้ install ที่มีทั้ง workflow และ positions อยู่แล้ว
+
+### Tests / Verification
+
+`RequestResolutionTest` เขียนใหม่รอบใหญ่ (12 tests) — ผังจริง `Staff → Leader → Supervisor → Manager → VP` ได้ **Sup → Mgr → VP และ Leader ไม่ถูกเรียกเลย** · ขั้นที่ไม่มีคนถือตำแหน่งถูกข้าม · ทุกขั้นหาไม่เจอ → คนบนสุดเซ็น · ขั้นถัดไปไม่ย้อนไปหยิบคนเดิม · คนลาออกถูกข้ามไปหาคนถัดไปที่ถือระดับเดียวกัน · merge ยังทำงานเมื่อ owner step ตรงกับหัวหน้าคนเดียวกัน
+`WorkflowAdminTest` — preview จับคู่ตามตำแหน่ง · chain ที่ไม่ระบุตำแหน่งถูกปฏิเสธ 422 · update บันทึก pivot · re-seed เติมขั้นที่ว่างแต่ไม่ทับที่แอดมินตั้ง
+fixture ของ `RequestWorkflowTest` / `RequestNotificationTest` / `RequestAutoTicketTest` / `EmployeeOnboardingRequestTest` เปลี่ยนมา seed `EmployeePositionSeeder` แล้วให้พนักงานถือตำแหน่งจริง
+**ทั้ง suite = 862 passed / 3,343 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน · migrate รันบนฐานจริงแล้ว
+
+---
+
+## Workflow — เลิกตั้ง SLA ในฐาน · วัดเวลาจริงแทน · ไม่มีการสร้าง workflow ใหม่ (2026-08-06)
+
+### 1. SLA ที่ตั้งค่าไว้ถูกลบออกจากฐานข้อมูล
+
+`workflow_steps.sla_days` · `request_approvals.sla_days` · `request_approvals.due_at` ถูก drop (migration `drop_sla_from_workflow_and_approvals`) — ตัวเลขพวกนี้ไม่เคยมีใครตั้งจากประสบการณ์จริง เป็นค่าที่ seed มาแบบเดาไว้ แล้วถูกใช้เป็นเส้นตายจนเกิดป้าย "เกินกำหนด" ที่อ้างอิงจากการเดา
+
+- ตามไปลบทุกจุด: model/resource/validation (`UpdateWorkflowRequest`, `WorkflowController@preview`) · `WorkflowResolverService` (ไม่มี SLA บนแถว ไม่ต้องเอา max ตอน merge) · `RequestService` (เลิกคำนวณ `due_at`) · `RequestOptionsController` · `DefaultWorkflows` + `WorkflowSeeder` · ฝั่งหน้าเว็บ: ช่องกรอก SLA ในตัวแก้ไข · SLA รวม/ต่อขั้นในหน้า view · `WorkflowStrip` (+ prop `showSla`) · ฟังก์ชัน `fmtSla` และคีย์ i18n ที่ตายแล้ว
+- `overdue` / `overdue_me` / `progress.current_overdue` หายไปจากโมดูล Request ทั้งหมด เพราะไม่มีเส้นตายให้เทียบ · `became_current_at` / `acted_at` / `approved_at` ยังอยู่ครบ ซึ่งพอสำหรับวัดของจริงย้อนหลัง
+
+### 2. การ์ดใบที่ 3 ทำใหม่ — "เวลาตัดสินเฉลี่ย" ที่วัดจริง 30 วันย้อนหลัง
+
+- `WorkflowController@index` คำนวณ **เวลาตั้งแต่ยื่นจนตัดสิน (submit → approved/rejected) เฉลี่ยต่อ workflow** จากคำขอที่ปิดในช่วง `MEASURE_DAYS = 30` แล้วส่งมาที่ `data[].measured = {avg_days, requests}` + `meta.measure_days`
+- **หน้าต่างเวลาเป็นตัวคุมความเร็ว** — query เดียวมีขอบเขต ไม่ scan คำขอทั้งระบบตามที่กังวลไว้ · เฉลี่ยใน PHP เหมือน KPI ของหน้า Requests เพื่อไม่ผูกกับฟังก์ชันวันที่ของฐานข้อมูล
+- การ์ดบอกช่วงและจำนวนตัวอย่างไว้ใต้ค่า (`ช่วง 30 วันย้อนหลัง · N คำขอ`) เพื่อไม่ให้เลขที่ขยับทุกสัปดาห์ถูกอ่านเป็นเป้าที่ใครตั้ง · ถ้าช่วงนั้นไม่มีคำขอปิดเลยจะขึ้น `—` ไม่ใช่ 0 (0 วันแปลว่า "ตัดสินทันที" ซึ่งไม่จริง)
+- แถวในลิสต์และหน้า view แสดงค่าที่วัดได้ของ workflow นั้นเอง แทนที่ SLA รวมที่เคยเอามาบวกกัน
+
+### 3. ไม่มีปุ่มสร้าง Workflow
+
+Backend ไม่มี endpoint สร้าง/ลบมาตั้งแต่ต้น (มีแค่ index/update/preview/employee-options) — ปุ่มบนหน้าเป็นปุ่มหลอกที่ toast "เร็ว ๆ นี้" ถูกลบออก พร้อมแก้คำบรรยายหน้าให้ตรงว่าโมดูลนี้ **ปรับ**เส้นทางอนุมัติของประเภทคำขอที่มีอยู่ ไม่ได้สร้างใหม่
+
+### Tests / Verification
+
+`WorkflowAdminTest` — เพิ่ม 2 เทสต์: ค่าเฉลี่ยที่วัดได้ถูกต้องและ **ไม่นับคำขอที่ปิดก่อนหน้าต่าง 30 วัน** · workflow ที่ยังไม่มีคำขอวิ่งผ่านคืน `measured = null` (ไม่ใช่ 0) · payload ของเทสต์เดิมถอด `sla_days` ออกหมด
+**ทั้ง suite = 854 passed / 3,324 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน · migrate รันบนฐานจริงแล้ว
+
+---
+
+## Onboarding requests → ต่อเข้า Workflow อนุมัติจริง — Tests / Verification
+
+`EmployeeOnboardingRequestTest` (12 tests) — 1 บริการ = 1 คำขอ · เจ้าของ/ผู้ยื่นถูกบันทึกแยกกัน · **สายอนุมัติเป็นของพนักงานใหม่ไม่ใช่ของ HR** · **คำขอรอหัวหน้าที่ยังไม่มีบัญชี (pending) ไม่ผ่านเอง** · **หัวหน้ากดอนุมัติได้ทันทีที่บัญชีถูกสร้าง** · workflow ปิดแล้วพนักงานยังถูกสร้าง + รายงานใบที่ยื่นไม่ได้ · หมายเหตุกลายเป็น reason · คนยื่นแทนเปิด/ยกเลิก/เห็นใน `scope=mine` ได้ · API บอก origin + ชื่อคนยื่น · คนยื่นได้รับ receipt ที่เจ้าของรับไม่ได้
+`RequestResolutionTest` — เทสต์เดิมที่พินกฎ "ไม่มีบัญชี = ข้าม" ถูกเขียนใหม่เป็นกฎใหม่ + เพิ่มเทสต์ว่าคนลาออกยังถูกข้าม
+**ทั้ง suite = 852 passed / 3,316 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · `php artisan migrate` รันบนฐานจริงแล้ว · ยิง resolver กับข้อมูลจริง (read-only) ยืนยันว่าคำขอใบใหม่รอหัวหน้าคนจริงแทนที่จะ skip · มีเทสต์คุมว่า `awaiting_account` เป็น true แล้วกลายเป็น false เองเมื่อบัญชีถูกสร้าง (ไม่มีอะไรไปเขียนแถวที่แช่ไว้)
+
+---
+
+## Settings → Request data: "การขอคอมพิวเตอร์" แก้ตัวเลือกได้แล้ว (2026-08-07)
+
+ฟิลด์ "อุปกรณ์ที่ต้องการ" ของคำขอคอมพิวเตอร์เคยเป็น slug ตายตัวใน `RequestSchemas` (`device` = laptop / desktop) — จะเพิ่ม All-in-One หรือ Workstation ต้องแก้โค้ดแล้ว deploy ตอนนี้เปลี่ยนเป็น **managed list** เหมือน Hardware / Mobile / Telephone:
+
+- คีย์เปลี่ยนเป็น `device_id` + `'managed' => true` → ค่าที่เก็บคือ **id ของ `request_options`** (ลงคอลัมน์ `request_option_id` ที่มี FK จริง) ไม่ใช่สตริง
+- `RequestOptionSeeder` หยิบตัวเลือกตั้งต้น (Laptop / Desktop PC) ให้เอง · migration `seed_computer_device_options` เติม 2 แถวนี้ให้ฐานที่ seed ไปแล้ว (idempotent — เช็คก่อนแทรก)
+- **ไม่ต้องแก้ frontend เลย** — หน้า Settings อ่าน `RequestSchemas::managedLists()` แล้วสร้างแท็บย่อยเองตามข้อมูล (จาก 3 เป็น 4 รายการ) · validation ยังคุมว่า id ต้องอยู่ในลิสต์ของฟิลด์นั้นและยัง `active`
+- คำขอเก่ายังอ่านได้ปกติ: `fields._display` เป็น snapshot ตอนยื่น หน้ารายละเอียดอ่านจากตรงนั้น ไม่ได้ resolve id ใหม่ — migration จึงไม่ไปเขียนทับข้อมูลเดิม
+
+### Tests / Verification
+
+`RequestOptionTest` — เทสต์ที่พินว่ามี 3 ลิสต์กลายเป็น 4 (+ นับ options 8→10) · เพิ่มเทสต์ "เพิ่มตัวเลือกคอมพิวเตอร์แล้วฟอร์มเสนอให้เลือกจริง" · เทสต์ "ลิสต์ที่ไม่ได้ประกาศเขียนไม่ได้" เปลี่ยนตัวอย่างไปใช้ `email.address` (ช่องพิมพ์ ไม่มีลิสต์) + `computer.ram_size` (field key ที่ไม่มีใครประกาศ)
+เทสต์ที่ยิงคำขอคอมพิวเตอร์ 4 ไฟล์ (`RequestWorkflowTest`, `RequestAutoTicketTest`, `RequestNotificationTest`, `EmployeeOnboardingRequestTest`) seed `RequestOptionSeeder` แล้วส่ง `device_id` เป็น id จริง
+**ทั้ง suite = 873 passed / 3,391 assertions** · pint ผ่าน · `php artisan migrate` รันบนฐานจริงแล้ว (ได้ `computer.device_id` = Laptop / Desktop PC) · ไม่มีไฟล์ frontend เปลี่ยน จึงไม่ต้อง build ใหม่
+
+---
+
+## Toast: คิวเดียวทั้งแอป · error รอให้กดปิด · ประกาศให้ screen reader (2026-08-07)
+
+เดิมมี toaster **2 ตัวแยกกัน** วาง `right-5 bottom-5` เหมือนกันแต่คนละ portal (`transient-toaster` z-120 กับ `notification-toaster` z-60) เด้งพร้อมกันจะทับกันสนิท และรวมกันได้ถึง 6 ใบ ปรับใหม่ตามมาตรฐาน (Material 3 snackbar · W3C ARIA APG alert/status · WCAG 2.2.1) โดย**ไม่เพิ่ม library ใด ๆ**
+
+### 1. region เดียว คิวเดียว
+`stores/toast.ts` เป็นคิวเดียวของทั้งแอป — ทั้งข้อความจากการกดบันทึก/ลบ, คำเตือน 429 จาก axios interceptor และ**การแจ้งเตือนจากเซิร์ฟเวอร์**
+- `notification-toaster.tsx` (component) → `use-notification-toasts.ts` (**hook ไม่ render อะไร**) แปลงแจ้งเตือนใหม่เป็น toast แล้ว push เข้าคิวเดียวกัน · เรียกใน `AppShell` เพราะกดแล้วต้อง navigate
+- `transient-toaster.tsx` → `toaster.tsx` = การ์ดเดียวใช้ทุกกรณี (badge สี + title + ข้อความ + ปุ่มปิด + แถบเวลา) · จำกัดรวม **3 ใบ** ที่เหลือรอคิว
+- `visibleToasts()` เป็น pure function: **error ที่ยังไม่ถูกอ่านจะไม่ถูกดันตกจอ** ด้วย toast ใหม่ · ช่องที่เหลือให้ใบล่าสุด
+- toast ที่กดได้ (แจ้งเตือน) ยังทำงานเหมือนเดิม — mark read + ไปหน้าเป้าหมาย + ปิดใบพี่น้องที่ไปที่เดียวกัน (`group` + `dismissGroup`)
+
+### 2. อายุตามความสำคัญ (เดิม 6 วิเท่ากันหมด)
+`TOAST_DURATION`: success 4 วิ · info 5 วิ · warning 6 วิ · **error = ไม่หายเอง** รอให้กดปิด (สิ่งที่ต้องแก้ต้องอ่านได้จบ) · แจ้งเตือนจากเซิร์ฟเวอร์ = 6 วิ (ไม่ค้าง เพราะกระดิ่งเก็บไว้อยู่แล้ว)
+การ์ดที่ยืม tone แดงเพื่อสื่อ "ลบแล้ว" (Access → member/resource removed) ส่ง `duration: 4000` เอง เพราะมันคือความสำเร็จ ไม่ใช่ความล้มเหลว
+แถบเวลาซิงก์กับตัวจับเวลาจริงผ่าน class `[animation-duration:…]` (ไม่ใช่ 6 วิตายตัวใน CSS อีก)
+
+### 3. Accessibility
+`role="alert"` สำหรับ error · `role="status" aria-live="polite"` สำหรับที่เหลือ · `aria-atomic` · region คงอยู่ใน DOM แม้ไม่มี toast (live region ที่เพิ่งโผล่มาพร้อมข้อความ screen reader มักไม่ประกาศ) · การ์ดที่กดได้ **โฟกัสด้วยคีย์บอร์ดและกด Enter/Space ได้** + focus ring · ปุ่มปิดใช้ `notif_dismiss` ผ่าน `useT()` (เดิม hardcode "Dismiss")
+
+### 4. เก็บกวาด
+หยุดนับเวลาเมื่อ **focus** ไม่ใช่แค่ hover (`:focus-within` + `onFocus/onBlur`) · ข้อความแจ้งเตือนแสดง **2 บรรทัด** แล้วค่อยตัด (เดิม `truncate` บรรทัดเดียว ตัดกลางประโยค) · ลบ `.toast-ring-fg` / `@keyframes toast-ring-deplete` ที่ไม่มีใครใช้แล้ว (วงแหวนนับถอยหลังของ toaster ตัวเก่า)
+หมายเหตุ: `prefers-reduced-motion` มีอยู่แล้วทั้งคู่ก่อนแก้ — ครอบ enter/leave/bar อยู่แล้ว ไม่ใช่ช่องว่างอย่างที่ประเมินไว้ตอนแรก
+
+### Tests / Verification
+
+ไม่มี test runner ฝั่ง frontend ในโปรเจกต์ (มีแต่ PHPUnit) จึงพิสูจน์กฎของคิวด้วยสคริปต์ assert รันบน Node type-stripping (`node toast-queue.test.ts` ใน scratchpad — ไม่เพิ่ม dependency): อายุต่อ tone · override ต่อใบ · burst guard ยุบเฉพาะ **key เดียวกัน** (แจ้งเตือน 2 ใบข้อความเหมือนกันไม่ถูกกลืน) · `dismissGroup` เก็บใบที่กดและกลุ่มอื่นไว้ · `visibleToasts` 4 เคส (ใบล่าสุดได้ที่ · error ไม่ถูกดันตก · error มากกว่าช่อง · คิวว่าง) — **ผ่านทั้งหมด** และพิสูจน์ว่าจับของจริงได้โดยแก้ `error: null` → `6000` ชั่วคราวแล้วเห็นเทสต์ล้ม
+`tsc --noEmit` = 0 · eslint ไฟล์ที่แก้ = 0 · prettier ผ่าน · `npm run build` ผ่าน + ยืนยันว่า CSS ที่ build ออกมามี `animation-duration` ครบทั้ง 4 ค่า (4s/5s/6s/8s)
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์จริง** — พฤติกรรมบนหน้าจอ (การซ้อน 3 ใบ, การกดแจ้งเตือนแล้วเด้งไปหน้าเป้าหมาย) ต้องกดดูเองอีกครั้ง
+
+### แก้ต่อ: `tone` เป็นพารามิเตอร์บังคับ (ข่าวดีเคยเด้งเป็นการ์ดแดง)
+
+`push()` เคยตั้ง default `tone = 'error'` → จุดที่เรียกโดยไม่ระบุ tone จะได้การ์ดแดงทั้งที่เป็นข่าวดี ที่เห็นชัดคือ **"ยื่นคำขอ Onboarding แล้ว 3 รายการ"** หลังเพิ่มพนักงาน (และยิ่งชัดเมื่อ error เลิกหายเอง → ค้างจนกดปิด)
+- `tone` เป็น **required** แล้ว TypeScript จับให้ตอน compile ไม่ต้องพึ่งการสังเกตบนหน้าจอ
+- 4 จุดที่ปล่อยให้ตกไปที่ default: `emp_onboarding_filed` → **success** · `emp_onboarding_failed` → error (ต้องไปยื่นเองจึงค้างไว้ให้อ่าน) · 422 field error ของ add/edit employee → error (เจตนาเดิม แต่ระบุให้ชัด)
+- `tsc --noEmit` ผ่าน = ยืนยันว่าไม่มีจุดอื่นในโปรเจกต์ที่ละเว้น tone อีก
+
+---
+
+## Request: ไฮไลต์ม่วง = "คำขอพนักงานใหม่ที่รอคุณตัดสิน" (2026-08-07)
+
+เดิมแถวม่วงติดทุกคำขอที่ `origin = onboarding` ไม่สนสถานะ — ผู้อนุมัติคนที่ 1 กดอนุมัติไปแล้ว คำขอไปรอคนที่ 2 แต่แถวในรายการของคนที่ 1 ยังม่วงอยู่ พอมีคำขอ onboarding สะสมหลายใบ ไฮไลต์ก็เลิกชี้อะไร
+
+- เพิ่ม `onboardingRowClass(request)` ใน `shared/lib/request-meta.ts` — คืนสีม่วงเมื่อ `origin = onboarding` **และ** `can_approve` (ขั้นปัจจุบันเป็นของผู้ที่กำลังดู) ใช้ทั้งตารางและการ์ดคิวบนแดชบอร์ด แทนที่จะเขียนเงื่อนไขซ้ำ 2 ที่
+- `can_approve` มาจาก `ServiceRequestResource` อยู่แล้ว = ตำแหน่งจริงในสายอนุมัติ ไม่ใช่การเดาจากสถานะ → **ไม่ต้องแก้ backend เลย**
+- **ป้ายม่วง "พนักงานใหม่" ยังอยู่ทุกแถวเสมอ** (ผูกกับ origin) สีที่หายไปคือพื้นหลัง ไม่ใช่ข้อมูล
+- ผลข้างเคียงที่ตั้งใจ: พอถึงคิวคนที่ 2 แถวจะม่วงในรายการของ**คนที่ 2** แทน · HR ที่ยื่นให้ (ไม่ได้เป็นผู้อนุมัติ) เห็นเฉพาะป้าย
+
+### Tests / Verification
+
+สคริปต์ assert ใน scratchpad (`node request-row-tint.test.ts`): รอฉัน → ม่วง · อนุมัติแล้วรอคนถัดไป → ไม่ม่วง · คำขอของตัวเอง → ไม่ม่วงแม้รอฉัน · ป้ายยังติดอยู่หลังสีหาย — ผ่านทั้งหมด และพิสูจน์ว่าจับของจริงได้โดยถอด `&& can_approve` ออกชั่วคราวแล้วเห็นเทสต์ล้ม
+`tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · `npm run build` ผ่าน
+
+### ขีดความคืบหน้าในตาราง: รางกว้างเท่ากันทุกแถว
+
+`WorkflowMini` เคยให้ขีดละ 20px คงที่ → workflow 3 ขั้นยาว 66px แต่ 5 ขั้นยาว 112px แถวในคอลัมน์เดียวกันจึงยาวไม่เท่ากัน และอ่านผิดเป็น "ใบนี้คืบหน้ามากกว่า" ทั้งที่หมายถึง "flow นี้มีขั้นมากกว่า"
+ตอนนี้ราง **กว้างคงที่ 96px** แล้วให้ขีดแบ่งกันเองด้วย `flex-1` (ขั้นเยอะ = ขีดบางลง ไม่ใช่รางยาวขึ้น) มี `min-w-[2px]` กันขีดหายเมื่อ flow ยาว · ตัวเลข `x/y` กว้างคงที่ + `tabular-nums` ชิดขวา ตัวเลขจึงตรงเป็นแนวลงมาทั้งคอลัมน์
+เทียบความกว้างต่อขีด: 3 ขั้น = 30px · 4 ขั้น ≈ 21.8px · 5 ขั้น ≈ 16.8px — ความกว้างรวมเท่ากันหมด
+
+---
+
+## View Drawer: สลับ record แล้วข้อมูลไม่ปนกันอีก (2026-08-07)
+
+**อาการ:** เปิดดูรายละเอียด record หนึ่งแล้วสลับไปดูอีก record ทันที เห็นข้อมูลของ record ก่อนหน้าแสดงใต้ชื่อ/เลขที่ของ record ใหม่ หรือเห็นแท็บย่อยขึ้นว่า "ไม่มีข้อมูล" ทั้งที่มี
+
+**สาเหตุราก:** ทุก drawer เก็บสำเนา record ล่าสุด (`shown`) ไว้กันหน้าว่างระหว่าง Radix เล่น exit animation แต่สำเนานั้น**ไม่ได้ผูกว่าเป็นของ record ไหน** เมื่อ id เปลี่ยนขณะ dialog ยังเปิดและข้อมูลของ id ใหม่ยังไม่มา โค้ดหยิบสำเนาเก่ามาแสดง — และแท็บย่อยที่ใช้ค่า default ว่าง (`= []`) ก็แยกไม่ออกว่า "ยังไม่มา" หรือ "ไม่มีจริง"
+
+### สำรวจครบทั้ง 6 drawer
+
+| Drawer | แหล่งข้อมูล | ก่อนแก้ |
+|---|---|---|
+| request | query ตาม id **ไม่มี** loading guard | 🔴 แสดงใบก่อนหน้าทั้งใบ |
+| stock item | query ตาม id + `isLoading` | 🟠 ปลอดภัยตอนสลับ แต่ถ้า query error จะ fallback ของเก่า |
+| employee | prop (ถูก) + sub-query 4 ตัว | 🟠 count = 0 และ empty state หลอกชั่วขณะ |
+| asset | prop + guard `full.id === a.id` (ถูกอยู่แล้ว) | 🟠 แท็บประวัติ/งานแจ้งซ่อมโชว์ "ไม่มี" ชั่วขณะ |
+| ticket · contract | prop ทั้งก้อน ไม่มี per-id query | 🟢 ไม่ต้องแก้ |
+
+### สิ่งที่แก้
+
+- **`shared/hooks/use-record-view.ts` (ใหม่)** — `useRecordView(id, live)` คืน `{ record, switching }` : สำเนาเก่าถูกใช้ได้**เฉพาะตอนกำลังปิด** (id = null) เท่านั้น · ระหว่างเปิดอยู่ record ต้องมี `id` ตรงกับที่ดูอยู่ ไม่ตรง = คืน `null` + `switching = true` ให้ผู้เรียกวาด skeleton · เช็ค `live.id === id` กัน query ที่คืนข้อมูลของ key ก่อนหน้า (`placeholderData`) ด้วย · แยก `pickRecordView()` เป็น pure function ให้เทสต์ได้
+- **request-detail-dialog** — ใช้ hook + แยกเนื้อหาเป็น `RequestDetailBody` (รับ record ที่ non-null) และ `RequestDetailLoading` (skeleton รูปทรงเดียวกับเนื้อหาจริง) วางใน `DialogContent` เดิม → dialog ไม่ปิด ไม่กระพริบ ไม่แสดงใบผิด · การตัดสินใจ (approve/reject) ที่ค้างถูกล้างเมื่อสลับใบ
+- **stock-item-detail-modal** — เปลี่ยนไปใช้ hook (ปิดช่อง query error ที่เคย fallback ของเก่า) เงื่อนไข skeleton เหลือ `!item`
+- **employee-view-drawer** — `emp = liveEmp && liveEmp.id === shown.id ? liveEmp : shown` (defense in depth) · count ของแท็บ Assets/Tickets/Access เป็น `undefined` ระหว่างโหลด (ไม่ใช่ 0) · `AssetsPane`/`TicketsPane` รับ `loading` → DataTable แสดง shimmer rows แทน empty state · แท็บ Access มี placeholder rows
+- **asset drawer** — `AssetHistoryTab`/`AssetTicketsTab` รับ `loading={!enriched}` → ตารางแสดง loading rows แทนข้อความ "ไม่มีประวัติ/ไม่มีงานแจ้งซ่อม"
+
+### Tests / Verification
+
+สคริปต์ assert ใน scratchpad (`node record-view.test.ts`) — 6 เคส: record ของ id ที่เปิด → แสดง · สลับแล้วข้อมูลยังไม่มา → `null` + switching (ไม่หยิบของเก่า) · query คืนข้อมูล key ก่อนหน้า → กันไว้ · ปิด (id = null) → คืนสำเนาให้ animation · ปิดโดยไม่เคยแสดง → null · สำเนาเก่าไม่เคยชนะ record สด ของ id เดียวกัน — **ผ่านทั้งหมด** และพิสูจน์ว่าจับของจริงได้โดยเปลี่ยน `record: null` → `record: retained` ชั่วคราวแล้วเห็นเทสต์ล้ม
+`tsc --noEmit` = 0 · eslint ไฟล์ที่แก้ = 0 (เหลือ 2 warnings เดิมของ stock counting/requests tab ที่ไม่ได้แตะ) · prettier ผ่าน · `npm run build` ผ่าน
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — ต้องลองสลับ record จริงเพื่อดู skeleton/จังหวะ
+
+---
+
+## เส้นทางการอนุมัติ: เหตุผลที่ข้ามขั้นมีข้อความจริง ๆ + เส้นไม่ทะลุจุด (2026-08-07)
+
+จาก `docs/debug/Screenshot 2026-08-07 164539.png` — แถบเหลืองของขั้นที่ถูกข้าม**ว่างเปล่า** มีแต่ไอคอน
+
+**สาเหตุ:** `ApprovalSkipReason::NoMatchingPosition` ถูกเพิ่มฝั่ง PHP ตอนทำ Workflow Engine แต่ไม่ได้เพิ่มใน `ApprovalSkipReason` ของ `shared/types` และ `REQUEST_SKIP_REASON_LABEL` → `t(undefined)` คืนค่าว่าง แถบจึงไม่มีข้อความ (ข้อมูลจริงมี 7 แถวที่ใช้เหตุผลนี้ รวมใบในภาพ)
+
+- เพิ่ม `no_matching_position` ทั้งใน TS union + ตาราง label + ข้อความ EN/TH
+- **ย้ายคำว่า "ข้ามขั้นนี้" เข้าไปในแถบ** — บรรทัดสถานะด้านบนไม่พูดซ้ำเมื่อมีเหตุผลแล้ว (แถวเก่าที่ยังไม่มี `skip_reason` ยังแสดงคำเดิมตามปกติ) และปรับข้อความทั้ง 4 เหตุผลให้พูดครบในตัวเอง: `ข้ามขั้นนี้ เนื่องจาก…` / `Step skipped - …`
+  - ใหม่: `ข้ามขั้นนี้ เนื่องจากตำแหน่งเท่ากัน หรือน้อยกว่า` (ใช้ซ้ำได้ทุกขั้นที่ไม่มีใครในสายถือตำแหน่งของขั้นนั้น)
+- **เส้น timeline ไม่ทะลุจุดอีก** — จุดของขั้น "กำลังรอ" กับ "ข้าม" เป็นสีโปร่งแสง (`bg-brand/10`, `bg-amber-500/10`) เส้นจึงมองเห็นผ่านกลางวง แก้ด้วยการห่อจุดด้วยแผ่นทึบ `bg-background` (แนวเดียวกับที่แก้ในตัวแก้ไข Workflow)
+- **เส้นไม่ห้อยเลยจุดสุดท้ายแล้ว** — เดิมวาดเป็น pseudo-element เดียวยาวตลอดกล่อง (`before:top-2 before:bottom-2`) ความยาวจึงมาจากขอบกล่อง ไม่ใช่ตำแหน่งจุด → มีหางห้อยใต้จุดสุดท้าย ~26px (เท่าความสูงข้อความ 2 บรรทัดของขั้นนั้น) และโผล่เหนือจุดแรก เปลี่ยนเป็น **1 เส้นต่อ 1 ช่วง** วาดจากใต้จุดไปเกือบถึงจุดถัดไป และไม่วาดหลังขั้นสุดท้าย
+- **ขั้นที่กำลังรอมีวงกระเพื่อม** (`.trail-live` ใน `app.css`) — วงสีแบรนด์ผุดจากหลังจุดแล้วจางหายทุก 2 วินาที ชี้ว่าคำขออยู่ที่ขั้นไหนในตอนนี้ (ring นิ่งอย่างเดียวไม่พอ เพราะขั้น "ข้าม" ก็มีจุดสีอ่อนเหมือนกัน) เลือกเป็นการกระเพื่อมช้า ๆ ไม่ใช่กระพริบติด-ดับ เพราะแถบนี้มีไว้อ่าน · `prefers-reduced-motion` = ค้างวงไว้นิ่ง ๆ (ไม่ลบทิ้ง เพราะเป็นตัวบอกขั้นปัจจุบัน)
+
+### Tests / Verification
+
+`tests/Unit/SkipReasonWordingTest.php` (ใหม่) — เดินทุก case ของ `ApprovalSkipReason` แล้วยืนยันว่ามีอยู่ใน TS union · ในตาราง label · มีข้อความทั้ง EN และ TH (16 assertions) เป็น guard ข้ามภาษาที่จับบั๊กแบบนี้ตั้งแต่ตอนรันเทสต์ ไม่ใช่ตอนเห็นภาพหน้าจอ · พิสูจน์แล้วว่าจับจริงโดยลบบรรทัด label ออกชั่วคราวแล้วเทสต์ล้ม
+**ทั้ง suite = 874 passed / 3,407 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน
+
+---
+
+## พนักงานใหม่: ขอสิทธิ์-อุปกรณ์ให้ครบ และปิดงานที่เดียวจบ (2026-08-08)
+
+รอบนี้ไล่ตั้งแต่ตอนเพิ่มพนักงาน จนถึงตอนช่างปิดเคส — พบว่าหลายจุดที่หน้าจอตรวจไว้ แต่ API ปล่อยผ่าน และหลายจุดที่หลังบ้านตั้งใจอธิบาย แต่หน้าบ้านทิ้งข้อความนั้นทิ้ง
+
+### 1. Step 3 เก็บรายละเอียดที่คำขอต้องใช้จริง
+
+เดิมติ๊ก "คอมพิวเตอร์" แล้วส่ง `fields => []` เปล่า ๆ IT เปิดใบขึ้นมาไม่รู้ว่าโน้ตบุ๊กหรือตั้งโต๊ะ
+
+- **`GET /employees/onboarding-services`** (ใหม่, gate `employees.add`) อ่าน `RequestSchemas::for()` ตัวเดิม → IT เพิ่มประเภทอุปกรณ์ที่ Settings → Request data แล้วโผล่ที่ Step 3 เองโดยไม่ต้อง deploy
+  - ไม่ใช้ `service-requests/options` เพราะ gate ด้วย `requests.submit` (สิทธิ์คนละโมดูลที่แอดมินถอดออกได้ แล้วฟอร์มพนักงานจะพังโดยไม่มีใครเดาถูก) — ตาม peek pattern เดิมของ asset→contract
+- **UI เปลี่ยนจากการ์ด 3 ใบเรียงแถว เป็นรายการเรียงลง** เพราะ grid บังคับให้ทุกใบสูงเท่ากัน ติ๊กใบเดียวแล้วยืดทั้งแถว · ฟิลด์ห้อยอยู่ใต้บริการของตัวเองด้วยเส้นตั้ง จึงเห็นชัดว่าเป็นของใคร
+- **อุดช่องโหว่ validation** — `RequestService::submitFor()` ถูกเรียกตรง ไม่เคยผ่าน `StoreServiceRequestRequest` ซึ่งเป็นที่เดียวที่มีกฎ `required` onboarding จึงยื่นคำขอที่ฟอร์ม Request เองยังปฏิเสธได้ · ตอนนี้ `StoreEmployeeRequest` ยืม `RequestSchemas::rules()` มาใช้ โดยเปลี่ยน prefix `fields.` → `services.<service>.` ทั้งใน key และในสตริงกฎ
+- `sim` (ต้องการซิม/แพ็กเกจดาต้า) เปลี่ยนเป็น **required** — เว้นว่างแล้ว IT ต้องกลับไปถามอยู่ดี ซึ่งเป็นสิ่งเดียวที่ฟิลด์นี้มีไว้ป้องกัน · กระทบหน้า Request ด้วยโดยตั้งใจ เพราะถ้าจำเป็นตอน onboarding ก็จำเป็นตอนใครขอมือถือเหมือนกัน
+- payload เปลี่ยนเป็น `services: { computer: { device_id: 3 } }` และ `toFormData` เขียนใหม่เป็น recursive `appendField()` — จำเป็นเพราะกรณีแนบรูป + ติ๊กบริการ ต้องส่ง `services[computer][device_id]`
+
+### 2. เช็คสายอนุมัติก่อน แทนที่จะรู้ตอนสายเกินไป
+
+- **`GET /employees/onboarding-precheck`** — สร้าง `new Employee([...])` แบบไม่ save แล้วส่งเข้า `blockReason()` ตัวเดิม **ไม่แตะ `WorkflowResolverService` เลยสักบรรทัด** ตรรกะที่ตอบ preview จึงเป็นโค้ดชิ้นเดียวกับที่ตัดสินตอน Save
+- สายเสีย → แบนเนอร์บอกเหตุ + ชื่อคนที่ลาออก + **ปุ่ม Save ปิด** (รวมทางลัด Enter)
+- **ตอบไม่ได้ ก็ยังปิด** พร้อมปุ่มลองใหม่ — "ไม่รู้" ไม่ใช่ "ผ่าน" และการ fail-open จะทำให้กฎหลุดโดยไม่มีใครรู้ · ยกเว้นเน็ตล่มทั้งตัว ซึ่ง POST ก็ยิงไม่ออกอยู่ดี
+
+### 3. role ของพนักงานใหม่มาจาก Role Group เท่านั้น
+
+เดิม `resolveGroupRole()` ใช้ `firstOrCreate(['key' => 'user'])` — บน install ที่ตั้ง Role Template เอง จะ **สร้าง role ชื่อ "Staff" ที่ไม่มีสิทธิ์สักข้อ** ให้เงียบ ๆ ได้บัญชีที่ล็อกอินได้แต่เปิดอะไรไม่ได้ ถือ role ที่แอดมินไม่เคยสร้าง · แถมการโหลดหน้า Settings ก็ trigger การเขียนนี้ได้ (write ใน GET)
+
+- ตัด fallback ทิ้งทั้งหมด: `role = กลุ่มของพนักงาน ?? กลุ่มเริ่มต้น ?? ปฏิเสธ`
+- สร้าง login ไม่ได้ → **422 พร้อม code `no_role_configured`** และ drawer ขึ้นแถบเตือนตั้งแต่เปิด
+- `DatabaseSeeder` เขียนกำกับว่า **ไม่ seed Role Group ให้โดยตั้งใจ** — แอดมินต้องสร้างเองก่อน (บัญชี super ยกเว้น เพราะถือ role ตรงผ่านคอลัมน์ `role`)
+- ตัดช่องอีเมลออกจาก Step 1 — พนักงานใหม่ยังไม่มีอีเมลบริษัท ต้องขอผ่าน Step 3 ก่อน
+- `joined_at` เปลี่ยนเป็น **required ตอนเพิ่ม** (ยังปล่อยตอนแก้ไข เพราะคนที่มาจาก bulk import อาจไม่มีวันที่ และต้องแก้ไขข้อมูลได้)
+
+### 4. ปิด Ticket แล้วคำขอปิดตาม
+
+เดิมต้องทำ 2 ที่: ช่างปิดเคส แล้วต้องมีคนจำได้ว่าต้องมากด Fulfil อีกที
+
+- **`RequestService::settleFromTicket()`** — ปิดสำเร็จ → `Fulfilled` · ยกเลิก → **`Cancelled` ไม่ใช่ `Rejected`** เพราะผ่านผู้อนุมัติครบทุกขั้นแล้ว นับเป็น rejected จะทำให้สถิติสายอนุมัติเพี้ยน
+- เหตุผลของช่างประทับลงแถว Fulfillment → **ข้อความชุดเดียวกันทั้งสองฝั่ง** สำหรับตรวจสอบย้อนหลัง (ไม่ต้อง migrate เพราะแถวนั้นคือขั้น "IT ลงมือทำ" ที่ `fulfill()` เขียนอยู่แล้ว)
+- ไม่ gate ด้วย `requests.fulfill` — ด่านที่สำคัญยิงไปแล้วคือ "เฉพาะผู้รับผิดชอบเคสเท่านั้นที่ปิดได้" ถ้ามาปฏิเสธซ้ำจะได้ ticket ปิดแต่ request ค้าง ซึ่งคือปัญหาที่กำลังแก้
+- **`notDelivered()`** (ใหม่) — เดิมเรียก `cancelled()` ซึ่งคุยกับผู้อนุมัติที่ถือใบรออยู่ แต่แถว Fulfillment เป็นขั้น `it_staff` ที่ไม่มีตัวบุคคล → **ไม่มีใครได้รับแจ้งเลย** ตอนนี้ยิงหาผู้ขอ + ผู้ยื่นแทน พร้อมเทมเพลตเมล `request.not_delivered` ของตัวเอง (ใช้ `request.rejected` ไม่ได้ เพราะจะบอกผู้ขอว่าถูกผู้อนุมัติปฏิเสธ ซึ่งตรงข้ามกับความจริง)
+- **เส้นทางการอนุมัติอ่านสถานะจาก ticket** — เดิมแถว Fulfillment ใช้คำศัพท์ของขั้นอนุมัติ จึงขึ้น "รออนุมัติ" บนคำขอที่อนุมัติไปแล้วหลายวัน และ "ไม่อนุมัติ" บนงานที่แค่ส่งมอบไม่ได้ · ตอนนี้: รอรับเคส / อยู่ระหว่างดำเนินการ โดย xxx / เสร็จสิ้น โดย xxx / ยกเลิก โดย xxx พร้อม tone สีเทาสำหรับ cancelled ให้ตรงกับ badge สถานะ
+
+### 5. ลบ Role Template บอกเหตุผลได้
+
+`confirm-dialog` ใช้ `catch {}` แบบไม่รับ error object → ทุกการปฏิเสธจากหลังบ้านขึ้น "กรุณาลองใหม่อีกครั้ง" ทั้งที่ `RoleController::destroy` เขียนเหตุผลไว้ 3 แบบ
+
+- เช็คฝั่ง client ก่อนเปิด dialog ตามแบบแผนของแผนก/ตำแหน่งที่มีอยู่แล้ว → บอกเหตุผลจริงพร้อมตัวเลข ("ยังมี Role Group ใช้ Template นี้อยู่ 1 กลุ่ม")
+- เพิ่ม `groups` count ใน `/api/permissions` (query เดียว แบบเดียวกับ `memberCounts`)
+- ลบ `PUT /api/permissions/default-role` — validate แล้วเขียน AuditLog ว่าตั้งค่าแล้ว **แต่ไม่ persist อะไรเลย** และไม่มีใครเรียก
+
+### Tests / Verification
+
+**ทั้ง suite = 913 passed / 3,554 assertions** (เดิม 892) · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน
+
+เทสต์ที่เพิ่มเน้นจับ **ความเงียบ** เป็นหลัก เพราะบั๊กรอบนี้ส่วนใหญ่คือระบบทำงานผ่านแต่ไม่มีใครรู้:
+- ปิด/ยกเลิก ticket แล้ว **ผู้ขอต้องได้ bell จริง** — รอบแรกผมเช็คแค่สถานะกับ note บั๊ก "ยกเลิกแล้วเงียบสนิท" เลยรอดผ่าน 911 tests มาได้
+- ยืม option ของ mobile มาตอบ computer → 422 (ทั้งคู่ชื่อ `device_id`)
+- โหลด settings ต้อง **ไม่เพิ่มจำนวน Role** (จับ write ใน GET)
+- มี role `user` อยู่ แต่ไม่มีกลุ่มเริ่มต้น → ต้องคืน null (จับการแอบ fallback)
+- precheck กับ Save ต้องตอบตรงกันบนสายที่พัง
+
+**5 tests เดิมพัง แล้วแก้ fixture ไม่ใช่แก้ให้ผ่าน** — ทั้งหมดสร้างบัญชี/พนักงานโดยไม่เคยมี Role Group หรือไม่ส่ง `joined_at` **การที่มันพังคือหลักฐานว่าของเดิมปลอมข้อมูลและ API ปล่อยผ่านจริง**
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — Step 3 แบบรายการ, แบนเนอร์บล็อก, และเส้นทางการอนุมัติที่อ่านจาก ticket ควรลองด้วยตาอีกรอบ
+
+---
+
+## ปิดคำขอได้ทางเดียว: ปิดที่เคส (2026-08-11)
+
+รอบที่แล้ว (`f37b734`) ทำให้ "ปิด ticket แล้วคำขอปิดตาม" แต่ปุ่ม **Fulfil เดิมยังอยู่และยังกดได้** ทั้งที่เคสยังไม่ปิด → คนถือ `requests.fulfill` กดปิดคำขอไปก่อนได้ ได้สภาพ request `Fulfilled` แต่ ticket ยัง `in_progress` ซึ่งคือความไม่ตรงกันแบบเดียวกับที่รอบก่อนตั้งใจกำจัด แค่กลับด้าน
+
+### บล็อกที่ไหน
+
+- **`RequestService::fulfill()`** — `abort_if` เมื่อเคสที่ผูกอยู่ยัง `Open`/`InProgress` (422 พร้อมเลขเคส) วางในทรานแซกชันหลัง `assertStatus()` ใต้ row lock เดิม
+- **`ServiceRequestResource::can_fulfill`** — เงื่อนไขเดียวกัน ปุ่มจึงหายก่อนถูกกด · อ่านจาก relation ที่โหลดแล้วเท่านั้น (resource ไม่ query) และถือว่า "มีเคสค้าง" เมื่อ relation ไม่ได้โหลด เพราะเดาผิดทางนี้แค่ทำให้ต้องไปกดที่เคส ส่วนอีกทางคือปุ่มที่กดแล้วเด้ง 422
+
+**เงื่อนไขอ่านจากสถานะเคส ไม่ใช่ "มี ticket"** — คำขอที่ปิดเคสไปก่อนมี `settleFromTicket` ยังค้างเป็น `Approved` + ticket `Completed` อยู่จริงในฐานข้อมูล ถ้าบล็อกด้วย "มี ticket" แถวพวกนี้จะปิดไม่ได้ตลอดกาล
+
+### ไม่มีทางตัน เพราะ `forward` มีอยู่แล้ว
+
+บล็อกแบบนี้ปลอดภัยเพราะเคสที่ค้างส่งต่อได้อยู่แล้ว — `POST tickets/{ticket}/forward` (gate `tickets.forward`) ยอมให้ทั้ง assignee เองและคนถือ `tickets.assign` ย้ายเคส `InProgress` ไปให้ช่างคนอื่น ช่างลาออก/ติดงานก็ยังมีคนปิดเคสได้ **จึงไม่ต้องแตะโมดูล Ticket เลย**
+
+### `requests.fulfill` ยังเหลือใช้ 3 กรณี
+
+ทั้งสามคือ "คำขอที่ไม่มีเคสให้ปิด" — ปุ่มนี้กลายเป็นทางสำรอง ไม่ใช่ทางหลัก
+
+1. workflow ที่ `auto_ticket = false` (ค่า default มีตัวเดียว: General Request · แต่ IT ปิดของสายไหนก็ได้เองที่หน้า Workflow)
+2. `auto_ticket = true` แต่เปิดเคสไม่ได้ — `finalize()` เขียน AuditLog `'Auto-ticket skipped'` เมื่อประวัติพนักงานหายกลางทาง แล้วอนุมัติผ่านต่อโดยไม่เปิดเคส
+3. แถวเก่าก่อน `f37b734` ตามที่ว่าข้างบน
+
+### หน้าจอ
+
+ปุ่มหายเฉย ๆ คนถือสิทธิ์จะอ่านเป็นบั๊ก เพราะคำขอใบอื่นก็ยังเห็นปุ่ม → ฟุตเตอร์ขึ้นบรรทัดจาง **"ปิดเคส TK-xxxx แล้วคำขอนี้จะปิดตามเอง"** (คีย์ `req_fulfill_awaits_case`) โดยดูจาก `useAuth().can()` ไม่ใช่ `can_fulfill` ซึ่งตอนนี้ false ด้วยเหตุนี้เอง จึงแยก "IT ที่ต้องรอ" กับ "คนที่ไม่ใช่ IT" ไม่ได้
+
+**ไม่เติมสถานะ/ผู้รับผิดชอบในการ์ด Linked ticket** — `request-trail.tsx` รายงานอยู่แล้วในไดอะล็อกเดียวกัน ("รอรับเคส" / "อยู่ระหว่างดำเนินการ โดย xxx") และโค้ดเขียนกำกับไว้ว่าการ์ดถือแต่เลขเคสเพื่อไม่ให้พูดซ้ำ
+
+**KPI `to_fulfill` กับแท็บ queue ปล่อยไว้ตามเดิม** — นับ `Approved` ทั้งหมดรวมใบที่รอเคส เพราะนั่นคือภาระที่ IT ถืออยู่จริง และ trail บอกอยู่แล้วว่าเคสอยู่กับใคร
+
+### Tests / Verification
+
+**ทั้ง suite = 917 passed / 3,574 assertions** (เดิม 913) · `tsc --noEmit` = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน · eslint เหลือ 2 warning เดิมของโมดูล stock (ไม่ใช่ไฟล์ที่แก้รอบนี้)
+
+4 tests ใหม่ใน `RequestAutoTicketTest` — เคย **ถอด `abort_if` ออกแล้วรันซ้ำ ยืนยันว่าสองตัวแรกพังจริง** ไม่ใช่เทสต์ที่ผ่านอยู่แล้ว:
+- เคส `in_progress` → 422 · สถานะยังเป็น `Approved` · และ `can_fulfill` ใน payload = false (ปุ่มหายจริง ไม่ใช่ปุ่มที่รอเด้ง)
+- เคส `Open` ยังไม่มีคนรับ → 422
+- ticket `Completed` แต่ request ยัง `Approved` (แถวเก่า) → ยัง fulfil ได้ **ตัวนี้กันไม่ให้แก้บั๊กแล้วไปสร้างของค้างถาวร**
+- workflow ที่ไม่เปิดเคส → fulfil ได้ตามปกติ (กรณีที่ 1 ข้างบน)
+
+**2 tests เดิมพัง แล้วแก้ fixture** — `RequestWorkflowTest::fulfill_requires_permission_and_approved_status` และ `RequestNotificationTest::final_approval_notifies_requester_and_the_fulfill_queue` ทั้งคู่ทดสอบเรื่องอื่น (ด่านสิทธิ์ / bell) แต่ยืม workflow ที่เปิดเคสอัตโนมัติมาใช้ → ปิด `auto_ticket` ใน fixture ให้ตรงกับกรณีที่ปุ่มนั้นมีไว้ใช้จริง
+
+**แก้ flaky ที่มีอยู่ก่อน** — `requestBells()` ถูกใช้ผ่าน `end($bells)` แต่ bell ของ "อนุมัติครบ" กับ "ปิดงาน" เกิดในวินาทีเดียวกัน และ `notifications()` เรียงด้วย `created_at` อย่างเดียว ลำดับของสองใบนี้จึงไม่แน่นอน — เจอตอนรันทั้ง suite (ได้ `approved_final` แทน `fulfilled`) เปลี่ยนเป็น `assertContains` ซึ่งตรงกับสิ่งที่เทสต์ต้องการจริง คือ "ผู้ขอได้รับแจ้ง"
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — บรรทัดในฟุตเตอร์ควรลองด้วยตาอีกรอบ
+
+---
+
+## ลิงก์ที่ตายแล้ว, ค่าสองภาษา, และบัญชีของคนที่ลาออก (2026-08-12)
+
+### 1. `?view=<id>` ที่ไม่มีของ — พังทั้ง 7 โมดูล
+
+`/requests?view=99999` ขึ้นไดอะล็อก skeleton ค้างถาวร · ต้นเหตุคือ `pickRecordView()` (`use-record-view.ts:33`) **ไม่รับ error เข้าไปเลย** มันคืน `switching: true` ทุกครั้งที่ record ไม่มี จึงแยก "ยังไม่มา" กับ "ไม่มีวันมา" ไม่ได้ และไม่มีทางอื่นให้ 404 โผล่ (interceptor ใน `http.ts` จัดการแค่ 401/419)
+
+ทางเข้าที่สองคือ `Number(searchParams.get('view'))` — `?view=abc` เป็น `NaN` ซึ่งผ่านการเช็ค `!= null` แล้วยิง `/api/<resource>/NaN`
+
+พฤติกรรมจริงก่อนแก้ ไม่ได้เหมือนกันทุกหน้า:
+
+| หน้า | อาการ |
+|---|---|
+| `requests` · `stock` | ไดอะล็อกเปล่าค้างถาวร (skeleton ที่ไม่มีวันจบ) |
+| `assets` · `tickets` · `employees` · `contracts` | เงียบ ไม่เปิดอะไรเลย (`if (!record) return null` ก่อนถึง `<Dialog>`) |
+| `access` | เงียบ และ **ไม่ยิง API เลย** เพราะหา row จากชุดที่โหลดมาในแท็บปัจจุบัน |
+
+แก้:
+- `toRecordId()` ใน `shared/lib/utils.ts` — รับเฉพาะจำนวนเต็มบวก ลิงก์ผิดรูปจึงไม่เปิดอะไรและไม่ยิง API · ใช้ทั้ง 7 หน้า
+- `RecordMissing` / `RecordMissingDialog` (`shared/components/record-missing.tsx`) — แผงเดียวกันทุกโมดูล ขนาดมาจากค่าเดียว `recordMissingContentClass` (440px) เพราะรอบแรกผมเขียนขนาดซ้ำในสองไฟล์แล้วมันหลุดกันจริง (requests 980 / ที่เหลือ 440)
+- **ไม่แตะไส้ในไดอะล็อกทั้ง 4 ตัวที่เงียบ** — mount `<RecordMissingDialog>` ไว้ข้าง ๆ แล้วเปิดด้วย `isError` ของ query เดิม จึงไม่เสี่ยงกับ logic retained-copy/exit-animation ของแต่ละตัว
+- ข้อความเป็นคำกลางคู่เดียวใน `common.ts` (`record_missing_title/hint`) — "ข้อมูล" ครอบได้ทั้งคำขอ/ทรัพย์สิน/สัญญา/สินค้า จึงไม่ต้องมีคีย์ต่อโมดูล
+- `retry` ระดับแอป (`query-client.ts`) ไม่ลองซ้ำเมื่อเจอ 404 — ถามซ้ำก็ได้คำตอบเดิม เสียแต่เวลาที่ skeleton ค้าง (**เปลี่ยนพฤติกรรมทั้งแอป** ไม่ใช่โมดูลเดียว)
+
+**`access` ยังเงียบอยู่** และแก้แบบเดียวกันไม่ได้ เพราะไม่เคยถาม API จึงไม่มี error ให้จับ — ต้องเลือกก่อนว่าจะยิง endpoint รายตัวไหม ยังไม่ตัดสิน
+
+### 2. `_display` เก็บค่าไทยคู่กับอังกฤษ
+
+ตารางรายละเอียดคำขอขึ้น `Smartphone` / `Yes` ใต้ label ไทย และสลับภาษาก็ไม่เปลี่ยน เพราะ `buildDisplayRows()` snapshot ค่าจาก `label_en` เท่านั้น — label เก็บสองภาษา แต่**ค่า**เก็บภาษาเดียว อ่านเหมือนบั๊กมากกว่าหลักการ
+
+`displayValue()` คืนคู่ `[value, value_th]`: managed option ใช้ `label_th` ที่ IT กรอกเองที่ Settings, select ใน schema ใช้ `label_th`, ส่วน text/source เป็น `null` (มีภาษาเดียวจริง) · `value` **ยังเป็นอังกฤษ** เพราะ `fieldLines()` เอาไปประกอบ description ของ auto-ticket ซึ่งเป็นของ IT
+
+**แถวเก่ายังเป็นอังกฤษ** (7 แถวในฐานข้อมูลจริงหาคำไทยย้อนหลังได้) — ยังไม่ backfill เพราะเป็นการเขียนทับ snapshot ของใบที่ตัดสินไปแล้ว
+
+### 3. รูปแบบ description ของเคสที่เปิดอัตโนมัติ
+
+```
+Auto-opened
+-----
+Service request RQ-2026-0001 (Approved).
+Type: Computer
+Requester: ทดสอบ Supervisor (Information Technology)
+Device type: Desktop PC
+Reason:
+...
+```
+
+และ **บั๊กที่ทำให้ไม่มีใครเห็นโครงนี้เลย**: `ticket-detail-drawer.tsx:316` เรนเดอร์ description ด้วย `<p>` เปล่า ๆ ไม่มี `whitespace-pre-wrap` → `\n` ที่มีอยู่ครบใน DB ยุบรวมเป็นย่อหน้าเดียวมาตลอด
+
+`Priority:` กับข้อความ `Details to be confirmed with their manager.` ที่ยังเห็นในเคสเก่า **ไม่ได้มาจากเทมเพลตปัจจุบัน** — ถูกถอดไปตั้งแต่ commit ที่เลิกใช้ priority และตอนแก้คำ reason ของ onboarding; เคสที่สร้าง 2026-08-07 แช่ข้อความเดิมไว้ เทสต์ใหม่ผูกทั้งบล็อกด้วย `assertSame` ต่อบรรทัด + `assertStringNotContainsString('Priority:')`
+
+### 4. placeholder ที่ hardcode
+
+สำรวจได้ 47 จุดในไฟล์ .tsx แยกเป็นของที่พังจริง 25 จุด (ที่เหลือเป็นรูปแบบ/ตัวอย่างเชิงเทคนิคอย่าง `0.00`, `SN-XXXXXXXX`, `smtp.example.com` ที่ไม่มีภาษา) แก้ไปแล้ว:
+
+- **`placeholder="—"` 7 จุด** — em dash เป็นสัญลักษณ์ "ไม่มีค่า" ของแอปนี้ เอามาเป็น placeholder ของฟิลด์ required จึงบอกความหมายกลับด้าน · และมันไปกดทับ default ที่ถูกอยู่แล้ว (`SearchableSelect` fallback ไป `select_placeholder` เอง) → **ลบ prop ทิ้ง** ไม่ต้องเพิ่มคีย์
+- **2 คอมโพเนนต์ใน `shared/`** ที่ร้ายแรงกว่าเพราะใช้ข้ามโมดูล และไม่เคยเรียก `useT()` เลย: `search-select.tsx` (อังกฤษตายตัว 2 จุด) · `icon-picker.tsx` (ไทยตายตัว 2 จุด — ผู้ใช้ EN เห็นภาษาไทย) · default ของ `IconPicker` ย้ายจาก parameter มาไว้จุดเรนเดอร์ เพราะ hook เรียกใน parameter ไม่ได้
+- 5 ช่องที่หน้า Settings เปลี่ยนจากตัวอย่างอังกฤษเป็นคำสั่งกรอก (`set_*_ph`)
+
+ยังเหลือ ~14 จุดเป็นตัวอย่างอังกฤษในฟอร์ม (ตำแหน่ง, role, industry) — ไว้ทำตอนแตะฟอร์มนั้น ๆ
+
+### 5. คนลาออกแล้วยังเข้าระบบได้
+
+`EmployeeService::resign()` เขียนแค่ `employees.status`, `resign_reason`, `last_day` — **ไม่แตะตาราง `users`** และตาราง `users` ไม่มีคอลัมน์สถานะให้แตะด้วย · `LoginRequest::authenticate()` ทำแค่ `Auth::attempt` · middleware ทั้ง 3 ตัวไม่มีใครดูสถานะ → รหัสผ่านของคนที่ออกไปแล้วยังใช้ได้ พร้อม role และสิทธิ์ทุกข้อ · เจอเพิ่มตอนเขียนเทสต์: **session ที่เปิดค้างอยู่ก่อนลาออกก็ใช้ต่อได้เรื่อย ๆ**
+
+กติกาเดียวอยู่ที่ `Employee::hasLeft()` — `Resigned` **และ** พ้น `last_day` แล้ว (ไม่มี `last_day` = ไม่มีช่วงบอกกล่าว ปิดทันที) วันทำงานวันสุดท้ายยังเข้าได้ ปิดวันถัดไป
+
+- **ประตูหน้า** `LoginRequest::ensureEmployeeHasNotResigned()` → `Auth::logout()` + **403 `account_closed`** ไม่ใช่ 422 เพราะ 422 แปลว่า "ชื่อผู้ใช้หรือรหัสผ่านผิด" ซึ่งจะส่งคนที่บัญชีถูกปิดไปนั่งหาว่าพิมพ์ผิดตรงไหน · หน้า login เพิ่มกิ่ง 403 + คีย์ `login_err_closed`
+- **ทุก request** middleware `BlockResignedEmployees` — invalidate session + 401 ให้ interceptor พาไปหน้า login การลาออกจึงมีผลทันทีไม่ต้องรอ session หมดอายุ · route `logout` ยกเว้นไว้ ให้เคลียร์คุกกี้ตัวเองได้
+- บัญชีที่ไม่มี employee (เช่น `super`) ไม่ถูกแตะทั้งสองชั้น — ไม่มีประวัติในไดเรกทอรีก็ไม่มีอะไรให้ลาออก
+
+**สายอนุมัติใช้เกณฑ์ต่างกันโดยตั้งใจ** — `WorkflowResolverService::canHoldAStep()` ข้ามคนที่ `status = Resigned` ตั้งแต่วินาทีที่บันทึก เพราะมีใบลาออกในมือแล้วต้องหาคนมาแทนทันที ไม่ใช่ส่งคำขอไปรอคนที่กำลังจะออก · คอมเมนต์ทั้งสองฝั่งชี้กันไป-กลับพร้อมคำกำกับว่าห้ามแก้ให้ตรงกัน
+
+### Tests / Verification
+
+**ทั้ง suite = 935 passed / 3,609 assertions** (เดิม 913) · `tsc --noEmit` = 0 · pint ผ่าน · prettier ผ่าน · `npm run build` ผ่าน · eslint เหลือ 2 warning เดิมของ `stock/pages/tabs/*` ที่ไม่ได้แตะ
+
+ไฟล์เทสต์ใหม่ 2 ไฟล์:
+- `RecordNotFoundContractTest` — DataProvider ครอบ **6 detail endpoint** ว่าต้องตอบ 404 กับ id ที่ไม่มี เพราะแผง "ไม่พบข้อมูล" ทั้งหมดพึ่งสถานะนี้เพียงอย่างเดียว ถ้าวันหนึ่งตัวใดตอบ 200 ตัวเปล่า ไดอะล็อกจะกลับไปค้าง skeleton
+- `ResignedAccountAccessTest` — DataProvider ไล่ทุกวันบนไทม์ไลน์ลาออก (วันสุดท้าย / วันถัดไป / อาทิตย์ถัดไป / ยังไม่ถึง / ไม่มี last_day) + 2 เคสคุมที่ต้องไม่พัง (พนักงาน active, บัญชีที่ไม่มี employee) + session ที่เปิดค้าง + logout ที่ต้องยังทำงาน
+
+**เขียนเทสต์ก่อนแก้ และยืนยันว่ามันจับของจริง** — ทั้งสองเรื่องหลัก: ถอด `abort_if` ออกแล้วรันซ้ำเพื่อดูว่าสองเทสต์แรกแดงจริง (เรื่อง gate ปิดคำขอ) และรันเทสต์ลาออกกับโค้ดเดิมก่อนแก้ ได้ 200 ทั้งสองจุดตามที่คาด
+
+**2 tests เดิมพัง แก้ fixture ไม่ใช่แก้ให้ผ่าน** — ทั้งคู่ยืม workflow ที่เปิดเคสอัตโนมัติมาทดสอบเรื่องอื่น (ด่านสิทธิ์ / bell) จึงปิด `auto_ticket` ใน fixture ให้ตรงกับกรณีที่ปุ่มนั้นมีไว้ใช้จริง · และ **แก้ flaky ที่มีอยู่ก่อน**: `requestBells()` ถูกอ่านผ่าน `end($bells)` แต่ bell สองใบเกิดในวินาทีเดียวกันและ `notifications()` เรียงด้วย `created_at` อย่างเดียว → เปลี่ยนเป็น `assertContains`
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์:** หน้า login ตอนบัญชีถูกปิด (ต้องมีบัญชีที่ลาออกจริง) และ description ของเคสที่เปิดอัตโนมัติในรูปแบบใหม่ (ต้องรอคำขอที่ยื่นวันนี้ผ่านอนุมัติครบ) · ส่วนแผง "ไม่พบข้อมูล" ทั้ง 6 หน้า วัดขนาดและถ่ายภาพยืนยันแล้ว
+
+## คิวอนุมัติที่อ่านรู้เรื่อง, ความเคลื่อนไหวที่จริง, และขีดกลางทั้งระบบ (2026-08-12)
+
+### 1. การ์ด "รอการตัดสินจากคุณ" พูดเรื่องที่ต้องตัดสิน
+
+การ์ดเดิมบอก `วันนี้` กับ `4 วัน` ไว้ข้าง ๆ กันโดยไม่บอกว่าอันไหนคืออะไร (วันที่ยื่น vs จำนวนวันที่รอ) — สองตัวเลขที่ไม่มีป้าย ตีความผิดได้ทั้งคู่ จึงตัดออกทั้งคู่ แล้วเปลี่ยนเป็น **badge `ใหม่` สีแดง** สำหรับใบที่มาถึงคุณวันนี้ วางในช่อง `w-10` หน้าแถบ Step เพื่อให้แถบ Step ของทุกแถวอยู่ตรงกัน ไม่ขยับตามความยาวข้อความ
+
+หัวข้อการ์ดขึ้น **ค่าที่ขอจริง** จาก `fields_display` (เช่น "Notebook", "ซิม / แพ็กเกจดาต้า") ไม่ใช่ชื่อประเภทคำขอ — คนอนุมัติต้องรู้ว่าอนุมัติอะไร ไม่ใช่ว่าใบนี้ประเภทไหน
+
+**แท็บ "รออนุมัติจากฉัน" ยุบเป็นชิปตัวกรอง** — มันไม่เคยเป็นมุมมองแยก แค่ `scope=approvals` ต่อท้าย query เดิม สภาพเดิมคือตัวกรองที่ใส่เสื้อแท็บ ทำให้ผู้ใช้เข้าใจว่าเปลี่ยนหน้า
+
+### 2. `admin` เห็นปุ่มอนุมัติของขั้นที่ไม่ใช่ของตัวเอง
+
+`scope=approvals` กรองด้วย permission `requests.view_all` มาก่อน — คนที่ดูได้ทั้งระบบจึงได้ทุกใบที่ค้างอยู่ในคิว **ของคนอื่น** มาแสดงในการ์ด "รอการตัดสินจากคุณ" พร้อมปุ่มอนุมัติที่กดแล้วเด้ง 403 กลับมา
+
+การอนุมัติไม่ใช่สิทธิ์ มันคือ**ตัวบุคคล**: กรองด้วย `approver_employee_id = ผู้ใช้คนนี้` ตรง ๆ และบัญชีที่ไม่มี employee (เช่น `super`) ได้ผลลัพธ์ว่างเสมอ ไม่ใช่ทั้งระบบ · เพิ่ม `disabled={!r.can_approve}` เป็นตาข่ายชั้นสอง
+
+### 3. "ความเคลื่อนไหวล่าสุด" ที่เคลื่อนไหวจริง
+
+การ์ดเดิมเรียงตามใบที่ยื่นล่าสุด — ใบที่เพิ่งมีคนเซ็นเมื่อ 5 นาทีก่อนจึงจมอยู่ใต้ใบที่ค้างมาตั้งแต่เดือนที่แล้ว ซึ่งไม่ใช่ความหมายของ "ความเคลื่อนไหว"
+
+ต้องมี stamp ของตัวเอง (`service_requests.last_activity_at`, มี index) เพราะไม่มีคอลัมน์เดิมตัวไหนตอบได้: `updated_at` ขยับทุกการเขียน (คำสั่ง refresh snapshot เขียนทับ `fields` ทุกแถว = ส่งทั้งตารางขึ้นหัวฟีด) และการเซ็นขั้นกลางเขียนที่ `request_approvals` โดยไม่แตะตัวคำขอเลย · migration backfill จาก stamp ที่มีอยู่ด้วย PHP ไม่ใช่ `GREATEST()` เพราะทุกคอลัมน์ nullable
+
+`ServiceRequestResource::lastActivity()` คืน `kind` เป็นรหัส (submitted / approved_step / approved / rejected / cancelled / fulfilled) ให้ SPA ประกอบประโยคเป็นภาษาผู้อ่าน ส่วน `by` เป็นชื่อที่ freeze ไว้บนแถวที่ขยับ ไม่ resolve ใหม่
+
+**เจอบัคลำดับตอนเขียนเทสต์**: ลำดับ default เรียงด้วย `created_at desc` คีย์เดียว สองใบที่ยื่นวินาทีเดียวกันจึงไม่มีลำดับแน่นอน — รายการนี้แบ่งหน้าฝั่ง server แถวหนึ่งจึงโผล่ซ้ำหน้าหนึ่งและหายจากหน้าถัดไปได้ · เติม `->latest('id')` ปิดท้ายทั้งสองสาขา
+
+### 4. กระดิ่ง Ticket ที่ยังขึ้น "coming soon"
+
+ไม่ใช่ของที่ยังไม่ได้ทำ — backend ส่ง bell ของ ticket ครบทุกชนิดมานานแล้ว แต่ `notifications-dropdown.tsx` มีตาราง `live: false` ค้างจากตอนที่โมดูลยังไม่เสร็จ แล้วกิ่ง coming-soon ก็ตัดหน้าการเรนเดอร์รายการจริง — ลบ flag + กิ่งนั้นทิ้ง
+
+### 5. ขีดกลาง: em dash → hyphen ทั้งระบบ (291 จุด / 76 ไฟล์)
+
+`—` (U+2014) กว้างกว่าที่การ์ดและกระดิ่งต้องการ และในระบบเดียวกันมีทั้งขีดยาว-ขีดสั้นปนกัน แทนที่ ` — ` เป็น ` - ` ในข้อความที่ผู้ใช้เห็น:
+
+| กลุ่ม | จำนวน |
+|---|---|
+| `lang/**` ค่าใน dict (en + th) | 152 |
+| seeder (ข้อมูล demo ที่จะถูก seed ครั้งต่อไป) | 62 |
+| PHP: หัวข้อ AuditLog, ข้อความ error 422, เทมเพลตอีเมล | 44 |
+| สตริงที่ hardcode ใน `.tsx` (ตัวคั่น `code - name`, placeholder, chip, toast) | 29 |
+| blade อีเมล / PDF | 4 |
+
+**ไม่แตะ** — คอมเมนต์ทุกภาษา · `—` เดี่ยวที่เป็นสัญลักษณ์ "ไม่มีค่า" (193 จุด, ยังเป็นภาษาของแอปนี้) · output ของ artisan command (เห็นแค่ใน terminal) · regex `[—-]` ใน migration ที่รองรับทั้งสองแบบอยู่แล้ว · **ข้อมูลจริงใน DB** (ชื่อสัญญา, `owner = 'Pool — IT'`, AuditLog แถวเก่า) เป็นข้อมูลไม่ใช่ UI
+
+**สวีปรอบแรกกินคอมเมนต์ไปด้วย 25 บรรทัด** เพราะตัวกรองจับได้แค่บรรทัดที่ *เริ่ม* ด้วย `//` `*` `{/*` ไม่ใช่บรรทัดที่ต่อเนื่องอยู่ในบล็อก — เขียนตัวตรวจสถานะบล็อกจริง (นับ `/* */`, `{/* */}`, `{{-- --}}` โดยตัดสตริงออกก่อนเพื่อไม่ให้ `/*` ที่อยู่ในสตริง toggle สถานะ) แล้วย้อนคืนโดยจับคู่กับ HEAD ตาม **เนื้อความ** ไม่ใช่เลขบรรทัด เพราะไฟล์เหล่านั้นมีงานอื่นค้างอยู่
+
+**3 จุดที่ hyphen ทำให้อ่านผิด แก้คำแทนการใส่ขีด**: กฎ username สองคีย์ (`. _ - only - starting…` → `only, starting…` เพราะ `-` เป็นอักขระที่อนุญาตด้วย จึงอ่านเป็นรายการต่อ) และเทมเพลตอีเมล 2 ฉบับที่ em dash คู่ทำหน้าที่เป็นวงเล็บ (`{{ticket.id}} - {{ticket.subject}} - was forwarded…` → ตัดขีดที่สองออก)
+
+### Tests / Verification
+
+**ทั้ง suite = 942 passed / 3,646 assertions** (เดิม 935) · `tsc --noEmit` = 0 · pint ผ่าน · prettier ผ่าน · `npm run build` ผ่าน · eslint เหลือ 2 warning เดิมของ `stock/pages/tabs/*`
+
+เทสต์ใหม่ใน `RequestWorkflowTest`: การเซ็นหนึ่งขั้นดันคำขอขึ้นหัวฟีดและเปลี่ยน `activity.by` จากคนยื่นเป็นคนเซ็น (`travel(1)->minutes()`) · `scope=approvals` ของ `admin` ที่ดูได้ทั้งระบบต้องว่าง ไม่ใช่ทุกใบ
+
+ยืนยันบนเบราว์เซอร์: การ์ดคิวอนุมัติ (badge `ใหม่`, แถบ Step ตรงกันทุกแถว), ชิปตัวกรอง + ช่องค้นหาสูง 40px เท่ากันทั้ง 6 หน้าที่ใช้ FilterPopover, ตัวเลือกใน filter บริการที่ไม่ตัดคำอีก (panel `minWidth` = ความกว้าง trigger, `width: max-content`, เพดาน 320px)
+
+### 6. กระดิ่งคิว IT: "รอการตัดสินจากคุณ" ที่ไม่มีอะไรให้ตัดสิน
+
+`finalApproved()` ส่งกระดิ่งให้คิว `requests.fulfill` โดยยืม subtype `waiting` ของขั้นอนุมัติมาใช้ แล้วยัดคำว่า `IT Staff` เป็นชื่อขั้น → ได้ประโยค "รอการตัดสินจากคุณ - IT Staff" · ขั้นนี้ไม่มีใครตัดสิน มันคือขั้นส่งมอบ และเมื่อ workflow เปิดเคสเอง **ก็ไม่มีอะไรให้กดด้วย** เพราะ gate ปิดปุ่มไว้ (ปิดที่เคสคือทางเดียว) กระดิ่งจึงขอสิ่งที่ระบบเองห้าม พร้อมยืนซ้อนกับกระดิ่ง "เคสใหม่รอการรับ" ของเคสนั้น
+
+`ready_to_fulfill` เป็น subtype ของตัวเอง และ `waiting` เหลือความหมายเดียว = คนที่ต้องตัดสิน · อ่านได้สองแบบตามความจริง: มีเคส → `เปิดเคสให้คุณเรียบร้อยแล้ว - TKT-…` ฟ้า (เป็นข่าว) · ไม่มีเคส → `อนุมัติครบทุกขั้นแล้ว - รอคุณส่งมอบและปิดคำขอ` เหลือง (เป็นงาน) · payload พก `ticket_id`/`ticket_no` มาเรียกชื่อเคส แต่คลิกแล้วยังเปิด**คำขอ** ไม่ใช่เคส เพราะ `requests.fulfill` ไม่ได้แปลว่ามีสิทธิ์ดู Ticket จะเป็นทางตัน 403
+
+notification เขียนครั้งเดียวไม่ re-render จาก source → migration retag ใบที่ส่งไปแล้ว (จับด้วย `step_label = 'IT Staff'` ซึ่งมีแต่กระดิ่งคิวที่ใช้ ขั้นอนุมัติจริงใช้ชื่อตำแหน่ง) พร้อมเติมเลขเคสให้
+
+### 7. Fade out ของ drawer ที่เนื้อหาหายก่อน panel
+
+เก็บ DOM ทุก 25ms ตอนกดปิด `/tickets?view=9`: เปิดอยู่ = 5 บล็อค / 788 ตัวอักษร, เฟรมแรกของ exit = **4 บล็อค / 719 ตัวอักษร** — แถบ "เคสนี้ยังไม่มีผู้รับผิดชอบ" หายทั้งบล็อคและปุ่ม "รับเคส" หายจาก footer panel จึงหดสั้นลงหนึ่งแถวพร้อมกับ fade
+
+drawer retain ตัว record ไว้อยู่แล้ว (`shown`) แต่ **flag ที่คำนวณจาก record อยู่ที่หน้าเพจและไม่ได้ retain**: `canTake={canTake && (detail ? hasLevel(detail.category) : false)}` · ปิด → `?view=` หลุด → query ปิด → `detail` เป็น undefined ในเรนเดอร์ถัดไป → flag เป็น false ก่อน animation ได้เล่นแม้แต่เฟรมเดียว drawer ถือ record ครบแต่ถูกสั่งซ่อนปุ่ม
+
+ทั้งสองหน้าอ่าน flag จาก record ที่ drawer ยังโชว์อยู่ ส่วน open/closed ยังตามค่าจริง · หน้า Access เป็นรูปเดียวกัน (`members` เป็น `useMemo` ที่คืน null ทันทีที่ `?view=` หลุด) แก้ด้วย · Asset/Contract/Employee ไม่เป็น เพราะ `can*` เป็นสิทธิ์ระดับผู้ใช้ และ Request ฝัง `can_approve`/`can_fulfill` มาใน record จาก API จึง retain ไปพร้อมกัน
+
+วัดหลังแก้: จำนวนบล็อคและความยาวข้อความคงที่ตลอด exit ที่เหลือคือ zoom-out keyframe ของ Radix เอง
+
+## ชื่อคำขอเป็นของ server ไม่ใช่ของคนกรอก (2026-08-12)
+
+### 8. `title` ที่แช่ภาษาของคนยื่นไว้ในคอลัมน์
+
+ไม่มีใครพิมพ์ title — wizard ปั้นเองจาก `t('req_auto_title')` + ชื่อประเภท แล้ว POST ขึ้นมาเก็บดิบ ๆ ประเภทเดียวกันจึงถูกเก็บคนละภาษาตามภาษา UI ของคนยื่น (ในฐานข้อมูลจริง: ไทย 9 แถว อังกฤษ 34 แถว ทั้งที่เป็นบริการชุดเดียวกัน) และสตริงนั้นถูกอ่านต่อ **4 ที่**: รายการ/ไดอะล็อกคำขอ · หัวกระดิ่ง · **subject ของ Ticket** · **อีเมลอนุมัติ** — ทั้งหมดจึงพูดภาษา *คนยื่น* ไม่ใช่ *คนอ่าน*
+
+เลือกทางที่ไม่ต้องเพิ่มคอลัมน์ `title_th` (จะกลายเป็นหนี้ `*_th` ก้อนใหม่ และภาษาที่ 3 ต้องเพิ่มคอลัมน์อีก):
+
+- **server เป็นเจ้าของคอลัมน์** `RequestService::canonicalTitle()` ประกอบเอง (direct = `Request: {service}` · onboarding = `{service} for {ชื่อ}`) เป็นอังกฤษ ให้ตรงกับ body ของ auto-ticket ที่เป็นอังกฤษอยู่แล้ว — จะสลับทั้งระบบเป็นไทยคือเปลี่ยน `label()` เป็น `labelTh()` ในเมธอดนี้จุดเดียว
+- **client ปั้นไม่ได้อีก** ถอด rule `title` ออกจาก Form Request → `validated()` ทิ้งสิ่งที่ส่งมา และลบ `autoTitle()` ออกจาก wizard บั๊กนี้จึงกลับมาไม่ได้
+- **หน้าจออ่านจาก `type`** `requestTitle()` ที่ `shared/lib/request-meta.ts` เขียนประโยคเดียวกันในภาษาผู้อ่าน ใช้ที่รายการ 3 จุด · ไดอะล็อกรายละเอียด 5 จุด · decision dialog 2 จุด · กระดิ่ง (payload เพิ่ม `requester_name` เพื่อให้ใบ onboarding เรียกชื่อคนได้เหมือนในรายการ) — **แถวเก่าจึงอ่านถูกด้วยโดยไม่ต้องแก้ข้อมูล**
+- **ค้นหาเลิกขึ้นกับภาษา** เดิม `title LIKE '%…%'` ซึ่ง `title` ไม่มี index (full scan) และหาข้ามภาษาไม่เจอ · เพิ่ม `RequestType::matching()` เทียบคำค้นกับ label ทั้งสองภาษาแล้ว `whereIn('type', …)` บน `service_requests_type_index` ที่มีอยู่ — เร็วกว่าเดิมและข้ามภาษาได้
+- **ใบเก่า** `php artisan requests:normalize-titles` (มี `--dry-run`) รันแล้ว: เขียนใหม่ 9 แถว, ตรงรูปอยู่แล้ว 34 แถว **รวมใบ onboarding ทุกใบ** ซึ่งเป็นหลักฐานว่ากฎใหม่ให้ผลเหมือนของเดิมเป๊ะ · ใช้ `withoutTimestamps()` ไม่ให้การเขียนหมู่ไปโป๊ะ `updated_at` จนดูเหมือนมีความเคลื่อนไหว
+
+ยืนยันบนเบราว์เซอร์: แถวเดิม (RQ-0038…0043 ซึ่งมีทั้งใบที่เก็บอังกฤษและใบที่เพิ่ง normalize มาจากไทย) กดสลับภาษาแล้วอ่านเป็น `คำขอ: กลุ่มเมล` / `Request: Mail group` ตามผู้อ่าน
+
+### 9. เคสของพนักงานใหม่ต้องสะดุดตา
+
+Ticket ไม่มีฟิลด์บอกที่มา คำเดียวที่เหลือคือตัวหนังสือ — เติม ` (New employee)` ที่ **subject** (เห็นในคิวโดยไม่ต้องเปิดเคส) และ **บรรทัดแรกของ description** ต่อ**หลัง**ตัด 200 ตัวอักษร ไม่งั้นชื่อยาวจะกินวงเล็บหายเงียบ ๆ · ไม่เอาไปต่อบรรทัด `Requester:` เพราะบรรทัดนั้นมีวงเล็บแผนกอยู่แล้ว จะเป็นวงเล็บซ้อนวงเล็บ · กฎอยู่ที่ `newHireMarker()` จุดเดียว ทั้งสองที่อ่านจากตัวเดียวกัน
+
+```
+[RQ-2026-0044] Computer for Somchai Jaidee (New employee)
+Auto-opened (New employee)
+```
+
+เคสเก่า 7 ใบที่มาจากคำขอ onboarding **ไม่เติมย้อนหลัง** (ตัดสินใจไว้: เป็น subject ของเคสที่ IT ถืออยู่จริงและอาจถูกอ้างไปแล้ว)
+
+### Tests / Verification
+
+**ทั้ง suite = 953 passed / 3,712 assertions** (เดิม 942) · tsc · prettier · eslint 0 error · pint · `npm run build` ผ่าน
+
+`RequestCanonicalTitleTest` ใหม่ 9 ตัว เขียนก่อนแก้และเห็นแดง 8/8 จริง: server ทับ title ที่ client ส่งมา · ไม่ส่ง title ก็ผ่าน · subject ของเคสไม่ตามภาษาคนยื่น · DataProvider ค้นหา 3 คำ (EN / TH / reference) · แถวที่เก็บไทยยังหาด้วยคำอังกฤษเจอ · ทุกประเภทมี label ครบสองภาษา · คำสั่ง normalize (dry-run ไม่เขียน / รันจริงเขียน / ใบที่ตรงแล้วไม่ถูกแตะ) · และใน `RequestAutoTicketTest` เพิ่มเคสพนักงานใหม่ (marker ครบสองที่) พร้อม assert ว่าคำขอปกติต้อง **ไม่มี** คำนี้
+
+---
+
+## Employee detail: แท็บ Requests เลิกเป็น Coming soon (2026-08-13)
+
+แท็บสุดท้ายในไดอะล็อกดูพนักงานที่ยังเป็นการ์ด "เร็ว ๆ นี้" มาตั้งแต่ดีไซน์แรก — ตอนนี้อ่านคำขอจริงของคนคนนั้น ต่อจาก Assets/Tickets/Access ที่ทำไปแล้ว
+
+### เจ้าของคำขออยู่ 2 คอลัมน์ ไม่ใช่คอลัมน์เดียว
+
+`GET /employees/{employee}/requests` (`EmployeeController@requests`) คืนคำขอที่ `employee_id` = คนนี้ **หรือ** `user_id` = บัญชีของคนนี้ เพราะคำขอเกิดได้ก่อนเจ้าตัวจะมีบัญชี (ใบ onboarding ที่ HR ยื่นแทนมี `employee_id` แต่ `user_id` เป็น null) ส่วน `user_id` เป็นตาข่ายรับกรณีที่ `employee_id` ถูก null ทิ้งภายหลัง — ใบที่เขาเป็นแค่**คนยื่นแทน** (`submitted_by_user_id`) ไม่ขึ้นที่นี่ เพราะมันเป็นคำขอของอีกคน
+
+- **Gate = `employees.view`** ไม่ใช่ `requests.view_all` — แพทเทิร์น peek เดิมของโมดูล Employee (อ่านข้อมูล "ของคนคนนี้" ผ่านหน้าพนักงาน)
+- เรียง `created_at` desc **แล้วต่อด้วย `id` desc** เพราะใบ onboarding หลายใบเกิดในวินาทีเดียวกัน ถ้าไม่มีตัวตัดสินลำดับจะสลับไปมาตามอารมณ์ฐานข้อมูล
+- **ไม่ส่ง `title`** จากฐาน: คอลัมน์นั้นเก็บอังกฤษตัวเดียวไว้ให้ subject ของเคสกับอีเมล ส่วนหน้าจอเขียนชื่อด้วย `requestTitle()` เป็นภาษาของ**คนอ่าน** (กฎเดียวกับหน้า Requests)
+
+### หน้าจอ
+
+`RequestsPane` ในไดอะล็อก: ตาราง 4 คอลัมน์ (วันที่ยื่น · เรื่อง+เลข RQ + ป้ายม่วง "พนักงานใหม่" ถ้าเป็นใบ onboarding · ประเภทพร้อมไอคอน · สถานะ) ใช้ `DataTable fillHeight` ความหนาแน่นเดียวกับแท็บ Tickets ให้อ่านเป็นตารางชุดเดียวกัน · ตัวเลขบนหัวแท็บมาจากจำนวนคำขอจริง (ว่างระหว่างโหลด ไม่โชว์ 0 ที่จะกลายเป็น 3) · **แถวกดไม่ได้** เพราะการเปิดคำขอต้องใช้สิทธิ์ของโมดูล Request ซึ่งคนที่เปิดไดอะล็อกนี้ไม่จำเป็นต้องมี
+
+คอมโพเนนต์ `ComingSoon` กับคีย์ `emp_v_coming_soon` ถูกลบทิ้งพร้อมกัน — ไม่มีแท็บไหนเหลือใช้แล้ว
+
+### Tests / Verification
+
+`EmployeeRequestsTest` ใหม่ 4 ตัว: คืนทั้งใบที่ยื่นเองและใบที่ HR ยื่นให้ · ไม่รวมคำขอของคนอื่นและใบที่เขาเป็นแค่คนยื่นแทน · `employees.view` อย่างเดียวพอ · ไม่มีสิทธิ์ = 403 — **ยืนยันด้วยการปิดเงื่อนไข `orWhere('user_id')` ชั่วคราวแล้วเห็นแดงจริงก่อนคืนกลับ**
+
+**ทั้ง suite = 957 passed / 3,726 assertions** (เดิม 953) · tsc 0 · eslint 0 · pint ผ่าน · `npm run build` ผ่าน
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — ตัวเลขบนหัวแท็บ, ป้ายม่วงของใบ onboarding และจังหวะ skeleton ควรกดดูด้วยตาอีกรอบ
+
+---
+
+## Assets Dashboard: กราฟส่งมอบ/รับคืน 12 เดือน + แกนกราฟตัวกลาง (2026-08-13)
+
+หน้า Assets แท็บ Dashboard เดิมมี KPI 4 ใบ → By type เต็มกว้าง → ตารางมูลค่าสูงสุด เพิ่มการ์ดกราฟ 12 เดือนไว้ข้าง By type
+
+### 1. ตารางประวัติไม่เคยบอกว่าการเปลี่ยนมือนั้นคืออะไร
+
+`asset_transfers` เก็บแค่ from/to owner — จะนับ "ส่งมอบกี่เครื่องเดือนนี้" ต้องอ่านข้อความ `reason` ภาษาอังกฤษ (`'Returned to pool'` / `'Recalled - transfer cancelled'`) ซึ่งเป็นช่องที่ผู้ใช้พิมพ์เองได้ = เดา ไม่ใช่ข้อเท็จจริง
+
+- คอลัมน์ใหม่ `kind` + enum `AssetTransferKind` (`handover` / `return` / `recall`) เขียนที่จุด log ทั้ง **4 จุด** ใน `AssetService` (ส่งให้พนักงาน · ส่งให้ของกลาง · รับคืนเข้าคลัง · เรียกคืนใบที่ยังไม่รับ) — `logTransfer()` บังคับรับ kind เป็นพารามิเตอร์ ลืมไม่ได้เพราะ type บังคับ
+- migration backfill แถวเก่าด้วยการเดาแบบเดิมครั้งเดียว (index `[kind, created_at]`, `down()` drop คืนได้) · **รันบนฐานจริงแล้ว**: 1 แถวที่มีอยู่ได้ `handover` ถูกต้อง (เหตุผลเป็นภาษาไทยที่ผู้ใช้พิมพ์ ไม่เข้าเงื่อนไขไหน)
+- **`recall` แยกจาก `return` ในฐาน แต่กราฟนับรวมเป็น "รับคืน"** เพราะทั้งคู่คือของกลับเข้าคลัง (`recall()` ทำเหมือน `markReceived()` เป๊ะ ต่างแค่ต้นเหตุ) — วันหน้าอยากแยกก็แยกได้โดยไม่ต้อง migrate ใหม่
+
+### 2. `summary` ส่ง `activity_12m`
+
+12 เดือนย้อนหลังจบที่เดือนปัจจุบัน เก่า→ใหม่ · **เดือนที่ไม่มีอะไรเกิดก็ต้องมีแถวเป็น 0** ไม่ใช่หายไป ไม่งั้นแท่งจะเลื่อนตำแหน่งแล้วป้ายเดือนผิด · จัดกลุ่มใน PHP ไม่ใช่ SQL เพราะเทสต์รันบน SQLite แต่ production เป็น MariaDB และฟังก์ชันตัดเดือนเขียนไม่เหมือนกัน (เหตุผลเดียวกับที่ `WorkflowController` คิดค่าเฉลี่ยใน PHP) · query ดึงแค่ 2 คอลัมน์ในหน้าต่าง 12 เดือน
+
+### 3. แกนกราฟย้ายไป `shared/` — ไม่มี chart library
+
+ไม่ลง dependency ใหม่: กราฟ 12 แท่งไม่ต้องใช้ scale/axis/tooltip engine และธีม/สี brand ของแอปคุมด้วย CSS variable อยู่แล้ว (บันเดิลตอนนี้ 554 kB gzip — build เตือนเรื่องขนาดอยู่แล้ว)
+
+- `shared/components/month-bar-chart.tsx` ใหม่ = แกนกราฟ (`MonthBarChart` + `CurrentMonthLegend`) ยกมาจาก `HiresTrendCard` ของโมดูล Employee ตรง ๆ · ทิศทางพึ่งพาถูกกฎ: `shared/` ไม่รู้จักโมดูลไหน ทั้ง employee และ asset พึ่ง shared
+- คีย์ legend ย้ายจาก `emp_current_month` → `current_month` ใน `common.ts` เพราะ 2 โมดูลใช้แล้ว (shared ไม่ควรอ้างคีย์ของโมดูลใด) · คีย์เดิมลบทิ้ง
+- `HiresTrendCard` เหลือแค่กรอบการ์ด + หัวข้อ + คำบรรยาย — **มีพฤติกรรมเปลี่ยน 1 อย่าง**: เดิมขึ้นข้อความว่างเฉพาะเมื่อ `data` ว่าง ตอนนี้ถ้า 12 เดือนเป็น 0 หมดก็ขึ้นข้อความว่างด้วย (แท่ง 0 สิบสองแท่งอ่านเหมือนกราฟเสีย) — ใช้กฎเดียวกันทั้งสองหน้า
+- การ์ดใหม่ `asset-activity-card.tsx`: ปุ่มสลับ ส่งมอบ/รับคืน ที่หัวการ์ด (series เดียวต่อครั้ง — 2 ชุด 12 เดือนในการ์ดครึ่งจอ = 24 แท่ง เบียดเกิน) · state อยู่ใน component ไม่ขึ้น URL เพราะเป็นมุมมองของการ์ด ไม่ใช่ filter ที่ใครจะแชร์ลิงก์
+- แถว By type เป็น `grid lg:grid-cols-2` + `items-start` — By type สูงตามจำนวนประเภท กราฟสูงคงที่ ไม่ยืดการ์ดที่สั้นกว่าให้เท่ากันแบบปลอม · `AssetDashboardSkeleton` เพิ่มโครงกราฟ 12 แท่งสูงสลับกันให้ layout ไม่กระตุกตอนโหลด
+
+### Tests / Verification
+
+`AssetActivityChartTest` ใหม่ 8 ตัว: kind ถูกต้องทั้ง 4 เส้นทาง (ส่งพนักงาน/ของกลาง/รับคืน/เรียกคืน) · 12 เดือนเสมอจบที่เดือนปัจจุบัน · นับเข้าเดือนที่ถูก · เดือนว่างเป็น 0 · recall รวมกับ return · แถวเก่ากว่าหน้าต่างไม่ถูกนับ — **ยืนยันด้วยการพังโค้ด 2 จุดแล้วเห็นแดงจริง** (`isInbound()` ตัด recall ออก → 1 fail · หน้าต่าง 11 เดือน → 4 fail) ก่อนคืนกลับ
+
+**ทั้ง suite = 965 passed / 3,747 assertions** (เดิม 957) · tsc 0 · eslint 0 · prettier · pint · `npm run build` ผ่าน
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — ฐานจริงมีทรัพย์สิน 1 รายการและ transfer 1 แถว กราฟจะขึ้นข้อความว่างเกือบทุกมุมมอง · ต้องดูด้วยตาว่าการ์ดคู่กันเรียงสวยจริง, ปุ่มสลับใช้ได้, และ `HiresTrendCard` หน้า Employee หน้าตาไม่เปลี่ยนหลังย้ายแกนกราฟ
+
+---
+
+## Workflow: View / Edit มี URL แล้ว (2026-08-13)
+
+หน้า Workflow เป็นโมดูลเดียวที่ dialog ยังเป็น state ในหน่วยความจำล้วน — reload แล้วปิด, ส่งลิงก์ให้คนอื่นไม่ได้ ตอนนี้ทั้งสองตัวขับด้วย URL เหมือนอีก 7 โมดูล
+
+- **`?view=<id>` และ `?edit=<id>`** เขียนผ่าน `open(mode, id)` ตัวเดียวที่ **ลบพารามิเตอร์อีกตัวทิ้งเสมอ** — "เปิดได้ทีละอัน" จึงเป็นคุณสมบัติของ URL ไม่ใช่กฎที่ต้องจำ · `{ replace: true }` ไม่ถมประวัติ back button · ปุ่ม Edit ในหน้า View = สลับพารามิเตอร์ด้วย id เดิม
+- **หา record จาก list ไม่ใช่ยิง API** — `WorkflowController` ไม่มี `show` (มีแค่ index/update/preview/employee-options) และเส้นทางอนุมัติมาคู่กับประเภทคำขอ ~12 รายการที่โหลดมาแล้วทั้งหมด ⇒ ไม่ต้องเพิ่ม endpoint
+- **`RecordMissingDialog`** สำหรับ id ที่ไม่มีจริง — เงื่อนไขเช็ค `data != null` ไม่ใช่ `!isLoading` เพราะ refetch ระหว่างใช้งานไม่ควรกล่าวหา URL ว่าตาย และตอนโหลดครั้งแรก id ที่ยังจับคู่ไม่ได้ก็ไม่ใช่ลิงก์เสีย
+- `toRecordId()` กรอง `?view=abc` (บั๊ก NaN ที่ 7 โมดูลแก้ไปเมื่อ 2026-08-12 — โมดูลนี้ไม่มีเพราะยังไม่มี URL ให้พัง)
+- **ต่างจากแพทเทิร์นเดิมข้อเดียว**: contract/asset จงใจให้ edit เป็น local (`edit stays local`) เพราะฟอร์มมี draft ที่ reload แล้วหาย · ที่นี่ตัวแก้ไขโหลดค่าจาก workflow ใหม่ทุกครั้งไม่มี draft ค้าง จึงให้ URL ได้
+
+### Tests / Verification
+
+backend ไม่แตะเลย (`WorkflowAdminTest` 8 ตัวยังผ่าน) · logic เป็น React ล้วนและโมดูลนี้ไม่มีเทสต์ frontend ⇒ `tsc` 0 · eslint 0 · prettier · `npm run build` ผ่าน
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — 4 เคสที่ต้องกดเอง: `/workflows?view=1` และ `?edit=1` เปิด dialog ถูกตัว · เปิดจากปุ่มแล้ว URL เปลี่ยน · ปุ่ม Edit ในหน้า View สลับ `view` → `edit` · `?view=999` ขึ้นกล่อง "ไม่พบรายการ"
+
+---
+
+## คำขอที่ไม่มีใครแตะ: กระดิ่งรายวัน + อีเมลสรุปวันจันทร์ (2026-08-14)
+
+แจ้งเตือนทุกตัวในระบบเป็น **push ครั้งเดียวตอนเกิดเหตุ** และไม่มีอะไร replay — ผู้อนุมัติที่ไม่ได้เปิดกระดิ่งเช้านั้นจะไม่มีอะไรมาทวงอีกเลย คำขอค้างเงียบได้เป็นสัปดาห์โดยระบบถือว่าจบธุระไปแล้ว เพิ่ม 2 กวาดที่ "พูดโดยไม่มีเหตุการณ์" เป็นครั้งแรกของโมดูลนี้
+
+### 1. กระดิ่งรายวัน — ค้างเกิน 3 วัน (`requests:send-stalled-reminders`, 08:10)
+
+- ส่งหา**คนที่ถือขั้นอยู่** (`status = current`) นับจาก `became_current_at` ที่มีอยู่แล้ว ไม่ต้องเพิ่มคอลัมน์
+- **ไม่มีอีเมล** — อีเมล `request.approval_needed` ยิงไปแล้วตอนขั้นมาถึง ส่งซ้ำทุกวันคือสอนให้คนตั้งกฎกรองที่อยู่ผู้ส่ง
+- **รันทุกเช้าไม่กองกัน** — `sendBell()` ลบใบเดิมก่อนส่งใหม่อยู่แล้ว เห็นเป็นกระดิ่ง 1 ใบที่ยังไม่อ่านเสมอ ไม่ต้องมี dedup ledger แบบ stock
+- **ผู้อนุมัติที่ยังไม่มีบัญชี = ไม่ทำอะไร** (ตัดสินใจไว้) · แถวคิว IT ที่ไม่ระบุตัวบุคคลส่งให้ผู้ถือ `requests.notify_approved`
+- ตรวจ 2 ชั้น: แถวเป็น `current` **และ** คำขอยังเปิดอยู่ (`pending` สำหรับขั้นอนุมัติ / `approved` สำหรับคิว IT) — คำขอที่ถูกยกเลิกไปแล้วยังทิ้งแถว current ไว้ ถ้าไม่กรองจะไปทวงเรื่องที่จบแล้ว
+
+### 2. อีเมลสรุปรายสัปดาห์ — ค้างเกิน 7 วัน (`requests:send-stalled-digest`, จันทร์ 12:00)
+
+- **1 คน = 1 ฉบับ** รวมทุกใบที่ค้างอยู่กับเขาไว้ในตารางเดียว — 5 อีเมลเช้าวันจันทร์คือ 5 อย่างที่ต้องกดปิด แต่ลิสต์เดียวคืองานหนึ่งชิ้น
+- ตาราง 4 คอลัมน์: เลขที่ (ลิงก์เปิดคำขอ) · ชื่อเรื่อง · ผู้ขอ · ค้างกี่วัน เรียงนานสุดขึ้นก่อน
+- ตารางถูก render เป็น HTML แล้วส่งเข้าเทมเพลตเป็นตัวแปรเดียว `{{digest.table}}` ⇒ แอดมินยังแก้ข้อความรอบ ๆ ได้ที่หน้า Email Templates โดยไม่ต้องเขียน markup ตารางเอง · เทมเพลตใหม่ `request.stalled_digest` cadence `weekly` (ค่าใหม่ ฝั่งหน้าเว็บเดิมรู้จักแค่ realtime/daily ป้ายเลยเคยโกหกว่าเป็น realtime)
+- **ไม่มีงานค้าง = ไม่ส่งอะไรเลย** ไม่ส่ง "สัปดาห์นี้ไม่มีงานค้าง" เพราะจะสอนให้คนเลิกเปิดอ่าน
+
+### 3. สิทธิ์ใหม่ 2 คีย์ — แยก "ใครทำได้" ออกจาก "ใครอยากรู้"
+
+| คีย์ | ใช้ที่ไหน |
+|---|---|
+| `requests.notify_approved` | **แทน `requests.fulfill`** ในการเลือกผู้รับกระดิ่ง/อีเมล "อนุมัติครบ พร้อมปิดงาน" + กระดิ่งเตือน 3 วันของแถวคิว IT |
+| `requests.notify_stalled` | รับอีเมลสรุปวันจันทร์ (ไม่มีสิทธิ์ = ยังได้กระดิ่งรายวันตามปกติ) |
+
+migration เติมคีย์ใหม่ให้ทุก role ที่ถือ `requests.fulfill` อยู่ก่อน กันแจ้งเตือนเงียบตอน deploy — **บนฐานจริงเติม 0 แถว เพราะไม่มี role ไหนถือ `requests.fulfill` เลย** (มีแต่ `super` ที่ข้ามการเช็คสิทธิ์อยู่แล้ว) แปลว่าพฤติกรรมบนฐานจริงไม่เปลี่ยน แต่ถ้าอยากให้ทีมอื่นได้รับต้องไปติ๊กที่หน้า Permissions เอง
+
+### Tests / Verification
+
+`RequestStalledReminderTest` ใหม่ 9 ตัว: เกิน 3 วันได้กระดิ่งพร้อมจำนวนวัน · ยังไม่ถึงเกณฑ์ไม่ได้ · รันซ้ำเหลือใบเดียว · คำขอที่ยกเลิกแล้วไม่ถูกทวง · คนไม่มีบัญชีไม่มีใครได้ · อีเมลสรุปใบเดียวต่อคนพร้อม**ตรวจเนื้อ HTML จริง** (เลขที่ทั้งสองใบ · เรียงนานสุดก่อน · เลขวัน · หัวเรื่องบอกจำนวน) · ไม่มีสิทธิ์ = ไม่ส่ง · ต่ำกว่า 7 วันไม่เข้าสรุป · เทมเพลตถูก seed — **ยืนยันด้วยการเปลี่ยนเกณฑ์ 7 → 3 วันแล้วเห็นแดงก่อนคืนกลับ**
+`RequestNotificationTest` แก้ให้ role IT ถือ `requests.notify_approved` ด้วย (เทสต์เดิมยืนยันกฎเก่า)
+
+**ทั้ง suite = 974 passed / 3,785 assertions** (เดิม 965) · tsc 0 · eslint 0 · prettier · pint · build ผ่าน · `schedule:list` ยืนยัน `10 8 * * *` และ `0 12 * * 1`
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์/อีเมลจริง** — ยังไม่เคยเห็นกระดิ่ง `stalled` กับหน้าตาอีเมลสรุปบนจอจริง (ฐานจริงยังไม่มีคำขอที่ค้างถึงเกณฑ์)
+
+---
+
+## อีเมลที่ไม่ได้ส่ง ก็ต้องมีที่บันทึก + แท็บประวัติการส่ง (2026-08-14)
+
+### 1. การตัดสินใจว่า "ส่งได้ไหม" กระจายอยู่ 7 ไฟล์
+
+ทุกบริการเช็ค `if (! $recipient->email) return;` เองแล้วปล่อยผ่านเงียบ ๆ (Request · Stock · Ticket · SLA · Contract · Employee) ⇒ คนที่ไม่เคยรู้เรื่องคำขอของตัวเองไม่ทิ้งร่องรอยไว้ที่ไหนเลย และไม่มีใครนับได้ว่ามีกี่คน
+
+- ย้ายการตัดสินใจไป `EmailNotificationService::sendTemplate()` จุดเดียว — รับที่อยู่แบบ **nullable** + ชื่อผู้รับ · มีอีเมล → คิว, ไม่มี → เขียน `email_logs` สถานะ **`skipped`** พร้อมชื่อคนที่ตกหล่น · **ลบ guard ซ้ำทั้ง 7 จุดทิ้ง**
+- **เทมเพลตที่ถูกปิดไม่ถูก log** — นั่นคือสวิตช์ของแอดมินเอง ไม่ใช่ความล้มเหลว ถ้า log ทุกครั้งจะได้แถวที่บอกแค่ว่า "เขาปิดไว้"
+- `email_logs`: `to_email` เป็น nullable, เพิ่ม `recipient_name` (ไม่มีอีเมลแล้วชื่อคือสิ่งเดียวที่บอกว่าใคร), index `(status, created_at)` · `SendTemplatedEmail` พาชื่อไปด้วยเพื่อให้แถวที่ส่งสำเร็จบอกได้ว่าส่งถึงใคร
+
+### 2. แท็บ "ประวัติการส่ง" ในหน้าเทมเพลตอีเมล
+
+การ์ด KPI นับแถวพวกนี้มาตลอด แต่ไม่มีที่ให้เปิดดู — เห็น "อัตราการส่งสำเร็จ 94%" โดยไม่รู้ว่า 6% คือใคร
+
+- หน้าแบ่งเป็น 2 แท็บ **`?tab=templates|log`** (URL อย่างเดียว + type guard ตามมาตรฐาน) · KPI อยู่เหนือแท็บ เห็นทั้งคู่
+- ตาราง: เวลา · เทมเพลต (key + หัวข้อ) · ผู้รับ (ชื่อ + ที่อยู่) · สถานะ · เหตุผล — server-paginated ผ่าน `DataTable server` เพราะตารางนี้โตขึ้น 1 แถวต่อ 1 อีเมลและไม่เคยถูกลบ
+- chip กรองสถานะ **นับจากทั้ง log ไม่ใช่หน้าปัจจุบัน** (ตัวเลขที่เปลี่ยนตามหน้าเป็นตัวเลขที่โกหก) · **การ์ด "อัตราการส่งสำเร็จ" กดได้** → เด้งมาแท็บนี้
+- `GET /api/email-logs` gate ด้วย `system.configure_notifications` เดียวกับเทมเพลต
+
+### 3. แถมจากการเปิดดูของจริง
+
+- **เทมเพลตใหม่ไม่เคยไปถึงฐานข้อมูล** — `EmailTemplates.php` เป็นแคตตาล็อก ส่วนที่ส่งจริงคือแถวในตาราง และ `sendTemplate()` หา key ไม่เจอจะ return เงียบ ๆ ⇒ `request.stalled_digest` จะไม่ถูกส่งเลย · migration `add_missing_standard_email_templates` เติมด้วย **`firstOrCreate`** ไม่ใช่ `updateOrCreate` เพราะบนฐานจริงมีเทมเพลตที่แอดมินแก้ข้อความไว้ **12 ใบ** (รันแล้ว: เพิ่ม 1 เป็น 28, ของที่แก้ไว้อยู่ครบ)
+- cadence `weekly` ฝั่งหน้าเว็บเดิมรู้จักแค่ `realtime|daily` ป้ายเลยเคยตกไปที่ realtime — เพิ่มค่าที่สามพร้อมป้าย "รายสัปดาห์"
+- พรีวิว `{{digest.table}}` เคยขึ้นเป็นข้อความดิบ (ตัวแปรนี้สร้างใน PHP ตอนส่ง) — ใส่ตารางตัวอย่างที่ `sampleVars()` ของ controller ให้แอดมินเห็นว่ากำลังแก้คำรอบอะไร
+
+### Tests / Verification
+
+`EmailDeliveryLogTest` ใหม่ 7 ตัว: ไม่มีที่อยู่ → แถว `skipped` + ไม่มีอะไรเข้าคิว · มีที่อยู่ → เข้าคิวพร้อมชื่อ · เทมเพลตปิด → ไม่มี log · `deliver()` เก็บชื่อ · endpoint เรียงใหม่สุดก่อน + นับทั้ง log · กรองสถานะ/ค้นหาชื่อ · กันคนไม่มีสิทธิ์ — **ยืนยันด้วยการใส่ `return;` ก่อนเขียน log แล้วเห็นแดงก่อนคืนกลับ**
+`TicketOwnerNotificationTest` แก้ตัวช่วยเป็น `updateOrCreate` เพราะ migration ทำให้ฐานเทสต์เริ่มต้นด้วยเทมเพลตมาตรฐานครบชุดแล้ว
+
+**ทั้ง suite = 981 passed / 3,807 assertions** (เดิม 974) · tsc 0 · eslint 0 · prettier · pint · build ผ่าน · **ยืนยันบนเบราว์เซอร์**: แท็บอ่านจาก URL ตรง ๆ, chip นับ 51 รายการ, pagination 1-20 จาก 51 (3 หน้า)
+
+**ที่ยังไม่ได้ทำ**: `email_logs` ไม่มีระบบล้างข้อมูลเก่า โตขึ้นเรื่อย ๆ ตลอด (ตอนนี้ 51 แถว) — ถ้าจะทำควรเป็น command ลบของเกิน N วัน
+
+### ตัดปุ่ม "เพิ่ม Template" ทิ้ง (2026-08-14)
+
+เทมเพลตจะถูกส่งก็ต่อเมื่อโค้ดเรียก `sendTemplate($key)` และ **ทุก key ที่เรียกได้เขียนอยู่ในซอร์สทั้งหมด** (`App\Support\EmailTemplates`) — แถวที่สร้างจากหน้าเว็บด้วย key ใหม่จึงแก้ได้ เปิด/ปิดได้ ส่งทดสอบได้ แต่**ไม่มีเหตุการณ์ไหนในระบบส่งมันเลย** (ช่องกรอก key ยังใส่ placeholder ว่า `ticket.escalated` ซึ่งไม่มีโค้ดไหนเรียก)
+
+เป็นกรณีเดียวกับปุ่ม "สร้าง workflow" ที่ตัดทิ้งไปเมื่อ 2026-08-06 แต่หนักกว่าเพราะบันทึกลงฐานจริง ⇒ ผู้ใช้ได้ของที่ดูเหมือนใช้ได้ · ลบปุ่ม + ไดอะล็อกสร้าง + `POST /email-templates` + คีย์ i18n ที่ตายแล้ว (`email_new` / `email_create` / `email_key`)
+
+`ApiAuthorizationTest` เปลี่ยน data set จาก "create email template" เป็น **"edit email template"** (`PUT`) — endpoint ที่หายไปทำให้เทสต์ได้ 405 แทน 403 · **ทั้ง suite 981 passed เท่าเดิม**
+
+> ถ้าวันหน้าเพิ่มเทมเพลตใหม่ ให้เพิ่มใน `EmailTemplates::all()` แล้วเขียน migration เติมแถวที่ขาด (แพทเทิร์น `add_missing_standard_email_templates`) — ไม่ใช่สร้างจากหน้าเว็บ
+
+### Logs: คอลัมน์ครบ + เปิดดูอีเมลที่ส่งจริงได้ (2026-08-14)
+
+- **6 คอลัมน์**: เวลา · Trigger · หัวข้อ · ผู้รับ · สถานะ · เหตุผล (เดิมยุบ Trigger กับหัวข้อไว้ช่องเดียว) — ทุกค่าอยู่ในฐานอยู่แล้ว ไม่ต้องแก้ schema
+- **กดแถวเปิด View Drawer** เห็นอีเมลจริงที่ผู้รับได้รับ — หัวเป็น `FocusDialogHeader` (trigger เป็น eyebrow · หัวข้อเป็น title · เวลา+ผู้รับเป็น subtitle · badge สถานะขวาบน) · กล่องเหตุผลโผล่เฉพาะใบที่ล้มเหลว/ไม่มีอีเมล · เนื้อหาแสดงใน iframe
+- **เก็บเฉพาะเนื้อความ ไม่เก็บทั้งใบ** — คอลัมน์ใหม่ `email_logs.body_html` เก็บ**เนื้อความที่แทนค่าตัวแปรแล้ว** (~0.2-3 KB) ส่วนกรอบแบรนด์/ปุ่ม/ฟุตเตอร์ถูกสวมกลับตอนเปิดอ่านจาก Blade `emails.templated` ตัวเดิม · วัดจริงแล้ว: เก็บทั้งใบ = **6.6 KB/ฉบับ** ซึ่ง 95% เป็นกรอบที่เหมือนกันทุกใบ ⇒ ประหยัดราว 30 เท่าโดยได้ภาพเหมือนเดิมเป๊ะ
+- **แถวที่ไม่มีอีเมลก็เก็บเนื้อหา** — "สิ่งที่เขาควรได้รับแต่ไม่ได้" คือครึ่งที่มีประโยชน์ของ log ประเภทนี้
+- แถวเก่าที่ไม่มี body → Drawer บอกว่าไม่ได้เก็บไว้ ไม่ใช่โชว์กรอบเปล่า · `GET /email-logs/{id}` คืน `preview_html` เป็น null
+
+`EmailDeliveryLogTest` +4 (เก็บ body ตอนส่ง · เก็บ body ตอน skipped · endpoint สวมกรอบให้ถูก · แถวเก่าคืน null) — **ยืนยันด้วยการเปลี่ยนเป็นเก็บ null แล้วเห็นแดง 2 ตัวก่อนคืนกลับ** · **ทั้ง suite 985 passed**
+
+### ticket.created: เนื้อจดหมายที่บอกว่าแจ้งอะไรไป (2026-08-14)
+
+- **`reference.id` ออกจากเทมเพลตตระกูล ticket ทั้งหมด** — มันคือเลขใบเดียวกับ `{{ticket.id}}` เป๊ะ ๆ การมีชื่อ 2 ชื่อให้ค่าเดียวชวนให้แอดมินเข้าใจว่าเป็นคนละอย่าง
+- **เนื้อจดหมายขยายเป็น 4 บรรทัด** (Ticket No. / Subject / Issue type / Details) — เดิมบอกแค่ว่า "รับเรื่องแล้ว" ผู้แจ้งต้องเข้าเว็บถึงจะรู้ว่าตัวเองพิมพ์อะไรไป
+- `{{ticket.details}}` เป็นตัวแปรตัวเดียวที่พาข้อความที่ผู้ใช้พิมพ์เองเข้าไปใน HTML ⇒ `nl2br(e(...))` — escape กัน tag หลง และขึ้นบรรทัดใหม่ตามที่พิมพ์
+- **`{{app.name}}` แทนคำว่า "the IT portal"** ที่ hardcode อยู่ 5 เทมเพลต — ดึงจาก `brand_name` ใน settings ผ่าน `globalVars()` เปลี่ยนชื่อระบบแล้วอีเมลเปลี่ยนตาม
+- รายการ **Available variables** และเมนู Insert variable เรียง A-Z (เดิมเรียงตามลำดับที่เขียนโค้ด — คนอ่านกำลังหาชื่อ และการหาชื่อคือการไล่ตัวอักษร)
+
+---
+
+## เคสใหม่: ทีม IT ได้อีเมลด้วย + สรุปเคสค้างเช้าวันจันทร์ (2026-08-14)
+
+กระดิ่ง "มีเคสใหม่" มีอยู่แล้วตั้งแต่แรก แต่กระดิ่งเห็นได้เฉพาะคนที่เปิดหน้าเว็บอยู่ — ซึ่งตรงกับเวลาที่เคสไม่มีคนรับพอดี
+
+### 1. `ticket.new_case` — ส่งพร้อมกระดิ่งตอนเปิดเคส
+
+- **ผู้รับชุดเดียวกับกระดิ่งเป๊ะ**: `tickets.resolve` + `tickets.level_<ประเภท>` ที่ตรงกับเคส และ**ไม่ส่งหาผู้แจ้งเอง** (เขารับเคสตัวเองไม่ได้อยู่แล้ว)
+- เนื้อจดหมายเหมือนใบเสร็จของผู้แจ้ง บวก **`{{ticket.requester}}`** — คนที่กำลังตัดสินใจว่าจะรับเคสไหมต้องรู้ว่าใครแจ้ง (ป้ายใช้คำว่า **Requester** ตรงกับที่หน้าเว็บเรียก ไม่ใช่คำใหม่)
+- `staffVars()` **จงใจไม่มี `user.first_name`** เพราะจดหมายฉบับนี้ส่งหลายคน แต่ละคนต้องถูกทักด้วยชื่อตัวเอง ⇒ ผู้เรียกเป็นคนใส่ (ถ้า reuse `ownerVars()` ตรง ๆ ทีม IT ทุกคนจะถูกทักด้วยชื่อผู้แจ้ง)
+
+### 2. `tickets:send-weekly-digest` — จันทร์ 08:30
+
+- **2 ตาราง ไม่ใช่ตารางเดียว** เพราะต้องทำคนละอย่างกัน: *ยังไม่มีคนรับ* (`open`) กับ *รับแล้วยังไม่ปิด* (`in_progress`)
+- ตารางที่สองเป็น**ของทั้งทีม ไม่ใช่ของตัวเอง** ⇒ ต้องมีคอลัมน์ Assignee · ตารางแรกมีคอลัมน์ Requester แทน (หัวตารางใช้คำเดียวกับหน้าเว็บ)
+- ทั้งสองตารางกรองด้วย **ticket level ของคนอ่าน** — ไม่ส่งแถวที่เขากดอะไรไม่ได้ให้ดู
+- **ไม่มีเกณฑ์จำนวนวัน** (ต่างจากคำขอที่ใช้ 7 วัน) — เคสค้างวันเดียวก็ยังเป็นเคสค้าง · เรียงเก่าสุดขึ้นก่อน · ไม่มีอะไรค้าง = ไม่ส่ง
+- `App\Support\EmailTable` **ใหม่**: ตัว render ตารางอินไลน์สไตล์ที่ digest ทุกตัวใช้ร่วมกัน (mail client ทิ้ง `<style>` ทุกกฎเลยต้องติดไปกับ element) — `RequestNotificationService` กับ `sampleVars()` ของหน้า Email Templates ย้ายมาใช้ตัวเดียวกัน พรีวิวจึงเพี้ยนจากของจริงไม่ได้อีก
+
+### Tests / Verification
+
+`TicketStaffNotificationTest` ใหม่ 6 ตัว: เคสใหม่ส่งหาคนที่มี level ตรง · ข้ามคนที่ level ไม่ตรง · **แต่ละฉบับทักด้วยชื่อผู้รับเอง** · สรุปรายสัปดาห์แยก 2 ตารางถูกต้องพร้อมชื่อคนถือเคส · ไม่มีสิทธิ์ `tickets.resolve` หรือไม่มี level ที่ตรง = ไม่ได้รับ · ไม่มีเคสค้าง = ไม่ส่ง — **ยืนยันด้วยการถอด level filter ทั้ง 2 จุดแล้วเห็นแดงก่อนคืนกลับ**
+
+> เทสต์นี้สร้าง **role แยกต่อ 1 บัญชี** เพราะสิทธิ์ผูกกับ role — 2 บัญชีที่เป็น `admin` เหมือนกันจะแชร์สิทธิ์กันเงียบ ๆ และเทสต์ชุดนี้มีไว้แยกว่าใครได้อะไร
+
+**ทั้ง suite = 994 passed / 3,851 assertions** (เดิม 985) · tsc 0 · eslint 0 · prettier · pint · `schedule:list` ยืนยัน `30 8 * * 1`
+
+**ยังไม่ได้ทดสอบบนอีเมลจริง** — ยังไม่เคยเห็นหน้าตาสรุป 2 ตารางบนกล่องจดหมายจริง (ยังไม่ถึงเช้าวันจันทร์)
+
+### พรีวิวโชว์ตัวแปรดิบเพราะไม่มีค่าตัวอย่าง (2026-08-14)
+
+`{{ticket.requester}}` ขึ้นเป็นข้อความดิบในหน้าพรีวิว — ค่าตัวอย่างอยู่ข้าง controller แต่ตัวแปรอยู่ในแคตตาล็อก เพิ่มตัวแปรที่หนึ่งโดยไม่เพิ่มอีกที่ = แอดมินเห็น `{{...}}` ตรงที่ผู้รับจะเห็นชื่อคน
+
+เขียนเทสต์ไล่**ทุกเทมเพลตมาตรฐาน** ยิง endpoint พรีวิวจริงแล้วหา `{{...}}` ที่เหลือค้าง — เจอว่าขาด **7 ตัว ไม่ใช่ตัวเดียว**: `from.name` (ticket.forwarded) · `contract.end_date` · `request.title` · `requester.name` · `actor.name` · `step.label` · `remark` ⇒ เทมเพลตกลุ่มคำขอกับสัญญาโชว์ตัวแปรดิบมาตั้งแต่ต้น เติมครบทั้ง 2 ฝั่ง (controller + chip list หน้าเว็บ ซึ่งขาด `items` ด้วย แปลว่า stock template แทรกตัวแปรนี้จากเมนูไม่ได้เลย)
+
+**ยืนยันด้วยการถอด `ticket.requester` ออกแล้วเห็นแดงก่อนคืนกลับ** · Email/Ticket/Request suites 302 passed
+
+### ลิงก์ในอีเมลพาไปแท็บด้วย ไม่ใช่แค่เปิด drawer (2026-08-14)
+
+`?view=15` เปิด drawer ได้ก็จริง แต่พอปิด drawer คนอ่านจะค้างอยู่บนแท็บ default ของ role ตัวเอง (ส่วนใหญ่คือ Dashboard) ไม่ใช่รายการที่เคสนั้นอยู่ ⇒ เปลี่ยนเป็น `?tab=all&view=15` ทั้ง 4 จุดที่ประกอบ URL ฝั่ง server: อีเมลเคสใหม่ · ทุกแถวในสรุปรายสัปดาห์ · ปุ่มท้ายสรุป (`?tab=all`) · อีเมลเตือน SLA breach
+
+### ตารางในอีเมลสรุป: ขยายกรอบ + คอลัมน์ตรงกัน + subject ยาวตัด … (2026-08-14)
+
+จากภาพจริงที่ได้รับ: เลขใบ `TKT-2856` ตัดเป็น 2 บรรทัด · หัว "Days open" ตัดเป็น 2 บรรทัด · 2 ตารางในฉบับเดียวกันคอลัมน์ไม่ตรงกันเลย
+
+- **กรอบอีเมล 600 → 720px** (`emails.templated`) — ตารางในสรุปมี 5 คอลัมน์ ที่ 600 ไม่พอ · กว้างกว่า reading pane ของ Outlook ซึ่งจะย่อทั้งฉบับให้พอดีไม่ใช่ตัดทิ้ง ตารางได้พื้นที่คุ้มกว่าที่เสียไป · media query ขยับตาม (620 → 740)
+- **`EmailTable` เพิ่ม `$widths`** ⇒ ใส่ความกว้างที่ `<th>` (ทั้ง attribute และ inline) · 2 ตารางที่ส่ง widths ชุดเดียวกันจะเรียงตรงกันพอดี — ค่าคงที่อยู่ที่ `TicketDigestService::WIDTHS/HEADERS_OPEN/HEADERS_WORKING/NUMERIC` ที่เดียว ทั้ง service และตารางตัวอย่างในหน้าพรีวิวอ้างตัวเดียวกัน (ก่อนหน้านี้เขียนหัวตารางซ้ำ 2 ที่ เวลาแก้คำต้องไล่แก้ทั้งคู่)
+- **หัวตารางกับเลขใบ `white-space:nowrap`** · เซลล์ `vertical-align:top` แถวที่มี 2 บรรทัดจะไม่ลอยกลาง
+- **`EmailTable::text()`** escape + ตัดที่ 60 ตัวอักษร (ชื่อคน 32) เติม `…` — **ตัดที่ PHP ไม่ใช่ CSS** เพราะ `text-overflow:ellipsis` ไม่รอดใน Outlook (เรนเดอร์ด้วยเอนจิน Word) ตารางที่พึ่ง CSS จะสวยทุกที่ยกเว้นโปรแกรมที่คนในออฟฟิศใช้จริง
+
+`TicketStaffNotificationTest` +1 (subject ยาวถูกตัด ไม่ใช่ wrap) · **ยืนยันบนเบราว์เซอร์**: เปิดพรีวิว `ticket.weekly_digest` จริง เห็นเลขใบ/หัวตารางอยู่บรรทัดเดียว และ 2 ตารางคอลัมน์ตรงกันแล้ว
+
+> **`<colgroup>` ใช้ไม่ได้ในอีเมล** — เวอร์ชันแรกใส่ความกว้างผ่าน `<colgroup><col>` ผลคือ **Send test แล้วได้อีเมลหน้าขาว ไม่มีเนื้อหาเลย** (log ยืนยันว่า body ออกไปครบ 4,385 ตัวอักษร แท็กปิดครบ ⇒ ตัว sanitizer ฝั่งผู้รับทิ้งทั้งฉบับ) · เทียบไทม์ไลน์ชัด: log 70 ที่ยังไม่มี colgroup แสดงผลได้ ส่วน 71+ ขาวหมด · นอกจากนั้น Outlook (เอนจิน Word) ไม่รองรับ colgroup อยู่แล้ว แปลว่าที่คิดว่า "2 ตารางตรงกัน" ก็ไม่จริงบน Outlook ⇒ ย้ายไปใส่ `width` ที่ `<th>` ซึ่งเป็นวิธีมาตรฐานของ HTML email
+
+### "Send test แล้วอีเมลขาว" — ไม่ใช่บั๊กของเรา (2026-08-14)
+
+ไล่หาทีละชั้นจนหมดข้อสงสัยฝั่งเรา:
+
+| ตรวจอะไร | ผล |
+|---|---|
+| body ที่บันทึกใน log | ครบ 4,349 ตัวอักษร แท็กเปิด/ปิดตรงกัน |
+| MIME ที่ออกทางสาย (ส่งผ่าน log mailer แล้วอ่านดิบ) | `multipart/related` + `text/html; charset=utf-8` + `quoted-printable` ถูกต้อง |
+| HTML ฉบับเต็ม (กรอบ+เนื้อ) เปิดในเบราว์เซอร์ | **แสดงผลครบทุกส่วน** |
+| สมมติฐานแรก: `<colgroup>` | **ผิด** — ฉบับที่ส่งหลังเอา colgroup ออกก็ยังขาว (log 75, 76) |
+
+เหตุผลจริง: **การส่งทดสอบซ้ำได้ข้อความเหมือนกันเป๊ะทุกตัวอักษร** กล่องจดหมายที่จัดกลุ่มตามหัวเรื่อง (Gmail) จะยัดฉบับที่ 2 เข้าไปในเธรดของฉบับแรกแล้วซ่อนเนื้อหาที่ซ้ำไว้หลังปุ่ม **"…"** ⇒ เปิดมาเห็นหน้าขาวมีจุดสามจุด · ฉบับแรกของแต่ละเทมเพลตจึงเห็นครบเสมอ ฉบับถัดไปขาวหมด
+
+⇒ ต่อท้ายหัวเรื่องของ **การส่งทดสอบ** ด้วยเวลา `(test 17:52)` ทุกฉบับไม่ซ้ำกันอีก และคนอ่านรู้ด้วยว่ากำลังดูการกดปุ่มครั้งไหน (`EmailDeliveryLogTest` +1) — อีเมลจริงจากเหตุการณ์ในระบบไม่ถูกแตะ เพราะเนื้อหาต่างกันตามข้อมูลอยู่แล้ว
+
+## Workflows: มี Master gate เหมือนโมดูลอื่น + ย้ายไป Administration (2026-08-17)
+
+หน้า Permissions วางการ์ด Workflows ไว้ใน **Workspace** ข้าง Requests และมีสวิตช์เดียว (`workflows.manage`) ขณะที่ sidebar ย้ายเมนู Workflows ไปอยู่ Administration ไปแล้ว — ตำแหน่งไม่ตรงกัน และ "เข้าดูสายอนุมัติได้" กับ "แก้สายอนุมัติได้" เป็นสวิตช์เดียวกัน
+
+- **คีย์ใหม่ `workflows.module`** เป็น master ตามแพทเทิร์นเดียวกับทุกโมดูล (`workflowHierarchy()` + `normalizeWorkflows()` เรียกต่อจาก normalize ตัวอื่นใน `RolePermissionController@update`)
+- **แยกสิทธิ์อ่าน/แก้**: `GET /workflows`, `employee-options`, `position-options`, `preview` ใช้ `workflows.module` · `PUT /workflows/{id}` ใช้ `workflows.manage`
+- **sidebar** เปลี่ยน gate เป็น `workflows.module` (master คุมเมนู ตามที่การ์ดบอกว่ามันคุม)
+- **การ์ดย้ายไป section Administration** (`ADMIN_GROUPS`) และเปลี่ยนเป็นทรี master → group แบบเดียวกับ Contracts (`WorkflowPermissionTree`) — หัวการ์ด `Workflows access` + บรรทัด `Master · gates the module and the sidebar icon` + ลูกคือ `Edit approval workflows`
+- **migration เติม `workflows.module` ให้ทุก role ที่ถือ `workflows.manage` อยู่** กันเมนูหายตอน deploy — บนฐานจริงเติม 0 แถว เพราะไม่มี role ไหนถือคีย์นี้ (มีแต่ super ที่ข้ามการเช็คอยู่แล้ว) พฤติกรรมจึงไม่เปลี่ยน
+
+`WorkflowAdminTest` +1 (**ถือ master อย่างเดียว = เปิดหน้าได้ แต่ PUT ถูกปฏิเสธ**) · เทสต์เดิม 2 ไฟล์แก้ให้ role ทดสอบถือ master ด้วย (เทสต์เดิมยืนยันกฎเก่า) · **ทั้ง suite 998 passed / 3,921 assertions** · tsc 0 · eslint 0 · prettier · pint · **ยืนยันบนเบราว์เซอร์**: การ์ดขึ้นใน Administration นับ 2/2 หน้าตาตรงกับการ์ด Stock/Employee
+
+## เมนูที่กดแล้วเจอ 403: route gate ไม่ตรงกับ sidebar 5 โมดูล (2026-08-25)
+
+การแยก `workflows.module` ออกจาก `workflows.manage` รอบที่แล้วเปลี่ยน gate ครบทุกที่ **ยกเว้น route ฝั่ง React** — `App.tsx` ยังขอ `workflows.manage` ขณะที่ `nav.ts` โชว์เมนูด้วย `workflows.module` และ `GET /workflows` ยอมรับ master ⇒ role ที่ถือ master อย่างเดียว (เคสที่ `WorkflowAdminTest` เพิ่งเขียนเทสต์รองรับ) เห็นไอคอนแต่กดแล้วได้หน้า 403
+
+ไล่เทียบทั้งสองไฟล์แล้วพบว่า**ไม่ใช่จุดเดียว — เป็น 5 โมดูล**:
+
+| โมดูล | sidebar โชว์เมื่อ | route เดิมขอ | คนที่ตกหล่น |
+|---|---|---|---|
+| workflows | `workflows.module` | `workflows.manage` | ผู้ดูสายอนุมัติแบบอ่านอย่างเดียว |
+| tickets | `tickets.module` · `create` · `my` | `create` · `view_all` | **พนักงานที่ถือ `tickets.my` อย่างเดียว** |
+| employees | `employees.module` | `employees.view` | role ที่ได้แค่แดชบอร์ดพนักงาน |
+| assets | `assets.module` | `assets.view` | role ที่ได้แค่แดชบอร์ดทรัพย์สิน |
+| contracts | `contracts.module` | `contracts.view` | role ที่ได้แค่แดชบอร์ดสัญญา |
+
+- **กฎที่ใช้แก้**: route ต้องยอมรับ**ทุก key ที่ sidebar ใช้โชว์เมนู** · กว้างกว่าได้ (เข้าทาง URL โดยไม่มีเมนูเป็นการตั้งใจ) แต่แคบกว่าคือเมนูที่กดไม่ได้เสมอ
+- ปลอดภัยเพราะ**แต่ละหน้ากรองแท็บของตัวเองอยู่แล้ว** (ticket/employee/asset มี fallback เมื่อไม่มีแท็บที่ดูได้) และ `http.ts` ปล่อย 403 ให้ผู้เรียกจัดการ ไม่เด้งจอ error ทั้งแอป
+- คง key เดิมไว้คู่กับ master ทุกจุด (`['x.module', 'x.view']`) เพราะ normalize บังคับ master เฉพาะตอนบันทึกสิทธิ์ — แถว role เก่าที่ถือ child โดยไม่มี master จึงไม่หลุด
+- คอมเมนต์ `WorkflowController` ที่ยังเขียนว่า "routes carry permission:workflows.manage" แก้ให้ตรงกับของจริง (อ่าน = `workflows.module`, เขียน = `workflows.manage`) ทั้ง 3 จุด
+
+### Tests / Verification
+
+`SidebarRouteGateTest` ใหม่ 2 ตัว — parse `nav.ts` กับ `App.tsx` จากฝั่ง PHP แบบเดียวกับ `PermissionMatrixTest` (ทั้งสองฝั่งเป็นข้อมูลดิบ TypeScript จับให้ไม่ได้): ทุกเมนูต้องเปิดหน้าที่มันลิงก์ไปได้ · ทุก key ที่ใช้ gate ต้องมีอยู่จริงใน `Permissions::all()` — **ยืนยันด้วยการย้อน `workflows` กลับเป็น `manage` แล้วเห็นแดงพร้อมข้อความชี้ตัวจุดก่อนคืนกลับ**
+
+**ทั้ง suite = 1,000 passed / 3,925 assertions** (เดิม 998) · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+> **ยังไม่ได้ทำ**: role ที่ถือ master + `view_dashboard` (ไม่มี `.view`) ตอนนี้เข้าหน้า Assets/Contracts ได้แล้วแต่จะเห็นแท็บรายการที่ว่างเปล่า เพราะ API ยังตอบ 403 ให้ list — หน้า Tickets/Employees กรองแท็บตามสิทธิ์ครบแล้ว ส่วน Assets (แท็บ Inventory/Transfers) กับ Contracts (ทั้ง 2 แท็บ) ยังไม่กรอง ถ้าจะทำให้ครบต้องกรองแท็บ + ใส่ `enabled` ให้ query รายการเหมือนหน้าอื่น
+
+## Resign modal: เลิก Coming soon + วางใหม่เป็น 2 คอลัมน์ — อุปกรณ์ค้างของคนลาออกถูกเรียกคืนจริง (2026-08-25)
+
+หน้าจอลาออกเขียนข้อความไว้ล่วงหน้าตั้งแต่ตอนที่โมดูล Assets ยังไม่มี — `resign_warn` บอกว่า "ขอเรียกคืนอุปกรณ์ทั้งหมด" และ `resign_assets_flagged` บอกว่า "ระบบจะตั้งสถานะอุปกรณ์เหล่านี้เป็น รอรับคืน" แต่ของจริงคือ **ป้าย Coming soon สองที่ กับ `// NOTE: ... (not yet built)` ใน `EmployeeService::resign()`** ⇒ กดลาออกแล้วอุปกรณ์ยังค้างสถานะ Deployed ในชื่อคนที่ไม่อยู่แล้ว
+
+ชิ้นส่วนที่ต้องใช้มีครบอยู่ก่อนแล้ว งานรอบนี้คือต่อสายให้ถึงกัน:
+
+| มีอยู่แล้ว | ใช้ทำอะไร |
+|---|---|
+| `GET /employees/{id}/assets` (`useEmployeeAssets`) | รายการอุปกรณ์ที่คนนั้นถืออยู่ — แท็บ Assets ในดรอเวอร์ใช้อยู่ |
+| `AssetService::requestReturn()` | `deployed → pending_return` + กระดิ่งหา IT ที่ถือ `assets.receive` |
+| badge sidebar ของ Assets | นับ `pending_return` อยู่แล้ว — เด้งเองไม่ต้องแตะ |
+
+- **`AssetService::requestReturnForEmployee()`** ใหม่ — เรียกคืนทีเดียวทั้งคน: หยิบเฉพาะที่ยัง**อยู่ในมือจริง** (`deployed` · `pending_acceptance`) ส่วนที่ `pending_return` อยู่แล้วปล่อยไว้ ไม่ตีกระดิ่งซ้ำ · resolve ผู้รับกระดิ่ง**ครั้งเดียวต่อ batch** (`requestReturn()` เดิม `User::all()` ใหม่ทุกชิ้น — คนถือ 12 เครื่องคือโหลด user 12 รอบ)
+- **`EmployeeService::resign()`** inject `AssetService` แล้วเรียกเมธอดข้างบน พร้อมเหตุผล `Resignation — {code}` ที่ไปโผล่ในหน้า Assets ว่าทำไมถึงถูกเรียกคืน
+- **ตั้งใจไม่ใส่ gate ของ Assets ในชั้น service** — คนบันทึกลาออกถือ `employees.resign` เป็นงาน HR ไม่จำเป็นต้องมีสิทธิ์อะไรในโมดูล Assets เลย ถ้าใส่ abort ตรงนั้น การลาออกจะพังในมือคนที่ควรทำได้
+- **Resign modal วางใหม่เป็น 2 คอลัมน์** (`max-w-4xl`, แบบร่างอยู่ที่ `docs/mockup/resign-dialog.html`) — ซ้ายคือสิ่งที่บันทึก ขวาคืออุปกรณ์ที่จะถูกเรียกคืนไปพร้อมกับคนนั้น **ผลลัพธ์ของการกดจึงอยู่ข้างปุ่ม ไม่ใช่ใต้ปุ่ม** ของเดิมรายการอยู่ล่างสุด คนกดเห็นปุ่มแดงก่อนเห็นว่ามีของค้างกี่ชิ้น
+- **หัวคอลัมน์ซ้ายเป็นตัวตนแบบอ่านอย่างเดียว 4 ช่อง** — ชื่อ-นามสกุล · รหัสพนักงาน · ตำแหน่ง · แผนก อ่านจาก `Employee` ที่ส่งเข้ามาอยู่แล้ว (list eager-load `department`/`position` อยู่แล้ว ไม่ยิง API เพิ่ม) คำบรรยายใต้หัวเรื่องจึงกลับเป็นประโยคกลาง ๆ เพราะตัวตนย้ายลงมาอยู่ในฟอร์มครบกว่าเดิม
+- **ช่อง "อุปกรณ์ที่ต้องคืน"** เป็นตัวเลขจริง (`3 รายการ`, เหลืองเฉพาะตอนมีของค้าง ไม่มีของค้าง = เทา) และกล่องเส้นประกลายเป็นรายการอุปกรณ์จริง (รุ่น · tag · serial · จุดสีตามสถานะ) **แบ่งหน้า 4 แถว** ตรึงความสูงไว้ — หน้าสุดท้ายที่ไม่เต็มจะไม่ทำให้ dialog หด
+- **`Field` ได้ prop `grow`** — ช่องเหตุผลยืดกินที่ที่เหลือ คอลัมน์ซ้ายจึงจบเสมอกับแถว pager ฝั่งขวาเอง ไม่ต้องไล่แก้ `min-height` ทุกครั้งที่เพิ่มฟิลด์ (ของเดิมตั้งเป็นตัวเลขตายตัว แก้ 3 รอบระหว่างทำ mockup)
+- **`DialogContent` ต้องไม่มี `overflow` เด็ดขาด** — รอบแรกผมใส่ `overflow-y-auto` ไว้กันเนื้อหาล้นจอ ผลคือ**ปฏิทินของ DateInput กลายเป็นเนื้อหาที่ต้องเลื่อนแทนที่จะลอยทับ** เหตุผล: `DateInput` portal ปฏิทินเข้าไปใน node ที่เป็น `[role="dialog"]` โดยตั้งใจ (ถ้า portal ไป `<body>` modal guard จะกินคลิกจนกดวันที่ไม่ได้) และ `DialogContent` มี `translate-x/y-[-50%]` ซึ่งทำให้มันกลายเป็น containing block ของลูกที่เป็น `position: fixed` ⇒ ปฏิทินถูกกักไว้ข้างใน พอตั้ง overflow เป็นอะไรก็ตามที่ไม่ใช่ `visible` มันจึงไปเพิ่ม scroll area แทนที่จะล้นออกมา · วัดยืนยันแล้ว: `overflow-y:auto` เลื่อนได้ 265px / `visible` `scrollTop` ค้างที่ 0 ทั้งที่ `scrollHeight` เท่ากัน · dialog อื่นที่สูงตามเนื้อหา (`department-members-dialog` ฯลฯ) ก็ใช้ `flex max-h-[Nvh] max-w-* flex-col` เปล่า ๆ ด้วยเหตุผลเดียวกัน
+- **`resign_assets_flagged` ถูกลบ** — เลย์เอาต์ใหม่ไม่มีที่ให้ประโยคนี้ และแบนเนอร์เหลืองบอก "ขอเรียกคืนอุปกรณ์ทั้งหมด" อยู่แล้ว เก็บคีย์ที่ไม่มีใครใช้ไว้คือขยะ
+- **fetch พังต้องไม่อ่านว่า "ไม่มี"** — `isError` แยกจาก "โหลดเสร็จแล้วว่าง" คนละข้อความ (`resign_assets_unavailable` vs `resign_assets_none`) เพราะ 403/เน็ตหลุดแล้วขึ้น "ไม่มีอุปกรณ์ค้าง" คือการรายงานข้อมูลผิดในจอที่ตัดสินใจไม่ย้อนกลับ
+- `HELD_STATUS_META` ย้ายจากในไฟล์ดรอเวอร์ออกมาที่ `modules/employee/lib/held-assets.ts` — สองจอวาดแถวเดียวกัน ไม่ก๊อป
+
+### Tests / Verification
+
+`EmployeeResignAssetsTest` ใหม่ 5 ตัว — flag ครบทั้ง `deployed`/`pending_acceptance` พร้อมเหตุผล · ของคนอื่นกับของในคลังไม่ถูกแตะ และของที่ `pending_return` อยู่แล้วคง `last_reason` เดิม · กระดิ่งถึง IT ชิ้นละใบและไม่ถึงคนที่ไม่มีสิทธิ์รับคืน · **บัญชีทรง HR ที่ถือแค่ `employees.*` ลาออกได้และอุปกรณ์ถูกเรียกคืนจริง** (เทสต์ตัวที่กันไม่ให้เผลอใส่ gate) · คนที่ไม่ถืออะไรเลยลาออกผ่านปกติ
+
+**ทั้ง suite = 1,005 passed / 3,940 assertions** (เดิม 1,000) · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+เปิดจอจริงในแอปที่ล็อกอินแล้ว: เคสไม่มีของค้าง (EMP-7) ขึ้น "ไม่มีอุปกรณ์ค้าง" ป้ายนับเทา · เคสมีของค้าง (EMP-14) ขึ้น "1 รายการ" ป้ายเหลืองพร้อมแถวอุปกรณ์จริง จุดสีเหลือง = รอรับคืน · เปิดปฏิทินแล้ววัดในหน้าเว็บ `overflowY: visible` · ตั้ง `scrollTop = 999` แล้วยังค้างที่ **0** (ไม่มี scroll) · ขอบล่างปฏิทิน 836px ล้ำขอบ dialog (756px) ออกมาโดยยังอยู่ในจอ (873px)
+
+> **ยังไม่ได้ทำ**: ยังไม่มีทางกดคืนอุปกรณ์ "บางชิ้น" ตอนลาออก — เรียกคืนทั้งหมดเสมอ ถ้าจะให้เลือกได้ต้องส่ง `asset_ids` ไปกับ payload ของ resign แล้วกรองใน service · `cancelResign()` ไม่ย้อนสถานะอุปกรณ์กลับให้ (ยกเลิกลาออกแล้วต้องให้ IT กดรับคืนหรือส่งมอบใหม่เอง)
+
+### แท็บ "คำขอ" ในดรอเวอร์พนักงาน ยุบเหลือ 1 แถวต่อหน้า (2026-08-26)
+
+อาการที่เห็นคือ "animation แปลก ๆ ตอนสลับแท็บ Tickets กับ คำขอ" — ของจริงคือ**ตารางคำขอยุบตัว**: เฟรมแรกขึ้น 4 แถว (`1/6`) แล้วหดเหลือ 1 แถว (`1/21`) ทั้งที่พื้นที่ว่างเหลือทั้งบาน
+
+ต้นเหตุอยู่ที่บรรทัดเดียวใน `employee-view-drawer.tsx` ที่เลือกคลาสให้กล่องเนื้อหาแท็บ:
+
+```
+tab === 'assets' || tab === 'tickets' ? 'flex flex-col p-5' : 'overflow-y-auto p-5'
+```
+
+ทั้ง Assets · Tickets · Requests เรนเดอร์ `DataTable` แบบ `fillHeight` ซึ่งคิดจำนวนแถวต่อหน้าจาก**ความสูงที่วัดได้จริง** แต่ `requests` ตกไปอยู่สาขา else ที่เป็น `display: block` ⇒ `flex-1` ของ `RequestsPane` ไม่มีผล ความสูงจึงอิงเนื้อหาแทนที่จะยืดเต็มกล่อง เกิดเป็นลูปป้อนกลับ: ตารางวัดตัวเองว่าเตี้ยลง → ลดแถว → เตี้ยลงอีก → วนจนชนพื้น `Math.max(1, …)`
+
+- แก้โดยเติม `tab === 'requests'` เข้าไปในสาขา flex — สามแท็บที่ใช้ `fillHeight` ต้องอยู่ในสาขาเดียวกันทั้งหมด · ใส่คอมเมนต์อธิบายกลไกไว้ตรงนั้นแล้ว เพราะเป็นกับดักที่มองไม่เห็นจากตัวคลาส
+- เป็นบั๊กเดิม ไม่เกี่ยวกับงาน Resign modal (diff ในไฟล์เดียวกันรอบนั้นมีแค่ย้ายค่าคงที่ `HELD_STATUS_META` ออกไปที่ `lib/held-assets.ts`)
+
+### Tests / Verification
+
+วัดใน DOM ของแอปจริง ก่อนแก้: กล่องแม่ `display: block` · pane สูง 118px ทั้งที่กล่อง scroll สูง 541px ⇒ 1 แถว · หลังแก้: `display: flex` · pane สูง 470px จาก 510px ⇒ **8 แถว นิ่งตั้งแต่เฟรมแรก** (`1–8 จาก 21`, `1/3`) สลับ Tickets ↔ คำขอ กลับไปกลับมาแล้วไม่ยุบ · tsc 0 · prettier · build ผ่าน
+
+### รอบตรวจ UX ของ Resign modal — แก้ 5 จุด (2026-08-26)
+
+ไล่เปิดจอจริงทุกสถานะ (ไทย/EN · light/dark · มีของค้าง/ไม่มี · error · keyboard) แล้วพบของที่ต้องแก้:
+
+- **จอแคบแล้วปุ่มยืนยันหลุดนอกกล่อง กดไม่ถึง** — เป็นผลข้างเคียงจากการถอด `overflow` ออกจาก `DialogContent` เพื่อปล่อยปฏิทินรอบก่อน พอต่ำกว่า `md` คอลัมน์ซ้อนกันจนเนื้อหาเกิน `max-h` แล้วไม่มีอะไรเลื่อนได้ · วัดก่อนแก้: เนื้อหา 990px ในกล่อง 560px · `canScroll: false` · ปุ่มอยู่ต่ำกว่าก้นกล่อง 431px
+  **แก้โดยย้าย scroll ลงไปหนึ่งชั้น** — ห่อแบนเนอร์+grid ด้วย `flex min-h-0 flex-1 overflow-y-auto` ให้ header/footer เป็นลูกตรงของ `DialogContent` · ปฏิทินยังลอยอิสระเพราะมัน portal เข้า `DialogContent` ซึ่งเป็น**พี่น้อง**กับตัวที่เลื่อน ไม่ได้อยู่ข้างใน (ยืนยันด้วย `parentElement === dialog` และ `scroller.contains(popper) === false`) · เพิ่ม `w-[calc(100vw-2rem)]` ให้มีขอบข้างบนมือถือ แทนที่จะชนขอบจอ
+- **API ปฏิเสธแล้วจอเงียบ** — `submit()` ไม่มี try/catch และไม่มีแบนเนอร์ระดับฟอร์ม 422/500 จึงเห็นแค่ปุ่มกลับมากดได้ เหมือนไม่มีอะไรเกิดขึ้น · เพิ่ม `formError` + แบนเนอร์ `animate-shake` ตามแพตเทิร์นเดียวกับ `set-credentials-modal` (ข้อความจาก API ก่อน ตกไปที่ `resign_err_failed`)
+- **ที่ว่างตายในคอลัมน์ขวา** — คนถือของชิ้นเดียวได้แถวเดียวลอยเหนือช่องว่าง ~210px · **ใส่กรอบคุมโซนทั้งก้อน** (`rounded-xl border`) แถวข้างในเลิกมีกรอบของตัวเองเปลี่ยนเป็น `divide-y` และ pager ยึดก้นแผง — ช่องว่างจึงอ่านเป็นพื้นที่ของแผง ไม่ใช่ความว่างเปล่า **คงสองคอลัมน์ไว้เหมือนเดิม**
+- **`"1 items"`** — เพิ่ม `filter_item` เอกพจน์ใน common แล้วเลือกตามจำนวน (ไทยใช้ "รายการ" ทั้งคู่ ถูกอยู่แล้ว)
+- **validation ไม่ย้าย focus** — ส่ง `name` ให้ `Field` แล้วเรียก `focusFirstError()` ที่ `shared/lib/utils` มีอยู่แล้ว เคอร์เซอร์จึงลงช่องแรกที่ยังไม่ได้กรอก
+
+### Tests / Verification
+
+วัดในแอปจริงหลังแก้: จำลองคอลัมน์เดียว + `max-h` แล้ว **ตัวเลื่อนชั้นในเลื่อนได้ 240px และปุ่มยืนยันอยู่ในกล่อง** (`btnBottom 711 ≤ boxBottom 736`) · `DialogContent` ยัง `overflow: visible` ปฏิทินลอยพ้นขอบ 38px โดยอยู่ในจอ · กดยืนยันทั้งที่ว่างเปล่า → focus ลงใน `[data-field="lastDay"]` จริง · EN ขึ้น **"1 item"** · ตรวจซ้ำทุกครั้งว่าไม่มีพนักงานถูกบันทึกลาออก (`resigned: 0`) · tsc 0 · eslint 0 · prettier · build ผ่าน
+
+> **ยังไม่ได้ทำ**: หัวข้อ "อุปกรณ์ที่ต้องคืน" กับคำอธิบายใต้มัน "รายการอุปกรณ์ที่ต้องคืนทั้งหมด" ยังพูดเรื่องเดียวกันสองรอบ — ถ้าจะตัดควรเปลี่ยนบรรทัดล่างเป็นข้อมูลที่เพิ่มขึ้นจริง เช่น "จะถูกตั้งเป็นรอรับคืนเมื่อยืนยัน" ไม่ใช่ลบทิ้งเฉย ๆ
+
+### แถวสุดท้ายในแผงอุปกรณ์สูงกว่าเพื่อน (2026-08-26)
+
+หน้าที่มี 4 รายการเต็ม แถวสุดท้ายดูสูงเป็นสองเท่าของแถวอื่น วัดแล้วพบว่า**แถวสูงเท่ากันหมด (63, 63, 63, 62)** ตัวปัญหาคือกล่องรายการถือ `flex-1` จึงถูกยืดเป็น 276px ขณะที่ 4 แถวรวมเส้นคั่นกินแค่ 254px เหลือ **22px ค้างอยู่ก้นกล่อง** — และเพราะ `divide-y` ไม่วางเส้นใต้ลูกคนสุดท้าย ช่องว่างนั้นจึงไม่มีขอบมาปิด กลืนเป็นเนื้อเดียวกับแถวที่ 4
+
+- **เลิกยืดกล่องรายการ** — ถอด `flex-1` ทั้งจากแผงและจากกล่องรายการ ความสูงแผงมาจากจำนวน slot ตรง ๆ ไม่มีเศษให้ค้าง
+- **เติม slot ว่างให้ครบหน้าเสมอ** — แบบเดียวกับ filler rows ของ `DataTable` หน้าสุดท้ายที่ไม่เต็มจึงสูงเท่าหน้าเต็ม ช่องว่างถูกแบ่งเป็นช่อง ๆ มีเส้นคั่น อ่านออกว่า "ที่ว่างสำหรับรายการถัดไป" ไม่ใช่แถวยักษ์
+- ทุก slot สูง `h-16` เท่ากันหมด (จริงและว่าง) · สถานะว่าง/ดูไม่ได้ใช้ `min-h-65` ให้แผงสูงเท่าหน้าเต็ม · skeleton เรนเดอร์ 4 slot ด้วย แผงจึงไม่ขยายตอนข้อมูลมาถึง
+
+### Tests / Verification
+
+วัดในแอปจริง: หน้า 1 (4 รายการ) กับหน้า 2 (1 รายการ + 3 slot ว่าง) ได้ `panelH` **303px เท่ากันทั้งคู่** · slot สูง **64px ทั้ง 4 ช่องทุกหน้า** · กดเปลี่ยนหน้าแล้ว dialog ไม่ขยับ · เคสไม่มีของค้างแผงสูง 260px คอลัมน์จบเสมอกัน · `resigned: 0` · tsc 0 · eslint 0 · prettier · build ผ่าน
+
+### คอลัมน์ซ้าย–ขวาไม่จบเสมอกัน (2026-08-26)
+
+หลังจากตรึงแผงอุปกรณ์ให้เป็นขนาดคงที่ (4 slot) แผงก็เลิกยืด ⇒ คอลัมน์ซ้ายกลายเป็นตัวกำหนดความสูงแถว textarea ที่ถือ `grow` จึงไม่มีที่ว่างให้ยืดและติดพื้น `min-h` ส่วนขวาเหลือช่องว่างใต้แผง
+
+- **ให้ทั้งสองฝั่งมีตัวซับพื้นที่** — ซ้ายคือ textarea (`grow`) ขวาคือ `flex-1` spacer ที่วางไว้**ใต้แถวสุดท้าย เหนือ pager** ในแผง ⇒ ฝั่งไหนเตี้ยกว่าก็ยืดของตัวเองมาชนอีกฝั่ง เสมอกันทุกเคส
+- **spacer อยู่นอกกล่องรายการ** ไม่ใช่ข้างใน — จุดนี้คือหัวใจ ถ้าปล่อยให้กล่องรายการยืด เศษความสูงจะไปกองใต้แถวสุดท้ายซึ่งไม่มีเส้นคั่นปิด กลายเป็นแถวสูงสองเท่าแบบเดิม
+- ลด `min-h` ของ textarea จาก 32 เหลือ 24 เพื่อไม่ให้ฝั่งซ้ายดันความสูงเกินจำเป็นก่อนที่ `grow` จะได้ทำงาน
+- สถานะว่าง/ดูไม่ได้ได้ `flex-1` ด้วย ข้อความจึงอยู่กึ่งกลางแผงจริง ไม่ใช่กึ่งกลางเฉพาะ `min-h` ของตัวเอง
+
+### Tests / Verification
+
+วัดในแอปจริงทั้งสองทรง: **EMP-14 (5 ชิ้น มี pager)** ก้น textarea กับก้นแผงห่างกัน **0px** slot สูงเท่ากันทั้ง 4 ช่อง · **EMP-15 (ไม่มีของค้าง ไม่มี pager)** ห่างกัน **0px** เช่นกัน (จากเดิมซ้ายสูงกว่า 29px) · `resigned: 0` · tsc 0 · prettier · build ผ่าน
+
+### แถวอุปกรณ์: ย้าย Tag ลงบรรทัดสอง (2026-08-26)
+
+เดิมแถวหนึ่งวางของสี่อย่างเรียงแนวนอน (ไอคอน · ชื่อรุ่น · tag · serial) รุ่นจึงโดนบีบจนตัดกลางชื่อ — `ThinkCentre Neo 55a 24 ...`
+
+จัดใหม่เป็นสองบรรทัด **ซ้ายคือสิ่งที่บอกว่าเครื่องนี้คืออะไร ขวาคือรหัสที่ติดอยู่บนตัวเครื่อง**:
+
+```
+[icon]  ThinkCentre Neo 55a 24 G6            SN-123456
+        ● คอมพิวเตอร์ · ใช้งานอยู่              🏷 PC001
+```
+
+- serial ขึ้นบรรทัดแรกคู่กับชื่อรุ่น · tag ลงบรรทัดสองคู่กับประเภท/สถานะ — รหัสสองตัวอยู่คอลัมน์ขวาเดียวกัน ชื่อรุ่นจึงได้ความกว้างคืนและแสดงเต็มไม่โดนตัด
+- ความสูงแถวยังเป็น `h-16` เท่าเดิม ไม่กระทบจำนวน slot ต่อหน้าหรือความสูงแผง
+
+### Tests / Verification
+
+วัดในแอปจริง: slot สูง **เท่ากันทั้ง 4 ช่อง** · ก้น textarea กับก้นแผงห่างกัน **0px** เหมือนเดิม · ชื่อรุ่นแสดงเต็ม `ThinkCentre Neo 55a 24 G6` ไม่มี ellipsis · `resigned: 0` · tsc 0 · eslint 0 · prettier · build ผ่าน
+
+### hover ลบสีแดงของช่องที่กรอกผิด (2026-08-26)
+
+ตรวจ hover ของ input ในจอลาออกแล้วพบว่า **ช่องที่ติด error พอเอาเมาส์ชี้ กรอบเปลี่ยนจากแดงเป็นน้ำเงิน** ทั้งที่ข้อความ error ใต้ช่องยังแดงอยู่ — สัญญาณว่า "ช่องนี้ยังไม่ผ่าน" หายไปทันทีที่ผู้ใช้เอาเมาส์ไปหา ซึ่งเป็นจังหวะที่เขากำลังจะแก้พอดี
+
+สาเหตุอยู่ที่ specificity ใน `Field`: คลาส error เป็น descendant selector `[&_textarea]:border-destructive` → `.wrapper textarea` = (0,1,1) ส่วนคลาสของตัวคอนโทรลเองคือ `hover:border-brand/50` → `.hover\:border-brand\/50:hover` = (0,2,0) ⇒ **hover ชนะ** (ไฟล์นี้มี `focus:` override ไว้อยู่แล้วด้วยเหตุผลเดียวกัน แต่ลืม `hover:`)
+
+- เติม `[&_input]:hover:` · `[&_textarea]:hover:` · `[&_select]:hover:` · `[&_button]:hover:border-destructive` เข้าไปในชุดคลาส error ⇒ (0,2,1) ชนะ hover ของคอนโทรล
+- แก้ที่ `shared/components/field.tsx` จุดเดียว ทุกฟอร์มในแอปที่ใช้ `Field` ได้ผลตามไปด้วย
+- อัปเดตคอมเมนต์เหนือบล็อกให้บอกว่าทั้ง `hover:` และ `focus:` ต้องอยู่ ไม่ใช่แค่ `focus:`
+
+### Tests / Verification
+
+วัดค่า `borderColor` จริงในเบราว์เซอร์ · ก่อนแก้: textarea ที่ติด error + hover = `oklab(… /0.5)` (brand 50%) · หลังแก้ = `rgb(220, 40, 40)` (destructive) · ยืนยันว่า hover ปกติ (ไม่มี error) ยังเป็น brand 50% เหมือนเดิม ไม่ได้ถูกกลบ · ช่องวันที่แดงถูกต้องทั้งก่อนและหลัง · `resigned: 0` · tsc 0 · prettier · build ผ่าน
+
+### เงา focus ของช่องกรอกโดนตัด 3 ด้าน (2026-08-26)
+
+ต่อจากรอบที่ย้าย scroll ไปไว้ที่ตัวห่อชั้นในเพื่อกันปุ่มยืนยันหลุดจอ — ตัวห่อนั้นใช้ `overflow-y-auto` ซึ่ง **เบราว์เซอร์บังคับให้แกน x กลายเป็น clip ตามไปด้วย** (`overflowX: auto`) และช่องกรอกทั้งสองวางชิดขอบกล่องนั้นพอดี วัดได้ `leftGap: 0` · `bottomGap: 0` ⇒ วงแหวน focus `ring-[3px]` ที่วาด**นอก**กรอบช่องเลยถูกเฉือนทั้งซ้าย ขวา และล่าง
+
+- แก้ด้วย `-mx-2 -mb-2` คู่กับ `px-2 pb-2` บนตัวที่เลื่อน — margin ติดลบขยายกล่อง clip ออกไป 8px ส่วน padding ดันเนื้อหากลับที่เดิม **เลย์เอาต์ไม่ขยับสักพิกเซล แต่วงแหวนมีที่ให้วาด**
+- ไม่ใช้วิธีใส่ padding เฉย ๆ เพราะจะดันทั้ง body เข้ามา 8px ทำให้หัวข้อกับแบนเนอร์ไม่ตรงแนวกับหัวเรื่องและปุ่มท้าย dialog
+
+### Tests / Verification
+
+วัดในแอปจริง — ก่อนแก้: `leftGap 0` · `bottomGap 0` (วงแหวน 3px ไม่มีที่) · หลังแก้: `leftGap 8` · `bottomGap 8` · ระยะจากก้นช่องเหตุผลถึงปุ่มท้ายยังเป็น **16px เท่าเดิม** (เลย์เอาต์ไม่ขยับ) · โฟกัสช่องวันที่แล้วอ่าน `box-shadow` ได้ `0 0 0 3px` ครบวง · ซูมดูขอบซ้ายทั้งสองช่องแล้วเงาไม่ขาด · `resigned: 0` · tsc 0 · prettier · build ผ่าน
+
+### Access: การ์ดกับรายการนับคนละหน่วย และมองไม่เห็นเจ้าของที่ลาออก (2026-08-26)
+
+ทดสอบให้พนักงานลาออกจริง (EMP-14 ถือ membership 3 และเป็นเจ้าของ resource อีก 2) แล้วเปิดหน้า Access พบสองเรื่องใน `AccessService::dashboard()` เมธอดเดียวกัน:
+
+**1. การ์ดนับคน รายการนับสิทธิ์** — `resigned_holders` ใช้ `$resignedGrants->unique('employee_id')->count()` (นับ**คน** = 1) ส่วน drill-down ส่ง `$resignedList` ที่เป็นแถวละ grant (= 3) จอเดียวกันเลยขึ้นเลขสองค่า แถวอื่นบนการ์ดนี้ (`empty_resources`, `no_owner`) นับ**รายการที่ต้องแก้**ทั้งหมด ⇒ แก้ให้แถวนี้นับรายการเหมือนกัน
+
+**2. เห็นแต่ member ไม่เห็น owner** — คิวรีดูแค่ตาราง `access_memberships` แต่ resigned staff ยัง**เป็นเจ้าของ** EmailGroup / FileShare ได้ผ่าน `owner_employee_id` ซึ่งไม่ใช่แถว membership จึงไม่โผล่เลย ทั้งที่เป็นครึ่งที่เร่งกว่า — resource มีผู้ดูแลระบุชื่อไว้แต่คนนั้นไม่อยู่แล้ว
+
+- เพิ่มคิวรีฝั่งเจ้าของ (`whereHas('owner', status = resigned)` ทั้ง FileShare และ EmailGroup) รวมเข้ากับรายการเดิม **เรียงเจ้าของขึ้นก่อน** เพราะ resource ที่ไม่มีคนดูแลสำคัญกว่าสิทธิ์ที่แค่ยังเปิดค้าง
+- แต่ละแถวพก `role` (`owner` / `member`) เพราะ**วิธีแก้ต่างกัน** — เจ้าของต้องเปลี่ยนมือ ส่วน member ต้องถอนสิทธิ์ · drill-down จึงขึ้น "เจ้าของคือ …" กับ "ถือสิทธิ์โดย …" คนละบรรทัด
+- เปลี่ยนชื่อแถวจาก "พนักงานลาออกที่ยังถือสิทธิ์" เป็น **"สิทธิ์ค้างของพนักงานที่ลาออก"** เพราะตอนนี้ตัวเลขคือจำนวนรายการ ไม่ใช่จำนวนคน — ป้ายกับหน่วยต้องพูดเรื่องเดียวกัน (คำอธิบายใต้แถวครอบทั้งสองวิธีแก้)
+
+### Tests / Verification
+
+`AccessResignedGovernanceTest` ใหม่ 5 ตัว — คนเดียวถือ 3 grant ต้องได้เลข 3 ไม่ใช่ 1 · resource ที่เจ้าของลาออกต้องขึ้นในรายการพร้อม `role: owner` · แถวเจ้าของมาก่อนแถว member · คนที่ยังอยู่ไม่ทำให้เกิดรายการ · grant ที่ถอนแล้วไม่นับ
+
+ของจริงในแอปหลังแก้: การ์ดขึ้น **5** ตรงกับ drawer **5** (เจ้าของ 2 + member 3) · `Folder1` และ `ทดสอบ email Group 1` ขึ้นบนสุดพร้อม "เจ้าของคือ ทดสอบเพิ่มพนักงาน test" · **ทั้ง suite = 1,010 passed / 3,957 assertions** (เดิม 1,005) · tsc 0 · prettier · pint · build ผ่าน
+
+> **แก้แล้วในรอบถัดไป** (ดูหัวข้อล่าง): แถวผู้ดูแลถูกจัดใหม่ให้ครอบทั้ง "เจ้าของลาออก" และ "ไม่มีเจ้าของ"
+
+### Access: จัดกลุ่มแถวใหม่ตาม "กดแล้วต้องไปทำอะไร" (2026-08-26)
+
+รอบก่อนแก้ตัวเลขให้ตรงกันแล้ว แต่ยังเหลือปัญหาที่ลึกกว่า — แถวในการ์ดจัดกลุ่มคนละเกณฑ์กัน แถว "สิทธิ์ค้างของพนักงานที่ลาออก" จัดตาม**ใคร** (คนที่ลาออก) จึงมีทั้งงานถอนสิทธิ์และงานเปลี่ยนเจ้าของปนกัน ส่วนแถวผู้ดูแลจัดตาม**อะไร** (resource) แต่ดูแค่ว่ามีชื่อเจ้าของไหม ไม่ได้ดูว่าคนนั้นยังอยู่ไหม จึงขึ้นติ๊กเขียวทั้งที่เจ้าของลาออกไปแล้ว
+
+จัดใหม่โดยยึด **"กดแล้วต้องไปทำอะไร" เป็นเกณฑ์เดียว** — หนึ่งแถว = หนึ่งวิธีแก้ ไม่มีรายการซ้ำข้ามแถว:
+
+| แถว | ครอบคลุม | วิธีแก้ |
+|---|---|---|
+| 🔴 สิทธิ์ค้างของพนักงานที่ลาออก | membership ที่ยังเปิดค้าง | ถอนสิทธิ์ |
+| 🔴 Resource ที่ต้องหาผู้ดูแล | เจ้าของลาออก **+** ไม่มีเจ้าของ | หาคนมารับช่วง |
+| 🟡 Resource ที่ยังไม่มีสมาชิก | ไม่มีใครเข้าถึงเลย | ตรวจว่ายังต้องใช้ไหม |
+
+- แถวผู้ดูแลรวมสองเหตุที่ปลายทางเหมือนกันไว้ด้วยกัน แต่ละแถวใน drill-down พก `reason` (`resigned` / `none`) จึงยังบอกได้ว่ามาจากทางไหน — "เจ้าของลาออกแล้ว - ชื่อ" กับ "ยังไม่มีเจ้าของ" · เรียงเคสที่มีชื่อให้ส่งต่อขึ้นก่อน
+- ยกระดับแถวผู้ดูแลเป็นสีแดง (เดิมเหลือง) เพราะ resource ที่ไม่มีคนรับผิดชอบไม่ใช่แค่ข้อมูลไม่ครบ · เปลี่ยนไอคอนเป็น `ShieldAlert`
+- `owners_complete` เปลี่ยนความหมายจาก "มีชื่อเจ้าของครบ" เป็น **"มีเจ้าของที่ยังทำงานอยู่ครบ"** ติ๊กเขียวจึงพูดความจริง
+
+### Tests / Verification
+
+`AccessResignedGovernanceTest` ปรับเป็น 5 ตัวตามโครงใหม่ — คนเดียวถือ 3 grant ได้เลข 3 · resource ที่เจ้าของลาออกไปอยู่คิวหาผู้ดูแล (ไม่ใช่คิวถอนสิทธิ์) และทำให้ `owners_complete` เป็น false · เจ้าของลาออกกับไม่มีเจ้าของอยู่แถวเดียวกันโดยแยกด้วย `reason` และเคสที่มีชื่อมาก่อน · คนที่ยังอยู่ไม่ทำให้เกิดรายการและติ๊กเขียวคงอยู่ · grant ที่ถอนแล้วไม่นับ
+
+ของจริงในแอป: การ์ดขึ้น **3 / 3 / 2** ตรงกับ drawer ทั้งสามกลุ่มพอดี · **ทั้ง suite = 1,010 passed / 3,962 assertions** · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+### รอบตรวจดีไซน์ drawer "รายการที่ต้องตรวจสอบ" — แก้ 6 จุด (2026-08-26)
+
+**1. สีของบรรทัดเหตุผลผูกกับ "มีชื่อคนไหม" ไม่ใช่ความรุนแรง** — เงื่อนไขคือ `item.employee ? toneText : muted` ยังไม่เห็นผลเพราะบังเอิญไม่มี resource ที่ "ไม่มีเจ้าของ" เลย แต่พอมีเมื่อไหร่ แถวนั้นจะเป็น**สีเทาอยู่ในกล่องสีแดง** ข้าง ๆ แถวแดง ทั้งที่เป็นงานชนิดเดียวกัน — แก้โดยให้บรรทัดเหตุผล**เป็นสีกลางทุกกลุ่ม** ความรุนแรงเป็นหน้าที่ของรางซ้าย ส่วนน้ำหนักไปลงที่**ชื่อคน** แทน (label เทา + ชื่อ foreground/medium)
+**2. คิวงานไม่มีลำดับที่แน่นอน** — คิวรี grant ไม่มี `ORDER BY` เลย ลำดับแถวขึ้นกับ DB · เรียงตามคนแล้วตามชื่อ resource คิวจึงไม่สลับตำแหน่งทุกครั้งที่เปิด
+**3. ไอคอนกับ pill ประเภทพูดซ้ำกัน** — ชิปไอคอนซ้ายใช้สีเดียวกับ pill "File Shares" และบอกเรื่องเดียวกัน · ตัด pill ทิ้ง ชื่อ resource ได้ความกว้างคืน (เดิม `ทดสอบ mail Group Manager` เกือบชนขอบ)
+**4. ความรุนแรงเข้ารหัส 3 ที่** (ราง + ไอคอน + badge) — ทำ badge ให้เป็นกลาง เหลือราง+ไอคอนที่อยู่ติดกันอ่านเป็นชุดเดียว · **จำนวนคือข้อมูล ไม่ใช่คำเตือน**
+**5. dark mode คอนทราสต์ต่ำ** — บรรทัดเหตุผลสีแดง 12px บนพื้นเกือบดำเป็นข้อความที่อ่านยากที่สุดในแผง · หายไปเองจากข้อ 1
+**6. copy** — ตัดศัพท์ราชการ "ธรรมาภิบาล" ออกจาก empty state พูดตรง ๆ ว่าอะไรเรียบร้อย · เปลี่ยนตัวคั่นจาก `-` (อ่านเหมือนช่วง) เป็น `·` · ตัด "กำหนดได้จากหน้าจัดการ" ทิ้งเพราะซ้ำกับลูกศรที่บอกอยู่แล้วว่ากดเข้าไปได้
+
+### Tests / Verification
+
+เพิ่ม `test_the_revoke_queue_has_a_stable_order` — สร้างข้อมูลสลับลำดับตั้งใจ แล้วยืนยันว่าออกมาเรียงตามคนและตามชื่อ (ถ้าเรียงถูกโดยบังเอิญจาก DB เทสต์นี้จะไม่จับ) · **ทั้ง suite = 1,011 passed / 3,965 assertions** · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+> **ยังไม่ได้ทำ**: drawer เป็นคิวงานที่**ทำงานในตัวเองไม่ได้** — ทุกแถวกดแล้วปิด drawer พาไปหน้าจัดการ เคลียร์ 5 รายการ = เปิด-ปิด 5 รอบ และไม่มีร่องรอยว่าทำอันไหนไปแล้ว ถ้าจะให้เป็นคิวจริงต้องมีปุ่มลงมือในแถว (ถอนสิทธิ์ได้เลย) ซึ่งเป็นงานคนละขนาด
+
+### Access: ถอนสิทธิ์ได้จาก drawer เลย ไม่ต้องเด้งออกไปทีละรายการ (2026-08-26)
+
+drawer "รายการที่ต้องตรวจสอบ" ตั้งชื่อและเรียงลำดับเหมือนคิวงาน แต่โครงจริงเป็นสารบัญลิงก์ — ทุกแถวกดแล้ว**ปิด drawer** พาไปหน้าจัดการ เคลียร์ 5 รายการ = เปิด-ปิด 5 รอบ และไม่มีร่องรอยว่าทำอันไหนไปแล้ว
+
+- **ปุ่ม "ถอนสิทธิ์" ในแถว เฉพาะกลุ่มสิทธิ์ค้าง** — กลุ่มนี้วิธีแก้เป็นคลิกเดียวไม่ต้องเลือกอะไร ส่วนกลุ่ม "ต้องหาผู้ดูแล" ต้องเลือกคน จึงยังพาไปหน้าจัดการเหมือนเดิม (แถวหนึ่งมีสองปุ่ม: เปิด resource กับถอนสิทธิ์ — ห่อด้วย div เพราะซ้อน `<button>` ใน `<button>` ไม่ได้)
+- **เรียกผ่าน endpoint เดิมของแต่ละทะเบียน** (`/{kind}/{id}/members/{membership}/revoke`) ไม่สร้าง endpoint รวม เพราะแต่ละอันมี gate ของตัวเอง (`access.email_edit` ฯลฯ) — endpoint รวมคือการเปิดทางข้าม gate · ฝั่ง UI ซ่อนปุ่มด้วย `canEdit[kind]` ชุดเดียวกับที่หน้า Access ใช้อยู่แล้ว
+- backend ส่ง `membership_id` มากับแถว (เดิมมีแค่ `resource_id` จึงถอนไม่ได้)
+- **ข้อความ confirm เดิมโกหก** — variant `danger` ขึ้นค่าเริ่มต้นว่า "ลบข้อมูลนี้? การลบนี้ถาวรและไม่สามารถย้อนกลับได้" ทั้งที่เป็น soft-revoke และเพิ่มสมาชิกกลับได้ · override เป็น "ถอนสิทธิ์นี้? คนนี้จะเข้าถึง Resource นี้ไม่ได้อีก เพิ่มกลับได้ภายหลังจากหน้าจัดการ" + ไอคอน `UserMinus` + ปุ่ม "ถอนสิทธิ์"
+- toast `access_member_removed` เปลี่ยนจาก "ลบสมาชิกแล้ว" เป็น **"ถอนสิทธิ์แล้ว"** และไอคอนจากถังขยะเป็นคน — คีย์นี้ `members-drawer` ใช้ร่วมและทำสิ่งเดียวกันเป๊ะ (soft-revoke) จึงถูกขึ้นทั้งสองที่
+
+### Tests / Verification
+
+ทดสอบวงจรเต็มในแอปจริง: กดถอนสิทธิ์ `Folder2` ของพนักงานที่ลาออก → confirm ขึ้นชื่อคนและชื่อ resource → กดยืนยัน → **แถวหายจากคิว (3→2) · การ์ดลดตาม · toast "ถอนสิทธิ์แล้ว" · drawer ยังเปิดค้างทำงานต่อได้** · knock-on ที่ถูกต้อง: `Folder2` เด้งไปโผล่กลุ่ม "ยังไม่มีสมาชิก" ทันที (3→4) เพราะเป็นสมาชิกคนสุดท้าย · **ทั้ง suite = 1,011 passed / 3,965 assertions** · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+### กระดิ่งเมื่อคนลาออกยังถือสิทธิ์อยู่ (2026-08-27)
+
+ตอนกดลาออก ระบบเรียกคืนอุปกรณ์และเตือน IT ให้ปิดบัญชี แต่**ไม่มีอะไรบอกเรื่องสิทธิ์เลย** — grant ที่ยังเปิดค้างและ resource ที่คนนั้นเป็นเจ้าของ นอนรออยู่จนกว่าจะมีคนบังเอิญเปิดหน้า Access เอง
+
+- **`AccessOffboardingNotification` ใหม่ — หนึ่งใบต่อการลาออก ไม่ใช่ใบต่อรายการ** คนถือ 5 อย่างคือข่าวชิ้นเดียวและงานทริปเดียว ส่ง 5 ใบคือถล่มกระดิ่งเพื่อบอกเรื่องเดิม ส่วนการไล่ทีละอันมี drawer "รายการที่ต้องตรวจสอบ" รับหน้าที่อยู่แล้ว
+- **`AccessService::outstandingFor()`** นับ grant ที่ยังเปิด + resource ที่เป็นเจ้าของ — ตัวเลขชุดเดียวกับที่การ์ดใช้ กระดิ่งกับการ์ดจึงเถียงกันเองไม่ได้ · payload แยก `grants` / `owned` ไม่ใช่แค่ยอดรวม เพราะถอนสิทธิ์กับหาเจ้าของใหม่เป็นคนละงาน
+- **ส่งถึงคนที่ถือ `access.*_edit` อย่างน้อยหนึ่งทะเบียน** ไม่ใช่ทุกคนที่เห็นหน้า Access — ทั้งถอนสิทธิ์และเปลี่ยนเจ้าของต้องใช้ edit ส่ง viewer ไปก็ได้แค่ to-do ที่ทำไม่ได้ · ไม่ส่งให้คนที่กดลาออกเอง
+- **ไม่ค้างอะไรเลย = ไม่ส่ง** — กระดิ่งที่เตือนเรื่องความว่างเปล่าสอนให้คนเลิกอ่านถาด
+- **ไม่ถอนสิทธิ์ให้อัตโนมัติ** คงกฎเดิมของระบบที่ว่า IT ลงมือเองเสมอ (เหตุผลเดียวกับที่คำขออนุมัติแล้วไม่ auto-grant) กระดิ่งแค่ทำให้งานถูกรับรู้
+- ฝั่ง UI: `moduleOf()` เดิมไม่รู้จัก prefix `access` จึงตกไปกอง `employees` — เพิ่มสาขาให้ · เพิ่มแท็บ Access ใน dropdown (มี `shownTabs` ซ่อนแท็บว่างอยู่แล้ว จึงไม่รกตอนไม่มีของ) · ไอคอน `ShieldAlert` สีแดง กดแล้วเข้า `/access`
+
+### Tests / Verification
+
+`AccessOffboardingNoticeTest` ใหม่ 7 ตัว — ส่งถึงคนที่แก้ได้ · ถือ 5 อย่างยังได้ใบเดียวและ payload แยก 3/1/4 ถูกต้อง · viewer ที่แก้ไม่ได้ไม่ได้รับ · ไม่มีของค้างไม่ส่ง · grant ที่ถอนแล้วไม่นับ · เป็นเจ้าของอย่างเดียวก็พอให้ส่ง · คนกดลาออกเองไม่ได้รับ · **ทั้ง suite = 1,018 passed / 3,980 assertions** (เดิม 1,011) · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+> **ยังไม่ได้ทำ**: อีเมล — ตกลงกันว่าเอาแค่กระดิ่งก่อน · แคตตาล็อกยังไม่มี `employee.resigned` (และการคืนทรัพย์สินก็เป็นกระดิ่งล้วนเหมือนกัน ไม่มีอีเมล) ถ้าจะทำควรเป็นฉบับเดียวสรุปทั้งสิทธิ์และอุปกรณ์ ไม่ใช่แยกตามโมดูล
+
+### การ์ดสิทธิ์: เลิกใช้ grid มาใช้ columns (2026-08-27)
+
+การ์ดในหน้า Permission สูงไม่เท่ากันมาก — Workflows มีแถวเดียว ส่วนพนักงานมี 18 แถว ต่างกัน 3.5 เท่า แต่ grid ใช้ `align-items: stretch` เป็นค่าเริ่มต้น ⇒ **การ์ดในแถวเดียวกันถูกยืดให้สูงเท่าตัวที่สูงกว่า เหลือช่องว่างเปล่าในกรอบตัวเอง** ซึ่งอ่านว่า "เนื้อหาหายไป" ไม่ใช่ "โมดูลนี้เล็ก"
+
+- เปลี่ยนเป็น `columns-1 md:columns-2` + `[&>*]:mb-4 [&>*]:break-inside-avoid` — แต่ละการ์ดสูงเท่าเนื้อหาตัวเอง ตัวถัดไปอัดชิดขึ้นมา · ลำดับการอ่านยังเป็นลำดับเดิม (บนลงล่างในคอลัมน์แรก แล้วขึ้นคอลัมน์ถัดไป)
+- `gap` ในโหมด column คุมเฉพาะระยะห่างระหว่างคอลัมน์ ระยะแนวตั้งจึงต้องใช้ `mb` · `break-inside` กันการ์ดถูกผ่ากลางคอลัมน์
+- ใช้ `[&>*]` เพราะการ์ดถูก return ตรง ๆ จาก map (แพตเทิร์นเดียวกับ `[&>*]:min-w-0` ใน `dialog.tsx`) ไม่ต้องห่อ div เพิ่มทีละใบ
+
+### Tests / Verification
+
+วัดด้วยหน้าเทียบที่จำลองความสูงจริงของทั้ง 7 การ์ด (session แอปหลุด เข้าหน้า Permission ไม่ได้) — **grid**: คำขอเหลือช่องว่าง 147px · คลังอะไหล่ 181px · สัญญา 27px · ความสูงรวม 2,180px · **columns**: ทุกใบช่องว่าง = 0 · ความสูงรวม **1,746px (สั้นลง 20%)** · ลบหน้าเทียบทิ้งแล้ว · tsc 0 · prettier · build ผ่าน (ยืนยันว่า `columns-2` และ `break-inside-avoid` ถูก emit ลง CSS จริง)
+
+> **ยังไม่ได้ยืนยัน**: ยังไม่ได้เห็นในหน้า Permission ของแอปจริง เพราะ session ในเบราว์เซอร์ล็อกเอาต์
+
+### ไอคอนบนหัวการ์ดสิทธิ์ + รวมหัวการ์ดเป็นตัวเดียว (2026-08-27)
+
+หัวการ์ดถูกเขียนซ้ำอยู่ **9 ที่** (tree 8 ไฟล์ + `CardHeader` ในตัวการ์ด Administration) บวก fallback ในหน้าอีกทรงหนึ่ง การใส่ไอคอนแบบก๊อปไปทีละไฟล์คือการต่ออายุความซ้ำนั้น
+
+- `PermissionCardHeader` ใหม่รับ `module` แล้วหาไอคอนเอง — **ใช้ไอคอนชุดเดียวกับ sidebar** (`nav.ts`) การ์ดกับเมนูที่มันคุมจึงเป็นของสิ่งเดียวกันในสายตา · ลบ `CardHeader` ที่ซ้ำใน `module-permission-card.tsx` ทิ้ง
+- fallback card (ตอนนี้ยังใช้จริงกับ `email_templates` และ `reports`) จัดโครงใหม่ให้ใช้หัวเดียวกัน — เดิมเป็น `p-3.5` ทั้งใบไม่มีเส้นคั่น ทำให้หัวการ์ดสองแบบไม่ตรงกัน
+- **ไอคอนอยู่สีเทาเสมอ แม้โมดูลจะเปิดสิทธิ์แล้ว** — ตัวนับข้างขวาบอกสถานะนั้นอยู่แล้ว (เปลี่ยนเป็นสีแบรนด์เมื่อ > 0) ใส่สัญญาณที่สองซ้ำเรื่องเดิมทำให้การ์ดดังขึ้นโดยไม่ได้บอกอะไรเพิ่ม ไอคอนคือ "นี่คือโมดูลอะไร" ไม่ใช่ "เปิดอยู่ไหม"
+
+### Tests / Verification
+
+เทียบรายชื่อด้วยสคริปต์: โมดูลที่เรนเดอร์เป็นการ์ดจริง 12 ตัว (workspace 7 + admin 5) **มีไอคอนครบทุกตัว ไม่มีตัวไหนเกิน** · grep ยืนยันไม่เหลือหัวการ์ดที่เขียนเองนอก `permission-card-header.tsx` · tsc 0 · eslint 0 · prettier · build ผ่าน
+
+> **ยังไม่ได้ยืนยัน**: ยังไม่ได้เห็นในหน้า Permission ของแอปจริง เพราะ session ในเบราว์เซอร์ล็อกเอาต์
+
+### คำศัพท์ในผังสิทธิ์: Workflow / Dashboard (2026-08-27)
+
+ไฟล์ `lang/th/workflow.ts` ตั้งกติกาไว้ตั้งแต่ตอนสร้างโมดูลว่า **ชื่อโมดูลใช้ "Workflow" ตรง ๆ ส่วน "สายอนุมัติ / สายบังคับบัญชา" สงวนไว้ให้หมายถึง "ลำดับคนที่อนุมัติจริง" เท่านั้น** แต่ `lang/th/permission.ts` ไม่ได้อัปเดตตามตอนนั้น การ์ดสิทธิ์จึงยังเรียกโมดูลว่า "สายอนุมัติ"
+
+- `perm_mod_workflows` · `perm_act_workflows.module` · `perm_act_workflows.manage` เปลี่ยนเป็น Workflow · แก้ "หน้า Workflow**s**" เป็นเอกพจน์ให้ตรงกับที่อื่นทั้งแอป
+- **คงคำว่า "สายอนุมัติ" ไว้ใน `perm_desc_workflows.module`** — ประโยคนั้นหมายถึงลำดับผู้อนุมัติจริงของคำขอแต่ละประเภท ซึ่งเป็นความหมายที่กติกาสงวนไว้พอดี
+- `perm_act_assets.view_dashboard` เป็นตัวเดียวใน 5 โมดูลที่ยังเขียน "แดชบอร์ด" — Ticket / สัญญา / คลัง / พนักงาน ใช้ "Dashboard" กันหมดแล้ว แก้ให้ตรงกัน
+
+**ไม่แตะ** ประโยคใน `employee.ts` และ `requests.ts` ที่ใช้คำว่า "สายอนุมัติ" (เช่น "สายอนุมัติของคุณยังไม่ได้ตั้งผู้บังคับบัญชา") — ทั้งหมดพูดถึงลำดับคนอนุมัติของพนักงานคนนั้นจริง ๆ ไม่ได้เรียกชื่อโมดูล การแทนที่ทั้งไฟล์จะทำให้ประโยคเหล่านี้ผิดความหมาย
+
+### Tests / Verification
+
+grep ยืนยันว่าไม่เหลือ "แดชบอร์ด" ในไฟล์ และ "สายอนุมัติ" เหลือแค่จุดเดียวที่ตั้งใจคงไว้ · tsc 0 · prettier · build ผ่าน
+
+> **ยังไม่ได้ยืนยัน**: `req_col_workflow: 'สายอนุมัติ'` ใน `requests.ts` เป็นหัวคอลัมน์ที่แสดง**ชื่อ workflow ที่ใช้** ไม่ใช่ลำดับคน — ตามกติกาน่าจะเป็น "Workflow" แต่ไม่ได้อยู่ในรายการที่สั่ง จึงยังไม่แตะ
+
+### Workflow Seeder: ให้ตรงกับที่ใช้งานจริง (2026-08-27)
+
+`DefaultWorkflows` เป็นเทมเพลตกลางจากไดอะแกรมตอนออกแบบ ส่วนของจริงถูกแอดมินแก้ไปหลายจุดแล้ว ⇒ ติดตั้งใหม่จะได้เส้นทางที่ต้องมานั่งแก้ซ้ำอีกรอบ เทียบทีละช่องกับ DB แล้วพบ 5 จุดที่ต่าง:
+
+| | เทมเพลตเดิม | ของจริง |
+|---|---|---|
+| ชื่อ workflow (ทั้ง 11) | อังกฤษ (`Email Group Access`) | **ไทย** (`คำขอสิทธิ์เข้าใช้งาน Email Group`) |
+| ป้ายขั้นแรก | `Supervisor / Head` | **`Supervisor`** |
+| รุ่น executive | Vice President + Director | **Vice President เท่านั้น** |
+| `email` | Department Manager → IT (2 ขั้น) | **Supervisor → Manager → VP → IT (4 ขั้น)** |
+| `recovery` | Resource Owner → IT | **Supervisor → IT** (และรับเฉพาะตำแหน่ง `Supervisor` ไม่ใช่ทั้งรุ่น) |
+
+- **ตรวจก่อนว่า Director ไม่ได้หายไปจากระบบ** — ตำแหน่งมีอยู่จริงในตาราง positions แปลว่าการที่ขั้น VP เหลือชื่อเดียวเป็นการตั้งใจแก้ ไม่ใช่ผลข้างเคียงตอน seed (seeder ข้ามตำแหน่งที่ไม่มีเงียบ ๆ) · ถ้าไม่เช็คตรงนี้จะบันทึกความบังเอิญเป็นค่าตั้งต้น
+- `recovery` ตั้งรายการตำแหน่งไว้ในตัวมันเอง ไม่ใช้ `RUNGS['supervisor']` เพราะแคบกว่ารุ่นโดยตั้งใจ
+- **ไม่แตะ migration `create_workflow_step_positions`** ที่ map ป้ายเดิม (`Supervisor / Head`, `Department Manager`) — migration รันไปแล้ว แก้ย้อนหลังจะทำให้ install ที่รันไปแล้วกับที่รันใหม่ได้ผลต่างกัน
+
+### Tests / Verification
+
+เขียนสคริปต์เทียบ `DefaultWorkflows::all()` กับ DB ทีละช่อง (ชื่อ · auto_ticket · ลำดับขั้น · actor_type · label · kind · ตำแหน่งของทุกขั้น) → **MATCH ครบทั้ง 11 workflow** · เทสต์ 2 ตัวที่อ้างป้าย `Supervisor / Head` ของ seeder (`WorkflowAdminTest`, `RequestResolutionTest`) แก้ตามป้ายใหม่ · **ทั้ง suite = 1,029 passed / 4,008 assertions** · pint ผ่าน
+
+### ลำดับประเภทคำขอ: ให้ทุกจอเรียงเหมือนกัน (2026-08-27)
+
+หน้า Workflow เรียงด้วย `orderBy('request_type')` — **เรียงตามตัวอักษรของ key ภายใน** จึงได้ Computer ติดกับ Email และ Hardware อยู่หลัง Fileshare ซึ่งไม่ได้สื่ออะไรกับคนอ่าน ส่วน enum `RequestType` มีลำดับที่ตั้งใจไว้อยู่แล้ว (อุปกรณ์ → บัญชี/สิทธิ์ → เบ็ดเตล็ด → `other` ปิดท้าย) แต่ไม่มีใครใช้
+
+เทียบกับลำดับที่ขอแล้วพบว่า**ต่างกันแค่ตำแหน่งเดียว** — `mailgroup` ย้ายจากลำดับ 7 ไปอยู่หลัง `recovery` ที่เหลือตรงกันหมด
+
+- **ให้ `WorkflowController::index()` เรียงตามลำดับ case ของ enum** แทนการ sort คอลัมน์ · เรียงใน PHP เพราะรายการมีแค่ประเภทละแถว ไม่มีอะไรได้เพิ่มจากการทำใน SQL
+- ลำดับนี้ถูกเก็บไว้ **4 ที่**: enum (ตัวตัดสิน) · `request-meta.ts` (ตัวกรองหน้าคำขอ) · `DefaultWorkflows` (ลำดับตอน seed) · endpoint · จัดให้ตรงกันทั้งหมด และเขียนคอมเมนต์ในสองไฟล์แรกว่า **ลำดับการประกาศคือลำดับการแสดงผล** ไม่ใช่เรื่องบังเอิญ
+- คอมเมนต์ "owner decides, IT carries out" เดิมครอบ mailgroup+fileshare ที่อยู่ติดกัน พอแยกห่างแล้วย้ายไปไว้ที่ File Share (ตัวแรก) และให้ Email Group ชี้กลับมา
+
+### Tests / Verification
+
+`RequestTypeOrderTest` ใหม่ 3 ตัว — parse `request-meta.ts` เทียบกับ enum ทีละตัว · `DefaultWorkflows` เรียงตรงกับ enum · **ยิง `GET /api/workflows` จริงแล้วเทียบลำดับที่คืนมา** · ถ้าไฟล์ไหนหลุดออกจากกันจะแดงทันที · ตรวจกับข้อมูลจริงแล้วได้ครบ 11 รายการเรียงตรงตามที่สั่ง · **ทั้ง suite = 1,032 passed / 4,012 assertions** · tsc 0 · pint · build ผ่าน
+
+### รอบอีเมล: ปิดช่องว่างการแจ้งเตือน + ความกว้างต่อเทมเพลต (2026-08-30)
+
+รอบนี้ไล่ทีละเหตุการณ์ว่า "เกิดเรื่องนี้แล้วใครควรรู้ และรู้ทางไหน" แล้วพบว่ากระดิ่งกับอีเมลไม่ได้เดินคู่กันหลายจุด — พนักงานลาออก 1 คนยิงกระดิ่ง 4 ทางแต่มีอีเมลทางเดียว
+
+**เพิ่มเทมเพลตใหม่ 4 ตัว (34 ฉบับรวม)**
+
+| ET | key | ถึงใคร |
+|---|---|---|
+| 34 | `contract.weekly_digest` | ผู้ที่เปิดสิทธิ์ `contracts.alerts` — จันทร์ 08:20 |
+| 35 | `access.offboarding` | ผู้ที่เปิด Access Directory ได้ + แก้ไขทะเบียนได้อย่างน้อย 1 ทะเบียน |
+| 36 | `employee.offboarding` | ทุกคนที่มี `employees.view` (ยกเว้นตัวคนลาออกเอง) |
+| 5 | `ticket.cancelled` | คนแจ้ง — ใช้แถวเดิมของ `ticket.sla_breach` ที่ถอนออก |
+
+- **`ContractDigestService`** สรุปสัญญาที่ใกล้หมดอายุกับที่เลยกำหนด แยก 2 ตาราง หัวตารางชุดเดียวกันจึงเรียงตรงกัน · เคารพ opt-out เดียวกับ sweep รายวัน (สัญญาที่ปิดแจ้งเตือนทุกช่วงไม่เข้าลิสต์) · **อ่านอย่างเดียว ไม่แตะ `contract_alert_logs`/`contract_bell_logs`** — ถ้าเขียน sweep รายวันจะข้ามการแจ้งเตือนที่ยังไม่ได้ส่ง คนอ่านจะได้แต่สรุปแต่ไม่เคยได้ตัวแจ้งเตือนจริง (มีเทสต์คุม)
+- **`AccessService::outstandingTableFor()`** — ตารางเดียวรวมสิทธิ์ที่ถือกับทรัพยากรที่เป็นเจ้าของ ให้คอลัมน์ `Held as` เป็นตัวแยกงาน · คอลัมน์ `Resource` เป็น address จริง (email / path / url) ไม่ใช่ชื่อซ้ำ · Software ไม่มี address จึงเป็น `-`
+- **`ticket.sla_breach` ถอนทั้งเทมเพลตและโค้ดที่ส่ง** — sweep วิ่งทุก 10 นาทีทั่วทุกเคสที่เปิดอยู่ เป็นตัวเดียวที่ยิงข้อความได้เยอะโดยไม่มีใครทำอะไร และผู้รับคือ IT ที่อยู่ในระบบอยู่แล้ว · กระดิ่งยังครบทั้ง `at_risk` และ `breached` · ถ้าลบแต่เทมเพลตโดยไม่ลบโค้ด `sendTemplate()` จะเงียบไปเฉย ๆ ซึ่งอันตรายกว่า
+
+**ความกว้างต่อเทมเพลต (`EmailTemplates::widthFor`)**
+
+กรอบอีเมลตายตัวที่ 720px มาตลอด แต่สรุปสัญญามี 6 คอลัมน์ ที่ 720 ชื่อผู้ขายกับชื่อสัญญาตกบรรทัดทั้งคู่
+
+- ความกว้างอยู่ใน **catalogue ไม่ใช่คอลัมน์ใน DB** — เป็นเรื่องดีไซน์ของเทมเพลต ไม่ใช่ข้อความ ถ้าเก็บใน DB คนแก้ข้อความหรือกด Reset จะทำให้ตารางล้นได้
+- กรอบถูกวาด **4 ที่** (จดหมายจริง · preview เทมเพลตที่บันทึก · preview สดตอนพิมพ์ · log การส่ง) ส่งค่าครบทั้ง 4 มีเทสต์คุมทีละทาง — ถ้าใส่แค่ตอนส่งจริง คนแก้เทมเพลตจะจัดตารางโดยดู preview ที่ไม่ตรงกับของที่ผู้รับเห็น
+- `renderPreview` รับ `key` เพิ่มเพื่อรู้ว่าต้องวาดกรอบกว้างเท่าไร (SPA ส่งมาให้)
+
+**ตัวแปรที่ขาด**
+
+- `{{employee.position}}` `{{employee.section}}` `{{employee.department}}` `{{employee.working}}` — ET-15 อ้างถึงแต่ไม่มีตัวแปรรองรับ ผู้รับจะเห็นเป็น `{{...}}` ดิบ (renderer เป็น `str_replace` ธรรมดา ไม่ใช่ช่องว่าง)
+- `{{ticket.resolution}}` — ET-4 อ้างถึงเช่นกัน ใช้ได้ทั้งเคสเสร็จ (วิธีแก้) และเคสยกเลิก (เหตุผล) · escape + `nl2br` เหมือน `ticket.details` เพราะเป็นข้อความที่คนพิมพ์เอง
+- master data ผสมสองภาษา — ใช้ `name` ก่อน ถ้าว่างตกไปใช้ `name_th` (section ส่วนใหญ่มีแต่อังกฤษ แผนกมีทั้งคู่)
+
+**บั๊กที่เจอระหว่างทาง**
+
+- **`cadence` ของ `contract.expiry_alert` ในโค้ดเป็น `realtime`** ทั้งที่ส่งโดย sweep รายวัน — `EmailTemplateResource` เอา cadence ไปเทียบด้วย ทำให้ ET-16 ขึ้นว่า "แก้ไขแล้ว" ตลอดไป และ Reset จะติดป้ายผิด
+- **ระดับสิทธิ์เก็บเป็น `Write` แต่ทุกหน้าจอแสดง `Read/Write`** — ถ้าปล่อยไป อีเมลจะเขียนคนละคำกับระบบ
+- **badge cadence ทั้ง 3 ตัวไม่มีสีโหมดมืด** ต่างจากทุก badge ในแอป (`status-badge.tsx` ขยับเป็น `-400`) · เติมให้ครบทั้งชุด พร้อมแยก Weekly เป็นสีม่วงเพราะเดิมใช้สีเดียวกับ Daily
+- **`<p>` ไม่สมดุลใน 3 เทมเพลต** (ET-4, ET-12, ET-33) · แก้ ET-4 และตัวใหม่ทั้งหมด · **ET-12 `asset.assigned` เนื้อหาขาดกลางคัน** ตั้งแต่ในนิยามมาตรฐาน (จบที่ `Tag:` ไม่มีบรรทัดปิด) — ยังไม่แก้เพราะต้องตัดสินใจเรื่องข้อความ ไม่ใช่แค่ปิดแท็ก
+- **audience ของกระดิ่งสัญญาเขียนผิด** — บอกว่า "ทุกคนที่ดูสัญญาได้" ทั้งที่กรองด้วย `contracts.alerts`
+
+### Tests / Verification
+
+เทสต์ใหม่ 6 ไฟล์ — `ContractWeeklyDigestTest` · `EmailFrameWidthTest` · `NewEmployeeEmailTest` · `AccessOffboardingEmailTest` · `EmployeeDepartureEmailTest` · `TicketClosureEmailTest` · `TicketOwnerNotificationTest` แก้ 1 ตัวที่ยืนยันพฤติกรรมเดิม (เคสยกเลิกเคยไม่ส่งอีเมล) พร้อมดักเพิ่มว่าต้องไม่ยิง `ticket.resolved` ปนมา · ทดสอบทุกเทมเพลตกับข้อมูลจริงโดยครอบ `DB::beginTransaction()`/`rollBack()` และตรวจยอดหลังจบทุกครั้ง · **ทั้ง suite = 1,096 passed / 4,602 assertions** · tsc 0 · pint · build ผ่าน
+
+**ค้างไว้** — ET-12 เนื้อหาขาด · อีเมลแจ้ง IT ให้ปิด login account (มีแต่กระดิ่ง) · 12 เทมเพลตที่แก้ในหน้าเว็บแล้วยังไม่ได้ดึงเข้าเป็นมาตรฐาน (Ticket 2 · Stock 9 · Request 1)
+
+### รอบอีเมล (ต่อ): จดหมายที่ไม่มีปุ่ม · วงจร Ticket ที่ขาดช่วง · ป้ายเตือนที่โกหก (2026-08-30)
+
+รอบต่อจากด้านบน ไล่ทีละเทมเพลตว่า "ใครได้รับ" แล้วเจอว่าหลายใบส่งออกไปในสภาพที่หน้า preview ไม่ได้บอก
+
+**จดหมาย 5 ใบของ Ticket ไม่มีปุ่มให้กดเลย**
+
+`sendTemplate()` สร้างปุ่มจาก `actionUrl`/`actionLabel` แต่ ET-01/02/03/04/05 ส่ง `null` ไปทั้งคู่ ขณะที่ `EmailTemplateController::preview()` **hardcode ปุ่มไว้ให้ทุกเทมเพลต** — เทมเพลตเลยดูสมบูรณ์ในหน้าเว็บ แต่ของที่ผู้รับได้ไม่มีอะไรให้คลิก
+
+- คนแจ้งไป `?tab=my` · IT ไป `?tab=all` — หน้า Ticket แสดงแท็บ All เฉพาะ IT (`isIT ? ['all'] : []`) ส่งคนแจ้งไปแท็บที่เขาไม่มีจะตกไปแท็บแรกที่มองเห็นแทน
+- ยังเหลืออีก 4 จุดนอกโมดูล Ticket ที่ส่งโดยไม่มีปุ่ม (Contract · Employee · Request · Stock)
+
+**คนแจ้งเงียบตลอดช่วงกลาง — เพิ่ม ET-37 / ET-38**
+
+เดิมได้จดหมาย 2 ใบคือ "รับเรื่องแล้ว" กับ "จบแล้ว" เคสจะเปลี่ยนมือกี่รอบก็ไม่รู้ · แยก 2 เทมเพลตเพราะใบส่งต่อต้องบอกทั้งคนรับใหม่และคนเดิม (คนแจ้งอาจคุยกับช่างคนเก่าค้างไว้) · `assign()` ส่ง `owner_taken` เหมือน `take()` — จากมุมคนแจ้งเป็นข่าวเดียวกัน ส่วนใครเลือกช่างเป็นเรื่องภายใน IT
+
+**ตัวแปรที่เดินท่อเพิ่ม**
+
+- `{{actor.name}}` ใน ET-02 — `assign()` ไม่เคยรู้ว่าใครสั่ง ต้องรับ `?User $assignedBy` จาก controller · **ระบบไม่ได้เก็บลง DB** ร่องรอยเดียวคือ audit log
+- `{{ticket.assignee}}` ตัวใหม่ ไม่ใช้ `{{actor.name}}` ซ้ำ เพราะใน ET-02 แปลว่า "คนสั่ง" แต่ใน ET-37/38 แปลว่า "คนถือเคส"
+- ET-02/03 เดิมส่งแค่ 4 ตัวแปร ไม่มีประเภทเคสและรายละเอียด — คนที่เพิ่งถูกมอบหมายต้องเปิดระบบก่อนถึงจะรู้ว่างานคืออะไร · เปลี่ยนไปใช้ `staffVars()` ที่ ET-29 ใช้อยู่แล้ว
+
+**ป้าย "ไม่มีอีเมลรองรับ" ชี้ผิดตัว**
+
+`NotificationTemplateController` แม็ปโมดูล→คำนำหน้าอีเมลด้วยมือ และค้างว่า `'access' => null` หลัง ET-35 ขึ้นแล้ว — **กระดิ่งตัวที่เพิ่งเลิกเป็นช่องทางเดียวกลายเป็นตัวเดียวที่ยังถูกติดป้ายว่าเป็น** คอมเมนต์ในฟังก์ชันนั้นเขียนทำนายไว้เองว่าจะพังแบบนี้ · `NotificationEmailPairingTest` ดักไว้แล้ว 2 ทาง (มีอีเมลแต่ไม่มีใครอ้าง / อ้างอีเมลที่ไม่มีจริง)
+
+**`db:seed` ถามรหัสแอดมินแทนการอ่าน `.env`**
+
+`SEED_SUPER_PASSWORD` ใน `.env` มีกับดักเงียบ: `config:cache` ทำให้ Laravel **ข้ามการโหลด `.env` ทั้งไฟล์** (`LoadEnvironmentVariables` return ทันทีเมื่อ config ถูก cache) `env()` เลยคืน null แล้วตกไปใช้ค่า fallback `password` โดยไม่มี error
+
+- env ยังใช้ได้เหมือนเดิม (สคริปต์/CI ไม่กระทบ) → ถ้าไม่มีและมีคนอยู่หน้าจอ **ถาม** → ถ้าไม่มีใครตอบใช้ค่าเดิม
+- รหัสที่พิมพ์เองไม่ตั้ง `must_change_password` — ไม่มีอะไรให้บังคับเปลี่ยน
+- ตัวคุมคือ `--no-interaction` ไม่ใช่ input object (`SeedCommand` ไม่มี `getInput()`) และ `$this->seed()` ส่ง flag นี้มาให้อยู่แล้ว เทสต์จึงไม่มีทางค้าง
+
+**การ์ดสถิติหน้า Notification**
+
+เพิ่ม `ปิดใช้งาน` ข้าง `เปิดใช้งาน` — เป็นที่แรกที่ควรดูเวลามีคนบอกว่าไม่ได้รับแจ้งเตือน เพราะกระดิ่งที่ถูกปิดหน้าตาเหมือนกระดิ่งที่พัง · เอา `ไม่มีอีเมลรองรับ` ออกพร้อมตัวเลข `only_channel` (สามเหลี่ยมในตารางยังอยู่ ซึ่งชี้ว่ากระดิ่งตัวไหน ไม่ใช่แค่นับ)
+
+**Ticket ทั้ง 9 ฉบับดึงเข้าเป็นมาตรฐาน** — พร้อมซ่อม `<p>` ไม่สมดุล 2 จุด (ET-3 ขาดปิด · ET-4 เกินมา ซึ่งเคยแก้ไปแล้วรอบหนึ่งและกลับมาอีก) และ `tacking` → `tracking`
+
+### Tests / Verification
+
+เทสต์ใหม่ 3 ไฟล์ — `TicketAssignedEmailTest` · `TicketProgressEmailTest` · `NotificationEmailPairingTest` · แก้เทสต์เดิมที่ยืนยันพฤติกรรมเก่า 2 ตัว (`has_email` ของ Access · เคสยกเลิกไม่ส่งอีเมล) · **เทสต์ 4 ตัวเปลี่ยนจากเทียบ HTML เป็นอ่านข้อความ (`strip_tags`)** เพราะพังทันทีที่ผู้ดูแลใส่ `<strong>` ครอบตัวแปร — ยังดักได้ว่าป้ายต้องไม่ค้างเปล่า แต่ไม่ผูกกับ markup · ทดสอบทุกเทมเพลตกับข้อมูลจริงโดยครอบ `DB::beginTransaction()`/`rollBack()` · **ทั้ง suite = 1,112 passed / 4,688 assertions** · tsc 0 · pint · build ผ่าน
+
+**ค้างไว้** — ET-12 `asset.assigned` เนื้อหาขาดกลางคันตั้งแต่ในนิยามมาตรฐาน · 4 จุดนอก Ticket ที่ส่งอีเมลโดยไม่มีปุ่ม · 10 เทมเพลตที่ยังไม่ได้ดึงเข้ามาตรฐาน (Stock 9 · Request 1) · preview ยังวาดปุ่มให้เทมเพลตที่ตั้งใจไม่มีปุ่ม
+
+### อีเมล: ปิดงานที่ค้างจากสองรอบก่อน (2026-08-30)
+
+**ET-12 `asset.assigned` เนื้อหาขาดกลางคัน**
+
+จบดื้อ ๆ ที่ `Tag:` ไม่มีแท็กปิด ไม่มีบรรทัดปิด — **ผิดตั้งแต่ในนิยามมาตรฐาน** ไม่ใช่ใครแก้ และส่งจริงไปแล้ว 3 ฉบับ · เติม `Type:` ที่ขาด (มีตัวแปรอยู่แล้ว ET-33 ก็ใช้) และบรรทัดปิดแบบเดียวกับ ET-33 · **ไม่ใส่ `{{asset.from}}`** ตามที่ตัดสินใจ — คนปลายทางไม่ต้องรู้ว่าเครื่องผ่านคลังไหนมา นั่นเป็นสายการครอบครองของ IT ตัวแปรยังส่งอยู่และยังเลือกจากเมนู chip ได้
+- ET-33 `asset.recalled` มี `<p>` เกินมา 1 ตัว ลบด้วย (ตัวอักษรเกินล้วน ๆ ข้อความไม่เปลี่ยน)
+
+**ปุ่มที่หายไปอีก 3 ใบ**
+
+`employee.account_needed` · `contract.expiry_alert` · `contract.expired_alert` ส่ง `null, null` มาตลอด — เตือนสัญญาใกล้หมดอายุแต่เปิดสัญญานั้นไม่ได้ · ตอนนี้ทั้งระบบไม่มีเทมเพลตไหนส่งโดยไม่มีปุ่มแล้ว
+
+**แก้ตัวเลขที่เคยรายงานผิด** — รอบก่อนบอกว่ามี 4 จุดนอกโมดูล Ticket ที่ไม่มีปุ่ม **ผิด** เพราะนับจากชื่อเมธอดที่ยิงกระดิ่งโดยไม่ตามเข้าไปดู helper · ของจริงคือ 3 ตัวข้างบน ส่วน Request (8 ตัว) กับ Stock (9 ตัว) มีปุ่มครบผ่าน `emailUser()` / `emailEach()` อยู่แล้ว
+
+### Tests / Verification
+
+`EmailActionButtonTest` สแกนทุกจุดที่เรียก `sendTemplate()` — ถ้าเพิ่มการส่งใหม่แล้วลืม URL จะแดงพร้อมบอกไฟล์และโค้ด · เป็นอย่างเดียวที่จับได้ เพราะ preview วาดปุ่มให้เสมอไม่ว่าตัวจริงจะส่งหรือไม่ · **พิสูจน์ว่าเทสต์จับได้จริงโดยถอด URL ของ ET-15 ออกชั่วคราวแล้วดูให้แดง** ก่อนคืนไฟล์ · ยังคุมอีก 2 อย่าง: ทุกจุดที่เรียก helper ต้องส่ง URL มาจริง · key ที่ส่งต้องมีนิยามในแคตตาล็อก (ไม่งั้น `sendTemplate()` เงียบ) · `AssetHandoverEmailTest` ล็อกว่าเทมเพลต `asset.*` ต้องปิดแท็กครบทุกตัว · **ทั้ง suite = 1,118 passed / 4,740 assertions** · tsc 0 · pint ผ่าน
+
+**ค้างไว้** — 10 เทมเพลตที่ยังไม่ได้ดึงเข้ามาตรฐาน (Stock 9 · Request 1)
+
+### อีเมล: ET-27 คำขอที่ IT ยกเลิก (2026-09-06)
+
+**ET-27 `request.not_delivered` — เนื้อหาเดิมสั้นกว่าญาติของมันทุกฉบับ**
+
+ยิงจุดเดียว: คำขอที่ **ผ่านอนุมัติครบทุกขั้นแล้ว** และ IT กด Cancel ตอนปิดเคสที่ระบบเปิดให้ (`TicketController::resolve` → `RequestService::settleFromTicket` → `notDelivered()`) ถึงผู้ขอ + คนที่ยื่นแทน · ยังไม่เคยส่งจริงสักฉบับ (`last_sent_at` ว่าง) เนื้อหาที่ผิดทรงจึงยังไม่ถึงตาใคร
+
+- ชื่อ/หัวข้อเปลี่ยนเป็น `Request was cancelled by IT (คำขอผ่านอนุมัติ แต่ยกเลิกโดย IT)` / `Your request {{reference.id}} has been cancelled by IT.` — เดิมเป็นตัวเดียวใน 38 ฉบับที่ชื่อไม่มีภาษาไทยกำกับ
+- เนื้อหาเขียนใหม่ทรงเดียวกับ ET-08/ET-11: บล็อกวันที่+คนทำ+เหตุผล → บล็อกรายละเอียดคำขอ (เพิ่ม `Ticket No.` เพราะการยกเลิกมาจากเคสนั้น) → ตาราง **Already approved** → บรรทัดปิด · เดิมมีแค่ 4 บรรทัด ไม่บอกว่าใครยกเลิก ไม่บอกว่าเมื่อไร และไม่บอกว่าคำขอนั้นคืออะไร
+- `'width' => 860` เพราะมีตารางประวัติอนุมัติแล้ว (ล็อกไว้ในแคตตาล็อก ไม่ใช่ในแถว DB — ผู้ดูแลแก้ข้อความแล้วตารางต้องไม่ล้น)
+- **ไม่ตัดตารางอนุมัติทิ้ง** ทั้งที่จบด้วยการยกเลิก — ใบนี้ผ่านทุกขั้นจริง คนอ่านควรเห็นว่าไม่มีใครปฏิเสธ ต่างจาก ET-08 ที่ตารางคือหลักฐานว่าใครไม่อนุมัติ
+
+**ตัวแปรใหม่ `{{request.cancelled_date}}`** — `cancelled_at` มีในตารางมาตลอดแต่ไม่เคยมีตัวแปรให้เทมเพลตใช้ · เพิ่มใน `emailUser()` + sample ทั้งสองฝั่ง (`EmailTemplateController::sampleVars()` และ `SAMPLE_VARS` ของ SPA ซึ่งเป็นเมนู chip) · `notDelivered()` ส่ง `{{actor.name}}` = ชื่อ IT ที่ปิดเคส ให้ความหมายตรงกับ ET-08 ("คนตัดสิน") แทนที่จะยืม `{{request.fulfilled_by}}` ที่อ่านแล้วขัดกับคำว่า Cancelled
+
+**แถวจริงใน DB** อัปเดตตามมาตรฐานด้วย (`email_templates` id 27) — เนื้อความที่ส่งจริงอ่านจาก DB ไม่ใช่จากแคตตาล็อก แถวนี้ยังไม่เคยถูกแก้ในหน้าเว็บจึงทับได้ตรง ๆ
+
+### Tests / Verification
+
+`RequestAutoTicketTest::test_the_cancellation_mail_carries_the_reason_the_case_and_the_approvals` — เดิมมีแต่เทสต์กระดิ่ง ตัวเมลไม่มีใครดู · ตรวจเหตุผล ชื่อคนยกเลิก วันที่ เลขคำขอ เลขเคส ตาราง Already approved · `{{` ต้องไม่เหลือค้าง และ `<p>` ต้องสมดุล · **พิสูจน์ว่าเทสต์จับได้จริงโดยถอด `request.cancelled_date` ออกชั่วคราวแล้วดูให้แดง** ก่อนคืนไฟล์ · `EmailSampleVarParityTest` คุมไม่ให้ตัวแปรใหม่มีแค่ฝั่งเดียว · **suite = 1,130 passed / 4,817 assertions** · tsc 0 · pint ผ่าน
+- แดงอยู่ 5 ตัว (`OrgMasterDataSeedTest` 4 · `EmployeeImportTest` 1) — เป็นงาน seeder แผนก/ฝ่ายที่ค้างอยู่ใน working tree ของอีกสายงาน ไม่เกี่ยวกับรอบนี้
+
+### อีเมล: รื้อ Drawer แก้ไข & พรีวิว (2026-09-06)
+
+**Send test ส่งของที่เซฟไว้ ไม่ใช่ของที่เห็นอยู่**
+
+`EmailTemplateController::test()` เรนเดอร์จากแถวใน DB ขณะที่พรีวิวข้าง ๆ เรนเดอร์จากเนื้อหาที่ยังไม่บันทึก — แก้ข้อความแล้วกดส่งทดสอบ **เมลที่เข้ากล่องเป็นของเก่า แต่จอบอกว่าเป็นของใหม่** และไม่มีอะไรบอกความต่าง · ตอนนี้ endpoint รับ `name` / `subject` / `body_html` ที่ยังไม่เซฟ (ไม่ส่งมาก็ใช้ของเดิม สำหรับปุ่มทดสอบในตาราง) · **การกดทดสอบไม่บันทึกทับของจริง**
+
+**กล่องแก้ HTML โตตามไดอะล็อกแล้ว**
+
+`rows={12}` ตายตัวอยู่ในคอลัมน์ที่สูงกว่ามันสามเท่า → แก้อีเมลยาวต้องเลื่อนสามชั้นซ้อน (ในtextarea → ในคอลัมน์ → ในไดอะล็อก) · เปลี่ยนเป็น flex column: overlay กับ textarea เป็น absolute ทั้งคู่ ความสูงมาจากคอลัมน์ ไม่ใช่จำนวนบรรทัด · ใช้ prop `grow` ของ `Field` ที่มีอยู่แล้วเพื่อการนี้
+
+**พรีวิวเลิกมี scrollbar ซ้อน** — เปลี่ยนไปใช้ `SentEmailFrame` ตัวเดียวกับ Delivery log ที่วัดความสูงตัวเองอยู่แล้ว (เคยแก้ปัญหานี้ฝั่งนั้นไปรอบหนึ่ง แต่พรีวิวสดไม่ได้แก้ตาม)
+
+**หัวไดอะล็อกจากสามชั้นเหลือหนึ่ง**
+
+แถบ `Edit & preview` + แถวชื่อเทมเพลต + แถบ `PREVIEW | EDIT` พูดเรื่องเดียวกันสามรอบ กินความสูงไป ~150px · ยุบเป็น `FocusDialogHeader` ตัวที่ทั้งแอปใช้ (ไดอะล็อกนี้เคยเป็นตัวเดียวที่ไม่ใช้) — eyebrow = `ET-xx` + badge cadence · title = ชื่อเทมเพลต · subtitle = key · `headerRight` = สวิตช์เปิด/ปิด · เพิ่มจุด **ยังไม่บันทึก** ข้างชื่อ
+- ตัวบอก "กำลังอัปเดต" ย้ายจากแถบหัวไปเกาะที่การ์ดพรีวิว — สถานะควรอยู่ติดของที่มันอธิบาย
+- คอลัมน์ 50/50 → **5:7** ซองอีเมลถูกคุมที่ 640px อยู่แล้ว ที่เหลือมีค่ากับ HTML มากกว่า · ไดอะล็อกคุมความกว้างที่ `min(1500px,92vw)` (เดิม `75vw` ไม่มีเพดาน จอ ultrawide จะกว้าง 2500px)
+- เอา `aria-describedby={undefined}` ออก เพราะ `FocusDialogHeader` มีคำอธิบาย sr-only มาให้แล้ว
+
+**บรรทัด From ในพรีวิวเลิกเดา** — เดิมประกอบ `no-reply@` + ชื่อแบรนด์เอาเว้นวรรคออก · ตอนนี้ `/email-templates` คืน `mail.from_address` ที่ resolve แบบเดียวกับ `MailConfigService` ตอนส่งจริง (ไม่ได้ตั้ง SMTP → ค่า fallback จาก `.env` ไม่ใช่ค่าที่แต่งขึ้น)
+
+**คำที่ทำให้เข้าใจผิด**
+- `ตัวแปรที่ใช้ได้` → **`ตัวแปรในอีเมลนี้`** — รายการนั้นคือตัวแปรที่ *อยู่ในเนื้อหาแล้ว* ไม่ใช่ตัวที่แทรกได้ (ตัวที่แทรกได้อยู่ในดรอปดาวน์) คนที่กำลังหาว่าใส่อะไรได้บ้างอ่านแล้วหลงทาง
+- `รีเซ็ตแล้ว` → **`คืนค่าแล้ว`** — เดิมกดแล้วปุ่มเปลี่ยนจาก Reset เป็น Reset
+- ปุ่ม Reset ตอนกดไม่ได้บอกเหตุผล (`ตรงกับมาตรฐานอยู่แล้ว`) แทน tooltip เดิมที่อธิบายสิ่งที่มันจะทำทั้งที่ทำไม่ได้ · และลดน้ำหนักเป็น `ghost` เพราะมันทิ้งงานที่คนเขียน แต่ไปนั่งข้างปุ่มที่กดกันทุกวัน
+- ปุ่ม Save บอก `Ctrl+S` ใน tooltip (คีย์ลัดทำงานมาตลอดแต่ไม่มีใครรู้)
+
+### Tests / Verification
+
+`EmailDeliveryLogTest` 2 ตัวใหม่ — ส่งทดสอบต้องพาเนื้อหาที่ยังไม่เซฟไป **และต้องไม่เซฟทับของจริง** · ไม่ส่ง draft มาก็ยังใช้ของที่เซฟไว้ · `EmailTemplatePreviewTest` 2 ตัวใหม่ — From ต้องเป็นค่าที่ตั้งไว้จริง และเป็น `.env` fallback เมื่อยังไม่ตั้ง SMTP · **พิสูจน์ว่าทั้ง 3 จับได้จริงโดยย้อนโค้ดกลับเป็นพฤติกรรมเดิมแล้วดูให้แดง** ก่อนคืนไฟล์ · **suite = 1,134 passed / 4,829 assertions** · tsc 0 · eslint 0 · pint · build ผ่าน
+- แดง 5 ตัวเดิม (`OrgMasterDataSeedTest` 4 · `EmployeeImportTest` 1) ยังเป็นงาน seeder แผนก/ฝ่ายของอีกสายงาน ไม่เกี่ยวกับรอบนี้
+
+**ค้างไว้** — `Field` ยังไม่ผูก `<Label htmlFor>` กับ input (คลิกป้ายไม่โฟกัส) แก้ทีเดียวกระทบทุกฟอร์มทั้งแอป จึงแยกเป็นงานของตัวเอง · ไดอะล็อกยังเป็นสองคอลัมน์ตายตัว ไม่มี breakpoint สำหรับจอเล็ก · `ToolBtn` ยังไม่มี focus ring
+
+**ตรวจบนหน้าจอจริง (หลังแก้)** — วัดจาก DOM ในเบราว์เซอร์ ไม่ใช่จากสายตา
+- เจอบั๊กที่โค้ดอ่านแล้วไม่เห็น: `Field` ตั้ง `grow` ให้แล้ว (สูง 401px) แต่ `BodyEditor` ข้างในยังสูง 199px เพราะ wrapper ของ `Field` เป็น **block ไม่ใช่ flex** → `flex-1` ไม่มีอะไรให้ยืด เหลือช่องว่างใต้กล่อง ~180px · เปลี่ยนรากของ `BodyEditor` เป็น `h-full` · วัดซ้ำ: กล่อง 250px · คอลัมน์ `scrollHeight === clientHeight` (ไม่ล้น) · เหลือช่องว่างท้ายคอลัมน์ = 20px พอดีกับ padding
+- พรีวิว: iframe สูง 946px = เนื้อหา 938 + 8 → **ไม่มี scrollbar ใน iframe** พาเนลข้างนอกเลื่อนแทน (1046 > 601) ตามที่ตั้งใจ
+- From แสดงที่อยู่จริงจาก `mail_settings` · จุด **ยังไม่บันทึก** กับป้าย **กำลังอัปเดต** บนการ์ดพรีวิวขึ้นตอนพิมพ์ · ตรวจทั้ง light และ dark
+- เก็บอีกจุดระหว่างตรวจ: ป้าย `Template Name` ในภาษาไทยยังเป็นอังกฤษ → `ชื่อ Template`
+
+### อีเมล: ดึง 5 เทมเพลตที่แก้ในหน้าเว็บเข้าเป็นมาตรฐาน (2026-09-06)
+
+ปิดงานที่ค้างมาสองรอบ — ตอนนี้ **ไม่มีแถวไหนใน `email_templates` ต่างจากนิยามใน `App\Support\EmailTemplates` อีกแล้ว** ป้าย "แก้ไขแล้ว" หายหมด และปุ่ม Reset คืนค่าเป็นข้อความที่ใช้อยู่จริง ไม่ใช่ข้อความรุ่นก่อนที่ไม่มีใครอยากได้
+
+| | เก็บอะไร |
+|---|---|
+| ET-06 `request.approval_needed` | หัวข้อ → `Request {{reference.id}} is awaiting approval from {{requester.name}}` — ผู้อนุมัติเห็นชื่อคนขอตั้งแต่ในกล่องจดหมาย |
+| ET-07 `request.approved` | ตัดประโยค "The request will now proceed to IT for the next step." ออก |
+| ET-09 `request.submitted` | เติม ✅ หน้าบรรทัดยืนยัน และหน้า `Next Approver` |
+| ET-25 `stock.request_created` | `New request` → `Stock request` |
+| ET-28 `request.stalled_digest` | ชื่อเติม `(รอคุณอนุมัติ)` ให้เข้าชุดกับตัวอื่นที่มีไทยกำกับ |
+
+**ET-07 เก็บเจตนา ไม่เก็บ HTML ที่พัง** — การลบประโยคในหน้าเว็บพา `</p>` ท้ายบรรทัดไปด้วย เหลือ `<p>` ที่ไม่มีวันปิดและ `<br>` ลอยอยู่เหนือความว่างเปล่า · เข้ามาตรฐานเป็น `<p>All required approvals have been completed.</p>` และ**ซ่อมแถวใน DB ให้ตรงกัน** (แถวนี้ส่งจริงไปแล้ว)
+
+**ไม่ได้แก้แต่บันทึกไว้** — `✅ Next Approver` ใน ET-09 อ่านเหมือนขั้นนั้นผ่านแล้วทั้งที่กำลังรออยู่ · เป็นการเลือกใช้คำ ไม่ใช่ข้อผิดพลาด จึงเก็บตามที่เขียนไว้ ถ้าจะเปลี่ยนค่อยว่ากัน
+
+### Tests / Verification
+
+`EmailTemplatePreviewTest::test_every_standard_template_closes_the_tags_it_opens` — ขยายจาก `AssetHandoverEmailTest` ที่คุมเฉพาะ `asset.*` มาคุม **ทั้งแคตตาล็อก** เพราะอาการพังแบบเดียวกันเป๊ะ (ลบประโยคแล้วพา `</p>` ไปด้วย) เพิ่งเกิดกับ `request.approved` · **พิสูจน์ว่าจับได้จริงโดยใส่ markup ที่พังกลับเข้าไปแล้วดูให้แดง** ก่อนคืนไฟล์ · ตรวจซ้ำด้วยสคริปต์ว่าทั้ง 36 แถวตรงกับมาตรฐานทุกฟิลด์ · **suite = 1,135 passed / 4,865 assertions** · pint ผ่าน
+- แดง 5 ตัวเดิม (`OrgMasterDataSeedTest` 4 · `EmployeeImportTest` 1) ยังเป็นงาน seeder แผนกของอีกสายงาน
+
+### แจ้งเตือน: ดึง 8 กระดิ่งที่แก้ในหน้าเว็บเข้าเป็นมาตรฐาน (2026-09-06)
+
+คู่ขนานกับรอบเทมเพลตอีเมล — ตอนนี้ **ไม่มีกระดิ่งไหนใน `notification_templates` ต่างจาก `App\Support\NotificationCatalogue`** ป้าย "แก้ไขแล้ว" เป็น 0 และปุ่มคืนค่ากลับไปหาข้อความที่ใช้อยู่จริง
+
+| กระดิ่ง | เก็บอะไร |
+|---|---|
+| `notif_access_offboarding` | ทั้ง EN/TH — ตัดรายละเอียด `{grants}` / `{owned}` ออก เหลือยอดรวม |
+| `notif_asset_assigned` | ทั้ง EN/TH |
+| `notif_asset_offboarding` | ทั้ง EN/TH — ขึ้นต้นด้วย Offboarding / ลาออก |
+| `notif_asset_recalled_cancelled` | ทั้ง EN/TH |
+| `notif_asset_recalled_taken_back` | ทั้ง EN/TH — "กลับแผนกไอที" แทน "เข้าคลัง" |
+| `notif_asset_return_requested` | ทั้ง EN/TH |
+| `notif_contract_expired` | TH — ตัดคำแนะนำท้ายประโยคออก |
+| `notif_request_blocked_no_account` | TH — ตัดคำแนะนำท้ายประโยคออก |
+
+**การเก็บเข้า STD ไม่ใช่แค่แก้ catalogue** — `NotificationTemplateTest` จับได้ทันทีว่า SPA มี dictionary สำรองของตัวเอง (`lang/{en,th}/notification.ts`) ที่ถ้ายังเป็นข้อความเก่า ผู้ใช้จะเห็นคำคนละแบบทุกครั้งที่ override ยังโหลดไม่ทัน · อัปเดตทั้งสามที่ให้ตรงกัน (catalogue + en + th)
+
+`{grants}` / `{owned}` ยังถูกส่งมาจากฝั่งผู้ส่งเหมือนเดิม แค่ข้อความเลือกไม่ใช้ — ไม่มี `{...}` โผล่ดิบ
+
+**ไม่ได้แก้ แต่บันทึกไว้ (เป็นเรื่องคำ ไม่ใช่ของพัง จึงเก็บตามที่เขียน)**
+- `The asset have been transferred to you` — ประธาน/กริยาไม่ตรง ควรเป็น `has`
+- `Offboarding  Please clear access {total} permission` — เว้นวรรคสองครั้งตรงที่น่าจะตั้งใจใส่ตัวคั่น และ `permission` ไม่เติม s
+- `Offboarding,  {count} assets waiting to be collected` — เว้นวรรคสองครั้งหลังจุลภาค
+- TH ของ `notif_asset_assigned` ยังชวนให้กด ("กดเพื่อตรวจสอบ") แต่ EN ตัดออกแล้ว สองภาษาบอกคนละอย่าง
+
+### Tests / Verification
+
+`NotificationTemplateTest::test_the_catalogue_thai_wording_matches_what_the_spa_ships` — ฝั่งไทยไม่เคยถูกล็อกเลย มีแต่ EN ซึ่งเป็นเหตุผลที่ TH ดริฟต์เงียบ ๆ ได้ · **พิสูจน์ว่าจับได้จริงโดยแก้ค่าใน `th/notification.ts` ให้เพี้ยนแล้วดูให้แดง** ก่อนคืนไฟล์ · ตรวจซ้ำด้วยสคริปต์ว่าทั้ง 42 กระดิ่งตรงกับ catalogue · **suite = 1,136 passed / 4,949 assertions** · tsc 0 · pint · build ผ่าน
+
+### Request options: ย้าย seed data ไปไว้ใน seeder (2026-09-06)
+
+`RequestOptionSeeder` เคยเป็นลูปเปล่า ๆ ที่ไปดูดตัวเลือกจากคีย์ `options` ของฟิลด์ `managed` ใน `RequestSchemas` — เปิดไฟล์ seeder แล้วไม่เห็นข้อมูลสักตัว ต้องตามไปอีกไฟล์ · ตอนนี้ลิสต์อยู่ในเมธอด `lists()` ของ seeder ตรง ๆ
+
+**ทำไมย้ายได้โดยไม่กระทบอะไร** — ลิสต์ที่อยู่ใน `RequestSchemas` **ไม่เคยถูกอ่านตอนรัน**: `RequestSchemas::for()` สลับตัวเลือกของฟิลด์ `managed` ด้วยแถวจาก `request_options` ทุกครั้ง (คอมเมนต์ในเมธอดเขียนไว้เองว่า "not a runtime fallback, because its ids only exist once the rows do") ส่วน `RequestService::displayValue()` กับ `RefreshRequestDisplaySnapshots` ก็แยกสาขา `managed` ออกไปอ่านตารางก่อนถึงบรรทัดที่ใช้ `options` · สำเนาในสคีมาจึงเป็นข้อมูลที่ไม่มีใครอ่าน แต่หน้าตาเหมือนตัวเลือกที่ฟอร์มยังเสนออยู่
+
+- ฟิลด์ `managed` ทั้ง 4 ตัว (`computer.device_id` · `hardware.device_id` · `mobile.device_id` · `telephone.device_type_id`) ไม่มีคีย์ `options` ในสคีมาอีกแล้ว — เหลือแค่ธง `managed` ที่บอกว่า "ตัวเลือกอยู่ในตาราง"
+- พฤติกรรม seeder เหมือนเดิมทุกอย่าง: `firstOrCreate` จับคู่ด้วย `(request_type, field_key, label_en)` · `sort_order` เป็นหลักสิบ · รันซ้ำไม่ทับ `label_th`/ลำดับที่แอดมินแก้ และไม่ลบตัวเลือกที่เพิ่มเอง
+- ไม่ได้รันบน DB จริง (แถว `request_options` เท่าเดิม 10 แถว) — เป็นการย้ายโค้ด ไม่ใช่การ seed ใหม่
+
+### Tests / Verification
+
+ไม่ต้องเพิ่มเทสต์ใหม่ — `ProductionSeedTest` เป็นตัวกันดริฟต์อยู่แล้ว: มันวนทุกฟิลด์ `managed` ในสคีมาแล้วยืนยันว่ามีแถวใน `request_options` จริง ฉะนั้นฟิลด์ `managed` ที่ลืมใส่ลิสต์ใน seeder = แดงทันที (ฟิลด์พวกนี้ `required` ถ้าไม่มีตัวเลือก request type นั้นจะส่งคำขอไม่ได้เลย) · **พิสูจน์แล้วโดยลบลิสต์ `telephone` ออกชั่วคราวแล้วดูให้แดง** ก่อนคืนไฟล์ · `RequestOptionTest` · `EmployeeOnboardingRequestTest` · `RequestAutoTicketTest` ผ่านครบ · **suite = 1,136 passed / 4,949 assertions** · pint ผ่าน
+
+### Ticket: คนแจ้งเคสไม่ได้เป็นคนตัดสินว่าใครทำ (2026-09-06)
+
+ปุ่ม **Assign to** และ **Transfer** เคยขึ้นให้ทุกคนที่ถือ `tickets.assign` — รวมถึงบนเคสที่คนดูเป็นคนแจ้งเอง · ตอนอ่านใบที่ตัวเองแจ้ง คนนั้นคือ "ผู้ใช้ที่รอ IT" ไม่ใช่ dispatcher: เขากด Take Case ไม่ได้ (anti case-pumping) และเป็นคนเดียวที่เคสนั้นส่งไปให้ไม่ได้ การเลือกว่าใครจะทำจึงไม่ใช่หน้าที่ของเขา
+
+```tsx
+const canRouteThis = !isMyOwnRequest;
+const showAssign  = isOpenUnassigned && canAssign && canRouteThis;
+const showForward = canForward && (isMine || (canAssign && canRouteThis));
+```
+
+**ปิดที่ API ด้วย ไม่ใช่แค่ซ่อนปุ่ม** — `TicketController::assertNotTheRequester()` เรียกจากทั้ง `assign()` และ `forward()` คืน 403 พร้อมเหตุผล · เป็นอีกครึ่งของกฎ anti case-pumping ที่มีอยู่แล้ว (เดิมพูดแค่ว่าเคส "ลงไปหา" คนแจ้งไม่ได้ ตอนนี้พูดด้วยว่าคนแจ้ง "ไม่ได้ชี้" ว่าจะลงไปหาใคร)
+
+- คนถือเคส (assignee) ยังส่งต่อได้ทุกกรณี — สาขานี้ไม่มีทางชนกฎใหม่ เพราะเคสไม่มีวันไปอยู่กับคนแจ้ง
+- dispatcher คนอื่นยังจัดเคสนั้นได้ตามปกติ และ IT คนไหนก็กด Take Case ได้
+- **แก้คำที่เคยเขียนผิด**: รอบแรกผมบอกว่า "ถ้าจำเป็นยังจัดการได้จากหน้า list" — **ไม่จริง** `AssignTicketModal` / `ForwardTicketModal` เปิดจาก drawer ที่เดียว (`pages/index.tsx:1064-1065`) ตารางไม่มี row action ฉะนั้นการซ่อนปุ่มคือปิดทางเดียวที่มีจริง ๆ ซึ่งเป็นเจตนา
+- บัญชี `super` ไม่มี `employee_id` เลยเป็นผู้แจ้งไม่ได้อยู่แล้ว — กฎนี้มีผลกับ IT ที่ผูกกับ record พนักงาน (เช่น `TKT-HW-260830-003` ที่ Piches แจ้งแล้ว Kankanok ถือ)
+
+**ปิดช่องที่เจอระหว่างตอบคำถาม** — ลิสต์ปลายทางใน Forward กรองออกแค่คนถือเคสปัจจุบัน ส่วน Assign กรองออกแค่ตัวเอง ทั้งที่ API ปฏิเสธ *คนแจ้งเคส* ด้วย ชื่อนั้นจึงนั่งรออยู่ในดรอปดาวน์เพื่อตอบ 422 · `/tickets/staff` คืน `employee_id` มาด้วยแล้ว (ผู้แจ้งเป็น employee id ลิสต์เดิมมีแต่ user id จึงเทียบกันไม่ได้) และทั้งสองหน้ากรองคนแจ้งออก
+
+### Tests / Verification
+
+`TicketLevelScopingTest` เพิ่ม 3 ตัว — dispatcher จัดเคสของตัวเองไม่ได้ทั้ง assign และ forward (แม้หลังมีคนรับไปแล้ว) · เคสของคนอื่นยังจัดได้ตามเดิม · `/tickets/staff` ต้องบอกว่าแต่ละบัญชีผูกกับพนักงานคนไหน ซึ่งเป็นข้อมูลชิ้นเดียวที่ทำให้ตัวกรองหน้าเว็บตรงกับกฎฝั่ง API · **พิสูจน์ว่าเทสต์จับได้จริงโดยถอด `assertNotTheRequester()` ออกจาก `assign()` แล้วดูให้แดง** ก่อนคืนไฟล์ · เงื่อนไขการโชว์ปุ่มเป็นตรรกะใน component ยังไม่มี runner ฝั่ง frontend จึงยังไม่มีเทสต์คุม (gate ฝั่ง API คุมผลลัพธ์แทน) · **suite = 1,139 passed / 4,956 assertions** · tsc 0 · eslint 0 · pint · build ผ่าน
+
+### เก็บงานค้าง: เทสต์แดง · a11y ของฟอร์ม · คำที่ทักไว้ (2026-09-06)
+
+**เทสต์แดง 5 ตัวหายหมด — suite เขียวทั้งก้อนครั้งแรก**
+
+`OrgMasterDataSeedTest` (4) กับ `EmployeeImportTest` (1) แดงเพราะเทสต์กับ seeder ไม่ตรงกัน · **seeder คือฝั่งที่ถูก** (เป็นของที่ตั้งใจแก้) เทสต์จึงเดินตาม
+- tag แผนกเป็น `IT` / `MN` / `SALE` ไม่ใช่ `It` / `Mn` / `Sales` → แก้ที่เทสต์และที่ fixture ของ `EmployeeImportTest` ซึ่งสร้าง `DEP-0003` ด้วย tag `It` ไว้ก่อน · `firstOrCreate` จับคู่ด้วย `code` แถวนั้นจึงเก็บ tag เดิมไว้ แล้ว `EmployeeSectionSeeder` หาแผนก `IT` ไม่เจอและโยน RuntimeException — เป็นที่มาของตัวที่ 5 · แถว import ยังพิมพ์ `It` เหมือนเดิม ซึ่งกลายเป็นการพิสูจน์ว่าการจับคู่ไม่สนตัวพิมพ์
+- จำนวนแผนกย่อยเป็น **25** ไม่ใช่ 26 · `SE` มี `Environment` + `Safety` · ชื่อไทยขึ้นต้น `ส่วนงาน`
+
+> ยังไม่ตรงกับ DB จริง: ตอนนี้ live มี tag `It`/`Mn`/`Lg`/`Sales`/`Acc` และ **26 แผนกย่อย** (มี `Quality Assurance` กับ `Occupational Safety & Health`) · seeder ไม่ทับของเดิม (`firstOrCreate` บน `code`) ของที่ใช้อยู่จึงไม่กระทบ แต่ **ติดตั้งใหม่จะได้ผังที่ไม่เหมือนวันนี้** · และ docblock ของ `EmployeeSectionSeeder` ยังเขียนว่า "twenty-six" ทั้งที่ลิสต์มี 25 — ทั้งสองข้อรอเจ้าของงานตัดสิน
+
+**`Field` ผูกป้ายกับช่องกรอกแล้ว — ทั้งแอปในที่เดียว**
+
+182 จุดที่ใช้ `<Field>` ไม่มีจุดไหนผูก `<Label htmlFor>` เลย คลิกป้ายไม่โฟกัส และ screen reader อ่านสองอย่างแยกกัน · แก้ที่ `Field` ตัวเดียว: `useId()` แล้ว `cloneElement` ใส่ `id` ให้ลูกที่เป็น element เดี่ยวและยังไม่มี `id` ของตัวเอง — `Input` / `Textarea` spread props ลง DOM อยู่แล้ว จึงได้ผลทันทีเป็นส่วนใหญ่ · `SearchableSelect` (35 จุด) รับ `id` เพิ่มและส่งลงปุ่ม trigger · ลูกที่ไม่รับ prop หรือ Field ที่ครอบหลายคอนโทรล = พฤติกรรมเดิม ไม่มีอะไรพัง
+
+**ไดอะล็อกแก้เทมเพลตรองรับจอเล็ก** — ต่ำกว่า `lg` สองพาเนลเรียงลงมาและเลื่อนเป็นก้อนเดียว โดย**เอาช่องแก้ไขขึ้นก่อน** (`flex-col-reverse`) เพราะบนจอแคบสองคอลัมน์เหลือข้างละ ~440px และฝั่ง HTML คือฝั่งที่เสียหาย · `ToolBtn` ได้ focus ring กับ `aria-label` แล้ว
+
+**คำที่ทักไว้เมื่อรอบก่อน แก้ครบ** (แก้ทั้ง catalogue + dictionary ของ SPA + แถวจริงใน DB)
+
+| | เดิม | ใหม่ |
+|---|---|---|
+| `notif_asset_assigned` | The asset **have** been transferred to you | The asset **has** been transferred to you - tap to check |
+| `notif_access_offboarding` | Offboarding␣␣Please clear access {total} permission | Offboarding - please clear {total} access item(s) |
+| `notif_asset_offboarding` | Offboarding,␣␣{count} assets waiting… | Offboarding - {count} assets waiting… |
+| ET-09 `request.submitted` | ✅ Next Approver | Next Approver |
+
+`notif_asset_assigned` เลือกทางที่เก็บภาษาไทยไว้ทั้งประโยคแล้วเติมคำชวนกดให้ EN แทน — สองภาษาบอกเรื่องเดียวกันแล้ว · ✅ บรรทัดบนของ ET-09 (ยืนยันว่าส่งคำขอสำเร็จ) ยังอยู่ ตัวที่ถอดคือตัวที่ไปเกาะขั้นที่ยังไม่เกิด
+
+### Tests / Verification
+
+**suite = 1,144 passed / 4,971 assertions (ไม่มีแดงเหลือแล้ว)** · tsc 0 · eslint 0 · prettier · pint · build ผ่าน · สคริปต์ตรวจซ้ำว่าทุกเทมเพลตอีเมลและทุกกระดิ่งใน DB ตรงกับมาตรฐานหลังซิงก์ 4 แถว
+
+### Dashboard: endpoint เดียว + การ์ด "ของฉัน" ที่เป็นข้อมูลจริง (2026-09-06)
+
+หน้าแรกเคยเปิดมาด้วยตัวเลข hardcode 3 ใน 4 ใบ (`14` / `5` / `128` ทั้งที่ของจริงคือ 13 / 8 / 5) พร้อมข้อความ "↑ 12% จากสัปดาห์ก่อน" ที่ไม่ได้คำนวณจากอะไร และตาราง "Ticket ล่าสุด" ที่เป็น `demoTickets` 4 แถวเขียนตายตัว (`TKT-2861 Cannot connect to production VPN`) — เลขที่ตั๋วคนละรูปแบบกับของจริงด้วยซ้ำ · **กล่อง Coming soon บอกตัวเองว่าว่าง แต่ตัวเลขปลอมไม่บอก** อันหลังจึงอันตรายกว่า
+
+**ทางที่เลือก: ประกอบจากสิทธิ์ ไม่ใช่แตกตาม role** — mockup เดิม (`docs/std-mockup/`) ออกแบบเป็น 3 หน้าแยก (`OverallDashboard` / `MyDashboard` / `HrDashboard`) สลับด้วย role string · ทั้งระบบเลิก hardcode role ไปใช้ permission แล้ว การ์ดจึงถูกทำเป็นชิ้นที่ถามสิทธิ์ของตัวเอง — คนที่เป็นทั้ง HR และ IT เห็นครบสองชุดแทนที่จะต้องเลือกข้าง และโมดูลใหม่ = เพิ่มการ์ด ไม่ใช่เพิ่ม dashboard ใบที่สี่
+
+**`GET /api/dashboard/summary`** — `DashboardSummaryService` ประกอบทั้งหน้าในคำขอเดียว ไม่มี gate ที่ route แต่ตัด block ตามสิทธิ์ผู้เรียก (แบบเดียวกับ `SidebarBadgeService`) · หน้าเว็บยิงทีละ endpoint ต่อการ์ดไม่ได้ เพราะมันไม่รู้ล่วงหน้าว่าอันไหนจะตอบ 403 และการ์ดที่ 403 หน้าตาเหมือนการ์ดที่ว่าง
+
+**ชุด "ของฉัน" (ยังไม่ต้องใช้สิทธิ์ใด ๆ — ทุกแถวเป็นของคนอ่านอยู่แล้ว)**
+- แบนเนอร์ **รอคุณกดรับ** อยู่บนสุด เป็นรายการไม่ใช่ตัวเลข เพราะเป็นบล็อกเดียวบนหน้าที่ขอให้ลงมือทำ
+- KPI 4: Ticket ที่ยังไม่ปิด · คำขอที่รออยู่ · ทรัพย์สินที่ถืออยู่ · ปิดแล้วเดือนนี้ — ทุกใบเป็น row count ไม่ใช่ค่าประมาณ และคลิกไปหน้าที่มาได้
+- ตาราง Ticket / คำขอ / ทรัพย์สินของฉัน อย่างละ 5 แถว พร้อม empty state ที่บอกว่า "ไม่มี" แปลว่าอะไร
+- คำขอที่ **คนอื่นยื่นแทน** (onboarding) นับเป็นของเจ้าตัวด้วย ไม่ใช่ของคนยื่นอย่างเดียว
+- การ์ดสัญญาใกล้หมดอายุ (ของจริงมาแต่เดิม) ยังอยู่ แต่ gate ด้วย `contracts.module` แล้ว · การ์ด Coming soon ฝั่ง IT gate ด้วย `tickets.view_all` — ผู้ใช้ทั่วไปเลิกเห็นรายงานที่ไม่มีวันเป็นของเขา
+
+**DB ไม่ต้องแก้อะไรเลย** — ตรวจ schema แล้วครบทุกอย่าง: `tickets.resolved_at` มีอยู่ · `AssetStatus` มี `pending_acceptance` · `service_requests` มี timestamp ครบทุกสถานะ · ที่ย้อนหลังไม่ได้มีอย่างเดียวคือ **สถานะทรัพย์สิน** (`assets.status` ไม่มีประวัติ, `asset_transfers` บันทึกแค่การโอน) จึงตัด sparkline/delta ของการ์ดทรัพย์สินทิ้งแทนที่จะไปแก้โครงเพื่อ dashboard · ถ้าวันหลังทำ asset history จริง sparkline จะตามมาเอง
+
+### Tests / Verification
+
+`DashboardSummaryTest` 6 ตัว — นับและลิสต์เฉพาะของคนอ่าน · เดือนนี้ตัดที่ต้นเดือน · ทรัพย์สินรอรับเป็นรายการแยกแต่ยังนับรวมใน KPI · คำขอที่ยื่นแทนนับเป็นของเจ้าตัว · **บัญชีที่ไม่มี employee record (super) ต้องได้โครงเดียวกันที่ว่างเปล่า ไม่ใช่ 500** เพราะบัญชีเดียวที่แก้ปัญหาได้ต้องเปิดหน้าแรกได้เสมอ · ต้องล็อกอิน · รันจริงกับข้อมูลบนเครื่องเทียบผลแล้ว (Piches: 4 ตั๋วค้าง / 1 คำขอ ตรงกับ DB) · **suite = 1,150 passed / 4,993 assertions** · tsc 0 · eslint 0 · build ผ่าน
+
+**ค้างไว้** — การ์ดฝั่ง IT (Tickets overview · Team workload) และชุด HR ยังเป็น Coming soon · Recent activity (`audit_logs` มีข้อมูลพร้อมแล้ว) ยังไม่ได้ทำ
+
+### Dashboard: ครบทั้งสามชุด — IT · HR · กิจกรรมล่าสุด (2026-09-06)
+
+ต่อจากชุด "ของฉัน" — ตอนนี้ `/api/dashboard/summary` ส่ง block ตามสิทธิ์ครบแล้ว และการ์ด Coming soon สามใบสุดท้ายบนหน้าแรกหายไปหมด
+
+**block ที่คนอ่านไม่มีสิทธิ์เห็น = ไม่ส่งคีย์นั้นมาเลย ไม่ใช่ส่งอาร์เรย์ว่าง** — หน้าเว็บวาดจาก "คีย์ไหนมาถึง" ถ้าส่งอาร์เรย์ว่างมา คนที่ไม่มีสิทธิ์จะเห็นรายงาน IT ที่มีหัวข้อ มีกรอบ และว่างเปล่า ซึ่งอ่านว่า "ไม่มีเคส" ไม่ใช่ "ไม่ใช่เรื่องของคุณ"
+
+| block | สิทธิ์ | มีอะไร |
+|---|---|---|
+| `it` | `tickets.view_all` | สัดส่วนเคส 30 วันล่าสุด + ภาระงานรายคน |
+| `hr` | `employees.view_dashboard` | KPI 4 · พนักงานเข้าใหม่ล่าสุด · จำนวนคนต่อฝ่าย |
+| `activity` | `system.view_audit` | 8 รายการล่าสุดจาก `audit_logs` |
+
+**Tickets overview** — นับจาก `created_at` ในหน้าต่าง 30 วัน ไม่ใช่ "ทุกใบที่ยังเปิดอยู่" เพราะคำถามที่การ์ดตอบคือ*ช่วงนี้งานเข้ามาแบบไหน* เคสที่เปิดตั้งแต่เดือนมีนาคมทำให้ภาพของเดือนนี้เพี้ยน · วาดเป็น **แถบเดียวแบ่งสี + legend ที่มีตัวเลข** แทนโดนัทของ mockup โดยใช้สำนวนเดียวกับแถบ active/resigned ในหน้า Employee และ**สีเดียวกับ badge สถานะ Ticket** (`TICKET_STATUS_META`) — segment กับ badge ของสถานะเดียวกันจะได้ไม่เป็นสีน้ำเงินคนละเฉด · ตัวเลขอยู่ใน legend เพราะคนที่อยากรู้ "กี่ใบกันแน่" ไม่ควรต้องเอาเมาส์ไปจิ้ม
+
+**Team workload** — ทุกคนที่ถือเคสอยู่ + ปิดไปกี่ใบในหน้าต่างเดียวกัน · **กองที่ยังไม่มีผู้รับผิดชอบเป็นแถวปกติแถวหนึ่ง** และเรียงตามจำนวนเหมือนคนอื่น ไม่ได้ถูกยัดไว้ท้ายรายการ — คิวที่ไม่มีเจ้าของคือสิ่งเดียวบนการ์ดนี้ที่ต้องมีคนไปทำอะไรกับมัน (ข้อมูลจริงบนเครื่องตอนนี้: ยังไม่มีผู้รับผิดชอบ 13 ใบ)
+
+**HR** — พนักงานทั้งหมด (นับเฉพาะ active) · เข้าใหม่เดือนนี้ · **รอ IT จัดเตรียม** (คำขอ origin `onboarding` ที่ยัง pending/approved) · ลาออกเดือนนี้ · ฝ่ายที่ไม่มีคนถูกตัดออกจากกราฟแทนที่จะวาดเป็นแท่งเปล่า
+
+**Recent activity** — `audit_logs` 8 แถวล่าสุด (action · target · ใครทำ · เมื่อไร) ลิงก์ไปหน้า audit เต็ม
+
+### Tests / Verification
+
+`DashboardSummaryTest` เพิ่มเป็น **10 ตัว** — 4 ตัวใหม่: block ที่ไม่มีสิทธิ์ต้อง**ไม่มีคีย์** (ไม่ใช่ค่าว่าง) · หน้าต่าง 30 วันตัดเคสเก่าออกจากสัดส่วนแต่ยังนับเป็นเคสค้างของคนถือ · แถวไม่มีผู้รับผิดชอบต้องมีอยู่จริง · ฟีดกิจกรรมต้องใช้สิทธิ์ `system.view_audit` · **พิสูจน์ว่าเทสต์จับได้จริงโดยถอด gate ของ `activity` ออกแล้วดูให้แดง** (สองตัวแดงพร้อมกัน) ก่อนคืนไฟล์ · ตรวจกับข้อมูลจริง: `super` ได้ 4 block · บัญชี HR ได้ `mine` + `hr` เท่านั้น · **suite = 1,154 passed / 5,018 assertions** · tsc 0 · eslint 0 · build ผ่าน
+
+**ภาพรวม Ticket เป็นวงแหวนตามที่ออกแบบไว้** — SVG (สำนวนเดียวกับวงนับถอยหลังใน session-timeout) เว้นช่อง 2px ระหว่างส่วนโค้ง ตัวเลขรวมอยู่กลางวง ส่วนจำนวนรายสถานะอยู่ใน legend เพราะวงแหวนตอบว่า *แบ่งกันยังไง* ส่วนคนที่อยากรู้ว่ากี่ใบไม่ควรต้องเอาเมาส์ไปจิ้ม · แต่ละส่วนโค้งมี `<title>` ให้ hover อ่านได้ และมี `role="img"` + aria-label
+
+### ภาพรวม Ticket: โดนัท และสีที่คนตาบอดสีอ่านได้ (2026-09-06)
+
+เปลี่ยนจากแถบแบ่งสีเป็น **โดนัท** ตามที่ออกแบบไว้ใน mockup · วงแหวน SVG ใช้สำนวนเดียวกับวงนับถอยหลังใน `session-timeout-modal` (หมุน -90°, `strokeDasharray`/`strokeDashoffset`) เว้นช่องสีพื้น 2px ระหว่างส่วนโค้ง · ยอดรวมอยู่กลางวง จำนวนรายสถานะอยู่ใน legend พร้อมชื่อสถานะ — ตัวตนของแต่ละส่วนจึงไม่ได้ฝากไว้กับสีอย่างเดียว
+
+**In progress เปลี่ยนจากม่วงเป็นเหลืองอำพัน — และนี่คือเหตุผล**
+
+รันตัววัดพาเลตของสกิล dataviz กับสีสถานะเดิมของแอป:
+
+```
+blue-600 #2563eb ↔ violet-500 #8b5cf6
+  ΔE 2.3 (protanopia) · 12.7 (สายตาปกติ) → FAIL ทั้งสองเกณฑ์
+```
+
+สองส่วนโค้งที่ใหญ่ที่สุดของกราฟนี้ (เปิด กับ กำลังดำเนินการ) คนตาบอดสีแดง-เขียว **แยกไม่ออกเลย** และแม้สายตาปกติก็ยังต่ำกว่าเกณฑ์ · badge อยู่กับม่วงได้เพราะแต่ละอันมีคำกำกับในตัว แต่ส่วนโค้งสองอันที่ติดกันไม่มี · ลองไล่ทั้งตระกูลม่วงแล้ว (violet-300/400, purple-500, fuchsia-500) ไม่มีสเต็ปไหนผ่านทั้ง light และ dark — violet-300 ผ่าน CVD แต่ตกเกณฑ์ความสว่างและ contrast บนพื้นขาว
+
+พาเลตที่ใช้: `blue-500 / amber-500 / emerald-500 / gray-400` (dark ใช้สเต็ป -400) — ผ่าน CVD separation และ normal-vision floor ทั้งสองโหมด
+- เกณฑ์ chroma ยังฟ้อง `gray` ว่า "อ่านเป็นสีเทา" ซึ่ง**ตั้งใจ**: ยกเลิกคือสถานะที่หยุดแล้ว ไม่ใช่หมวดที่มาแย่งสายตา
+- เกณฑ์ contrast เตือน amber/emerald บนพื้นขาว → แก้ด้วยป้ายชื่อ+ตัวเลขที่มองเห็นใน legend ตามที่เกณฑ์กำหนด
+
+> **ค้างให้ตัดสิน** — ตอนนี้กราฟใช้เหลืองอำพันแต่ badge ในโมดูล Ticket ยังเป็นม่วง (`TICKET_STATUS_META`) ถ้าอยากให้ภาษาสีเป็นอันเดียวกันทั้งแอป ต้องย้าย `in_progress` เป็น amber ทุกที่ ซึ่งกระทบ badge/spine/ตัวกรองทั้งโมดูล — เป็นการตัดสินใจเรื่องภาษาสีของระบบ ไม่ใช่ของงาน dashboard
+
+### Tests / Verification
+
+**ตรวจบนเบราว์เซอร์จริงแล้ว** (ล็อกอินเป็น Piches S ซึ่งถือครบทั้ง `tickets.view_all` · `employees.view_dashboard` · `system.view_audit`)
+- ทุกการ์ดขึ้นข้อมูลจริง: KPI 4/1/0/0 · Ticket ของฉัน 4 ใบพร้อมเลขที่จริงและผู้รับผิดชอบ · คำขอ `RQ-2026-0048`
+- **วัดส่วนโค้งจาก DOM**: เปิด 74.4% · กำลังดำเนินการ 11.9% · เสร็จสิ้น 11.9% (ของจริง 12/2/2 จาก 16 = 75/12.5/12.5 ลบช่องว่าง 2px ต่อชิ้น) และแต่ละชิ้นมี `<title>` ถูกต้อง
+- ภาระงานของทีม: **ยังไม่มีผู้รับผิดชอบ 13 ค้าง** อยู่แถวบนสุดตามที่ตั้งใจ
+- HR + กิจกรรมล่าสุดขึ้นครบ เวลาแสดงเป็นภาษาไทย ("5 นาทีที่แล้ว")
+- ตรวจทั้ง light และ dark · console ไม่มี error · คืนธีมเป็น light ตามเดิม
+- เก็บระหว่างตรวจ: legend เดิมเป็น `flex-1` ทำให้ตัวเลขไหลไปติดขอบขวาห่างจากป้ายชื่อ → คุมความกว้างที่ 220px
+
+**suite = 1,154 passed / 5,018 assertions** · tsc 0 · eslint 0 · pint · build ผ่าน
+
+### Dashboard: เก็บพื้นที่ว่างของการ์ดภาพรวม + ภาระงานนับเฉพาะคน (2026-09-06)
+
+**การ์ดภาพรวม Ticket มีพื้นที่ว่างเหลือทางขวา** — วงแหวน 132px + legend คอลัมน์เดียวที่คุมไว้ 220px กินความกว้างไปไม่ถึงสองในสามของการ์ด ที่เหลือว่างเปล่า · ลองเปลี่ยนเป็นวงกลมทึบก่อนแล้วแต่ไม่ใช่ประเด็น (วงแหวนสวยอยู่แล้ว) ประเด็นคือ legend
+- วงแหวนโตขึ้นเป็น **148px** ยอดรวมกลางวงใหญ่ขึ้นตาม
+- legend เป็น **กริด 2 คอลัมน์ `flex-1`** กินความกว้างที่เหลือทั้งหมด — ไม่ยืดคอลัมน์เดียวให้ยาว เพราะนั่นจะพาตัวเลขเดินหนีจากป้ายชื่อของมันเอง (ปัญหาที่เพิ่งแก้ไปรอบก่อน)
+- เพิ่ม **%** ข้างจำนวน เพราะมุมของวงแหวนเทียบด้วยตายาก — เป็นจุดอ่อนที่รู้กันอยู่ของกราฟทรงนี้ และ legend คือที่ที่ต้องชดเชยให้
+- วัดจาก DOM หลังแก้: legend ชนขอบ padding ขวาพอดี เหลือ **1px** · สองคอลัมน์กว้าง 269px เท่ากัน
+
+**ภาระงานของทีมนับเฉพาะคน** — ตัดแถว "ยังไม่มีผู้รับผิดชอบ" ออกจากการจัดอันดับ เพราะการ์ดนี้ตอบคำถามว่า*ใครแบกเยอะสุด* และกองไร้เจ้าของเป็นแท่งที่ยาวที่สุดเสมอ ทำให้คนที่แบกจริงถูกวัดเทียบกับคิวที่ไม่ใช่ภาระของใคร · **ตัวเลขไม่ได้หายไป** — ย้ายไปเป็นบรรทัดเล็กบนหัวการ์ด (ลิงก์ไปหน้า Ticket) เพราะคิวไร้เจ้าของ 13 ใบเป็นข้อมูลที่ควรเห็น แค่ไม่ควรลงไปแข่งในอันดับที่มันไม่ได้อยู่ในนั้น
+
+### Tests / Verification
+
+ตรวจบนเบราว์เซอร์จริงซ้ำทั้ง light/dark · console ไม่มี error · คืนธีมเป็น light · **suite = 1,154 passed / 5,018 assertions** · tsc 0 · eslint 0 · build ผ่าน
+
+### My assets → My assets & access (2026-09-06)
+
+พนักงานไม่มีทางรู้เลยว่าตัวเองมีสิทธิ์เข้าถึงระบบอะไรบ้าง — ข้อมูลมีอยู่ใน Access Directory แต่เป็นทะเบียนของ IT ที่พนักงานทั่วไปเปิดไม่ได้ · หน้า My Assets เดิมจึงขยายเป็น **`/my-assets-access`** ตอบคำถามเดียวว่า "ตอนนี้ฉันถือครองอะไรอยู่บ้าง"
+
+**รวมเป็นรายการเดียว ไม่แยกแท็บ** — ทรัพย์สินกับสิทธิ์เข้าถึงมาจากคนละ endpoint และไม่มีอะไรเหมือนกันเลยนอกจากเป็นของคนคนเดียวกัน · หน้าแบนทั้งสองอย่างให้เป็นแถวหน้าตาเดียวกัน (ไอคอน → ชื่อ → บรรทัดรอง → ตั้งแต่เมื่อไร) แล้วกรองด้วย chip ด้านบน · **แท็บจะซ่อนคำตอบจากคนที่ไม่รู้ว่าคำตอบอยู่แท็บไหน** ซึ่งเป็นคนที่หน้านี้สร้างมาเพื่อเขาพอดี
+- chip ขึ้นเฉพาะชนิดที่คนคนนั้นมีจริง — chip ที่กดแล้วว่างคือทางตัน และสี่อันเรียงกันทำให้ดูเหมือนเมนูให้เลือกซื้อ
+- **ปุ่มมีเฉพาะฝั่งทรัพย์สิน** (กดรับ / ส่งคืน) เพราะเป็นสิ่งที่ผู้ถือทำเองได้ · ฝั่งสิทธิ์อ่านอย่างเดียวตามที่ตัดสินใจไว้ว่า IT ให้สิทธิ์ด้วยมือหลังคำขอผ่าน — ปุ่มตรงนี้จะสัญญา flow ที่ไม่มีอยู่จริง
+- KPI เพิ่มใบที่ 4 "สิทธิ์เข้าใช้งาน" · บล็อก "รอคุณกดรับ" ยังอยู่บนสุดเหมือนเดิม
+
+**`GET /api/access/mine`** — ใช้ `AccessService::employeeAccess()` + `EmployeeAccessResource` ตัวเดียวกับแท็บ Access ในหน้า Employee สองจอจึงขัดกันเองไม่ได้ ต่างกันแค่ว่าใครมีสิทธิ์ถาม · อยู่**นอก** route group ของ Access Directory โดยตั้งใจ เพราะทุก read ในนั้นตอบต่อ `access.module` ซึ่งคือสิทธิ์ดูทะเบียนของทั้งบริษัท
+
+**สิทธิ์ใหม่ `access.my`** — เดินตามรอย `assets.my` ทุกอย่าง: อยู่ในโมดูล access แต่ `normalizeAccess()` เก็บไว้เสมอแม้ตัวหลักปิด (เดิมโค้ดตัด `access.*` ทิ้งทั้งหมด) · migration แจกให้ทุก role ที่มี `assets.my` อยู่แล้ว — คนกลุ่มเดียวกัน: ใครที่ไว้ใจให้ดูอุปกรณ์ตัวเอง ก็ไว้ใจให้ดูบัญชีตัวเอง · **รันบน DB จริงแล้ว**
+
+**การ์ด Permission แยกออกมา** — `assets.my` / `assets.return` เคยอยู่ท้ายการ์ด Assets ใต้ตัวหลักที่มันจงใจไม่สนใจ ทำให้สิทธิ์ที่พนักงานทุกคนมี ไปนั่งอยู่ในการ์ดของงาน IT · ตอนนี้เป็นการ์ด **"ทรัพย์สิน และการเข้าถึงของฉัน"** ของตัวเอง (บริการตนเอง · ไม่ขึ้นกับตัวหลัก) มีสามสวิตช์: ทรัพย์สินของฉัน → ส่งคืน · การเข้าถึงของฉัน · ฝั่ง backend ไม่แตะเลย กฎ "ส่งคืนต้องมีทรัพย์สินของฉัน" ยังอยู่ที่เดิม
+
+**ลิงก์เก่าไม่พัง** — `/my-assets` redirect ไป `/my-assets-access` (คงคิวรีสตริง) เพราะเมลรับมอบ/เรียกคืนและกระดิ่งที่ส่งไปก่อนหน้านี้ยังชี้ที่เดิม · แก้ลิงก์ในโค้ดครบ 6 จุด (เมล 2 · กระดิ่ง 2 · Dashboard 2)
+
+### Tests / Verification
+
+`MyAccessTest` 6 ตัว — เห็นเฉพาะของตัวเอง · สิทธิ์ที่ถูกเพิกถอนไม่ขึ้น · ตอบต่อ `access.my` ไม่ใช่ตัวหลัก · **normalize ต้องไม่ตัด `access.my` ทิ้งตอนตัวหลักปิด** · บัญชีไม่มี employee record ได้ลิสต์ว่างไม่ใช่ 500 · ต้องล็อกอิน · `PermissionMatrixTest` ยังเขียว · **suite = 1,160 passed / 5,037 assertions** · tsc 0 · eslint 0 · pint · build ผ่าน
+
+ตรวจบนเบราว์เซอร์: redirect ทำงาน · ชื่อหน้า/เมนู/breadcrumb เปลี่ยนครบ · `/api/access/mine` ตอบ 200 ให้ role Standard (ก่อน migration คือ 403) · **ยังไม่ได้เห็นหน้าตอนมีข้อมูลจริง** — `php artisan serve` ดับระหว่างตรวจ (ข้อมูลทดสอบที่สร้างไว้ชั่วคราวลบคืนครบแล้ว ตาราง `access_memberships` กลับมาที่ 5 แถวเท่าเดิม)
+
+### My assets & access: จัดกลุ่มให้อ่านออกตอนของเยอะ (2026-09-06)
+
+รอบแรกเป็นรายการแบนยาว ๆ ต่อกันแล้วแบ่งหน้า — พอของเยอะขึ้นก็อ่านไม่ออก ไม่มีที่ให้สายตาพัก และไม่รู้ว่าตรงไหนหมดเรื่องทรัพย์สินแล้วขึ้นเรื่องบัญชี
+
+- **จัดกลุ่มตามชนิด พร้อมหัวข้อ** (ไอคอนสี + ชื่อ + จำนวน) — หัวข้อคือสิ่งที่ทำให้รายการยาวสแกนได้ และทำให้**แต่ละแถวไม่ต้องบอกชนิดของตัวเองซ้ำ**
+- **เลิกแบ่งหน้า** — คนหนึ่งคนถือของราว 5–20 อย่าง การแบ่งหน้าที่ 10 คือสิ่งที่ทำให้ครึ่ง Access ตกไปอยู่หน้า 2 ตั้งแต่แรก ทั้งที่หน้านี้สร้างมาเพื่อให้เห็นมัน
+- **เรียงใหม่สุดก่อนในแต่ละกลุ่ม** — ของที่เพิ่งได้มาคือของที่คนจำได้น้อยที่สุด
+- **ไอคอนใช้สีประจำชนิดของ Access registry** (`#7c3aed` กลุ่มอีเมล · `#0d9488` ไฟล์แชร์ · `#6366f1` โซเชียล · `#f59e0b` ซอฟต์แวร์) ทรัพย์สินใช้สีแบรนด์ — ไฟล์แชร์เป็นสีเขียวน้ำทะเลเหมือนกันทุกที่ที่เจอมัน
+
+**แถวรวมเป็นก้อนเดียวชิดซ้าย** — เดิมชื่ออยู่ซ้ายสุด ชิป+วันที่อยู่ขวาสุด เหลือช่องว่างกลางแถว ~900px ที่สายตาต้องกระโดดข้ามเพื่อจับคู่ชื่อกับข้อมูลของมันเอง · ตอนนี้บรรทัดรองเก็บทุกอย่าง: สถานะ · ที่อยู่ · **วัตถุประสงค์** (ข้อมูลที่ API ส่งมาอยู่แล้วแต่รอบแรกไม่ได้ใช้) · **`ตั้งแต่ <วันที่>`** — เดิมวันที่ลอยอยู่ขวาโดยไม่มีป้ายบอกว่าคือวันอะไร และหมายคนละเรื่องกันระหว่างทรัพย์สิน (วันรับมอบ) กับสิทธิ์ (วันได้รับสิทธิ์) · ปุ่มส่งคืนไม่จองที่ 104px ท้ายแถวที่ไม่มีวันมีปุ่มอีกแล้ว
+
+**KPI ไม่ทักทายด้วยศูนย์** — เดิม 4 ใบเป็นเรื่องทรัพย์สิน 3 ใบ พนักงานที่ไม่มีอุปกรณ์บริษัทเปิดมาเจอ `0 · 0 · 0` · ตอนนี้ 3 ใบที่มีความหมายเสมอ (ถือครองทั้งหมด · ทรัพย์สิน · สิทธิ์เข้าใช้งาน) แล้ว "รอกดรับ / กำลังส่งคืน" โผล่เฉพาะตอนมีค่า เพราะเป็นสถานะชั่วคราวไม่ใช่ตัวเลขประจำหน้า
+
+**ระดับสิทธิ์ใช้ `AccessBadge` ของโมดูล Access** — รอบแรกผมวาดชิปเองแล้วโชว์ค่าดิบ ซึ่งจะทำให้สิทธิ์ `Write` อ่านว่า "Write" บนหน้านี้ แต่อ่านว่า "Read/Write" ทุกที่ในแอป · **มีแค่ไฟล์แชร์ที่มีระดับสิทธิ์** (Read / Write) ส่วนกลุ่มอีเมล ซอฟต์แวร์ โซเชียล ไม่มีเลย
+
+### Tests / Verification
+
+**suite = 1,160 passed / 5,037 assertions** · tsc 0 · eslint 0 · pint · build ผ่าน · ตรวจบนเบราว์เซอร์ด้วยข้อมูลตัวอย่างครบทั้ง 5 ชนิด — กลุ่ม/หัวข้อ/สี/ป้าย Read/Write/ปุ่มส่งคืนถูกต้อง · **ลบข้อมูลตัวอย่างคืนแล้ว** (`access_memberships` กลับมา 5 แถวเท่าเดิม)
+
+### Dashboard: กราฟจำนวนตั๋วต่อวัน 14 วัน (2026-09-07)
+
+เติมส่วนที่สองของการ์ด **ภาพรวม Ticket** ตามที่ mockup ออกแบบไว้ (`จำนวนตั๋วต่อวัน — 14 วันล่าสุด`) ต่อจากโดนัท คั่นด้วยเส้น
+
+**สองค่าต่อวัน: เข้าใหม่ กับ ค้างสะสม ณ สิ้นวัน**
+- `opened` นับจาก `created_at` ต่อวัน
+- `backlog` เป็น**ระดับ ไม่ใช่จำนวนเหตุการณ์** จึงต้อง*สร้างขึ้นใหม่*แทนการนับ: เริ่มจากยอดค้างก่อนเข้าช่วง แล้วเดินไปทีละวัน บวกที่เข้า ลบที่ปิด · ย้อนหลังได้เพราะแถวตั๋วมี timestamp ทั้งตอนเปิดและตอนปิด — ไม่มีการเก็บค่ารายวันไว้ที่ไหนเลย
+- **3 query เท่านั้นไม่ว่าหน้าต่างจะกี่วัน** (เข้าต่อวัน · ปิดต่อวัน · ยอดตั้งต้น) — ถ้านับ ณ จุดเวลาทีละวันจะเป็น 14 รอบสแกนตาราง
+
+**ไม่วาดซ้อนกันแบบ mockup — บวกกันไม่ได้** · "เข้าใหม่ 8" คือปริมาณที่ไหลเข้าวันนั้น ส่วน "ค้าง 12" คือยอดคงค้าง ณ สิ้นวัน แท่งซ้อนจะสื่อว่าผลรวม 20 มีความหมาย และตั๋วที่เข้าวันนั้นแล้วยังไม่ปิดจะถูกนับซ้ำในสองชั้นของแท่งตัวเอง · ใช้ **แท่ง = เข้าใหม่ · เส้น = ค้างสะสม** บนแกนเดียวกัน (หน่วยเดียวกันคือจำนวนใบ ไม่ใช่ dual-axis) ตอบสองคำถามที่คนดูการ์ดนี้ถามจริง: งานเข้าหนักผิดปกติไหม และกองค้างโตขึ้นหรือยุบลง
+- ป้ายวันที่ 3 จุด (ต้น/กลาง/ท้าย) — ป้ายใต้ทุกแท่งอ่านไม่ออกที่ความกว้างนี้
+- hover ทีละวันบอก `เข้า N · ค้าง M` · legend มีทั้งสองเส้น ตัวตนจึงไม่ได้ฝากไว้กับสีอย่างเดียว
+- สีเดิมของการ์ด: แท่งน้ำเงินแบรนด์ · เส้น amber ตัวเดียวกับ "กำลังดำเนินการ"
+
+### Tests / Verification
+
+`DashboardSummaryTest::test_the_volume_series_counts_arrivals_and_rebuilds_the_backlog` — ยอดตั้งต้นจากตั๋วที่เปิดก่อนหน้าต่าง · ตั๋วที่ปิดในช่วงทำให้กองค้างลดลงในวันที่ปิด · **ตั๋วที่เปิดและปิดวันเดียวกันนับเป็นงานเข้าแต่ไม่ค้างข้ามคืน** · วันแรก/วันสุดท้ายของช่วงถูกต้อง · **พิสูจน์ว่าเทสต์จับได้จริงโดยถอดการลบยอดปิดออกจากการเดินวัน แล้วดูให้แดง** ก่อนคืนไฟล์ · ตรวจกับข้อมูลจริงบนเครื่อง (กองค้างไต่จาก 11 → 16 ตามวันที่เปิดตั๋วจริง) · **suite = 1,161 passed / 5,048 assertions** · tsc 0 · eslint 0 · pint · build ผ่าน
+
+**เส้นกริดและแกนค่า** — กราฟรอบแรกไม่มีแกน y เลย เห็นรูปทรงแต่อ่านไม่ออกว่าเส้นค้างอยู่ที่ 10 หรือ 100 · เพิ่มเส้นกริด 3 เส้น (บน/กลาง/ฐาน) พร้อมตัวเลขในช่องซ้าย ระดับสีเท่า `border` เพราะเส้นกริดมีไว้ให้วัด ไม่ได้มีไว้ให้มอง
+- **ยอดสเกลปัดขึ้นเป็นเลขที่คนพูดออกเสียงได้** (1 · 2 · 4 · 5 · 10 และพหุคูณสิบ) — ที่ต้องมี 4 เพราะยอดจริง 23 ถ้าปัดเป็น 50 จะทิ้งความสูงของกราฟไปครึ่งหนึ่งและทำให้ทุกแท่งแบนหมด
+- **เส้นกลางขึ้นเฉพาะตอนหารสองแล้วลงตัว** — ขีดที่เขียนว่า 2.5 บนกราฟนับจำนวนใบคือเส้นที่วัดอะไรไม่ได้
+- **แกนนอนมีป้ายทุกวัน ตรงกับแท่งของตัวเอง** — ใช้โครง flex ชุดเดียวกับแท่ง (gap เท่ากัน · flex-1 เท่ากัน · เยื้องพ้นช่องแกนเท่ากัน) ป้ายจึงอยู่ใต้วันของมันเป๊ะ ไม่ใช่ใกล้ ๆ · เดิมมีสามป้ายกระจาย คนอ่านต้องนับแท่งเอาเองว่าวันอังคารอยู่ไหน
+- แสดงเลขวันอย่างเดียว ยกเว้นวันแรกกับวันที่ข้ามเดือน (`9/1`) ซึ่งเป็นจุดเดียวที่เลขวันเปล่า ๆ กำกวม
+
+**ยังไม่ได้ดูบนเบราว์เซอร์** — session หมดอายุอีกครั้ง (เด้งหน้า login)
+
+### Ticket: อัปเดตความคืบหน้าระหว่างทาง + สถานะ Pending (2026-09-08)
+
+เดิม IT มีที่เขียนอยู่สองที่เท่านั้น — บันทึกตอนกดรับเคส กับผลการแก้ไขตอนปิดเคส · ระหว่างนั้นทั้งหมด (สั่งอะไหล่ไปแล้ว · รอผู้แจ้งตอบ · vendor เงียบ) ถูกพูดปากเปล่าและไม่ได้ถูกบันทึกไว้ที่ไหน คนแจ้งจึงเงียบหายไปหลายวัน และคนที่มารับช่วงต่อต้องไล่ถามเอาเอง
+
+**ตาราง `ticket_updates`** — หนึ่งแถวคือหนึ่งบันทึก เรียงเก่าไปใหม่ · เก็บ `author_name` ควบคู่ `user_id` เพราะบันทึกต้องอ่านออกแม้คนเขียนลาออกไปแล้ว (แบบเดียวกับแถวอนุมัติ) · `status_from`/`status_to` เติมเฉพาะตอนบันทึกนั้น**ย้ายสถานะเคสด้วย** ไทม์ไลน์จึงขึ้นป้าย "พักเคส/ทำต่อ" เฉพาะที่มีการเปลี่ยนจริง
+
+**`POST /api/tickets/{ticket}/updates`** — gate เดียวกับปิดเคส (`tickets.resolve` + ต้องเป็นผู้ถือเคส) · รับ `body` (บังคับ ≥5 ตัวอักษร) + `pending` (bool) · `pending` คือ**สถานะที่ขอให้เป็น ไม่ใช่ปุ่มสลับ**: เขียนบันทึกครั้งที่สองระหว่างยังรออะไหล่ตัวเดิม โดยติ๊กค้างไว้ เคสก็ยังพักอยู่ ไม่ถูกดึงกลับมาเงียบ ๆ
+
+**สถานะใหม่ `Pending`** — `Open → InProgress ⇄ Pending → Completed / Canceled`
+- **นาฬิกา SLA ไม่หยุด** (ผู้ใช้ตัดสินใจ) — พักคืองานที่หยุด ไม่ใช่เคสที่หยุด คนแจ้งก็ยังรออยู่เหมือนเดิม · คนที่พักต้องเขียนเหตุผลไปพร้อมกันเสมอ เวลาเกิน SLA จึงอ่านออกว่าเพราะอะไร แทนที่จะต้องเดา
+- `TicketStatus::live()` / `liveValues()` / `working()` — เดิมมี 17 จุดที่เขียน "open หรือ in_progress" ด้วยมือ ลิสต์ที่เขียนด้วยมือคือลิสต์ที่วันหนึ่งจะถูกเติมสมาชิกใหม่แค่ 16 จุด · กวาดครบทั้ง TicketController · TicketService · TicketSlaAlertService · TicketDigestService · SidebarBadgeService · DashboardSummaryService · RequestService · ServiceRequestResource
+- `resolve()` และ `forward()` รับเคสสถานะ Pending ได้แล้ว — ของที่รออยู่มาถึงแล้วก็ปิดได้เลย ไม่ต้องกดกลับมา In progress ก่อน
+- คอลัมน์ `tickets.status` เป็น `string` อยู่แล้ว ไม่ต้อง migrate
+
+**แจ้งผู้แจ้งทุกครั้ง** — กระดิ่ง `notif_ticket_owner_updated` (ต่อยอด `TicketOwnerNotification` เดิม เพิ่ม event `updated`) + เมล `ticket.updated` ที่พก**ตัวบันทึกและสถานะปัจจุบัน**ไปด้วย · ตัวแปรใหม่ `{{ticket.update}}` (escape + `nl2br` เหมือน details/resolution) และ `{{ticket.status}}`
+
+**หน้าจอ**
+- Drawer รายละเอียดมีแท็บที่สาม **"ความคืบหน้า"** พร้อมจำนวน — ไทม์ไลน์จุด+เส้นภาษาเดียวกับ spine ทางขวา
+- แบนเนอร์ใต้หัวเรื่อง: เคสที่พักไว้บอกทุกคนที่เปิดอ่านว่าพักอยู่ **พร้อมเหตุผลจากบันทึกล่าสุด** (เหตุผลคือสาระทั้งหมดของการพัก ไม่ควรต้องเข้าไปหา)
+- ปุ่ม **อัปเดต** อยู่ที่ footer และบนแบนเนอร์ (เฉพาะผู้ถือเคส) · ไดอะล็อกมี textarea + ช่อง "พักเคสนี้ไว้" ที่เตือนเรื่องนาฬิกา SLA ตรงจุดที่กำลังจะพัก แทนที่จะให้ไปรู้ตอนมันเกินแล้ว
+- โดนัทบน Dashboard เพิ่มชิ้นที่ห้า **สี orange** — วน validator ใหม่: เทียบ amber ได้ ΔE 12.1 (deutan) และ 15.5 (สายตาปกติ) ผ่านทั้งสองเพดาน · เลือกโทนข้างเคียง amber โดยตั้งใจ เพราะ In progress กับ Pending คือช่วงเดียวกันของเคส · ป้ายสถานะยังเป็น amber (ชุดสีป้ายไม่มีขั้น orange) ซึ่งเป็นตระกูลเดียวกันและป้ายมีคำกำกับตัวเองอยู่แล้ว
+- การ์ด "สถานะปัจจุบัน" ของหน้า Tickets เพิ่มแถว **พักเคสไว้** (ขึ้นเฉพาะตอนมีค่า) · แยก `backlog_pending` ออกจาก `backlog_in_progress` เพราะตัวเลขบนการ์ดต้องตรงกับฟิลเตอร์ที่มันเปิดให้
+
+### Tests / Verification
+
+`TicketUpdateTest` 14 ตัว — เขียนบันทึกโดยไม่ย้ายสถานะ · พักแล้วบันทึกการย้าย · **พักแล้ว SLA ไม่ขยับ** · บันทึกซ้ำบนเคสที่พักอยู่ไม่ดึงกลับ · ไม่ติ๊กแล้วกลับมาทำต่อ · ปิด/ส่งต่อเคสที่พักได้ · เฉพาะผู้ถือเคส · เคสที่ยังไม่มีคนรับ/ปิดแล้วเขียนไม่ได้ · บังคับกรอกบันทึก · เรียงเก่าไปใหม่ · backlog แยกช่อง · badge งานของฉันนับเคสที่พักด้วย · เพิ่มเทสต์เมล `ticket.updated` และกระดิ่ง `updated` ในไฟล์เดิม
+**พิสูจน์ guard ด้วยการถอดออกทีละตัวแล้วดูให้แดง** — guard สถานะของ endpoint ใหม่ · การผ่อนให้ `resolve()` และ `forward()` รับ Pending (ถอดแล้วเทสต์ที่ควรแดงแดงตัวเดียว ตัวอื่นยังเขียว)
+**suite = 1,177 passed / 5,117 assertions** · tsc 0 · pint ผ่าน · migration รันบน DB จริงแล้ว · เพิ่มแถว `email_templates` (`ticket.updated`) และ `notification_templates` (`notif_ticket_owner_updated`) บน DB จริงแบบ firstOrCreate ทีละแถว — **ไม่ได้รัน `db:seed`** ซึ่งจะทับเทมเพลตที่แก้ด้วยมือไว้
+
+ตรวจบนเบราว์เซอร์จริง — เปิดเคส TKT-HW-260901-001 กด **อัปเดต** ติ๊กพักเคส: ป้ายสถานะเปลี่ยนเป็น *พักเคสไว้* (amber) · แบนเนอร์พร้อมเหตุผลขึ้นใต้หัวเรื่อง · แท็บ *ความคืบหน้า 1* แสดงบันทึกพร้อมชิป *พักเคส* · spine ขั้นที่ 2 ขึ้น "บันทึกความคืบหน้า 1 ครั้ง" · **SLA ยังเดินต่อ (ยังขึ้นเกิน 4วัน 9ชม. เท่าเดิม)** · KPI หน้า Tickets อ่านว่า `12 รอรับ · 3 กำลังทำ · 1 พักไว้` และการ์ดสถานะปัจจุบันขึ้นแถวพักเคสไว้ · โดนัทหน้า Dashboard ขึ้นชิ้นที่ห้าสีส้ม 1 เคส (6%) · **ลบข้อมูลทดสอบคืนแล้วทั้งหมด** — แถว `ticket_updates` · กระดิ่ง · งานเมลในคิว · และคืนสถานะเคสเป็น In progress ตามเดิม
+
+**ไทม์ไลน์ครบเส้นทาง** — แท็บความคืบหน้าไม่ได้มีแค่บันทึกระหว่างทางแล้ว: **รับเคส** (พร้อมบันทึกแรกของเจ้าหน้าที่) อยู่หัวแถว และ **ปิดเคส** (พร้อมผลการแก้ไข สีเขียว/เทาตามผลลัพธ์) อยู่ท้ายแถว · สองปลายนี้ไม่ได้เป็นแถวใน `ticket_updates` แต่อ่านจาก `responded_at`/`take_note` และ `resolved_at`/`resolution` ของตั๋วเอง — ข้อมูลชุดเดิมที่มีมาก่อนฟีเจอร์นี้ จึงไม่ต้องย้อนสร้างแถวให้ของเก่า และ**เคสที่ปิดไปก่อนหน้านี้ก็อ่านได้ครบเส้นทางเหมือนกัน** · ตัวเลขบนแท็บนับทุกเหตุการณ์ในนั้น ส่วนบรรทัด "บันทึกความคืบหน้า N ครั้ง" ที่ spine ยังนับเฉพาะบันทึกเหมือนเดิม · ข้อความว่างเปลี่ยนไปตามความจริงที่เหลืออยู่กรณีเดียว คือเคสที่ยังไม่มีใครรับ
+
+ตรวจบนเบราว์เซอร์ (อ่านอย่างเดียว ไม่แตะข้อมูล): เคสที่ปิดสำเร็จ TKT-HW-260812-001 อ่านว่า *รับเคสโดย super 13:42 → แก้ไขเสร็จสิ้น 13:49* · เคสที่ยกเลิก TKT-HW-260807-001 ขึ้นกากบาทเทากับกล่องเหตุผลสีเทา และแถวรับเคสที่ไม่มีบันทึกแสดงแค่หัวข้อ · tsc 0 · eslint 0 · build ผ่าน
+
+### Ticket: หยุดนาฬิกา SLA ได้ ถ้าคนพักเคสสั่งให้หยุด (2026-09-09)
+
+รอบก่อนพักเคสแล้วนาฬิกาเดินต่อเสมอ ซึ่งถูกสำหรับ "รอผู้แจ้งตอบ" แต่ไม่ถูกสำหรับ "อะไหล่อยู่กับ vendor และไม่มีใครฝั่งเราขยับได้" · ตอนนี้เลือกได้**เป็นครั้ง ๆ ตอนพัก** ค่าเริ่มต้นคือไม่หยุด (พฤติกรรมเดิม จะได้ไม่มีใครหยุดนาฬิกาโดยไม่ตั้งใจ) และไม่มีสิทธิ์ใหม่ — ใครพักเคสได้ก็เลือกได้ คือผู้ถือเคส
+
+**3 คอลัมน์**
+| คอลัมน์ | หน้าที่ |
+|---|---|
+| `tickets.sla_paused_at` | ไม่ null = นาฬิกาหยุดอยู่ ตั้งแต่เวลานี้ (มี index เพราะทุก query ที่ถามหาเคสเกินกำหนดต้องกรองมันออก) |
+| `tickets.sla_paused_minutes` | นาทีทำการที่พักไปแล้วสะสม |
+| `ticket_updates.sla_paused` | บันทึกครั้งนี้สั่งหยุดนาฬิกาด้วย — อยู่ที่นี่เพราะสองคอลัมน์บนถูกล้างทันทีที่เคสกลับมาทำต่อ หลังจากนั้นแถวนี้คือหลักฐานเดียวว่าตอนนั้นตัดสินใจอะไรไว้
+
+**"หยุดนาฬิกา" = "เลื่อนเดดไลน์ออกไปเท่ากับเวลาที่หยุด"** — เขียนแบบนี้ทำให้ทุกคนที่อ่านค่าต่อ (ป้าย · รายการ · คำตัดสินทัน/ไม่ทัน) ยังเทียบเวลากับเวลาเหมือนเดิม ไม่ต้องรู้จักการพักเลย · ครึ่งที่ยังหยุดอยู่คำนวณสด (`TicketSla::pausedMinutes`) ไม่ได้เก็บ เดดไลน์ของเคสที่พักอยู่จึงขยับตามนาฬิกาจริง ซึ่งคือหน้าตาของคำว่า "หยุด" เมื่อมองจากข้างนอก
+- ตอนกลับมาทำต่อ **และตอนปิดเคสทั้งที่ยังพักอยู่** → ฝากนาทีที่พักเข้า `sla_paused_minutes` แล้วดัน `sla_resolve_due_at` ที่เก็บไว้ออกไปเท่ากัน · ต้องดันคอลัมน์ที่เก็บด้วยเพราะการเรียง/ฟิลเตอร์เกินกำหนด/sweep แจ้งเตือน เทียบกับคอลัมน์นั้นใน SQL — เคสที่พักไปหนึ่งสัปดาห์ต้องไม่กลับมาพร้อมสถานะเกินกำหนดแล้ว · ล้าง `sla_resolve_alert_level` ด้วยเหตุผลเดียวกับที่ `take()` ล้าง
+- `TicketSla::resolveDueAt()` บวกเวลาที่พักเข้าไปด้วย ทำให้ **% SLA บน Dashboard ตัดสินด้วยเดดไลน์เดียวกับที่ป้ายบนเคสแสดง** (เดิมสองที่นี้คิดคนละทาง — จุดนี้คือส่วนที่กินแรงจริง ไม่ใช่ตัว migration)
+- เคสที่นาฬิกาหยุด **ถูกกันออกจาก** ฟิลเตอร์ `?sla=breached` · ตัวเลข `sla_breached_now` · และ sweep แจ้งเตือน SLA — นาฬิกาที่หยุดอยู่ไม่มีเดดไลน์ให้เลยกำหนด
+- ยังไม่แตะ: การเรียง `sla_due` ยังใช้คอลัมน์ที่เก็บไว้ เคสที่พักอยู่จึงลอยขึ้นบนเหมือนใกล้ครบกำหนด — ป้าย SLA ของมันอ่านว่า "หยุด SLA" อยู่แล้ว จึงไม่ได้ทำให้เข้าใจผิด
+
+**หน้าจอ** — ช่อง "หยุดนาฬิกา SLA ด้วย" ซ้อนอยู่ใต้ "พักเคสนี้ไว้" และโผล่เฉพาะตอนติ๊กพัก เพราะเป็นการตัดสินใจที่แคบกว่าและอยู่ในกันและกัน · บรรทัดสีเหลืองใต้กล่องบอกผลของสิ่งที่กำลังจะกดจริง ๆ (เดินต่อ / หยุดแล้วเลื่อนเดดไลน์) · ป้าย SLA เปลี่ยนเป็น **หยุด SLA** แทนการนับถอยหลังที่ตัวเลขไม่ขยับ · ไทม์ไลน์ติดชิป "หยุด SLA" ที่บันทึกซึ่งสั่งหยุด · ทั้งสองช่องเปิดขึ้นมาตามสถานะปัจจุบันของเคส บันทึกครั้งที่สองระหว่างรอเรื่องเดิมจึงยืนยันของเดิม ไม่ใช่เปลี่ยนมันเงียบ ๆ
+
+### Tests / Verification
+
+`TicketUpdateTest` เพิ่มเป็น 20 ตัว — พักเฉย ๆ ไม่หยุดนาฬิกา · สั่งหยุดแล้วบันทึกว่าใครสั่ง · **เดดไลน์ถูกดันออกเท่ากับเวลาที่รอ (นาทีทำการ)** · เคสที่หยุดนาฬิกาไม่โผล่ในรายการเกินกำหนดและไม่ถูกนับใน `sla_breached_now` · ปิดเคสทั้งที่ยังหยุดอยู่ตัดสินด้วยเดดไลน์ที่เลื่อนแล้ว (`met`) · บันทึกครั้งถัดไปเริ่มนาฬิกาใหม่ได้โดยเคสยังพักอยู่ · `pause_sla` บนเคสที่ไม่ได้พักไม่มีผล
+**พิสูจน์ด้วยการถอดออกแล้วดูให้แดงทีละตัว** — การดันคอลัมน์เดดไลน์ · การฝากเวลาพักตอนปิดเคส · การกันเคสที่หยุดนาฬิกาออกจากฟิลเตอร์เกินกำหนด
+เทสต์เวลาต้องปักเวลาไว้ (`travelTo` เช้าวันจันทร์) เพราะการพักวัดเป็น**นาทีทำการ** — เทสต์ที่บังเอิญรันตอนสองทุ่มจะฝากศูนย์นาทีอย่างถูกต้องทุกครั้ง
+**suite = 1,183 passed / 5,147 assertions** · tsc 0 · eslint 0 error · pint · build ผ่าน · migration รันบน DB จริงแล้ว · ตรวจไดอะล็อกบนเบราว์เซอร์แล้วกดยกเลิก **ไม่ได้เขียนข้อมูลใด ๆ** (ยืนยันว่าไม่มีเคสที่นาฬิกาหยุดค้างอยู่)
+
+### ยกเลิก: พักเคส (Pending) และหยุด SLA (2026-09-13)
+
+ถอนสองอย่างนี้ออกทั้งหมดตามที่ตัดสินใจใหม่ — จะตอบโจทย์เดิมด้วยการให้ super admin สร้าง**กฎ SLA เพิ่มได้เองที่หน้า Settings** แทน ซึ่งเก็บการตัดสินใจไว้กับคนที่เป็นเจ้าของเป้าหมาย ไม่ใช่กับคนที่บังเอิญถือเคสอยู่ · **บันทึกความคืบหน้า (แท็บไทม์ไลน์) ยังอยู่ครบ** เพราะนั่นคือโจทย์ตั้งต้น
+
+**DB — ย้อนกลับครบ ไม่มีข้อมูลค้าง** (ตรวจก่อนลงมือ: เคส `pending` 0 · เคสที่หยุดนาฬิกา 0 · นาทีพักสะสม 0)
+- `migrate:rollback --step=1` คืน `tickets.sla_paused_at` / `sla_paused_minutes` แล้วลบไฟล์ migration ทิ้ง (ย้อนก่อนลบ ไม่งั้น `down()` หายไปพร้อมไฟล์)
+- ตัด `status_from` / `status_to` ออกจาก `ticket_updates` ด้วย migration ชั่วคราว (ไม่ ALTER ด้วยมือ เพราะ migration ติดตามได้) — **บันทึก 3 แถวที่เขียนไว้ยังอยู่ครบ**
+- จากนั้น**ยุบประวัติให้เรียบ**: แก้ migration ตัวสร้างตารางให้ไม่สร้างสองคอลัมน์นั้นตั้งแต่แรก · ลบ migration ตัวตัดทิ้ง · ลบแถวของมันออกจากตาราง `migrations` — ไม่เหลือประวัติแบบ "สร้างแล้วลบ" และ fresh install ได้ schema ตรงกับ DB จริงเป๊ะ (ยืนยัน: `migrate:status` ลงท้ายที่ตัวสร้างตาราง · `migrate --pretend` = Nothing to migrate · และ suite ที่สร้าง schema ใหม่ทุกครั้งยังเขียว)
+- แถว `email_templates` ของ `ticket.updated` ถูกอัปเดตเอาบรรทัด `{{ticket.status}}` ออก — **ตรวจก่อนเขียนว่าตรงกับมาตรฐานเดิมเป๊ะ** ถ้าโดนแก้ด้วยมือจะข้ามไปให้คนตัดสินใจเอง (ไม่ทับงานใคร)
+- คอลัมน์ `tickets.status` เป็น string อยู่แล้ว ไม่ต้องแตะ
+
+**โค้ดที่ถอนออก** — `TicketStatus::Pending` · `addUpdate()` เหลือพารามิเตอร์เดียวคือตัวบันทึก · `stopSlaClock`/`resumeSlaClock` · `TicketSla::pausedMinutes()` และคีย์ `paused` ใน payload · การกันเคสที่หยุดนาฬิกาออกจากฟิลเตอร์เกินกำหนด/sweep/`sla_breached_now` · `backlog_pending` · ชิ้นสีส้มในโดนัท · แถว "พักเคสไว้" บน Dashboard · ช่องพักเคส/หยุด SLA ในไดอะล็อก · ป้าย "หยุด SLA" · คีย์ภาษา 12 คีย์ทั้ง en/th
+**ที่เก็บไว้** — `TicketStatus::live()` / `liveValues()` / `working()` เพราะมันคือการตั้งชื่อให้ลิสต์ที่เคยเขียนด้วยมือ 17 จุด และตอนนี้ให้ค่าเท่ากับของเดิมเป๊ะ (live = open + in_progress, working = in_progress) · แถม `SettingsController` ที่คำนวณเดดไลน์ใหม่ตอนแก้ค่า SLA ก็ใช้ `liveValues()` แทนลิสต์ที่เขียนมือไว้เดิม
+
+### Tests / Verification
+
+`TicketUpdateTest` เหลือ 7 ตัว (จาก 20) — เขียนบันทึกโดยเคสและเดดไลน์ไม่ขยับ · เฉพาะผู้ถือเคส · เคสที่ยังไม่มีคนรับ/ปิดแล้วเขียนไม่ได้ · บังคับกรอก · เรียงเก่าไปใหม่ · **บันทึกไม่ถูกส่งมากับ list endpoint** · ปรับเทสต์เมลและกระดิ่งให้ตรงกับ signature ใหม่ · `DashboardSummaryTest` เอา `pending` ออกจาก by_status
+**suite = 1,170 passed / 5,093 assertions** · tsc 0 · eslint 0 error · pint · build ผ่าน
+
+### SLA: เป้าหมายเป็นแถวที่เพิ่มได้ และเคสจากคำขอมีเวลาของตัวเอง — หลังบ้าน (2026-09-13)
+
+**ที่มา** — ไปไล่ดูของจริงก่อนออกแบบ แล้วเจอว่าเคสที่เปิดอัตโนมัติจากคำขอเกิดมาแบบ `priority = null` → `resolveHours(null)` ตกไปใช้ medium เงียบ ๆ · เดดไลน์แรกจึงเป็นค่าที่ไม่มีใครเลือก และถูกเขียนทับอีกครั้งตอนมีคนกดรับ · ตัวอย่างจริง RQ-2026-0048 (ขอจอ) ใช้เวลาจริง 46.8 ชม.ทำการ ชนเป้า 25 ชม. → **missed ทั้งที่ไม่มีอะไรผิดพลาด**
+
+รากของปัญหาคือ **`priority` ตอบว่า "ด่วนแค่ไหน" ไม่ใช่ "งานนี้ยาวแค่ไหน"** และคนตั้งมันคือคนกดรับเคส — ส่วนความยาวของงานถูกกำหนดตั้งแต่ตอนเลือกประเภทคำขอแล้ว แต่ไม่มีที่ให้เก็บ
+
+**ตาราง `sla_targets`** แทน JSON ก้อนเดียวใน `app_settings` · หนึ่งแถว = หนึ่งเป้าหมาย: `scope` (`priority` / `request_type`) · `match_value` · `resolve_hours` · `enabled` · unique ที่ (scope, match_value) ให้กฎซ้ำเกิดไม่ได้ตั้งแต่ระดับ DB
+- **แถวคือค่าที่ทับ ไม่ใช่ค่าที่จำเป็นต้องมี** — ตารางว่างได้ ทุกเคสยังได้เป้าหมายจาก `defaults()` ในโค้ด ซึ่งเป็นคุณสมบัติเดิมที่ทำให้ระบบไม่มีวันไม่มีค่า SLA
+- migration **ยกค่าที่เซฟไว้แล้ว (5/9/25/73) มาเป็นแถวให้อัตโนมัติ** แล้วลบคีย์ `ticket_sla` ทิ้ง — สองแหล่งข้อมูลสำหรับคำตอบเดียวคือจุดที่มันเริ่มไม่ตรงกัน · `down()` เขียนกลับเป็น JSON ให้ด้วย ย้อนแล้วไม่เสียข้อมูล
+
+**ลำดับตายตัวข้อเดียว ไม่มีให้ลาก:** `request_type` → `priority` → `defaults()` (`SlaScope::precedence()`)
+request_type ต้องชนะเพราะเคสจากคำขอ**ถูกตั้ง priority เสมอ**ตอนกดรับ ถ้าให้ priority ชนะ กฎประเภทคำขอจะไม่มีวันทำงานเลยสักครั้ง
+
+**`take()`/`assign()` ไม่ทับเดดไลน์ของเคสที่เข้ากฎ request_type** — "จอต้องใช้เวลาจัดหา 3 วัน" ไม่ได้เลิกเป็นความจริงเพราะช่างที่กดรับติ๊กว่าด่วน · priority ยังตัดสินทุกอย่างที่มันเคยตัดสิน แค่ไม่หดเดดไลน์ที่ถูกกำหนดโดยเนื้องาน
+
+**รายละเอียดที่ต้องระวังและจัดการแล้ว**
+- `Ticket::serviceRequest()` (ทางกลับของ `service_requests.ticket_id`) + eager load ในหน้า list — ไม่งั้น N+1 หนึ่ง query ต่อแถว · ตรวจแล้วว่าไม่มี endpoint อื่นที่คืน TicketResource เป็นชุด
+- `Builder::value()` **ใช้ cast ของโมเดล** เลยคืน enum ไม่ใช่สตริง — ต้องบีบเป็น string ก่อนเทียบกับ `match_value`
+- `SlaTarget::booted()` ล้าง memo ทุกครั้งที่มีการบันทึก/ลบ — ปล่อยให้ผู้เรียกจำเองคือสิ่งที่วันหนึ่งจะมีคนลืม แล้วอาการคือหน้า Settings เซฟเลขใหม่แล้วโชว์เลขเก่า
+- `PUT /api/settings/sla` รับ `ticket_sla_request` เป็น**ทั้งลิสต์** แถวที่หายไปคือแถวที่ถูกลบ · ไม่ส่งคีย์นี้มาเลย = ไม่แตะกฎเดิม (ฟอร์ม Priority เซฟเดี่ยวได้)
+- `TicketResource.sla_target` บอกว่าเป้าหมายของเคสนี้มาจากไหน (`scope` / `value` / `hours`) ไว้ให้หน้าจออธิบายว่าทำไมเคส critical ได้ 3 วัน
+
+### Tests / Verification
+
+`SlaTargetTest` 14 ตัว — ไม่มีกฎ → ค่า default และรายงานว่า "ไม่มีใครเลือก" · กฎ priority ทับ default · **request_type ชนะ priority** · กฎที่ปิดอยู่ถูกข้าม · เคสที่แจ้งเองไม่โดนกฎคำขอ · **กดรับไม่หดเดดไลน์ที่มาจากกฎคำขอ** · กดรับเคสธรรมดายังตั้งเดดไลน์จาก priority เหมือนเดิม · เดดไลน์+คำตัดสินใช้เป้าหมายเดียวกัน · settings เซฟเป็นแถว · แถวที่ถูกตัดออกหายไป · เซฟฟอร์ม priority เดี่ยวไม่แตะกฎคำขอ · ประเภทคำขอที่ไม่รู้จักถูกปฏิเสธ 422 · แก้กฎแล้วเดดไลน์เคสที่ยังไม่ปิดขยับตาม · เคสบอกที่มาของเป้าหมายตัวเองได้
+**พิสูจน์ด้วยการถอด guard ออกแล้วดูให้แดง** — เงื่อนไข "กดรับไม่ทับเดดไลน์ของกฎคำขอ" (ถอดแล้วแดงตัวเดียว อีกตัวยังเขียว)
+แก้เทสต์เดิม `TicketSlaTest::test_sla_target_is_configurable_in_settings` ให้ตั้งค่าผ่านแถวแทน JSON key ที่เลิกใช้
+**suite = 1,184 passed / 5,127 assertions** · pint · migration รันบน DB จริงแล้ว (ค่า 5/9/25/73 ย้ายมาเป็นแถวครบ) · ตรวจบน DB จริงว่า**พฤติกรรมยังเหมือนเดิมทุกเคส** เพราะยังไม่มีกฎ request_type สักข้อ — 12 เคสจากคำขอยังได้ 25 ชม. เท่าเดิม
+
+
+### SLA: หน้าจอ — ตั้งกฎตามประเภทคำขอ และบอกที่มาของเดดไลน์ (2026-09-13)
+
+**Settings → Tickets & SLA เพิ่มส่วน "เป้าหมายตามประเภทคำขอ"** ใต้ตาราง Priority เดิม
+- เป็น**ลิสต์ที่เพิ่มแถวเอง** ไม่ใช่ตารางตายตัว — เพิ่มเฉพาะประเภทที่ความยาวงานต่างจากเป้าหมายตาม Priority · แต่ละแถวมีไอคอน+สีประจำประเภท (ใช้ `REQUEST_TYPE_META` ชุดเดียวกับหน้า Requests) · ช่องชั่วโมง · สวิตช์เปิด/ปิด · ปุ่มลบ
+- dropdown เสนอเฉพาะประเภทที่**ยังไม่มีกฎ** — กฎซ้ำจึงสร้างไม่ได้ตั้งแต่หน้าจอ (และ unique index กันไว้อีกชั้น) · ใช้ครบทุกประเภทแล้วจะบอกว่าไม่เหลือให้เพิ่ม
+- แถวที่ปิดสวิตช์ขึ้นชื่อแบบขีดฆ่า — ตัวเลขยังอยู่ แค่ไม่ทำงาน
+- ส่งทั้งลิสต์ตอนเซฟ แถวที่ถูกลบบนจอจึงหายจาก DB · validate เหมือนแถว Priority (1–8760 ชม. และต้องไม่น้อยกว่าเป้าหมายตอบรับ)
+
+**Drawer ของเคสเพิ่มบรรทัด "เป้าหมาย"** ใต้กำหนดตอบรับ/ปิดเคส — อ่านว่า `72h · ตามประเภทคำขอ (Hardware / peripheral)` หรือ `25h · ตามความสำคัญ` หรือ `24h · ค่าเริ่มต้น` · ถ้าไม่มีบรรทัดนี้ เดดไลน์ 3 วันบนเคส critical จะอ่านเหมือนบั๊ก · `RailRow` เพิ่มโหมด `wrap` เพราะบรรทัดนี้เป็นประโยค ไม่ใช่ timestamp — ตัดท้ายทิ้งแล้วเสียความหมาย
+
+### Tests / Verification
+
+tsc 0 · eslint 0 error · build ผ่าน · **suite = 1,184 passed / 5,127 assertions** (จากรอบหลังบ้าน ไม่มีโค้ด PHP เปลี่ยนในรอบนี้)
+
+ตรวจบนเบราว์เซอร์ครบวงจรด้วยเคสจริง **TKT-HW-260901-001 (ขอจอ)** ซึ่งเป็นเคสที่จุดประเด็นนี้มาแต่แรก:
+1. ก่อนตั้งกฎ — SLA อ่านว่า **Missed** (กำหนดปิด 2026-09-04, เป้าหมาย 25 ชม. ตามความสำคัญ)
+2. เพิ่มกฎ `Hardware / peripheral = 72 ชม.` แล้วเซฟ
+3. เปิดเคสเดิมอีกครั้ง — **Met** · กำหนดปิดขยับเป็น 2026-09-14 09:13 · บรรทัดเป้าหมายอ่านว่า `72h · request type (Hardware / peripheral)`
+4. โหลดหน้า Settings ใหม่ — แถวยังอยู่ครบ (72 ชม. เปิดใช้งาน) ยืนยันว่า payload ไป-กลับถูกต้อง
+5. กดลบแล้วเซฟ — กฎหายจาก DB · **คืนค่าเดิมครบ** (4 แถว priority, request_type 0 แถว) · ไม่มี error ใน console ตลอดทาง
+
+**ไม่ได้แตะข้อมูลของจริงค้างไว้เลย** — ตรวจซ้ำแล้วว่า `updated_at` ของตั๋วไม่ขยับ (ยังเป็น 2026-09-08) เพราะเคสที่ปิดแล้วถูกแช่ไว้โดยตั้งใจ ไม่เข้าลูปคำนวณเดดไลน์ใหม่
+
+### SLA: รื้อวิธีตั้งค่าใหม่ — จาก "อีกระบบหนึ่ง" เป็น "ข้อยกเว้นของตารางด้านบน" (2026-09-13)
+
+รอบแรกทำเสร็จแล้วผู้ใช้บอกว่า "วิธีการตั้งค่าแปลก" ซึ่งถูก — ตรวจแล้วเจอสามข้อที่เป็นความผิดของการออกแบบ
+
+**1. หน้าเดียวกันถามเรื่องเดียวกัน แต่ใช้วิธีตั้งค่าคนละแบบ** — ฝั่ง Priority เป็นตารางตายตัวกรอกเลข ฝั่งประเภทคำขอเป็นลิสต์ที่ต้องกดเพิ่มเอง มีสวิตช์ มีถังขยะ · ทั้งคู่ตอบคำถามเดียวกันคือ "เคสแบบนี้ปิดภายในกี่ชั่วโมง" แต่ต้องเรียนรู้สองแบบ
+
+**2. `<select>` ถูกใช้เป็นปุ่ม** — เลือกจาก dropdown แล้วมันสร้างแถวใหม่ทันทีแล้วรีเซ็ตตัวเอง คือการกระทำที่ปลอมตัวเป็นช่องกรอก · และตอนยังไม่มีกฎ (สภาพปกติ) ทั้งส่วนเหลือแค่ dropdown ลอย ๆ ไม่บอกว่าถ้าไม่ตั้งจะเกิดอะไรขึ้น
+
+**3. ลำดับความสำคัญของกฎอยู่ในประโยค ไม่ได้อยู่ในเลย์เอาต์** — "ประเภทคำขอชนะ Priority" เป็นกฎสำคัญที่สุดของฟีเจอร์ แต่เขียนเป็นบรรทัดสีฟ้าเล็ก ๆ ส่วนเลย์เอาต์วางสองส่วนเป็นพี่น้องกันเหมือนไม่เกี่ยวข้องกัน
+
+**ที่แก้**
+- **หัวข้อเปลี่ยนเป็น "ยกเว้นเคสที่เปิดจากคำขอเหล่านี้"** และย่อหน้าเข้ามาใต้เส้นแนวตั้ง — คำว่า *ยกเว้น* ทำหน้าที่บอกลำดับความสำคัญแทนบรรทัดอธิบาย และเลย์เอาต์เห็นด้วยกับคำนั้น (ตัดบรรทัดสีฟ้าทิ้ง)
+- **ปุ่ม "+ เพิ่มข้อยกเว้น"** เพิ่มแถวพร้อม dropdown เลือกประเภท**อยู่ในแถว** — การกระทำเป็นปุ่ม ค่าเป็น dropdown · dropdown ของแต่ละแถวเสนอประเภทที่ว่าง + ประเภทของตัวเอง สองแถวจึงชี้ของเดียวกันไม่ได้
+- **ตัดสวิตช์เปิด/ปิดออกจากหน้าจอ** — ผู้ใช้ขอ "ง่าย ๆ" แต่ผมใส่สถานะที่สามเข้ามาโดยไม่มีใครขอ ทั้งที่มีปุ่มลบอยู่แล้ว (คอลัมน์ `enabled` ยังอยู่ใน DB และยังมีเทสต์ — เป็นความสามารถที่ backend รองรับ แค่ไม่โผล่บนจอ)
+- **"≈ N วันทำการ" ข้างช่องชั่วโมง ทั้งสองตาราง** — ไม่มีใครคิดเป็น 72 ชั่วโมง ทุกคนคิดเป็นวัน · คิดจาก**เวลาทำการที่ตั้งไว้ด้านล่างในหน้าเดียวกัน** (วันละ 8 ชม. หลังหักพัก) ไม่ใช่หาร 24 เพราะนาฬิกา SLA นับแบบนั้น
+- **ข้อความว่างบอกว่าระบบทำงานยังไงตอนนี้** — "ยังไม่มีข้อยกเว้น ทุกเคสใช้เป้าหมายตามความสำคัญด้านบน" แทน dropdown ลอย
+
+### Tests / Verification
+
+tsc 0 · eslint 0 error · build ผ่าน · ไม่มีโค้ด PHP เปลี่ยน (suite เดิม 1,184 passed)
+
+**เจอบั๊กจากการดูจอจริง** — ตัวแปลง "≈ วันทำการ" รอบแรกปัด 5 ชั่วโมง (0.6 วัน) ขึ้นเป็น "≈ 1 วันทำการ" ทำให้ 5 ชม. กับ 9 ชม. อ่านได้เหมือนกัน · แก้เป็นแสดงเฉพาะเมื่อเป้าหมาย ≥ หนึ่งวันทำการเต็ม · ตรวจซ้ำบนจอ: วิกฤต 5 ชม. ไม่มีป้ายวัน · สูง 9 ชม. ≈ 1 วัน · ปานกลาง 25 ชม. ≈ 3 วัน · ต่ำ 73 ชม. ≈ 9 วัน
+
+### Ticket: Priority และ SLA เห็นได้เฉพาะคนที่รับเคสได้ (2026-09-13)
+
+Priority คือการตัดสินใจเรื่องลำดับคิวของคนที่ต้องลงมือทำ ไม่ใช่ข่าวสำหรับคนที่กำลังรอ และผู้แจ้งก็ไม่มีสิทธิ์เลือกมันอยู่แล้ว · ตอนนี้ผูกกับ **Take Case gate (`tickets.resolve`)** ทั้งหมด
+
+**ตัดออกจาก payload ไม่ใช่แค่ซ่อนบนจอ** — `TicketResource::showsPriority()` เป็นที่เดียวที่ตอบคำถามนี้ และ `AssetResource` เรียกใช้ตัวเดียวกันสำหรับตารางเคสซ่อมของทรัพย์สิน · ค่าที่ไม่เคยถูกส่งไปถึงเบราว์เซอร์ ก็อ่านจาก network tab ไม่ได้เช่นกัน
+
+**กันทางอ้อมด้วย** — `?priority=` ถูกเมิน และ `?sort=priority_desc` ตกกลับไปเรียงแบบปกติ สำหรับคนที่ไม่มีสิทธิ์ · ไม่งั้นยังกรอง/เรียงตามของที่มองไม่เห็นได้ทีละคำขอผ่าน URL
+
+**บนหน้าจอ** — คอลัมน์ในตาราง Tickets · ฟิลเตอร์ในป๊อปอัป · ตัวเลือกเรียง "ความสำคัญ" · ตาราง "กิจกรรมล่าสุด" บนแท็บภาพรวม · คอลัมน์ในแท็บเคสซ่อมของทรัพย์สิน — ซ่อนทั้งหมดเมื่อไม่มีสิทธิ์ · ป้ายบนหัว drawer หายไปเองเพราะมันเรนเดอร์จากค่าที่ไม่มีแล้ว · ไดอะล็อกรับเคส/มอบหมายไม่แตะ เพราะเป็นที่**ตั้ง**ค่าและเข้าถึงได้เฉพาะคนมีสิทธิ์อยู่แล้ว
+`Ticket.priority` ใน TS กลายเป็น optional ตามความจริงของ payload
+
+### Tests / Verification
+
+`TicketPriorityVisibilityTest` 5 ตัว — ผู้แจ้งไม่ได้รับ `priority` ทั้งในหน้ารายการและหน้ารายละเอียดเคสของตัวเอง · คนที่รับเคสได้ได้รับ · ฟิลเตอร์ `?priority=` ถูกเมิน (คืนครบทุกใบ ไม่ได้กรอง) · `?sort=priority_desc` ตกกลับไปเรียงปกติสำหรับผู้แจ้ง แต่ยังทำงานให้เจ้าหน้าที่ · ตารางเคสซ่อมของทรัพย์สินใช้กฎเดียวกัน
+**พิสูจน์ด้วยการถอด gate ออก** (ให้ `showsPriority()` คืน true เสมอ) แล้วดู 4 ใน 5 ตัวแดง
+**suite = 1,189 passed / 5,142 assertions** · tsc 0 · eslint 0 error · pint · build ผ่าน
+
+**เพิ่ม: SLA ถูกซ่อนด้วยกฎเดียวกัน** — ตรวจบนจอด้วยบัญชี Standard จริงแล้วเจอว่า Priority หายครบ แต่ผู้แจ้งยังเห็น**คอลัมน์ SLA** อยู่ (ตั๋วของตัวเองขึ้นป้ายแดง "เกิน 27 วัน 9 ชม.") และใน drawer เห็นทั้งกำหนดตอบรับ · กำหนดปิดเคส · และบรรทัดเป้าหมายที่เพิ่งเพิ่มไป
+
+Priority กับนาฬิกา SLA เป็นของชุดเดียวกัน — อันหนึ่งจัดลำดับคิว อีกอันวัดผลงานทีมเทียบเป้าหมาย · ผู้แจ้งไม่ได้เลือกทั้งคู่และทำอะไรกับมันไม่ได้ทั้งคู่ · ป้ายแดงบนตั๋วตัวเองอ่านเหมือนใบประเมินของแผนก IT ไม่ใช่คำตอบว่างานจะเสร็จเมื่อไหร่ · เลยรวมเป็นกฎเดียว `TicketResource::showsDeskInternals()` (เปลี่ยนชื่อจาก `showsPriority`)
+- payload ตัด `sla` และ `sla_target` ออกด้วย · บล็อก SLA ทั้งก้อนใน drawer หายเองเพราะเรนเดอร์จาก `view.sla`
+- คอลัมน์ SLA · ช่องกรอง SLA · ตัวเลือกเรียง "ใกล้เกิน SLA ก่อน" ซ่อนบนจอ · `?sla=breached` และ `?sort=sla_due` ถูกเมินฝั่งเซิร์ฟเวอร์
+
+`TicketDeskInternalsVisibilityTest` (เปลี่ยนชื่อจาก TicketPriorityVisibilityTest) เป็น 8 ตัว — เพิ่มกรณี SLA: ผู้แจ้งไม่ได้รับ `sla`/`sla_target` · เจ้าหน้าที่ได้รับทั้งคู่ · ฟิลเตอร์เกินกำหนดถูกเมิน · เรียงตาม SLA ตกกลับไปเรียงปกติ
+**suite = 1,192 passed / 5,153 assertions** · tsc 0 · eslint 0 error · pint · build ผ่าน
+
+**ตรวจบนจอด้วยบัญชี Standard จริง (ผู้ใช้ล็อกอินให้)** — ตาราง Ticket ของฉันเหลือ วันที่แจ้ง · Ticket no. · หัวข้อ · ผู้แจ้ง · ประเภท · สถานะ · ผู้รับผิดชอบ · drawer เหลือสถานะเคส/ผู้แจ้ง/ผู้รับผิดชอบ/ข้อมูลอื่น ๆ **ไม่มีบล็อก SLA** · ป๊อปอัปตัวกรองเหลือ Status · Category · Sort by และ Sort by เหลือ Newest / Oldest / Recently updated
+
+### Ticket: Detail Drawer — ตัดสิ่งที่พูดซ้ำออก (2026-09-15)
+
+รีวิว UX/UI หน้า drawer รายละเอียดเคสแล้วแก้ 5 จุด — หัวข้อเคยขึ้นสองที่ (ใต้หัวไดอะล็อก และในบล็อก SUBJECT) เหลือที่เดียว · "บันทึกตอนรับเคส" กับ "รายละเอียดการแก้ไข" ย้ายไปอยู่บนไทม์ไลน์ความคืบหน้าอย่างเดียว ไม่แสดงซ้ำเป็นบล็อกแยก · บล็อก "ข้อมูลอื่น ๆ" (วันที่สร้าง/อัปเดต) ที่ราง เอาออกเพราะซ้ำกับหัวไทม์ไลน์ · หัวคอลัมน์ `Ticket no.` ที่ hardcode เปลี่ยนเป็นคีย์ i18n · ความสูงขั้นต่ำของเนื้อหา 480 → 380px เพราะเคสสั้นเหลือช่องว่างค้างครึ่งจอ · คีย์ภาษาที่ไม่มีใครใช้แล้ว 4 ตัวถูกลบออกจากทั้ง en และ th
+
+### Asset: อัปเดตที่ตั้งของทรัพย์สินที่ใช้งานอยู่ (2026-09-15)
+
+พนักงานย้ายโต๊ะแล้วยกเครื่องไปด้วย — เดิมไม่มีทางแก้ `location_id` นอกจากโอนใหม่ ซึ่งจะดันสถานะกลับไป "รอรับมอบ" บันทึกประวัติเป็นการส่งมอบ และยิงแจ้งเตือนหาเจ้าของทั้งที่เจ้าของไม่ได้เปลี่ยน
+
+**`POST /api/assets/bulk-location`** รับ `ids[]` + `location_id` + `note` เส้นเดียวรับใช้ทั้งปุ่มในหน้ารายละเอียดและแถบเลือกหลายรายการ
+- **gate เป็น `assets.edit` ไม่ใช่ `assets.transfer`** เพราะเป็นการแก้ข้อมูลของทรัพย์สิน ไม่ใช่การเปลี่ยนมือผู้ถือครอง
+- **เขียนแค่ `location_id`** ไม่แตะเจ้าของ · สถานะ · คลัง และไม่ส่งกระดิ่ง/อีเมลใด ๆ — นี่คือเหตุผลที่ใช้ `AssetService::transfer()` ซ้ำไม่ได้ จึงเป็น `AssetService::relocate()` แยกออกมา
+- **เฉพาะ `deployed` และ `common`** เท่านั้น · ของในคลัง (ready) ยังไม่มีที่ตั้งให้แก้ · ที่รอกดรับยังไม่ได้ไปถึงไหน · ที่รอรับคืนกับตัดจำหน่ายไม่ต้องแก้ — นอกเหนือจากนี้ 422
+
+**ประวัติ** — เพิ่มชนิด `AssetTransferKind::Relocate` ลงเส้นทางการถือครอง โดยช่อง from/to เก็บ**ชื่อที่ตั้ง**แทนชื่อคน (ไม่งั้นแถวจะอ่านว่า "สมชาย → สมชาย") · แท็บประวัติแสดงแถวนี้พร้อมหมุดและป้าย "ย้ายที่ตั้ง" · `AuditLog` บันทึก "Updated asset location" ทุกครั้ง
+แถว `relocate` ถูกกันออกจากกราฟส่งมอบ/รับคืน 12 เดือน และจากหน้า "ประวัติการโอน" รวม — ทั้งสองที่ตอบคำถามว่า "ใครถืออะไร" ซึ่งการย้ายโต๊ะไม่ได้เปลี่ยน (`AssetTransferKind::changesCustody()`)
+
+**บนหน้าจอ** — ปุ่ม "อัปเดตที่ตั้ง" ในท้าย drawer ของทรัพย์สินที่ใช้งานอยู่ และปุ่มที่สามในแถบเลือกหลายรายการของกลุ่ม deployed/common · ไดอะล็อกบอกที่ตั้งปัจจุบัน ให้เลือกที่ตั้งใหม่ ใส่หมายเหตุได้ และมีบรรทัดบอกชัดว่า**ไม่**เปลี่ยนอะไรบ้าง · กลุ่ม deployed/common เลือกติ๊กได้แล้วสำหรับคนที่มี `assets.edit` แม้ไม่มีสิทธิ์เรียกคืน
+
+### Tests / Verification
+
+`AssetRelocateTest` 6 ตัว — ที่ตั้งเปลี่ยนแต่เจ้าของ/สถานะ/คลังคงเดิมและไม่มีการแจ้งเตือนถูกส่ง (`Notification::assertNothingSent` + `Bus::assertNothingDispatched`) · แถวประวัติเป็นที่ตั้ง→ที่ตั้งและโผล่บน `GET /assets/{id}` แต่ไม่โผล่ใน `/assets/transfers` · ของในคลังและของที่รอกดรับถูกปฏิเสธ 422 · ของกลางย้ายได้ · เลือกหลายรายการย้ายครบทุกตัว · คนมีแค่ `assets.view` โดน 403 ส่วนคนมี `assets.edit` ผ่าน
+**พิสูจน์ด้วยการถอด guard สถานะออก** แล้วดูตัวที่ยืนยัน 422 แดง
+**suite = 1,198 passed / 5,185 assertions** · tsc 0 · pint · build ผ่าน
+
+### SLA: งานซ่อมยาวมีเป้าหมายของตัวเอง — `work_class` และนาฬิกาต่อแถว (2026-09-16)
+
+**ที่มา** — เคส "Network" ไม่ใช่งานชนิดเดียว ตั้งค่า Wi-Fi ตัวหนึ่ง แก้ไดรเวอร์ตัวหนึ่ง ตั้ง VPN ตัวหนึ่ง จบในไม่กี่ชั่วโมง แต่เดินสายใหม่ทั้งชั้นหรือส่งเครื่องซ่อมกับผู้ขายไม่จบแบบนั้น และองค์กรก็วัดสองอย่างนี้แยกกันอยู่แล้วในชีวิตจริง — **30 วันสำหรับงานที่ทำเอง 45 วันเมื่อต้องผ่านผู้ขาย** ก่อนรอบนี้ไม่มีทางบอกความต่างนั้นให้ระบบรู้ งานเดินสายจึงถูกจับเทียบกับเป้าหมาย 8 ชั่วโมงเดิมของ Network แล้วขึ้น "Missed" ทั้งที่ไม่มีอะไรผิดพลาดเลยสักจุด
+
+**scope ที่สามของ SLA: `TicketWorkClass`** (`standard` / `repair_internal` / `repair_vendor`) เพิ่มเข้ามาเป็น `SlaScope::WorkClass` และ**ชนะทั้ง `request_type` และ `priority`** — เหตุผลอยู่ที่ว่าใครเป็นคนตอบ: ประเภทคำขอถูกเลือกโดยคนกรอกฟอร์ม**ก่อน**มีใครไปดูของจริง ส่วน work class ถูกเลือกโดยคนที่ถือเคสอยู่**หลังจาก**เห็นงานแล้ว ข้อมูลที่ใหม่กว่าและแม่นกว่าควรชนะ
+สิ่งที่ทำให้วางไว้บนสุดได้อย่างปลอดภัยคือ **`standard` ไม่ match กฎไหนเลย** — มันเป็นค่าเริ่มต้นของทุกเคส ดังนั้น scope นี้จะมีผลเฉพาะตอนที่มีคนตั้งใจจัดประเภทเป็น `repair_internal`/`repair_vendor` จริง ๆ เท่านั้น เคสปกติที่ไม่มีใครไปแตะไม่มีทางถูก `work_class` เปลี่ยนเดดไลน์โดยไม่ตั้งใจ
+
+**นาฬิกาต่อแถว** — แต่ละแถวเป้าหมาย (priority / request type / work class) เลือกได้เองว่านับ **`business`** (เวลาทำการ ข้ามวันหยุด/นอกเวลา/พักเที่ยง) หรือ **`calendar`** (นับทุกวันรวมวันหยุด) `sla_targets.clock` เก็บค่านี้ต่อแถว คำถาม "30 วันคือวันทำงานหรือปฏิทิน" จึงเป็นสิ่งที่**ผู้ดูแลระบบตอบผ่านหน้า Settings** ไม่ใช่โค้ดเดาแทน — งานซ่อมที่ต้องรอผู้ขายเดินทางมักตั้งเป็น `calendar` เพราะวันหยุดของช่างไม่ได้หยุดนับความล่าช้าให้ลูกค้า
+
+**Guard rails — และต่างจาก Pending ที่ถอนไปเมื่อ 2026-09-13 อย่างไร** ฟีเจอร์ Pending เดิมให้คนถือเคสหยุดนาฬิกาได้เองเป็นจำนวนเท่าไหร่ก็ได้ตามใจ ซึ่งคือช่องให้ยืดเดดไลน์ตัวเองแบบไม่มีขอบเขต รอบนี้ให้อำนาจแบบเดียวกันคืนมา (คนถือเคสเป็นคนกำหนด work class) แต่ปิดช่องนั้นด้วยรั้ว 5 ชั้น:
+- **ตัวเลขทุกตัวเป็นของ super admin** — เลือกได้แค่จากป้ายที่ตั้งไว้ล่วงหน้าใน Settings → Tickets & SLA คนถือเคสเลือกป้าย ไม่ได้พิมพ์จำนวนวันเอง
+- **เหตุผลบังคับ** (`reason`, min 5 ตัวอักษร) และไปต่อท้ายบันทึกความคืบหน้าบนไทม์ไลน์ที่ผู้แจ้งเห็นเหมือนกัน ไม่ใช่ log ที่มองไม่ถึง
+- **`AuditLog::record('Classified ticket work', ...)`** ทุกครั้งที่เปลี่ยน พร้อมค่าก่อน→หลัง
+- **ไดอะล็อกโชว์เดดไลน์เก่า → ใหม่ก่อนยืนยัน** เดดไลน์ "หลัง" มาจาก `ticket.work_class_forecast` ที่เซิร์ฟเวอร์คำนวณจริงด้วย `TicketSla` ตัวเดียวกับที่ใช้ตั้งเดดไลน์จริง ไม่ใช่ค่าที่ฝั่งจอเดาเอง — ช่างจึงเห็นตัวเลขจริงก่อนกดยืนยัน ไม่มีทางให้ตัวเองได้เพิ่มอีกกี่สัปดาห์โดยไม่รู้ตัว
+- gate ที่ endpoint เดียวกับการเขียนบันทึก (`tickets.set_work_class` + ต้องเป็นผู้รับเคสเอง + เคสต้องอยู่สถานะ "กำลังทำ") — ไม่ใช่พารามิเตอร์ของ take/assign ที่จะทำให้ตั้งได้ตั้งแต่ยังไม่เห็นงาน
+
+**แยกตัวเลขสองก้อน** — เป้าหมาย 4 ชั่วโมง (เคสปกติ) กับ 720 ชั่วโมง (งานซ่อมผู้ขาย 30 วัน) ไม่มีทางแชร์เปอร์เซ็นต์เดียวกันได้อย่างมีความหมาย ดังนั้น `GET /api/tickets/summary` คืนสองคู่แยกกัน: `sla_met_pct`/`sla_delta_pts` กับ `repair_kpi_met_pct`/`repair_kpi_delta_pts` (เฉพาะเคสซ่อม) บวก `repair_backlog` (เคสซ่อมที่ยังไม่ปิด ณ ตอนนี้) และ `has_repair_rules` (มีกฎ work_class ที่เปิดอยู่ไหม) เคสแต่ละใบตกกลุ่มไหนตัดสินจาก `work_class` **ปัจจุบัน** ของเคสนั้น
+
+**กฎจริงของ `sla_met_pct` คือ "ตัดเคสที่ถูกจัดประเภทเป็นซ่อมอยู่ตอนนี้ออกเสมอ"** (`TicketController::summary()` ทำ `$resolvedInWindow(...)->reject($isRepair)` แบบไม่มีเงื่อนไข) — **ไม่ได้ผูกกับว่ามีกฎ `has_repair_rules` อยู่หรือไม่** ทั้งสองเรื่องเป็นคนละคำถาม: `has_repair_rules` ตอบว่า "ผู้ดูแลระบบตั้งเป้าหมายไว้หรือยัง" ส่วนเซตที่ถูกตัดออกจาก `sla_met_pct` ตอบว่า "ตอนนี้มีเคสไหนถูกจัดว่าเป็นงานซ่อมบ้าง" — และการจัดประเภทเคสไม่เคยถูกบังคับให้ต้องมีกฎรออยู่ก่อน (`TicketWorkClassModal` เสนอทั้งสามคลาสเสมอ ไม่ว่ามีกฎหรือไม่ ไม่มีกฎก็แค่ขึ้นคำเตือน) ในทางปฏิบัติเซตที่ถูกตัดออกจึงว่างเปล่าจนกว่าจะมีใครเริ่มจัดประเภท ซึ่ง**มักจะ**ตามหลังการสร้างกฎ แต่ไม่มีอะไรบังคับลำดับนั้น — เคสที่ถูกจัดเป็นซ่อมก่อนมีกฎเป็นสถานการณ์ที่เกิดได้จริง
+
+**บนหน้าจอ (รอบนี้)** — การ์ด "ปิด Ticket ทัน SLA" เดิมแคบป้ายเหลือ "ปิดงานปกติทัน SLA" **เฉพาะตอนที่การ์ด KPI งานซ่อมโผล่อยู่ด้วย** เพราะนั่นคือตอนที่ `sla_met_pct` กำลังตัดเคสซ่อมออกจริง ป้ายเดิมต้องพูดความจริงข้อนั้น · การ์ดใหม่ "ปิดงานซ่อมทัน KPI" (ไอคอน `Wrench` ตัวเดียวกับไดอะล็อกจัดประเภทงาน) **ไม่ได้โผล่ตาม `has_repair_rules` เฉย ๆ** — เพราะถ้าทำแบบนั้น เคสที่ถูกจัดเป็นซ่อมก่อนมีกฎจะหายทั้งจากตัวเลข SLA ปกติ (ถูก `reject($isRepair)` ตัดออก) **และ**จากการ์ดเดียวที่จะโชว์มันได้ (การ์ดไม่โผล่เพราะยังไม่มีกฎ) งานซ่อมนั้นจะหายไปจากทั้งสองตัวเลขพร้อมกัน แก้โดยรวมเป็นเงื่อนไขเดียวชื่อ `showsRepairKpi` = มีกฎเปิดอยู่ **หรือ** มีเคสซ่อมที่ยังไม่ปิด (`repair_backlog > 0`) **หรือ** มีเคสซ่อมที่ปิดไปแล้วภายใต้ KPI (`repair_kpi_met_pct != null`) — ต่อเมื่อทั้งสามเป็นเท็จพร้อมกันเท่านั้นถึงจะไม่มีอะไรให้โชว์จริง ๆ และการ์ดกับป้ายบนการ์ด SLA เดิมใช้ตัวแปรตัวเดียวกันนี้ร่วมกัน จึงไม่มีทางเห็นป้าย "ปิดงานปกติทัน SLA" โดยไม่เห็นการ์ด KPI คู่กัน · ใต้ค่าเปอร์เซ็นต์ของการ์ด KPI มีบรรทัด "ยังไม่ปิด N เคส" เสมอ (มาจาก `repair_backlog`) เพราะเป้าหมาย 30 วันต้องรอ 30 วันถึงจะมีเคสซ่อมเคสแรกปิดจริง ช่วงแรกเปอร์เซ็นต์จึงเป็น "—" ยาวหลายสัปดาห์ และ "—" เปล่า ๆ อ่านเหมือนบั๊ก ส่วน "—, ยังไม่ปิด 3 เคส" อ่านว่า "ยังไม่ถึงเวลา" — คอมโพเนนต์การ์ดของหน้านี้ชื่อ `StatCard` ไม่ใช่ `Kpi`, prop คือ `label`/`value`/`icon`/`trend`/`hint` (ไม่มี `hint` แบบสตริงเดี่ยว — `hint` รับ `React.ReactNode` ได้อยู่แล้วเหมือนการ์ด backlog เดิม) จึงใช้ `hint` ตัวนั้นวางบรรทัด backlog แทนที่จะเพิ่ม prop ใหม่
+
+### Tests / Verification
+
+tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,313 assertions** (ครบทั้ง 12 task ของแผนนี้ ไม่มีตัวแดง)
+**eslint** — ไม่ได้รันคำสั่งเต็มตามบรีฟ (`npx eslint resources/js --max-warnings=0`) เพราะมันแดงจาก warning เดิม 2 ตัวที่ไม่เกี่ยวกับรอบนี้ (`react-hooks/exhaustive-deps` ในโมดูล stock, ไฟล์ที่ไม่ได้แตะ) รันเฉพาะสองไฟล์ที่แก้ในรอบนี้แทน (`resources/js/modules/ticket/pages/index.tsx`, `resources/js/shared/types/index.ts`) — **0 error / 0 warning**
+
+### Request: ขั้นที่ระบุตัวบุคคล ระบุได้มากกว่า 1 คน (2026-09-19)
+
+**ที่มา** — ขั้นแบบ "ระบุฝ่าย" เดิมมีสองรูปแบบ: ระบุ**ตำแหน่ง** (ใครก็ได้ในฝ่ายที่ถือตำแหน่งนั้น) กับระบุ**ตัวบุคคล** ซึ่งเก็บเป็น FK เดี่ยว `workflow_steps.approver_employee_id` จึงได้แค่คนเดียว เส้นทางที่พิงคนเดียวหยุดนิ่งทั้งสัปดาห์ที่คนนั้นลา และการเลี่ยงไปใช้โหมดตำแหน่งก็เป็นคำสัญญาคนละอย่าง — เปิดให้ทั้งระดับชั้นเซ็นได้ รวมคนที่เส้นทางไม่เคยตั้งใจจะถาม
+
+**คอลัมน์เดี่ยวกลายเป็นรายการ** — ตาราง `workflow_step_approvers` (pivot เหมือน `workflow_step_positions`) และ migration ย้ายค่าเดิมเข้าไปก่อนจะ drop คอลัมน์ เส้นทางที่ระบุคนเดียวไว้จึงยังระบุคนเดิมเป๊ะ · ฝั่ง request เพิ่ม snapshot `request_approvals.approver_employee_ids` (json) ด้วยเหตุผลเดียวกับ `approver_position_ids`: คำขอที่ยื่นไปแล้วต้องไม่เปลี่ยนความหมายเมื่อมีคนแก้ workflow ทีหลัง
+
+**คนที่ระบุคือ "ตัวสำรอง" ไม่ใช่ "ลายเซ็นที่ต้องครบ"** — ใครเซ็นก่อนปิดขั้นนั้นทันที (ใช้ `claimForActor` ตัวเดิมที่โหมดตำแหน่งใช้อยู่แล้ว: คนที่กดถูกเขียนลง `approver_employee_id` แถวจึงอ่านเหมือนแถวปกติทุกประการ) เส้นทางที่ต้องการสองลายเซ็นจริง ๆ ยังต้องเขียนเป็นสองขั้น
+- **ระบุ 1 คน = พฤติกรรมเดิมทุกอย่าง** — resolver คืนแถวผู้อนุมัติเดี่ยวตามเดิม ไม่มี snapshot json ไม่มีรูปแบบใหม่ให้อะไรข้างล่างต้องรู้จัก
+- **คนที่ลาออกถูกคัดออกตอน resolve** เหลือคนเดียว → แถวเดี่ยว · ไม่เหลือเลย → ข้ามขั้นพร้อมเหตุผล `no_department_approver`
+- **ผู้ขอไม่มีวันเป็นผู้อนุมัติของตัวเอง** แม้จะมีชื่ออยู่ในรายการ
+- **ทุกคนที่ถูกระบุได้รับกระดิ่ง + อีเมล** พร้อมกัน (`groupApprovers()` เดิมชื่อ `departmentApprovers()`) ไม่ใช่คนแรกคนเดียว
+- **validation**: ทุกคนที่ระบุต้องอยู่ในฝ่ายที่ขั้นนั้นถาม ไม่งั้น 422
+
+**ช่องโหว่เดิมที่เจอระหว่างทางและแก้ไปด้วย** — ขั้นแบบกลุ่ม (โหมดตำแหน่ง ที่มีอยู่ก่อนรอบนี้) ถูก match ด้วย `approver_employee_id` อย่างเดียวทุกที่ คนในกลุ่มจึง **กด approve ผ่าน API ได้ แต่หาคำขอนั้นไม่เจอ**: ไม่ขึ้น badge sidebar · ไม่อยู่ในแท็บ "รออนุมัติ" · `meta.awaiting_me` ไม่นับ · `can_approve` เป็น false ปุ่มจึงไม่โผล่ · และ `show()` ตอบ 403 รวมเป็นคำถามเดียวที่ `RequestApproval::scopeActionableBy()` (ชื่อในแถว **หรือ** อยู่ในกลุ่มที่แถวเปิดให้ — ทั้งแบบระบุชื่อและแบบตำแหน่ง) แล้วให้ทั้งห้าที่เรียกตัวเดียวกัน · `EmployeeService` กันลบพนักงานที่ชื่ออยู่ใน `approver_employee_ids` ด้วย เท่ากับที่กันคนที่ถือแถวตรง ๆ
+**preview ในหน้าแก้ workflow** เดิมไม่ได้ส่ง `department_id` ไปด้วย (validate ทิ้ง) ขั้นแบบฝ่ายจึง preview ขึ้น "ข้าม" เสมอ — แก้พร้อมกันเพราะการ preview ต้องบอกความจริงเรื่องคนที่ถูกระบุ
+
+**บนหน้าจอ** — โหมด "ระบุตัวบุคคล" เปลี่ยนจาก dropdown ช่องเดียวเป็น**ชิปรายชื่อ + ช่องเพิ่มคน** พร้อมบรรทัดกำกับ "คนใดคนหนึ่งเซ็นก็ผ่าน ไม่ต้องครบทุกคน" · ไทม์ไลน์ของคำขอแสดงรายชื่อทุกคนที่ยังเซ็นได้ (`approver_candidates`) แทนที่จะเว้นว่าง · preview แสดง "ใครในนี้เซ็นก่อนก็ถือว่าผ่าน"
+
+### Tests / Verification
+
+`RequestNamedApproversTest` 11 ตัว — เปิดให้ทั้งสองคน · คนที่สองในรายการเซ็นได้และครองแถว · เซ็นแล้วอีกคนกดไม่ได้ · คนในฝ่ายที่ตำแหน่งเดียวกันแต่ไม่ถูกระบุโดน 403 · ระบุคนเดียวได้แถวเดี่ยวแบบเดิม · คนลาออกถูกคัดออก · หมดทุกคน → ข้ามพร้อมเหตุผล · ผู้ขอไม่เซ็นของตัวเอง · ทั้งสองคนเห็นทั้งแท็บ/badge/ปุ่ม/รายชื่อบนไทม์ไลน์ · คนนอกไม่เห็นและโดน 403 · ทุกคนได้กระดิ่ง
+`RequestDepartmentStepTest` +1 ตัว (กลุ่มแบบตำแหน่งเห็นขั้นที่รออยู่) · `WorkflowAdminTest` อัปเดตเป็นรายการ + เพิ่มกรณีระบุคนข้ามฝ่ายโดน 422
+**suite = 1,295 passed / 5,520 assertions** · tsc 0 · eslint 0 · prettier · pint passed · migration รันบน DB จริงแล้ว
+
+### Request: ตรวจ UX/UI หน้า Workflow แล้วแก้ 5 จุด (2026-09-20)
+
+ไล่ดูหน้า `/workflows` ด้วย Chrome จริงหลังทำฟีเจอร์ "ระบุได้หลายคน" เสร็จ เจอของจริง 5 อย่างที่เทสต์ไม่ได้จับ
+
+**1. กดปุ่ม "ระบุตัวบุคคล" แล้วโหมดไม่เปลี่ยน แถมตำแหน่งที่เลือกไว้หาย** — โหมดถูก derive จาก "รายชื่อไม่ว่าง" ปุ่มจึงพยายามเดาคนแรกในฝ่ายมาใส่ให้ แต่ฝ่าย QC ไม่มีพนักงานเลย รายชื่อจึงยังว่าง โหมดเด้งกลับ ส่วน `position_ids` ถูกล้างไปแล้ว → ขั้นนั้นกลายเป็น invalid กดบันทึกไม่ได้และกู้คืนไม่ได้
+แก้เป็น **`by_person` เก็บเป็น state ของตัวเอง** ไม่ derive จากรายการ · สลับโหมดแล้ว**ไม่ล้างอะไรทั้งนั้น** — `toPayload()` เป็นคนตัดสินว่าจะส่งฟิลด์ไหนตอนบันทึก/preview ฝั่งเซิร์ฟเวอร์จึงไม่มีวันได้ step ที่ระบุทั้งคนและตำแหน่งพร้อมกัน ส่วนคนแก้กดสลับไปมาได้โดยไม่เสียของ · และการสลับโหมด**ไม่เลือกชื่อให้เอง** (ชื่อที่ไม่มีใครเลือก = เส้นทางที่ default เป็นคนตัดสิน)
+
+**2. preview พัง 500** — `Employee::whereIn(...)->pluck('name','id')` ยิง SQL หา column `name` ซึ่ง**ไม่มีจริง** (เป็น accessor จาก first_name + last_name) → `Unknown column 'name'` แก้เป็น `->get()->pluck('name','id')` · เพิ่ม `test_preview_shows_who_a_department_step_naming_people_would_reach` และ**พิสูจน์แล้วด้วยการใส่โค้ดเดิมกลับไปให้เทสต์แดง**
+
+**3. ขั้นที่ถูกข้ามใน preview อ่านว่า "ข้ามขั้นนี้ - " ห้อยท้ายไม่มีเหตุผล** — เพราะอ่านจาก `note` ซึ่งเก็บแต่ข้อความที่คนเขียน ส่วนเหตุผลอยู่ใน `skip_reason` (เป็น code) ตั้งแต่ตอนที่เพิ่ม enum นี้ · แก้ให้ preview เขียนเหตุผลผ่าน `REQUEST_SKIP_REASON_LABEL` เหมือนไทม์ไลน์ของคำขอ และ**ตัดคำว่า "ข้าม" ที่ซ้ำ** ออก (ทุก `req_skip_*` ขึ้นต้นด้วย "ข้าม"/"Skipped" อยู่แล้ว)
+
+**4. ฝ่ายที่ไม่มีพนักงานยังโชว์ช่อง "เพิ่มบุคคล" ให้กดเล่น** — dropdown ที่เปิดมาแล้วว่างเปล่าคือคำเชิญให้กดสิ่งที่ทำอะไรไม่ได้ · ซ่อนช่องไปเลยแล้วขึ้นข้อความแทน แยกสองกรณีออกจากกัน: **"ฝ่ายนี้ยังไม่มีพนักงาน"** (เรื่องกำลังคน สั่งให้เลือกคนก็เลือกไม่ได้) กับ **"เลือกอย่างน้อย 1 คน"** (ฝ่ายมีคน แต่ยังไม่ได้เลือก)
+
+**5. บรรทัด "คนใดคนหนึ่งเซ็นก็ผ่าน" ขึ้นตั้งแต่ยังไม่มีชื่อสักคน** — ย้ายไปขึ้นเมื่อมีชื่อแล้วอย่างน้อย 1 · และ picker ไม่เสนอคนที่ลาออกแล้ว (resolver คัดออกอยู่แล้ว เสนอไปก็เป็นชื่อที่เงียบ ๆ ไม่ทำงาน) ส่วนชื่อที่ถูกเลือกไว้แล้วยังแสดงเป็นชิปเสมอไม่ว่าสถานะไหน
+
+**ตรวจบนจอจริง** (บัญชี Super Admin, ไทย + อังกฤษ) — สลับโหมดไป-กลับแล้วชิปตำแหน่ง `Manager / Asst. Manager` กลับมาครบ · ตั้ง 2 คน (Maree Suaymak · Kankanok B) แล้ว preview ขึ้น "Maree Suaymak · Kankanok B / ใครในนี้เซ็นก่อนก็ถือว่าผ่าน" · ขั้นที่ข้ามบอกเหตุผลครบทุกขั้น · **ไม่ได้กดบันทึกทับข้อมูลจริง** (กดยกเลิกทุกครั้ง workflow ยังเป็น 13 เส้นทาง / 45 ขั้นเท่าเดิม)
+
+### Tests / Verification
+
+**suite = 1,296 passed / 5,524 assertions** · tsc 0 · eslint 0 · prettier · pint passed · build ผ่าน
+
+### Request: แนบไฟล์ประกอบคำขอ (2026-09-21)
+
+คำขอเดิมมีแต่ `reason` กับ `fields` — คนขอกล้องวงจรปิดอธิบายจุดติดตั้งเป็นตัวหนังสือให้ QC กับ SE อ่านแล้วเซ็น ซึ่งไม่เคยพอ · รอบนี้ทุกประเภทแนบไฟล์ได้ และ **CCTV บังคับอย่างน้อย 1 ไฟล์**
+
+**ไฟล์ไปพร้อมกับตอนส่ง ไม่ใช่ตามไปทีหลัง** — Ticket ใช้วิธีสร้างก่อนแล้วค่อยอัปโหลด ซึ่งใช้กับคำขอที่ *บังคับ* แนบไม่ได้: ถ้าอัปโหลดพัง จะเหลือคำขอ CCTV ที่ไม่มีไฟล์ค้างอยู่ทั้งที่ validation บอกว่าห้ามมี · `POST /api/service-requests` จึงเป็น multipart ที่พาไฟล์ไปด้วย และ `RequestService::create()` เขียนไฟล์ใน transaction เดียวกับตัวคำขอ
+
+**แก้ได้จนกว่าคนแรกจะเซ็น** — `ServiceRequest::attachmentsLocked()` คือ "มี approval แถวไหน `approved` แล้วหรือยัง" · ก่อนหน้านั้นผู้ขอ (และคนที่ยื่นแทน) เพิ่ม/ลบได้ผ่าน `POST|DELETE /api/service-requests/{id}/attachments` หลังจากนั้นทั้งสองเส้นตอบ 403 — ผู้อนุมัติตัดสินจากของที่อยู่ตรงหน้า คำขอที่สลับหลักฐานทีหลังได้ไม่ใช่บันทึกของการตัดสินนั้น · **ผู้อนุมัติเองก็แก้ไม่ได้** ตั้งแต่แรก (อ่านและดาวน์โหลดได้อย่างเดียว)
+
+**กฎ "ใครเห็นคำขอได้" ย้ายมาอยู่ที่เดียว** — เดิมฝังอยู่ใน `RequestController::show()` · ย้ายเป็น `ServiceRequest::isVisibleTo()` แล้วให้ route ดาวน์โหลดไฟล์ใช้ตัวเดียวกัน ไฟล์จึงไม่มีทางเปิดได้โดยคนที่เปิดคำขอต้นทางไม่ได้ · binary อยู่บน private disk เหมือน ticket/contract เข้าถึงผ่าน `files.request-attachment` ที่ต้อง login เท่านั้น
+
+**ลิมิต 5 ไฟล์ · 10 MB/ไฟล์** อยู่ที่ `RequestAttachmentService` ที่เดียว แล้วส่งให้ทั้ง validation, endpoint เพิ่มไฟล์ และ `/service-requests/options` (wizard อ่านไปเขียนบรรทัดบอกชนิด/ขนาด) · wizard กันขนาดรวมไม่เกิน 30 MB เองด้วย เพราะ `post_max_size` = 40M จะปัดตกก่อนที่ Laravel จะตอบอะไรที่อ่านรู้เรื่อง
+
+**ของซ้ำสามที่ถูกยุบเป็นหนึ่ง** — กล่อง drag & drop + รายการไฟล์ เคยเขียนซ้ำใน `create-ticket-drawer` กับ `edit-ticket-drawer` และกำลังจะกลายเป็นที่สาม · ดึงออกเป็น `shared/components/file-drop-zone.tsx` (`FileDropZone` · `AttachmentList` · `AttachmentRow` · `mergeFiles` · `formatFileSize`) แล้วให้ทั้งสามหน้าใช้ตัวเดียวกัน — พฤติกรรมเดิมทุกอย่าง ต่างแค่ลิมิตกับบรรทัดกำกับที่ส่งเข้าไป · คีย์ `ticket_attach_drop` / `ticket_attach_count` ย้ายไปเป็น `attachment_drop` / `attachment_count` ใน `common`
+
+**บนหน้าจอ** — wizard ขั้น ② มีบล็อกไฟล์แนบเต็มความกว้างใต้ฟอร์ม (ติดดาวเมื่อเลือก CCTV และไปขั้น ③ ไม่ได้ถ้ายังไม่แนบ) · ขั้น ③ แสดงรายชื่อไฟล์ที่กำลังจะส่ง · footer มี progress bar ของการอัปโหลดจริง · หน้า detail มี section ไฟล์แนบในคอลัมน์ซ้าย ทุกคนที่เปิดคำขอได้กดดาวน์โหลดได้ ส่วนปุ่มเพิ่ม/ลบขึ้นเฉพาะตอนที่ `can_attach` ยังจริง
+
+### Tests / Verification
+
+`RequestAttachmentTest` 11 ตัว — catalog บอกว่าบริการไหนบังคับ · CCTV ไม่แนบ → 422 และไม่มีคำขอเกิดขึ้น · แนบแล้วได้ทั้งแถวและไฟล์บนดิสก์ · บริการอื่นไม่แนบก็ส่งได้ · เพิ่ม/ลบได้ตอนยังไม่มีใครเซ็น · เซ็นแล้วทั้งเพิ่มและลบโดน 403 · ผู้อนุมัติแก้ไฟล์ไม่ได้ · ผู้อนุมัติดาวน์โหลดได้ คนนอกโดน 403 · เกิน 5 ไฟล์ → 422 · `.exe` → 422
+`RequestDepartmentStepTest` / `RequestNamedApproversTest` แก้ fixture ให้ยื่น CCTV พร้อมไฟล์ (กฎใหม่บังคับจริง — เทสต์เดิม 20 ตัวแดงก่อนแก้)
+**suite = 1,307 passed / 5,566 assertions** · tsc 0 · eslint 0 · prettier · pint passed · build ผ่าน · migration รันบน DB จริงแล้ว
+
+### DB: ลบแล้วประวัติหาย — ปิดสามทางที่เปิดอยู่ (2026-09-21)
+
+ตรวจ FK ทั้ง 84 เส้นใน DB จริงแล้วพบว่า `cascadeOnDelete` ถูกใช้กับ "ลูกแท้" (attachments, ticket_updates, role_permissions) ปนกับ "ประวัติ" ซึ่งไม่เหมือนกัน — ลูกแท้หายไปพร้อมพ่อได้ ประวัติหายไม่ได้ · สามเส้นที่หลุดออกมา **ทำได้ผ่าน UI จริง** ไม่ใช่ทฤษฎี:
+
+| จุด | ลบผ่านได้เพราะ | สิ่งที่หายเงียบ ๆ |
+|---|---|---|
+| `stock_movements.stock_item_id` | `destroy` ปล่อยผ่านเมื่อ `current_stock = 0` + มูลค่า 0 — SKU ที่รับเข้าแล้วเบิกออกหมดเข้าเงื่อนไขพอดี | ledger ทั้งเส้น + lots + serials + serial events |
+| `asset_transfers.asset_id` | `destroy` ปล่อยผ่านเมื่อ status = Ready — เครื่องที่แจกแล้วรับคืนก็กลับมา Ready | custody trail ทั้งหมด |
+| `workflow_step_approvers.employee_id` | `deletionBlockers()` ไม่เคยเช็คตารางนี้ (ฟีเจอร์ระบุตัวบุคคลเพิ่งเพิ่ม) | ชื่อผู้อนุมัติหลุดจาก step → route กลายเป็นเส้นกลวง |
+
+**ปิดที่ "พ่อ" เส้นเดียวพอ** — ไม่ต้องไล่แก้ทั้ง 11 เส้นในสาย stock: เมื่อลบ `stock_items` ไม่ได้แล้ว lots / serials / serial events ที่ห้อยอยู่ก็ปลอดภัยตามไปเอง · `stock_balances` กับ `stock_alert_logs` ยัง cascade ต่อโดยตั้งใจ — เป็นค่า derived ไม่ใช่บันทึก
+
+**พ่วง net อีกสองเส้น** `tickets.requester_id` และ `access_memberships.employee_id` — สองอันนี้ `deletionBlockers()` กันอยู่แล้วและกันได้จริง แต่ comment ในโค้ดเองเขียนว่า "กลัวเส้นนี้" มาตลอด ตอนนี้ชั้น DB กันด้วย
+
+**แต่ RESTRICT เฉย ๆ ทำให้ UX แย่ลง** — `confirm-dialog.tsx` เดิม `catch` แล้วทิ้ง error แสดง `t('cd_error')` เสมอ ผู้ใช้จะเห็นแค่ "เกิดข้อผิดพลาด" · เพิ่ม option `errorMessage?: (error) => ReactNode | undefined` ให้ผู้เรียกแปลเหตุผลเอง (คีย์ภาษาอยู่กับโมดูล ไม่ใช่ที่ `shared/`) แล้วให้ `StockItemController` / `AssetController` ตอบ 422 `has_history` + จำนวนรายการ กลับไป · dialog จึงค้างอยู่พร้อมบรรทัด "มีประวัติเคลื่อนไหว 12 รายการ ลบไม่ได้" แทนข้อความกลาง · helper `refusalReason()` ใน `shared/lib/api-errors.ts` อ่าน 422 ที่ส่ง key มาใน `message`
+
+**ลำดับสำคัญ** — guard ที่ app มาก่อน FK เสมอ ถ้าเปลี่ยน FK ก่อนผู้ใช้จะเจอ error ดิบแทนเหตุผลที่อ่านรู้เรื่อง
+
+**วิธีลง** — เพราะ migration เพิ่งยุบเป็นชุด `0001_01_01_*` และ DB ยังไม่มีข้อมูลธุรกิจ จึงแก้ไฟล์ migration เดิม 5 ไฟล์แล้วยิง `ALTER TABLE` 5 คำสั่งกับ DB ที่มีอยู่ ผลลัพธ์เท่ากับ fresh install ทุกประการ โดยไม่ต้อง `migrate:fresh` (ซึ่งจะทำให้เทมเพลตอีเมลที่แก้มือถูก `EmailTemplateSeeder` เขียนทับ เพราะมันใช้ `updateOrCreate`)
+
+### Tests / Verification
+
+`StockItemTest::test_cannot_delete_item_that_has_ever_moved` · `AssetApiTest::test_delete_blocked_when_asset_has_a_custody_trail` · `EmployeeDeleteTest::test_an_employee_named_on_a_workflow_step_is_refused` — ทั้งสามยืนยันทั้ง 422 ที่มีเหตุผล และว่าแถวประวัติยังอยู่ครบ
+**suite = 1,329 passed / 5,641 assertions** · tsc 0 · pint passed · build ผ่าน · ALTER รันบน DB จริงแล้ว (ยืนยัน `DELETE_RULE = RESTRICT` ครบ 5 เส้น)
+
+### DB: อีเมลพนักงานเป็นของคนเดียว — unique ที่ชั้น DB (2026-09-21)
+
+`employees.email` กับ `employees.username` ไม่มี unique index มาตลอด · ตรวจแล้วพบว่า **ชั้น app กันครบอยู่แล้ว** — `EmployeeImportService` เช็ค 3 ทาง (ซ้ำกับ employee เดิม · ซ้ำกับ `users.email` · ซ้ำกันเองในไฟล์ เทียบแบบ `strtolower()`) และ `StoreEmployeeRequest` มี `Rule::unique` + closure เช็คข้ามตาราง `users` ส่วน `username` ยิ่งไม่ใช่ทางเข้า เพราะ FormRequest จงใจไม่รับคอลัมน์นี้เลย มันเป็นกระจกเงาของ `users.username` ที่ unique อยู่แล้ว
+
+สิ่งที่ยังเหลือจึงไม่ใช่ "รูที่เปิดอยู่" แต่เป็น **net**: validate แล้วค่อย insert ไม่ใช่ atomic (สอง import พร้อมกันผ่านด่านได้ทั้งคู่) และไม่มีอะไรบังคับว่าโค้ดในอนาคตต้องเดินผ่าน FormRequest · จังหวะนี้คือจังหวะที่ถูกที่สุด เพราะตารางยังว่าง — ถ้ารอจนมีข้อมูลจริงแล้วเจอซ้ำ `ALTER` จะล้มทันที
+
+**เลือก unique ธรรมดา ไม่ใช่ unique เฉพาะคน active** — ทางเลือกคือ generated column `IF(status='active', email, NULL)` เพื่อให้รีไซเคิลอีเมลของคนที่ลาออกได้ทันที แต่แลกกับคอลัมน์ที่ต้องอธิบายและ `Rule::unique` ที่จะเข้มกว่า DB จนสับสน · วิธีที่เลือกคือถ้าจะใช้อีเมลซ้ำ ให้ล้างช่องอีเมลของคนเก่าก่อน — ตรวจย้อนหลังได้ชัดว่าใครถือ address นั้นอยู่ "ตอนนี้"
+
+**`NULL` ซ้ำได้ `''` ซ้ำไม่ได้** — คือกับดักของ unique index บนคอลัมน์ที่ปล่อยว่างได้ พนักงานที่ไม่มีอีเมลบริษัทมีเยอะ ถ้าทางไหนเขียน `''` เข้ามาคนที่สองจะชนทันที · ใส่ mutator `setEmailAttribute` / `setUsernameAttribute` ที่ Model แปลง blank → `null` (และ trim) เพื่อให้ข้อนี้จริงกับทุกทางเขียน ไม่ต้องหวังว่าทุก caller จะจำได้ · collation เป็น `utf8mb4_unicode_ci` อยู่แล้ว `A@x.co` กับ `a@x.co` จึงชนกันเองโดยไม่ต้องทำอะไรเพิ่ม
+
+### Tests / Verification
+
+`EmployeeApiTest::test_the_database_itself_refuses_a_duplicate_email` (คาด `QueryException` จากการเขียนที่ไม่ผ่านฟอร์ม) · `::test_employees_without_an_email_do_not_collide` (`''` · ไม่ส่งมา · `'   '` → `NULL` ทั้งสามและอยู่ร่วมกันได้)
+**suite = 1,331 passed / 5,645 assertions** · pint passed · ALTER รันบน DB จริงแล้ว (`employees_email_unique` · `employees_username_unique`)
+
+### DB: เก็บกวาดหลังตรวจสคีมา — สองจุดที่ "ดูผิด" (2026-09-21)
+
+ปิดท้ายการตรวจ DB รอบนี้ด้วยสองอย่างที่ไม่ใช่บั๊ก แต่ทำให้คนอ่านสคีมาเข้าใจผิดได้ (และทำให้ผมเองรายงานผิดมาแล้ว)
+
+**`stock_counts.warehouse` / `.category` ไม่ใช่ FK ที่ลืมใส่** — สองคอลัมน์นี้คือตัวกรองที่ใช้ตอนเปิดใบนับ · `StockCountService::open()` resolve ชื่อ → items **ครั้งเดียว ใน transaction เดียวกับที่เขียน `stock_count_lines`** และอีก 3 action ที่เหลือ (`saveCounts` · `commit` · `cancel`) ทำงานกับไลน์ที่ materialise แล้วล้วน ๆ ไม่มีที่ไหน query ด้วยชื่ออีก · เปลี่ยนชื่อคลังทีหลังจึงไม่กระทบใบที่เปิดค้าง และใบเก่ายังอ่านชื่อแบบวันที่นับ — หลักการเดียวกับ `asset_transfers.asset_tag` · ใส่ comment กำกับไว้แล้วเพราะเดิมไม่มี ต่างจาก `asset_tables` ที่เขียนเจตนาไว้ชัด
+
+**`rp_allowed_idx` ถูกถอด** — index บน `role_permissions.allowed` (boolean, cardinality 2) · วัดด้วย `EXPLAIN` ทั้งสอง query ที่อ่านคอลัมน์นี้: `User::permissions()` (`role_id` + `allowed`) เลือก `role_permissions_role_id_permission_unique` เพราะมี `role_id` นำ ส่วนหน้า matrix (`allowed` อย่างเดียว ได้ครึ่งตาราง) ให้ `key: NULL` — optimizer เห็น index แล้วทิ้ง เลือกสแกนแทน · ไม่มีทางไหนใช้ เขียน comment แทนไว้ว่าทำไมถึงไม่ควรใส่กลับ
+
+**ส่วน `service_requests` ปล่อยไว้ตามเดิม** — 18 index ฟังดูเยอะ แต่ 11 ตัวเป็น index ที่ InnoDB บังคับให้มีบนคอลัมน์ FK (ลบแล้วได้ error 1553) · และ `status` เดี่ยวที่ดูซ้ำกับ `(status, type)` นั้น `EXPLAIN` บอกว่า optimizer **เลือกตัวเดี่ยว** เพราะ key สั้นกว่า — ลบทิ้งคือการแลก ไม่ใช่การเก็บขยะ · เรื่อง index ของตารางนี้ควรรอวัดจาก slow log ตอนมีข้อมูลจริง ไม่ใช่เดาจากรูปร่างสคีมา
+
+### Tests / Verification
+
+ไม่มีเทสต์ใหม่ — ทั้งสองอย่างไม่เปลี่ยนพฤติกรรม · `StockCountTest` 10 ตัว · `PermissionMatrixTest` + `EmployeePermissionGatingTest` 14 ตัวผ่าน · ยืนยันด้วย `EXPLAIN` ซ้ำหลัง `DROP INDEX` ว่า query สิทธิ์ยังเลือก unique index ตัวเดิม
+**pint passed** · `DROP INDEX` รันบน DB จริงแล้ว
+
+### System: ระยะเวลาเก็บ log — กวาดล้างทุกคืน ตั้งค่าได้เอง (2026-09-22)
+
+สามตารางโตไปเรื่อย ๆ โดยไม่มีอะไรลดมันเลย: `email_logs` (เก็บเนื้ออีเมลทุกฉบับ) · `audit_logs` · `notifications` · ทั้งสามไม่ใช่ข้อมูลธุรกิจ แต่เป็น "บันทึกว่าระบบทำอะไรไป" คำถามจึงไม่ใช่ว่าเก็บไหม แต่คือเก็บนานแค่ไหน — และคำตอบเป็นของผู้ดูแลระบบ ไม่ใช่ของโค้ด
+
+**ล้างเนื้อก่อน ลบแถวทีหลัง** — `body_html` คือน้ำหนักเกือบทั้งหมด ส่วนที่เหลือของแถว (ใคร เมื่อไร เทมเพลตไหน สำเร็จหรือไม่) หนักไม่กี่ร้อยไบต์ และเป็นตัวที่ `EmailTemplateController` ใช้นับ `sent_total` / `failed_total` · เนื้อจึงหายที่ 90 วัน แต่แถวอยู่ถึง 730 วัน — ตารางหยุดโต สถิติยังตรง และ log ยังตอบได้ว่า "ส่งไปไหม" นานหลังจากที่มันเลิกตอบว่า "ส่งว่าอะไร" · **ไม่ต้องแก้ frontend เลยสักบรรทัด** เพราะ `EmailLogController::show()` เขียนรองรับ `body_html` ที่เป็น null ไว้อยู่แล้ว (ขึ้นว่า "ไม่ได้บันทึกเนื้อหาไว้" ไม่ใช่กรอบเปล่า)
+
+**`0` = เก็บตลอดไป** ใช้ convention เดียวกับ session timeout / password expiry ที่อยู่หน้าเดียวกัน · ค่าเริ่มต้น: เนื้ออีเมล 90 วัน · แถวอีเมล 730 วัน · **audit log = 0** · แจ้งเตือนที่อ่านแล้ว 90 วัน · audit ตั้ง 0 โดยตั้งใจ — การล้าง audit trail คือการตัดสินใจว่าองค์กรต้องพิสูจน์อะไรได้บ้างในอนาคต ไม่ใช่สิ่งที่ค่า default ในโค้ดควรตัดสินแทน
+
+**แจ้งเตือนที่ยังไม่อ่านไม่ถูกลบ** ไม่ว่าจะเก่าแค่ไหน — มันยังเป็นกล่องข้อความของใครบางคนอยู่
+
+**index ต้องมาก่อน ไม่งั้นกวาดทีสแกนทั้งตาราง** — `email_logs` มี `(status, created_at)` ซึ่ง prune ใช้ไม่ได้เพราะ `status` นำ → เพิ่ม `email_logs_created_at_index` · `notifications` มีแค่ `(notifiable_type, notifiable_id)` → เพิ่ม `(read_at, created_at)` โดยให้ `read_at` นำเพราะเป็นครึ่งที่ selective · `audit_logs` มี `audit_created_at_idx` อยู่แล้ว
+
+**ลบเป็น chunk ละ 1,000 แถว** ไม่ใช่ statement เดียว — DELETE ที่กินข้อมูลทั้งปีถือ lock นานเท่าที่มันทำงาน และตัวนี้รันตอน 02:00 บน DB ตัวเดียวกับที่กะกลางคืนใช้ · เขียน audit หนึ่งบรรทัดต่อรอบ **เฉพาะเมื่อมีอะไรถูกลบจริง** — ถ้าเขียนทุกคืนจะกลายเป็น 365 แถว/ปี ในตารางที่คำสั่งนี้มีไว้ทำให้เล็กลง
+
+**ไฟล์:** `LogRetentionService` (ตรรกะ + `DEFAULTS` ที่หน้าจอกับ sweep อ่านร่วมกัน จะได้ไม่ขัดกัน) · `PruneLogs` (command บาง) · `Schedule::command('logs:prune')->dailyAt('02:00')` · `SettingsController::updateSecurity()` รับ 4 คีย์ใหม่แบบ `sometimes` (client เก่าที่ส่งมาแค่ 2 ฟิลด์ยังทำงานได้) · หน้า Settings → Security เพิ่มกลุ่ม "ระยะเวลาเก็บข้อมูล" ใช้ `SecurityPolicyRow` ตัวเดิม เพิ่ม prop `offLabel` เพราะ 0 ในบริบทนี้อ่านว่า "เก็บตลอดไป" ไม่ใช่ "ปิด"
+
+### Tests / Verification
+
+`LogRetentionTest` 8 ตัว — เนื้อหาย/แถวอยู่ · สถิติ sent/failed ไม่เปลี่ยนหลังล้างเนื้อ · แถวที่เกิน window ถูกลบ · แจ้งเตือนที่ยังไม่อ่านรอด แม้อายุ 400 วัน · audit ไม่ถูกแตะเมื่อไม่ได้ตั้ง window · ตั้ง 0 ทุกช่องแล้วไม่มีอะไรหาย และไม่มี audit line ถูกเขียน · อ่าน/บันทึกค่าผ่าน API ได้ · ส่งมาแค่ 2 ฟิลด์แล้ว window เดิมไม่ถูกล้าง
+**suite = 1,341 passed** · tsc 0 · pint passed · build ผ่าน · `ALTER` เพิ่ม 2 index บน DB จริงแล้ว
+*(`MasterDataSeedTest` 1 ตัวแดงอยู่ เป็นงาน vendor/seeder ที่กำลังทำค้างในอีก session ไม่เกี่ยวกับการแก้ชุดนี้)*
+
+## Report Module — Phase 1 (2026-09-25)
+
+โมดูล Report ตัวแรกของระบบ — เดิมมีแค่การ์ด Coming soon บน Dashboard ฝั่ง IT ตอนนี้เปิดเป็นโมดูลของตัวเองที่ `/reports`
+
+**Report Center (`/reports`)** — หน้ารวมรายการรายงาน อ่านจาก `GET /api/reports` ซึ่งคืนเฉพาะรายงานที่ผู้เรียกมีสิทธิ์ครบตาม `ReportCatalogue` (รายงานที่เปิดสิทธิ์ไม่ครบจะไม่ถูกส่งมาเลย ไม่ใช่ส่งมาแล้วเทาไว้) มีช่องค้นหาและชิปกรองตามโดเมน (ตอนนี้มีโดเมนเดียวคือ `tickets`) ส่วนโดเมนอื่นที่ยังไม่ทำ (asset, contract, stock, request, employee, access) จะไม่ถูกแสดงเช่นกัน เพราะหน้ารวมนี้แสดงเฉพาะรายงานที่ผู้เรียกเปิดได้จริงเท่านั้น
+
+**Ticket & SLA overview (`/reports/tickets-overview`)** — รายงานตัวแรกและตัวเดียวของเฟสนี้
+- **ตัวกรอง** ช่วงวันที่ · หมวดหมู่ (จำกัดตามสิทธิ์ `tickets.level_*` ของผู้เรียก) · priority · แผนก · ผู้รับผิดชอบ — เก็บใน `localStorage` เหมือนหน้ารายการ ticket
+- **KPI tiles** จำนวนเคสในช่วง, ปิดทัน SLA, resolve time median/P90, backlog ที่ยังไม่ปิด
+- **กราฟรายสัปดาห์** เปิด/ปิดต่อสัปดาห์, **SLA ตาม priority** พร้อมเส้นเป้าหมาย 90%, **อายุ backlog**, ตาราง **by category / by department / by assignee**
+- **ตารางแถว** แบ่งหน้าฝั่ง server (คอลัมน์เดียวกับตัวกรอง) และ **ไดอะล็อก export** เลือกฟอร์แมต xlsx/pdf ก่อนดาวน์โหลด
+
+**Endpoint**
+
+| Method | Path | หน้าที่ |
+|---|---|---|
+| GET | `/api/reports` | รายการรายงานที่ผู้เรียกเปิดได้ (Report Center) |
+| GET | `/api/reports/tickets/overview` | สรุป KPI/กราฟของรายงาน Ticket & SLA |
+| GET | `/api/reports/tickets/overview/rows` | ตารางแถว ticket แบ่งหน้าฝั่ง server |
+| GET | `/api/reports/tickets/overview/export?format=xlsx\|pdf` | export ตรง (synchronous), PDF จำกัด 1,000 แถว |
+
+**สิทธิ์** เมนู/route gate ด้วย `anyOf: ['tickets.view_all']` (แทนที่ลิสต์ role เดิม super/admin/hr — HR ยังไม่เห็นเมนูนี้จนกว่าจะมีรายงานฝั่งพนักงาน) ส่วนตัวรายงานเองต้องมีทั้ง `tickets.view_all` **และ** `tickets.resolve` (priority/SLA เป็นข้อมูลภายในทีมงาน เห็นทุก ticket อย่างเดียวไม่พอ) และหมวดหมู่ที่กรอง/เห็นได้ถูกจำกัดตามสิทธิ์ `tickets.level_*` ของผู้เรียกเสมอ
+
+**นิยามตัวเลข** ประชากร = ticket ที่สร้างในช่วง `[from 00:00, to 23:59:59]` · วัด SLA เฉพาะเคสที่ปิดแล้วและมีทั้ง `resolved_at`/`sla_resolve_due_at`, ทันเมื่อ `resolved_at <= due` · resolve time = ชั่วโมงปฏิทินจากเปิดถึงปิด · median/P90 ใช้ nearest-rank · backlog = ticket ที่ยังไม่ปิดทั้งหมด **ไม่กรองตามช่วงวันที่** · ช่วงก่อนหน้า (สำหรับเทียบ trend) = ช่วงความยาวเท่ากันก่อน `from`
+
+**Dependency ใหม่** `maatwebsite/excel` (^3.1) สำหรับ export xlsx — ไฟล์อยู่ใต้ `app/Exports/Report/`
+
+**ค้างไว้ (เฟสถัดไป)** รายงาน asset / contract / stock / request / employee / access · export แบบคิว + แผง "My exports" + snapshot strip บนหน้า hub + ปักหมุด + column picker · ส่งรายงานตามกำหนดเวลาทางอีเมล · ตั้งเป้า SLA ได้จากหน้า Settings
+
+### Tests / Verification
+
+`tests/Feature/Report` + `SidebarRouteGateTest` = **22 passed / 88 assertions** · pint (เฉพาะไฟล์ report) passed, ไม่มีอะไรต้องแก้ · build ผ่าน (`npm run build`)
+
+## Report Module — Phase 2: เครื่องมือรายงานแบบตาราง (2026-09-25)
+
+เฟสนี้เพิ่ม **engine รายงานแบบตาราง (tabular)** ที่ใช้ร่วมกันได้ทุกโมดูล — ต่างจากเฟส 1 ที่ Ticket & SLA overview เขียน controller/route/หน้าเป็นของตัวเองทั้งหมด รายงานสาย tabular ประกาศแค่ **1 คลาส `TabularReport`** (filters/query/columns/summary) แล้วให้ engine ที่มีอยู่แล้ว (`TabularReportController`, `TabularReportExporter`, หน้า React `pages/tabular-report.tsx`) ทำที่เหลือทั้งหมด
+
+**วิธีเพิ่มรายงาน tabular ใหม่**
+1. สร้างคลาส `app/Services/Report/<Domain>/XxxReport.php` extends `App\Services\Report\Tabular\TabularReport` — ประกาศ `key()`, `title()` (Thai, ใช้พิมพ์ไฟล์ export), `filters()`, `query()`, `columns()`, และ `summary()` ถ้าอยากมีมากกว่าค่า total เริ่มต้น (heading ของ column/filter/summary เขียนเป็นภาษาไทยตรงนี้เลย)
+2. เพิ่ม entry ใน `App\Support\ReportCatalogue::definitions()` — ระบุ `domain`, `kind: 'tabular'`, `class`, `requires` (permission ที่ต้องมีครบ) และ `formats`
+3. เพิ่มคีย์ i18n ใน `resources/js/lang/en/report.ts` + `lang/th/report.ts`: `rep_<key_stem>_title` / `_desc` (หัวข้อ+คำอธิบายบนหน้า React), `rep_c_<column key>` ต่อคอลัมน์, `rep_fl_<filter name>` ต่อตัวกรอง, `rep_k_<summary key>` ต่อ summary tile — ใช้คีย์ซ้ำข้ามรายงานได้ถ้าคอลัมน์/ตัวกรองชื่อเดียวกัน (เช่น `rep_c_status`, `rep_fl_category_id`)
+4. เขียนเทสต์ (`tests/Feature/Report/`) อย่างน้อย: definition คืนคอลัมน์/ตัวกรองที่ถูกต้อง, query กรองถูกต้อง, สิทธิ์ปฏิเสธคนไม่มี `requires`, export ไม่พัง — ไม่ต้องแตะ route/controller เพราะ engine เดิมรองรับให้แล้ว
+
+**รายงานใหม่ 3 ตัว (Phase 2)**
+- **สัญญาใกล้หมดอายุ** (`contracts.expiring`, โดเมน `contracts`) — `app/Services/Report/Contract/ContractExpiringReport.php` — สัญญาเช่า/MA/License ที่ end date อยู่ในหน้าต่างที่เลือก (30/60/90/180 วัน) รวมถึงที่เลยวันสิ้นสุดแล้วแต่ยังไม่ถูกปิด (ไม่ cancelled/expired) เพราะยังต้องมีคนจัดการ ต้องมีสิทธิ์ `contracts.view`
+- **ทะเบียนทรัพย์สิน** (`assets.register`, โดเมน `assets`) — `app/Services/Report/Asset/AssetRegisterReport.php` — ทรัพย์สินทุกชิ้น พร้อม serial ผู้ถือ แผนก สถานะ ที่มา และมูลค่า ต้องมีสิทธิ์ `assets.view`
+- **ประกันใกล้หมดอายุ** (`assets.warranty_expiring`, โดเมน `assets`) — `app/Services/Report/Asset/WarrantyExpiringReport.php` — ทรัพย์สินที่ซื้อ (ไม่ใช่เช่า, ไม่ใช่ lifetime warranty, ไม่ถูกตัดจำหน่าย) ที่ประกันจะหมดในหน้าต่างที่เลือก ต้องมีสิทธิ์ `assets.view`
+- ทั้งสามโมดูล (`assets`, `contracts`) ใช้ resolver ร่วมกันผ่าน trait `App\Services\Report\Asset\AssetColumns` (ผู้ถือ/แผนกปัจจุบันของทรัพย์สิน) เพื่อไม่ให้สองรายงาน asset อ่านค่าต่างกัน
+
+**เมนู/route gate ใหม่** เดิม `/reports` เปิดด้วย `anyOf: ['tickets.view_all']` อย่างเดียว ตอนนี้ขยายเป็น `anyOf: ['tickets.view_all', 'assets.view', 'contracts.view']` ทั้งใน `nav.ts` และ route `reports` ใน `App.tsx` (ใครมีสิทธิ์อย่างใดอย่างหนึ่งเห็นเมนู Report ส่วนจะเปิดรายงานไหนได้จริงยังเช็คแยกที่ `ReportCatalogue::allows()` อยู่ดี) และเพิ่ม route ใหม่ `reports/r/:key` (gate เดียวกัน) ให้หน้า generic `TabularReportPage` — ส่วน `reports/tickets-overview` ยังคง gate ด้วย `['tickets.view_all']` เท่าเดิม เพราะเป็นรายงาน custom ของเฟส 1
+
+**Endpoint (generic tabular engine)**
+
+| Method | Path | หน้าที่ |
+|---|---|---|
+| GET | `/api/reports/r/{key}` | นิยามรายงาน (filters/columns) ให้หน้า React วาดฟอร์ม+ตาราง |
+| GET | `/api/reports/r/{key}/rows` | ตารางแถว + summary tiles แบ่งหน้าฝั่ง server ตามตัวกรองปัจจุบัน |
+| GET | `/api/reports/r/{key}/export?format=xlsx\|pdf` | export ตรง (synchronous) ตามตัวกรองปัจจุบัน |
+
+`{key}` คือ key ของรายงานใน `ReportCatalogue` (เช่น `contracts.expiring`, `assets.register`, `assets.warranty_expiring`) — จำกัดรูปแบบด้วย route pattern `[a-z_]+\.[a-z_]+`
+
+**กฎการตั้งชื่อ label** ข้อความที่ผู้ใช้เห็นบนหน้า (หัวคอลัมน์ ป้ายตัวกรอง ป้าย summary ตัวเลือก dropdown) มาจากคีย์ i18n เสมอ (`rep_c_*` / `rep_fl_*` / `rep_k_*` / `rep_opt_*` ที่หน้า React เรียกผ่าน `t()`) ส่วน `heading` ภาษาไทยที่เขียนไว้ในคลาส `ReportColumn`/`ReportFilter`/`ReportSummary` ฝั่ง PHP ใช้เฉพาะตอน export เป็น Excel/PDF (ไฟล์ที่ดาวน์โหลดออกไปเป็นภาษาไทยเสมอ ไม่ผูกกับภาษาที่ผู้ใช้ตั้งบนเว็บ) — เวลาเพิ่มคอลัมน์ใหม่จึงต้องตั้ง heading ภาษาไทยที่ PHP และคีย์ i18n (en+th) ที่หน้าเว็บให้ตรงกันเสมอ
+
+### Tests / Verification
+
+`tests/Feature/Report` + `tests/Unit/Report` + `SidebarRouteGateTest` = **41 passed** · `npx tsc --noEmit` ผ่าน (0 error) · `npm run build` ผ่าน · เช็ค key parity เอง (สคริปต์ node ชั่วคราว) ว่าคีย์ใน `lang/en/report.ts` กับ `lang/th/report.ts` ตรงกันครบ (133 คีย์ทั้งคู่) และทุกคีย์ `rep_*` ที่โค้ดหน้าเว็บ/นิยาม PHP อ้างถึงมีอยู่จริงทั้งสองภาษา
+
+## Report Module — Phase 3: รายงานสต็อก + ค่าใช้จ่ายสัญญา (2026-09-30)
+
+เพิ่มรายงานแบบตาราง 4 ตัวบน engine ของ Phase 2 — ไม่มี route/controller/migration ใหม่ รวมเป็น **8 จาก 19 รายงาน** ใน mockup
+
+| รายงาน | key | สิทธิ์ | ตัวกรอง | Summary |
+|---|---|---|---|---|
+| **ความเคลื่อนไหวรับเข้า-เบิกออก** | `stock.movements` | `stock.view_events` (สิทธิ์เดียวกับ log เคลื่อนไหวในโมดูลสต็อก) | ช่วงวันที่ (ค่าเริ่มต้น = ต้นเดือนถึงวันนี้, ใส่กลับด้านก็อ่านถูก), ประเภท 6 แบบ, คลัง (ตรงกับ from **หรือ** to), หมวด, ค้นหา doc_no/อ้างอิง/SKU/ชื่อ | เอกสาร, จำนวนเข้า, จำนวนออก (โอนย้ายไม่นับ), มูลค่ารับเข้า |
+| **อะไหล่ต่ำกว่าขั้นต่ำ** | `stock.below_min` | `stock.view` | สถานะ (หมด/ต่ำกว่า Min), หมวด, ค้นหา | ทั้งหมด, หมดสต็อก, ต่ำกว่า Min, มูลค่าที่ควรสั่ง |
+| **มูลค่าคงคลัง** | `stock.valuation` | `stock.view` | ณ วันที่ (ค่าเริ่มต้น = วันนี้), หมวด, ค้นหา | จำนวน SKU, จำนวนคงเหลือรวม, มูลค่ารวม |
+| **ค่าใช้จ่ายสัญญารายเดือน** | `contracts.monthly_cost` | `contracts.view` | ประเภท, ผู้ขาย, รอบบิล | จำนวนสัญญา, ต่อเดือน, ต่อปี |
+
+**กติกาที่ตัดสินใจไว้**
+- **ต่ำกว่าขั้นต่ำ** = SKU ที่ตั้ง `min_stock > 0` และ `current_stock < min_stock` (SKU ที่ไม่ได้ตั้ง min ไม่ถือว่าต้องสั่ง แม้เป็น 0) เรียงตามจำนวนที่ขาดมากสุดก่อน · "ควรสั่ง" = เติมให้ถึง max (หรือถึง min ถ้า max ต่ำกว่า) · ราคาต่อหน่วย = ราคารับเข้าล่าสุดที่มีราคา ไม่มีจึงใช้ `stock_items.cost` ไม่มีทั้งคู่ = ไม่คิดมูลค่า
+- **มูลค่าคงคลัง ย้อนหลังได้** — จำนวน ณ วันนั้น = ยอดวันนี้ ลบผลรวมสุทธิของ movement ที่เกิดหลังวันนั้น (transfer = 0) · มูลค่า **วันนี้** = lot FIFO ที่ยังเปิดอยู่ (ตรงกับ `StockItem::stockValue()` ในโมดูลสต็อก — เทียบกับฐานจริงแล้วตรงกัน 242,800 / 407 ชิ้น / 24 SKU) · มูลค่า **ย้อนหลัง** = FIFO ทำให้ของที่เหลืออยู่คือของที่รับเข้าล่าสุดเสมอ จึงเติมจาก lot ที่รับเข้าไม่เกินวันนั้น เรียงใหม่ไปเก่า จนครบจำนวน · ส่วนที่ไม่มี lot รองรับ (ของเก่าก่อนมีระบบ lot) คิดที่ราคา lot เก่าสุด ไม่มีจึงใช้ `cost`
+- **ค่าใช้จ่ายรายเดือน** = สัญญาที่มีผลวันนี้ (เริ่มแล้ว ยังไม่สิ้นสุด ไม่ถูกยกเลิก/หมดอายุ) นำค่าต่องวดมาเฉลี่ยต่อเดือน: รายไตรมาส ÷ 3, รายปี ÷ 12 · ต่อปี = ต่อเดือน × 12 · เรียงค่าต่อเดือนมากสุดก่อน
+
+**โค้ดที่ใช้ร่วม**
+- trait `App\Services\Report\Stock\StockColumns` — คอลัมน์ SKU/รายการ/หมวด/หน่วย + ป้ายประเภท movement (ไทยตรงกับ `lang/th/stock.ts`)
+- trait `App\Services\Report\Contract\ContractLabels` — ป้ายประเภทสัญญา/รอบบิล ย้ายออกมาจาก `ContractExpiringReport` ให้สองรายงานสัญญาใช้ชุดเดียวกัน
+- `Options::warehouses()` — ตัวเลือกคลังสำหรับตัวกรอง
+- หน้า hub มีโดเมนใหม่ `stock` (ไอคอน Warehouse) · เมนู/route `/reports` และ `/reports/r/:key` เพิ่ม `stock.view`, `stock.view_events` ใน `anyOf`
+
+**แก้ใน engine** `use-tabular-filters.ts` — เดิมบันทึกตัวกรองทุกตัวลง localStorage รวมวันที่ ทำให้ "ณ วันนี้" / "ต้นเดือนนี้" ค้างเป็นวันที่เปิดครั้งแรกตลอดไป ตอนนี้ตัวกรองวันที่ที่ยังเป็นค่าเริ่มต้นจะไม่ถูกบันทึก (เลื่อนตามปฏิทิน) ส่วนวันที่ที่ผู้ใช้เลือกเองยังจำไว้เหมือนเดิม
+
+**หมายเหตุ** รายการ `reports` ใน `nav.ts` ต้องอยู่บรรทัดเดียว (`// prettier-ignore`) เพราะ `SidebarRouteGateTest` อ่านด้วย regex บรรทัดเดียว — ถ้าถูก prettier ตัดขึ้นบรรทัดใหม่ เทสต์จะข้าม gate นี้ไปเงียบ ๆ แทนที่จะ fail
+
+### Tests / Verification
+
+`StockReportsTest` (10) + `ContractMonthlyCostReportTest` (5) ใหม่ · `ReportCatalogueTest` เพิ่มเคสแยกสิทธิ์สต็อก · `tests/Feature/Report` + `SidebarRouteGateTest` = **53 passed** · รัน query ทั้ง 4 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน · `npx tsc --noEmit` + eslint ผ่าน · pint ผ่าน · คีย์ i18n ที่ 4 รายงานอ้างถึง (74 คีย์) มีครบทั้ง en/th
+
+## Report Module — Phase 4: รายงานคำขอ พนักงาน และสิทธิ์ (2026-09-30)
+
+เพิ่มรายงานแบบตาราง 6 ตัวบน engine เดิม — ไม่มี route/controller/migration ใหม่ รวมเป็น **14 จาก 19 รายงาน** ใน mockup · หน้า hub มีโดเมนใหม่ `requests` / `employees` / `access` · เมนู/route `/reports` เพิ่ม `requests.view_all`, `employees.view`, `access.software_view` ใน `anyOf`
+
+| รายงาน | key | 1 แถว = | สิทธิ์ |
+|---|---|---|---|
+| **สรุปคำขอตามประเภทและสถานะ** | `requests.summary` | ประเภทคำขอ: ทั้งหมด / รออนุมัติ / อนุมัติแล้ว (รอ IT) / เสร็จ / ไม่อนุมัติ / ยกเลิก / % อนุมัติ · ช่วงวันที่ยื่น (ค่าเริ่มต้น = ต้นปีถึงวันนี้), แผนกผู้ขอ | `requests.view_all` |
+| **ระยะเวลาอนุมัติแต่ละขั้น** | `requests.approval_time` | ผู้อนุมัติ: จำนวนขั้น, ค้างอยู่ตอนนี้, เฉลี่ย/นานสุด/ค้างนานสุด (วัน) เรียงคนที่เฉลี่ยช้าสุดก่อน · ช่วงวันที่ขั้นมาถึง (ค่าเริ่มต้น = เดือนนี้), ประเภทคำขอ | `requests.view_all` |
+| **คำขอที่รอดำเนินการโดย IT** | `requests.it_pending` | คำขอสถานะ `approved` (ผ่านอนุมัติแล้ว รอ IT ส่งมอบ) รอนานสุดก่อน พร้อมเลข Ticket, สถานะ Ticket, ผู้รับผิดชอบ · summary รอเกิน 3 / 7 วัน, ยังไม่มี Ticket | `requests.view_all` |
+| **พนักงานเข้าใหม่และลาออก** | `employees.joiners_leavers` | พนักงานที่เริ่มงาน (`joined_at`) หรือวันสุดท้าย (`last_day`) อยู่ในช่วง (ค่าเริ่มต้น = ต้นเดือนถึงสิ้นเดือน) เรียงตามวันที่ · ตัวกรองเข้า/ออก, แผนก | `employees.view` |
+| **ทรัพย์สินค้างคืนจากผู้ลาออก** | `employees.leaver_assets` | ทรัพย์สินที่ยังอยู่ในชื่อพนักงานสถานะ resigned เรียงวันสุดท้ายเก่าสุดก่อน พร้อมเหลือกี่วัน (ติดลบ = เลยแล้ว) | `employees.view` |
+| **การใช้ License ซอฟต์แวร์** | `access.software_licenses` | ซอฟต์แวร์: ซื้อไว้ / ใช้ไป / คงเหลือ / % ใช้งาน / ผู้ลาออกที่ยังถือ / รายชื่อผู้ถือ · กรองประเภท License, การใช้งาน (เกิน/เต็ม/ยังว่าง/ไม่จำกัด), ค้นหา | `access.software_view` |
+
+**กติกาที่ตัดสินใจไว้**
+- **ระยะเวลาอนุมัติ** นับเฉพาะขั้น `approval` (ขั้น `completion` เป็นงานของ IT ดูในรายงานคำขอรอ IT) · ผู้อนุมัติ = คนที่กดตัดสิน ถ้ายังไม่มีคือผู้อนุมัติที่ระบุชื่อไว้ ถ้าไม่มีทั้งคู่ใช้ label ของขั้น (ขั้นแบบแผนก/กลุ่มที่ยังไม่มีใครรับ) · ขั้นที่ยังรออยู่นับถึงตอนนี้ · ขั้น `current` ของคำขอที่ไม่ใช่ pending แล้ว (ถูกยกเลิกทับ) **ไม่นับ** เพราะไม่มีใครถืออยู่จริง · summary "เฉลี่ยทั้งหมด" ถ่วงตามจำนวนขั้น · คำนวณชั่วโมงใน SQL แยกตาม driver (`TIMESTAMPDIFF` บน MariaDB, `julianday` บน SQLite ของเทสต์)
+- **เตรียมเครื่อง** (เฉพาะคนเข้าใหม่) อ่านจากคำขอ onboarding (`origin = onboarding`) ที่ HR ยื่นตอน Add Employee: มีใบที่ยัง pending/approved = กำลังเตรียม, ไม่มีใบค้าง = พร้อม, ไม่มีคำขอเลย = ไม่มีคำขอ · คนที่เข้าและออกในช่วงเดียวกันแสดงครั้งเดียวเป็น "ลาออก" · resigned ที่ยังไม่มีวันสุดท้ายยังนับเป็นคนเข้าใหม่
+- **รายงานพนักงานใช้แค่ `employees.view`** ตาม pattern "peek" เดิมของแท็บ Assets ในหน้าพนักงาน (ไม่ต้องมี `assets.view`) และไม่แสดงมูลค่าทรัพย์สิน
+- **License ที่ใช้ไป** = membership ที่ยังไม่ revoke (ตัวเลขเดียวกับหน้า Access) · seats ว่าง = ไม่จำกัดจำนวน
+
+**แก้ใน engine / โค้ดร่วม**
+- `TabularReportExporter` — PDF นับจำนวนแถวจาก query (`getCountForPagination`) แทนการอ่าน summary `total` เพราะรายงานแบบ group (1 แถว = ประเภท / ผู้อนุมัติ) มี total คนละความหมายกับจำนวนแถว เดิมจะขึ้นข้อความ "แสดง N รายการแรก" ผิด
+- ป้ายสถานะทรัพย์สินย้ายจาก `AssetRegisterReport` เข้า trait `AssetColumns` ให้รายงานผู้ลาออกใช้ชุดเดียวกัน · trait ใหม่ `App\Services\Report\Request\RequestLabels` (ประเภท/สถานะคำขอ ใช้คีย์ `req_*` ของโมดูลคำขอ + `RequestType::labelTh()`)
+- คอลัมน์เลขที่คำขอใช้คีย์ `rep_c_request_no` (ไม่ใช้ `rep_c_reference` ซึ่งเป็น "อ้างอิง" ของรายงานสต็อก)
+
+### Tests / Verification
+
+`RequestReportsTest` (8) + `EmployeeReportsTest` (5) + `SoftwareLicenseReportTest` (4) ใหม่ · `ReportCatalogueTest` เพิ่มเคสสิทธิ์ 3 โดเมน · `tests/Feature/Report` + `SidebarRouteGateTest` = **71 passed** · รันทั้ง 6 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน · tsc + eslint + pint ผ่าน · `npm run build` ผ่าน · คีย์ i18n ที่ 6 รายงานอ้างถึง (132 คีย์) มีครบ en/th
+
+## Report Module — Phase 4b: 5 รายงานสุดท้าย ครบ 19 ตัวตาม mockup (2026-09-30)
+
+เพิ่ม 5 รายงานแบบตาราง (Ticket 3, ทรัพย์สิน 2) — **ครบ 19 จาก 19 รายงาน** ใน mockup · ไม่มี route/controller/migration ใหม่ · เมนู/route gate ไม่ต้องแก้ (`tickets.view_all`, `assets.view` อยู่ใน `anyOf` แล้ว)
+
+| รายงาน | key | 1 แถว = | สิทธิ์ |
+|---|---|---|---|
+| **Ticket ตามแผนกและหมวด** | `tickets.by_department` | แผนกผู้แจ้ง: ทั้งหมด / แยก 6 หมวด / ยังไม่ปิด / % ตาม SLA · ช่วงวันที่เปิด (ค่าเริ่มต้น = เดือนนี้), ความสำคัญ | `tickets.view_all` + `tickets.resolve` |
+| **ผลงานเจ้าหน้าที่ IT** | `tickets.staff_performance` | ผู้รับผิดชอบ: ปิดสำเร็จ / ยกเลิก (ตาม `resolved_at` ในช่วง) / มัธยฐานชั่วโมง / % ตาม SLA / อยู่ในมือตอนนี้ / ในมือที่เกิน SLA · ช่วงวันที่, หมวด | `tickets.view_all` + `tickets.resolve` |
+| **Ticket ค้างและเกิน SLA** | `tickets.backlog` | Ticket ที่ยัง open / in progress เก่าสุดก่อน: อายุ (วัน), ครบกำหนด SLA, เหลือกี่ชั่วโมง (ติดลบ = เกินแล้ว) · กรอง SLA (เกิน/ยังไม่เกิน), หมวด, ความสำคัญ, ค้นหา | `tickets.view_all` + `tickets.resolve` |
+| **ทรัพย์สินตามสถานะและแผนก** | `assets.by_status_department` | แผนกของผู้ถือ: ทั้งหมด + จำนวนแต่ละสถานะ 6 แบบ · ทรัพย์สินที่ไม่มีพนักงานถือ (พร้อมส่งมอบ / Common / ตัดจำหน่าย) รวมเป็นแถว "ไม่ระบุแผนก" · กรองหมวด, ที่มา | `assets.view` |
+| **ประวัติโอนย้ายและรับคืน** | `assets.transfer_history` | แถวของ `asset_transfers` ในช่วงวันที่ (ค่าเริ่มต้น = เดือนนี้) ใหม่สุดก่อน: ส่งมอบ / รับคืน / เรียกคืน / ย้ายที่ตั้ง · จาก/ไปยังแสดงเป็น "ชื่อ (รหัส)" เมื่อเป็นรหัสพนักงาน | `assets.view` |
+
+**กติกาที่ตัดสินใจไว้**
+- รายงาน Ticket ทั้ง 3 ตัวมีข้อมูล SLA จึงขอสิทธิ์เดียวกับ Ticket & SLA overview และนับเฉพาะหมวดที่ผู้อ่านมี `tickets.level_*` (ใช้ `Permissions::ticketLevelsFor` ตัวเดียวกัน) · หมวดที่ไม่มีสิทธิ์ในรายงานตามแผนกแสดง "—" ไม่ใช่ 0 (0 จะอ่านว่า "ไม่มีเลย")
+- "เกิน SLA" ของ Ticket ที่ยังไม่ปิดใช้กฎเดียวกับ `TicketMetrics::activeDue` — รอรับเรื่องวัดกับกำหนดตอบกลับ, รับแล้ววัดกับกำหนดแก้ไข · "ตาม SLA" ของที่ปิดแล้ว = `resolved_at <= sla_resolve_due_at` เหมือน `slaState`
+- มัธยฐานชั่วโมงใช้ nearest-rank แบบเดียวกับ overview — ย้ายสูตรไปที่ `TicketMetrics::percentile()` ให้ทั้งสองรายงานเรียกตัวเดียวกัน ตัวเลขจึงไม่มีวันต่างกัน
+
+**แก้ใน engine**
+- `TabularReport::hydrateRows()` (ค่าเริ่มต้นไม่ทำอะไร) — engine เรียกก่อน map แถวทั้งหน้าเว็บ / Excel / PDF ให้รายงานโหลดข้อมูลเพิ่มครั้งเดียวต่อชุดแถว: ผลงานเจ้าหน้าที่ใช้คิดมัธยฐาน (GROUP BY ทำ median แบบข้าม DB ไม่ได้), ประวัติโอนย้ายใช้ดึงชื่อจากรหัสพนักงาน (`AssetTransfer::employeeNamesFor`)
+- `TabularReport::dayRange()` — ตัวแปลงช่วงวันที่ from/to (กลับด้านก็อ่านถูก) รวมไว้ที่ base class แทนสำเนาใน `StockMovementReport` และ `RequestLabels`
+- trait ใหม่ `App\Services\Report\Ticket\TicketReportScope` — scope ตาม level, ป้ายหมวด/ความสำคัญ/สถานะ (คีย์ของโมดูล Ticket + `TicketLabels` ภาษาไทย), SQL ของ "ตาม SLA" / "เกิน SLA"
+
+### Tests / Verification
+
+`TicketTabularReportsTest` (8) + `AssetActivityReportsTest` (5) ใหม่ · `ReportCatalogueTest` เพิ่มเคส "มีสิทธิ์ครบเห็นครบ 19 รายงาน" · `AssetReportsTest` ปรับรายการรายงานทรัพย์สินเป็น 4 ตัว · `tests/Feature/Report` + `SidebarRouteGateTest` = **85 passed** · รันทั้ง 5 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน — % SLA ของรายงานตามแผนกกับผลงานเจ้าหน้าที่ตรงกัน · tsc + eslint + pint ผ่าน · `npm run build` ผ่าน · คีย์ i18n ที่ 5 รายงานอ้างถึง (98 คีย์) มีครบ en/th
+
+**ค้างไว้ (เฟสถัดไป)** Phase 5 = export แบบคิว + "ไฟล์ส่งออกของฉัน" + snapshot strip บนหน้า hub + ปักหมุด + column picker · Phase 6 = ส่งรายงานทางอีเมลตามเวลา
+
+## Report Module — Phase 5a: แถบตัวเลขสรุป ปักหมุด และเลือกคอลัมน์ (2026-09-30)
+
+Phase 5 แบ่งเป็น 2 รอบ (ผู้ใช้เลือก) — รอบนี้ 3 ส่วนที่ไม่แตะคิว · รอบ 5b = Export ผ่านคิวทุกครั้ง + แผง "ไฟล์ส่งออกของฉัน"
+
+**1. แถบตัวเลขสรุปบนหน้า `/reports`** (`components/snapshot-strip.tsx` ← `GET /api/reports/snapshot?period=7d|month|quarter|year`, `App\Services\Report\ReportSnapshotService`)
+- 6 ช่อง: Ticket ที่ยังไม่ปิด (+ เกิน SLA) · ปิดตาม SLA (+ เทียบช่วงก่อนเป็น pt) · คำขอรออนุมัติ (+ ยื่นใหม่ในช่วง) · ทรัพย์สินที่ใช้งาน / ทั้งหมดที่ไม่ตัดจำหน่าย (+ อัตราใช้งาน) · สัญญาหมดใน 30 วัน (+ เลยวันสิ้นสุดแล้ว) · อะไหล่ต่ำกว่าขั้นต่ำ (+ หมดสต็อก)
+- **แต่ละช่องแสดงเฉพาะเมื่อผู้อ่านเปิดรายงานที่ช่องนั้นลิงก์ไปได้ และเอาตัวเลขจากรายงานนั้นเอง** (query + summary ของรายงาน tabular, หรือ `TicketOverviewReportService::summary()` สำหรับ SLA) — กดช่องแล้วไปเจอตัวเลขเดียวกันเสมอ · ใครไม่มีรายงานเลย แถบไม่แสดง
+- ช่วงเวลามีผลเฉพาะช่องที่นับตามเวลา (SLA, คำขอยื่นใหม่) ที่เหลือเป็นสถานะ ณ ตอนนี้ · ช่วงที่เลือกจำไว้ใน localStorage (`reports.snapshot.period`)
+
+**2. ปักหมุดรายงาน** — ตารางใหม่ `report_pins` (`user_id` FK cascade + `report_key`, unique คู่) · `App\Models\Report\ReportPin` · `App\Services\Report\ReportPinService`
+- `PUT` / `DELETE /api/reports/{key}/pin` — รายงานที่ไม่มีอยู่ = 404, เปิดไม่ได้ = 403 · `GET /api/reports` มี `pinned` ในทุกรายการ
+- หน้า hub: ดาวหน้าทุกแถว (อยู่นอกลิงก์ของแถว กดแล้วไม่เปิดรายงาน) เปลี่ยนทันทีแบบ optimistic แล้วคืนค่าถ้าเรียกไม่สำเร็จ · ชิป "ปักหมุด N" (มีเมื่อปักอย่างน้อย 1) · ชิปทุกตัวมีจำนวนรายงาน
+- หมุดของรายงานที่ผู้ใช้เสียสิทธิ์ไปแล้วแค่ไม่แสดง (กลับมาเองถ้าได้สิทธิ์คืน)
+- **migration รันบน DB จริงแล้ว** (สร้างตารางใหม่อย่างเดียว ไม่แตะข้อมูลเดิม — ดู SQL ด้วย `--pretend` ก่อน)
+
+**3. เลือกคอลัมน์ในรายงานแบบตาราง** — ปุ่ม "คอลัมน์" ข้าง Export (`components/column-picker.tsx`, state ใน `hooks/use-hidden-columns.ts` จำใน localStorage `report.<key>.hiddenColumns`) · ซ่อนคอลัมน์สุดท้ายไม่ได้
+- Export ส่ง `columns[]` ไปด้วย (เฉพาะเมื่อมีคอลัมน์ถูกซ่อน) → `ExportTabularReportRequest` ตรวจว่าเป็นคอลัมน์ของรายงานนั้นจริง (ไม่ใช่ = 422) → `TabularReport::showOnly()` / `exportColumns()` ให้ Excel และ PDF พิมพ์เฉพาะคอลัมน์ที่เลือกตามลำดับเดิมของรายงาน · ไดอะล็อก Export บอกว่า "Export เฉพาะ N คอลัมน์ที่แสดงอยู่"
+- `FilterPopover` (shared) เพิ่ม prop `label` / `icon` (ไม่ใส่ = "ตัวกรอง" เหมือนเดิม ทุกหน้าเดิมไม่เปลี่ยน)
+
+**แก้ระหว่างทาง** ไดอะล็อก Export ขึ้น "ใช้ตัวกรองปัจจุบัน · 80 Ticket" ในทุกรายงาน (คำนี้มาจากสมัยมีแต่รายงาน Ticket) → เปลี่ยนเป็น "{n} รายการ" / "{n} rows"
+
+### Tests / Verification
+
+`ReportHubTest` (9) ใหม่ — หมุดรายคน / ปักซ้ำเป็นหมุดเดียว / 403 / 404 / หมุดของรายงานที่เสียสิทธิ์ไม่แสดง · แถบตัวเลขแสดงเฉพาะช่องที่มีสิทธิ์ นับเฉพาะหมวด Ticket ที่มี level, SLA เทียบช่วงก่อน, ช่วงเวลาขยับช่องที่นับตามเวลา, period ผิด = 422 · Export ตามคอลัมน์ที่เลือก (Excel + PDF) และคอลัมน์ที่ไม่มี = 422 · `tests/Feature/Report` + `SidebarRouteGateTest` = **94 passed** · รันแถบตัวเลขกับ DB จริงผ่าน · เปิดดูในเบราว์เซอร์แล้ว: แถบตัวเลข, ปัก/เลิกปัก + ชิปปักหมุด, ซ่อน/แสดงคอลัมน์ + จำหลัง reload + ข้อความในไดอะล็อก Export (ปักทดสอบแล้วเลิกปัก ตาราง `report_pins` กลับเป็น 0 แถว) · tsc + eslint + pint ผ่าน · `npm run build` ผ่าน
+
+---
+
+## Asset — ตัดจำหน่ายต้องมีหมายเหตุ (2026-09-25)
+
+มาจากการเทียบ Scope of Work ข้อ 5.4 "การตัดจำหน่าย หรือขายซาก" — ข้อตกลงคือไม่ทำรายการวิธีจำหน่ายแบบตายตัว ให้ผู้ดูแลเขียนหมายเหตุเองว่าออกไปอย่างไร (ทิ้ง / ขายซาก / บริจาค / หมดสัญญาเช่า ฯลฯ)
+
+- เดิมปุ่ม **ตัดจำหน่าย** บนแถบ bulk ของหน้า Assets ยิง `POST /api/assets/bulk` ทันทีโดยไม่ส่ง `reason` — API รับได้อยู่แล้วแต่หน้าจอไม่เคยถาม จึงไม่มีบันทึกว่าของหายไปทางไหน
+- ตอนนี้กดแล้วเปิด `AssetWriteoffDialog` (`modules/asset/components/asset-writeoff-dialog.tsx`) ให้กรอกหมายเหตุ (บังคับ, สูงสุด 500 ตัวอักษร) — `AssetController::bulk()` เปลี่ยน `reason` เป็น `required` (ช่องว่างล้วนถูก TrimStrings ทำเป็น null จึงไม่ผ่าน)
+- หมายเหตุเก็บที่ `assets.last_reason` เหมือนเดิม และแสดงเป็นกล่อง "ตัดจำหน่ายแล้ว" บนแท็บ Overview ของ `AssetDetailDrawer` เมื่อสถานะเป็น `writeoff`
+- ไม่มี migration · lang ใหม่ `asset_writeoff_*` (en + th)
+
+### Tests / Verification
+
+`AssetApiTest` = **92 passed** (เพิ่ม `test_bulk_writeoff_requires_a_note`, `test_bulk_writeoff_keeps_the_note_on_the_asset` และให้เทสเดิม 3 ตัวส่งหมายเหตุ) · `npx tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน
+
+---
+
+## แท็บ Overview ทุกโมดูล + ภาพรวมคำขอบน Dashboard (2026-09-25)
+
+**1. ภาพรวมคำขอบนหน้า Dashboard หลัก** — เดิมหน้าแรกมีภาพรวมของ Ticket / HR / Activity แต่ไม่มีของคำขอ ตอนนี้ `DashboardSummaryService` ส่ง block `requests` ให้คนที่มี `requests.view_all`
+- `by_status` / `by_type` ของคำขอที่ยื่นใน 30 วัน (นับจาก `created_at` แบบเดียวกับ block IT)
+- `waiting` = ขั้นอนุมัติที่ค้างเกิน 3 วัน เรียงจากรอนานสุด 5 รายการ + `waiting_count` — ใช้ชุดเดียวกับกระดิ่งเตือนคำขอค้าง (`RequestStalledService::waitingSteps()` ใหม่, เปิด `daysWaiting()` เป็น public) ตัวเลขบนหน้าแรกจึงเท่ากับจำนวนกระดิ่งเสมอ
+- หน้า React: `RequestsOverviewCard` + `WaitingRequestsCard` (แถวกดแล้วเปิด `/requests?view=<id>`)
+
+**2. แท็บ Dashboard → Overview / ภาพรวม** ใน Employee · Tickets · Requests · Assets · Contracts · Stock · Access (ให้เหมือน Ticket) — ทั้งชื่อที่แสดง, tab id ใน URL (`?tab=overview`), ตัวแปร/คอมโพเนนต์ (`canViewOverview`, `OverviewTab`, `AccessOverview` — ไฟล์ `access-dashboard.tsx` → `access-overview.tsx`, `stock/pages/tabs/dashboard-tab.tsx` → `overview-tab.tsx`) และ lang key (`sub_overview`, `asset_overview`, `ticket_tab_overview`, `requests_tab_overview`)
+- ลิงก์เก่า `?tab=dashboard` ยังใช้ได้ — `shared/lib/tab-param.ts` (`readTabParam`) แปลงเป็น `overview` ก่อนทุกหน้าอ่านค่า
+- หน้า Dashboard หลัก (เมนู Overview → Dashboard) ยังชื่อ Dashboard เหมือนเดิม
+
+**3. Permission** — ป้ายสิทธิ์ `*.view_dashboard` ของ 5 โมดูลแสดงเป็น "Overview / ภาพรวม" พร้อมคำอธิบาย · **key สิทธิ์ไม่เปลี่ยน** (เก็บใน `role_permissions` บนฐานจริง เปลี่ยนแล้วสิทธิ์ที่ตั้งไว้จะหาย)
+
+**4. แท็บหน้าโมดูลหน้าตาเดียวกัน** — เดิมมี 4 แบบ (ขีดเต็มปุ่ม / ขีดเต็มปุ่มแต่ตัวอักษรไม่เป็นสีแบรนด์ / ขีดสั้น inset 12px / ขีดมน inset 8px) ตอนนี้ทั้ง 7 หน้าใช้ `shared/components/page-tabs.tsx` (`PageTabs`) ซึ่งเป็นแบบเดียวกับ `DialogTabs` ของไดอะล็อก: ตัวอักษรสีแบรนด์ + ขีดมน inset เท่ากันทุกแท็บ · ตัวเลขข้างแท็บมี `tone` ตามความหมายเดิม (`alert` แดง = งานค้าง, `warn` เหลือง = ต้องดู, `muted` เทา = จำนวน)
+
+### Tests / Verification
+
+`DashboardSummaryTest` +3 (`requests` block ต้องมีสิทธิ์ · แยกสถานะ/ประเภทในหน้าต่าง · รายการค้างเกินเกณฑ์เรียงรอนานสุด) · Dashboard + Asset + Stalled + SidebarRouteGate = 119 passed · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน · เปิดดูจริงในเบราว์เซอร์ครบ 7 หน้า + หน้าแรก และ `/tickets?tab=dashboard` เข้าแท็บ Overview ถูก
+
+---
+
+## Request: workflow ที่ตั้งไม่ครบยื่นไม่ได้ + ไฟล์แนบล็อกตั้งแต่ยื่น (2026-09-26)
+
+**ต้นเหตุ** — `migrate:fresh --seed` วันที่ 2026-09-21 สร้าง workflow ใหม่ตอนที่ตาราง `positions`/`departments` ยังว่าง (`DatabaseSeeder` ไม่ seed master data) ขั้นแบบ chain และแบบแผนกจึงไม่มีตำแหน่ง/แผนกผูกอยู่เลย ที่หลุดไปได้เพราะตอนยื่น `blockReason()` ตรวจแค่สายบังคับบัญชา ขั้นที่ไม่ได้ระบุใครจึงถูกข้ามด้วย `no_matching_position` แบบเงียบ ๆ (RQ-2026-0002 / 0004 ข้าม Supervisor แล้วไปให้ VP แทน) · แก้ข้อมูลบน DB จริงแล้วด้วย `db:seed --class=WorkflowSeeder` ซึ่งเติมเฉพาะขั้นที่ยังว่าง (ขั้น QC/SE ของ CCTV ยังต้องตั้งตำแหน่งเองในหน้า Workflows)
+
+**1. ยื่นไม่ได้ถ้า workflow ยังตั้งไม่ครบ**
+- `App\Support\WorkflowStepCompleteness` ใหม่ เป็นกฎชุดเดียว: ขั้น chain ต้องมีตำแหน่ง · ขั้นแผนกต้องมีแผนก และต้องมีคนหรือตำแหน่ง — `UpdateWorkflowRequest` (ตอนบันทึก) กับ `WorkflowResolverService::blockReason()` (ตอนยื่น) ใช้ชุดเดียวกัน
+- `ChainBlockReason::WorkflowIncomplete` (`workflow_incomplete`) ตรวจก่อนทุกอย่างและบล็อกทุกคน รวมถึงตำแหน่งพิเศษ · ข้อความ `req_block_workflow_incomplete`: "คำขอยังไม่พร้อมใช้งาน กรุณาติดต่อ IT" / "The request is not available. Please contact IT."
+- precheck ของ Onboarding (`EmployeeController`) รายงานรหัสนี้ด้วย (`add-employee-drawer` ใช้ key เดียวกัน)
+- ขั้นที่ "ในสายไม่มีคนตำแหน่งนี้" ยังข้ามได้เหมือนเดิม — ที่บล็อกคือขั้นที่ไม่ได้ระบุใครเลยเท่านั้น
+
+**2. ไฟล์แนบแก้ไม่ได้หลังยื่น** — ถ้าต้องการเปลี่ยนไฟล์ ต้องยกเลิกคำขอแล้วยื่นใหม่
+- ลบ `RequestAttachmentController` + route `POST/DELETE service-requests/{id}/attachments` · ลบ `ServiceRequest::canManageAttachments()` / `attachmentsLocked()` · ลบ `RequestAttachmentService::delete()` / `remaining()` · ลบ `can_attach` ออกจาก resource และ type
+- `request-detail-dialog.tsx` แสดงไฟล์แบบอ่าน/ดาวน์โหลดได้อย่างเดียว · ลบ `uploadAttachments` / `deleteAttachment` ออกจาก api + hooks
+- ลิมิต (5 ไฟล์, 10 MB, นามสกุลที่อนุญาต) ยังบังคับตอนยื่นผ่าน `StoreServiceRequestRequest`
+
+### Tests / Verification
+
+`RequestWorkflowTest` +2 (ขั้น chain ไม่มีตำแหน่ง → `workflow_incomplete` ทั้งพนักงานทั่วไปและตำแหน่งพิเศษ แล้วยื่นผ่านเมื่อแก้ครบ · ขั้นแผนกขาดแผนก/ขาดคนเซ็น) · `EmployeeOnboardingRequestTest` +1 (precheck ส่ง `workflow_incomplete`) · `RequestAttachmentTest` เขียนใหม่: รวม test เพิ่ม/ลบ/ล็อกหลังเซ็น/ยกเลิก เหลือ `test_a_filed_request_takes_no_further_changes_to_its_files` และย้าย test เกิน 5 ไฟล์/ไฟล์ .exe ไปตรวจตอนยื่น · fixture ของ `RequestAttachmentTest` (seed แผนก) และ `RequestOptionTest` (seed ตำแหน่ง) เคย seed workflow ไม่ครบแบบเดียวกับบน DB จริง · test ของ Request/Workflow/Onboarding 15 ไฟล์ = **201 passed** · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน
+
+---
+
+## Request: Fulfill → Complete / เสร็จสิ้น (2026-09-26)
+
+คำว่า Fulfilled / ดำเนินการแล้ว อ่านเข้าใจยาก จึงเปลี่ยนเป็น **Completed / เสร็จสิ้น** ทั้งชื่อในโค้ดและค่าที่เก็บใน DB — เฉพาะโมดูล Request (ใบเบิกของ Stock ยังใช้ `stock.fulfill` / `fulfilled` เหมือนเดิม)
+
+| ส่วน | เดิม | ใหม่ |
+|---|---|---|
+| สถานะคำขอ (`RequestStatus`) | `Fulfilled` / `'fulfilled'` | `Completed` / `'completed'` |
+| ชนิดขั้นใน workflow (`WorkflowStepKind`) | `Fulfillment` / `'fulfillment'` | `Completion` / `'completion'` |
+| คอลัมน์ `service_requests` | `fulfilled_at` | `completed_at` (แก้ใน migration baseline `…000009`) |
+| Permission | `requests.fulfill` | `requests.complete` |
+| API | `POST /api/service-requests/{id}/fulfill` (`api.service-requests.fulfill`) | `POST /api/service-requests/{id}/complete` (`api.service-requests.complete`) |
+| Controller / Service / Resource | `fulfill()`, `can_fulfill` | `complete()`, `can_complete` |
+| Notification subtype | `ready_to_fulfill`, `fulfilled` | `ready_to_complete`, `completed` |
+| Template | `request.ready_to_fulfill`, `request.fulfilled`, `notif_request_fulfilled`, `{{request.fulfilled_date}}` / `{{request.fulfilled_by}}` | `request.ready_to_complete`, `request.completed`, `notif_request_completed`, `{{request.completed_date}}` / `{{request.completed_by}}` |
+| Audit | `Fulfilled service request` / `…via ticket` | `Completed service request` / `…via ticket` (หมวด workflow กรอง `Completed` เพิ่ม) |
+
+- ภาษาไทย: สถานะ "เสร็จสิ้น" · ปุ่ม "ยืนยันเสร็จสิ้น" · ขั้นสุดท้ายใน workflow "ปิดงาน" · สิทธิ์ "ปิดงานคำขอ (เสร็จสิ้น)"
+- lang key ทุกตัวที่เคยเป็น `*fulfill*` / `*fulfilled*` ของ Request เปลี่ยนเป็น `*complete*` / `*completed*`
+- **ไม่มี migration แปลงข้อมูล** (ตกลงกันให้ล้าง DB) — ฐานเดิมที่ยังมี `fulfilled_at` / `'fulfilled'` / `requests.fulfill` ใช้กับโค้ดนี้ไม่ได้
+
+### Tests / Verification
+
+ชุดเต็ม **1408 passed** (รวม Stock ทั้งหมด ยืนยันว่าไม่โดนเปลี่ยน) · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน
+
+---
+
+## Seeding: ติดตั้งใหม่ + ข้อมูล Demo (2026-09-26)
+
+ลำดับที่ต้องรัน — `WorkflowSeeder` (ใน `db:seed`) ต้องเจอแผนก/ตำแหน่งก่อน ไม่งั้น workflow จะไม่มีตำแหน่งผูก และคำขอจะยื่นไม่ได้
+
+```bash
+php artisan migrate:fresh
+php artisan db:seed --class=EmployeeDepartmentSeeder
+php artisan db:seed --class=EmployeePositionSeeder
+php artisan db:seed --class=EmployeeSectionSeeder
+php artisan db:seed --class=MasterDataSeeder
+php artisan db:seed                       # Role Template + สิทธิ์, Role Group + default group, admin (password), เทมเพลต, workflow, ตัวเลือกคำขอ, SLA
+php artisan db:seed --class=DemoSeeder    # (ไม่บังคับ) ข้อมูล demo ทุกโมดูล — รันได้บนฐานที่ยังไม่มีพนักงานเท่านั้น
+```
+
+**DemoSeeder** (`database/seeders/DemoSeeder.php` + `database/seeders/Demo/*`) — ข้อมูลสำหรับพรีเซนต์และ UAT
+- สร้างผ่าน service จริงทุกเหตุการณ์ที่มีขั้นตอน ย้อนเวลาด้วย `DemoClock` (~6 เดือน) → สายอนุมัติ, SLA, ต้นทุน FIFO, audit log, กระดิ่ง ตรงกับของจริง
+- ไม่ส่งอีเมล (`Queue::fake()`) · ทั้งหมดอยู่ใน transaction เดียว (พังกลางทาง = ย้อนหมด) · ผลเหมือนเดิมทุกครั้ง · ไม่มีข้อมูลในอนาคตแม้รันวันหยุด
+- ปฏิเสธการรันถ้ามีพนักงานอยู่แล้ว หรือยังไม่ได้ seed มาตรฐาน
+- ลำดับขั้น: `DemoOrg` (พนักงาน ~40 คน 11 แผนก จัดเข้า Role Group ที่ `db:seed` สร้างไว้ (หาจาก template ไม่ใช่ชื่อ), บัญชี 9 บัญชี) → `DemoReference` (vendor, รุ่น, สถานที่) → `DemoAccess` → `DemoContracts` (ครบทุกสถานะ รวมใกล้หมด 7/30 วัน) → `DemoAssets` (80 ชิ้น ครบ 6 สถานะ) → `DemoStock` (25 รายการ, lot หลายราคา, ใบเบิก 4 สถานะ, ตรวจนับ, ต่ำ/หมด/เกิน) → `DemoTickets` (60 ใบ ผ่าน/เลย SLA) → `DemoRequests` (37 คำขอ ครบ 13 ประเภท 5 สถานะ + Onboarding)
+
+| username | ใคร | ใช้ทดสอบ |
+|---|---|---|
+| staff.demo | Staff ฝ่ายผลิต | ยื่นคำขอ / ticket / ทรัพย์สินของฉัน (มี 1 ชิ้นรอรับมอบ) |
+| sup.demo | Supervisor ฝ่ายผลิต | อนุมัติขั้น 1 |
+| mgr.demo | Manager ฝ่ายผลิต | อนุมัติขั้น 2 · เจ้าของ Production Share / Team |
+| vp.demo | Vice President | อนุมัติขั้นบนสุด |
+| qc.demo | QC Manager | ขั้นแผนก QC (CCTV) · เจ้าของ QC Documents / Team |
+| se.demo | Safety Manager | ขั้นแผนก SE (CCTV) |
+| it.lead | IT Supervisor (IT Supervisor/Leader) | มอบหมาย ticket, ปิดงานคำขอ, สต็อก |
+| it.tech | ช่าง IT (IT Support) | รับ/แก้ ticket, เบิกของ |
+| hr.demo | HR (HR Recruit) | เพิ่มพนักงาน / Onboarding |
+
+รหัสผ่านทุกบัญชี `Demo@1234` (ไม่บังคับเปลี่ยน) · `admin` / `password` จาก `db:seed` (บังคับเปลี่ยนครั้งแรก)
+
+### Tests / Verification
+
+`tests/Feature/DemoSeederTest.php` — guard 2 กรณี, rollback + คืนนาฬิกา, ไม่มีอีเมลค้างใน `jobs`, ครอบทุกสถานะทุกโมดูล, รันเช้าวันอาทิตย์ไม่มีข้อมูลในอนาคต, DemoClock
+
+---
+
+## Role Template + Role Group เข้า Seeder (2026-09-26)
+
+ค่าตั้งต้นของ `db:seed` ตรงกับที่ตั้งไว้บน DB จริงแล้ว — **มีผลกับการติดตั้งใหม่เท่านั้น** (seeder ใช้ `firstOrCreate` ไม่เขียนทับสิทธิ์/กลุ่มที่ปรับบนระบบที่ใช้งานอยู่)
+
+| Role Template (key) | ชื่อ | สิทธิ์ | Role Group |
+|---|---|---|---|
+| `super` | Administrator | ทุกสิทธิ์ | Super Administrator |
+| `it_supervisorleader` | IT Supervisor/Leader | 124 | IT Supervisor/Leader |
+| `admin` | IT Support | 69 | IT Support |
+| `it_stock` | IT Admin & Document | 45 | IT Admin & Doc |
+| `hr` | HR Recruit | 18 | HR Recruit |
+| `user` | Staff | 8 | **User** ← default group ของพนักงานใหม่ |
+
+- `Permissions::defaults()` — รายการสิทธิ์ต่อ template สร้างจาก `role_permissions` บน DB (allowed = 1) ไม่ได้พิมพ์เอง
+- `DatabaseSeeder::seedRoleGroups()` — สร้าง Role Group เฉพาะเมื่อยังไม่มีกลุ่มเลย และตั้ง `default_employee_group_id` เฉพาะเมื่อยังไม่ได้เลือก → การเปลี่ยนชื่อ/ลบกลุ่ม หรือเปลี่ยน default ของผู้ดูแลไม่ถูก seed ทับ
+- DemoSeeder จัดคนเข้ากลุ่มตาม template: IT lead → IT Supervisor/Leader, ช่าง → IT Support, 1 คน → IT Admin & Doc, HR → HR Recruit, ที่เหลือ → default group
+
+### Tests / Verification
+
+`ProductionSeedTest` +2 (Role Group + default group; re-seed ไม่ทับการเลือกของผู้ดูแล) และตรวจชื่อ/จำนวนสิทธิ์ของทั้ง 6 template · test ที่อิงสิทธิ์ตั้งต้นเดิมปรับตาม template ใหม่ (Access: ลบรายการเป็นของ IT Supervisor/Leader, HR ไม่มี Access module; Settings: section ต้องมาพร้อม `settings.access` และ HR/Staff ไม่มี settings) · ชุดเต็ม **1421 passed**
+
+---
+
+## UX/UI: รองรับ iPad mini 5 ขึ้นไป (768×1024 / 1024×768) (2026-09-26)
+
+ตรวจทุกหน้า (16 หน้า) ที่แนวตั้ง 768 และแนวนอน 1024 — ไม่มีหน้าไหนเลื่อนแนวนอนทั้งหน้า แต่ตาราง/แท็บอึดอัดเพราะ sidebar เต็มกินพื้นที่ ~25% จึงแก้:
+
+1. **Sidebar เป็นไอคอนอัตโนมัติเมื่อจอกว้าง < 1280px** — `app/layout/use-sidebar-style.ts` + `shared/hooks/use-media-query.ts`; กด ≡ บนจอแคบ = เปิดชื่อเมนูชั่วคราว (`narrowSidebarOpen` ใน ui store, ไม่ persist) ค่าที่ผู้ใช้บันทึกไว้สำหรับจอกว้างไม่ถูกเขียนทับ
+2. **รหัสและหัวตารางไม่ตัดบรรทัด** — `app.css`: `table .font-mono, table th { white-space: nowrap }` (เดิม `RQ-2026-0018` / `INK-IT-26-0017` แตกเป็น 3 บรรทัด) · คอลัมน์หัวข้อของหน้า Requests แคบลงต่ำกว่า `xl` ทำให้ตารางพอดีกรอบที่ 1024
+3. **แท็บหน้าโมดูลไม่ตกบรรทัด** — `PageTabs` เป็นแถวเดียวเลื่อนแนวนอนได้ (ซ่อน scrollbar) และเลื่อนแท็บที่เลือกให้อยู่ในจอเสมอ
+4. **ปุ่มที่เคยโผล่เฉพาะตอน hover** (แจ้งเตือน, คัดลอกในข้อมูลพนักงาน/คู่มือนำเข้า, แก้ role ในหน้าสิทธิ์) แสดงตลอดบนจอสัมผัส (`@media (pointer: coarse)`) และเมื่อโฟกัสด้วยคีย์บอร์ด
+5. **Reduced motion** — animation เปิด/ปิดของ Dialog/Sheet/Dropdown/Select/Tooltip ลดเหลือทันทีเมื่อผู้ใช้เปิด "ลดการเคลื่อนไหว" และ `animate-ping` หยุด · ปุ่มช่วงวัน (7/30/90 วัน) และลิงก์ "ดูทั้งหมด" มีพื้นที่กดใหญ่ขึ้นบนจอสัมผัส
+
+Effect เดิมที่มีหน้าที่ (toast, shake ตอนกรอกผิด, จุดขั้นอนุมัติปัจจุบัน, ไฟสถานะสต็อก, filter-pop) มีตัวกัน reduced motion ครบอยู่แล้ว ไม่แตะ
+
+### Tests / Verification
+
+ไม่มี JS test runner — ตรวจด้วย iframe ขนาดจริงใน Chrome: ทุกหน้าที่ 768 และ 1024 ไม่เลื่อนแนวนอน, แท็บ 1 แถว, รหัส 1 บรรทัด, sidebar 64px · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน (ยังไม่ได้ทดสอบบน iPad จริง / Safari)
+
+---
+
+## Assets: การ์ด "ทรัพย์สินทั้งหมดในระบบ" ไม่ยืดตามจำนวนประเภท (2026-09-26)
+
+เดิมการ์ดแสดงทุกประเภท (ประเภทละ 2 บรรทัด) จึงสูงกว่าการ์ด "โอนย้าย / รับคืน" และยืดขึ้นทุกครั้งที่เพิ่มหมวดหมู่ asset ใน Master data
+
+- แสดง 3 ประเภทที่มีของมากที่สุด (`TYPE_ROWS_SHOWN`) ที่เหลือรวมเป็นแถว **"อื่น ๆ N ประเภท"** — ตัวเลข/แถบสียังรวมครบทุกชิ้น ไม่มีของหายจากภาพรวม
+- ปุ่ม **"แสดงทั้งหมด (N)"** / **"แสดงน้อยลง"** กางดูครบในการ์ดเดิม (component state ไม่ใช่ URL)
+- ยุบเฉพาะเมื่อเหลือ ≥ 2 ประเภท (ถ้าเกินมา 1 ประเภทแสดงตัวมันเองเลย) · backend เรียง `by_type` จากมากไปน้อยอยู่แล้ว
+- lang ใหม่: `asset_type_others`, `asset_types_show_all`, `asset_types_show_less` (en + th)
+
+### Tests / Verification
+
+วัดบนข้อมูล demo (9 ประเภท): การ์ดสูง 319px เทียบกับการ์ดข้าง ๆ 292px (เดิม 6 แถวสูง 478px) · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน
+
+---
+
+## Ticket / Stock / Contract: เหตุผลที่ server ปฏิเสธแสดงเป็นสองภาษา + ย้ายข้อความ UI เข้าไฟล์ lang (2026-09-26)
+
+แก้ตามผลตรวจแอปข้อ 1, 2, 4, 6 และ 7 ส่วนข้อ 3 (import CSV ให้ Super admin ทำเท่านั้น) และข้อ 5 คงเดิมตามที่ตั้งใจ
+
+- **มอบหมายเคสที่เปิดจากคำขอ (ข้อ 1)** — dialog มอบหมายซ่อนช่อง priority และไม่ส่ง priority เมื่อเคสมาจากคำขอ (API ไม่รับ priority ของเคสแบบนี้ เดิมกดแล้วเงียบ)
+- **Dialog ของ Ticket บอกเหตุผลเมื่อถูกปฏิเสธ (ข้อ 2)** — รับเคส / มอบหมาย / ส่งต่อ / ปิดเคส / อัปเดตความคืบหน้า / เปิด Ticket / แก้ไข Ticket แสดงแบนเนอร์สีแดงแทนการเงียบ · ปุ่มแก้ไขเช็ก `tickets.edit_own` เหมือน endpoint · mutation ของ Ticket refresh ทั้งตอนสำเร็จและล้มเหลว (`onSettled`) เพื่อให้ drawer ด้านหลังแสดงสถานะล่าสุด
+- **กดส่งซ้ำไม่สร้างของซ้ำ** — เปิด Ticket แล้วแนบไฟล์ไม่ผ่าน: กดส่งอีกครั้งจะแนบเฉพาะไฟล์ที่เหลือเข้า Ticket เดิมและล็อกช่องรายละเอียด · แก้ไข Ticket แล้วล้มกลางทาง: ไฟล์ที่อัปโหลด/ลบไปแล้วจะไม่ถูกทำซ้ำ (`ticketApi.uploadAttachments` มี callback `onSaved`) · ไฟล์ที่ server ไม่รับ (ชนิด/ขนาด) บอกชื่อไฟล์ · ช่องหัวข้อ / รายละเอียด / เบอร์โทรจำกัดความยาวเท่ากับ server
+- **ยืนยันการลาออกอีกรอบ (ข้อ 4)** — หลังกด "ยืนยันลาออก" มี dialog ยืนยันแบบ danger (`useConfirm`) บอกวันทำงานวันสุดท้าย และแจ้งว่าอุปกรณ์จะถูกเรียกคืนและแจ้ง IT ทันที ซึ่งการยกเลิกลาออกภายหลังไม่คืนให้
+- **เหตุผลการปฏิเสธเป็น reason key (ข้อ 6)** — `App\Support\Refusal::fail($reason, $details, $field)` (ยังเป็น ValidationException) ใช้ในโดเมน Stock · `TicketController` / `TicketAttachmentController` ตอบ reason key แทนประโยคภาษาเดียว · frontend แปลด้วย `refusalText()` (`shared/lib/api-errors.ts`) → คีย์ `ticket_refusal_*` / `stock_refusal_*` พร้อมเติม `{placeholder}` จาก response · Stock ใช้ `modules/stock/lib/refusal.ts` (แปลงสถานะคำขอเป็นชื่อที่แสดง) ทั้งใน toast และ confirm dialog ของคำขอ / การนับสต็อก / การลบ SKU
+- **ย้ายข้อความ hardcode เข้า lang (ข้อ 6)** — โมดูล Contract ทั้งหมด (98 คีย์), Ticket (ฟอร์มเปิด/แก้ไข, ปิดเคส), Stock movement drawer (ย้ายคลัง), Resign modal
+- **CLAUDE.md (ข้อ 7)** — Ticket workflow เหลือ 4 สถานะตามระบบจริง: เปิด → กำลังดำเนินการ → เสร็จสิ้น / ยกเลิก (ปรับ enum ตัวอย่างด้วย)
+- ยังเหลือข้อความ hardcode ในโมดูลอื่นราว 160 บรรทัด (Permission, Asset, แท็บอื่นของ Stock, Email templates ฯลฯ) — ยังไม่ได้ย้าย
+
+### Tests / Verification
+
+PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket, StockWorkflow, StockCount, StockCountSerial, StockBalance) โดย assert reason key และค่าที่ส่งมาด้วย + test ใหม่ `test_a_case_opened_from_a_request_is_assigned_without_a_priority` · Pint ผ่าน · `tsc --noEmit` ผ่าน · eslint (0 error) + prettier ผ่าน · สคริปต์ตรวจ lang: th/en ตรงกัน ไม่มีคีย์ซ้ำข้ามไฟล์ ทุก `t('…')` มีคีย์ และทุก reason ของ backend มีคีย์ครบสองภาษา
+
+---
+
+## Auth: Remember me 7 วัน · ข้าม idle timeout · เปลี่ยนรหัสแล้วเครื่องอื่นหลุด (2026-09-28)
+
+1. **Remember me อยู่ได้ 7 วัน** (เดิม 400 วัน ค่าเริ่มต้น Laravel) — `config/auth.php` guard `web` → `'remember' => AUTH_REMEMBER_MINUTES` (ค่าเริ่ม 10080)
+2. **ติ๊ก Remember = ไม่โดน idle timeout** (Settings → หมดเวลาเข้าใช้งาน) อยู่ได้ครบ 7 วัน · ไม่ติ๊ก = ออกจากระบบเมื่อไม่ใช้งานตามที่ตั้ง เหมือนเดิม
+   - login เก็บ `_sec_remembered` ใน session (`CheckSessionTimeout::REMEMBERED`) · session ที่ guard กู้คืนจาก remember cookie (`viaRemember()`) นับเป็น remembered ด้วย
+   - `CheckSessionTimeout` ข้ามการนับเวลาเฉพาะ session ที่ remembered · `UserResource` ส่ง `remembered` ให้ SPA → `app-shell` ปิดตัวจับเวลาฝั่งหน้าเว็บให้ด้วย
+3. **เปลี่ยนรหัสผ่าน / แอดมินรีเซ็ตรหัส = ออกจากระบบทุกเครื่อง** — `User::signOutEverywhere()` (ย้ายมาจาก EmployeeController) ลบ session + API token และ **หมุน `remember_token`** (เดิมรีเซ็ตรหัสแล้ว cookie remember ยังพากลับเข้าระบบได้) · เปลี่ยนรหัสเองจะคงเครื่องที่กำลังใช้ไว้ และออก remember cookie ใหม่ให้ถ้าเครื่องนั้นติ๊ก remember
+- ข้อความช่วยเหลือของ Settings → หมดเวลาเข้าใช้งาน บอกว่า Remember อยู่ได้ 7 วันแทน
+
+### Tests / Verification
+
+`tests/Feature/Auth/RememberMeTest.php` ใหม่ 7 ข้อ (cookie 7 วัน, session จำว่า remember หรือไม่, remember ไม่โดน idle, กู้จาก cookie = remembered, ไม่ remember ยังหมดอายุ, เปลี่ยนรหัสเอง → token หมุน + session อื่นหาย + cookie เก่าใช้ไม่ได้, แอดมินรีเซ็ต → token หมุน) · Auth + Credentials + Security + PasswordExpiry = **101 passed** · `tsc --noEmit` ผ่าน · pint ผ่าน
+
+---
+
+## แก้บั๊กจากการอ่านโค้ดตอนทำเล่ม Use Case (2026-09-30)
+
+บั๊กที่ agent อ่านโค้ดเจอตอนทำ ITSD-DOC-02 (2026-09-28) — ทุกข้อยืนยันในโค้ดก่อน เขียนเทสต์ที่ fail ก่อนแก้ แล้วค่อยแก้
+
+**ชุด A — คำขอ / สิทธิ์ API**
+- **ผู้ขออนุมัติขั้นของแผนกตัวเองได้** (ขั้นแผนกแบบเลือกตำแหน่ง เมื่อผู้ขออยู่ตำแหน่งนั้นและมีเพื่อนร่วมตำแหน่ง) → `RequestApproval::acceptsEmployee` / `scopeActionableBy` ไม่รับเจ้าของคำขอ และกระดิ่งกลุ่มไม่ส่งถึงเขา
+- **คำขอที่ยกเลิกแล้วยังค้างใน "รออนุมัติจากฉัน"** → `cancel()` คืนขั้นที่รออยู่เป็น waiting · **ยกเลิกคำขอที่รอกลุ่ม ไม่มีใครรู้** → กระดิ่งยกเลิกส่งถึงคนกลุ่มเดียวกับกระดิ่ง "รอคุณ"
+- **`GET /api/employees` (picker) แจกอีเมล/เบอร์/username/เหตุผลลาออก ให้ทุกคน** → ส่งเป็นค่าว่างถ้าไม่มี `employees.view` (ยกเว้นข้อมูลตัวเอง) · **`GET /api/employees/{id}` ไม่ตรวจสิทธิ์** → ต้องมี `employees.view` หรือเป็นของตัวเอง
+- **`GET /api/settings` ก่อนเข้าระบบแจกชื่อนิติบุคคล เลขผู้เสียภาษี ที่อยู่ SLA** → ก่อนเข้าระบบได้แค่ชื่อแบรนด์ โลโก้ ธีม
+
+**ชุด B — ทรัพย์สิน / สต็อก**
+- API ทรัพย์สินรายชิ้นกันสถานะเหมือนหน้าจอและ bulk: รับคืนได้เฉพาะ "รอรับคืน" · ยืนยันรับได้เฉพาะ "รอรับมอบ" · ส่งมอบได้เฉพาะ "พร้อมส่งมอบ" · แก้ไขทรัพย์สินไม่รับ `status`/`owner` (ลงทะเบียนใหม่ยังรับได้)
+- **`stock.delete` ให้ใครไม่ได้** (ไม่อยู่ในแคตตาล็อก) → อยู่ใต้ "รายการพัสดุ" ข้าง "จัดการรายการสินค้า"
+- **ใบเบิก**: ยื่นเกินจำนวน "เบิกได้" ไม่ได้ (เดิมกันแค่หน้าจอ) · อนุมัติเช็คซ้ำใต้ lock กันอนุมัติสองใบบนของชุดเดียวกัน · ผู้ขออนุมัติ/ปฏิเสธใบของตัวเองไม่ได้ (`can_decide` คุมปุ่ม)
+
+**ชุด C — ข้อมูลเสีย / ใช้งานไม่ได้**
+- **Add Employee ขั้นที่ 3 กดบันทึกไม่ได้เมื่อ workflow ใดปิดอยู่** → ปิดปุ่มเฉพาะปัญหาสายบังคับบัญชา · workflow ที่ปิดแค่ปิดการ์ดบริการนั้น + แจ้งเตือนสีเหลือง
+- **นับสต็อก Auto ไม่ปรับยอดรายคลัง** → รอบนับรายคลังใช้ยอดคลังนั้นและปรับคลัง + ยอดรวมตามส่วนต่าง · รอบนับทุกคลังปรับคลังเดียวที่มีของ ถ้าของอยู่หลายคลังจะปฏิเสธ (`count_needs_warehouse`) ให้นับรายคลัง · movement ระบุคลัง
+- **แก้ Ticket ที่มีไฟล์ครบ 10 แล้วสลับไฟล์ไม่ได้** → ลบไฟล์เดิมก่อนอัปโหลด
+- **ค่าเช่าทรัพย์สินเช่าแสดง "/mo" เสมอ และภาพรวมคูณ 12** → ตามรอบบิลของสัญญา (`/mo`, `/qtr`, `/yr`, `Contract::annualValue`)
+- **ส่งต่อเคสไม่มีร่องรอย คนเดิมไม่รู้** → `ticket_updates.kind` + `meta` ลงประวัติเคส "ส่งต่อจาก A ให้ B" · กระดิ่งใหม่ `notif_ticket_forwarded_away` ถึงคนที่ถือเคสอยู่ (ถ้าไม่ได้ส่งต่อเอง)
+
+**ชุด D — หน้าจอ / ภาษา**
+- **Settings บันทึกไม่สำเร็จแต่ปุ่มขึ้น "บันทึกแล้ว"** → `SaveButton` ขึ้นเครื่องหมายถูกเฉพาะเมื่อบอกว่าสำเร็จ · hook บันทึกทุกตัว + Email + Security มี toast เมื่อถูกปฏิเสธ (4xx)
+- **หน้า Permissions โชว์ทุกแท็บ** (IT Supervisor เห็น Role Templates หมุนไม่หยุด, Role Groups ว่าง) → แต่ละแท็บต้องมีสิทธิ์ของ endpoint ตัวเอง
+- **ข้อความ validation จาก server เป็นอังกฤษเสมอ** → SPA ส่ง `X-Locale`, middleware `SetRequestLocale`, `lang/th/{validation,auth,passwords}.php` (ชื่อฟิลด์เป็นไทย)
+- **ข้อความ hardcode ในหน้า Permissions** (รวม "ระดับประเภทเคส (Tickets Level)", "อีเมล / การแจ้งเตือนในระบบ") → 55 จุดย้ายเข้า `lang/<locale>/permission.ts` (`perm_ui_*`)
+- ลบสิทธิ์ตาย `contracts.import` และป้าย `perm_act_reports.*` ที่ไม่มีสิทธิ์รองรับ
+
+**Migration บน DB จริง** (ผู้ใช้อนุญาต): `report_pins` (Phase 5a) · `ticket_updates.kind` + `meta` (68 แถวเดิม = note)
+**ซ่อมข้อมูลบน DB จริง** (ผู้ใช้อนุญาต): ขั้นอนุมัติ id 58, 129 (RQ-2026-0017, RQ-2026-0037) current → waiting · `stock_balances` id 15 (SKU-0000013 คลังโรงงาน 4) 4 → 3
+
+**ยังไม่ได้ทำ (ต้องใช้ข้อมูลจากผู้ใช้)** ตั้ง SMTP ในหน้า Settings → อีเมล (`mail_settings` ว่าง + `MAIL_MAILER=log` อีเมลจึงยังไม่ส่งจริง) — ต้องทำก่อน UAT ส่วนอีเมล
+
+### Tests / Verification
+
+เพิ่มเทสต์ที่ fail ก่อนแก้ทุกข้อ (RequestDepartmentStep, RequestWorkflow, EmployeePermissionGating, GuestAccess, AssetApi, StockItem, StockWorkflow, StockCount, TicketApi, RequestLocale) · ชุดเต็ม **1508 passed** · `npm run build` ผ่าน · tsc + eslint + pint ผ่าน · ตรวจบนเบราว์เซอร์: ส่วนท้าย sidebar ยังแสดงชื่อบริษัทหลังเข้าระบบ (settings เต็มเมื่อมี session)
+
+## เก็บเรื่องเล็กที่พักไว้ของโมดูลรายงาน (2026-09-30)
+
+- **index `tickets.created_at`** — รายงาน Ticket ทุกตัวกรองตามวันที่เปิดเคส · migration `2026_09_30_155555` รันบน DB จริงแล้ว (index อย่างเดียว)
+- **ชื่อไทยของผู้แจ้ง** — Excel ของรายงาน Ticket & SLA ใช้ชื่อไทยก่อนถ้ามี · API แถวส่ง `requester_name_th` · ตารางบนหน้าเพิ่มคอลัมน์ "ผู้แจ้ง" ตามภาษาที่เลือก (PDF ไม่มีคอลัมน์ผู้แจ้งมาแต่เดิม คงไว้)
+- **เป้า SLA** — เลิกใช้ค่าคงที่ 90% ใน `TicketOverviewReportService` · ตั้งได้ที่ Settings → SLA (`ticket_sla_goal`, `TicketSla::goalPercent()`, ค่าเริ่มต้น 90, 1–100) · เส้นเป้า / badge / แถวสีแดงในรายงานใช้ค่านี้
+
+### Tests / Verification
+
+`TicketOverviewReportTest` (+2: index, ชื่อสองภาษา) · `TicketOverviewExportTest` (+1: Excel ชื่อไทย) · `MailAndSlaValidationTest` (+2: ตั้งเป้าแล้วรายงานตาม, รับเฉพาะ 1–100) · ชุดเต็ม **1513 passed** · `npm run build` ผ่าน · tsc + eslint + pint ผ่าน
+
+## Report Module — Phase 5b: Export ผ่านคิว + "ไฟล์ส่งออกของฉัน" (2026-09-30)
+
+ทุกการ Export ของรายงานทั้ง 19 ตัวเข้าคิวทุกครั้ง (ผู้ใช้เลือก) — ไม่มีการดาวน์โหลดตรงจาก request อีกแล้ว
+
+- **ตารางใหม่ `report_exports`** (migration `2026_09_30_160942` รันบน DB จริงแล้ว) — เก็บว่าใครขอรายงานไหน รูปแบบอะไร ตัวกรอง/คอลัมน์ที่เลือก สถานะ `queued → running → ready | failed` ไฟล์อยู่ใน private disk `report-exports/{id}/` เก็บ 7 วัน (`ReportExport::KEEP_DAYS`)
+- **Endpoint** — `POST /api/reports/r/{key}/export` และ `POST /api/reports/tickets/overview/export` ตอบ 202 (เดิมเป็น GET ดาวน์โหลดตรง) · `GET /api/reports/exports` · `GET …/{id}/download` · `POST …/{id}/retry` · `DELETE …/{id}` — เห็น/ใช้ได้เฉพาะเจ้าของ (คนอื่นได้ 404)
+- **`GenerateReportExport` job** (tries 1, timeout 600s) → `ReportExportService::build()` เช็กสิทธิ์ `ReportCatalogue` ซ้ำตอนสร้าง (เสียสิทธิ์ระหว่างรอ = failed `forbidden`) · error อื่น = `build_failed` + log · ตัว Export สองตัวมี `store()` ใช้ build path เดียวกับของเดิม
+- **แจ้งเตือน (bell)** `notif_report_export_ready` / `notif_report_export_failed` (module system) — ตั้งปิด/แก้ข้อความได้ในหน้า Notification เหมือน bell อื่น · คลิกแล้วไปศูนย์รายงาน
+- **จำกัด 5 ไฟล์ที่รอ/กำลังสร้างต่อคน** — เกินได้ refusal `export_queue_full`
+- **`reports:prune-exports`** ทุกวัน 02:15 — ลบไฟล์หมดอายุ และแถวที่ค้างคิวเกิน 24 ชม. (worker ตาย)
+- **หน้าเว็บ** — ปุ่มในไดอะล็อก Export เป็น "สร้างไฟล์ Excel/PDF" → ปิดไดอะล็อก + toast "กำลังสร้างไฟล์" (คลิกไปศูนย์รายงาน) · แผง **ไฟล์ส่งออกของฉัน** บนหน้า hub (ใต้แถบตัวเลข) แสดงสถานะ/จำนวนแถว/ขนาด/เก็บถึงวันไหน, ปุ่มดาวน์โหลด · ลองใหม่ · ลบ (useConfirm) · poll ทุก 3 วิเฉพาะตอนมีไฟล์กำลังสร้าง + รีเฟรชทันทีเมื่อ bell มา · รอคิวเกิน 2 นาทีขึ้นเตือนให้ตรวจ Queue worker
+- **`composer run dev`** — `queue:listen` เพิ่ม `--timeout=660` (ค่าเดิม 60 วิ: งานที่นานเกินทำให้ listener ตายทั้งตัว — เคยเกิดแล้ว 2026-09-26)
+
+### Tests / Verification
+
+`ReportExportQueueTest` ใหม่ 11 ข้อ (สร้าง/รายการ/ดาวน์โหลด, Ticket overview, คนอื่นเข้าไม่ได้, ลบไฟล์, ไฟล์ยังไม่เสร็จดาวน์โหลดไม่ได้, เสียสิทธิ์ก่อนสร้าง, error แล้ว retry, retry ได้เฉพาะ failed, จำกัด 5 ไฟล์, prune, GET เดิมใช้ไม่ได้แล้ว) · test export เดิม 11 ไฟล์ย้ายไปใช้ trait `Tests\Concerns\ExportsReports` (POST → job → download) · ชุดเต็ม **1524 passed** · `npm run build` ผ่าน · tsc + eslint + prettier + pint ผ่าน
+
+## Report Module — Phase 6: ส่งรายงานทางอีเมลตามเวลา (2026-09-30)
+
+ตั้งจากหน้ารายงาน (ปุ่ม **ตั้งเวลาส่ง** ข้าง Export) ทั้ง 19 รายงาน · ผู้ใช้เลือก: ผู้รับเป็นอีเมลอะไรก็ได้ · รายวัน/รายสัปดาห์/รายเดือน · แนบ PDF หรือ Excel ตามที่รายงานรองรับ · ใครเปิดรายงานได้ก็ตั้งได้ (ไม่เพิ่ม permission)
+
+- **ตารางใหม่ `report_schedules`** + template อีเมล `report.scheduled` (migration `2026_09_30_163939` / `163940` รันบน DB จริงแล้ว — template ใส่เฉพาะถ้ายังไม่มี ไม่แตะ template ที่แก้ไว้)
+- **รอบส่ง** — รายวัน = ข้อมูลเมื่อวาน · รายสัปดาห์ (วันจันทร์) = จันทร์–อาทิตย์ที่แล้ว · รายเดือน (วันที่ 1) = เดือนที่แล้ว · เลือกชั่วโมงส่งได้ 00–23 · ตัวกรองวันที่ (`from`/`to`/`as_of`) ถูกแทนด้วยช่วงของรอบ ตัวกรองอื่น + คอลัมน์ที่เลือกเก็บตามที่ตั้ง
+- **`reports:send-scheduled`** ทุก 5 นาที → เลื่อน `next_run_at` ก่อน แล้ว dispatch `SendScheduledReport` (ใช้เวลารอบ ไม่ใช่เวลาที่ worker หยิบ จึงรายงานช่วงถูกแม้ช้า) → สร้างไฟล์ด้วย `store()` ตัวเดียวกับ Export (สิทธิ์ของเจ้าของ) → ส่งทีละผู้รับพร้อมไฟล์แนบ (log ทุกฉบับใน email log) → ลบไฟล์ชั่วคราว
+- **กรณีพิเศษ** — เจ้าของเสียสิทธิ์ = หยุด schedule + bell · template ถูกปิด = ไม่ส่ง · ไฟล์เกิน 10 MB = ไม่แนบ แต่ไปอยู่ใน "ไฟล์ส่งออกของฉัน" ของเจ้าของ + อีเมลบอกผู้รับ · ส่งไม่ถึงบางคน = failed · bell ใหม่ `notif_report_schedule_failed` (module system)
+- **จำกัด** 10 schedule ต่อคน · 10 ผู้รับต่อ schedule · อีเมลตรวจแบบ RFC + ห้ามซ้ำ
+- **API** — `POST /api/reports/r/{key}/schedule` · `POST /api/reports/tickets/overview/schedule` · `GET /api/reports/schedules` · `PUT/DELETE …/{id}` · `POST …/{id}/send-now` (เฉพาะเจ้าของ คนอื่น 404)
+- **หน้าเว็บ** — ไดอะล็อกตั้งเวลา (ความถี่ · เวลา · รูปแบบ · ผู้รับแบบ chip ค่าเริ่มต้นเป็นอีเมลตัวเอง) · แผง **รายงานที่ตั้งเวลาไว้** บนหน้าศูนย์รายงาน: ครั้งถัดไป / ส่งล่าสุด / สาเหตุที่ไม่สำเร็จ, เปิด-ปิด, ส่งตอนนี้, แก้ไข, ลบ · หน้า Email template มี cadence ใหม่ "ตามเวลาที่ตั้ง" + ตัวแปร `report.*`
+- **อีเมลเชื่อมกับ `deliver()`** — `TemplatedMail` รับไฟล์แนบจาก private disk · `EmailNotificationService::renderTemplate()` สำหรับผู้ส่งที่อยู่ใน worker อยู่แล้ว
+- **SMTP** — ตั้งแล้วในหน้า Settings (Gmail) ส่ง test mail สำเร็จ 2026-09-30 · **ต้องมี queue worker และ scheduler ทำงาน** รายงานตามเวลาจึงจะออก
+
+### Tests / Verification
+
+`ReportScheduleTest` ใหม่ 15 ข้อ (รอบเวลา/ช่วงข้อมูลทั้ง 3 แบบ, แทนตัวกรองวันที่, ตั้งจากหน้ารายงาน + Ticket overview, validation อีเมล/จำนวน, สิทธิ์, จำกัด 10, sweep ส่งทุกผู้รับพร้อมไฟล์แนบ, workbook เฉพาะช่วง, เสียสิทธิ์แล้วหยุด, template ปิด, ไฟล์ใหญ่ไป My exports, แก้ไข/หยุด/เปิด, คนอื่นแตะไม่ได้, ส่งตอนนี้/ลบ) · `NotificationEmailPairingTest` ยกเว้นตระกูล `report.` (อีเมลคือตัวรายงาน ไม่มี bell คู่) · ชุดเต็ม **1539 passed** · build + tsc + eslint + prettier + pint ผ่าน
+
+## Seeder ไม่ทับข้อมูลที่ admin แก้ (2026-09-30)
+
+- **`EmailTemplateSeeder`** — เปลี่ยน `updateOrCreate` → `firstOrCreate` · รัน `db:seed` ซ้ำจะเพิ่มเฉพาะ template ที่ยังไม่มี ไม่ทับ template ที่แก้ในหน้า Email template อีกต่อไป (ตรงกับที่ `DatabaseSeeder` เขียนไว้) · อยากได้ค่ามาตรฐานคืน = ปุ่ม Reset ในหน้า Email template · template ใหม่ในอนาคตรัน seeder ได้เลย
+- **`MasterDataSeeder`** (แยก commit) — เปลี่ยนเป็น `firstOrCreate` เช่นกัน · คำอธิบาย / ชื่อไทย / ไอคอนของยี่ห้อ หมวด คลัง หน่วย และประเภทประกันที่แก้ใน Settings ไม่ถูกทับ
+- แก้ comment ที่ยังเล่าพฤติกรรมเดิม (`NotificationTemplateSeeder`, migration `report.scheduled`)
+
+### Tests / Verification
+
+`EmailTemplateResetTest` (+2: seed ซ้ำแล้ว template ที่แก้ยังอยู่, seed ซ้ำเติม template ที่ขาด) · `MasterDataSeedTest` (+1: seed ซ้ำแล้วค่าที่แก้ยังอยู่) · เทสต์ใหม่ทั้ง 2 ไฟล์ fail กับ seeder เดิม pass กับของใหม่ · ชุดเต็ม **1542 passed** · pint ผ่าน
+
+## `composer run dev` รัน scheduler ด้วย (2026-09-30)
+
+- เพิ่ม `php artisan schedule:work` (ชื่อ `schedule`) เข้าสคริปต์ `dev` — งานตามเวลาทั้ง 11 ตัวใน `routes/console.php` (เตือน SLA, เตือนสัญญา/สต็อก/คำขอค้าง, สรุปรายสัปดาห์, รายงานตามเวลา, ล้าง log/ไฟล์ Export) ทำงานบนเครื่อง dev ตอนเปิด `composer run dev` · ก่อนหน้านี้ไม่มีตัวไหนรันเลย
+- ทำงานเฉพาะตอนสคริปต์เปิดอยู่ (รอบที่พลาดไม่รันย้อนหลัง) · production ใช้ Windows Task Scheduler รัน `php artisan schedule:run` ทุกนาทีแทน
+
+## Report UX รอบ 1: แก้จุดที่ทำให้อ่านตัวเลขผิด (2026-09-30)
+
+จากการตรวจ UX/UI เทียบ Design (claude.ai artifact "Service Desk Reports")
+
+- **ช่วงวันที่ของ Ticket & SLA ไม่ค้างอีก** — ค่าเริ่มต้นเคยถูกจำใน localStorage เป็นวันที่ตายตัว (หน้าค้างที่ 07-01 – 09-25) · ตอนนี้จำเฉพาะช่วงที่ผู้ใช้เลือกเอง เหมือนรายงานตาราง · เปลี่ยน key เป็น `report.tickets-overview.filters.v2` เพื่อทิ้งค่าค้างเดิม
+- **คำอธิบายสีกราฟ Ticket รายสัปดาห์** — เป็นจุดสีจริง (น้ำเงิน = เปิดใหม่, เขียว = ปิดแล้ว) แทน "■" สีเทา
+- **แถบตัวเลขบนศูนย์รายงาน** — ตัวเลขที่ตามช่วงเวลาบอกช่วงในข้อความเอง ("ปิดตาม SLA เดือนนี้", "ยื่นใหม่ปีนี้ 39") ช่องอื่นเป็นค่า ณ ตอนนี้ · SLA ไม่มีข้อมูลขึ้น "ยังไม่มีงานที่ปิดในช่วงนี้" แทน "—" เปล่า · ปุ่มช่วงเวลามี `aria-pressed`
+- **ไดอะล็อกตั้งเวลาส่งบอกช่วงข้อมูลตามชนิดรายงาน** — มีช่วงวันที่ = ช่วงที่เพิ่งปิด · `as_of` (มูลค่าคงคลัง) = ยอด ณ สิ้นรอบ · ไม่มีตัวกรองวันที่ = ข้อมูล ณ เวลาที่ส่ง · หัวเรื่องอีเมลของรายงาน `as_of` เป็น "As of <วันสิ้นรอบ>"
+- หัวคอลัมน์ "COMMON" ไม่ได้แก้รอบนี้ — ตัวพิมพ์ใหญ่มาจาก DataTable กลางของทั้งระบบ (คำว่า "Common" ตรงกับโมดูลทรัพย์สิน) ไปพิจารณารอบ 3
+
+### Tests / Verification
+
+`ReportScheduleTest` (+1: หัวเรื่องอีเมลบอกช่วงแบบ range / as_of / ณ เวลาส่ง) · ตรวจในเบราว์เซอร์: ช่วงวันที่ขึ้นถึงวันนี้ + ไม่เก็บลง storage, legend สี, สลับเดือนนี้/ปีนี้, ไดอะล็อกของรายงาน 3 แบบ · ชุดเต็ม **1543 passed** · build + tsc + eslint + prettier + pint ผ่าน
+
+## Report UX รอบ 2–3: จัด layout ตาม Design + อ่านตารางง่ายขึ้น (2026-09-30)
+
+**รอบ 2 — layout**
+- **ศูนย์รายงาน 2 คอลัมน์ (xl)** — รายการรายงานซ้าย, แถบขวา = ไฟล์ส่งออกของฉัน + รายงานที่ตั้งเวลาไว้ (แสดงเมื่อมีรายการ, จอเล็กกว่า xl ต่อท้ายรายการ) · ปุ่มช่วงเวลาเป็นแถบเลือก (segmented) ขวาของหัวเรื่อง (`PeriodSwitch` + `useSnapshotPeriod`)
+- **แถวไฟล์ Export** — บอกขอบเขตไฟล์ (`2026-09-01 – 2026-09-30 · กรอง 2 อย่าง · 5 คอลัมน์`, `report-scope.ts`; API ส่ง `filters` + `columns_count`) · ไม่มีป้าย "พร้อมดาวน์โหลด" ซ้ำกับปุ่ม · ปุ่มดาวน์โหลดเป็น outline ไม่แย่งสายตา · วันหมดอายุอยู่ใน tooltip
+- **รายการรายงาน** — เลิกแสดงป้าย XLSX/PDF (ทั้ง 19 รายงานมีครบ) · แสดง Export ล่าสุดของผู้ใช้แทน (เมื่อไหร่ / กำลังสร้าง / ไม่สำเร็จ)
+- **หัวหน้ารายงาน** (`ReportHeader`) — ปุ่ม คอลัมน์/ตั้งเวลาส่ง/Export อยู่แถวเดียวกับชื่อรายงานทั้งหน้า Ticket และหน้าตาราง · breadcrumb บน topbar เป็น "การจัดการระบบ / รายงาน / <ชื่อรายงาน>" (ลิงก์กลับได้; `useCrumbTail` + `ui.crumbTail` แบบไม่ persist) แทนลิงก์ "‹ ศูนย์รายงาน"
+
+**รอบ 3 — ตารางและรายละเอียด**
+- **แถวลิงก์ไปเรคคอร์ด** — `ReportColumn::linkTo()` + `_links` ต่อแถว: เลข Ticket (backlog, IT pending), เลขคำขอ, รหัสทรัพย์สิน (register, warranty, ผู้ลาออก, ประวัติโอนย้าย), เลขที่สัญญา (หมดอายุ, ค่าใช้จ่าย) · ตาราง Ticket & SLA ลิงก์เลข Ticket · ลิงก์แสดงเฉพาะเมื่อผู้ใช้เปิดโมดูลนั้นได้ (`useCanOpen` = anyOf เดียวกับเมนู)
+- **ตารางไม่ตัดบรรทัด** — รหัส/วันที่/ตัวเลข/ชื่อคน อยู่บรรทัดเดียว เลื่อนแนวนอนแทน · ข้อความยาวตัดที่ ~22rem พร้อม tooltip · เลข 0 จางลง
+- **ตัวพิมพ์ใหญ่กับภาษาไทย** — เอา `uppercase`/`tracking` ออกจากหัวตารางย่อยหน้า Ticket และป้ายในไดอะล็อก Export/ตั้งเวลาส่ง (DataTable กลางและ eyebrow ของ FocusDialogHeader ยังเหมือนทั้งระบบ)
+- **แถบตัวกรอง** — ช่องวันที่สูงเท่า dropdown (h-9) ป้ายตรงแนวกัน
+- **KPI** — "ปิดตาม SLA" มีแถบเทียบเป้า (เขียวถึงเป้า / ส้มต่ำกว่า + ขีดเป้า) + "ช่วงก่อนหน้า X%" · "Ticket ทั้งหมด" มี ▲/▼ % เทียบช่วงก่อน (สีกลาง)
+- **ไดอะล็อก Export** — กล่องแจ้งก่อนกดว่าไฟล์สร้างเบื้องหลัง + แจ้งกระดิ่ง + เก็บ 7 วัน · ปุ่มยกเลิก (ไดอะล็อกตั้งเวลาส่งด้วย)
+
+### Tests / Verification
+
+`TicketTabularReportsTest` (+1: คอลัมน์ประกาศ link + ทุกแถวมี `_links`) · `ReportExportQueueTest` (API ส่ง filters/columns_count) · ตรวจในเบราว์เซอร์: hub 2 คอลัมน์, breadcrumb, หัว + ปุ่มแถวเดียว, แถบ SLA, ตารางสต็อกบรรทัดเดียว + เลื่อนแนวนอน, ไดอะล็อก Export, คลิกรหัสทรัพย์สินเปิด detail ได้ · ไม่มี render loop (0 mutation ใน 2 วิ) · ชุดเต็ม **1544 passed** · build + tsc + eslint + prettier + pint ผ่าน
+
+## ศูนย์รายงาน: ตรงกับ Mockup (2026-09-30)
+
+หน้าแรกของโมดูลรายงานจัดใหม่ให้ตรงกับ Design ("Service Desk Reports" artifact)
+
+- **แถบตัวเลข** — การ์ดเดียวแบ่ง 6 ช่องด้วยเส้นคั่น (ไม่ใช่ 6 การ์ดแยก) · ช่องอ่าน ชื่อ / ตัวเลข / บรรทัดล่าง · "Ticket ที่ยังเปิดอยู่" มี ▲/▼ เทียบต้นช่วง (แดงเมื่อเพิ่ม) + sparkline 7 จุด และ "เกิน SLA n" ข้างตัวเลข · "ปิดตาม SLA" มี ▲/▼ pt + sparkline · สัญญา/อะไหล่เป็น pill (ต้องต่ออายุ / สั่งซื้อ หรือจำนวนที่เลยกำหนด/หมดสต็อก) · ชื่อช่องตาม Mockup ("Ticket ที่ยังเปิดอยู่", "สัญญาหมดอายุใน 30 วัน")
+  - API snapshot ส่ง `trend` (7 จุด) — open tickets นับจาก created_at / resolved_at ณ แต่ละจุด, SLA คิดต่อช่วงย่อยตามกฎเดียวกับรายงาน Ticket & SLA · `delta` ของ open tickets = ตอนนี้ − ต้นช่วง
+- **รายการรายงาน** — ช่องค้นหาแถวเต็ม ชิปอยู่แถวถัดไป · ลำดับโมดูลตาม Mockup (Ticket, คำขอ, ทรัพย์สิน, สัญญา, สต็อก, พนักงาน, สิทธิ์) · แถว = ชื่อ+คำอธิบาย / ชิป XLSX PDF / Export ล่าสุด ("ยังไม่มีไฟล์" ถ้าไม่มีใน 7 วัน) / ดาวปักหมุดท้ายแถว (เอาลูกศรออก)
+- **แถบขวาแสดงตลอด (xl)** — คอลัมน์รายงานกว้าง 2 ใน 3 ของหน้าพอดี (`66.6667%`) ขอบขวาตรงกับเส้นคั่นหลังช่องที่ 4 ของแถบตัวเลข แถบขวาได้ 1 ใน 3 ที่เหลือหักช่องว่าง · หัวการ์ดแบบ Mockup (ไอคอนจาง + ชื่อ + หมายเหตุขวา) · ไฟล์ Export: "ชื่อรายงาน · ขอบเขต" ด้วยวันที่แบบสั้น (ก.ย. 2026 / 1 ก.ค. – 25 ก.ย. 2026) · บรรทัดล่าง แถว · ขนาด · กี่ชั่วโมงที่แล้ว · แถบวิ่งตอนกำลังสร้าง · ปุ่มดาวน์โหลด/ลองใหม่ด้านขวา · ยังไม่มีไฟล์มีข้อความบอก · ยังไม่ตั้งเวลาส่ง = การ์ด "รายงานที่ตั้งเวลาไว้" ใบเดียวกัน ขึ้นข้อความ "ไม่ได้ตั้งส่งออกอีเมลอัตโนมัติ" กลางการ์ด
+
+### Tests / Verification
+
+`ReportHubTest` (+1: trend 7 จุดของ Ticket ค้าง + delta + trend ของ SLA) · ตรวจในเบราว์เซอร์ (ภาษาไทย) เทียบ Mockup · ชุดเต็ม **1545 passed** · build + tsc + eslint + prettier + pint ผ่าน
+
+## ปรับถ้อยคำโมดูลรายงาน (2026-10-01)
+
+รีวิวข้อความไทย/อังกฤษของโมดูลรายงานให้อ่านเป็นธรรมชาติ ใช้คำที่คนทั่วไปพูด (แก้เฉพาะค่า ไม่แตะ key และ comment)
+
+- **ไทย** — เลิกประโยคแบบแปล ("ถูกบันทึกไว้", "ซึ่ง", ปฏิเสธซ้อน "ไม่ได้สร้างไม่สำเร็จ") · "ปิดตาม SLA / ตรง SLA" → "ปิดทัน SLA / ทัน SLA" ทุกที่ · ตัดศัพท์ระบบที่ผู้ใช้ไม่ต้องรู้ ("Queue worker", "บทบาท", "โมดูล") · ไดอะล็อกตั้งเวลาส่งบอกชัดว่า "ผู้รับจะเห็นข้อมูลเท่าที่คุณมีสิทธิ์ดู" · ป้าย "สั่งซื้อ" → "ควรสั่งซื้อ" · "ครอบคลุม..." → "เป็นข้อมูล..."
+- **อังกฤษ** — สะกดแบบอเมริกันทั้งโมดูล (utilization, license) · เลิกใช้ " - " / "—" เชื่อมประโยค · เลิก "(s)" · "The PDF lists the latest {n} tickets" → "rows" (ข้อความนี้ใช้กับทุกรายงาน) · "case" → "tickets"
+- ชื่อปุ่ม/แผงในประโยคใส่เครื่องหมายคำพูด ("ตั้งเวลาส่ง", "ไฟล์ส่งออกของฉัน") รวมข้อความกระดิ่ง Export (ข้อความใน `NotificationCatalogue` แก้ตรงกัน, DB จริงไม่มีแถวที่แก้ทับไว้)
+- ไม่แตะ: "Common" (ตรงกับโมดูลทรัพย์สิน), " - " ในกระดิ่ง (เหมือนกระดิ่งอื่นทั้งระบบ), อีเมล `report.scheduled`
+
+### Tests / Verification
+
+`NotificationTemplateTest` (ข้อความกระดิ่งไทย/อังกฤษตรงกับ catalogue) · ชุดเต็ม **1545 passed** · build + tsc ผ่าน
+
+## ขนาดตัวอักษรรายงานให้เท่าส่วนอื่นของระบบ (2026-10-01)
+
+- หัวการ์ดในหน้า Ticket & SLA ("Ticket รายสัปดาห์", "แยกตามหมวด" ฯลฯ) และชื่อรายงานในศูนย์รายงานไม่ได้กำหนดขนาด จึงเป็น 16px ทั้งที่ทั้งระบบใช้ `text-sm` (14px) → `text-sm font-semibold`
+- คำอธิบายใต้ชื่อรายงาน 12.5px → `text-xs` · หัวกลุ่มโมดูลและหัวการ์ดแถบขวา (bold) → `text-sm font-semibold` เหมือนหัวการ์ดของโมดูลอื่น
+- ตัวเลข KPI, ตาราง, ตัวกรอง และชื่อหน้า ตรงกับโมดูลอื่นอยู่แล้ว ไม่ได้แก้
+
+## ศูนย์รายงาน: ปักหมุดเป็นไอคอนหมุด + การ์ด "ปักหมุดไว้" (2026-10-01)
+
+- **ไอคอน** — ดาว (อ่านเหมือน favorite) → หมุด (`Pin`): ปักแล้ว = หมุดตั้งตรงทึบสีแบรนด์ · ยังไม่ปัก = หมุดเอียงโปร่งสีจาง
+- **การ์ด "ปักหมุดไว้" บนสุด** (ผู้ใช้เลือก) — แสดงในมุมมอง "ทั้งหมด" ที่ไม่ได้ค้นหา เรียงตามลำดับที่ปักหมุด · รายงานยังอยู่ในหมวดของตัวเองด้วย และขึ้นก่อนในหมวดนั้น · เลิกใช้ชิป "ปักหมุด" (ซ้ำกับการ์ด)
+- **API** — `GET /api/reports` ส่ง `pin_order` (0 = ปักก่อน) จากลำดับใน `report_pins` · ปักใหม่แบบ optimistic ต่อท้ายลำดับทันที
+
+### Tests / Verification
+
+`ReportHubTest` (+1: pin_order ตามลำดับที่ปัก) · ตรวจในเบราว์เซอร์ · ชุดเต็มผ่าน · build + tsc + eslint + pint ผ่าน
+
+## ศูนย์รายงาน: badge รูปแบบไฟล์ตรงแนว + สถานะไฟล์ใต้คำอธิบาย (2026-10-01)
+
+- เดิม badge XLSX/PDF เลื่อนไม่ตรงกัน 40px เพราะคอลัมน์ "ส่งออกล่าสุด… / ยังไม่มีไฟล์" ข้างหลังกว้างไม่เท่ากัน (92 vs 132px)
+- ตอนนี้ (ผู้ใช้เลือก) badge อยู่ท้ายแถวข้างหมุด ตรงแนวเดียวกันทุกแถว · สถานะไฟล์ต่อท้ายบรรทัดคำอธิบาย ("· ส่งออกล่าสุด 21 ชั่วโมงที่แล้ว" / กำลังสร้างไฟล์ / ส่งออกไม่สำเร็จ) และไม่แสดงอะไรเมื่อยังไม่มีไฟล์ (เลิกใช้ "ยังไม่มีไฟล์")
+- ปรับต่อ (ผู้ใช้ขอ): สถานะไฟล์ย้ายไปอยู่ใต้ badge ชิดขวา — badge ระดับชื่อรายงาน สถานะระดับบรรทัดคำอธิบาย · แถวที่มีไฟล์สูงกว่าแถวอื่น 4px
+- ภาษาไทยของโมดูลรายงานใช้คำว่า "ส่งออก" ทั้งหมดแล้ว (ปุ่ม, หัวไดอะล็อก, ป้ายสถานะ, ข้อความปฏิเสธ, คำอธิบายใต้ชื่อหน้า) · ภาษาอังกฤษยังเป็น Export
+
+## การ์ด "ไฟล์ส่งออกของฉัน" แบบไฟล์ใน Drive (2026-10-01)
+
+- ไอคอนไฟล์บอกประเภท + ขนาด (PDF / 109 KB) · บรรทัด 1 ชื่อรายงาน · บรรทัด 2 ช่วงข้อมูล · จำนวนแถว · บรรทัด 3 วันที่ส่งออก (วันหมดอายุอยู่ใน tooltip) · ผ่านมาแล้วเท่าไรอยู่มุมขวาล่างใต้ปุ่ม ให้ฝั่งขวาไม่โล่ง
+- ปุ่มดาวน์โหลด / ลองใหม่ / ลบ เป็นไอคอนอย่างเดียว (มี aria-label + tooltip) · ระหว่างสร้าง บรรทัด 3 เป็นสถานะ + แถบวิ่ง · สร้างไม่สำเร็จ เป็นป้ายแดง + เหตุผล
+- **การ์ด "รายงานที่ตั้งเวลาไว้"** จัดชุดเดียวกัน — ไอคอนไฟล์ (ประเภท + นาฬิกา) · บรรทัด: ชื่อรายงาน / "ทุกวันจันทร์ · 07:00" / ผู้รับ (ไอคอนอีเมล, รายชื่อเต็มใน tooltip) / ส่งครั้งถัดไป (ส่งล่าสุดใน tooltip) / ส่งไม่สำเร็จ + เหตุผลเป็นสีแดง · ส่งตอนนี้ / แก้ไข / ลบ เป็นไอคอนมุมขวาบน · สวิตช์เปิด-ปิดมุมขวาล่าง · หยุดไว้ = ข้อความจาง สวิตช์ยังชัด
+- ปรับต่อ (ตามภาพที่ผู้ใช้วาด): แถวรายงานตามเวลาเหลือ 3 บรรทัด แต่ละบรรทัดแบ่งซ้าย | ขวา — ชื่อรายงาน | สวิตช์ · ผู้รับ | ไอคอนส่งตอนนี้/แก้ไข/ลบ · ทุกวันจันทร์ · 07:00 | ส่งครั้งถัดไป
+
+## คิวงาน: ไฟล์ส่งออกค้าง "รอคิว" (2026-10-01)
+
+**อาการ**: กดส่งออกแล้วไฟล์ค้างสถานะ "รอคิว" ตลอด — `queue:listen` ใน `composer run dev` ตายไปแล้ว (งานลูกเงียบเกิน 660 วินาที → `ProcessTimedOutException` → listener exit code 1) ส่วน server/vite/schedule ยังรันอยู่ จึงดูเหมือนปกติ · บน Windows ไม่มี pcntl ตัว worker จึงตัดงานที่ค้างทีละงานเองไม่ได้ เหลือแต่ timeout ของ listener ที่ฆ่าทั้งตัว
+
+- **`composer run dev`** — concurrently `--restart-tries -1 --restart-after 3000`: process ไหนตาย (รวม queue) เปิดใหม่เองใน 3 วินาที งานในคิวไม่ค้างถาวร
+- **`MailConfigService`** — ตั้ง `mail.mailers.smtp.timeout` = 30 วินาที (`SMTP_TIMEOUT_SECONDS`) ทุกครั้งก่อนส่ง รวมกรณี fallback `.env` · SMTP ที่เงียบไปจะล้มแค่อีเมลฉบับนั้น (ลง log ส่งไม่สำเร็จ) ไม่ลากทั้งคิว
+- เครื่องจริง (production) ให้รัน worker เป็น Windows service / Task Scheduler ไม่ใช่ผ่าน `composer run dev`
+
+`MailConfigTimeoutTest` (2: ตั้งค่า SMTP แล้ว + fallback .env — ตรวจถึง timeout ของ socket จริง) · pint ผ่าน
+
+## ภาพรวม Ticket & SLA: รวม "แยกตามแผนก" + "ผลงานเจ้าหน้าที่ IT" เข้าหน้าเดียวตาม Mockup (2026-10-02)
+
+ตาม `docs/mockup/report-module.html` (หน้า Ticket): รายงาน **"Ticket ตามแผนกและหมวด"** (`tickets.by_department`) และ **"ผลงานเจ้าหน้าที่ IT"** (`tickets.staff_performance`) ย้ายมาเป็นการ์ดเต็มความกว้างในหน้าภาพรวม และถอดออกจากศูนย์รายงาน · หมวด Ticket เหลือ 2 รายงาน (ภาพรวม + Ticket ค้างและเกิน SLA) · รวมทั้งหมดเหลือ 17 รายงาน · ตรวจ DB จริงแล้ว ไม่มีหมุด/ไฟล์ส่งออก/รายงานตั้งเวลาที่ผูกกับ 2 key นี้
+
+**หน้าจอ**
+- การ์ดขวา = ปิดตาม SLA แยกความสำคัญ → อายุ Ticket ที่ค้าง → **แยกตามหมวด** (ย้ายมาจากแถวล่าง) · กราฟรายสัปดาห์ยืดเต็มความสูงที่การ์ดขวากำหนด (`weekly-ticket-chart.tsx` วัดกล่องด้วย ResizeObserver: กว้าง 640 หน่วยคงที่ ตัวอักษรขนาดเดิม viewBox สูงขึ้นตามกล่อง ต่ำสุด 640×240)
+- **แยกตามแผนก** (`components/ticket-breakdown-cards.tsx` → `DepartmentStacksCard`): ทุกแผนก แท่ง stacked ตามหมวดพร้อมตัวเลขบนแต่ละชิ้น · Ticket / ทัน SLA (แดงเมื่อต่ำกว่าเป้า) / ยังไม่ปิด · 10 แผนกแรก + แถว "อื่น ๆ (n)" (SLA คิดจาก met/measured รวม) + ปุ่ม "แสดงทั้งหมด" · "ไม่ระบุแผนก" แยกใต้เส้นประ สเกลของตัวเอง
+- **ผลงานเจ้าหน้าที่ IT** (`StaffPerformanceCard`, re-design ตามภาพที่ผู้ใช้ส่ง): **เฉพาะช่วงวันที่ที่เลือก** — ทุกคนที่ปิดเคสในช่วง: แท่งแนวนอนเต็มความกว้างแบ่ง ปิดสำเร็จ (เขียว) / ยกเลิก (เทา) ตามสัดส่วนของคนนั้น ตัวเลขอยู่บนแต่ละช่วง (`StackBar`, คอลัมน์ "ผลการปิดเคส" — คำอธิบายสีอยู่มุมขวาของหัวการ์ดเหมือนการ์ดแผนก ไม่มีข้อความ "นับเฉพาะเคสที่ปิดในช่วงวันที่ที่เลือก" แล้ว) / ทั้งหมด (`total` ใหม่ใน API = ปิดสำเร็จ + ยกเลิก) / เวลาแก้ไขโดยเฉลี่ย / ปิดทัน SLA (tooltip อธิบายทั้งสองคอลัมน์) · Excel/PDF เพิ่มคอลัมน์ "ทั้งหมด" · ไม่มีคอลัมน์ "ในมือตอนนี้" (ผู้ใช้ขอให้เป็นสรุปตาม period เท่านั้น) · ใช้ `DataTable` ตัวเดียวกับ "รายการ Ticket" (ตารางอยู่ในกรอบ inset + แบ่งหน้า 20 แถว เลือกจำนวนได้) — รองรับเจ้าหน้าที่ 30+ คนโดยหน้าไม่ยาว
+- การ์ด "รายการ Ticket" เอาบรรทัด "ข้อมูล ณ …" ออก · เพิ่มคอลัมน์ "วันที่แจ้ง" (created_at, YYYY-MM-DD HH:mm) ถัดจากเลขที่
+- การ์ด KPI ใบที่ 4 และคอลัมน์ในการ์ดเจ้าหน้าที่ เปลี่ยนจาก**มัธยฐาน**เป็น**ค่าเฉลี่ย** "เวลาแก้ไขโดยเฉลี่ย" (ผู้ใช้ขอ) — API ใช้ `avg_resolve_hours` แทน `median_resolve_hours` (kpi, previous, by_assignee) · ใต้การ์ด "P90 = N ชม." → "90% ปิดภายใน N ชม." (Excel ใช้คำเดียวกัน) · Excel/PDF ตามกัน + tooltip (prop ใหม่ `hint` ของ `KpiTile`) · Excel/PDF ใช้คำเดียวกัน
+- หัวการ์ดกราฟ "Ticket รายสัปดาห์" → "ภาพรวม Ticket" (ตาม mockup)
+- การ์ดแยกตามแผนกแสดงไม่เกิน 10 แผนกเสมอ (เดิมแผนกที่ 11 แสดงเลยแทนที่จะเป็น "อื่น ๆ (1)") — `fold()` รับ `spare` (ค่าเริ่มต้น 1 เหมือนเดิม; การ์ดนี้ส่ง 0) รายงานทรัพย์สินยังใช้กติกาเดิม
+- ถ้อยคำ: "ปิดทัน SLA แยกตามความสำคัญ" → "ภาพรวม SLA แยกตามความสำคัญ" → "ปิดเคสทัน SLA แยกตามความสำคัญ" · "เส้น = เป้า" → "เป้าหมาย N%" (N = เป้า SLA จาก Settings → SLA) · "อายุ Ticket ที่ค้าง" → "Ticket ที่ค้าง" · คอลัมน์ "หมวดที่แจ้ง" → "หมวดหมู่"
+- กราฟภาพรวม Ticket มีเส้นไกด์แนวนอนแบบเส้นประ (สีเดียวกับเส้นหลัก ไม่มีตัวเลข) กึ่งกลางระหว่างเส้นหลัก เช่น 5 และ 15 เมื่อแกนสูงสุด 20
+- การ์ด "Ticket ที่ค้าง" เปลี่ยนจากแท่งแนวตั้งเป็นกล่องตัวเลขพื้นสีอ่อน เขียว/ฟ้า/ส้ม/แดง 4 กล่องเรียงแถว (มือถือ 2×2) — ตัวเลขอยู่กลางกล่อง ชื่อช่วงอายุอยู่ใต้กล่อง จัดกึ่งกลาง (ผู้ใช้เลือก)
+- การ์ด KPI "ค้างอยู่ตอนนี้": บรรทัดล่าง "เปิด N · กำลังทำ N" ใส่จุดสีและตัวเลขสีตามป้ายสถานะ (เปิด = ฟ้า, กำลังทำ = ส้ม) · คีย์ `rep_kpi_backlog_split` แยกเป็น `rep_kpi_backlog_open` / `rep_kpi_backlog_in_progress`
+- แท่ง stacked + fold ใช้ของ `tabular-charts.tsx` ร่วมกับรายงานทรัพย์สิน (export `StackBar`, `fold`, `FoldToggle`)
+- ลิงก์เก่า `/reports/r/tickets.by_department` และ `/reports/r/tickets.staff_performance` redirect ไปหน้าภาพรวม
+
+**Backend** (`TicketOverviewReportService`)
+- `by_department`: ทุกแผนก (เดิม top 6) + `categories` ต่อหมวด + `open` + `sla_measured/sla_met` · ไม่ระบุแผนกอยู่ท้ายเสมอ
+- `by_assignee`: ทุกคน (เดิม top 5) ที่ปิด (เสร็จสิ้น/ยกเลิก) ในช่วง — นับตาม `resolved_at` ไม่ใช่ที่เปิดในช่วง · ไม่มีข้อมูลงานในมือ · ตาม filter หมวด/ความสำคัญ/แผนก/ผู้รับผิดชอบ และ level ของผู้อ่าน
+- Excel ชีต "สรุป" และ PDF แสดงแผนกแยกหมวด + ตารางเจ้าหน้าที่ครบ
+- ลบ `StaffPerformanceReport`, `TicketsByDepartmentReport`, helper ที่ไม่มีใครใช้ใน `TicketReportScope` (`metSql`/`measuredSql`/`percent`) และคีย์ภาษาที่ใช้เฉพาะ 2 รายงานนี้ · ยกเลิกการรับ filter จาก URL ที่เพิ่มไว้ก่อนหน้าใน `use-tabular-filters.ts` (ไม่มีลิงก์ใช้แล้ว)
+
+**Tests**: `TicketOverviewReportTest` +4 (แผนกแยกหมวด/ยังไม่ปิด/ไม่ระบุแผนก, ทุกแผนกไม่ตัด top, เจ้าหน้าที่นับตามวันที่ปิด + ในมือ + เกิน SLA, กรองหมวด) — ย้ายมาจากเทสต์ของ 2 รายงานที่ถูกถอดใน `TicketTabularReportsTest` · `TicketOverviewExportTest` +2 (ชีตสรุป, PDF มีข้อมูล) · `ReportCatalogueTest` 19 → 17 · `tests/Feature/Report` + `SidebarRouteGateTest` = **133 passed** · pint + tsc + eslint + `npm run build` ผ่าน · ตรวจในเบราว์เซอร์กับข้อมูลจริงแล้ว
+
+## Dialog "ส่งรายงานทางอีเมลอัตโนมัติ": รีวิว UX/UI + ภาษา (2026-10-02)
+
+- **บอกตัวกรองที่จะใช้จริง** — กล่องสรุปแสดงตัวกรองที่แต่ละรอบส่งจะใช้เป็น chip ("หมวด: ฮาร์ดแวร์ · ความสำคัญ: สูง") หรือ "ไม่มี (ส่งข้อมูลทั้งหมด)" · `components/schedule-filter-summary.ts` (ใหม่): `tabularFilterChips` (จาก definition ของรายงาน) / `ticketFilterChips` (enum + options แผนก/ผู้รับผิดชอบ) · ส่งจากหน้า Ticket & SLA, หน้ารายงานแบบตาราง และตอนแก้ไขในหน้า "รายงาน" (`useTabularDefinition`/`useTicketOverview` รับ `enabled` ใหม่ ดึงเฉพาะตอนเปิดแก้ไข)
+- **เรื่องสิทธิ์แยกบรรทัด** — "ผู้รับจะเห็นข้อมูลตามสิทธิ์ของคุณ" พร้อมไอคอนโล่สีส้ม · "ช่วงวันที่จะเลื่อนตามรอบส่งเอง" เป็นบรรทัดของตัวเองในกล่องสรุป
+- **ไม่พูดซ้ำ** — การ์ดความถี่บอกแค่วันที่ส่ง ("ทุกวันจันทร์") ส่วนช่วงข้อมูลอยู่ในกล่องสรุปที่เดียว · ลบคีย์ `rep_schedule_freq_*_desc`, `rep_schedule_filters_note(_now)`
+- **`FocusDialogHeader`** (ใช้ทุก dialog) — eyebrow ภาษาไทยไม่ uppercase/ไม่ถ่างตัวอักษร (สระ/วรรณยุกต์ไม่ลอย) ขนาด text-xs · ภาษาอังกฤษคงเดิม
+- **Accessibility** — การ์ดความถี่/รูปแบบไฟล์เป็น `radiogroup` + `role="radio"` `aria-checked` · หัวข้อผูก `aria-labelledby` · ช่องผู้รับมี `<label htmlFor>` และ `aria-describedby` ไปที่คำแนะนำ/ข้อความ error
+- **ภาษา** — หัว "ส่งรายงานทางอีเมลตามเวลา" → "ส่งรายงานทางอีเมลอัตโนมัติ" · สรุป "ส่งทุกวันจันทร์ เวลา 07:00 น. พร้อมข้อมูลของสัปดาห์ที่แล้ว (จันทร์–อาทิตย์)" · คำแนะนำผู้รับ "ใส่ได้ทั้งอีเมลในและนอกระบบ กด Enter หรือจุลภาค (,) เพื่อเพิ่ม" · toast บอกที่อยู่ชัด (เมนู "รายงาน" หัวข้อ "รายงานที่ตั้งส่งอัตโนมัติ") · error 422 บอกช่องที่ผิด (เวลาส่ง/ความถี่/รูปแบบไฟล์) · ภาษาอังกฤษแก้ตามกัน
+
+tsc + eslint ผ่าน · ตรวจใน Chrome: radio/aria ถูก, chip ตัวกรองขึ้นตามตัวกรองจริง (ทดสอบผ่าน localStorage แล้วคืนค่าเดิม) · ไม่ได้กดสร้างรายการจริง
+
+## ภาษาอังกฤษหน้า Ticket & SLA ใช้คำง่ายขึ้น (2026-10-02)
+
+ผู้ใช้ขอให้ใช้คำง่าย ๆ — แก้เฉพาะ `lang/en/report.ts`: "Volume … SLA compliance" → "Tickets opened, time to fix and SLA results…" · "Open right now" → "Open now" · "past SLA" → "over SLA" · "vs {n} in the previous period" → "from {n} last period" · "Average resolve time" → "Average time to fix" · คอลัมน์ "Resolution" → "Time to fix" · "Outcome" → "Result" · "{n} open" (หัวการ์ด Ticket ที่ค้าง) → "Total {n}" · "Share within this group" → "Shown on its own scale" · "The 'to' date is before the 'from' date" → "The end date is before the start date" · tooltip ใช้ประโยคสั้นลง
+
+## Dialog "ส่งออกรายงาน": รีวิว UX/UI + ภาษา (2026-10-02)
+
+- **บอกว่าไฟล์มีอะไร** — กล่องสรุปเดียว: "จำนวนข้อมูลที่ส่งออก {n} รายการ" + "ตัวกรอง:" + chip ช่วงวันที่/ตัวกรอง (`tabularFilterChips`/`ticketFilterChips` ใหม่ `withDates` — export ใช้วันที่ตามที่ตั้ง ไม่เลื่อนเหมือนตั้งเวลาส่ง; วันเดียว `as_of` แสดงเป็นวันที่เดียว) + หมายเหตุคอลัมน์/PDF จำกัดแถว · หน้า Ticket & SLA เลิกใช้ subtitle ช่วงวันที่ดิบ "2026-08-01 – 2026-10-02" (ไปอยู่ใน chip "ช่วงวันที่: 1 ส.ค. – 2 ต.ค. 2026") ทั้งสองหน้าจึงแสดงเหมือนกัน
+- **ไม่ซ้อนกล่อง** — หมายเหตุ "สร้างเบื้องหลัง" ลดเป็นบรรทัดเล็กสีเทาใต้กล่องสรุป (เดิมเป็นกล่องสีน้ำเงินอีกกล่อง)
+- **Accessibility** — การ์ด Excel/PDF เป็น `radiogroup` + `aria-checked`
+- **ภาษา (ไทย)** — หมายเหตุก่อนกด "ระบบกำลังสร้างไฟล์ให้" → "ระบบจะสร้างไฟล์ให้เบื้องหลัง…" (ยังไม่ได้กด) · การ์ด Excel "ทุกแถว พร้อมชีตสรุป เอาไปกรองต่อได้" · PDF "สรุปและตาราง พร้อมพิมพ์" (เดิมตัดคำ "ส่งผู้|บริหาร") · toast บอกที่อยู่ (เมนู "รายงาน" หัวข้อ "ไฟล์ส่งออกของฉัน") และ "กดเพื่อไปดู"
+- **ภาษา (อังกฤษ คำง่าย)** — "Every row and a summary sheet. Easy to filter." · "Summary and table, ready to print" · "We make the file in the background. You can close this…" · "{n} rows" · PDF cap แยกเป็น 2 ประโยค
+
+tsc + eslint ผ่าน · ตรวจใน Chrome (DOM) ทั้งหน้า Ticket & SLA และ Ticket ค้างและเกิน SLA · ไม่ได้กดสร้างไฟล์จริง
+
+## หน้า "รายงาน": ช่วงเวลา 7 วัน / เดือนนี้ / ไตรมาสนี้ / ปีนี้ ส่งต่อไปยังรายงานย่อย (2026-10-02)
+
+- ทุกลิงก์ไปรายงานในหน้า `/reports` (การ์ดตัวเลขด้านบน, รายการรายงาน, การ์ดปักหมุด) แนบ `?from=&to=` ตามช่วงที่เลือก — `reportRoute(def, range?)` + `periodRange()` ใน `report-scope.ts` (คิดแบบเดียวกับ `ReportSnapshotService::range`: 7 วัน = วันนี้กับ 6 วันก่อนหน้า, เดือน/ไตรมาส/ปี = ตั้งแต่วันแรก, ถึงวันนี้)
+- **ฝั่งรับ** — หน้า Ticket & SLA (`useTicketReportFilters`) และรายงานแบบตารางที่มีทั้งตัวกรอง `from` และ `to` (`useTabularFilters`) เปิดด้วยช่วงนั้น แล้วล้าง query ออกจาก URL · รายงานที่ไม่มีช่วงวันที่ไม่ได้รับผล (แค่ล้าง query)
+- **ไม่ทำให้วันที่ค้าง** — วันที่จากลิงก์ใช้เฉพาะรอบนั้น ไม่ถูกจำเป็นวันที่ที่ผู้ใช้เลือก (ตัวกรองอื่นยังจำตามเดิม) · เปิดรายงานตรงครั้งถัดไปจึงกลับเป็นค่าเริ่มต้นที่เลื่อนตามปฏิทิน หรือช่วงที่ผู้ใช้เคยเลือกเอง · ถ้าผู้ใช้แก้วันที่ในหน้านั้น จึงจำค่าที่แก้
+
+tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสนี้" → ลิงก์ทุกตัว 2026-10-01 ถึง 2026-10-02 · หน้า Ticket & SLA เปิดด้วยช่วงนั้น, URL ล้างแล้ว, localStorage ไม่มีวันที่ · ประวัติโอนย้ายฯ เปิดจากลิงก์ได้ช่วงที่ส่งมา และเปิดตรงอีกครั้งกลับเป็นต้นเดือน
+
+## รายงาน: ตัวกรองอยู่ใน URL เพื่อส่งต่อลิงก์ / bookmark (2026-10-02)
+
+แทนแบบเดิม (อ่าน `?from=&to=` แล้วลบออกจาก URL) ตามที่ผู้ใช้ขอ — หน้า Ticket & SLA (`useTicketReportFilters`) และรายงานแบบตารางทุกตัว (`useTabularFilters`):
+- URL แสดง**ตัวกรองทั้งหมด**ตลอดเวลา (วันที่เสมอ ตัวกรองอื่นเมื่อไม่ใช่ค่าเริ่มต้น เช่น `?from=2026-09-01&to=2026-09-30&categories=hardware,software&priority=high`) อัปเดตแบบ `replace` ทุกครั้งที่เปลี่ยน — copy ลิงก์ได้ทุกเมื่อ ปุ่ม Back ไม่รก · แตะเฉพาะชื่อตัวกรองของรายงานนั้น (`?view=` ของกราฟอยู่ร่วมได้)
+- เปิดลิงก์ที่มีตัวกรอง → ใช้ตามลิงก์ทั้งหมด (ตัวที่ไม่มีใน URL = ค่าเริ่มต้น/ทั้งหมด ไม่ใช่ค่าที่จำไว้) คนรับลิงก์จึงเห็นตัวเลขเดียวกับคนส่ง · ค่าว่าง (`within=`) = "ทั้งหมด" สำหรับตัวกรองที่ค่าเริ่มต้นไม่ใช่ทั้งหมด
+- เปิดจากเมนู (ไม่มีตัวกรองใน URL) → ใช้ค่าที่จำไว้ใน localStorage เหมือนเดิม
+- ตัวกรองที่มากับลิงก์ไม่ทับค่าที่จำไว้ จนกว่าผู้ใช้จะเปลี่ยนเองบนหน้า · ช่วงวันที่ค่าเริ่มต้นไม่ถูกจำ (ยังเลื่อนตามปฏิทิน)
+- ลิงก์จากหน้า "รายงาน" (ช่วง 7 วัน/เดือน/ไตรมาส/ปี) ใช้กลไกเดียวกัน
+
+ตรวจใน Chrome: เปิดจากเมนูได้ URL พร้อมวันที่ · ลิงก์ ก.ย. + 2 หมวด + ความสำคัญสูง เปิดตรงทุกค่าและไม่แตะ localStorage · กด "ล้างทั้งหมด" URL อัปเดตตาม · `assets.warranty_expiring?within=` = "ทั้งหมด" · `tickets.backlog?priority=high` = สูง · คืนค่า localStorage เดิมหลังทดสอบ · tsc + eslint ผ่าน
+## รายงาน: URL อ่านง่าย `/reports/<ชื่อ-รายงาน>` (2026-10-02)
+
+- ทุกรายงานเปิดที่ `/reports/<slug>` — slug = key ที่เปลี่ยน "." และ "_" เป็น "-" เช่น `assets.by_status_department` → `/reports/assets-by-status-department` (Ticket & SLA ยังเป็น `/reports/tickets-overview` ตรงกันพอดี) · `reportSlug` / `reportKeyFromSlug` ใน `report-catalogue.tsx` แปลงกลับได้แน่นอนเพราะชื่อหมวดไม่มี "-" หรือ "_"
+- API ไม่เปลี่ยน (`/api/reports/r/{key}`) — เปลี่ยนเฉพาะ URL ของหน้าเว็บ
+- ลิงก์เก่า `/reports/r/<key>` redirect ไป URL ใหม่ (คง query ตัวกรองไว้) · `tickets-by-department` / `tickets-staff-performance` (รายงานที่รวมเข้าภาพรวมแล้ว) → `/reports/tickets-overview`
+
+ตรวจใน Chrome: `/reports/assets-by-status-department` เปิดได้ · `/reports/r/assets.transfer_history?from=2026-09-01&to=2026-09-30` → `/reports/assets-transfer-history?from=…&to=…` ตัวกรองตรง · tsc + eslint ผ่าน
+
+## รายงาน: แต่ละรายงานมีไฟล์หน้า frontend + route ของตัวเอง (2026-10-02)
+
+ผู้ใช้เลือกแยกหน้า (เดิม 16 รายงานแบบตารางใช้ route กลาง `/reports/:slug` → หน้าเดียว):
+- **`modules/report/pages/<slug>.tsx`** — 1 ไฟล์ต่อ 1 รายงาน ชื่อไฟล์ตรงกับ URL (เช่น `pages/assets-by-status-department.tsx` = `/reports/assets-by-status-department`) · หน้า Ticket & SLA เปลี่ยนชื่อไฟล์เป็น `pages/tickets-overview.tsx` ให้ตรงกัน · ทุกไฟล์มี comment ชื่อรายงานภาษาไทย + report key
+- **`modules/report/routes.tsx`** — รายการ route ทั้งหมดของโมดูลรายงาน (path / สิทธิ์ / หน้า) บรรทัดละรายงาน · App.tsx map รายการนี้ · แต่ละ route ใช้สิทธิ์ของรายงานนั้นเอง (เช่น สต็อกเคลื่อนไหว = `stock.view_events`) แทนการรวมทุกสิทธิ์ไว้ที่ route เดียว
+- **`components/tabular-report-view.tsx`** (ย้ายจาก `pages/tabular-report.tsx`) — ส่วนกลางที่หน้ารายงานแบบตารางเรียกใช้ (`<TabularReportView reportKey="…" />`) · คอลัมน์/ตัวกรอง/กราฟยังมาจาก definition ฝั่ง backend ที่เดียว หน้าจอ, Excel, PDF และอีเมลตั้งเวลาจึงตรงกันเสมอ — ถ้ารายงานไหนต้องการหน้าตาพิเศษ แก้ในไฟล์หน้าของรายงานนั้น
+- **`pages/unknown-report.tsx`** — URL `/reports/…` ที่ไม่มีในรายการ ขึ้น "ไม่พบรายงานนี้" + ปุ่ม "กลับไปหน้ารายงาน" · ลิงก์เก่า `/reports/r/<key>` ยัง redirect ได้
+
+ตรวจใน Chrome: `/reports/stock-below-min` · `/reports/tickets-overview` · `/reports/nope-nothing` → ไม่พบรายงาน · `/reports/r/tickets.backlog` → `/reports/tickets-backlog` · tsc + eslint + `npm run build` ผ่าน · `SidebarRouteGateTest` + `RequestPermissionGateTest` ผ่าน
+
+## หน้า "รายงาน": แนบช่วงวันที่เฉพาะรายงานที่มีช่วงวันที่ (2026-10-02)
+
+**อาการ**: ลิงก์ในหน้า `/reports` แนบ `?from=&to=` ให้ทุกรายงาน รายงานที่ไม่มีช่วงวันที่ (เช่น อะไหล่ต่ำกว่าขั้นต่ำ) จึงลบ query ทิ้งตอนเปิด ทำให้ URL กระพริบ
+- `ReportCatalogue` มี flag `range` (6 รายงาน: ภาพรวม Ticket & SLA, ประวัติโอนย้ายฯ, พนักงานเข้า-ออก, ระยะเวลาอนุมัติ, สรุปคำขอ, สต็อกเคลื่อนไหว) ส่งไปกับ `GET /api/reports` · `ReportCatalogueTest` ใหม่ตรวจว่า flag ตรงกับตัวกรอง from/to ของแต่ละรายงานจริง (ลืมแก้ = เทสต์ฟ้อง)
+- `reportRoute` แนบช่วงวันที่เฉพาะ `def.range` · การ์ดตัวเลขด้านบนอ่าน flag จาก catalogue
+
+ตรวจใน Chrome: ลิงก์ในหน้า `/reports` มีช่วงวันที่เฉพาะ 6 รายงานข้างบน · `ReportCatalogueTest` 9 ผ่าน · tsc + eslint ผ่าน
+
+## รายงาน: dialog ส่งออก / ส่งทางอีเมลอัตโนมัติ อยู่ใน URL (`?dialog=`) (2026-10-02)
+
+- `shared/hooks/use-dialog-param.ts` (ใหม่, ใช้ซ้ำได้ทั้งแอป) — สถานะเปิดของ dialog อยู่ใน `?dialog=<ชื่อ>` แบบเว็บทั่วไป: เปิด = push ประวัติ (ปุ่ม Back ของเบราว์เซอร์ปิด dialog ไม่ออกจากหน้า) · ปิดด้วย ✕/ยกเลิก/เสร็จ = ย้อนประวัติที่เพิ่ง push · ถ้าเปิดมาจากลิงก์ที่มี `?dialog=` อยู่แล้ว ปิด = ลบ param ในที่เดิม ไม่ออกจากหน้า · ไม่แตะ param อื่น (ตัวกรอง)
+- ใช้กับหน้า Ticket & SLA และรายงานแบบตารางทุกตัว: `…&dialog=export` (ส่งออกรายงาน) · `…&dialog=schedule` (ส่งรายงานทางอีเมลอัตโนมัติ) — ส่งลิงก์ให้คนอื่นเปิด dialog พร้อมตัวกรองได้ · refresh แล้ว dialog ยังเปิด
+- ยังไม่ได้ทำ: dialog แก้ไขรายการที่ตั้งเวลาไว้ในหน้า "รายงาน"
+
+ตรวจใน Chrome: กดส่งออก → `dialog=export` → Back → ปิด อยู่หน้าเดิม · กดตั้งเวลาส่ง → ยกเลิก → param หาย · เปิด `/reports/stock-movements?dialog=schedule` → dialog เปิด → ยกเลิก → อยู่หน้าเดิม ตัวกรองครบ · tsc + eslint ผ่าน
+
+## หน้า "Ticket ค้างและเกิน SLA" ทำใหม่ตาม mockup (2026-10-02)
+
+ตาม mockup ที่ผู้ใช้อนุมัติ (artifact Report · Design แท็บ "Ticket ค้างและเกิน SLA") — `/reports/tickets-backlog`
+
+**Backend** (`TicketBacklogReport`)
+- ตัวกรอง SLA 3 สถานะ: `breached` เกิน SLA · `due_soon` ครบใน 24 ชม. (ใหม่) · `on_track` ยังมีเวลา (= เกิน 24 ชม. หรือไม่มีกำหนด — เดิมรวม "ใกล้ครบ" ด้วย; ตรวจแล้วไม่มีรายงานตั้งเวลา/ไฟล์ที่ใช้ค่าเดิม)
+- ตัวกรองผู้รับผิดชอบใหม่ `assignee` (คนที่เคยรับ Ticket + `none` = ยังไม่มีผู้รับ)
+- เรียง**เลยกำหนดนานสุดก่อน** (ตามกำหนดที่ใช้อยู่ตอนนี้ — `TicketMetrics::activeDue`) แทนเปิดเก่าสุดก่อน · ไม่มีกำหนดไปท้าย
+- คอลัมน์ใหม่ `due_kind` (กำหนดตอบรับ / กำหนดแก้ไข) · `hours_left` เป็นชนิดคอลัมน์ใหม่ `hours_left` (`ReportColumn::hoursLeft`) — หน้าจอแสดงป้าย "เกิน 3 วัน" / "อีก 5 ชม." · Excel ยังเป็นตัวเลขชั่วโมง
+- การ์ดสรุป: ทั้งหมด (แยก รอรับเรื่อง/กำลังดำเนินการ) · เกิน SLA · ครบกำหนดใน 24 ชม. · ยังไม่มีผู้รับ
+- `GET /api/reports/tickets/backlog/board` (`TicketBacklogBoardController` → `TicketBacklogReport::board()`) — Ticket ค้างทุกใบตามตัวกรองอื่น ไม่แบ่งหน้า ไม่ใช้ตัวกรอง SLA (หน้าเว็บนับ/กรองเอง) · route ตรึง `{key}=tickets.backlog` จึงตรวจสิทธิ์/validate เหมือน rows
+
+**Frontend**
+- `pages/tickets-backlog.tsx` — ใช้ `TabularReportView` + `extras` ใหม่ (ซ่อนตัวกรองบางตัวจากแถบ, ของหัวแถบตัวกรอง, การ์ดก่อนตาราง, class ต่อแถว)
+- `components/backlog-board.tsx` — ปุ่มกรอง SLA พร้อมจำนวน (แทน select) · กระดานครบกำหนด SLA 6 ช่องรอบเส้น "ตอนนี้" (ช่องละ 6 ใบ + "+n รายการในตาราง", จุดสีตามความสำคัญ, ยังไม่มีผู้รับ = สีส้ม, กดเปิด Ticket) · ค้างอยู่กับใคร (เกิน/ใกล้/ยังมีเวลา, "ยังไม่มีผู้รับ" แยกใต้เส้นประ) · ค้างตามหมวด (ส่วนแดง = เกิน SLA) · แถวตารางมีแถบแดง/ส้มตามสถานะ SLA
+- `tabular-cell.tsx` `HoursLeftBadge` · คำอธิบายหน้า "งานที่ยังไม่ปิด เรียงจากเลยกำหนดนานสุดก่อน ใช้ไล่ตามงานรายวัน"
+
+**Tests**: `TicketTabularReportsTest` — เรียงตามเลยกำหนด (เคสเปิดเก่ากว่าแต่ยังมีเวลาไปท้าย), `due_kind`, ชนิด `hours_left`, การ์ดสรุปใหม่, SLA 3 สถานะ, ตัวกรองผู้รับผิดชอบ + `none` + ค่าที่ไม่มี = 422, board API (ไม่แบ่งหน้า ไม่ใช้ SLA, ตามหมวด, ไม่มีสิทธิ์ = 403) · `tests/Feature/Report` + `SidebarRouteGateTest` = **136 passed** · tsc + eslint + pint + `npm run build` ผ่าน · ตรวจใน Chrome กับข้อมูลจริง
+
+## หัวการ์ด "รายการ" ของรายงานแบบตาราง (2026-10-02)
+
+- เอาบรรทัด "ข้อมูล ณ …" ออกจากการ์ด "รายการ" ทุกรายงานแบบตาราง (เหมือนการ์ด "รายการ Ticket")
+- ปุ่ม **คอลัมน์** ย้ายจากหัวหน้ารายงาน (ข้างปุ่มตั้งเวลาส่ง/ส่งออก) มาอยู่ขวาของหัวการ์ด "รายการ" — ต่อจาก "ทั้งหมด N รายการ" คั่นด้วยเส้นตั้งบาง ๆ เพราะเลือกคอลัมน์ของตารางนี้ (ไฟล์ส่งออกยังใช้คอลัมน์ที่เลือกเหมือนเดิม) · หัวหน้ารายงานเหลือ ตั้งเวลาส่ง + ส่งออก
+- `FilterPopover` เพิ่ม `size="sm"` (ปุ่มสูง h-8 พื้นขาว สำหรับหัวการ์ด) และ `align="end"` (แผงเปิดชิดขอบขวาของปุ่ม) — หน้าอื่นที่ใช้อยู่ไม่เปลี่ยน
+- กระดานครบกำหนด SLA: "+n รายการในตาราง" เปลี่ยนเป็นปุ่ม **"แสดงอีก n รายการ"** (กรอบเส้นประ) — กดแล้วช่องนั้นแสดงการ์ดครบทุกใบ ปุ่มเปลี่ยนเป็น "ย่อ" · แต่ละช่องกาง/พับแยกกัน · ใช้ `fold()` ตัวเดียวกับการ์ดอื่น (เกินมา 1 ใบแสดงเลย ไม่ขึ้นปุ่ม)
+
+ตรวจใน Chrome `/reports/tickets-backlog`: ปุ่มอยู่หัวการ์ด, แผงเปิดชิดขวาไม่ล้นจอ, ซ่อน/แสดงคอลัมน์ + ป้ายจำนวน + ล้างทั้งหมด ทำงาน · tsc + eslint + prettier ผ่าน
+
+## รีวิว UX รายงาน รอบ 1 (2026-10-02)
+
+- **ป้ายวันเหลือ** (`days_left` — สัญญาใกล้หมดอายุ, ประกันใกล้หมดอายุ, ทรัพย์สินของคนที่จะลาออก): ไม่ใช้เลขติดลบแล้ว — "เลยมา 5 วัน" / "วันนี้" / "อีก 9 วัน" (เหมือนป้าย "เกิน / อีก" ของหน้า Ticket ค้าง) · หัวคอลัมน์บนจอ "เหลือ (วัน)" → "เหลือเวลา" · Excel/PDF ยังเป็นตัวเลขวัน หัวคอลัมน์เดิม
+- **ศูนย์รายงาน แถบตัวเลขบน**: ลูกศรบอกว่าเทียบกับอะไร — Ticket ที่ยังเปิดอยู่ "▲ 3 ตั้งแต่ 7 วันก่อน / ตั้งแต่ต้นเดือน …" (เทียบต้นช่วง) · ปิดทัน SLA "▲ 1.8% จากเดือนก่อน …" (เทียบช่วงก่อนหน้า) · ไม่เปลี่ยนก็บอก "เท่าเดิม ตั้งแต่ต้นเดือน" · ภาษาไทยใช้ "%" แทน "pt"
+- **ตารางว่างบอกเหตุผล** (`components/tabular-empty-state.tsx`, ทุกรายงานแบบตาราง): แทน "ไม่พบข้อมูล" — "ไม่มีรายการในช่วง 1 ต.ค. – 2 ต.ค. 2026" (หรือ "ไม่มีรายการที่ตรงกับตัวกรองนี้") + คำแนะนำ + ปุ่ม **ดู 30 วันล่าสุด** (เมื่อช่วงสั้นกว่า 30 วัน) / **ล้างตัวกรอง** (ล้างเฉพาะตัวกรองที่ไม่ใช่วันที่ ซึ่งไม่ใช่ค่าเริ่มต้น) · ปุ่มใช้ `patch` ของหน้า URL และค่าที่จำไว้จึงตามเหมือนเปลี่ยนตัวกรองเอง
+
+ตรวจใน Chrome กับข้อมูลจริง: สัญญาใกล้หมดอายุ ("เลยมา 5 วัน"), ศูนย์รายงาน 7 วัน/เดือนนี้, ความเคลื่อนไหวรับเข้า-เบิกออก (ตารางว่าง → ดู 30 วันล่าสุด / ล้างตัวกรอง) · tsc + eslint + prettier ผ่าน · กราฟ "ภาพรวม Ticket" คงแบบสองแกนไว้ตามที่ผู้ใช้เลือก (ลองแยกเส้นค้างสะสมเป็นแถบล่างแล้ว revert)
+
+## ศูนย์รายงาน: ช่วงเวลา 7 / 30 / 90 วัน / กำหนดเอง (2026-10-02)
+
+เดิม "เดือนนี้ / ไตรมาสนี้" นับจากวันแรกของเดือน/ไตรมาส — ต้นเดือนจึงได้ข้อมูลแค่ 1–2 วัน และเดือนแรกของไตรมาสสองปุ่มได้วันเดียวกัน (เช่น 2 ต.ค. ทั้งคู่ = 1–2 ต.ค.)
+
+- **ปุ่ม**: `7 วัน · 30 วัน · 90 วัน · กำหนดเอง` (`components/period-switch.tsx`) — ช่วงสำเร็จรูปนับย้อนหลังจากวันนี้ (รวมวันนี้) ยาวเท่ากันทุกวันที่เปิด · ค่าเริ่มต้น 30 วัน
+- **กำหนดเอง**: แผงเลือกวันที่ ตั้งแต่ / ถึง + "ใช้ช่วงนี้" (ตรวจว่าวันสิ้นสุดไม่ก่อนวันเริ่ม และไม่เกินวันนี้ — ตรงกับ API) · เลือกแล้วปุ่มแสดงช่วง เช่น "1 ก.ค. – 2 ต.ค. 2026"
+- **คำบนการ์ด**: "ปิดทัน SLA ใน 30 วัน / ในช่วงที่เลือก" · "▲ 3 ตั้งแต่ 30 วันก่อน / ตั้งแต่ต้นช่วง" · "จาก 30 วันก่อนหน้า / จากช่วงก่อนหน้า" (ช่วงก่อนหน้า = ช่วงยาวเท่ากันที่ติดกันก่อนหน้า)
+- **ลิงก์รายงานย่อย** ส่ง `?from=&to=` ตามช่วงที่เลือก (`periodRange`)
+- **ค่าที่เบราว์เซอร์จำไว้** (`hooks/use-snapshot-range.ts`, key เดิม `reports.snapshot.period` เก็บเป็น JSON): ค่าเก่า เดือนนี้ → 30 วัน, ไตรมาส/ปี → 90 วัน · ช่วงกำหนดเองที่ไม่ถูกต้อง → 30 วัน
+- **API** `GET /api/reports/snapshot?period=7d|30d|90d|custom&from=&to=` (`ReportSnapshotService::PERIODS`) — `month/quarter/year` ใช้ไม่ได้แล้ว (422)
+
+**Tests**: `ReportHubTest` — ค่าเริ่มต้น 30 วัน (27 ส.ค.–25 ก.ย.), 90 วัน vs กำหนดเอง, `month` = 422, กำหนดเอง: ต้องมีทั้งสองวัน / เรียงถูก / ไม่เกินวันนี้ / รูปแบบวันที่, ช่วงสำเร็จรูปไม่สนใจ from/to · `tests/Feature/Report` **135 passed** · tsc + eslint + prettier + pint ผ่าน · ตรวจใน Chrome: ทุกปุ่ม + ลิงก์ + แผงกำหนดเอง (ปฏิทินซ้อนในแผงใช้ได้)
+
+## รีวิว UX รายงาน รอบ 2 (2026-10-02)
+
+ผู้ใช้เลือกไม่แก้ข้อ 5 (ปุ่มกรอง SLA ซ้ำกับการ์ดสรุปในหน้า Ticket ค้าง) และข้อ 9 (ป้าย XLSX/PDF ในศูนย์รายงาน)
+
+- **สีแดงมีความหมายเดียว**: การ์ด "แยกตามแผนก" หมวดกล้องวงจรปิด แดง → ชมพู (`ticket-breakdown-cards.tsx`) — แดงในรายงานเหลือ เกิน SLA / วิกฤต / เลยกำหนด
+- **ป้ายวันที่เหมือนกันทุกรายงาน**: รายงานแบบตาราง "ตั้งแต่ … ถึง" → "ช่วงวันที่ … ถึง" เหมือนหน้า Ticket & SLA (`rep_fl_from`; อังกฤษ "Dates")
+- **การ์ดสรุปเต็มแถว**: 2 หรือ 3 ใบแบ่งแถวกันบนจอกว้าง (`summary-strip.tsx`) ไม่เหลือช่องว่างขวา เช่น สัญญาใกล้หมดอายุ
+- **ตัวอักษรอย่างน้อย 12px**: ข้อความเล็ก 10.5–11.5px ในโมดูลรายงาน → `text-xs` (เลข Ticket / ผู้รับบนกระดาน, ป้าย "ตอนนี้", ปุ่ม "แสดงอีก", ตัวเลขบนแท่งแผนก, บรรทัดล่างของการ์ดตัวเลขในศูนย์รายงาน, ไฟล์ส่งออก / รายงานตั้งเวลา, หมายเหตุใต้หัวการ์ด) · ตัวเลขกลางกราฟโดนัท 11.5 → 13.5 หน่วย (กราฟถูกย่อ บนจอจึงราว 12px) · ยกเว้นตัวย่อชนิดไฟล์ XLSX/PDF ในกล่องไอคอนขนาดคงที่ และตัวอักษรในกราฟรายสัปดาห์ (SVG ขยายตามความกว้าง บนจอใหญ่กว่า 12px อยู่แล้ว)
+
+## ภาษาหน้า "Ticket ค้างและเกิน SLA" (2026-10-02)
+
+รีวิวด้วย /humanizer — เรื่องเดียวใช้คำเดียว คำง่ายทั้งไทยและอังกฤษ
+- **คำเดียวต่อเรื่อง**: เกิน SLA / Over SLA (เดิมอังกฤษมี "Past SLA" ในการ์ด, ไทยมี "เลยกำหนดแล้ว") · ยังมีเวลา / Not due yet (เดิม "ยังเหลือเวลา", "More time left") · ครบกำหนดใน 24 ชม. ทั้งปุ่มและการ์ด
+- **คำอธิบายหน้า**: "Ticket ที่ยังไม่ปิด ใบที่เกิน SLA นานที่สุดอยู่บนสุด" / "Tickets still open. The most overdue are at the top." · ชื่ออังกฤษ "Open and overdue tickets"
+- **คอลัมน์ "กำหนดที่ใช้" → "รออะไร"**: รอรับเรื่อง / รอแก้ไขเสร็จ (อังกฤษ Waiting for: Pickup / Fix) — Excel ใช้คำเดียวกัน
+- **กระดาน**: "ซ้ายคือเกิน SLA แล้ว ขวาคือยังมีเวลา" · อังกฤษ "Deadline board", "Over by less than a day" · ไม่ได้ตั้งความสำคัญ "ยังไม่ระบุ" / "No priority"
+- **ค้างอยู่กับใคร**: บรรทัดใต้ชื่อขึ้นยอดรวมก่อน "ค้าง 7 รายการ · เกิน SLA 6" · อังกฤษ "Who has them"
+- **ป้ายเหลือเวลา (อังกฤษ)**: "3 d late" / "5 h left" · คอลัมน์ "Open for (days)", "Due", "Ticket no."
+- **ผู้แจ้ง**: บนจอเคยเป็น "ผู้ขอ" (ไม่ตรงกับ Excel "ผู้แจ้ง") — `ReportColumn::labelKey()` ใหม่ ให้คอลัมน์ใช้ key ของตัวเอง (`rep_c_ticket_requester`) รายงานคำขอยังเป็น "ผู้ขอ" · "เลขที่ Ticket" ตรงกับ Excel
+
+**Tests**: `TicketTabularReportsTest` (label key ผู้แจ้ง / เลขที่ Ticket / ป้ายรออะไร) · `tests/Feature/Report` **135 passed** · tsc + eslint + pint ผ่าน · key ไทย/อังกฤษครบคู่ · ตรวจใน Chrome ทั้งสองภาษา
+- **ค้างตามหมวด**: หัวการ์ดใช้คำอธิบายสี "■ เกิน SLA ■ ยังไม่เกิน" แทนข้อความ "ส่วนสีแดง = เกิน SLA" — แบบเดียวกับการ์ด "ค้างอยู่กับใคร" (`Swatch` ใช้ร่วมกันทั้งสองการ์ด; key ใหม่ `rep_sla_not_breached`, เลิกใช้ `rep_bl_cats_sub`)
+- **ค้างตามหมวด — ตัวเลขบนแท่ง**: ใช้ `StackBar` แบบการ์ดผลงานเจ้าหน้าที่ IT — จำนวนเกิน SLA (แดง) / ยังไม่เกิน (ฟ้า) อยู่เหนือแต่ละส่วน ความยาวแท่งยังเทียบกับหมวดที่มากที่สุด · สีจากชุดสีรายงาน (`FILL.red` / `FILL.blue`) ทั้งแท่งและคำอธิบายสีบนหัวการ์ด
+- **ค้างตามหมวด — หัวคอลัมน์ "ทั้งหมด"**: แถวหัวบาง ๆ เหนือรายการ ป้าย "ทั้งหมด" (`rep_col_total`) ชิดขวาตรงกับตัวเลขยอดรวม แบบคอลัมน์ "ทั้งหมด" ของการ์ดผลงานเจ้าหน้าที่ IT
+- **ค้างตามหมวด — ลำดับและตัวเลข**: เรียงตามจำนวนเกิน SLA มากสุดก่อน แล้วจึงยอดรวม (แบบเดียวกับ "ค้างอยู่กับใคร") · "อื่น ๆ" อยู่ท้ายเสมอ · ตัวเลขยอดรวมขนาด/น้ำหนักเท่าการ์ดข้าง ๆ (14px semibold)
+- **ค้างอยู่กับใคร — แบบเดียวกับค้างตามหมวด**: แท่ง `StackBar` มีตัวเลขบนแต่ละส่วน (เกิน SLA แดง / ครบกำหนดใน 24 ชม. ส้ม / ยังมีเวลา ฟ้า) · คำอธิบายสีจากชุดสีรายงาน (`FILL`) · หัวคอลัมน์ "ทั้งหมด" ตรงกับตัวเลขยอดรวม (`OWNER_GRID` ใช้ร่วมกับทุกแถว) · การเรียงตามเกิน SLA และแถว "ยังไม่มีผู้รับ" ใต้เส้นประคงเดิม
+- **ค้างอยู่กับใคร — คนเยอะไม่ยืด**: เอาบรรทัด "ค้าง N รายการ · เกิน SLA N" ใต้ชื่อออก (ตัวเลขบนแท่งบอกแล้ว; ลบ key `rep_bl_owner_count/over`) · แสดง 5 คนแรก (เกิน SLA มากสุด) ที่เหลือพับด้วย `fold()` + ปุ่ม "แสดงทั้งหมด (N)" / "ย่อ" แบบการ์ดแยกตามแผนก (เกินมา 1 คนแสดงเลย) · แถว "ยังไม่มีผู้รับ" แสดงเสมอ — ตรวจใน Chrome โดยตั้งชั่วคราวเป็น 1 คน แล้วคืนเป็น 5
+- **ค้างอยู่กับใคร / ค้างตามหมวด — กดกรองทั้งหน้า**: แต่ละแถวเป็นปุ่ม (`FilterRow`) กดแล้วตั้งตัวกรองผู้รับผิดชอบ (user id หรือ `none` = ยังไม่มีผู้รับ) / หมวด — กระดาน การ์ด และตารางกรองตาม · กดซ้ำเพื่อยกเลิก · แถวที่เลือกอยู่มีพื้น+กรอบสีแบรนด์ (`aria-pressed`) · เอาเมาส์ชี้แล้วขึ้นชื่อเต็ม + "กดเพื่อกรองทั้งหน้า" / "กดอีกครั้งเพื่อยกเลิกตัวกรอง" (ชื่อไทยยาวที่ถูกตัดจึงอ่านได้) · `TabularReportExtras.beforeTable` ได้ `patch` ของหน้าเพิ่ม
+- **สองการ์ดจังหวะเดียวกัน**: แถวสูง 44px ไม่มีเส้นคั่น ทั้งสองการ์ด · ค้างอยู่กับใครเหลือเส้นประเส้นเดียวเหนือ "ยังไม่มีผู้รับ" (ไม่ขึ้นเมื่อกรองจนเหลือแถวนั้นแถวเดียว) · ตัวเลขเท่ากันเรียงตามชื่อ (เจ้าหน้าที่) / key (หมวด) ลำดับจึงไม่สลับเมื่อข้อมูลรีเฟรช
+- **คอลัมน์ "เงื่อนไข SLA"** (เดิม "รออะไร"): รอรับเคส / รอปิดเคส — คำเดียวกับหน้า Ticket (ปุ่ม "รับเคส", "กำหนดรับเคส / กำหนดปิดเคส") · อังกฤษ "SLA condition": Waiting to take / Waiting to close (ไม่ใช้ "In process" เพราะซ้ำกับสถานะ "In progress" ในคอลัมน์ข้าง ๆ) · Excel ใช้คำเดียวกัน
+- **ซ่อนช่อง "ค้นหา"** ในแถบตัวกรองของหน้านี้ไว้ก่อน (`hiddenFilters: ['sla', 'search']` ใน `pages/tickets-backlog.tsx`) — ตัวกรอง `search` ฝั่ง backend ยังอยู่ (Excel / ตั้งเวลาส่ง / ลิงก์เดิมใช้ได้) เปิดกลับได้โดยเอา `'search'` ออกจากรายการ
+- **การ์ด "ทั้งหมด"**: แยกเป็น "รอรับเคส · กำลังดำเนินการ" (เดิม "รอรับเรื่อง"; อังกฤษ "Waiting to take") — หน้านี้ไม่เหลือคำว่า "รอรับเรื่อง" แล้ว
+- **ตาราง: สีความสำคัญ / สถานะ Ticket** — ป้ายแบบเดียวกับ "รายการ Ticket" ของหน้า Ticket & SLA (วิกฤต แดง · สูง ส้ม · ปานกลาง ฟ้า · ต่ำ เทา / เปิด ฟ้า · กำลังดำเนินการ ส้ม …) · ย้ายชุดสีและป้ายเป็น component กลาง `components/ticket-badges.tsx` (`TicketPriorityBadge`, `TicketStatusBadge`) ใช้ทั้งสองตาราง · `TabularReportExtras.renderCell` ใหม่ ให้หน้าวาดคอลัมน์เองได้ (หน้า backlog ใช้กับ `priority` / `ticket_status`)
+- **ตาราง: วันที่แจ้ง / ครบกำหนด SLA มีเวลา** — ชนิดคอลัมน์ใหม่ `ReportColumn::dateTime()` (`datetime`, `Y-m-d H:i`) ทั้งบนจอและ Excel/PDF · test ตรวจชนิดคอลัมน์และค่า `2026-09-26 10:00`
+- **ชื่อการ์ดตาราง**: "รายการ" → "รายการ Ticket ครบกำหนด SLA และยังพอมีเวลา" (อังกฤษ "Tickets over SLA or with time left") — `TabularReportExtras.rowsTitle` ใหม่ ให้หน้าตั้งชื่อการ์ดตารางเอง รายงานอื่นยังเป็น "รายการ"
+- **ตาราง: เรียงคอลัมน์ตามงานของหน้า** — เลขที่ · เรื่อง · **เหลือเวลา · เงื่อนไข SLA · ครบกำหนด SLA** · ความสำคัญ · สถานะ · ผู้รับผิดชอบ · หมวด · ผู้แจ้ง · แผนก · วันที่แจ้ง · ค้างมา (`TicketBacklogReport::columns()`; Excel เรียงตาม) — เดิมสามคอลัมน์ SLA อยู่ท้าย ต้องเลื่อนตารางถึงจะเห็น ตอนนี้อยู่บนจอทันที (จอ 1920 เหลือนอกจอแค่ แผนก / วันที่แจ้ง / ค้างมา) · คอลัมน์ที่ซ่อนไว้ยังจำได้ (เก็บตาม key)
+- **"ค้างมา"**: บนจอเป็น "39 วัน" (ไม่ถึงวัน "5 ชม.") แทน 39.4 — หัวคอลัมน์ "ค้างมา" / "Open for" · Excel ยังเป็นตัวเลขวันทศนิยม หัว "ค้างมา (วัน)"
+- **กระดาน: สีความสำคัญเท่ากับป้ายในตาราง** — จุดสีใช้ `toneDots` ของ `StatusBadge` ผ่าน `TICKET_PRIORITY_TONE` (ต่ำ เขียว → เทา ตรงกับตาราง) · "ยังไม่ระบุ" เป็นวงโปร่งขอบเทา ไม่ซ้ำกับ "ต่ำ" (ทั้งการ์ดและคำอธิบายสี) · `toneDots` export จาก `shared/components/status-badge.tsx`
+- **กระดาน: ป้าย "ตอนนี้" มีที่ว่าง** — หัวช่องเลื่อนลง (pt-7) ป้ายห่างหัวช่อง 10px
+- **ชื่อการ์ดตารางเปลี่ยนตามปุ่ม SLA**: ทั้งหมด "รายการ Ticket ครบกำหนด SLA และยังพอมีเวลา" · เกิน SLA "รายการ Ticket เกิน SLA" · ครบกำหนดใน 24 ชม. "รายการ Ticket ครบกำหนดใน 24 ชม." · ยังมีเวลา "รายการ Ticket ที่ยังมีเวลา" — `rowsTitle` รับฟังก์ชันของตัวกรองได้
+- **การ์ดสรุป เกิน SLA / ครบกำหนดใน 24 ชม. / ยังไม่มีผู้รับ ไม่โล่งแล้ว** — จังหวะเดียวกับการ์ด "ทั้งหมด" (ตัวเลข · แถบ · บรรทัดล่าง): แถบ + % ของงานค้างทั้งหมดในสีการ์ด (`withShareOf`) และบรรทัดบอกความหนัก "เกินนานสุด 38 วัน" · "ใบถัดไปครบ 5 ต.ค. 13:13" · "รอนานสุด 17 วัน" — `ReportSummary::withNote()` ใหม่ (i18n key + ชั่วโมง `{n}` / เวลา `{at}`, จอเท่านั้น) · `SummaryStrip` แสดง note เมื่อไม่มี split (ระยะเวลาใช้กติกาเดียวกับป้ายเหลือเวลา; วันที่แบบสั้น) · test ตรวจ share และ note ทั้งสามใบ
+
+## Ticket: ที่มา `tickets.source` (2026-10-04)
+
+เดิม Ticket ไม่มีฟิลด์บอกว่าเปิดเองหรือเปิดอัตโนมัติจากคำขอ (ร่องรอยเดียวคือ `service_requests.ticket_id`)
+- **enum** `App\Enums\Ticket\TicketSource`: `manual` (ผู้ใช้/IT เปิดเอง) · `auto_request` (เปิดอัตโนมัติเมื่อคำขอที่ตั้ง `auto_ticket` อนุมัติครบ)
+- **migration** `2026_10_04_090505_add_source_to_tickets_table`: คอลัมน์ `source` (string 20, default `manual`, index) + เติมค่าย้อนหลังจาก `service_requests.ticket_id` — **รันบนฐานข้อมูลจริงแล้ว**: auto_request 17 · manual 203 (ตรงกับคำขอที่ผูก Ticket 17 รายการ)
+- **ตอนสร้าง**: `TicketService::create()` ตั้ง `manual` เป็นค่าเริ่มต้น · `RequestService` (เปิดจากคำขอ) ส่ง `auto_request` · ฟอร์มเปิด Ticket ส่ง `source` มาเองไม่ได้ (ไม่อยู่ใน validated input) · Model cast + factory
+- ค่าเดิม `request` เปลี่ยนชื่อเป็น `auto_request` (migration `2026_10_04_091022_rename_ticket_source_request_to_auto_request` แก้ 17 แถวในฐานข้อมูลจริงแล้ว; migration แรกเติม `auto_request` ตรง ๆ สำหรับฐานข้อมูลใหม่)
+- **Tests**: `RequestAutoTicketTest` (Ticket จากคำขอ = auto_request) · `TicketApiTest` (เปิดเอง = manual แม้ส่ง source มาใน payload) — 56 passed
+- ยังไม่ได้ใช้ในรายงาน — ขั้นต่อไป: ตัวกรอง "ที่มา" / รายงาน SLA ของ Ticket จากคำขอ
+
+## สถานะ SLA: `at_risk` → `near_due`, `breached` → `over_sla` (2026-10-04)
+
+ให้อ่านค่าในฐานข้อมูลแล้วเข้าใจทันที — `on_track`, `met`, `missed` คงเดิม · `near_due` = ใช้เวลาไปแล้ว 80% ของ SLA เคสนั้น (คนละอย่างกับ `due_soon` ของรายงาน Ticket ค้าง = ครบกำหนดใน 24 ชม.)
+
+**ค่าสถานะที่เปลี่ยน (ทุกที่)**
+- `TicketSla` (สถานะเคสที่ยังเปิด → หน้า Ticket) · `TicketMetrics::slaState()` (รายงาน: `met` / `over_sla`) · `TicketSlaAlertService` + คำสั่ง `SendTicketSlaAlerts`
+- คอลัมน์ `tickets.sla_response_alert_level` / `sla_resolve_alert_level`: `null → near_due → over_sla`
+- การแจ้งเตือน: subtype `response_near_due` / `response_over_sla` / `resolve_near_due` / `resolve_over_sla` · key `notif_ticket_sla_*` (`NotificationCatalogue`, ไฟล์ภาษา notif_* และ notification_name/when/who_*)
+- ตัวกรอง: หน้า Ticket `?sla=over_sla` · Ticket ค้าง `sla=over_sla|due_soon|on_track` — ไม่รองรับค่าเก่า `breached` (ยังอยู่ช่วง demo/ทดสอบ ยังไม่ go-live)
+- หน้าเว็บ: `TicketSlaState`, สี SLA ใน ticket-meta / detail drawer, ตัวกรองหน้า Ticket, ไอคอนกระดิ่ง (`endsWith('over_sla')`), ตาราง Ticket & SLA, กระดาน/การ์ด Ticket ค้าง, key `rep_sla_over_sla`, `rep_sla_not_over_sla`, `rep_bl_rows_over_sla` · Excel/PDF รายงาน Ticket & SLA
+
+**ชื่อในโค้ดเปลี่ยนตามด้วย**: ฟิลด์ API `sla_breached_now` → `over_sla_now` · `backlog.breached` → `backlog.over_sla` (หน้า Ticket & SLA + Excel) · key การ์ดสรุป `breached` → `over_sla` (`rep_k_over_sla`, การ์ดตัวเลขศูนย์รายงาน `rep_snap_sub_over_sla`) · `breachedSql()` → `overSlaSql()` · `ticket_dash_breached*` → `ticket_dash_over_sla*` · `rep_kpi_breached` → `rep_kpi_over_sla` — ที่ยังเหลือคำว่า breach เป็นข้อความที่ผู้ใช้เห็น (แอดมินแก้ได้) และชื่อเทมเพลตอีเมลเก่า `ticket.sla_breach` ที่ถอนไปแล้ว
+
+**ข้อมูลจริง** — migration `2026_10_04_092309_rename_sla_states_to_near_due_and_over_sla` (มี `down()` ย้อนกลับ) **รันแล้ว**: alert level response over_sla 8 · resolve near_due 1 / over_sla 11 · กระดิ่ง SLA 53 รายการ (subtype ใหม่) · `notification_templates` 4 แถวเปลี่ยน key ในที่เดิม (สวิตช์/ข้อความที่แอดมินแก้/`last_sent_at` อยู่ครบ) · ตัวกรองที่บันทึกในรายงานตั้งเวลา/ไฟล์ส่งออก (ไม่มีแถวที่ใช้ค่าเก่า) · `source_key` ของกระดิ่งทดสอบ
+
+**Tests**: `SlaStateRenameMigrationTest` ใหม่ (up แล้ว down: alert level, subtype, source_key, template key + ค่าที่แอดมินแก้, ตัวกรองที่บันทึก, แถวที่ไม่เกี่ยวไม่ถูกแตะ) · อัปเดต TicketSla / SlaAlert / DeskInternals / รายงาน · **ทั้งชุด 1559 passed** · tsc + eslint + pint ผ่าน · ตรวจใน Chrome: หน้า Ticket (ป้าย SLA, ตัวกรองเกิน SLA), กระดิ่ง (ข้อความ SLA), หน้าตั้งค่าการแจ้งเตือน (ชื่อ + key ใหม่ + ส่งล่าสุดเดิม), Ticket ค้าง
+- **NT-35 (`notif_ticket_sla_resolve_over_sla`) ข้อความไม่มีคำว่า breach**: "เกินกำหนดปิดเคส - SLA breach แล้ว" → **"เกินกำหนดปิดเคสแล้ว - เคสนี้เกิน SLA"** · "Resolution overdue - SLA breached" → **"Resolution overdue - this case is past its SLA"** — แก้ครบ 3 ที่: `NotificationCatalogue` (ข้อความมาตรฐาน), ไฟล์ภาษา (ข้อความสำรอง) และแถวใน `notification_templates` ที่กระดิ่งอ่านจริง ผ่าน migration `2026_10_04_095621_reword_ticket_sla_resolve_over_sla_notification` (แก้เฉพาะภาษาที่ยังเป็นข้อความมาตรฐานเดิม ไม่ทับข้อความที่แอดมินแก้เอง; รันบนฐานข้อมูลจริงแล้ว) · test `test_nt35_rewords_only_the_standard_text`
+
+## รวม migration เข้าไฟล์ฐาน 0001 (2026-10-04)
+
+ระบบยังอยู่ช่วง demo/ทดสอบ — ไฟล์ migration แบบมีวันที่ 11 ไฟล์ถูกรวมเข้าไฟล์ฐาน `0001_01_01_*` (เหลือ **18 ไฟล์**, "Baseline n/18")
+- `000007_create_ticket_tables`: + `tickets.source` (ต่อจาก `status`, index) + index `tickets_created_at_idx`
+- `000013_create_ticket_updates_table`: + `kind` (default `note`) + `meta` (json)
+- `000016_create_request_attachments_table`: + `ticket_attachments.request_attachment_id` (FK → request_attachments, restrict) — อยู่ไฟล์นี้เพราะตาราง request_attachments ต้องมีก่อน
+- `000017_create_report_tables` (ใหม่): `report_pins`, `report_exports`, `report_schedules`
+- ลบ migration แก้ข้อมูลครั้งเดียว (ค่า source เดิม, ชื่อสถานะ SLA เดิม, ข้อความ NT-35, ใส่เทมเพลต `report.scheduled`) — ฐานข้อมูลใหม่ได้ค่าใหม่จากโค้ด/seeder อยู่แล้ว (`EmailTemplateSeeder`, `NotificationTemplateSeeder` เป็น firstOrCreate) · ลบ `SlaStateRenameMigrationTest` ตามไป · `ReportScheduleTest` seed `EmailTemplateSeeder` เองใน setUp (เดิมได้เทมเพลตจาก migration)
+
+**ตรวจ**: migrate ลงฐานข้อมูลทดลอง `itservices_schemacheck` แล้ว dump โครงสร้างเทียบกับฐานข้อมูลจริง (`mariadb-dump --no-data`) — **ตรงกันทุกตาราง 69 ตาราง** (ไม่นับ AUTO_INCREMENT) · db:seed บนฐานข้อมูลทดลองผ่าน (เทมเพลต report.scheduled, key การแจ้งเตือน SLA ใหม่, ข้อความ NT-35 ใหม่) แล้วลบฐานข้อมูลทดลองทิ้ง · ฐานข้อมูลจริง: ตาราง `migrations` ลบ 11 แถวไฟล์ที่ไม่มีแล้ว + ลงทะเบียน `0001_01_01_000017_create_report_tables` (batch 1) — โครงสร้าง/ข้อมูลไม่ถูกแตะ, `migrate` = Nothing to migrate · **ทั้งชุด 1558 passed**
+
+## ตัวกรอง + คอลัมน์ "ที่มา" ในรายงาน Ticket (2026-10-04)
+
+ใช้ `tickets.source`: `manual` = **ผู้ใช้เปิดเอง** (Opened by user) · `auto_request` = **จากคำขอ (อัตโนมัติ)** (From a request (auto)) — ป้ายใช้ key `rep_source_*` · หัวตัวกรอง/คอลัมน์ใช้ `rep_fl_source` / `rep_c_source` ("ที่มา") ร่วมกับรายงานทรัพย์สิน
+- **Ticket ค้างและเกิน SLA** (`TicketBacklogReport`): `ReportFilter::select('source')` + คอลัมน์ enum `source` (ต่อจากผู้รับผิดชอบ, ซ่อนได้ด้วยปุ่มคอลัมน์) — ระบบรายงานแบบตารางให้ช่องในแถบ, `?source=`, Excel/PDF, ตั้งเวลาส่ง, chip ในหน้าต่างส่งออก มาเอง · กระดาน/การ์ดกรองตาม
+- **ภาพรวม Ticket & SLA**: `TicketOverviewReportRequest` รับ `source` (enum) → `TicketOverviewReportService::scoped()` กรองทุกส่วนของหน้า (KPI, กราฟ, SLA, แผนก, เจ้าหน้าที่, รายการ) และไฟล์ส่งออก/ตั้งเวลาส่ง · `ReportSnapshotService` ส่ง `source => null` · หน้าเว็บ: `TicketReportFilters.source`, `use-ticket-report-filters` (URL `?source=`, ค่าที่จำไว้), ช่อง "ที่มา" ใน `ticket-report-filter-bar` (นับเป็นตัวกรองที่ใช้), chip ใน `ticketFilterChips` · ตาราง "รายการ Ticket" มีคอลัมน์ "ที่มา" (API `source`) · Excel แผ่นรายการเพิ่มคอลัมน์ "ที่มา" (`TicketLabels::source()`); PDF ยังไม่เพิ่ม (หน้ากระดาษแคบ)
+- **Tests**: overview — KPI/รายการกรองตาม manual / auto_request, ค่าผิด 422 · backlog — กรอง, ค่าผิด 422, คอลัมน์+ป้าย, กระดานกรองตาม · **ทั้งชุด 1560 passed** · ตรวจใน Chrome ทั้งสองหน้า (`?source=auto_request`: Ticket & SLA 6 ใบ, Ticket ค้าง 3 ใบ)
+
+## รายงานใหม่ "สรุปผล SLA ของ Ticket จากคำขอ" (2026-10-04)
+
+`/reports/tickets-request-sla` · key `tickets.request_sla` · กลุ่ม Ticket · สิทธิ์เหมือนรายงาน Ticket อื่น (`tickets.view_all` + `tickets.resolve`, นับเฉพาะหมวดตาม `tickets.level_*`) · ทำตาม mockup ที่ตกลงกัน (artifact "Report Design" หน้า SLA ตามประเภทคำขอ)
+
+วัด Ticket ที่ระบบเปิดเองจากคำขอที่อนุมัติครบ (`tickets.source = auto_request`, ประเภทจาก `service_requests.ticket_id`) แยกตามประเภทคำขอ
+- **ปิดทัน SLA** = กฎเดียวกับ `TicketMetrics::slaState` นับเฉพาะเคสที่เสร็จสิ้น (ไม่นับยกเลิก/ยังเปิด) · **รับเคสทัน SLA** = เคสที่รับแล้ว เทียบ `responded_at` กับ `sla_response_due_at` · ยังไม่รับและเลยกำหนด = "เกิน SLA"
+- ตัดสินทุกแถวเทียบเป้า `ticket_sla_goal` (90%) แม้มี 1 เคส — ตัวเลข N/N บอกว่ามาจากกี่เคส · เวลาแก้ไขโดยเฉลี่ยนับชั่วโมงจริง (`TicketMetrics::resolveHours`) ตรงกับรายงานภาพรวม
+
+**Backend**
+- `App\Services\Report\Ticket\TicketRequestSlaReport` (รายงานแบบตาราง): ตัวกรอง ช่วงวันที่แจ้ง (ต้นปี–วันนี้) · ประเภทคำขอ · ผู้รับผิดชอบ — แถว = Ticket จากคำขอทีละเคส (เลขที่, คำขอ, ประเภท, สถานะ, ผู้รับผิดชอบ, วันที่แจ้ง, รับเคสเมื่อ + ทัน/ไม่ทัน/เกิน SLA, ปิดเคสเมื่อ + ทัน/ไม่ทัน/เกิน SLA, เวลาแก้ไข) · การ์ดสรุป 5 ใบ: Ticket จากคำขอ (เสร็จสิ้น/ยกเลิก/ยังเปิด), ปิดทัน SLA %, รับเคสทัน SLA %, เวลาแก้ไขโดยเฉลี่ย (+ รับเคสเฉลี่ย), เกิน SLA ตอนนี้
+- `breakdown()` + `GET /api/reports/tickets/request-sla/breakdown` (`TicketRequestSlaBreakdownController`, gate ผ่าน `TabularReportRequest` แบบเดียวกับกระดาน Ticket ค้าง): ตารางตามประเภทคำขอ (ไม่กรองตามประเภท เพื่อให้เห็นประเภทที่เลือกเทียบกับที่เหลือ) · ประเภทที่ไม่มี Ticket · Ticket ที่ยังเปิดและเกิน SLA · เกณฑ์ SLA (เป้า, รับเคส `ticket_sla_response`, เป้าปิดเคสของแต่ละประเภทจาก `sla_targets`)
+- ลงทะเบียนใน `ReportCatalogue::TICKETS_REQUEST_SLA` (`range => true`) → ศูนย์รายงาน, ส่งออก, ตั้งเวลาส่งอีเมล ใช้ได้ทันที
+
+**เพิ่มในระบบรายงานกลาง (ใช้ร่วมได้)**
+- `ReportSummary`: รูปแบบ `percent` / `hours` · `withGoal()` (แถบมีขีดเป้า, การ์ดเตือนเมื่อต่ำกว่าเป้า) · note รับตัวเลขตามชื่อ (`values` → `{met}`, `{n}`)
+- `TabularReport::exportSections()`: ตารางเสริมในไฟล์ — Excel เป็นแผ่นของตัวเอง (`TabularSectionSheet`) ระหว่าง "สรุป" กับรายการ · PDF พิมพ์ก่อนรายการ · รายงานนี้ใส่แผ่น "ตามประเภทคำขอ" (ทั้งหมด/เสร็จสิ้น/ยกเลิก/ยังเปิด, ทัน/รับแล้ว + %, ทัน/เสร็จสิ้น + %, เวลาเฉลี่ย, แถวรวม)
+- `SummaryStrip` (หน้าเว็บ): แสดง % / ชม. / แถบเป้า · การ์ด 5 ใบอยู่แถวเดียวบนจอกว้างมาก (`xl:grid-cols-5`, จอ lg = 3 คอลัมน์) — มีผลกับ "การใช้ License ซอฟต์แวร์" ที่มี 5 การ์ดด้วย
+
+**Frontend**
+- `pages/tickets-request-sla.tsx` (ใช้ `TabularReportView` + pill สถานะ / ทัน-ไม่ทัน) · `components/request-sla-cards.tsx`: การ์ด "ผลตามประเภทคำขอ" (หัวตาราง 2 ชั้น: จำนวน Ticket ทั้งหมด/เสร็จสิ้น/ยกเลิก/ยังเปิด · แท่ง 0–100% + N/N + % สีเทียบเป้า · เวลาเฉลี่ย · เส้นแบ่งกลุ่มคอลัมน์ · กดแถว = กรองทั้งหน้า `?request_type=`) · "ยังเปิดอยู่" (3 เคสที่เกินนานสุด + ลิงก์ Ticket ค้าง `?source=auto_request&sla=over_sla`) · "เกณฑ์ SLA ที่ใช้วัด" (+ ลิงก์ตั้งค่า SLA)
+- `Heading` / `Swatch` ใน `backlog-board.tsx` export ให้ใช้ร่วม · `useRequestSlaBreakdown` · route + ข้อความ TH/EN (`rep_rs_*`, `rep_k_rs_*`, `rep_c_*`, `rep_tickets_request_sla_*`)
+
+**Tests**: `TicketRequestSlaReportTest` ใหม่ 7 ตัว (เฉพาะ auto_request + หมวดตามสิทธิ์ + ช่วงวันที่, ทัน/ไม่ทัน/เกิน SLA ต่อเคส, การ์ดสรุป + เป้า, breakdown + เกณฑ์จาก `sla_targets`, ตัวกรองประเภท/ผู้รับผิดชอบ, สิทธิ์ 403, Excel 3 แผ่น, PDF) · `ReportCatalogueTest` เพิ่มรายงานในรายการ (18) · **ทั้งชุด 1567 passed** · tsc + eslint + prettier + pint ผ่าน · ตรวจใน Chrome กับข้อมูลจริง (17 Ticket: ปิดทัน 100%, รับเคสทัน 47%, เกิน SLA 3 — ตรงกับ mockup), กดกรองประเภท, โหมดมืด, ลิงก์ไป Ticket ค้าง, การ์ดในศูนย์รายงาน
+- **ชื่อรายงาน** (เปลี่ยนหลังทำเสร็จ): "SLA ตามประเภทคำขอ" → **"สรุปผล SLA ของ Ticket จากคำขอ"** · EN "SLA summary of tickets from requests" — หัวหน้า, breadcrumb, การ์ดในศูนย์รายงาน (`rep_tickets_request_sla_title`) และหัวไฟล์ Excel/PDF (`title()`) · key / URL เดิม (`tickets.request_sla`, `/reports/tickets-request-sla`)
+
+## ตั้งค่า: ปุ่ม Back / Forward ของเบราว์เซอร์สลับหมวดตาม `#` (2026-10-04)
+
+**ปัญหา**: หน้า `/settings#assets` อ่าน `#` ครั้งเดียวตอนเปิดหน้า (`useState(sectionFromHash)`) — กด Back แล้ว `#` ใน URL เปลี่ยนแต่หน้าจอค้างหมวดเดิม
+- `settings/pages/index.tsx`: หมวดที่เปิดอ่านจาก `#` ผ่าน router (`useLocation().hash`) ทุกครั้ง ไม่เก็บซ้ำใน state · กดเมนู = `navigate({ hash })` (เพิ่มประวัติ 1 รายการ) → Back / Forward / ลิงก์ตรง `/settings#tickets` เปิดหมวดตาม URL เสมอ · รูปแบบ URL เดิม (`#company`, `#assets`, …) ไม่เปลี่ยน
+- แก้ลิงก์ "ตั้งค่า SLA" ในรายงานสรุปผล SLA ของ Ticket จากคำขอ: `/settings?tab=tickets` → `/settings#tickets` (หน้าตั้งค่าใช้ `#` ไม่ใช่ `?tab=` — ลิงก์เดิมเปิดหมวดแรก)
+- **ตรวจ**: tsc + eslint ผ่าน · Chrome: บริษัท → ทรัพย์สิน → ตั้งค่าอีเมล แล้ว Back 2 ครั้ง / Forward — เมนูที่เลือก เนื้อหา และ `#` ตรงกันทุกขั้น · เปิด `/settings#tickets` ตรงได้หมวด Ticket & SLA (ยังไม่มีชุดทดสอบฝั่งหน้าเว็บ)
+
+## ตั้งค่า: หมวดที่เปิดอยู่ใช้ `?tab=` ตามมาตรฐาน (2026-10-04)
+
+ต่อจากหัวข้อก่อนหน้า — เปลี่ยนจาก `#` เป็นมาตรฐานแท็บเดียวกับทุกหน้า (`permission/pages/index.tsx` เป็นต้นแบบ): `/settings?tab=company|system|master-data|email|tickets|request-data|assets|security`
+- อ่านค่าด้วย type guard `isSection()` (ไม่ cast) — `?tab=` ที่ไม่มีหรือไม่มีสิทธิ์เปิด → หมวดแรกที่เห็นได้ · `useEffect` ตาม `?tab=` ขณะอยู่ในหน้า (ลิงก์จากหน้าอื่นเข้าหมวดอื่น / Back / Forward) · กดเมนูเขียน URL แบบ `replace` ไม่เพิ่มประวัติ (กด Back = กลับหน้าก่อนเข้าตั้งค่า เหมือนหน้าอื่น) · ไม่มี localStorage
+- ไม่รองรับ `#assets` แบบเดิม (ยังอยู่ช่วง demo/ทดสอบ) — ลิงก์ "ตั้งค่า SLA" ในรายงานสรุปผล SLA ของ Ticket จากคำขอกลับเป็น `/settings?tab=tickets`
+- **ตรวจ**: tsc + eslint ผ่าน · Chrome: ลิงก์จากรายงานเปิดหมวด Ticket & SLA · กดทรัพย์สิน → อีเมล URL เปลี่ยนตาม ประวัติไม่เพิ่ม · Back กลับหน้ารายงาน / Forward กลับมาหมวดเดิม · `?tab=garbage` → หมวดบริษัท
+
+## ตั้งค่า: ปุ่ม Back ย้อนทีละแท็บที่กด (2026-10-04)
+
+ต่อจากหัวข้อก่อนหน้า — เทสจริง: `/email-notifications` → `/settings` → กดทุกแท็บ → Back กระโดดกลับ `/email-notifications` ทันที เพราะกดแท็บเขียน URL แบบ `replace` (ไม่เพิ่มประวัติ)
+- กดแท็บ = เพิ่มประวัติ 1 รายการ (`setSearchParams` ไม่ใช้ replace; กดแท็บเดิมซ้ำไม่เพิ่ม) → Back / Forward ย้อนทีละแท็บที่กด
+- หมวดที่เปิดคำนวณจาก `?tab=` ทุกครั้ง (ไม่เก็บใน state / ไม่มี useEffect) — ย้อนกลับถึง `/settings` ที่ไม่มี `?tab=` ได้หมวดบริษัท ไม่ค้างแท็บเดิม
+- **ตรวจ** Chrome ตามเทสเดิม: กด 7 แท็บ แล้ว Back 8 ครั้ง = ความปลอดภัย → ทรัพย์สิน → ข้อมูลคำขอ → Ticket & SLA → ตั้งค่าอีเมล → ข้อมูลหลัก → ระบบ → บริษัท → `/email-notifications` · tsc + eslint ผ่าน
+- หน้าอื่นที่มีแท็บยังเขียนแบบ replace อยู่ (ยังไม่เปลี่ยน)
+
+## ทุกหน้าที่มีแท็บ: ปุ่ม Back ย้อนทีละแท็บที่กด (2026-10-04)
+
+ทำทุกหน้าให้เหมือนหน้าตั้งค่า — มาตรฐานแท็บเปลี่ยนจาก "กดแท็บแบบ replace ไม่เพิ่มประวัติ" เป็น **กดแท็บ = เพิ่มประวัติ** · เดิมหลายหน้าอ่าน `?tab=` ครั้งเดียวตอนเปิดหน้า (`useState(initialTab)`) Back จึงเปลี่ยน URL แต่หน้าจอไม่เปลี่ยน
+- **hook กลางใหม่** `shared/hooks/use-tab-param.ts` — `const [tab, setTab] = useTabParam(isTab, defaultTab)`: อ่าน `?tab=` ทุกครั้ง (ผ่าน `readTabParam` ที่แปลง `?tab=dashboard` → `overview`) ด้วย type guard ของหน้านั้น · กดแท็บ = push 1 รายการ (กดแท็บเดิมซ้ำไม่เพิ่ม) · `{ replace: true }` สำหรับการย้ายที่ผู้ใช้ไม่ได้กดเอง (ไม่มีสิทธิ์เห็นแท็บ → ไปแท็บแรกที่เห็น) จะได้ไม่เด้งกลับตอน Back
+- **ใช้ hook**: พนักงาน, Ticket (คำนวณแท็บที่เห็นได้ตามสิทธิ์ + รีเซ็ตหน้า 1 ทุกครั้งที่แท็บเปลี่ยน รวมตอน Back), คำขอ, ทรัพย์สิน, สัญญา, คลังอะไหล่, สิทธิ์การใช้งาน, Email & Notification, ตั้งค่า · **การเข้าถึง** คง setter เดิม (ปิด drawer / ฟอร์มเพิ่ม และไม่ใส่ `?tab=` สำหรับภาพรวม) แค่เลิก replace · Workflow ไม่มีแท็บ
+- แท็บย่อยภายในหน้า (เช่น ข้อมูลหลัก → ยี่ห้อ/รุ่น ในตั้งค่า) ยังเก็บในหน้าจอ ไม่อยู่ใน URL
+- **ตรวจ** tsc + eslint ผ่าน · Chrome ทุกหน้า: เข้าจากเมนู → กดทุกแท็บ → Back ทีละครั้ง ได้แท็บย้อนตามลำดับที่กดจนถึงแท็บแรก แล้วออกจากหน้า — พนักงาน 6 แท็บ, Ticket 4, คำขอ 2, การเข้าถึง 5, ทรัพย์สิน 3, สัญญา 2, คลังอะไหล่ 5, สิทธิ์การใช้งาน 3, Email & Notification 3, ตั้งค่า 8 (ยังไม่มีชุดทดสอบฝั่งหน้าเว็บ)
+
+## รายงานสรุปผล SLA ของ Ticket จากคำขอ: รีวิว UX/UI + ภาษา (2026-10-04)
+
+- **แก้การตัดสิน "ปิดทัน SLA" ของเคสที่ยังไม่มีคนรับ**: เดิมขึ้น "เกิน SLA" ทั้งรับเคสและปิดเคส (ใช้กำหนดรับเคสตัดสินทั้งคู่) — เวลาปิดเคสเริ่มนับเมื่อกดรับเคส จึงเป็น "—" จนกว่าจะรับ · `closeState()` นับเกินเฉพาะเคสที่รับแล้วและเลยกำหนดปิด · "เกิน SLA ตอนนี้" และการ์ด "ยังเปิดอยู่" ใช้ `isOverNow()` = เกินด้านใดด้านหนึ่ง (นับเคสละครั้ง)
+- **เกณฑ์ SLA ที่ใช้วัด**: เป้าปิดเคสของแต่ละประเภทจัดกลุ่มตามเป้า ("24 ชม. ทำการ: คอมพิวเตอร์, กู้คืนข้อมูล, …") แทนข้อความยาวต่อกัน
+- **การ์ด "เกิน SLA ตอนนี้"** มีบรรทัด "จาก {n} เคสที่ยังเปิด" · **ตัวเลขตรงกันทุกจุด**: รับเคสเฉลี่ยบนการ์ด 1 ตำแหน่ง ("10.1 ชม.") เท่าตาราง · คอลัมน์เวลาแก้ไขในรายการ "73.0" · จัดรูปตัวเลขด้วย `Intl.NumberFormat` ตามภาษา
+- **สีต่ำกว่าเป้า = แดงทั้งแอป**: แถบ meter ของการ์ด KPI (`KpiTile`) ต่ำกว่าเป้าเปลี่ยนจากส้มเป็นแดง — มีผลกับการ์ด ปิดทัน SLA ของรายงานภาพรวม Ticket & SLA ด้วย
+- **Web Interface Guidelines**: แถวประเภทคำขอกดได้ด้วยปุ่มจริง (`<button aria-pressed>` ในช่องชื่อ, `<th scope="row">`) ไม่ใช้ `aria-selected` บน `<tr>` · หัวตารางมี `scope="col"/"colgroup"`
+- **ภาษา**: คำอธิบายใต้ชื่อ "IT รับเคสและปิดเคสทัน SLA แค่ไหน สำหรับ Ticket ที่เปิดจากคำขอ แยกตามประเภท" / "How often IT took and closed request tickets within SLA, by request type" · "Past SLA right now" · "{kind}, due {at}" · "Total" · ลิงก์ "ดูทั้งหมดในรายงาน Ticket ค้างและเกิน SLA"
+- **Tests**: อัปเดต + เพิ่ม `test_a_taken_case_past_its_resolve_deadline_is_over_on_closing_and_counts_once` (8 ตัว) · รายงานทั้งหมด 145 passed · tsc + eslint + pint ผ่าน · ตรวจใน Chrome (ภาษาอังกฤษ): ปุ่มแถวโฟกัส/กดกรองได้ครั้งเดียว, เกณฑ์ SLA จัดกลุ่ม, คอลัมน์ปิดเคส "—" ของเคสที่ยังไม่รับ
+- **ขอบการ์ดเตือนตามสี** (ต่อจากข้อสีต่ำกว่าเป้า): `KpiTile.alert` รับ `'red' | 'amber'` (true = amber เหมือนเดิม) — แดง = เกิดปัญหาแล้ว (ต่ำกว่าเป้า SLA, เกิน SLA), ส้ม = ต้องติดตาม (ครบกำหนดใน 24 ชม., ยังไม่มีผู้รับ) · `SummaryStrip` เลือกสีจากเป้า/tone ของการ์ด · ภาพรวม Ticket & SLA: การ์ดปิดทัน SLA ที่ต่ำกว่าเป้า และ "ค้างอยู่ตอนนี้" ที่มีเคสเกิน SLA เป็นขอบแดง · ตรวจใน Chrome ทั้ง 3 หน้ารายงาน Ticket
+- ป้าย "เป้า 90%" บนการ์ดสรุปแบบมีเป้า (`SummaryStrip`) เป็นสีเขียว เหมือนการ์ดปิดทัน SLA ของหน้าภาพรวม (เดิมสีเทา)
+- **การ์ด "เวลาแก้ไขโดยเฉลี่ย"**: แถบแยก 2 ส่วน = เวลานี้หมดไปกับอะไร — **รอรับเคส** (ส้ม) + **หลังรับเคส** (น้ำเงิน) คิดจากเคสที่เสร็จสิ้นชุดเดียวกัน จึงรวมกันได้ตัวเลขของการ์ด (`wait_avg_hours`, หลังรับเคส = เฉลี่ยแก้ไข − รอรับเคส) · แทนบรรทัด "รับเคสเฉลี่ย" เดิมที่คิดจากคนละกลุ่มเคส
+- **การ์ด "เกิน SLA ตอนนี้"**: ป้าย % แดง + แถบแดง = สัดส่วนจากเคสที่ยังเปิด (`withShareOf`) · บรรทัดล่างแยก **ยังไม่มีคนรับ** / **รับแล้วยังไม่ปิด** (`over_untaken` / `over_taken`) — รู้ว่าต้องหาคนรับหรือตามคนที่รับไป
+- `ReportSummary` split รับค่าทศนิยมได้ (`int|float`) · `SummaryStrip` การ์ดแบบชั่วโมงแสดงค่าในบรรทัดล่างเป็นทศนิยม 1 ตำแหน่ง + "ชม." (หน่วยอยู่นอกตัวอักษร monospace) · ลบ key `rep_rs_note_take_avg` / `rep_rs_note_over` ที่ไม่ใช้แล้ว เพิ่ม `rep_rs_split_*`, `rep_rs_over_*`
+- **Tests** อัปเดตการ์ดทั้งสอง (split รอรับเคส 11.8 + หลังรับเคส 60.2 = 72.0, share 50%, แยกยังไม่รับ/รับแล้ว) · รายงาน 145 passed · ตรวจใน Chrome
+
+## ภาพรวม Ticket & SLA: สีโทนนุ่ม (แบบ D) (2026-10-04)
+
+ผู้ใช้เห็นว่าสีกราฟตัดกันแรง — เทียบ 5 แบบในหน้าตัวอย่าง (artifact "Ticket Report Palettes") แล้วเลือก **D: โทนเดิมแบบนุ่ม** = สีเดิม ความหมายเดิม แต่อ่อนลงหนึ่งระดับ
+- **Ticket รายสัปดาห์**: เปิดใหม่ = น้ำเงินนุ่ม · ปิดแล้ว = emerald-400 · เส้นค้างสะสม = red-400 (ป้ายแกนขวายัง red-500 ให้อ่านชัด)
+- **ปิดเคสทัน SLA ตามความสำคัญ**: red-400 / amber-400 / emerald-400 · จุดในการ์ด "ค้างอยู่ตอนนี้" blue-400 / amber-400
+- **Ticket ตามหมวด**: น้ำเงินนุ่มสีเดียว (เดิมสีหลักของแอป)
+- **แยกตามแผนก**: สีข้างเคียงบนวงล้อสีรอบน้ำเงินนุ่ม ห่างกัน 30° ความสว่างเท่ากัน — ฮาร์ดแวร์ ฟ้า (225°) · ซอฟต์แวร์ น้ำเงินนุ่ม (255°) · เครือข่าย คราม (285°) · โทรศัพท์ ม่วง (315°) · กล้อง ม่วงชมพู (345°) · อื่น ๆ เทา — ตัวเลขบนแท่งใช้เฉดเข้มของสีเดียวกัน
+- **ที่ทำ**: `app.css` เพิ่ม token `--chart-soft-{sky,blue,indigo,violet,orchid}` + `-ink` (OKLCH, สว่าง/มืด) และ `--color-chart-soft-*` · `ChartTone` เพิ่ม `soft-*` (`FILL` / `TEXT` / `STROKE` ใน `chart-tones.ts`) — สีเดิมของรายงานอื่นไม่เปลี่ยน · `weekly-ticket-chart.tsx`, `ticket-breakdown-cards.tsx` (`CATEGORY_TONES`), `pages/tickets-overview.tsx`
+- ยังไม่เปลี่ยน: การ์ดอายุงานค้าง (พื้นสีจางอยู่แล้ว), แท่งผลงานเจ้าหน้าที่ IT (ใช้สีเขียวกลางร่วมกับรายงานอื่น), แถบ KPI
+- **ตรวจ** tsc + eslint ผ่าน · Chrome สว่าง/มืด
+- **ปรับน้ำเงิน** (ตามที่ผู้ใช้กำหนด): `--chart-soft-blue` = **#2978e9** ทั้งโหมดสว่าง/มืด (ตัวเลขบนแท่ง `-ink` #1d5fc2 / #8fb8f4) — แท่งเปิดใหม่รายสัปดาห์, Ticket ตามหมวด และหมวดซอฟต์แวร์ในการ์ดแยกตามแผนก · ตรวจใน Chrome
+- **แยกตามแผนก → คู่สีตรงข้าม 2 คู่ (double-complementary)** (แทนสีข้างเคียงโทนนุ่ม ที่ผู้ใช้เห็นว่าไม่เข้ากับการ์ดภาพรวม Ticket ที่สดกว่า): สร้างจากสีของการ์ดภาพรวมเอง — ฮาร์ดแวร์ น้ำเงิน #2978e9 ↔ ซอฟต์แวร์ ส้ม #f0952b · เครือข่าย เขียว #34d399 ↔ โทรศัพท์ ชมพูกุหลาบ #e8588a · กล้อง ม่วง #9a7cf2 · อื่น ๆ เทา — สีตรงข้ามวางติดกันในแท่ง ตัวเลขบนแท่งใช้เฉดเข้ม (โหมดมืดใช้เฉดอ่อน) · `app.css` `--chart-pair-*` (+ `-ink`) แทน `--chart-soft-{sky,indigo,violet,orchid}` ที่เลิกใช้ · `ChartTone` `pair-*` · เทียบในหน้าตัวอย่าง artifact "Department Card Colours" · ตรวจใน Chrome
+- ป้าย "เกิน SLA {n}" ในการ์ด "ค้างอยู่ตอนนี้" เป็นสีแดง (เดิมส้ม) ตามกติกาแดง = เกิดปัญหาแล้ว เข้ากับขอบแดงของการ์ด
+- ข้อความ p90 ของการ์ด "เวลาแก้ไขโดยเฉลี่ย" อ่านแล้วเหมือนค่าเฉลี่ยของ 90% (ผู้ใช้เข้าใจแบบนั้น) → **"90% ปิดได้ไม่เกิน {n} ชม."** / "90% closed in at most {n} h" — เป็นเพดาน: เคสลำดับที่ 90% ใช้เวลาเท่านี้ ไม่ใช่ค่าเฉลี่ย (ช่วง 7 ก.ค.–4 ต.ค.: 133 จาก 147 เคสปิดได้ไม่เกิน 173 ชม. แต่ค่าเฉลี่ยของ 133 เคสนั้นคือ 48.9) · Excel แผ่นสรุป "90% ปิดได้ไม่เกิน (ชม.)" · test `TicketOverviewExportTest` ตรวจหัวแถวนี้
+
+## สีโทนนุ่มใน 3 รายงาน + ชื่อรายงาน (2026-10-04)
+
+ขยายโทนนุ่มของหน้าภาพรวม Ticket & SLA ไปที่ **ทรัพย์สินตามสถานะ และแผนก**, **Ticket ค้าง และเกิน SLA**, **สรุปผล SLA ของ Ticket จากคำขอ** — สีเดิม ความหมายเดิม อ่อนลงหนึ่งระดับ (Tailwind 400) น้ำเงิน = #2978e9 · รายงานอื่นไม่เปลี่ยน
+- **ชุดสีกลาง**: `ChartTone` เพิ่ม `soft-green/red/amber/orange/violet/pink` (+ `soft-blue` เดิม) ใน `chart-tones.ts` · `ReportSummary` / `SummaryItem` รับ tone แบบ `soft-*` — `SummaryStrip` เติมแถบเป็นเฉดอ่อน แต่ป้ายและขอบเตือนยังใช้ความหมายเดิม (แดง = เกิดปัญหา, ส้ม = ต้องติดตาม)
+- **ทรัพย์สินตามสถานะ และแผนก**: สีสถานะ / ที่มา ในกราฟแผนก โดนัท และการ์ดสรุปเป็น `soft-*` · แท่ง "แยกตามหมวด" เป็นน้ำเงินนุ่ม (เดิมเทาเข้ม) เหมือน Ticket ตามหมวดของหน้าภาพรวม
+- **Ticket ค้าง และเกิน SLA**: เส้นหัวช่องกระดาน แถบสีหน้าแถวตาราง การ์ด "ค้างอยู่กับใคร" / "ค้างตามหมวด" และการ์ดสรุป
+- **สรุปผล SLA ของ Ticket จากคำขอ**: แท่งทัน/ไม่ทัน SLA เขียว/แดงนุ่ม และการ์ดสรุป
+- แถบเป้าในการ์ด KPI (ปิดทัน / รับเคสทัน SLA) คงสีเดิม เหมือนหน้าภาพรวม
+- **ชื่อรายงาน**: "Ticket ค้างและเกิน SLA" → **"Ticket ค้าง และเกิน SLA"** · "ทรัพย์สินตามสถานะและแผนก" → **"ทรัพย์สินตามสถานะ และแผนก"** — หัวหน้า, breadcrumb, การ์ดในศูนย์รายงาน, ลิงก์ในรายงานสรุปผล SLA, หัวไฟล์ Excel/PDF (`title()`)
+- **Tests**: `AssetActivityReportsTest` ตรวจ tone ใหม่ (`soft-green`, `soft-pink`) · รายงาน 145 passed · tsc + eslint + pint ผ่าน · ตรวจใน Chrome ทั้ง 3 หน้า
+- **กราฟวงกลม "สถานะทรัพย์สิน"**: ข้อความกลางวง "ใช้งานรวมส่วนกลาง" กว้างเกินช่องกลาง ทับเส้นวงแหวน → แบ่ง 2 บรรทัด "ใช้งาน" / "รวมส่วนกลาง" (EN "in use" / "+ common") ด้วย `\n` ในไฟล์ภาษา · `DonutCenter` ใน `tabular-charts.tsx` วาดแต่ละบรรทัดเป็น `<tspan>` ตัวเล็กลงและจัดทั้งก้อนให้อยู่กลางวง ข้อความบรรทัดเดียวแสดงเหมือนเดิม · ตรวจใน Chrome
+- **สีสถานะทรัพย์สินในรายงานตรงกับตั้งค่า**: เดิมรายงานกำหนดสีเอง (ใช้งานอยู่ = เขียว ฯลฯ) ไม่ตรงกับสีที่ผู้ดูแลเลือกใน ตั้งค่า → ทรัพย์สิน ซึ่งป้ายทุกหน้าใช้ — ตอนนี้ใช้สีจากตั้งค่า แต่ในรายงานผสมสีขาวให้นุ่มกว่าป้าย
+  - `useApplyTheme` ตั้งตัวแปร `--asset-status-*` จากสีที่บันทึกไว้ (store `assetStatusColors`, โหลดผ่าน sidebar) — เปลี่ยนในตั้งค่า รายงานเปลี่ยนตาม
+  - `app.css`: ค่าเริ่มต้น `--asset-status-*` + `--asset-soft` (สว่าง 72% / มืด 82%) · `--color-asset-*` = `color-mix(สีตั้งค่า, ขาว)` และ `-ink` = สีตั้งค่าเอง
+  - `ChartTone` `asset-*` · `SummaryStrip` ป้าย % ของการ์ดสถานะใช้สีจากตั้งค่าตรง ๆ (`StatusBadge color`)
+  - รายงานทรัพย์สินตามสถานะ และแผนก: กราฟแผนก กราฟวงกลม และการ์ดสถานะใช้ `asset-*` (สีที่มา ซื้อ/เช่า และแท่งตามหมวด ยังเป็นโทนนุ่มเดิม) · การ์ด "รอรับคืน" ไม่มีขอบเตือนสีส้มแล้ว (เป็นสถานะปกติ สีตามตั้งค่า)
+  - Tests: `AssetActivityReportsTest` (tone `asset-deployed`) — 14 passed · ตรวจใน Chrome (ตัวแปรมาจากตั้งค่า, สีผสมนุ่ม)
+- ที่มา **"ซื้อ" เป็นม่วงนุ่ม** (`soft-violet`, เดิมน้ำเงินนุ่ม) — น้ำเงินใกล้กับ "ใช้งานอยู่" (น้ำเงินจากตั้งค่า) เกินไปในการ์ดเดียวกัน · ค่าเริ่มต้นของตั้งค่าไม่มีสถานะไหนใช้ม่วง · "เช่า" ยังชมพู · test ตรวจ tone ของซื้อ/เช่า
+- **กรอบเหลือง "รอรับคืน" กลับมา** — การ์ดสรุปมีตัวเลือก `attention` (`'amber'` = ต้องติดตาม, `'red'` = ผิดแล้ว) แยกจากสี: `ReportSummary::withAttention()` → `SummaryStrip` ขึ้นกรอบเมื่อค่า > 0 · การ์ด "รอรับคืน" ยังใช้สีจากตั้งค่า แต่มีกรอบเหลือง · test ตรวจ `attention` — Report tests 145 passed · ตรวจใน Chrome แล้ว
+- **Seeder สีสถานะทรัพย์สิน** — `DatabaseSeeder::seedAssetStatusColors()` ใส่ `asset_status_colors` ตอนติดตั้งใหม่ (`ASSET_STATUS_COLORS`: "รอรับคืน" เป็นม่วง `#7c3aed` แยกจากน้ำเงิน "ใช้งานอยู่") · ใส่เฉพาะเมื่อยังไม่มีค่า สีที่ผู้ดูแลตั้งเองไม่ถูกเขียนทับ · ฐานข้อมูลจริงผู้ใช้บันทึกม่วงไว้แล้วผ่านหน้าตั้งค่า · `ProductionSeedTest` +2 test — 19 passed
+- **จุด "ซื้อ" เป็นส้มนุ่ม + สีเริ่มต้น "รอรับคืน" เป็นม่วง** — ที่มา "ซื้อ" ใช้ `soft-orange` (น้ำเงิน = ใช้งานอยู่, ม่วง = รอรับคืน อยู่ในการ์ดเดียวกัน) · สีเริ่มต้น "รอรับคืน" `#7c3aed` ตรงกับ Seeder ใน `SettingsController`, `stores/ui.ts`, `app.css` · tests 13 passed · ตรวจใน Chrome แล้ว
+
+### รายงาน "ภาพรวมของทรัพย์สิน" (รวมทะเบียนทรัพย์สิน) — 2026-10-04
+- "ทรัพย์สินตามสถานะ และแผนก" → **ภาพรวมของทรัพย์สิน** (key `assets.overview`, `/reports/assets-overview`) · ยุบ **ทะเบียนทรัพย์สิน** (`assets.register`) มารวม — ตัวกรอง (สถานะ ที่มา หมวด แผนก ค้นหา) และตารางรายการอยู่ท้ายหน้า (+ คอลัมน์ คลัง) · ไม่มีลิงก์เก่า · หมุดในฐานข้อมูลย้ายไป key ใหม่
+- **แยกตามแผนก** นับเฉพาะเครื่องที่อยู่กับพนักงาน (ใช้งานอยู่ / รอรับมอบ / รอรับคืน) · พนักงานไม่มีแผนก = แถว "ไม่ระบุแผนก" แยกท้าย
+- **แยกตามหมวด** หน้าตาแบบการ์ด /assets (ไอคอนหมวด · พร้อมใช้ / ใช้งานอยู่ / ตัดจำหน่าย · แท่งแบ่งสี) — chart type ใหม่ `buckets` (`bucket-rows-card.tsx`)
+- แถวการ์ดเล็ก: **คลัง (พร้อมส่งมอบ)** ตามคลัง · **ส่วนกลาง (ตามสถานที่)** ตามสถานที่ (แยก ซื้อ/เช่า, `stacks` + `compact`, `compact-stacks-card.tsx`) · **ตัดจำหน่าย** จำนวน + รายการ (รหัส หมวด รุ่น คลัง เหตุผล — ระบบไม่เก็บวันที่ตัดจำหน่าย; type `list`, `asset-list-card.tsx`)
+- ส่งออก: แผ่นสรุป → แยกตามแผนก → คลัง → ส่วนกลาง → ตัดจำหน่าย → รายการ (`exportSections`)
+- `chart-parts.tsx` รวม fold / FoldToggle / ChartHeading / useChartLabel · ลบ chart type `bars`
+- Tests: `AssetActivityReportsTest` (overview 6 tests ใหม่), register tests → overview, key ในชุด Report tests — ทั้งระบบ 1573 passed · ตรวจใน Chrome แล้ว
+- **แยกตามหมวด: แสดงทั้งหมด** — แสดง 5 หมวดแรก ที่เหลือรวมเป็น "อื่น ๆ (n)" พร้อมปุ่ม "แสดงทั้งหมด (n)" · ปุ่มแยกจากของการ์ดแผนก (กดแล้วการ์ดแผนกไม่กางตาม) · ตรวจใน Chrome แล้ว
+- **คำในภาพรวมของทรัพย์สิน** — "แยกตามแผนก" → "ทรัพย์สินแยกตามแผนก", "แยกตามหมวด" → "แยกตามหมวดหมู่", ตัวกรอง/คอลัมน์/ไฟล์ส่งออก "หมวด" → "หมวดหมู่" (เฉพาะรายงานนี้; รายงาน Ticket/คลังอะไหล่ยังเป็น "หมวด") · `ReportFilter::labelKey()` ใหม่ (ตั้งชื่อตัวกรองเฉพาะรายงาน แบบ `ReportColumn::labelKey()`) · Report tests 148 passed · ตรวจใน Chrome แล้ว
+- **จัดแถวการ์ดเล็ก** — คลัง (พร้อมส่งมอบ) และ ส่วนกลาง (ตามสถานที่) อยู่แถวเดียวกัน ใบละครึ่ง · ตัดจำหน่ายลงแถวถัดไปเต็มความกว้าง เครื่องละบรรทัด (รหัส · หมวดหมู่/รุ่น · คลัง · เหตุผล; จอแคบเรียงซ้อน) · ปุ่มแสดงทั้งหมดของรายการตัดจำหน่ายแยกของตัวเอง · skeleton ตามแถวใหม่ · ตรวจใน Chrome แล้ว
+- **การ์ด "ทรัพย์สินในคลัง"** (เดิม คลัง (พร้อมส่งมอบ)) — หัวการ์ด "ทรัพย์สินในคลัง" + "สถานะพร้อมใช้งาน" ตัวบาง, "N รายการ" ชิดขวา, ไม่มีป้าย ซื้อ/เช่า · ส่วนบน: แท่งจำนวนต่อคลัง สีพร้อมส่งมอบจากตั้งค่า (เขียว) เทียบคลังมาก-น้อย · ส่วนล่างในการ์ดเดียวกัน: "ซื้อ / เช่า ในแต่ละคลัง" แท่งสัดส่วนเต็มความกว้าง + จำนวน · แสดง 5 คลังแรก แล้วกด "แสดงทั้งหมด" · chart type ใหม่ `places` (`places-card.tsx`) · แผ่นส่งออก "ทรัพย์สินในคลัง (พร้อมใช้งาน)" · test 11 passed · ตรวจใน Chrome แล้ว
+- **ทรัพย์สินในคลัง: กราฟแท่งแนวตั้ง** — ส่วนจำนวนต่อคลังเป็นแท่งแนวตั้ง (ตัวเลขบนหัวแท่ง ชื่อคลังใต้แกน เทียบคลังที่มากสุด) · "ไม่ระบุคลัง" เป็นแท่งท้ายสีจาง · ส่วน ซื้อ / เช่า ยังเป็นแนวนอน · ตรวจใน Chrome แล้ว
+- **ทรัพย์สินในคลัง: กางแล้วเป็นแนวนอน** — พับอยู่ = แท่งแนวตั้ง 5 คลัง · กด "แสดงทั้งหมด" = แท่งแนวนอนทุกคลัง (ชื่อ + จำนวนครบ) เพราะทดสอบ 50 คลังแล้วแนวตั้งเบียดอ่านไม่ได้ · ข้อมูลทดสอบ DEMO 50 คลัง (`DEMO คลัง 01–50`, ทรัพย์สิน `DEMO-WH-%` 707 เครื่อง) อยู่ใน DB รอสั่งลบ · ตรวจใน Chrome แล้ว
+- **ซื้อ / เช่า ในแต่ละคลัง: วงแหวน** — พับอยู่ = วงแหวนเล็กคลังละวง (ส้ม ซื้อ · ชมพู เช่า · กลางวง = % เช่า สีชมพู · ใต้วงชื่อคลัง + จำนวน) · กด "แสดงทั้งหมด" = แท่งสัดส่วนแนวนอนทุกคลัง (อ่านง่ายกว่าเมื่อมีหลายคลัง) · backend ส่ง `center_key: 'rented'` · ตรวจใน Chrome กับข้อมูล DEMO 50 คลัง
+- **วงแหวน ซื้อ / เช่า: "เช่า" + N% กลางวง** — กลางวงเขียน "เช่า" ตัวเล็กเหนือ % (แทนคำอธิบาย "กลางวง = % เช่า" ที่หัวข้อ) · วงใหญ่ขึ้น 72px · ตรวจใน Chrome แล้ว
+- **ซื้อ / เช่า ตอนกาง: จำนวนกลางแท่ง** — แต่ละคลังมีตัวเลขซื้อ/เช่าอยู่เหนือกลางช่วงสีของตัวเอง + ยอดรวมขวาสุด · หัวข้อเพิ่ม "| ทั้งหมด" ต่อท้ายป้ายสีตอนกาง · ตรวจใน Chrome แล้ว
+- **ทรัพย์สินในคลัง: นับคลัง** — หัวการ์ดขวา "N รายการ | N คลัง" (นับเฉพาะคลังที่มีชื่อ ไม่นับ "ไม่ระบุคลัง") · backend ส่ง `count_key: 'rep_chart_stores_n'` · test 11 passed · ตรวจใน Chrome แล้ว
+- **ทรัพย์สินในคลัง เต็มแถว + ทรัพย์สินในส่วนกลาง** — การ์ดคลังขยายเต็มแถว แสดงครั้งละ 10 · การ์ด "ส่วนกลาง (ตามสถานที่)" → **ทรัพย์สินในส่วนกลาง** แบบเดียวกับคลัง: "N รายการ | N สถานที่", ไม่มีป้าย ซื้อ/เช่า, แท่งเขียวแนวตั้งต่อสถานที่ (มาก→น้อย, 10 แรก, กางแล้วแนวนอน) + "ซื้อ / เช่า ในแต่ละสถานที่" วงแหวน (กางแล้วแท่งมีตัวเลข) · ทั้งสองการ์ดใช้ `placesChart()` ตัวเดียว สีพร้อมส่งมอบ · วงแหวนจอกว้างแบ่งช่องเท่าจำนวนแท่ง (อยู่ใต้แท่งของตัวเอง) · ลบ `compact-stacks-card.tsx` และ `compact` (ย้าย `TitleWithCount` ไป chart-parts) · แผ่นส่งออก "ทรัพย์สินในส่วนกลาง" · Report tests 148 passed · ข้อมูลทดสอบ DEMO ส่วนกลาง 40 สถานที่ (`DEMO สถานที่ 01–40`, ทรัพย์สิน `DEMO-LC-%` 507 เครื่อง) อยู่ใน DB รอสั่งลบ · ตรวจใน Chrome แล้ว
+- **สีแท่งตามสถานะ** — การ์ด places ใช้สีของสถานะที่นับ (`CHART_TONES[$status]`): ทรัพย์สินในคลัง = สีพร้อมส่งมอบ (เขียว), ทรัพย์สินในส่วนกลาง = สีส่วนกลาง (เทา) จากหน้าตั้งค่า · test 11 passed · ตรวจใน Chrome แล้ว
+- **แยกตามหมวดหมู่ + /assets "ทรัพย์สินทั้งหมดในระบบ": แท่งอัตราส่วนเต็ม** — แท่งเต็มความกว้างทุกหมวด แบ่งตามยอดของหมวดเอง (แบบการ์ด "ผลงานเจ้าหน้าที่ IT") ตัวเลขอยู่เหนือกลางแต่ละช่วงสี, ยอดรวมขวาบรรทัดชื่อ (เอาตัวเลข+จุดบนบรรทัดชื่อออก) · ช่วงที่มีค่าไม่บางกว่า 3px — ตัดจำหน่ายน้อย ๆ ยังเห็นสีแดง · `StackBar` ย้ายไป `chart-parts.tsx` · ตรวจใน Chrome ทั้งสองหน้า
+- **แท่งหมวดหมู่บรรทัดเดียว** — /assets "ทรัพย์สินทั้งหมดในระบบ" และรายงาน "แยกตามหมวดหมู่": ไอคอน + ชื่อ → แท่ง (ตัวเลขเหนือแต่ละช่วงสี) → ยอดรวม ในบรรทัดเดียว · หัวการ์ดต่อท้ายป้ายสีด้วย "| ทั้งหมด" (lang ใหม่ `asset_types_total`) · ตรวจใน Chrome ทั้งสองหน้า
+- **/assets: การ์ดหมวดหมู่กับการส่งมอบ/รับคืนสูงเท่ากัน** — แถวยืดทั้งสองการ์ดเท่าใบที่สูงกว่า (เอา `items-start` ออก) · `AssetActivityCard` เต็มความสูง และกราฟเดือนขยายตามพื้นที่ (ไม่ต่ำกว่า 172px) — กาง "แสดงทั้งหมด" แล้วกราฟสูงตาม · ตรวจใน Chrome แล้ว
+- **/assets: skeleton ตอนโหลดตรงกับการ์ดจริง** — สองการ์ดสูงเท่ากัน (ยืดเหมือนตอนโหลดเสร็จ), การ์ดหมวดหมู่เป็น 4 แถวบรรทัดเดียว (3 หมวด + อื่น ๆ) + ปุ่มแสดงทั้งหมด, กราฟขยายเต็มการ์ด · ตรวจใน Chrome แล้ว
+- **/reports/tickets-overview: skeleton สูงเท่าของจริง** — แถวกราฟรายสัปดาห์ + การ์ด SLA/ค้าง/หมวด: ตอนโหลดเสร็จสูง 580px แต่ skeleton ~490px (หน้ากระตุก) · `report-skeletons.tsx`: หัวการ์ดสูงเท่าบรรทัด text-sm, แถวแท่งสูง/ระยะเท่า HorizontalBars (h-5, space-y-2.5), ช่องอายุค้างสูงเท่าของจริง · หมวด Ticket 6 แถว (เดิม 5) · กราฟ skeleton ขยายเต็มการ์ด · คำนวณความสูงได้เท่ากัน 580px (หน้าโหลดเร็วเกินจับภาพ skeleton)
+- **Ticket ค้าง และเกิน SLA: Excel สำหรับวิเคราะห์** — แผ่น "รายการ" เพิ่มคอลัมน์เฉพาะ Excel: รายละเอียด, วันที่ครบกำหนด SLA รับเคส, วันที่ครบกำหนด SLA ปิดเคส, สถานะ SLA (เกิน SLA / ใกล้ครบ (ภายใน 24 ชม.) / ยังไม่ถึง / ไม่มีกำหนด) · เรียงคอลัมน์เป็นกลุ่ม: เคส (เลขที่ เรื่อง รายละเอียด หมวด ความสำคัญ ที่มา) → คน (ผู้แจ้ง แผนก ผู้รับผิดชอบ) → สถานะ (สถานะ วันที่แจ้ง ค้างมา) → SLA (ครบกำหนดรับ/ปิดเคส, เงื่อนไข/ครบกำหนด ขั้นปัจจุบัน, เหลือ ชม., สถานะ SLA) · แถวเรียงเกิน SLA นานสุดก่อน (เป็นช่วงตามสถานะ SLA) · engine: `ReportColumn::sheetOnly()`, `TabularReport::screenColumns()/sheetColumns()/sheetOrder()` — หน้าจอ, API rows, PDF ไม่มีคอลัมน์ sheet-only; ตัวเลือกคอลัมน์ไม่ซ่อนคอลัมน์เหล่านี้ · Report tests 153 passed
+- **ชื่อคอลัมน์ SLA ใน Excel/PDF** — "เงื่อนไข SLA (ในสถานะปัจจุบัน)" และ "วันที่ครบกำหนด SLA (ในสถานะปัจจุบัน)" (เดิม "(ขั้นปัจจุบัน)") · test 9 passed
+- **Excel Ticket ค้าง: เพิ่ม "ลักษณะงาน"** — คอลัมน์เฉพาะ Excel ในกลุ่มเคส ต่อจากหมวด: งานปกติ / งานซ่อม (ช่างภายในองค์กร) / งานซ่อม (ช่างภายนอก) · Report tests 153 passed
+- **สรุปผล SLA ของ Ticket จากคำขอ: แท็บ "ข้อมูลดิบ" ใน Excel** — แผ่นรายการเปลี่ยนชื่อเป็น "ข้อมูลดิบ" + คอลัมน์เฉพาะ Excel: เรื่อง, รายละเอียด, หมวด, ลักษณะงาน, ความสำคัญ, ผู้แจ้ง, แผนก, เดือนที่แจ้ง (YYYY-MM สำหรับ pivot), ยกเลิกเมื่อ, วันที่ครบกำหนด SLA รับเคส/ปิดเคส, เวลารอรับเคส (ชม.) · เรียงเป็นกลุ่ม: เคส+คำขอ → คน → สถานะและเวลา → SLA รับเคส (ครบกำหนด, ทันไหม, รอกี่ ชม.) → SLA ปิดเคส (ครบกำหนด, ทันไหม, แก้กี่ ชม.) · engine: `TabularReport::sheetTitle()` · คำไทยลักษณะงานย้ายไป `TicketReportScope::workClassTh()` (ใช้ร่วมกับ Ticket ค้าง) · Report tests 154 passed
+- **สรุปผล SLA ของ Ticket จากคำขอ: การ์ดเวลาแก้ไขบอกฐาน** — ใต้ "รอรับเคส · หลังรับเคส" เพิ่ม "จาก N เคสที่เสร็จสิ้น" (เฉลี่ยจากเคสที่เสร็จเท่านั้น ต่างจากคอลัมน์ "เวลารับเคสโดยเฉลี่ย" ในตารางที่เฉลี่ยจากทุกเคสที่รับแล้ว — เลยเห็น 11.0 กับ 10.6) · `SummaryStrip` แสดง split + note ต่อกันได้ · tally ใหม่ `fix_n` · test 9 passed · ตรวจใน Chrome แล้ว
+- **การ์ดเวลาแก้ไข: "รอรับเคส" ใช้วิธีเดียวกับตาราง** — รอรับเคส = เฉลี่ยจากทุกเคสที่รับแล้ว (10.6 ชม. ตรงกับ "เวลารับเคสโดยเฉลี่ย" แถวรวม) · หลังรับเคส = เวลาจากรับเคสถึงปิดเคส เฉลี่ยจากเคสที่เสร็จ · เอาบรรทัด "จาก N เคสที่เสร็จสิ้น" ออก (`work_avg_hours` แทน `wait_avg_hours`/`fix_n`) · สองส่วนเป็นค่าเฉลี่ยคนละชุด จึงไม่จำเป็นต้องบวกได้ตัวเลขใหญ่พอดี · test 9 passed · ตรวจใน Chrome แล้ว
+- **ไฟล์ส่งออกของฉัน: "ลบทั้งหมด"** — หัวแผง "เก็บไว้ 7 วัน | ลบทั้งหมด" (สีแดง, ขึ้นเมื่อมีไฟล์ที่ลบได้) · กล่องยืนยันแบบ danger บอกจำนวนไฟล์ · ลบเฉพาะไฟล์ที่สร้างเสร็จ/ไม่สำเร็จของตัวเอง — ไฟล์ที่ยังรอคิว/กำลังสร้างไม่ถูกลบ (กัน worker เขียนลงไฟล์ที่ลบแล้ว) · API `DELETE /api/reports/exports` (`ReportExportService::deleteAllFor`) · test ใหม่ใน ReportExportQueueTest — 12 passed · ตรวจใน Chrome (เปิดกล่องยืนยันแล้วกดยกเลิก ไม่ได้ลบไฟล์จริง)
+- **รายงานใหม่: สรุปผล SLA ของ Ticket ที่ผู้ใช้เปิดเอง** (`/reports/tickets-manual-sla`, key `tickets.manual_sla`, สิทธิ์เดียวกับรายงาน SLA จากคำขอ) — คู่แฝดของรายงานจากคำขอ สำหรับ Ticket `source = manual` · ตารางกลางคอลัมน์เดียวกัน (จำนวน · รับเคสทัน · ปิดทัน · เวลาเฉลี่ย) มีปุ่ม **แยกตาม** หมวด / ความสำคัญ / ลักษณะงาน / ผู้รับผิดชอบ — กดแถวเพื่อกรองหน้า (ตัวกรองของมิติที่เลือกไม่ตัดแถวออกจากตาราง) · การ์ด **ปิดไม่ทัน SLA ช้าไปเท่าไร** (5 ช่วง + มัธยฐาน + เคสที่ช้าไม่ถึง 8 ชม.) + ยังเปิดอยู่และเกิน SLA · การ์ดเกณฑ์ SLA (รับเคส, ปิดเคสตามความสำคัญ, งานซ่อม, เวลาทำการ) · รายการ Ticket แบบหน้า Ticket & SLA (เลขที่ใต้เรื่อง, แผนกใต้ผู้แจ้ง) · Excel: สรุป + "ตาม<มิติที่เลือก>" + ข้อมูลดิบ (เพิ่ม "ปิดช้ากว่ากำหนด (ชม.)") · engine: trait `TicketSlaVerdicts` (กฎตัดสินเดียวกับรายงานจากคำขอ ยังไม่ได้ย้ายรายงานจากคำขอมาใช้), `TabularReportExtras.viewFilters` (ตัวกรองที่เป็นแค่การแสดงผล ไม่นับในปุ่มล้าง และคงไว้ตอนล้าง), `innerColumns` (คอลัมน์ที่วาดอยู่ในช่องอื่น) · ข้อมูลจริง ณ 4 ต.ค. 2026: 203 เคส รับทัน 100% ปิดทัน 84% (วิกฤต 64%, สูง 66%) · Report tests 163 passed · ตรวจใน Chrome แล้ว
+- **เวลาเฉลี่ยทุกตัวใช้เคสที่เสร็จแล้ว (สรุปผล SLA ของ Ticket จากคำขอ)** — การ์ด "เวลาแก้ไขโดยเฉลี่ย" 58.4 = รอรับเคส 11.0 + หลังรับเคส 47.4 (บวกได้พอดี) · คอลัมน์ "เวลารับเคสโดยเฉลี่ย" ในตาราง/ไฟล์ส่งออกก็เฉลี่ยจากเคสที่เสร็จ แถวรวม 11.0 ตรงกับการ์ด · ประเภทที่ยังไม่มีเคสเสร็จแสดง "—" · Report tests 163 passed · ตรวจใน Chrome แล้ว
+- **คำเรื่องเวลาเคส: ปิดเคส = รอคนรับ + ลงมือแก้** — การ์ด "เวลาปิดเคสเฉลี่ย" (เดิม เวลาแก้ไขโดยเฉลี่ย) แบ่ง "รอคนรับ" + "ลงมือแก้" (เดิม รอรับเคส / หลังรับเคส) · ตาราง "รอคนรับ (เฉลี่ย)" / "ปิดเคส (เฉลี่ย)" · คอลัมน์ "เวลาปิดเคส (ชม.)" · ไฟล์ส่งออกใช้คำเดียวกัน + ข้อมูลดิบเพิ่ม "ลงมือแก้ (ชม.)" (ต่อเคส: รอคนรับ + ลงมือแก้ = เวลาปิดเคส) · คีย์ภาษาใช้ร่วมกับรายงาน SLA ของ Ticket ที่ผู้ใช้เปิดเอง บนหน้าจอรายงานนั้นจึงได้คำใหม่ด้วย (หัวคอลัมน์ในไฟล์ส่งออกของรายงานนั้นยังเป็นคำเดิม) · Report tests 164 passed · ตรวจใน Chrome แล้ว
+
+### วันที่ตัดจำหน่ายทรัพย์สิน (assets.written_off_at) — 2026-10-04
+- migration `2026_10_04_220420_add_written_off_at_to_assets_table`: คอลัมน์ `written_off_at` (timestamp, index) ต่อจาก `last_reason` — **รันบน DB จริงแล้ว** · เครื่องที่ตัดจำหน่ายอยู่แล้วเติมจาก `updated_at` (เครื่องที่ตัดจำหน่ายแก้ไขไม่ได้ เวลาแก้ล่าสุดจึงเป็นเวลาตัดจำหน่าย) — 3 เครื่องได้ 2026-09-01 09:00 ตรงกับ audit log "Bulk asset writeoff"
+- `Asset::booted` saving: สถานะเปลี่ยนเป็น writeoff → ประทับเวลา, เปลี่ยนออก (ยกเลิกตัดจำหน่าย) → ล้าง · `AssetService::bulkSetStatus` (query update) ประทับเอง · `AssetResource.written_off_at` ("Y-m-d H:i")
+- Tests: `AssetApiTest` ใหม่ 1 — ทั้งระบบ 1590 passed
+- **รายงาน "การตัดจำหน่ายทรัพย์สิน"** (`assets.writeoffs`, `/reports/assets-writeoffs`) — ตัวกรอง: ช่วงวันที่ตัดจำหน่าย (ค่าเริ่มต้นต้นปี–วันนี้), หมวดหมู่, ที่มา, ค้นหา (รหัส/Serial/รุ่น/เหตุผล) · การ์ด: จำนวนที่ตัดจำหน่าย (แยก ซื้อ/เช่า), มูลค่าซื้อที่ตัดจำหน่าย · กราฟ: แยกตามเดือน (เก่า→ใหม่), แยกตามหมวดหมู่ (มาก→น้อย) แยก ซื้อ/เช่า · รายการ: วันที่ตัดจำหน่าย, รหัส, หมวดหมู่, ยี่ห้อ, รุ่น, Serial, ที่มา, คลัง, เหตุผล, วันที่ซื้อ, อายุใช้งาน (ปี), มูลค่า — ใหม่ก่อน · Excel: สรุป → แยกตามเดือน → แยกตามหมวดหมู่ → รายการ · ต้องมีสิทธิ์ assets.view
+- **ภาพรวมของทรัพย์สิน: การ์ดตัดจำหน่ายมีวันที่** — คอลัมน์แรก "วันที่ตัดจำหน่าย" เรียงล่าสุดก่อน, แผ่นส่งออกเพิ่มคอลัมน์วันที่ · การ์ดกราฟแนวนอน (stacks) ยืดได้แต่ไม่หดเล็กกว่าเนื้อหา — สองใบในคอลัมน์เดียวไม่ตัดแถวทิ้ง · Report tests 170 passed · ตรวจใน Chrome แล้ว
+
+### ใครเพิ่ม/แก้/ตัดจำหน่าย/ยกเลิก + audit log ผูกกับ record — 2026-10-04
+- migration `2026_10_04_224354_add_actor_columns_and_audit_subjects` (**รันบน DB จริงแล้ว**):
+  - `assets`: `created_by`, `updated_by`, `written_off_by`
+  - `contracts`: `created_by`, `updated_by`, `cancelled_by`
+  - ทั้งหมดเป็น FK → users แบบ null on delete
+  - `audit_logs`: `subject_type` / `subject_id` (+ index)
+- เติมค่าย้อนหลังจาก audit log:
+  - ทรัพย์สิน 80/1294 เครื่อง ที่เหลือมาจากการ import ซึ่งไม่มี log จึงเว้นว่าง
+  - สัญญาครบ 16/16 รวม cancelled_by ของ 2 ฉบับที่ยกเลิก
+  - log เก่า 156 รายการผูกกับทรัพย์สิน และ 22 รายการผูกกับสัญญา
+  - ไม่มี written_off_by ย้อนหลัง เพราะเดิม bulk บันทึกแค่จำนวน
+- `App\Models\Concerns\RecordsActors` (ใช้กับ Asset, Contract):
+  - ประทับผู้ใช้ที่ login อยู่ทุกครั้งที่ save ผ่าน model; ถ้าไม่มีผู้ใช้ (queue/scheduler) จะไม่แตะค่า
+  - relation `creator()` / `updater()`
+  - query update ไม่ผ่าน hook จึงประทับเอง (`AssetService::bulkSetStatus`, การผูกทรัพย์สินใน `ContractService`)
+  - ผูกสัญญาใหม่จะประทับเฉพาะเครื่องที่เพิ่งผูก
+- `Asset` ประทับ/ล้าง `written_off_by` คู่กับ `written_off_at`; `Contract` ประทับ/ล้าง `cancelled_by` เมื่อ `cancelled_at` เปลี่ยน
+- `AuditLog`:
+  - `record(..., subject: $model)`
+  - `recordDeleted()` เก็บทั้งแถวไว้ใน `details.snapshot` ไม่รวม password/token/hidden
+  - `forSubject($model)` ดึง log ของ record นั้น
+  - `subjectType()` ใช้ `Relation::getMorphAlias()` เพราะแอป enforce morph map
+- เติม subject ให้ทุกจุดที่เรียก `AuditLog::record` ใน app/ (~145 จุด); จุดที่ลบทั้งหมดใช้ `recordDeleted`
+- Bulk ทรัพย์สิน (ตัดจำหน่าย, ย้ายที่ตั้ง, โอน, เรียกคืน, รับคืน) บันทึกทีละเครื่อง ด้วยชื่อ action เดียวกับแบบเครื่องเดียว:
+  - ตัดจำหน่ายใช้ "Wrote off asset" + เหตุผลใน facts
+  - เรียกคืนระบุ forced รายเครื่อง
+- API/UI: หน้ารายละเอียดทรัพย์สินและสัญญาแสดง "… โดย <ชื่อ>" ที่วันที่ลงทะเบียน/สร้าง และอัปเดตล่าสุด, กล่อง "ตัดจำหน่ายแล้ว · โดย …", ช่อง "ยกเลิกโดย" (ส่งชื่อเฉพาะ endpoint รายตัว ไม่ส่งใน list)
+- ไม่ทำ soft delete / deleted_by — snapshot ใน audit log ใช้แทน
+- Tests: `ActorStampsTest` ใหม่ 11 tests; `AssetRelocateTest` ปรับให้ตรวจ log รายเครื่อง; ทั้งระบบ 1606 passed (ก่อนเพิ่ม test ชื่อใน API) · ตรวจใน Chrome แล้ว
+
+### created_by / updated_by: พนักงาน, อะไหล่ และ master data — 2026-10-04
+- migration `2026_10_04_230214_add_actor_columns_to_employees_stock_items_and_master_data` (**รันบน DB จริงแล้ว**):
+  - เพิ่ม `created_by` / `updated_by` (FK → users แบบ null on delete) ใน 13 ตาราง:
+    - `employees`, `stock_items`
+    - แท็บ Master Data: brands, asset_models, categories, vendors, warehouses, locations, units, warranty_types
+    - โครงสร้างองค์กร: departments, positions, sections
+- เติมค่าย้อนหลังจาก audit log:
+  - อะไหล่ได้ updated_by ครบ 25/25 จาก log รับเข้า/คืน/โอน
+  - พนักงานได้ 2/40 จาก log บันทึกการลาออก
+  - ไม่มี created_by เลย เพราะ DB ถูก reset แล้วข้อมูลมาจาก seeder/import ที่ไม่มีหลักฐานว่าใครเพิ่ม
+  - log ที่จับคู่ได้ถูกผูก subject ด้วย (พนักงาน 2, อะไหล่ 34)
+- ทั้ง 13 model ใช้ `RecordsActors` แล้ว
+  - การเคลื่อนไหวสต็อกนับเป็นการแก้ไขอะไหล่ ตรงกับ `updated_at`
+  - การนำเข้าพนักงานที่ผูกหัวหน้าด้วย query update จะเติม updated_by เอง
+- API/UI:
+  - `EmployeeResource` / `StockItemResource` เพิ่ม `created_at`, `updated_at` และชื่อผู้เพิ่ม/แก้ไข (ชื่อส่งเฉพาะ endpoint รายตัว)
+  - component ใหม่ `shared/components/record-stamps.tsx` แสดง "เพิ่มเมื่อ … โดย … / แก้ไขล่าสุด … โดย …" ที่หัวรายละเอียดอะไหล่ และใต้การ์ดภาพรวมพนักงาน
+- Tests:
+  - `ActorStampsTest` เพิ่ม master data 11 ตาราง (data provider), พนักงาน, อะไหล่ (รับเข้าแล้ว updated_by เปลี่ยน)
+  - `EmployeeImportTest` เพิ่ม 1 test
+  - ทั้งระบบ 1621 passed · ตรวจใน Chrome แล้ว
+
+### ใครเพิ่ม/แก้: เทมเพลตแจ้งเตือน/อีเมล และทะเบียนสิทธิ์การเข้าถึง — 2026-10-05
+- migration `2026_10_05_081959_add_actor_columns_to_templates_and_access_catalogues` (**รันบน DB จริงแล้ว**):
+  - `notification_templates`, `email_templates`: `updated_by` อย่างเดียว เพราะแถวมาจาก catalogue ของระบบ คนทำได้แค่แก้ไข
+  - `email_groups`, `file_shares`, `social_platforms`, `softwares`: `created_by` + `updated_by`
+- เติมค่าย้อนหลังจาก audit log (จับคู่ด้วยชื่อ ชื่อซ้ำจะข้าม):
+  - ทะเบียนสิทธิ์ครบทั้ง 10 แถว
+  - log เก่า 28 รายการ (สร้าง/แก้/เปลี่ยนเจ้าของ/เพิ่ม-ลบสมาชิก) ผูก subject แล้ว
+  - เทมเพลตยังไม่มีประวัติแก้ไข จึงว่าง
+- trait ใหม่ `App\Models\Concerns\RecordsUpdater`:
+  - ประทับ updated_by อย่างเดียว ใช้กับเทมเพลต
+  - `RecordsActors` ใช้ trait นี้แล้วเพิ่ม created_by
+  - การประทับ `last_sent_at` ตอนส่งเป็น query update จึงไม่นับเป็นการแก้ไข
+- รีเซ็ตเทมเพลตอีเมลทั้งหมด: บันทึก log เฉพาะเทมเพลตที่เปลี่ยนจริง ทีละรายการ (แทน log ก้อนเดียว "N template(s)")
+- รีเซ็ตแจ้งเตือน: ผูก subject แล้ว
+- API/UI:
+  - list ของทะเบียนสิทธิ์ทั้ง 4 ส่งวันที่และชื่อผู้เพิ่ม/แก้ แสดงที่หัวหน้าต่างสมาชิก
+  - list เทมเพลตอีเมลและแจ้งเตือนส่ง `updated_at` / `updated_by_name` แสดง "แก้ไขล่าสุด … โดย …" ในหน้าต่างแก้ไข เฉพาะเมื่อมีคนเคยแก้แล้ว
+  - `RecordStamps` ซ่อนบรรทัด "เพิ่มเมื่อ" ได้
+- Tests:
+  - `ActorStampsTest` เพิ่มทะเบียนสิทธิ์ 4 แบบ (data provider), เทมเพลตอีเมล (ส่งเมลไม่นับเป็นการแก้), แจ้งเตือน
+  - `EmailTemplateResetTest` เพิ่ม 1 test
+  - ทั้งระบบ 1628 passed · ตรวจใน Chrome แล้ว
+
+### ใครบันทึก Workflow ล่าสุด (workflows.updated_by) — 2026-10-05
+- migration `2026_10_05_084536_add_updated_by_to_workflows_table` (**รันบน DB จริงแล้ว**):
+  - `workflows.updated_by` (FK → users แบบ null on delete) ใช้ `RecordsUpdater`
+  - ไม่มี created_by เพราะ workflow ถูก seed ไว้ประเภทคำขอละ 1 แถว สร้าง/ลบเองไม่ได้
+  - ตารางขั้นตอน (`workflow_steps` + pivot ตำแหน่ง/ผู้อนุมัติ) ไม่เพิ่ม เพราะทุกการบันทึกลบแล้วสร้างใหม่ ค่าจะซ้ำกับ workflow เสมอ
+  - เติมค่าย้อนหลังจาก log "Updated workflow" ด้วย `details.workflow_id` (DB จริงยังไม่มี log จึงว่างทั้ง 13 แถว)
+- `WorkflowController::update` เรียก `touch()` หลังบันทึก — แก้เฉพาะขั้นตอนก็นับเป็นการแก้ไข (`updated_at`/`updated_by` ขยับ)
+- API: `WorkflowResource.updated_by_name` (index และผลลัพธ์ของ update)
+- UI: หน้าต่างดูและแก้ไข Workflow แสดง "แก้ไขล่าสุด … โดย …" เมื่อเคยมีคนบันทึกแล้ว · `RecordStamps` รับวันที่แบบมีเวลาได้
+- Tests: `WorkflowAdminTest` เพิ่ม 1 test (แก้แค่ขั้นตอนก็ประทับ) · ทั้งระบบ 1629 passed
+- **อีเมล ET-10 (สรุป Ticket ค้างประจำสัปดาห์): ตัวแปร `{{digest.total}}`** — จำนวนรวม รอรับ (`open_count`) + กำลังทำ (`working_count`) ต่อผู้รับ · ส่งจริงใน `TicketDigestService`, ค่าตัวอย่างพรีวิวทั้ง API และหน้าแก้เทมเพลต (ตัวอย่างหน้าแก้เปลี่ยนเป็น 2 + 1 = 3 ให้หัวเรื่องตรงกับเนื้อหาพรีวิว) · หน้าต่างแก้เทมเพลต: "แก้ไขล่าสุด … โดย …" ย้ายไปใต้ปุ่มเปิดใช้งาน ชิดขวา · test 7 + Email 108 passed · ตรวจใน Chrome แล้ว
+- **ค่าเริ่มต้น ET-10 = ฉบับที่ผู้ดูแลแก้** — `EmailTemplates.php` (ticket.weekly_digest) ใช้หัวเรื่อง "Weekly Pending Tickets Summary – {{digest.total}} Tickets" และเนื้อหาฉบับในระบบ (2026-10-05) · แก้แท็ก `<li>` ที่หายในบรรทัด "Total pending" + เว้นวรรคหลัง ":" ในค่าเริ่มต้น (ฉบับในระบบยังเป็นแบบเดิม จึงยังขึ้นป้าย "แก้ไขแล้ว") · Seeder เป็น firstOrCreate ไม่ทับฉบับในระบบ · tests 158 passed
+- **ET-10 ในระบบ = ค่าเริ่มต้น** — reset ฉบับใน DB เป็นค่าเริ่มต้นใหม่ (แบบเดียวกับปุ่ม Reset + audit log "Reset email template to standard") ป้าย "แก้ไขแล้ว" หายแล้ว · รัน `EmailTemplateSeeder` ซ้ำ (firstOrCreate — ไม่มีเทมเพลตขาด ยังเป็น 38)
+- **ET-10 บรรทัด Total pending** — เป็นข้อสุดท้ายของรายการแบบไม่มีจุด `<li style="list-style:none"><strong>Total pending: {{digest.total}} tickets</strong></li>` (HTML ถูกต้อง Outlook แสดงได้ หน้าตาย่อหน้าตรงกับสองข้อบน) · ปรับทั้งค่าเริ่มต้นและฉบับในระบบให้ตรงกัน (ไม่ขึ้น "แก้ไขแล้ว") · tests 114 passed · ตรวจพรีวิวใน Chrome แล้ว
+- **หน้าต่างแก้เทมเพลตอีเมล: ตัวแปรเฉพาะเทมเพลต + เตือนตัวแปรผิด + สวิตช์มีผลทันที** (2026-10-05)
+  - `EmailTemplates::variablesFor($key)`: ตัวแปรที่อีเมลนั้นได้รับจริง (อ่านจากเนื้อหามาตรฐาน + `'variables'` เสริม + `app.name`) · เพิ่มตัวแปรเสริม `asset.from` (asset.assigned), `asset.type` (asset.return_requested) · ส่งเป็น `variables` ใน `EmailTemplateResource` (null = เทมเพลตที่สร้างเอง)
+  - เมนู "แทรกตัวแปร" แสดงเฉพาะตัวแปรของเทมเพลตนั้น (เช่น ET-01 มี 6 ตัว แทน ~60)
+  - ตัวแปรที่อีเมลนั้นไม่มีค่า (พิมพ์ผิด เช่น `{{ticket.idd}}`) เป็นชิปสีแดง + คำเตือนใต้ชิป · กดบันทึกจะถามยืนยันก่อน ("บันทึกต่อ")
+  - สวิตช์ "เปิดใช้งาน" ในหน้าต่างแก้ไขบันทึกทันทีเหมือนในตาราง (ไม่นับเป็น "ยังไม่บันทึก" แล้ว ถ้าบันทึกไม่สำเร็จจะคืนค่าเดิม)
+  - แก้บั๊ก: เปิดหน้าต่างยืนยันจากในหน้าต่างแก้ไข (บันทึก/Reset) ถูกนับเป็น "คลิกนอกหน้าต่าง" ทำให้ขึ้น "ทิ้งการแก้ไข?" ซ้อน → ปิดเฉพาะเมื่อคลิกนอกจริง
+  - Tests: `EmailTemplateVariablesTest` (4) · Email 112 passed · ตรวจใน Chrome แล้ว (ET-01 สลับปิด/เปิดกลับ ค่าในระบบเหมือนเดิม)
+- **หน้าต่างแก้เทมเพลตอีเมล: เตือน HTML ที่ผิด** (2026-10-05) — `modules/email-templates/lib/html-issues.ts` (`findHtmlIssues`, ไม่ใช้ library เพิ่ม — ไล่แท็กเอง เพราะ parser ทุกตัวซ่อม HTML เงียบ ๆ เหมือนเบราว์เซอร์)
+  - ตรวจ 3 แบบ: (1) แท็กเปิด/ปิดไม่ครบคู่หรือปิดสลับลำดับ (2) ใน `<ul>`/`<ol>` มีอย่างอื่นนอกจาก `<li>` (ตัวแปร/ข้อความยอมให้มี) (3) แท็กที่โปรแกรมอีเมลไม่แสดงผล (นอกรายการแท็กที่ใช้ได้ทุกที่ เช่น `<section>`, `<button>`; เตือนครั้งเดียวต่อแท็ก)
+  - กล่องเตือนสีแดงใต้กล่องเนื้อหา บอกบรรทัด (แสดง 3 ข้อแรก + "และอีก N จุด") · กดบันทึกจะถามยืนยันครั้งเดียวรวมกับตัวแปรที่ไม่รู้จัก ("เนื้อหายังมีจุดที่ควรแก้" → "บันทึกต่อ")
+  - ตรวจกับเทมเพลตทั้ง 38 ฉบับ ทั้งค่าเริ่มต้นและฉบับในระบบ ไม่มีเตือนผิด · ตรวจใน Chrome แล้ว (ไม่มีชุด test ฝั่ง frontend — ตรวจด้วยสคริปต์ + เบราว์เซอร์)
+- **กล่องเนื้อหาเทมเพลตอีเมล: เลขบรรทัด + ขีดแดงที่แท็กผิด** (2026-10-05)
+  - เลขบรรทัดด้านซ้าย นับตามบรรทัดจริง (บรรทัดยาวที่ถูกตัดลงมาไม่มีเลข) ตรงกับ "บรรทัด N" ในคำเตือน · บรรทัดที่มีปัญหาเลขเป็นสีแดง
+  - แท็กที่ผิดมีขีดเส้นใต้หยักสีแดงในกล่องเนื้อหา — `findHtmlIssues` ส่งตำแหน่ง (`start`/`end`) ของแท็กมาด้วย
+  - ข้อความเตือน: ใช้ตัวอักษรแบบ code เฉพาะชื่อแท็ก · กด "และอีก N จุด" เพื่อดูทั้งหมด · กล่องเตือนเลื่อนในตัวเมื่อยาว
+  - ชั้นสีเดิม (`highlightBody`) เปลี่ยนเป็น `BodyHighlight` วาดทีละบรรทัด · ทั้งชั้นสีและกล่องพิมพ์จองที่ scrollbar เท่ากัน (`scrollbar-gutter: stable`) ตัดบรรทัดตรงกัน เคอร์เซอร์ไม่เลื่อน · ตรวจใน Chrome กับ ET-10 แล้ว
+- **กล่องเนื้อหาเทมเพลตอีเมล: แถบสถานะ HTML แทนกล่องเตือน** (2026-10-05) — เลือกจากตัวอย่าง 4 แบบ (แบบ 4 + ชี้เลขบรรทัดแดง)
+  - `HtmlStatusBar`: แถบ 1 บรรทัดติดใต้กล่องเนื้อหา สูงคงที่ — น้ำเงิน "✓ HTML ถูกต้อง" / แดง "⚠ HTML ผิด N จุด บรรทัด …" กดแล้วรายการเต็มเปิดขึ้นด้านบน (Popover ในหน้าต่าง) · ขวาสุดบอกจำนวนบรรทัด · กล่องเตือนเดิมที่ดันกล่องเนื้อหาให้เตี้ยลงถูกเอาออก
+  - ชี้เลขบรรทัดสีแดงแล้วเห็นข้อความของบรรทัดนั้น — กล่องพิมพ์เริ่มถัดจากคอลัมน์เลขบรรทัด (`left-9` + `pl-2` = ตำแหน่งเดิม ข้อความยังตรงชั้นสี)
+  - Esc ตอนรายการเปิดอยู่ ปิดแค่รายการ (หน้าต่างแก้ไขรับ Esc ก่อนและกันไว้ รายการจึงปิดตัวเองใน `onKeyDown`) · ตรวจใน Chrome กับ ET-10 แล้ว
+- **ข้อความเตือน HTML ใช้ถ้อยคำมาตรฐาน (ไม่แปล)** (2026-10-05) — `htmlIssueMessage()` ใน `lib/html-issues.ts` ใช้ถ้อยคำแบบ W3C HTML Validator เหมือนกันทุกภาษา: `Unclosed element <x>.` · `Stray end tag </x>.` · `End tag </x> seen, but there were open elements (<y> on line N).` · `Element <x> not allowed as child of element <ul> in this context.` · `Element <x> is not supported by some email clients.` — คำว่า "บรรทัด N:" ยังตามภาษาหน้าจอ (`email_html_line`), ข้อความที่ชี้เลขบรรทัดแดงไม่มีเลขบรรทัดนำหน้า · ลบ lang key ข้อความแปลเดิม 5 ตัว · ตรวจใน Chrome แล้ว
+- **แถบสถานะ HTML สีแดง: "HTML Syntax error"** (2026-10-05) — ข้อความเดียวกันทุกภาษา ไม่บอกจำนวนจุด/เลขบรรทัดในแถบแล้ว (ดูได้จากรายการที่กดเปิด และเลขบรรทัดสีแดง) · ลบ lang key `email_html_lines` · ตรวจใน Chrome แล้ว
+- **แถบสถานะ HTML สีน้ำเงิน: "No syntax errors"** (2026-10-05) — ภาษาอังกฤษล้วนเหมือนแถบแดง (แทน "HTML ถูกต้อง" / "HTML looks good")
+- **รายการ HTML Syntax error แบบทางการ** (2026-10-05) — กดแถบแดงแล้วรายการขึ้นหัว "⚠ HTML Syntax error" + จำนวน ("3 issues") · แถว "Line 5 | Unclosed element <strong>." สองคอลัมน์ คั่นเส้นบาง · ท้ายรายการ "The preview may appear correct, but some email clients may display this email incorrectly." · หน้าต่างยืนยันตอนบันทึกใช้หัวข้อและรายการแบบเดียวกัน · ข้อความทั้งชุด (รวม "N lines" ท้ายแถบ, "Show N more") เป็นภาษาอังกฤษทุกภาษา · ลบ lang key `email_html_list_title`, `email_html_issues_text` · ตรวจใน Chrome แล้ว
+- **ท้ายรายการ HTML Syntax error:** "Browsers hide errors in the preview. Outlook or Gmail may show a broken layout." (2026-10-05) — บอกตรง ๆ ว่าทำไมพรีวิวดูปกติ และผู้รับจะเห็นอะไร
+- **รายการ HTML Syntax error กว้างขึ้น** (2026-10-05) — 28rem → `min(34rem, 90vw)` ข้อความท้ายรายการอยู่บรรทัดเดียว (วัดใน Chrome: กว้าง 544px, สูง 1 บรรทัด)
+- **เทมเพลตอีเมล: "ส่งเมื่อ / ถึง" เป็นภาษาคน แทนชื่อ Trigger** (2026-10-05)
+  - ตาราง: คอลัมน์ "ส่งเมื่อ / ถึง" เช่น "เปิด Ticket ใหม่ / ส่งถึง: ผู้แจ้ง" (ชี้เมาส์เห็นชื่อ Trigger เดิม เช่น `ticket.created`)
+  - หน้าต่างแก้ไข: ใต้ชื่อเทมเพลต "เมื่อ: ส่งต่อ Ticket · ส่งถึง: IT ที่รับงานต่อ" แทน `ticket.forwarded`
+  - ข้อความทั้ง 38 เทมเพลต (th/en) อยู่ใน `lang/*/email.ts` คีย์ `email_when_<key>` / `email_to_<key>` (จุดเป็น `_`) — ไล่ผู้รับจากโค้ดที่ส่งจริงทุกฉบับ · ตารางเวลาเขียนแบบ "ทุกเช้าวันจันทร์" ไม่ระบุนาที เพื่อไม่ให้ข้อความผิดเมื่อเปลี่ยนเวลาใน `routes/console.php`
+  - เทมเพลตที่ไม่มีข้อความ (สร้างเอง) ยังแสดงชื่อ Trigger เดิม
+  - Test: `EmailTemplateAudienceTextTest` (4) — ทุกเทมเพลตมีข้อความครบทั้ง 2 ภาษา และไม่มีข้อความค้างของเทมเพลตที่ไม่มีแล้ว · ตรวจใน Chrome แล้ว
+- **หัวหน้าต่างแก้เทมเพลต: เอาจุด "·" ออก** (2026-10-05) — "เมื่อ: …" กับ "ส่งถึง: …" แยกกันด้วยระยะห่าง (`gap-x-5`) ป้ายสีจางบอกจุดเริ่มแต่ละคู่อยู่แล้ว · ตรวจใน Chrome แล้ว
+- **หน้าต่างแก้เทมเพลตอีเมลอยู่ใน URL: `?tab=email&edit=<id>`** (2026-10-05) — แบบเดียวกับ `?view=<id>` ของหน้าสัญญา: กดแถวแล้ว URL ได้ `edit=<id>` (แทนที่ ไม่เพิ่มประวัติ), ปิดแล้วหายไป, ส่งลิงก์หรือ reload แล้วเปิดเทมเพลตเดิม · id ที่ไม่มีจริงไม่เปิดอะไรและตัดออกจาก URL · หน้าต่างอ่านข้อมูลเทมเพลตจากรายการ (หลังบันทึก/สลับสวิตช์ เห็นค่าล่าสุด) · ตรวจใน Chrome แล้ว (เปิดตรง `edit=4`, กดแถว ET-02, `edit=999`)
+- **Notification: หน้าต่างแก้ไขอยู่ใน URL `?tab=notification&edit=<key>`** (2026-10-05) — key ไม่มี `notif_` นำหน้า เช่น `edit=ticket_assigned` (ไม่ใช้รหัส NT-## เพราะเปลี่ยนตามลำดับเมื่อเพิ่มรายการ) · กดแถว/ปิด/ลิงก์ตรง/key ที่ไม่มีจริง ทำงานแบบเดียวกับแท็บ Email · `?edit=` ของแท็บ Email อ่านเฉพาะตอนอยู่แท็บ Email (ไม่เปิดซ้อน) · หน้าต่าง Notification ตั้งค่าฟอร์มใหม่เฉพาะเมื่อเปลี่ยนรายการ (`bell.key`) — list refetch ไม่ล้างข้อความที่กำลังพิมพ์
+- **เข้าหน้า Email & Notification แล้วได้ `?tab=email` ทันที** (2026-10-05) — จากเมนู หรือลิงก์เก่า `/email-templates` · แทนที่ URL (ไม่เพิ่มประวัติ) · ตรวจทั้งหมดใน Chrome แล้ว
+- **Notification ใช้ id: `?tab=notification&edit=<id>` และรหัส NT-## จาก id** (2026-10-05) — แทน key ที่ทำก่อนหน้า
+  - API `/notification-templates` ส่ง `id` และ `code` (`NT-%02d` จาก id เหมือน ET-##) · แสดงเฉพาะรายการที่มีแถวในฐานข้อมูล เหมือน Email Template — **ต้องรัน seeder ทุกครั้งที่ขึ้นระบบ** (`DatabaseSeeder` เรียก `NotificationTemplateSeeder` อยู่แล้ว, firstOrCreate ไม่ทับข้อความที่แก้ไว้)
+  - รัน `NotificationTemplateSeeder` บน DB จริงแล้ว: 44 → 48 แถว (ครบตามรายการตั้งต้น)
+  - Tests: `ProductionSeedTest` ตรวจจำนวนแถว notification ครบ · `NotificationTemplateTest` เพิ่ม 1 test (id/code และรายการไม่มีแถวไม่แสดง) · test ที่อ่านรายการ seed ก่อน · Notification/ProductionSeed/ActorStamps 130 passed · ตรวจใน Chrome แล้ว
+- **เอาปุ่ม "ส่งทดสอบ" มุมขวาบนของหน้า Email & Notification ออก** (2026-10-05) — ส่งทดสอบยังทำได้ในหน้าต่างแก้ไขแต่ละเทมเพลต และทดสอบ SMTP ในหน้าตั้งค่า · lang key `email_test` / `email_test_sent` ยังใช้ที่อื่น ไม่ลบ · ตรวจใน Chrome แล้ว
+
+### ตั้งค่าเหตุผลการตัดจำหน่าย + รายงานแยกตามเหตุผล — 2026-10-05
+- **ตารางใหม่ `writeoff_reasons`** (migration `2026_10_05_171538_create_writeoff_reasons_table`, **รันบน DB จริงแล้ว**):
+  - เก็บ name (unique) และ description พร้อม created_by / updated_by (RecordsActors)
+  - `assets.writeoff_reason_id` ผูกด้วย FK แบบ restrictOnDelete
+  - รายการตั้งต้น 7 ข้อ: ชำรุด ซ่อมไม่คุ้ม · หมดอายุการใช้งาน / ล้าสมัย · สูญหาย / ถูกโจรกรรม · ขายซาก · บริจาค · คืนผู้ให้เช่า · อื่น ๆ
+  - ทรัพย์สิน 3 เครื่องที่ตัดจำหน่ายแล้ว (หมายเหตุ "Beyond economical repair…") ผูกกับ "ชำรุด ซ่อมไม่คุ้ม"
+- **ตั้งค่า > ทรัพย์สิน:** มีส่วน "เหตุผลการตัดจำหน่าย" (ใช้ `LookupSection`) เพิ่ม แก้ไข ลบได้
+  - `WriteoffReasonController`: อ่านได้ทุกคนที่ login, การแก้ไขต้องมีสิทธิ์ `settings.assets`
+  - ลบเหตุผลที่มีทรัพย์สินใช้อยู่ไม่ได้ (409); เปลี่ยนชื่อแล้วทรัพย์สินตามไปด้วยเพราะผูกด้วย id
+- **การตัดจำหน่าย:**
+  - `POST /assets/bulk` ต้องมี `writeoff_reason_id`; หมายเหตุ (`reason` → `last_reason`) **ไม่บังคับแล้ว**
+  - ยกเลิกการตัดจำหน่ายแล้วเหตุผลถูกล้างด้วย
+  - audit log เก็บ facts ทั้ง reason และ note
+  - หน้าต่างตัดจำหน่ายเลือกเหตุผลจากรายการ (SearchableSelect)
+  - รายละเอียดทรัพย์สินแสดงเหตุผลตัวหนา แล้วตามด้วยหมายเหตุ
+- **รายงานการตัดจำหน่าย:**
+  - ตัวกรองใหม่ "เหตุผล"
+  - คอลัมน์ "เหตุผล" (จากรายการ), "หมายเหตุ" และ "ผู้ตัดจำหน่าย"
+  - กราฟและแผ่น Excel ใหม่ "แยกตามเหตุผล" (ไม่มีเหตุผล = "ไม่ระบุเหตุผล")
+  - ค้นหาครอบคลุมชื่อเหตุผลด้วย
+- Tests:
+  - `WriteoffReasonTest` ใหม่ 4
+  - `AssetApiTest`: test "requires a note" เปลี่ยนเป็น "requires a reason from the list but not a note"
+  - `AssetWriteoffReportTest` / `ActorStampsTest` ปรับตาม
+  - ทั้งระบบ 1642 passed
+
+### ตั้งค่า > ทรัพย์สิน: ปรับความสม่ำเสมอ UX/UI — 2026-10-05
+- **รูปแบบส่วน:** ทั้ง 2 ส่วนใช้แบบเดียวกับ Ticket & SLA คือ h3 `text-sm` + คำอธิบาย `text-xs` และเส้นคั่น `mt-6 border-t pt-5`
+  - ส่วนสีมีหัวข้อ "สีป้ายสถานะ" แล้ว
+  - ส่วนเหตุผลการตัดจำหน่ายปรับขนาดหัวข้อให้ตรงกัน
+- **ข้อความ:**
+  - คำอธิบายหน้าครอบคลุมทั้งสีและเหตุผล
+  - ข้อความแจ้ง "ใช้ทันที" แก้เป็น "กดบันทึกแล้ว…" ให้ตรงกับที่ต้องกดบันทึกจริง
+  - "ข้อมูลหลัก" ในกล่องแนะนำเป็นลิงก์ไปแท็บข้อมูลหลัก
+- **ป้ายสถานะ:** แสดงตามความกว้างของตัวเอง ไม่ยืดเต็มช่องเป็นแถบ
+- **ปุ่มเลือกสี:**
+  - aria-label เป็นชื่อสี แทนรหัส hex
+  - มี `aria-pressed` บอกสีที่เลือก และ `role="group"` ตามชื่อสถานะ
+  - มี focus-visible outline และ hover state
+  - เปลี่ยน `transition-all` เป็น `transition-shadow`
+- **`LookupSection`** (ใช้ร่วมกับหน่วยนับ/ประกัน): ปุ่มแก้ไข/ลบที่เป็นไอคอนอย่างเดียวมี `type="button"`, aria-label "แก้ไข/ลบ <ชื่อ>", focus ring และไอคอน `aria-hidden`
+
+### คืนผู้ให้เช่า (ทรัพย์สินเช่า) — 2026-10-06
+ปุ่มแยกจากการตัดจำหน่าย เพื่อให้การคืนเครื่องเช่าเป็นข้อมูลของระบบเอง ไม่อิงเหตุผลในหน้าตั้งค่า (ซึ่งแก้ชื่อ/ลบได้) — ใช้ทำการ์ด "เครื่องเช่าตามสัญญา" ในรายงานตัดจำหน่ายต่อไป
+- **ฐานข้อมูล** (`2026_10_06_090155_add_returned_to_vendor_to_assets_table`, **รันบน DB จริงแล้ว**): `assets.returned_to_vendor_at`, `returned_to_vendor_by` (FK users, null on delete) · ลบเหตุผล "คืนผู้ให้เช่า" ออกจากรายการตั้งต้นและจาก DB (ไม่มีเครื่องใช้) — เหลือ 6 เหตุผล
+- **การคืน** `POST /assets/bulk-return-to-vendor` (`AssetService::returnToVendor`): เฉพาะเครื่องเช่า สถานะพร้อมใช้งาน (กติกาเดียวกับตัดจำหน่าย) · สิทธิ์ `assets.retire` · สถานะเป็นตัดจำหน่าย + ประทับผู้/วันที่ทั้งตัดจำหน่ายและคืน · ไม่ต้องเลือกเหตุผล หมายเหตุไม่บังคับ · ยังผูกกับสัญญาเดิม · log "Returned asset to lessor" ทีละเครื่อง
+- **ยกเลิกการคืน**: ปุ่มยกเลิกตัดจำหน่ายเดิม (สิทธิ์ `assets.cancel_writeoff`) ชื่อเป็น "ยกเลิกการคืน" · ล้างข้อมูลการคืน (`Asset::booted`) · log "Cancelled asset return to lessor"
+- **ช่องโหว่ที่ปิด**
+  - ยกเลิกตัดจำหน่าย/การคืน ไม่ได้ถ้าสัญญาของเครื่องปิดแล้ว (ยกเลิก/หมดอายุ) — ต้องเปิดสัญญาก่อน
+  - แก้ไขสัญญาแล้วเครื่องที่ตัดจำหน่าย/คืนแล้ว ไม่หลุดจากสัญญา (`ContractService::syncAssets`) · ในฟอร์มติ๊กออกไม่ได้ (ไอคอนกุญแจ)
+  - สัญญาฮาร์ดแวร์ที่มีเครื่องตัดจำหน่าย/คืนแล้ว เปลี่ยนประเภทไม่ได้ (`assertKeepsRetiredAssets`) · ในฟอร์มการ์ดประเภทอื่นกดไม่ได้ พร้อมข้อความบอกเหตุผล
+- **หน้าจอ**: ปุ่ม "คืนผู้ให้เช่า" ในแถบเลือกหลายเครื่อง แสดงเมื่อทุกเครื่องที่เลือกเป็นเครื่องเช่า · ป้าย "ตัดจำหน่าย · คืนผู้ให้เช่า" ในตารางและหน้าต่างรายละเอียด · กล่อง "คืนผู้ให้เช่าแล้ว · วันเวลา · โดย" · แท็บทรัพย์สินในหน้าสัญญาแสดง "คืนผู้ให้เช่าแล้ว"
+- **Tests**: `AssetReturnToVendorTest` (10) · ปรับ `WriteoffReasonTest`, `AssetWriteoffReportTest`, `ContractApiTest` ให้ตรงกับรายการเหตุผลใหม่/ข้อมูลทดสอบที่แน่นอน · ทั้งระบบ 1652 passed · ตรวจใน Chrome แล้ว (ลองกับ DEMO-LC-40-024 แล้วยกเลิกการคืน คืนค่าเดิมครบ)
+- **ปุ่มตัดจำหน่าย และคืนผู้ให้เช่า ในหน้าต่างรายละเอียดทรัพย์สิน** (2026-10-06) — แสดงเมื่อเครื่องพร้อมใช้งานและมีสิทธิ์ `assets.retire` · "คืนผู้ให้เช่า" เฉพาะเครื่องเช่า (เครื่องเช่ายังตัดจำหน่ายได้ เช่น หาย/ชำรุด) · กดแล้วปิดหน้าต่างรายละเอียด แล้วเปิดหน้าต่างยืนยันตัวเดียวกับแถบเลือกหลายเครื่องสำหรับเครื่องนั้น (แบบเดียวกับปุ่มโอนทรัพย์สิน) · ตอนปิดหน้าต่างยืนยันยังคงเครื่องที่เลือกไว้ เนื้อหาไม่หายระหว่างค่อย ๆ ปิด · ตรวจใน Chrome แล้ว (เครื่องเช่า: โอน / คืนผู้ให้เช่า / ตัดจำหน่าย · เครื่องซื้อ: โอน / ตัดจำหน่าย / ลบ) — เปิดหน้าต่างยืนยันแล้วกดยกเลิก ไม่มีการเปลี่ยนข้อมูล
+
+### WCAG 2.2 AA — หน้ารายการทรัพย์สิน (รอบ A: component กลาง) — 2026-10-06
+ตรวจ /assets?tab=inventory ทั้งในหน้าจริงและโค้ด แล้วแก้ที่ component กลาง ทุกหน้าที่ใช้ได้ผลด้วย
+- **ป้ายสถานะสีที่ตั้งเอง** (`StatusBadge` color): ตัวหนังสือคำนวณเฉดจากสีที่ตั้ง (`shared/lib/contrast.ts` → `readableInk`) ผสมดำ/ขาวเท่าที่จำเป็นให้ได้ ≥4.5:1 บนพื้นป้าย แยกโหมดสว่าง/มืด (CSS vars `--ink` / `--ink-dark`) จุดสีและพื้นยังเป็นสีที่ตั้ง · "พร้อมส่งมอบ" 3.8 → 4.7:1 · สีตั้งต้นทุกสีผ่านทั้งสองโหมด
+- **ช่องติ๊ก** (`Checkbox`): ขอบ muted-foreground 80% (≥3:1) · กรอบโฟกัสวงแหวนสีแบรนด์ทึบ + เว้นระยะ แบบปุ่ม (เดิมน้ำเงินจาง 15% ≈1.2:1)
+- **กล่องตัวกรอง** (`FilterPopover`, ใช้ 9 หน้า — API เดิม): ปุ่มบอก `aria-expanded` · กล่องมีชื่อ (group + aria-labelledby; ไม่ใช้ role=dialog เพราะจะทำให้ SearchableSelect ข้างใน portal เข้ากล่องเล็ก) · เปิดแล้วโฟกัสย้ายเข้ากล่อง · Esc / เสร็จสิ้น / Tab ออกปลายกล่อง → ปิดและโฟกัสกลับปุ่ม · "พบ N รายการ" เป็น live region · จำนวนบนปุ่มมีคำอ่าน "ตัวกรองที่ใช้อยู่"
+- **ช่องเลือก** (`SearchableSelect`): `aria-haspopup="listbox"` + `aria-expanded`
+- ตรวจใน Chrome แล้ว (สีป้าย, เปิดกล่องโฟกัสย้ายเข้า, Esc/Tab ปิดและคืนโฟกัส)
+
+### WCAG 2.2 AA — หน้ารายการทรัพย์สิน (รอบ B: หน้า /assets?tab=inventory) — 2026-10-06
+- **แป้นพิมพ์**: รหัสทรัพย์สินเป็นปุ่ม "ดูรายละเอียด <รหัส>" เปิดหน้าต่างรายละเอียดได้ (เดิมเปิดได้แค่คลิกแถวด้วยเมาส์) · คลิกแถวยังได้เหมือนเดิม
+- **ชื่อสำหรับโปรแกรมอ่านหน้าจอ**: ช่องติ๊กแต่ละแถว "เลือก <รหัส>" และหัวตาราง "เลือกทุกเครื่องในหน้านี้ที่สถานะเดียวกัน" · ตาราง "รายการทรัพย์สิน" · ช่องค้นหา (type=search) · ตัวกรอง 4 ช่องมี `<label>` ผูกกับช่อง (เดิมอ่านว่า "ทั้งหมด" ทุกช่อง) · ช่อง "แสดง" · ปุ่มหน้าก่อนหน้า/ถัดไป · ปุ่มไอคอนในแถวมี aria-label · ป้ายตัวกรอง "เอาตัวกรองออก: …" (ลบแล้วโฟกัสกลับช่องค้นหา) · ไอคอนประกอบ aria-hidden
+- **แถวที่ถูกล็อกตอนเลือกหลายเครื่อง**: ไม่จาง 55% แล้ว (ตัวหนังสือเหลือ 2.1–3.9:1) ใช้พื้นเทาอ่อนแทน · ไอคอนกุญแจสีเต็มและมีคำอธิบายให้โปรแกรมอ่านหน้าจอ
+- **แจ้งสถานะ**: "เลือกแล้ว N รายการ" ผ่าน live region ที่อยู่ตลอด · ช่วง "1–20 จาก 1,294" เป็น live · ตารางมี `aria-busy` ตอนโหลด และแถวโครงร่างซ่อนจากโปรแกรมอ่านหน้าจอ · **แก้บั๊ก** เปลี่ยนหน้า/กรอง/ค้นหาแล้วตารางโชว์ข้อมูลเก่าระหว่างโหลด — ตอนนี้แสดงแถวกำลังโหลด (`isLoading || isFetching`) · ภาพเคลื่อนไหวตอนโหลดหยุดเมื่อผู้ใช้ตั้งลดการเคลื่อนไหว
+- **iPad mini 768px**: แถบเลือกหลายเครื่องขึ้นบรรทัดใหม่ได้ (ตรวจแล้ว ปุ่มอยู่ครบ หน้าไม่เลื่อนแนวนอน ตารางเลื่อนในกรอบตัวเอง)
+- **ขัดเกลา**: คอลัมน์มูลค่าชิดขวา ตัวเลขเรียงตรง · รุ่น/ผู้ถือครอง/แผนก/คลัง/แท็ก ตัดบรรทัดเดียวพร้อมดูเต็มเมื่อชี้ · ตัวเลขใช้ `Intl.NumberFormat` · ไม่พบผลตอนกรองอยู่ → ข้อความ + ปุ่มล้างตัวกรอง · ข้อความที่เขียนตรงในโค้ด (ประเภท/แหล่งที่มา/รายการ/แสดง) ย้ายเข้าไฟล์ภาษา
+- ตรวจใน Chrome แล้ว (ชื่อทุกช่อง/ปุ่ม, เปิดรายละเอียดจากปุ่มรหัส, live region, ความกว้าง 768px)
+
+### หน้ารายการทรัพย์สิน: ค้นหา ตัวกรอง และหน้า อยู่ใน URL (รอบ C) — 2026-10-06
+- `?q=` ค้นหา · `type` · `source` · `status` · `warehouse` · `page` · `per` (20/50/100) — reload หรือส่งลิงก์แล้วเห็นรายการเดิม
+- ค่าตั้งต้นไม่ลง URL (หน้า 1, 20 แถว, ค่าว่าง) · ทุกการเปลี่ยน **แทนที่** URL ไม่เพิ่มประวัติ (พิมพ์ค้นหาแล้วกด Back ไม่ย้อนทีละตัวอักษร)
+- ตั้งหลายค่าในการกดครั้งเดียว (เช่น ตัวกรอง + กลับหน้า 1) รวมเป็นการเขียน URL ครั้งเดียว (`setListParams` + `queueMicrotask`) — ถ้าเขียนแยก ครั้งหลังจะทับครั้งแรก
+- ค่าสถานะที่ไม่รู้จักใน URL ถูกละ · จำนวนต่อหน้านอก 20/50/100 กลับเป็น 20
+- ตรวจใน Chrome แล้ว (เปิดลิงก์ที่มีตัวกรอง, เอาตัวกรองออก/หน้าถัดไป/พิมพ์ใหม่รีเซ็ตหน้า/ล้างทั้งหมด, ประวัติไม่เพิ่ม)
+
+### หน้ารายการทรัพย์สิน: จัดคอลัมน์ตารางใหม่ — 2026-10-06
+- คอลัมน์: **รหัสทรัพย์สิน / Tag · แบรนด์ / รุ่น · ประเภท · Serial · ผู้ถือครอง / แผนก · คลัง / สถานที่ · สถานะ · มูลค่า**
+- แบรนด์ (ตัวเล็กสีจาง) อยู่บนรุ่น · Serial ตัว mono (ค้นหาด้วย Serial ได้อยู่แล้ว) · แผนกอยู่ใต้ชื่อผู้ถือครอง (เดิมคอลัมน์แผนกว่างทุกเครื่องส่วนกลาง/ในคลัง)
+- **คลัง / สถานที่** (`AssetPlace`): เครื่องในคลัง (พร้อมส่งมอบ/รอรับคืน) แสดงคลัง ไอคอนคลัง · เครื่องที่ใช้งานแสดงสถานที่ ไอคอนหมุด (ไม่มีสถานที่ → คลัง) · โปรแกรมอ่านหน้าจออ่าน "คลัง:" / "สถานที่:" นำหน้า
+- **มูลค่าเครื่องเช่า** แสดงป้ายม่วง "เช่า · เลขสัญญา" แทนค่าเช่าทั้งสัญญาที่เคยซ้ำทุกเครื่อง
+- **แก้บั๊ก scroll ซ้อน**: ข้อความ sr-only "สถานที่:" เป็น `position:absolute` แต่ไม่มี ancestor ที่ positioned ถึง `<main>` ที่เลื่อนได้ จึงยึดกับทั้ง document → แถวล่าง ๆ ยืดหน้า เกิด scrollbar ชั้นนอกและแถบบนเลื่อนหาย · แก้โดยใส่ `relative` ที่ตัวครอบ (document กลับมาสูงเท่าจอ 855 → เดิม 1769)
+- ตรวจใน Chrome แล้ว (หัวตาราง, ป้ายเช่า, ไอคอนคลัง/หมุด, scrollbar เหลือชั้นเดียวทั้งหน้า 1 และ 2)
+
+### ตารางแบ่งหน้า: กด "หน้าถัดไป" ต่อเนื่องได้ + หัวตารางติดด้านบน — 2026-10-06
+- **ปุ่มเปลี่ยนหน้าไม่ขยับ**: ระหว่างโหลดหน้าใหม่ ตารางคงความสูงเดิม (`shared/hooks/use-held-height.ts` → `min-height` ชั่วคราว) และแถวโครงร่างมีจำนวนเท่าแถวที่แสดงอยู่ — เดิมโครงร่าง 6–8 แถวเตี้ยกว่าแถวจริง ตารางหด ปุ่มกระโดดขึ้น กดซ้ำไม่โดน · หน้าสุดท้ายที่มีแถวน้อยยังหดตามจริง
+- **ไม่เลื่อนจออัตโนมัติ** (ลองแล้วถอนออก: เลื่อนกลับหัวตารางทำให้ปุ่มหนีจากเมาส์)
+- **หัวตารางติดขอบบนตอนเลื่อน** (sticky) เมื่อตารางกว้างพอดีกรอบ (`shared/hooks/use-table-fits-width.ts`) · ตารางกว้างเกินกรอบ (เช่น iPad 768px) ยังเลื่อนแนวนอนได้เหมือนเดิม หัวตารางไม่ติด — CSS ทำสองอย่างพร้อมกันไม่ได้
+  - `<main>` ตั้ง `--sticky-top: -1.5rem` ให้หัวตารางติดชิดขอบ (sticky หยุดที่ขอบใน padding 24px ทำให้แถวโผล่เหนือหัวตาราง)
+  - การ์ดที่ครอบแท็บ/ตาราง เปลี่ยน `overflow-hidden` → `overflow-clip` (ตัดมุมโค้งเหมือนเดิม แต่ไม่เป็นกล่องเลื่อนที่ทำให้ sticky ไม่ทำงาน): ทรัพย์สิน, สัญญา, พนักงาน, คลังอะไหล่, Ticket, คำขอ, การเข้าถึง, สิทธิ์การใช้งาน, Email & Notification, ตารางรายงาน
+- ใช้กับ `DataTable` กลาง (ทุกตารางที่ใช้) + ตารางที่เขียนเอง: รายการทรัพย์สิน, รายการสัญญา, บันทึกการตรวจสอบ
+- ตรวจใน Chrome แล้ว (ทรัพย์สิน กดถัดไป 3 ครั้งติด ปุ่มตำแหน่งเดิมตลอด · คลังอะไหล่/เหตุการณ์ และบันทึกการตรวจสอบ เช่นเดียวกัน · หัวตารางชิดขอบบน · 768px เลื่อนแนวนอนได้ หน้าไม่ล้น)
+
+### หน้าทรัพย์สิน: งานรอรับคืนย้ายเข้าแถบเครื่องมือ + เลิกใช้ " · " — 2026-10-06
+- **แก้ตารางกระโดด**: กล่อง "ทรัพย์สินรอดำเนินการ" เหนือแท็บโหลดมาหลังรายการ แล้วดันทั้งแท็บและตารางลง 320px (CLS 0.113) และยิ่งสูงตามจำนวนรายการ → เอาออก
+  - แทนด้วยป้าย **"รอรับคืน N"** สีเหลืองในแถวเครื่องมือ (ความสูงแถวคงที่ ป้ายโผล่ทีหลังก็ไม่ดันอะไร) · กดแล้วกรองเหลือเฉพาะสถานะรอรับคืน (`?status=pending_return`, `aria-pressed`) กดอีกครั้งเลิกกรอง · รับคืนจากปุ่มในแถว (มีอยู่แล้ว)
+  - ตัวเลขสีเหลืองบนแท็บ "รายการทรัพย์สิน" (เฉพาะผู้มีสิทธิ์รับคืน)
+  - หลังแก้ CLS ตอนโหลดหน้า 0.021
+- **เลิกใช้ " · " คั่นข้อมูล** — แยกด้วยบรรทัด/ช่องไฟแทน
+  - มูลค่าเครื่องเช่า: 2 บรรทัด "เช่าตามสัญญา" / เลขสัญญา (แทนป้าย "เช่า · CT-…")
+  - สถานะเครื่องที่คืนผู้ให้เช่า: "คืนผู้ให้เช่าแล้ว" (แทน "ตัดจำหน่าย · คืนผู้ให้เช่า")
+  - หน้าต่างรายละเอียด: หัวข้อบรรทัดหนึ่ง วันเวลา / "โดย …" บรรทัดถัดไป
+  - หน้าต่างรับคืน: รหัส กับ "เดิมอยู่: คลัง" เว้นช่อง
+  - เลือกผู้รับในหน้าต่างโอน: ชื่อ บรรทัดล่างแผนก รหัสชิดขวา
+  - ข้อความคำอธิบาย 4 ข้อ เขียนเป็นประโยค
+- ตรวจใน Chrome แล้ว (ไม่มี shift ใหญ่, ป้ายกรอง 4 รายการ ทุกแถวมีปุ่มรับคืน, ในหน้ารายการไม่เหลือ " · ")
+- **ปรับต่อ (วันเดียวกัน)**: เปลี่ยนป้าย "รอรับคืน N" ในแถวเครื่องมือ + ตัวเลขบนแท็บ เป็น **แถบบรรทัดเดียวเหนือแท็บ** "รอรับคืน N รายการ" พร้อมปุ่ม "ดูรายการ" (กดซ้ำเป็น "แสดงทั้งหมด") (`components/pending-return-strip.tsx`) เห็นได้ทุกแท็บ
+  - จำนวนมาจาก `/api/sidebar-badges` (ตัวเลขเดียวกับเมนูข้าง, shell โหลดไว้แล้ว) — เลิกดึงรายการ 100 เครื่องมานับ · เพิ่ม `useSidebarBadge(key)` คืน undefined ระหว่างยังไม่รู้
+  - **โครงร่างจองที่**: ระหว่างยังไม่รู้จำนวน แสดงแถบโครงร่างสูงเท่ากัน ถ้าครั้งล่าสุดที่เบราว์เซอร์นี้เห็นมีงานค้าง (localStorage) — ไม่มีงานค้างประจำก็ไม่ขึ้นแถบว่างแล้วหาย
+  - ตรวจใน Chrome: รีโหลดเต็มหน้า layout shift = 0 · ปุ่มจากแท็บภาพรวมพาไปรายการกรองรอรับคืน 4 แถว (มีปุ่มรับคืนครบ) · "แสดงทั้งหมด" เอาตัวกรองออก
+  - ข้อความแถบ: "ผู้ใช้งานส่งคืนทรัพย์แล้ว **รอรับคืน N รายการ**" (จำนวนตัวหนา) · มูลค่าเครื่องเช่า: badge "เช่า" สีม่วง เลขสัญญาบรรทัดล่าง (แทน "เช่าตามสัญญา")
+- **เก็บงานหน้าทรัพย์สิน**:
+  - แท็บภาพรวม ตาราง "ทรัพย์สินมูลค่าสูงสุด": รหัสเป็นปุ่ม "ดูรายละเอียด <รหัส>" (เดิมคลิกแถวได้แค่เมาส์) · ตารางมีชื่อจากหัวการ์ด
+  - ลบ `usePendingReturns` และ query key `assets-pending-return` ที่ไม่มีใครใช้แล้ว · toast แจ้งเตือนเรื่องทรัพย์สินสั่ง refresh `sidebar-badges` แทน แถบรอรับคืนจึงอัปเดตทันทีเหมือนเดิม
+  - ตรวจใน Chrome: ปุ่มรหัสเปิดหน้าต่างรายละเอียดได้ · หน้าต่างรับคืน / ตัวเลือกผู้รับในหน้าต่างโอน (ชื่อ, แผนกใต้ชื่อ, รหัสชิดขวา) / กล่องตัดจำหน่าย / กล่องและป้าย "คืนผู้ให้เช่าแล้ว" ไม่มี " · " (ลองคืน DEMO-LC-40-024 แล้วยกเลิก คืนค่าเดิมครบ)
+- **แถบรอรับคืนไม่ต้องเดาแล้ว**: `ProtectedRoute` เริ่มโหลด `/api/sidebar-badges` พร้อมกับเช็กผู้ใช้ (`usePrefetchSidebarBadges`) และให้วงหมุนรอจนเสร็จ → ทุกหน้าวาดพร้อมตัวเลขบนเมนู แถบรอรับคืนอยู่ถูกที่ตั้งแต่แรก · ลบ localStorage และแถบโครงร่างออก
+  - คำขอนี้ยิงก่อนรู้ว่าล็อกอินหรือยัง จึงใช้ `quietUnauthenticated` (ใหม่ใน `shared/lib/http.ts`): ได้ 401 ไม่เด้งไปหน้า login (route guard จัดการเอง ลิงก์ปลายทางไม่หาย) · การโหลดซ้ำทุก 15 วิ ยังจับ session หลุดตามเดิม · โหลดไม่สำเร็จก็แสดงหน้าโดยไม่มีตัวเลข ไม่รอค้าง
+  - ตรวจใน Chrome: เปิดครั้งแรก (ไม่มีค่าใน localStorage) ไม่มี shift แนวตั้ง CLS 0.002
+  - prefetch ตอนเปิดแอปไม่ลองซ้ำเมื่อพลาด (`retry: false`) — เดิมคนที่ยังไม่ล็อกอินยิง badges ได้ 401 แล้วลองซ้ำอีกหลายครั้งจากหน้า login · ตรวจใน Chrome: ล็อกเอาต์แล้วเปิด `/assets?tab=inventory` ตรง ๆ → ไป `/login` ไม่มีข้อความ "ถูกออกจากระบบ" เก็บลิงก์ปลายทางไว้ และคำขอ badges เหลือครั้งเดียว · วัดบน dev: `/me` 256ms, badges 257ms, ยิงพร้อมกัน 498ms (dev server รับทีละคำขอ) — บนเซิร์ฟเวอร์จริงวงหมุนแทบไม่นานขึ้น
+
+### เลิกใช้ " · " คั่นข้อมูลทั้งระบบ — 2026-10-06
+ต่อจากหน้าทรัพย์สิน เก็บอีกราว 130 จุด (frontend 13 โมดูล, ไฟล์ภาษา th/en, PHP, PDF, หน้า error) หลักคือแยกด้วยบรรทัด/ช่องไฟแทนจุด
+- **บนหน้าจอ** (รหัส + ชื่อ, ตำแหน่ง + แผนก, สถานะ + เวลา): เป็น element แยกเว้นช่อง (`flex gap-x-3`) หรือขึ้นบรรทัด · จำนวนหลังหัวข้อ → "(N)" หรือ pill
+- **ข้อความล้วน** (เลือกตามบริบท): tooltip ขึ้นบรรทัดใหม่ · ตัวเลือก dropdown ใช้ชื่อ + บรรทัดรอง (`hint`/`sub`) · หัวเล็ก dialog / สถานะใช้ ":" เช่น "คำขอใหม่: ขอซื้อ" · รายการหลายอย่างใช้ "," · ชื่อแท็บเบราว์เซอร์ใช้ " - "
+- **ไฟล์ภาษา**: ประโยคที่ต่อด้วยจุด เขียนใหม่เป็นประโยคธรรมดา (permission, report, employee, access, requests, ticket, workflow, settings, common) · เพิ่มคีย์ `req_activity_by`
+- **PHP**: ชื่อขั้น workflow ที่ข้าม/รวม (`WorkflowResolverService`) ใช้ ", " — หน้า Workflow เช็กตัวคั่นเดียวกัน · audit log ตัวเลือกคำขอใช้ ":" (รายการเก่าในฐานข้อมูลยังมีจุด) · หัว PDF รายงาน, ชื่อไฟล์/ท้ายหน้า PDF, หน้า error
+- ที่ยังมี "·" คือ comment ในโค้ดเท่านั้น
+- เทส: ปรับ `RequestResolutionTest` ตามตัวคั่นใหม่ · ทั้งระบบ 1652 passed · ตรวจใน Chrome 11 หน้า (Dashboard, พนักงาน, คำขอ, Workflow, คลังอะไหล่, สัญญา, Ticket, รายงาน, สิทธิ์, Email & Notification, การเข้าถึง) ไม่มี " · " บนจอและใน tooltip
+- **ป้าย "ครอบ" ในตัวอย่าง Workflow ไม่เดาจากเครื่องหมายจุลภาคแล้ว**: backend ใส่ `covered_steps` (จำนวนขั้นที่รวมเป็นการตัดสินใจเดียว) ในแถวที่รวม · หน้า Workflow แสดงป้ายเมื่อ `covered_steps > 1` แทนการหา ", " ในชื่อ (ชื่อตำแหน่ง/ขั้นที่มีจุลภาคเองจะไม่ขึ้นป้ายผิด) · ไม่ใช่คอลัมน์ของ `request_approvals` ตอนบันทึกจึงถูกข้ามไป · ตรวจข้อมูลจริง: ชื่อขั้น 45, ตำแหน่ง 14, แผนก 11, ขั้นในคำขอ 139 รายการ ไม่มีจุลภาคหรือ "·" · เทส Request/Workflow 304 passed
+
+### แก้บั๊ก: หน้าต่างสินค้าในคลังอะไหล่ไม่แสดงจำนวนสำรอง — 2026-10-06
+- รายการสินค้า (`index`) นับจำนวนสำรองจากคำขอเบิกที่อนุมัติแล้ว (`withSum`) แต่สินค้ารายตัว (`show`) และผลหลังแก้ไข (`update`) ไม่ได้นับ → ตอบ 0 เสมอ หน้าต่างสินค้าจึงไม่เคยขึ้นบรรทัด "สำรอง N ว่าง M"
+- เพิ่ม `withReserved()` ใน `StockItemController` ใช้ทั้ง `show` และ `update` (นับแบบเดียวกับ index)
+- เทส: `test_show_reports_reserved_like_the_index`, `test_show_reports_zero_reserved_without_approved_requests` · Stock ทั้งหมด 168 passed · ตรวจใน Chrome: SKU-0000002 ขึ้น "สำรอง 2  ว่าง 10"
+
+### รายงานการตัดจำหน่ายทรัพย์สิน ทำใหม่ตาม mockup — 2026-10-06
+**เฟส 1 (backend, f28166a0)**
+- ตัวกรอง: เอาช่องค้นหาออก · เพิ่ม "สัญญา" (เฉพาะสัญญาที่มีทรัพย์สินผูก ชื่อสัญญาเป็นบรรทัดรอง) · เก็บ "เหตุผล"
+- ช่องตัวเลข 5 ช่อง: ตัดจำหน่าย (ซื้อ/เช่า) · มูลค่าซื้อที่ตัดออก (+เฉลี่ยต่อเครื่อง) · อายุใช้งานเฉลี่ย (รูปแบบ "ปี" ใหม่ + หมวดที่อายุสั้นสุด) · ตัดทั้งที่ยังมีประกัน (กรอบเหลือง) · เครื่องเช่าค้างคืน (กรอบแดง สัญญาที่หมดแล้ว ไม่ขึ้นกับช่วงวันที่) · หมายเหตุใต้ตัวเลขใส่ข้อความได้ (`note.texts`)
+- endpoint `GET /api/reports/assets/writeoffs/breakdown` (สิทธิ์ `assets.view`): รายเดือนครบทุกเดือน · เหตุผล (คืนผู้ให้เช่าเป็นกลุ่มของตัวเอง) · หมวดหมู่ + ช่วงอายุ <3 / 3–5 / >5 ปี + ยังมีประกัน · เครื่องเช่าตามสัญญา นับทุกช่วงเวลา: คืนแล้ว (`returned_to_vendor_at`), ตัดด้วยเหตุผลอื่น, ยังไม่คืน, เหลือกี่วัน, คืนก่อนกำหนด, สถานะ
+- คอลัมน์: เพิ่มสัญญา, ประกัน ณ วันที่ตัด (เหลือ N เดือน / ตลอดอายุ / หมดแล้ว / ไม่มีข้อมูล = "—" ไม่นับเป็นหมดแล้ว) · เครื่องเช่าไม่แสดงมูลค่าสัญญาทั้งก้อนซ้ำ · ซ่อนบางคอลัมน์เป็นค่าตั้งต้นได้ (`hiddenByDefault`) ไฟล์ส่งออกยังมีครบ
+- ไฟล์ส่งออก: ชีตรายเดือนมีเดือนว่าง · ชีตหมวดหมู่คอลัมน์ใหม่ · ชีต "เครื่องเช่าตามสัญญา" · ชีตรายการเพิ่มสัญญาและประกัน
+**เฟส 2 (หน้าจอ)**
+- ผัง: ตัวกรอง → ช่องตัวเลข 5 ช่อง → [กราฟรายเดือนแบบซ้อน | เหตุผล] → ตามหมวดหมู่ → เครื่องเช่าตามสัญญา → รายการ (`components/writeoff-cards.tsx`)
+- กราฟรายเดือน: แท่งซ้อน ซื้อ / เช่าคืนผู้ให้เช่า / เช่าตัดด้วยเหตุผลอื่น ทุกเดือน ตัวเลขบนแท่ง หัวการ์ดบอกเดือนที่มากสุด · `role="img"` + ตารางสำหรับโปรแกรมอ่านหน้าจอ
+- การ์ดสัญญา: ความคืบหน้าการคืนเขียนเป็นตัวเลข · "ต้องทำอะไร": หมดสัญญาแล้ว D วัน ต้องตามคืน N เครื่อง / หมดใน D วัน เตรียมคืน / อีก D วัน (+คืนก่อนกำหนด) / คืนครบแล้ว + "ตัดด้วยเหตุผลอื่น N เครื่อง ต้องคุยกับผู้ให้เช่า"
+- ตารางรายการ 8 คอลัมน์: รหัส (แบรนด์ รุ่น ใต้รหัส) · ที่มา "ซื้อ" หรือ badge "เช่า" + เลขสัญญา · ป้ายประกัน · มูลค่าเครื่องเช่า = "เช่า"
+- ตัวกลางของรายงาน: รูปแบบ "ปี", `note.texts`, ตัวเลือกในตัวกรองมีบรรทัดรอง (`hint`)
+- **คอลัมน์ที่ซ่อน**: บันทึกเฉพาะตอนผู้ใช้กดเลือกเอง (เดิมบันทึกทุกครั้งที่เปิด ทำให้ค่าตั้งต้นใหม่ไม่มีผล) key ใหม่ `.hiddenColumns.v2` · ตัวเลขบนปุ่ม "คอลัมน์" นับเฉพาะที่ปรับจากค่าตั้งต้น ปุ่มล้างคืนค่าตั้งต้น · `FilterPopover` รับ `countLabel` (อ่านความหมายของตัวเลขให้ถูก)
+- WCAG: ไม่ใช้สีอย่างเดียว (ทุกแถบมีตัวเลข, อายุต่ำกว่า 3 ปีมีไอคอน+ข้อความ) · แท่งกราฟ ≥3:1 ทั้งสองโหมด · หัวการ์ด h2 สั้น คำอธิบายอยู่นอก h2 · ตาราง caption/scope · 768px การ์ดเรียงเป็นคอลัมน์เดียว ตารางเลื่อนในกรอบ หน้าไม่ล้น
+- ตรวจใน Chrome: หน้าจอปกติ + iframe 768px + วัด contrast โหมดสว่าง/มืด · เทส Report 224 passed
+
+### Contrast โหมดมืด (WCAG 1.4.3) — 2026-10-06
+เจอตอนตรวจรายงานตัดจำหน่าย · **โหมดสว่างคงสีเดิมทุกจุด** (ลองทำให้ผ่าน 4.5:1 ทุกจุดแล้วหน้าดูมืดทึบ ผู้ใช้ให้ย้อนกลับ) แก้เฉพาะโหมดมืด
+- **สีแบรนด์โหมดมืด** (`shared/lib/brand-color.ts`): สีที่ตั้งใน Settings เคยทับสีของโหมดมืด ตัวหนังสือสีแบรนด์เหลือ ~2.9:1 → `resolveBrand` ในโหมดมืดผสมขาวจนอ่านเป็นตัวหนังสือได้ 5.6:1 · `brandForeground` เลือกขาว/เกือบดำที่ชัดกว่า → ปุ่มหลักโหมดมืดเป็นฟ้าสว่างตัวหนังสือเข้ม · โหมดสว่างคืนสีที่ตั้งตรง ๆ เหมือนเดิม
+- **`--destructive` โหมดมืด** hsl(0,85%,68%) + ตัวหนังสือบนพื้นเป็นเกือบดำ (เดิม 3.8–4.2:1)
+- **ตัวหนังสือสีที่ไม่มี `dark:`** 48 จุด เติม `dark:text-{สี}-400` · **`text-white` บนพื้นสีแบรนด์/แดง** 25 จุด → `text-brand-foreground` / `text-destructive-foreground` (โหมดสว่างยังเป็นขาว)
+- เมนูข้าง (โหมดมืด): ตัวเลขบนเมนูที่เลือกอยู่เป็นป้ายทึบ · บรรทัด © ไม่จาง · ตัวเลขกระดิ่งใช้ foreground ของธีม
+- ตรวจด้วยสคริปต์วัด contrast ทุกตัวหนังสือในโหมดมืด 10 หน้า (Ticket, คำขอ, สัญญา, คลังอะไหล่, Email & Notification, ตั้งค่า, ทรัพย์สิน, รายงานตัดจำหน่าย, Dashboard, พนักงาน) ผ่านทั้งหมด · โหมดสว่างยังมีจุดต่ำกว่า 4.5:1 ตามเดิม (สีจาง ~4.45, ป้ายเขียว 3.3, ป้ายแดง 4.1, ตัวหนังสือเหลือง 3.2) — ตั้งใจคงไว้
+- **รายงานตัดจำหน่าย: เงินทศนิยม 2 ตำแหน่งทั้งหน้า** — ช่องตัวเลข / ตารางหมวดหมู่ / ตารางรายการ เป็น `6,200.00` เหมือนกัน (ตารางหมวดหมู่เดิม `฿6,200`) · หมายเหตุใต้ช่องตัวเลข "เฉลี่ยเครื่องละ ฿9,966.67" และ "มูลค่า ฿… ควรเคลมก่อนตัด" ส่งเป็นข้อความที่จัดรูปแบบแล้ว (`texts`) เดิมปัดเป็นจำนวนเต็ม
+- **รายงานตัดจำหน่าย: เก็บความสม่ำเสมอ + ธีมกราฟแบบภาพรวมทรัพย์สิน + เกลาภาษา**
+  - วันที่ในตารางรายการเป็นวันอย่างเดียว `2026-09-01` (Excel/PDF ด้วย) · วันสิ้นสุดในการ์ดสัญญาแบบเดียวกัน
+  - คำอธิบายสีทุกการ์ดอยู่มุมขวาบน · หน่วย "(ปี)" อยู่ที่หัวคอลัมน์ทั้งสองตาราง
+  - ช่วงอายุ แดงอ่อน / ฟ้าอ่อน / เขียวอ่อน (ไม่ซ้ำส้มของ "ซื้อ") ด้วย `StackBar` ตัวเลขเหนือแถบ ไม่มีตัวจิ๋วใต้แถบ
+  - ตารางหมวดหมู่มีแถว "รวม N หมวด" — endpoint ส่ง `category_totals` (อายุเฉลี่ยตรงกับช่องตัวเลข)
+  - รหัสทรัพย์สิน/เลขสัญญาเป็นลิงก์สีแบรนด์แบบรหัส Ticket ในรายงาน SLA มีกรอบโฟกัส
+  - กราฟรายเดือนแบบกราฟ "ทรัพย์สินในคลัง" (แท่งมน ตัวเลขบนแท่ง ไม่มีเส้นตาราง) สีอ่อนจาก `chart-tones`: ซื้อส้ม / เช่าคืนชมพู / เช่าตัดอื่นม่วง · การ์ดเหตุผลใช้ `StackBar` + ยอดรวมขวา
+  - ภาษา: ใช้ "ตัดจำหน่าย" สม่ำเสมอ (ประเภทการออก, ประกันตอนตัดจำหน่าย, แยกตามหมวดหมู่) · "หมดสัญญาในอีก N วัน" · "ไม่มีเครื่องค้างคืนจากสัญญาที่หมดแล้ว" · "มูลค่า ฿… ยังอยู่ในประกันตอนตัด" · "มีแต่เครื่องเช่า" · "เช่าที่คืนผู้ให้เช่า" / "เช่าที่ตัดด้วยเหตุผลอื่น" · "สิ่งที่ต้องทำ" · อังกฤษตามกัน
+- **รายงานตัดจำหน่าย: การ์ดเครื่องเช่าตามสัญญา แถบความคืบหน้ามีสีครบทุกส่วน** — ส่วน "ยังไม่คืน" เดิมเป็นสีเทาเดียวกับราง จึงมองไม่เห็น ตอนนี้ใช้ `StackBar` แบบหน้าภาพรวม: คืนแล้ว (ชมพู) / ตัดด้วยเหตุผลอื่น (ม่วง) / ยังไม่คืน (ฟ้า สีสถานะ "ใช้งานอยู่") หรือแดงอ่อนเมื่อสัญญาหมดแล้ว (คีย์ใหม่ `rep_wo_ct_out_overdue`) ตัวเลขอยู่เหนือแต่ละส่วน บรรทัด "คืนแล้ว x จาก y" ย้ายเป็น sr-only ตัวเลขคอลัมน์ "ตัดด้วยเหตุผลอื่น" เปลี่ยนจากเหลืองเป็นม่วงให้ตรงกับแถบ คำอธิบายสีมุมขวาบนครบทุกส่วน (แดงแสดงเฉพาะเมื่อมีสัญญาค้างคืน)
+- **ทรัพย์สิน: แก้ไขแล้ว dialog รายละเอียดอัปเดตทันที** — `useAssetMutations().invalidate` เดิมรีเฟรชเฉพาะ cache รายการ แต่ dialog อ่านจาก `['asset', 'view', id]` และประวัติ/Ticket อ่านจาก `['asset', id]` จึงค้างค่าเก่าจนกว่าจะโหลดหน้าใหม่ ตอนนี้รีเฟรช `['asset']` และ `['asset-contract']` ด้วย ครอบทุกการกระทำ (แก้ไข, โอน, รับคืน, เรียกคืน, ย้ายตำแหน่ง ฯลฯ)
+- **แก้ scroll ซ้อน (ทั้งระบบ)** — `<main>` ใน `app-shell.tsx` เป็น `relative` แล้ว ข้อความสำหรับโปรแกรมอ่านหน้าจอ (`sr-only`, `position: absolute`) เคยไม่มีกล่องแม่ที่มี position จึงวางเทียบกับทั้งหน้า ตัวที่อยู่ลึกใน main ดันหน้าเอกสารให้ยาวเกินจอ (1692px บนจอ 911px) เกิด scrollbar ชั้นที่สองและพื้นที่ว่างใต้หน้า ตรวจ 9 หน้า หน้าเอกสารสูงเท่าจอทุกหน้า
+- **รายงานตัดจำหน่าย: ชื่อเหตุผลไม่ถูกตัด และกราฟรายเดือนเต็มการ์ด** — คอลัมน์ชื่อเหตุผลกว้างขึ้น (8rem → 11rem) "หมดอายุการใช้งาน / ล้าสมัย" อยู่บรรทัดเดียว ชื่อที่ยาวกว่านั้นขึ้นได้ 2 บรรทัด (`line-clamp-2`) แทน "…" กราฟรายเดือนยืดเต็มความสูงการ์ด (ขั้นต่ำเท่าเดิม `min-h-40`) ไม่เหลือที่ว่างใต้แกนเมื่อการ์ดเหตุผลข้าง ๆ สูงกว่า
+- **รายงานตัดจำหน่าย: เก็บความสม่ำเสมอกับหน้า /assets + WCAG (รอบ ก.)**
+  - กราฟรายเดือน: ความสูงแท่งเป็นสัดส่วนจริง (ตัวเลขลอยเหนือแท่งแบบ MonthBarChart เดิมถูกบีบจนแท่งใกล้ค่าสูงสุดสูงเท่ากัน) แท่งกว้าง 32px เดือน/ปีสองบรรทัด เส้นคั่นระหว่างสี tooltip รายส่วน เดือนปัจจุบันจางลง + ชื่อเดือนสีแบรนด์ + คำอธิบาย "เดือนนี้ยังไม่ครบเดือน"
+  - สี "เช่า" ตรงกันทั้งหน้า (ชมพู) ป้ายที่มา ซื้อ/เช่า ใช้ `StatusBadge` (เพิ่ม tone `orange`, `pink`) ป้ายประกันในการ์ดหมวดหมู่ใช้ `StatusBadge` ค่าเช่าในคอลัมน์มูลค่าเป็น "—" ไม่ซ้ำคำว่าเช่า ประกันที่ไม่รู้จำนวนเดือนแสดง "ยังมีประกัน"
+  - หัวตารางในการ์ดแบบเดียวกับ DataTable ลิงก์รหัสหนาเท่ากัน ชื่อผู้ให้เช่ายาวถูกตัด
+  - โหลดไม่สำเร็จแสดงการ์ด error แทน skeleton ค้าง skeleton เป็นรูปการ์ด (หัวการ์ด + กราฟ/แถว) และช่องตัวเลข 5 ช่อง (`extras.tiles`)
+  - `StackBar`: ตัวเลข/แถบ aria-hidden + ข้อความ sr-only "ชื่อ จำนวน" ปุ่ม "แสดงทั้งหมด" มีกรอบโฟกัส
+  - โหมดมืด: ตัวเลขสีสถานะทรัพย์สิน (`--asset-ink` 80%) และ "—" ในตารางรายงานผ่าน 4.5:1 (โหมดสว่างคงเดิม)
+  - **ทุกรายงาน (โครงกลาง):** หน้าและจำนวนแถวของตารางอยู่ใน URL (`?page`, `?per`) แบบ /assets เปลี่ยนตัวกรองแล้วกลับหน้า 1 และไม่ remount ทั้งส่วนอีก (ช่องตัวเลข/การ์ดค้างค่าเดิมระหว่างโหลดแทนการกระพริบเป็น skeleton)
+- **สี "เช่า" เป็นม่วงทั้งระบบ + ปุ่มเปลี่ยนหน้า + caption ตาราง (รอบ ข.)**
+  - "เช่า" สีม่วงเหมือน /assets: ช่องตัวเลข/การ์ดเหตุผล/กราฟ/ป้ายในรายงานตัดจำหน่าย และรายงานภาพรวมทรัพย์สิน (backend tone `soft-violet`) "เช่าที่ตัดด้วยเหตุผลอื่น" ย้ายไปสีเหลืองอำพัน (`soft-amber`) ทั้งกราฟรายเดือนและการ์ดสัญญา จุดสีตัวกรอง "ซื้อ" บน /assets เป็นส้มให้ตรงกับป้ายในหน้ารายละเอียดและรายงาน
+  - กราฟ /assets (MonthBarChart) ใช้ปี ค.ศ. เหมือนส่วนอื่นของระบบ
+  - ปุ่ม ‹ › เปลี่ยนหน้า (DataTable, พนักงาน, สัญญา, สิทธิ์, ทรัพย์สิน) มี `aria-label` (คีย์ `page_prev`/`page_next`) และกรอบโฟกัส
+  - DataTable รับ `caption` (sr-only) ตารางรายการของทุกรายงานมี caption และหัวการ์ดเป็น h2
+- **รายงานตัดจำหน่าย: "คืนแล้ว" เป็นสีเขียว** — เดิมใช้ม่วงเดียวกับ "เช่า" ทั้งที่เป็นคนละความหมาย ตอนนี้กราฟรายเดือน (เช่าที่คืนผู้ให้เช่า) และการ์ดสัญญา (คืนแล้ว) เป็นเขียว ตรงกับ "คืนครบแล้ว" ที่เป็นเขียวอยู่แล้ว ม่วงเหลือความหมายเดียวคือ "เช่า" (ช่องตัวเลข การ์ดเหตุผล ป้ายในตาราง)
+- **รายงานตัดจำหน่าย: อายุเป็น "ปี เดือน" เมื่อชี้ + คำอธิบายไอคอนเตือน** — ตัวเลขอายุ (ช่องตัวเลข "อายุใช้งานเฉลี่ย", คอลัมน์อายุในการ์ดหมวดหมู่และแถวรวม, คอลัมน์อายุในตารางรายการ) มีเส้นประใต้ ชี้แล้วขึ้น "4 ปี 4 เดือน" (`components/years-tip.tsx`, คีย์ `rep_age_*`) และโปรแกรมอ่านหน้าจออ่านเป็นปี-เดือน ไอคอนเตือนอายุสั้นเป็นปุ่ม ชี้/โฟกัสแล้วขึ้นคำอธิบาย (`rep_wo_short_life_tip`) `KpiTile.value` รับ ReactNode
+- **รายงานตัดจำหน่าย: หมายเหตุใต้ "อายุใช้งานเฉลี่ย" อ่านชัดขึ้น** — จาก "สั้นสุด: เครื่องพิมพ์ 1.5 ปี" เป็น "หมวดที่ใช้งานสั้นสุด: เครื่องพิมพ์ เฉลี่ย 1.5 ปี (1 เครื่อง)" บอกว่าเป็นค่าเฉลี่ยของหมวดและมาจากกี่เครื่อง (backend ส่ง `n` ใน note values)
+- **หมายเหตุใต้ช่องตัวเลข (ทุกรายงาน) ไม่ล้นการ์ด** — `truncate` อยู่บน `<span>` แบบ inline จึงไม่ตัดข้อความ ข้อความยาวล้นไปทับการ์ดข้าง ๆ ตอนนี้ขึ้นได้ 2 บรรทัด (`line-clamp-2`) และชี้แล้วเห็นข้อความเต็ม ข้อความอังกฤษของหมวดที่ใช้งานสั้นสุดย่อเป็น "Shortest: Printer (1), avg 1.5 yrs"
+- **รายงานตัดจำหน่าย: เดือนปัจจุบันในกราฟรายเดือนไม่จางแล้ว** — ทุกแท่งสีปกติ เดือนปัจจุบันมีกรอบเส้นประสีแบรนด์ + ชื่อเดือนสีแบรนด์ ชี้แล้วขึ้น "นับถึง 7 ต.ค. 2026 ยังไม่จบเดือน" (นับถึงวันนี้ หรือวันสิ้นสุดตัวกรองถ้าเร็วกว่า) คำอธิบายมุมขวาบนเป็นกรอบเส้นประแบบเดียวกัน "เดือนนี้ (ยังนับไม่ครบ)"
+- **รายงานตัดจำหน่าย: ตัวเลขแยกในแต่ละสีของแท่งรายเดือน** — แท่งที่มีหลายสีแสดงจำนวนของแต่ละส่วนไว้ในสีนั้น (ตัวหนังสือเข้มบนสีอ่อน ผ่าน contrast ทั้งสองโหมด) ตัวเลขรวมยังอยู่บนหัวแท่ง ส่วนที่เตี้ยไม่ถึง 12% ของแท่งสูงสุดไม่ใส่เลข (ชี้ดูได้) แท่งสีเดียวไม่ซ้ำเลข
+
+### รายงานประวัติโอนย้ายและรับคืน ทำใหม่ตาม mockup — 2026-10-07
+ต่อยอดรายงานตารางเดิม `assets.transfer_history` ให้เป็นรายงานวิเคราะห์แบบเดียวกับรายงานตัดจำหน่าย (mockup: artifact หน้า "ประวัติโอนย้ายและรับคืน")
+**Backend**
+- `app/Services/Report/Asset/TransferTrail.php` (ใหม่): จำแนกปลายทางของแต่ละแถว (พนักงาน = ตรงกับ `employees.code`, คลัง = ตรงกับ `warehouses.name`, สถานที่ = ปลายของการย้ายที่ตั้ง, ที่เหลือ = ป้ายใช้ร่วม) · ผลของการส่งมอบแต่ละครั้ง: กดรับแล้ว (จับคู่ audit `Accepted asset` ถัดไปก่อนแถวถัดไปของเครื่องเดียวกัน) / รอกดรับ / เรียกคืนก่อนกดรับ / ไม่ได้กดรับ / ใช้ร่วมไม่ต้องกดรับ · รับคืนหลังแจ้งคืนกี่ชั่วโมง (audit `Requested asset return`) · เครื่องที่ค้างตอนนี้ (`pending_acceptance` / `pending_return`) พร้อมวันเริ่มรอและสาเหตุ (ส่งมอบ / แจ้งขอคืน / ลาออก จาก audit `Recorded resignation`)
+- `AssetTransferHistoryReport`: ช่วงวันที่ค่าตั้งต้นเป็น**ปีนี้** (เดิมเดือนนี้) · ตัวกรองใหม่ คลัง หมวดหมู่ แผนก · ค้นหาด้วยชื่อพนักงานได้ · คอลัมน์ใหม่ "ผลหลังส่ง" + คอลัมน์ย่อยที่หน้าจอวาดในเซลล์ (ประเภท/ชื่อ/รหัส/แผนก/ลาออกของปลายทาง, รุ่น, หมวดหมู่, จำนวนครั้งที่เครื่องเคลื่อนไหว, ชั่วโมง) · วันที่เป็นวันเวลา
+- ช่องตัวเลข 4 ช่อง: ส่งมอบออก (ให้พนักงาน/ใช้ร่วม) · กลับเข้าคลัง (รับคืน/เรียกคืน) · ค้างอยู่ตอนนี้ (รอกดรับ/รอรับคืน กรอบแดงเมื่อมีเครื่องรอเกิน 7 วัน) · เวลากดรับมอบมัธยฐาน + กดรับภายใน 2 วันกี่ %
+- endpoint ใหม่ `GET /api/reports/assets/transfer-history/breakdown` (สิทธิ์ `assets.view`, `AssetTransferBreakdownController`): รายเดือนแยกประเภท · การกดรับ (วันเดียวกัน / วันถัดไป / 2 วันขึ้นไป และกี่ครั้งที่แค่ข้ามเสาร์–อาทิตย์) · ตามคลัง · ตามแผนกผู้รับ · ตามหมวดหมู่ · เครื่องที่ค้างตอนนี้ (ไม่ขึ้นกับช่วงวันที่ กรองตามหมวดหมู่/แผนกได้)
+- ไฟล์ส่งออกเพิ่มชีต: แยกตามเดือน, การกดรับมอบ, คลัง, แผนก, หมวดหมู่, ค้างอยู่ตอนนี้ แล้วตามด้วยรายการ
+**หน้าจอ** (`components/transfer-cards.tsx`, `pages/assets-transfer-history.tsx`)
+- ผัง: ตัวกรอง → ช่องตัวเลข 4 ช่อง → [เข้า–ออกคลังรายเดือน | ค้างอยู่ตอนนี้] → [พนักงานกดรับมอบเร็วแค่ไหน | เข้า–ออกตามคลัง] → [ส่งมอบให้แผนกไหน | ส่งมอบตามหมวดหมู่] → รายการเคลื่อนไหว
+- กราฟรายเดือน: แท่งเหนือเส้น = ส่งมอบออก แท่งใต้เส้น = รับคืน + เรียกคืน · การย้ายที่ตั้งไม่อยู่ในกราฟ (ผู้ถือไม่เปลี่ยน) บอกเป็นบรรทัดใต้กราฟ
+- ตาราง: ประเภทมีรูปทรงกำกับ (▲ ส่งมอบ, ▼ รับคืน/เรียกคืน, ◆ ย้ายที่ตั้ง) · จาก/ไปยัง ชื่อ + รหัส แผนก (ลาออกแล้ว) หรือ "คลัง"/"ใช้ร่วม"/"สถานที่" · ผลหลังส่ง "กดรับใน 29 ชม." / ป้าย "รอกดรับ 13 วัน" (แดงเมื่อเกิน 7 วัน) · ปุ่ม "N ครั้ง" ข้างรหัสกรองตารางเหลือเส้นทางของเครื่องนั้น
+- โครงกลาง: `renderCell` ของรายงานตารางได้รับ `{ filters, patch }` เป็นอาร์กิวเมนต์ที่สาม · `CardTitle`, `Swatch`, `CardEmpty`, `monthLabel` ย้ายจาก `writeoff-cards.tsx` ไป `chart-parts.tsx` ใช้ร่วมกัน
+- WCAG: ไม่ใช้สีอย่างเดียว (รูปทรง + ข้อความ, ป้ายรอเกิน 7 วันมีข้อความ sr-only) · กราฟมีตารางสำหรับโปรแกรมอ่านหน้าจอ · หัวการ์ด h2 · ไม่มี " · " คั่นข้อมูล
+- ข้อมูลจริง ณ 7 ต.ค. 2026 ตรงกับ mockup: ส่งมอบ 41 (ให้พนักงาน 37, ใช้ร่วม 4) · กลับเข้าคลัง 4 · ค้าง 7 · มัธยฐาน 29 ชม. (29 จาก 32 ครั้งภายใน 2 วัน) · 3 ครั้งที่ใช้ 3 วันเป็นศุกร์→จันทร์ทั้งหมด
+- เทส: `AssetTransferHistoryReportTest` (ใหม่ 11 เทส) + ปรับ `AssetActivityReportsTest` ตามช่องตัวเลข/ช่วงวันที่ใหม่ · Report ทั้งหมด 187 passed · tsc, eslint, prettier, pint ผ่าน · ตรวจใน Chrome: หน้าจอปกติ, โหมดมืด, iframe 768px ไม่ล้น, ปุ่มเส้นทางเครื่อง
+- **รายงานตัดจำหน่าย: เส้นไกด์ในกราฟรายเดือน แบบกราฟภาพรวม Ticket** — แกนซ้ายมีตัวเลขที่ 0, ครึ่ง, สูงสุด (เส้นทึบ) และเส้นประระหว่างกลาง ค่าสูงสุดของแกนปัดเป็นเลขกลม (`niceMax` export จาก weekly-ticket-chart ใช้ร่วมกัน) ความสูงแท่งเทียบกับแกนนี้
+- **รายงานตัดจำหน่าย: กราฟรายเดือนปรับตามจำนวนเดือน + การ์ดตรงแนวช่องตัวเลข** (ย้อนแบบเลือกหน่วยสัปดาห์/ไตรมาส/ปีออก ยังเป็นรายเดือนเสมอ)
+  - 1–6 เดือน แท่ง 64px · 7–12 เดือน 32px · 13–24 เดือน 20px ซ่อนเลขในแท่ง ป้ายเดือนเว้นเดือน · 25–60 เดือน แท่งยืดเต็ม ซ่อนเลขบนแท่ง ป้ายเฉพาะ ม.ค. · เกิน 60 เดือน แท่ง 6px เลื่อนซ้าย-ขวาได้ (เปิดมาที่เดือนล่าสุด, ไม่มี scroll แนวตั้งซ้อน) ชี้แท่งเห็นเดือนและจำนวนแยกสีเสมอ
+  - เครื่องหมายเส้นประใช้กับเดือนนี้เท่านั้น คำอธิบาย "เดือนนี้"
+  - การ์ดกราฟ + เหตุผลใช้ grid เดียวกับช่องตัวเลข (xl 3:2, lg 2:1, gap-3)
+- **รายงานตัดจำหน่าย: แก้บัคกราฟรายเดือน + ใช้บน iPad/คีย์บอร์ดได้ (รอบตรวจ UX/WCAG)**
+  - แท่ง: ความสูงแต่ละสีเป็นสัดส่วนจริง (`basis-0`), 13–24 เดือนป้ายนับจากเดือนล่าสุด, 25+ เดือนป้ายแท่งแรกเสมอ (ชิดซ้าย/ชิดขวาไม่ถูกตัด), เดือนนี้บนแท่งกว้างเป็นกรอบเส้นประไม่มีขอบล่าง บนแท่งบางเป็นจุดสีแบรนด์, แกนซ้ายชดเชยความสูง scrollbar, เปลี่ยนช่วงแล้วเลื่อนกลับเดือนล่าสุด
+  - `InfoPopover` (components/info-popover.tsx): เปิดเมื่อชี้, แตะ (iPad) หรือ Enter แทน tooltip ที่ใช้ได้แค่เมาส์ — ใช้กับแท่งรายเดือน (เดือน + จำนวนแต่ละสี + รวม), ตัวเลขอายุ, ไอคอนเตือน (ปุ่ม 24px)
+  - วันสิ้นสุดสัญญาเป็น "17 ส.ค. 2026", ตัวเลขทุกจุดผ่าน locale (StackBar, ข้อความในการ์ดสัญญา), `CODE_LINK` ย้ายไป chart-parts ใช้ร่วม, formatter ชื่อเดือนแคชไว้
+- **รายงานตัดจำหน่าย: สี/ฟอนต์รอบ ค.** — "เช่าที่ตัดด้วยเหตุผลอื่น" เปลี่ยนจากเหลืองอำพันเป็นชมพู (แยกจากส้มของ "ซื้อ" ชัดกว่า, เหลืองอำพันเหลือความหมายเดียว = ยังมีประกัน/ใกล้หมด) ตัวเลขขาวในแท่งมีเงาจาง ๆ ช่วยอ่าน (contrast ตามเกณฑ์ยังรอคุยรวม) ป้ายเดือนใต้แท่งเป็นฟอนต์ปกติแทน mono ทั้งรายงานนี้และ MonthBarChart บน /assets
+- **รายงานประวัติโอนย้ายและรับคืน: กราฟเข้า–ออกคลังมีเส้นไกด์ + ช่องตัวเลข "ย้ายที่ตั้ง" + ตาราง "อัปเดตสถานที่"**
+  - กราฟ: แกนซ้ายและเส้นไกด์แบบกราฟตัดจำหน่าย (บน 0/ครึ่ง/สูงสุด ล่างครึ่ง/สูงสุด, เส้นประระหว่างกลาง) แกนปัดพอดีข้อมูล (11 → 12) ป้ายเล็ก "▲ ออก" / "▼ เข้า" ที่เส้นศูนย์แทนข้อความ "เหนือเส้นคือ…" บนหัวการ์ด ป้ายเดือนฟอนต์ปกติ การ์ดกว้าง 3 ใน 5 ตรงแนวช่องตัวเลขแบบหน้าตัดจำหน่าย
+  - ช่องตัวเลขที่ 5 "ย้ายที่ตั้ง (ครั้ง)" + "N เครื่อง ผู้ถือคนเดิม" (`th_relocations`) แทนข้อความใต้กราฟ
+  - การ์ด "อัปเดตสถานที่": วันที่ ทรัพย์สิน (ลิงก์) จาก → ไป เหตุผล ผู้ทำรายการ ใหม่สุดก่อน พับหลัง 10 แถว breakdown ส่ง `relocations` และไฟล์ Excel มีชีต "อัปเดตสถานที่"
+- **รายงานโอนย้าย: ช่อง "เวลากดรับมอบ" และ "ย้ายที่ตั้ง" มีแถบสี** — เวลากดรับมอบแยก วันเดียวกัน (เขียว) / วันถัดไป (ฟ้า) / 2 วันขึ้นไป (เหลืองอำพัน) เป็นจำนวนครั้ง (split รับ `counts: true` ให้ช่องหน่วยชั่วโมงแสดงตัวเลขแยกเป็นจำนวน) ย้ายที่ตั้งแยกตามผู้ถือตอนย้าย พนักงานถือ / ใช้ร่วม / อยู่ในคลัง (สีสถานะทรัพย์สิน ดูจากการส่งมอบ/รับคืนล่าสุดก่อนย้าย)
+- **รายงานโอนย้าย: กราฟเข้า–ออกคลังใช้กฎเดียวกับกราฟตัดจำหน่ายรายเดือน** — กฎความหนาแน่น (`monthDensity`, `monthLabelPlace`, `currentMonth`, `SCROLL_*`) ย้ายไป `chart-parts` ใช้ร่วม: ความกว้างแท่ง/ซ่อนตัวเลข/เว้นป้ายเดือน/เลื่อนซ้าย-ขวาเมื่อเกิน 60 เดือน (เปิดที่เดือนล่าสุด), เดือนนี้กรอบเส้นประ (แท่งบนไม่มีขอบล่าง แท่งล่างไม่มีขอบบน) หรือจุดบนแท่งบาง + คำอธิบาย "เดือนนี้" แต่ละเดือนเป็น `InfoPopover` (ชี้/แตะ/Enter) แสดงส่งมอบ รับคืน เรียกคืน ย้ายที่ตั้ง — popover ของแท่งเปิดด้านข้าง (`side="right"`) และไม่คืนโฟกัสตอนปิด (ไม่มีกรอบโฟกัสค้าง)
+- **รายงานโอนย้าย: การ์ด "ค้างอยู่ตอนนี้" รองรับรายการเยอะ** — แต่ละกลุ่มแสดง 5 รายการที่รอนานสุด ท้ายกลุ่มมี "แสดงทั้งหมด (N)" กางในการ์ดโดยรายการสูงไม่เกิน 20rem แล้วเลื่อนภายใน (`overscroll-contain` ไม่ลากหน้า) และ "เปิดในหน้าทรัพย์สิน" ไป /assets แท็บรายการที่กรองสถานะรอรับมอบ/รอรับคืนไว้ (แบ่งหน้า ค้นหา ส่งออกได้) การ์ดจึงไม่ยืดจนกราฟข้าง ๆ เสียรูป
+- **รายงานโอนย้าย: การ์ด "พนักงานกดรับมอบเร็วแค่ไหน" ใช้พื้นที่ว่าง** — "ส่งมอบให้พนักงาน N ครั้ง" ย้ายไปชิดขวาบนหัวการ์ด ใต้ช่องตัวเลขมีตัวเลขเด่น "91% กดรับภายใน 2 วัน (29 จาก 32 ครั้งที่กดรับแล้ว)" แถบสัดส่วนเต็มความกว้างตามสีของช่อง (ชี้ดูจำนวนได้) และ % ของแต่ละช่องใต้แถบ ข้อความหมายเหตุอยู่ล่างสุดเหมือนเดิม
+- **รายงานโอนย้าย: จัดผังการ์ดใหม่** — คอลัมน์ขวาข้างกราฟเข้า–ออกคลังรายเดือนวาง "พนักงานกดรับมอบเร็วแค่ไหน" ไว้บน "ค้างอยู่ตอนนี้" (กราฟสูงตามคอลัมน์) แถวถัดไป "เข้า–ออกตามคลัง" 2 ใน 5 คู่กับ "อัปเดตสถานที่" 3 ใน 5 แล้วจึงเป็นแผนก | หมวดหมู่ โครงตอนโหลดทำตามผังใหม่ · "ค้างอยู่ตอนนี้" แสดงกลุ่มละ 3 รายการ (จาก 5) · การ์ดกดรับมอบตัดหมายเหตุ 3 บรรทัดใต้แถบออก (ข้ามเสาร์–อาทิตย์ / ปิดโดยไม่ได้รับ / ใช้ร่วมไม่นับ) และลบคีย์ภาษาที่ไม่ได้ใช้
+- **รายงานโอนย้าย: การ์ดกดรับมอบคิด % จากการส่งมอบทั้งหมด** — ตัวเลขเด่น "26% กดรับภายใน 2 วัน จากทั้งหมด 113 ครั้ง" (เดิมคิดจากเฉพาะที่กดรับแล้ว) · แถบสัดส่วนหนาขึ้น (h-5) มี % สีขาวกลางแต่ละท่อน ซ่อนเองเมื่อท่อนแคบกว่าตัวเลข (container query `@container` + `@min-[…]`) แทนแถวจุดสีด้านล่าง · ช่องย่อย 5 ช่องจัดตัวเลขและคำอธิบายกึ่งกลาง
+- **รายงานโอนย้าย: คำให้ตรงกับทั้งระบบ** — "ใช้ร่วม" → "ส่วนกลาง" (EN "Shared" → "Common") ตรงกับสถานะ `Common` ของทรัพย์สิน ทั้งแถบสีย้ายที่ตั้ง จาก/ไปยัง ผลหลังส่ง การ์ดแผนก และไฟล์ Excel ("ส่งมอบเป็นส่วนกลาง (ไม่ต้องกดรับ)") · "ยังรอกดรับ" → "รอกดรับ" · "ปิดโดยไม่ได้รับ" → "ปิดโดยไม่ได้กดรับ" · "แจ้งขอคืน" → "แจ้งคืน" และ "รับคืนหลังแจ้ง" → "รับคืนหลังแจ้งคืน" · การ์ด/ชีตอัปเดตสถานที่ "จาก → ไป"/"ผู้ทำรายการ" → "จาก → ไปยัง"/"ผู้ดำเนินการ" ตามคอลัมน์ตาราง · ชื่อรายงานตัดช่องว่างเกิน "ประวัติโอนย้ายและรับคืน"
+- **รายงานโอนย้าย: ยี่ห้อหน้ารุ่นทุกจุด** — ตาราง "รายการเคลื่อนไหว", การ์ด "ค้างอยู่ตอนนี้" และ "อัปเดตสถานที่" แสดง "Dell Latitude 5440" แทน "Latitude 5440" (ประวัติโอนย้ายเก็บแค่รุ่น ยี่ห้อดึงจากทรัพย์สินปัจจุบันผ่าน `TransferTrail::brands()`) · คอลัมน์ `brand` ใหม่ (ซ่อนบนจอ วาดในช่องทรัพย์สิน) จึงออกในชีต "รายการ" ของ Excel และชีต "ค้างอยู่ตอนนี้" / "อัปเดตสถานที่" มีคอลัมน์ "ยี่ห้อ" · ช่องค้นหาหาด้วยชื่อยี่ห้อได้
+- **รายงานโอนย้าย: % ในแถบกดรับมอบขึ้นครบทุกท่อน** — ท่อนขยายตามสัดส่วน (`flex-grow` = จำนวน, `basis-0`) และกว้างอย่างน้อย 1.375rem พอใส่ตัวเลข ท่อนเล็กจึงกว้างกว่าสัดส่วนจริงเล็กน้อย (ตัวเลขแม่นอยู่ในช่องย่อยด้านบน) แทนการซ่อนตัวเลขด้วย container query
+- **รายงานโอนย้าย: ช่องย่อยการกดรับมอบมีพื้นสีตามโทน** — แต่ละช่องพื้นสีอ่อน (`-500/10`) และตัวเลขสีเข้มของโทนนั้น (`-700`, มืด `-300`) แบบป้ายสถานะ คงขอบบนสีเดิม ช่องที่เป็น 0 ตัวเลขยังเป็นสีจาง (สีสว่างเปลี่ยนตามที่ผู้ใช้เลือก)
+- **รายงานตัดจำหน่าย/โอนย้าย: ป้ายของกราฟรายเดือนเปิดที่หัวแท่ง** — `InfoPopover` รับ `anchor` (จุดหัวแท่งจาก `barTop()` ใน chart-parts ผ่าน `PopoverAnchor virtualRef`) ป้ายเปิดเหนือหัวแท่งของเดือนนั้น ถ้าเหนือหัวแท่งไม่พอวางป้าย (วัดความสูงป้ายจริงหลังเปิด) ย้ายไปด้านซ้ายแท่ง ขอบบนตรงหัวแท่ง แทนการเปิดด้านขวากึ่งกลางคอลัมน์ที่ลอยกลางกราฟทับแท่งข้าง ๆ · แถบ % การ์ดกดรับมอบเปลี่ยนจาก `title` ของเบราว์เซอร์เป็น `InfoPopover` (ชี้/แตะ/Enter ได้)
+- **รายงาน: ข้อความ "ไม่มีข้อมูล" อยู่กลางการ์ด** — `CardEmpty` ใน chart-parts เป็น `flex-1` จัดกลางทั้งแนวตั้งและแนวนอน การ์ดที่ถูกยืดสูงตามการ์ดข้าง ๆ ในแถวเดียวกัน (เช่น อัปเดตสถานที่ข้างเข้า–ออกตามคลัง) จึงไม่เหลือที่ว่างใต้ข้อความ · การ์ดคลัง (โอนย้าย) และการ์ดหมวดหมู่/สัญญา (ตัดจำหน่าย) เป็น `flex flex-col` ให้ข้อความว่างยืดได้
+- **รายงานโอนย้าย: คำอธิบายการ์ดอัปเดตสถานที่สั้นลง** — "ย้ายที่ตั้งโดยไม่เปลี่ยนผู้ถือ" (en "Moved without changing the holder") ตัด "ในช่วงวันที่ที่เลือก" เพราะทุกการ์ดนับตามช่วงวันที่อยู่แล้ว เหลือแค่สิ่งที่แยกการ์ดนี้จากการส่งมอบ
+- **รายงาน: วงโฟกัสเห็นชัดตาม WCAG 1.4.11** — ปุ่มและลิงก์ในโมดูลรายงานที่ใช้ `ring-brand/30` (จางจนแทบมองไม่เห็นตอนกด Tab) เปลี่ยนเป็น `ring-brand` สีเต็ม 12 จุด ปุ่มสลับแบบแบ่งช่อง (งานค้าง, SLA, ช่วงเวลา, กราฟตาราง, ประกัน) เพิ่ม `ring-offset-1` ให้มีช่องขาวคั่น ปุ่มที่เลือกอยู่ (พื้นสีแบรนด์) จึงยังเห็นวงโฟกัส
+- **ทั้งระบบ: วงโฟกัสสีแบรนด์แทนวงดำของ Chrome** — `app.css` (base) ให้ `:focus-visible` ที่ไม่มีสไตล์โฟกัสของตัวเองได้ `outline: 2px solid var(--ring)` เว้น 2px (เมนูซ้าย 16 ลิงก์ แถบบน 5 ปุ่ม และลิงก์อื่นที่เคยได้เส้นดำบาง 1px ของเบราว์เซอร์) จุดที่มีวงของตัวเอง (`outline-none`/`outline-hidden` ใน utilities) ไม่เปลี่ยน · `[tabindex=-1]` (กล่องไดอะล็อก/ชีตที่รับโฟกัสแทนผู้ใช้) ไม่มีเส้น · ตรวจ 9 หน้าไม่มีปุ่มที่ขึ้นวงซ้อน 2 ชั้น
+- **รายงาน: ตัวเลขในแท่งอ่านได้ตาม WCAG 1.4.3** — ตัวเลขขาวบนท่อนสีอ่อนได้แค่ 1.7–3.8:1 เปลี่ยนเป็นสีตาม `ON_FILL` ใน `chart-tones.ts` (โทนเข้ม -950 ของสีนั้น หรือ slate-950 เมื่อโทนเข้มไม่ถึง) สีแท่งไม่เปลี่ยน เอาเงาตัวอักษรออก ใช้ในกราฟรายเดือนตัดจำหน่าย แถบกดรับมอบโอนย้าย (field `on` ของ ACCEPT_TILES) และแท่งทั้งหมดของรายงานประกัน วัดได้ 4.76–8.73:1 · สีสถานะทรัพย์สินที่ผู้ดูแลเปลี่ยนได้: `useApplyTheme` ตั้ง `--asset-on-*` เป็นขาวหรือสีเข้มของสถานะนั้นตามความสว่างของสีท่อนจริง (`whiteReadsOn` ใน `shared/lib/contrast.ts`, แยกโหมดสว่าง 72% / มืด 82%) ค่าเริ่มต้นใน `app.css` คือสีเข้ม
+- **รายงาน: ตัวเลขในแท่งกลับเป็นสีขาว** — เลขสีเข้มตามข้อก่อนหน้าผ่านสูตร WCAG 2 แต่อ่านยากจริงทั้งโหมดสว่างและมืด (สูตรนี้ให้คะแนนเลขเข้มบนฟ้า/ม่วง/แดงสูงเกินจริง) ผู้ใช้เลือกกลับเป็นเลขขาวมีเงาแบบเดิมทุกท่อน ถอน `ON_FILL`, `--asset-on-*`, `whiteReadsOn` ออก · เลขขาวบนเหลือง/เขียวอ่อนยังต่ำกว่า 4.5:1 (ตัวเลขดูได้จากป้ายที่กดเปิดและโปรแกรมอ่านหน้าจอ)
+- **รายงาน: ป้ายกราฟรายเดือนไม่หลุดขอบบนตอนเลื่อนหน้า** — ป้ายยึดหัวแท่ง ถ้าเลื่อนหน้าจนหัวแท่งสูงหายขึ้นไปใต้แถบบน แล้วชี้ส่วนล่างของแท่ง ป้ายเปิดตามหัวแท่งที่มองไม่เห็นและโดนตัดขอบจอ (`/assets-transfer-history` ช่วง 1 เดือน) `InfoPopover` จับจุดยึดไว้ไม่ให้สูงกว่าขอบบนของพื้นที่เลื่อน (`main`) + 8px และคิดที่ว่างเหนือแท่งจากส่วนที่เห็นจริง ป้ายจึงเปิดด้านซ้ายแท่ง ชิดขอบบนที่มองเห็น ใช้กับกราฟรายเดือนทุกรายงาน
+- **รายงาน: เลือกจำนวนแถวต่อหน้าแล้วเด้งกลับเป็น 20** — `DataTable` เรียก `onPageSizeChange(50)` แล้วตามด้วย `onPageChange(1)` ทันที รายงานแบบตาราง (`tabular-report-view`, ทุกรายงานที่ใช้) เก็บหน้า/จำนวนแถวไว้ใน URL ด้วย `setSearchParams` ซึ่งรอบที่สองได้ URL ก่อนรอบแรก จึงเขียนทับ `per` หาย แก้ที่ `DataTable`: โหมด server ไม่เรียก `setPage(1)` ซ้ำ ให้ `onPageSizeChange` ของหน้าพากลับหน้า 1 เอง (ทุกหน้าที่ใช้ทำอยู่แล้ว ยกเว้นบันทึกอีเมลที่เพิ่ม `setPage(1)` ให้) ตรวจ: ประกัน หน้า 2 → 50 แถว = 1–33 จาก 33; ภาพรวมทรัพย์สิน หน้า 3 → 100 แถว = 1–100 จาก 1450 แล้วกลับ 20 ได้ URL สะอาด
+- **ภาพรวมทรัพย์สิน: การ์ดรายการชื่อ "รายการทรัพย์สิน"** — แทนชื่อกลาง "รายการ" (`rep_ov_rows_title`, en "Assets") แบบรายงานตัดจำหน่าย/โอนย้ายที่ตั้งชื่อการ์ดรายการของตัวเอง · หัวไฟล์ `assets-overview.tsx` ย่อเหลือ 2 บรรทัด
+- **ภาพรวมทรัพย์สิน: คอลัมน์วันที่ลงทะเบียนและลงทะเบียนโดย** — `registered_at` (`created_at`) และ `registered_by` (`creator` จาก `created_by`) ซ่อนไว้ก่อน เปิดจากปุ่มคอลัมน์ได้ และอยู่ท้ายไฟล์ Excel เสมอ เครื่องที่นำเข้าโดยไม่มีผู้ล็อกอินแสดง "—" · test ใหม่ `AssetOverviewRegisteredColumnsTest`
+- **ภาพรวม Ticket & SLA: ช่องผู้แจ้ง 2 บรรทัด** — ชื่อ (ตัวหนาเล็กน้อย) แล้วบรรทัดเล็กเป็นรหัสพนักงานกับแผนก แบบช่องผู้ถือของรายงานประกัน · `TicketReportRowResource.requester_code` ใหม่ · คอลัมน์กว้าง 170 → 190px ตารางขั้นต่ำ 1,410 → 1,430px
+- **SLA Ticket จากคำขอ: รายการมีคอลัมน์ "ผู้ขอ"** — ผู้แจ้งของ Ticket (คนที่ยื่นคำขอ) เดิมมีแค่ในไฟล์ Excel ตอนนี้แสดงบนจอต่อจากประเภทคำขอ 2 บรรทัด ชื่อ แล้วรหัสพนักงานกับแผนก (`requester` และ `department` ไม่เป็น sheetOnly แล้ว, `requester_code` ใหม่ ทั้งสองเป็น innerColumns ของหน้า) · ไฟล์ Excel เพิ่มคอลัมน์ "รหัสพนักงานผู้แจ้ง" ต่อจาก "ผู้แจ้ง" ลำดับอื่นเหมือนเดิม
+- **SLA Ticket จากคำขอ: ไฟล์ Excel ใช้คำว่า "ผู้ขอ"** — หัวคอลัมน์ "ผู้แจ้ง" → "ผู้ขอ" และ "รหัสพนักงานผู้แจ้ง" → "รหัสพนักงานผู้ขอ" ให้ตรงกับบนจอ (รายงาน Ticket ค้าง และ SLA Ticket ที่ผู้ใช้เปิดเอง ยังใช้ "ผู้แจ้ง")
+
+### Access: บันทึกว่าใครถอนสิทธิ์ — 2026-10-09
+- `access_memberships.revoked_by` ใหม่ (FK users, null เมื่อลบบัญชี) คู่กับ `revoked_at` ที่มีอยู่แล้ว (เก็บเป็นวันที่แบบ `granted_at`) · `AccessService::revoke()` และ `setOwner()` (ตั้งสมาชิกเป็นเจ้าของ → ถอนสิทธิ์สมาชิกเดิม) บันทึกผู้ใช้ที่ล็อกอิน ถอนซ้ำไม่ทับคนแรก · `AccessMembership::revokedBy()`, `AccessMembershipResource.revoked_by` (ชื่อ เมื่อโหลด relation) และ type `AccessMember.revoked_by` · รายการบนจอแสดงเฉพาะสิทธิ์ที่ยังใช้อยู่ จึงยังไม่มีที่แสดงผู้ถอน · migration รันกับ DB จริงแล้ว (ก่อนหน้านี้ยังไม่มีสิทธิ์ที่ถูกถอน ไม่ต้องย้อนเติม)
+- `granted_at` / `revoked_at` เปลี่ยนจาก date เป็น datetime เก็บวันเวลาเต็ม (migration ย้อนเติมเวลา 14 แถวเดิมจาก `created_at` ที่เป็นวันเดียวกัน) · บันทึกด้วย `now()` · API (`AccessMembershipResource`, `EmployeeAccessResource`) ส่ง "YYYY-MM-DD HH:mm" (`SystemTime::dateTime`) ให้หน้าจอเลือกแสดงเวลาเอง หน้า "ทรัพย์สินและการเข้าถึงของฉัน" ยังแสดงแค่วันที่ (`formatDateTime(…, false)`) · การเรียงสมาชิกใน members-drawer เทียบเป็นข้อความแทน `Date.parse` ที่ Safari อ่าน "YYYY-MM-DD HH:mm" ไม่ได้ · migration รันกับ DB จริงแล้ว
+
+### รายงานประกันใกล้หมดอายุ ทำใหม่ตาม mockup — 2026-10-09
+ต่อยอดรายงานตารางเดิม `assets.warranty_expiring` ให้เป็นรายงานวิเคราะห์แบบเดียวกับรายงานตัดจำหน่ายและโอนย้าย (mockup: artifact หน้า "ประกันใกล้หมดอายุ" v30)
+**Backend**
+- `WarrantyExpiringReport`: ตัวกรองใหม่ `state` (ใกล้หมด / หมดแล้ว — หมดแล้วคือ `warranty_end` ก่อนวันนี้ เรียงล่าสุดก่อน ไม่ขึ้นกับช่วง "ภายใน") · ช่วง "ภายใน" เพิ่ม 1 ปี (`rep_opt_365d`) · ตัวกรองผู้ขาย (`vendor_id`) · ขอบเขตเดิม (เครื่องซื้อ ไม่ใช่ประกันตลอดอายุ ไม่ถูกตัดจำหน่าย) · คอลัมน์ใหม่ที่ซ่อนไว้ก่อน: ยี่ห้อ (วาดคู่รุ่น), สถานะ, วันที่ซื้อ, มูลค่าซื้อ
+- ช่องตัวเลข 5 ช่อง: หมดภายใน N วัน (แยกสถานะเครื่องตามสีใน ตั้งค่า → ทรัพย์สิน) · มูลค่าซื้อที่ประกันจะหมด · หมดภายใน 30 วัน (กรอบเหลือง + เครื่องที่ใกล้สุด) · หมดแล้วยังไม่ตัดจำหน่าย (กรอบแดง + มูลค่า + อยู่ในคลังกี่เครื่อง) · มีวันหมดประกันกี่ % ของเครื่องซื้อ (ไม่ระบุวันหมด / ไม่ระบุผู้ขาย)
+- endpoint ใหม่ `GET /api/reports/assets/warranty-expiring/breakdown` (สิทธิ์ `assets.view`, `AssetWarrantyBreakdownController`): 12 เดือนข้างหน้าแยกสถานะ · ช่วงเวลาที่เหลือ (หมดแล้ว / 30 / 31-90 / 91-180 / 181-365 วัน / เกิน 1 ปี) · หมวดหมู่และผู้ขายแบ่งเป็นช่วงที่ไม่ซ้อนกันตามตัวกรอง "ภายใน" (หมดแล้ว / ภายใน N / N+1 วัน-1 ปี / เกิน 1 ปี) พร้อมเครื่องที่ใกล้สุด จำนวนที่เหลือในช่วง และวันถึงเครื่องถัดไป · ไม่ขึ้นกับปุ่มใกล้หมด/หมดแล้ว
+- ไฟล์ส่งออกเพิ่มชีต: ประกันหมดรายเดือน, ประกันเหลืออีกเท่าไร, แยกตามหมวดหมู่, แยกตามผู้ขาย แล้วตามด้วยรายการ
+**หน้าจอ** (`components/warranty-cards.tsx`, `pages/assets-warranty-expiring.tsx`)
+- ผัง: ปุ่ม ใกล้หมด/หมดแล้ว (พร้อมจำนวน) หัวแถวตัวกรอง → ช่องตัวเลข 5 ช่อง → [ประกันหมดรายเดือน | ประกันเหลืออีกเท่าไร] → แยกตามหมวดหมู่ (+ แถวรวม) → แยกตามผู้ขาย (ไม่ระบุผู้ขายแยกใต้เส้นประ + สิ่งที่ต้องทำ) → รายการ
+- แท่งทุกอันบนหน้าใส่ตัวเลขไว้ในชิ้น แต่ละชิ้นกว้างพอใส่เลขเสมอ · คอลัมน์ "ใกล้สุด" = เครื่องที่ใกล้หมดที่สุดในช่วง + ปุ่ม "และอีก N เครื่องภายใน …" กรองรายการตามหมวดนั้นแล้วเลื่อนลงไปที่รายการ (การ์ดรายการมี `id="report-rows"`)
+- `DaysLeftBadge` ใน `tabular-cell.tsx` export ออกมาใช้ในคอลัมน์ใกล้สุด
+- การ์ด "ประกันเหลืออีกเท่าไร": จำนวนเครื่องย้ายจากข้างชื่อการ์ดไปอยู่ท้ายคำอธิบายสีทางขวา ("… รอรับคืน | 171 เครื่อง") แบบเดียวกับการ์ดแผนก/หมวดหมู่ในรายงานโอนย้าย
+- ภาษาให้ตรงกับรายงานตัดจำหน่าย/โอนย้าย: "ตรวจสภาพก่อนส่งมอบ" (แทน "จ่ายออก") · "ถัดไปหมดอีก n วัน" คำเดียวทั้งตารางหมวดหมู่และผู้ขาย (ลบ `rep_wty_todo_next`) · มูลค่าใส่ ฿ · คำอ่านกราฟขึ้นต้น "กราฟแท่ง" · คำอธิบายหน้า การ์ดหมวดหมู่ ("เรียงจากหมวดที่ใกล้หมดก่อน") การ์ดผู้ขาย ("ต้องติดต่อใครก่อนประกันหมด") หมายเหตุรอรับคืน และ "ใส่ผู้ขายในหน้าทรัพย์สิน" สั้นลง · ช่องมีวันหมดประกันคั่นตัวเลขด้วย " | " · หัวคอลัมน์ Excel คง "ทั้งหมด" และ "31-90 วัน" ตามไฟล์ส่งออกของรายงานตัดจำหน่าย
+- รีวิว UX/WCAG: รายการแสดงยี่ห้อและรุ่นใต้รหัสทรัพย์สินแบบรายงานตัดจำหน่าย (ยี่ห้อและรุ่นเป็น innerColumns) · แท่งในตารางหมวดหมู่/ผู้ขาย/ประกันเหลือเปิด `InfoPopover` (ชี้ แตะ Enter) แทน `title` ของเบราว์เซอร์ · ชื่อผู้ขายตัดที่ 12rem พร้อม `title` · ตัวเลขขาวบนแท่งสีอ่อน (contrast 1.7–3.2:1) ยังรอเลือกวิธีแก้
+- ปุ่ม ใกล้หมด/หมดแล้ว ย้ายจากหัวแถบตัวกรองไปต่อท้ายชื่อการ์ดรายการ เพราะกรองแค่ตารางรายการ (ช่องใหม่ `rowsLead` ใน `TabularReportExtras` วางข้างหัวการ์ดรายการ ตัดลงบรรทัดเองเมื่อแคบ; `filterLead` ยังใช้กับรายงานงานค้างที่กรองทั้งหน้า) ปุ่มเตี้ยลงเป็น h-6 หัวการ์ดสูงเท่าเดิม
+- ชื่อการ์ดรายการคงที่ "รายการเครื่องตามวันหมดประกัน" (en "Assets by warranty end") ไม่เปลี่ยนตามปุ่ม ใกล้หมด/หมดแล้ว เพราะปุ่มข้างชื่อบอกฝั่งอยู่แล้ว (`rep_wty_rows_title` แทน `rep_wty_rows_30d…365d/expired` และลบ `warrantyRowsTitle`)
+- ตารางรายการกลับมามีคอลัมน์ "รุ่น" แยกจากรหัสทรัพย์สิน (แสดงยี่ห้อ + รุ่น เช่น "Cisco Catalyst 9200L") ตามที่ผู้ใช้ขอ แทนการเขียนยี่ห้อและรุ่นใต้รหัสแบบรายงานตัดจำหน่าย (innerColumns เหลือ brand)
+- คอลัมน์ "ผู้ถือ" เป็น 2 บรรทัดแบบช่อง จาก/ไปยัง ของรายงานโอนย้าย: ชื่อ แล้วบรรทัดเล็กเป็นรหัสพนักงานกับแผนก (`HolderCell` แยก "ชื่อ (รหัส)" จากค่า holder; ป้ายใช้ร่วมไม่มีรหัสแสดงชื่ออย่างเดียว) แผนกเป็น innerColumns ไม่มีคอลัมน์แยกบนจอแล้ว แต่ยังอยู่ในไฟล์ส่งออก
+
+### Access: จำนวน License ของ Software ต้องกรอก + ปุ่ม "ไม่จำกัด" — 2026-10-09
+- ฟอร์มเพิ่ม/แก้ Software (`resource-modal.tsx`): ช่องจำนวน License บังคับกรอก (ขั้นต่ำ 1) มีปุ่ม "ไม่จำกัด" ข้างช่อง กดแล้วช่องจำนวนปิดใช้งาน · Software เดิมที่ `seats` เป็น null เปิดมาจะกดปุ่มไว้แล้ว
+- `StoreSoftwareRequest`: รับ `seats_unlimited` (boolean ใช้แค่ใน request ไม่มีคอลัมน์) · `seats` required เมื่อไม่ได้กดไม่จำกัด, `min:1` (เดิม nullable min:0) · กดไม่จำกัด → บันทึก `seats = null` เหมือนเดิม ไม่ต้องแก้ DB · `SoftwareController` ตัด `seats_unlimited` ออกก่อนบันทึก
+- test: `AccessSoftwareTest` เพิ่ม 3 กรณี (ไม่กรอก/0 → 422, ไม่จำกัด → null, สลับไป-กลับตอนแก้ไข) · `AccessControlTest` payload ที่ไม่มี seats ใส่ค่าให้ครบ
+
+### Access: ฟอร์มเพิ่ม/แก้ Software ออกแบบใหม่ — 2026-10-09
+ตาม mockup "Software Form Redesign" (artifact) ที่ผู้ใช้อนุมัติ · ข้อมูลที่บันทึกเหมือนเดิม ไม่แก้ backend
+- `components/software-form-sections.tsx` ใหม่: `SoftwareLogoPicker` (วงกลมสีส้ม 96px กดเพื่ออัปโหลด ป้ายกล้อง + ปุ่ม × ลบ, ใต้วงกลมบอก PNG, JPG ไม่เกิน 2MB), `LicenseTypePicker` (การ์ด 4 ใบแนวนอน ไอคอนซ้าย ชื่อ + คำอธิบายสั้น), `SeatsField` (ปุ่มเลือก กำหนดจำนวน/ไม่จำกัด คู่ช่องตัวเลข − +), `ProductKeySection` (ป้าย Product key + `Switch` กลางบรรทัดเดียวกัน) · ย้าย `LICENSE_CARDS` มาที่นี่ + `isFreeLicense()`
+- `resource-modal.tsx` (เฉพาะ Software): กว้าง 600px · หัวข้อ "เพิ่ม Software"/"แก้ไข Software" · โลโก้อยู่ซ้าย ชื่อซอฟต์แวร์ (autofocus) และแบรนด์ซ้อนกัน 2 บรรทัดทางขวา · กลุ่ม License / Product key / หมายเหตุ คั่นด้วยเส้น · หมายเหตุเป็น `Textarea` 2 บรรทัด ตัวนับ 0 / 2,000 อยู่ข้างชื่อช่อง · เลือก ฟรี/Open Source → ตั้งไม่จำกัดและปิด key ให้ (กลับเป็นประเภทเสียเงิน → กลับมานับจำนวน)
+- ย่อให้พอดีจอคอมไม่ต้องเลื่อน (สูงราว 610px): ตัดคำอธิบายใต้หัวข้อ License/Product key และข้อความช่วยใต้จำนวน License (ลบคีย์ `access_seats_help`, `access_store_key_hint`, `access_license_group_hint`, `access_logo_note_change`) · error แสดงเฉพาะใต้ช่อง ไม่มีแถบรวมด้านบน
+- ทุกประเภทในไดอะล็อกนี้: ท้ายฟอร์มมี "* จำเป็นต้องกรอก" · ตัวฟอร์มเลื่อนในตัวเมื่อจอเตี้ยมาก (`max-h-[calc(100dvh-10rem)]`)
+- ตาราง Software ช่องจำนวน License: ไม่จำกัดแสดง "ใช้/∞" (ไอคอน `InfinityIcon`, title + aria-label "ไม่จำกัด") แทนตัวเลขเปล่า
+- แก้ไข Software: ลดจำนวน License ต่ำกว่าจำนวนที่ให้สิทธิ์อยู่ไม่ได้ (เช่น 5/10 แก้เป็น 4 ไม่ได้) — `StoreSoftwareRequest::notBelowSeatsInUse` ตรวจเฉพาะตอนเปลี่ยนจำนวน (รายการที่ให้สิทธิ์เกินอยู่แล้วยังแก้ช่องอื่นได้); ฟอร์มตรวจซ้ำ + ปุ่ม − หยุดที่จำนวนที่ใช้อยู่ + ข้อความ `access_err_seats_below_used` ("ใช้อยู่ {n} license ลดต่ำกว่านี้ไม่ได้") แสดงใต้ช่องกรอกจำนวนโดยตรง; test 2 ตัวใน `AccessSoftwareTest`
+- เพิ่ม Member ใน Software เกินจำนวน License ไม่ได้แล้ว (เดิมให้เกินได้แค่ขึ้นสีแดง) — `AccessService::grant()` ตอบ 422 เมื่อใช้ครบ (ไม่จำกัด = เพิ่มได้เสมอ, ถอนสิทธิ์แล้วเพิ่มคนใหม่ได้); หน้าจัดการสมาชิกซ่อนช่องเพิ่ม แสดง "License เต็มแล้ว (4/4) เพิ่มจำนวน License หรือถอนสิทธิ์ออกก่อน" (`access_seats_full`, `MemberTarget.seats`); test เดิมที่ยืนยันว่าเพิ่มเกินได้ เปลี่ยนเป็นยืนยันว่าถูกปฏิเสธ + test ถอนแล้วเพิ่มใหม่/ไม่จำกัด
+- กันกดให้สิทธิ์พร้อมกันตอนเหลือ seat สุดท้าย: `AccessService::grant()` ทำใน `DB::transaction` + `lockForUpdate` แถว resource ก่อนตรวจ seat/คนซ้ำ (request ที่สองรอแล้วนับใหม่ → 422); ใช้กับทุกประเภท จึงกันการให้สิทธิ์คนเดิมซ้ำพร้อมกันด้วย
+- รีวิว Access รอบ 1 (security / code review / WCAG / ภาษา) แก้แล้ว:
+  - ถอนสิทธิ์ข้ามประเภทไม่ได้แล้ว (IDOR): route revoke ทั้ง 4 ใช้ `->scopeBindings()` สิทธิ์ที่ไม่ใช่ของ resource ใน URL ตอบ 404
+  - Audit log ไม่เก็บ Product key: `SoftwareController::auditChanges` ซ่อน key แล้วบันทึกแค่ "••••" ว่ามีการเปลี่ยน (ตรวจ DB จริงแล้ว ไม่มี key หลุดก่อนหน้า)
+  - ลด License ตอนแก้ไขตรวจใต้ล็อกเดียวกับการให้สิทธิ์ (`AccessService::guardSeatCount` ใน transaction) ตอบ `seats_below_in_use` + `in_use` จาก server ข้อความในฟอร์มใช้ตัวเลขจาก server แทน regex ข้อความอังกฤษ
+  - เพิ่มสมาชิกไม่สำเร็จมีข้อความแล้ว: `grant()` ตอบรหัส `seats_full` / `already_granted` / `is_owner` หน้าจัดการสมาชิกแสดง toast (`access_add_err_*`) และรีเฟรชรายชื่อทั้งตอนสำเร็จและไม่สำเร็จ
+  - เปลี่ยนเป็น ฟรี/Open Source ไม่ลบ Product key ที่เก็บไว้อีก
+  - ภาษา TH/EN: คำเรียกตรงกัน (ถอนสิทธิ์ / เจ้าของ / สมาชิก / แบรนด์ / Email Group, File Share), ตัดอีโมจิ, "และ"→"หรือ" ในเจ้าของลาออก, placeholder เป็นตัวอย่าง, EN สะกด license แบบเดียว
+- WCAG หน้า Access (รอบ 2):
+  - อัปโหลดโลโก้ Social ด้วยคีย์บอร์ดได้ (input `sr-only` + กรอบ focus ที่ปุ่ม) ข้อความ error/คำแนะนำผูกกับ input
+  - ตาราง "Resource ที่มีสมาชิกมากที่สุด" ในภาพรวม: ชื่อเป็นปุ่ม กด Tab/Enter เปิดได้
+  - `Field` (ใช้ทุกฟอร์มในระบบ): ช่องกรอกได้ `aria-invalid` + `aria-describedby` ชี้ไปที่ข้อความ error/help โปรแกรมอ่านหน้าจออ่าน error ให้; `SearchableSelect` รับ aria สองตัวนี้ด้วย
+  - กรอบ focus (focus-visible) ที่การ์ดประเภท License, ปุ่ม กำหนดจำนวน/ไม่จำกัด, −/+, ปุ่มลบโลโก้, ปุ่มแสดง key, `Switch`, แถวสถานะและการ์ดในภาพรวม (Space ไม่เลื่อนหน้า, กดค้างไม่ยิงซ้ำ)
+  - ชื่อให้ช่อง/ปุ่ม: ช่องค้นหาใน `DataTable`, ขนาด/หน่วย/สี/รหัสสี, ตัวกรองแผนก/ประเภท/แบรนด์ (`<label htmlFor>`), ปุ่มถอนสิทธิ์ (บอกชื่อพนักงาน) และดินสอ, ช่องเพิ่มสมาชิก, ระดับสิทธิ์; ปุ่มไอคอนในหน้าจัดการสมาชิกใหญ่ขึ้นเป็น 32px
+  - toast สีแดงที่แจ้งว่าถอนสิทธิ์/ลบสำเร็จ ประกาศแบบ status ไม่ใช่ alert (`ToastOptions.polite`)
+  - ใช้ License เกินจำนวน: มีไอคอนเตือน + ชื่อ "ใช้เกินจำนวน License" ไม่ใช่แค่สีแดง
+  - ป้ายประเภทในภาพรวม โหมดมืดใช้สีอ่อนลง (contrast 7.9–10.7:1) โหมดสว่างคงเดิม
+- `<html lang>` ตามภาษาที่ผู้ใช้เลือก (ทั้งระบบ): `useApplyTheme` ตั้ง `document.documentElement.lang` เป็น th/en ทุกครั้งที่สลับภาษา เดิมค้าง `en` จาก locale ของ server ทำให้โปรแกรมอ่านหน้าจออ่านไทยด้วยเสียงอังกฤษ และ Chrome เสนอแปลหน้า (WCAG 3.1.1)
+- Contrast โหมดสว่างหน้าภาพรวม Access (ผู้ใช้อนุมัติ): ป้ายประเภทในตาราง Resource ใช้ `StatusBadge color` ตัวเดียวกับหน้าทรัพย์สิน (คำนวณสีตัวอักษรให้ผ่านทั้งสองโหมด) แทนสีตรง; ข้อความส้ม/เขียว -600 → -700, ตัวเลขในวงกลมส้ม -800, พื้นแถวเตือนจางลง (0.07 → 0.05); ป้ายรหัสบนหัว dialog ที่ส่งสีเอง (`FocusDialogHeader` accent เช่น SW-0001) ใช้ `readableInk` แบบเดียวกัน (2.0 → 5.04 สว่าง / 7.19 มืด); `StatusBadge` เผื่อ contrast เป็น 4.6 กันพลาดจากการปัดเศษ — วัดในเบราว์เซอร์ทั้งสองโหมดผ่านหมด เหลือคำอธิบายใต้หัวเพจ (4.42 สีกลางของธีม ทุกหน้า)
+- ฟอร์ม Social / Internet ใช้ตัวเลือกโลโก้วงกลม 96px แบบเดียวกับ Software: แยกเป็น `components/logo-picker.tsx` (`LogoPicker` เลือกไอคอน + สี amber/indigo ตามหัว dialog) ใช้ทั้งสองฟอร์ม; Social วาง layout เหมือน Software (โลโก้ซ้าย, ชื่อ + URL ซ้อนขวา, สี + นโยบายด้านล่าง); ลบ `LogoField` เดิมและ key `access_logo`, `access_logo_help`, `access_logo_change`, `access_logo_remove` ที่ไม่ใช้แล้ว; เปิดฟอร์มแล้ว focus ช่องชื่อ (ไม่ใช่ตัวเลือกโลโก้ที่อยู่ก่อน) และวงโลโก้ขึ้นกรอบเฉพาะ focus จากคีย์บอร์ด (`has-focus-visible`)
+- ตาราง/รายการทั้งระบบเก็บคำค้น ตัวกรอง การเรียง หน้า และจำนวนแถวต่อหน้าไว้ใน URL (รีโหลด/แชร์ลิงก์แล้วได้รายการเดิม):
+  - hook กลาง `shared/hooks/use-list-params.ts` (`useListParams`): `get`, `setParams` (รวมหลายการเปลี่ยนใน handler เดียวเป็น URL replace ครั้งเดียว อ่านจาก URL ปัจจุบันจริงจึงไม่ทับค่าที่ใหม่กว่า), `setFilter` (ตั้งค่า + กลับหน้า 1), `table` (props `search`/`paging` ให้ DataTable)
+  - `DataTable`: เพิ่ม prop `search` (คำค้นที่ parent ถือ) + export `PAGE_SIZES`; ช่องค้นหามีค่าของตัวเองระหว่างพิมพ์ เคอร์เซอร์ไม่กระโดด
+  - ชื่อพารามิเตอร์: คำค้น `?search=` (เดิมหน้าทรัพย์สินใช้ `?q=`) · ตัวกรองตามหน้า เช่น `status`, `type`, `dept`, `module`, `category` · `sort` · `page` · `per`; ค่าเริ่มต้นไม่ใส่ใน URL; ค่าแปลกใน URL ตกกลับเป็นค่าเริ่มต้น
+  - สลับแท็บ: ล้างคำค้น/ตัวกรอง/หน้า ของแท็บเดิมใน navigation เดียวกัน คง `per` ไว้
+  - หน้าที่ทำ: การเข้าถึง (4 ทะเบียน), ทรัพย์สิน (รายการ, ประวัติการโอน, ของฉัน `kind`), สัญญา, Ticket (+ ช่วงวันภาพรวม `range`/`from`/`to`), คำขอ (debounce 300ms), คลังอะไหล่ (รายการ, คำขอเบิก, ความเคลื่อนไหว, ตรวจนับ), พนักงาน (ทำเนียบ, ตำแหน่ง, แผนก, ส่วนงาน), สิทธิ์ (Audit log), Workflow, Email & Notification (Email, Notification, Log debounce 350ms), ตั้งค่า (Master Data sub-tab `?list=` + ทุกรายการ), รายงาน (ค้นหารายงาน `domain`, ตาราง Ticket ในรายงาน)
+  - คลังอะไหล่และแม่แบบอีเมลยังจำตัวกรองล่าสุดในเบราว์เซอร์: เปิดหน้าโดยไม่มีตัวกรองใน URL จะใส่ค่าที่จำไว้ให้; ลิงก์ที่แชร์มาชนะเสมอ และไม่บันทึกทับค่าที่ผู้อ่านจำไว้
+  - ไม่รวม: แผนผังองค์กร, การเลือก Role, dialog/drawer ที่เปิดอยู่
+  - ตรวจในเบราว์เซอร์ทุกหน้า: เปิดลิงก์ที่มี `search=` ช่องค้นหาได้ค่า และพิมพ์แล้ว URL เปลี่ยนตาม; สลับแท็บล้างคำค้น; Ticket `status=` กรองถูก
+  - `page` เกินหน้าสุดท้าย (ลิงก์เก่า/รายการหดลง) พาไปหน้าสุดท้ายแทนตารางว่าง: `DataTable` แบบ `server` ทำเอง, รายการที่มีตัวแบ่งหน้าของตัวเองใช้ `usePageInRange(list, meta?.last_page)` (ทรัพย์สิน, สัญญา, ทำเนียบพนักงาน, Audit log) — ทดสอบ page=99 → 73 / 11 / 2 / 1 / 40
+  - ทดสอบการจำตัวกรอง (คลังอะไหล่, แม่แบบอีเมล): เปิดโดยไม่มีตัวกรองได้ค่าที่จำ, ลิงก์แชร์ชนะและไม่บันทึกทับ, พิมพ์เองบันทึก, สลับแท็บแล้วกลับมาได้ตัวกรองคืน; หน้าสุดท้าย 29/29 ที่ 50 แถวแสดง 1,401–1,450 ถูกต้อง
+- ภาษา (รอบ 2) ข้อความที่เพิ่มล่าสุด: กล่องทิ้งข้อมูลใช้ได้ทั้งปิดฟอร์มและสลับหัวข้อ ("ยังไม่ได้บันทึก ถ้าออกตอนนี้ สิ่งที่กรอกหรือแก้ไว้จะหายไป" / ปุ่ม "แก้ไขต่อ"; EN "Discard changes?" / "You haven't saved this. If you leave now, your changes will be lost."); EN License เต็ม/ลดต่ำกว่าที่ใช้/เป็นเจ้าของ อ่านเป็นธรรมชาติขึ้น, "More people than licenses", "Hex color code"; TH "หน่วยของขนาด", "ถอนสิทธิ์บางคนออกก่อน" — ตรวจโค้ดใหม่แล้วไม่มีข้อความเขียนตรงในโค้ด
+- ทุกฟอร์มในระบบถามก่อนทิ้งข้อมูลที่กรอกค้าง (ประมาณ 50 ฟอร์ม/จุด):
+  - hook กลาง `shared/hooks/use-discard-guard.ts` (`useDiscardGuard(open && isDirty)` → `guardClose(onClose)`): กล่องยืนยันแบบเตือน "ทิ้งข้อมูลที่กรอกไว้?" (key `discard_*` ใน `lang/*/common.ts`) + เตือนของเบราว์เซอร์เมื่อรีโหลด/ปิดแท็บขณะมีข้อมูลค้าง (beforeunload)
+  - ปิดด้วย Esc / คลิกนอกฟอร์ม / × / ยกเลิก: ฟอร์มที่ยังไม่แตะปิดทันที, กรอกแล้วถาม ("ทิ้ง" / "กลับไปกรอกต่อ"), บันทึกสำเร็จปิดเลยไม่ถาม (รวมช่วงแสดง "บันทึกแล้ว")
+  - "มีข้อมูลค้าง" = เทียบกับค่าเริ่มต้นของฟอร์ม (เพิ่มใหม่ = ฟอร์มว่าง, แก้ไข = ค่าเดิม) รวมไฟล์/รูป/serial ที่เลือก; แก้บักเดิมที่ฟอร์มเพิ่มแผนก/ส่วนงาน/อะไหล่ถูกนับว่าแก้แล้วตั้งแต่เปิด
+  - ครอบคลุม: การเข้าถึง (ฟอร์ม + เพิ่มสมาชิก/แก้เจ้าของ), ทรัพย์สิน (ลงทะเบียน, โอน, ย้ายที่, ตัดจำหน่าย, คืนผู้ขาย), สัญญา (ฟอร์ม 6 ขั้น, ยกเลิก), รายงาน (ตั้งเวลาส่ง), พนักงาน (เพิ่ม/แก้, แผนก, ส่วนงาน, ตำแหน่ง, ลาออก, สร้าง/จัดการบัญชี), สิทธิ์ (Role, กลุ่ม, ตารางสิทธิ์ตอนสลับ Role/แท็บ), ตั้งค่า (Master Data 6 ฟอร์ม, หน่วย/ประกัน/เหตุผลตัดจำหน่าย, ข้อมูลคำขอ, หน้าอีเมล/ความปลอดภัย/ทรัพย์สิน/SLA/แบรนด์ ถามก่อนสลับหัวข้อ), คลังอะไหล่ (อะไหล่, ขอเบิก, รับเข้า/เบิกออก, จัดสรร, ใบตรวจนับ), คำขอ (สร้าง, อนุมัติ/ปฏิเสธ), Workflow, ข้อความแจ้งเตือน, แม่แบบอีเมล (เปลี่ยนจากกล่องของตัวเองมาใช้ตัวกลาง ลบ key `email_discard_*`), Ticket (เปิด, แก้, อัปเดต, ปิดงาน, รับเคส, มอบหมาย, ส่งต่อ), โปรไฟล์ตัวเอง, เปลี่ยนรหัสผ่าน (แก้กล่องถามถูกบังด้วย z-index), นำเข้าไฟล์
+  - ไม่ครอบคลุม: ปุ่ม Back/Forward ของเบราว์เซอร์ และการกดเมนูซ้ายออกจากหน้าตั้งค่า (router แบบ BrowserRouter บล็อกไม่ได้) — รีโหลด/ปิดแท็บยังเตือน
+  - ทดสอบในเบราว์เซอร์: Ticket, ทรัพย์สิน, สัญญา, พนักงาน (ยังไม่แตะ → ปิดทันที, กรอกแล้ว → ถาม → ทิ้ง → ปิด), อะไหล่ + คำขอ (ยังไม่แตะ → ปิดทันที), แบรนด์ (ทั้งสองกรณี), ตั้งค่าความปลอดภัย (สลับหัวข้อ → ถาม, กลับไปกรอกต่อ → ค่ายังอยู่, ทิ้ง → ไปหัวข้อใหม่โดยไม่บันทึก), Access (กลับไปกรอกต่อ → ข้อมูลยังอยู่)
+- Access ทุกแท็บ (Email Groups / File Shares / Social / Software): หน้าและจำนวนแถวต่อหน้าอยู่ใน URL `?page=` `?per=` แบบหน้า Assets (ค่าเริ่มต้นไม่ใส่ใน URL, เขียนแบบ replace, รวมหลายการเปลี่ยนเป็น write เดียว); เปลี่ยนแท็บล้าง page แต่คง per; เปลี่ยนตัวกรอง/ค้นหา/จำนวนแถว กลับหน้า 1 — DataTable เพิ่ม prop `paging` (แบ่งหน้าฝั่ง client แต่ให้ parent ถือ page/size)
+- ตรวจในเบราว์เซอร์ทั้งโหมดสว่าง/มืด: สถานะว่าง, ฟรี/ไม่จำกัด, กรอกไม่ครบ
+
+### รายงานสิทธิ์การเข้าถึง 3 ตัว ตาม mockup — 2026-10-09
+สร้างตาม mockup "Report design" v47 (หน้า ภาพรวมสิทธิ์ / ทบทวนสมาชิก / License ซอฟต์แวร์) · ของที่ใช้ร่วมกันอยู่ที่ `App\Services\Report\Access\AccessFacts` (ชื่อทะเบียน สีตามโมดูล Access กฎ "ลาออกแล้ว" = `Employee::hasLeft()` ที่อยู่ของทรัพยากร) และ `components/access-cells.tsx` (ช่องพนักงาน ทรัพยากร ระดับ สถานะในรายการ) · สีประเภทเพิ่มเป็น ChartTone `access-email / access-file / access-social / access-software`
+- **ภาพรวมสิทธิ์การเข้าถึง** (`access.overview`, `/reports/access-overview`, สิทธิ์ `access.overview`): ทะเบียนสิทธิ์ทุกแถวของ `access_memberships` (ผู้ลาออกที่ยังถือขึ้นก่อน, ปุ่ม ใช้งานอยู่ / ถอนแล้ว / ทั้งหมด, ถอนแล้วบอกวันและผู้ถอน, ข้ามแผนกเป็นป้ายคู่ "ใช้งาน | ข้ามแผนก") · ช่องตัวเลข 5 ช่อง · `GET /api/reports/access/overview/breakdown`: ให้–ถอนรายเดือนในช่วงวันที่ (ถอนเมื่อลาออก = `revoked_at` ตั้งแต่วันสุดท้ายของผู้ลาออก), ผู้ลาออกที่ยังถือสิทธิ์ + ทรัพยากรที่ผู้ลาออกยังเป็นเจ้าของ, ตามแผนกของผู้ถือ, ทรัพยากรที่ต้องดูแล (เจ้าของลาออก / ไม่มีเจ้าของ / ไม่มีสมาชิก — ไม่ขึ้นกับตัวกรองแผนก) · ประเภทเป็นปุ่มแบ่งหัวแถวตัวกรอง
+- **ตรวจสอบสมาชิกและเจ้าของ** (เดิมชื่อ ทบทวนสมาชิกและเจ้าของ) (`access.resource_members`, `/reports/access-resource-members`, ต้องมีสิทธิ์ดูทั้ง Email / File / Social): 1 แถว = 1 สมาชิก (Software มีรายงานของตัวเอง) ปุ่ม ใช้งานอยู่ / ข้ามแผนก / ถอนแล้ว + เรียงตาม (ทรัพยากร พนักงาน แผนก วันที่ให้ ใหม่/เก่า — ตัวกรอง `sort` แบบ viewOnly ส่งไปกับไฟล์) · ตัวกรองแผนกของทรัพยากร สิ่งที่ต้องทำ ค้นหา · `GET /api/reports/access/resource-members/breakdown`: ตารางทรัพยากร (เจ้าของ สมาชิกแยก ในแผนก / ข้ามแผนก / ลาออก / ไม่ผูกแผนก Read/Write สิ่งที่ต้องทำ) และพื้นที่ File Share ตามแผนก (ขนาดที่จัดสรรเท่านั้น `size` + `size_unit`, 0 = ไม่จำกัด — ระบบไม่มีพื้นที่ใช้จริง) · กด "N คน ›" เลือกทรัพยากร → แถบเจ้าของ + ใบทบทวนสมาชิก (ดูตัวอย่างในหน้าต่าง และ PDF `GET /api/reports/access/resource-members/sheet?resource=type:id` ผ่าน DomPDF `pdf/reports/access-review-sheet` มีช่องยังใช้ / ถอน และลงชื่อเจ้าของกับ IT)
+- **การใช้ License ซอฟต์แวร์** (`access.software_licenses` ทำใหม่): รายการเปลี่ยนจาก 1 แถวต่อซอฟต์แวร์ เป็น 1 แถวต่อผู้ถือ — Excel / ไฟล์ที่ตั้งเวลาส่งเปลี่ยนรูปแบบ (ตัวเลขรายซอฟต์แวร์ย้ายไปชีตแรก; ตอนทำยังไม่มีรายการตั้งเวลาส่งของรายงานนี้) · ลบคีย์ภาษาคอลัมน์/ช่องเดิมที่ไม่ใช้แล้ว · `GET /api/reports/access/software-licenses/breakdown`: การใช้ seat ต่อซอฟต์แวร์ (แท่งตาม seat ของตัวเอง ผู้ถือที่ยังทำงาน / ผู้ลาออก สิ่งที่ต้องทำ) ผู้ลาออกที่ยังถือ และคำขอซอฟต์แวร์ที่ยัง pending / approved · ช่อง "License เต็ม" แทน "ใช้เกินจำนวน" (`AccessService::grant()` กันเกินแล้ว) แดงเมื่อเต็มแล้วมีคำขอรอ · ตัวกรอง "ใช้เกิน" แสดงเฉพาะเมื่อมีข้อมูลเก่าที่เกิน · ตัวกรองผู้ผลิตใหม่
+- เทสต์: `AccessOverviewReportTest` (7), `AccessResourceMembersReportTest` (8), `SoftwareLicenseReportTest` เขียนใหม่ (6) · `ReportHubTest::test_export_carries_only_the_picked_columns_in_report_order` ล้มอยู่ก่อนแล้ว ไม่เกี่ยวกับรอบนี้ (คอลัมน์ซ่อนของรายงานภาพรวมทรัพย์สินเข้าชีต Excel เสมอ)
+- รีวิวรอบ 2 (ภาษา, WCAG, รีวิวโค้ด):
+  - ภาษา: เลิกใช้ " · " ตามกฎทั้งระบบ (เขียนเป็นประโยค / ช่องไฟ / จุลภาค ทั้งไฟล์ภาษา หน้าจอ และ PDF) · ใช้คำเดียวกับโมดูล Access: "Resource" แทน "ทรัพยากร", "License" แทน "seat" (en "licenses") · หัวคอลัมน์ Excel และชื่อชีตเปลี่ยนตาม
+  - WCAG: เลื่อนไปที่รายการไม่มี animation เมื่อผู้ใช้ตั้งลดการเคลื่อนไหว (`scrollToRows`) · ปุ่มล้างที่เลือกให้ชื่อที่อ่านออกเสียงขึ้นต้นด้วยข้อความที่เห็น (Label in Name) · ลิงก์ผู้ลาออกในรายงาน License มี focus ring · ชื่อแผนกที่ถูกตัดมี tooltip
+  - แก้จากรีวิวโค้ด: ค้นหาชื่อผู้ถือในรายงาน License แสดงเฉพาะคนนั้น (ค้นชื่อซอฟต์แวร์ยังได้ผู้ถือทั้งหมด, ค้นชื่อเต็มและชื่อไทยได้) · ค่าที่เลือก (Resource / ซอฟต์แวร์) ล้างเองเมื่อตัวกรองอื่นทำให้หลุดจากผลลัพธ์ · พนักงานที่ไม่มีแผนกไม่นับเป็นข้ามแผนก · "คำขอรอ แต่เหลือ…" ไม่ขึ้นเมื่อไม่มีคำขอ · ตัวเลือก resource / ผู้ผลิต / ซอฟต์แวร์ โหลดครั้งเดียวต่อ request (`once`) และสมาชิกที่ใช้งานอยู่ไม่ query ซ้ำ
+  - ยังไม่แก้: ตัวเลขสีขาวบนแท่งสีอ่อน (เหลือง/แดงอ่อน/เทา/ส้ม) contrast ต่ำกว่า 4.5:1 เรื่องเดียวกับรายงานประกันที่รอเลือกวิธีแก้ · หน้าทบทวนสมาชิกเปิดผ่านลิงก์ได้ด้วยสิทธิ์ดูทะเบียนใดทะเบียนหนึ่ง แต่ server ต้องการครบ 3 (แบบเดียวกับรายงาน Ticket)
+  - รวมโค้ดซ้ำและเลิก inline style: `components/access-parts.tsx` (count, deptName, PieceBar แท่งแบ่งชิ้นมีตัวเลข, TodoLines สิ่งที่ต้องทำ, PickButton ปุ่ม "N คน") ใช้ร่วมทั้ง 3 รายงาน · `str` ใช้จาก access-cells · ความกว้าง/สูงที่คำนวณจากข้อมูลใช้ class เปอร์เซ็นต์เต็ม `components/percent-classes.ts` (W_PCT, H_PCT, BASIS_PCT 0–100 เขียนครบเพราะ Tailwind สร้าง class จากค่าตอนรันไม่ได้) แทน `style` · กราฟให้–ถอนรายเดือนตัดโหมดเลื่อนแนวนอน (>60 เดือน) ที่ต้องวัดขนาดด้วย JS ออก แท่งบางลงแทน · ไฟล์รายงานสิทธิ์ทั้ง 3 ไม่มี `style=` แล้ว
+  - ตาราง "แยกตาม Resource" และ "การใช้ License ต่อซอฟต์แวร์": กดที่ไหนในแถวก็เลือกได้ (`pickRow` ใน access-parts; ลิงก์ในแถวยังเปิดหน้าของตัวเอง) แทนการกดปุ่ม "N คน" · เอาเมาส์ชี้แล้วแถวเป็นสีเทา เคอร์เซอร์เป็นรูปมือ และ "N คน ›" เปลี่ยนเป็นสีแบรนด์ · แถวที่เลือกมีพื้นจางกับเส้นแบรนด์ด้านซ้าย และลูกศรหันลง · ปุ่ม "N คน" ยังเป็นปุ่มจริงให้ใช้คีย์บอร์ดได้ (aria-pressed) · คำอธิบายใต้หัวตารางเปลี่ยนเป็น "กดที่แถว…" · หัวคอลัมน์ภาษาอังกฤษ "List" เปลี่ยนเป็น "People" · การ์ด "คำขอที่รอ License" สูงเท่าการ์ดผู้ลาออกข้าง ๆ (เลิก `items-start` ให้เหมือนหน้ารายงานอื่น) · การ์ดผู้ลาออกและคำขอที่รอ License เลิกมีลิงก์ "เปิดในหน้า…" ข้าง "แสดงทั้งหมด" เหมือนหน้าภาพรวม (`Group` ไม่มี prop `link` แล้ว) · คำอธิบายรายงานทั้ง 3 ตัวสั้นลง (TH/EN) และรายงาน 2 ภาษาอังกฤษชื่อ "Members and owners check" · คำอธิบายใต้หัวการ์ดสั้นลง: ตัด "นับตามแผนกของผู้ถือ" ออก, "แยกตาม Resource" กับ "การใช้ License ต่อซอฟต์แวร์" เหลือ "กดที่แถวเพื่อดูรายชื่อ / ผู้ถือ" · หัวหน้ารายงาน (`ReportHeader`) ขยายความกว้างคำอธิบายจาก 70ch เป็น 120ch ให้คำอธิบายยาว ๆ (8 รายงาน EN, 7 รายงาน TH) อยู่บรรทัดเดียวบนจอ desktop · ช่องตัวเลขหน้าภาพรวม: "พนักงานที่ถือสิทธิ์" เขียนใหม่เป็น "โดยทั่วไปถือคนละ N สิทธิ์ อีก N จาก N คนไม่มีสิทธิ์เลย" (N แรกเป็นค่ากลาง median ปัดเป็นจำนวนเต็ม ไม่ใช่ค่าเฉลี่ย) (ถือครบทุกคนใช้ `rep_n_ac_holders_all`) · ช่องผู้ลาออกนับเป็นจำนวนสิทธิ์ จึงเปลี่ยนชื่อไทยเป็น "สิทธิ์ที่ผู้ลาออกยังถือ" (ตรงกับ EN "Held by leavers") และหมายเหตุ "จากผู้ลาออก N คน ออกไปนานสุด N วัน" · ช่อง "ให้สิทธิ์ในช่วงวันที่" เลิกใช้ "สุทธิ +N" เป็น "ถอนออก N สิทธิ์ ▲ รวมแล้วเพิ่มขึ้น N" (▲ เขียว / ▼ แดง / เท่าเดิมสีเทา) พร้อมเส้นกราฟเล็กของสิทธิ์ที่ใช้งานอยู่ 7 จุดตลอดช่วงวันที่ แบบการ์ดแรกของศูนย์รายงาน: note ของช่องตัวเลขมี `trend` (direction, label_key, values, points) ใช้ได้ทุกรายงาน · `Sparkline` ย้ายจาก snapshot-strip ไป chart-parts ใช้ร่วมกัน · Resource ที่เลือกย้ายไปเป็นหัวของการ์ดรายชื่อสมาชิก (mockup แบบ ก.): ไอคอนประเภทแบบหน้า Access, "สมาชิกของ <ชื่อ>" + รหัส, ประเภท ที่อยู่ แผนก เจ้าของในบรรทัดเดียว, ป้าย "ลาออกแล้ว N คน ควรแก้ไขก่อนส่งให้เจ้าของรีวิว" / ข้ามแผนก, ปุ่มใบทบทวนสมาชิก + ✕ ล้างการเลือก (ชิปในแถบเครื่องมือเลิกใช้) · `TabularReportView` มี `rowsHead` แถบบนสุดของการ์ดรายการ (มีแล้วแถบหัวเดิมเป็นพื้นขาว) · พื้นที่ File Share: "ไม่จำกัด" เปลี่ยนเป็น "ไม่จำกัดขนาด" ทั้งหัวคอลัมน์ การ์ดข้าง ขนาดใต้ path และ Excel (แชร์ที่ตั้งขนาด 0 ไม่นับในยอดจัดสรร) · ช่อง "สมาชิกทั้งหมด" นับรายการสมาชิก หมายเหตุจึงเป็น "เป็นพนักงาน N คน บางคนอยู่หลาย Resource" (เลิกใช้ค่าเฉลี่ย / ค่ากลางต่อ Resource ที่ทำให้งง) · ช่องสมาชิกข้ามแผนกเหลือ "ใน N Resource" · คอลัมน์ "วัตถุประสงค์" ซ่อนไว้ก่อนในรายงานตรวจสอบสมาชิกและรายงาน License (ยังเลือกเปิดได้ และยังอยู่ในไฟล์) และเอาออกจากใบทบทวนสมาชิก ทั้งหน้าจอและ PDF เพราะในแอปไม่มีช่องให้กรอก (`access_memberships.purpose` มีแต่ข้อมูลเก่า / demo)
+
+### Request + Workflow: แก้จากรีวิว (บัค, security, ความสม่ำเสมอ, ภาษา) — 2026-10-10
+- **บัคตรรกะ**
+  - ยกเลิก/ปิดคำขอไม่สำเร็จ ข้อความ error ขึ้นในกล่องยืนยัน dialog ไม่ปิดเอง (`confirm({ errorMessage })`)
+  - การ์ด "อนุมัติแล้ว" นับเฉพาะสถานะอนุมัติแล้ว ตรงกับรายการที่เปิด (เสร็จสิ้นแสดงเป็นบรรทัดล่าง)
+  - การ์ด "รอการตัดสินจากคุณ" เรียงคำขอที่รอนานสุดก่อน (`sort=oldest`) และมี skeleton ระหว่างโหลด ไม่ขึ้น "ไม่มีคำขอค้าง" ก่อนข้อมูลมา
+  - แถบความคืบหน้าในตารางระบายสีตามตำแหน่งขั้นจริง ขั้นที่ถูกข้ามเป็นสีเหลือง (เดิมนับขั้นที่ข้ามเป็นผ่านแล้วระบายผิดขั้น)
+  - ขั้นอนุมัติแบบกลุ่ม: คนหนึ่งตัดสินแล้ว กระดิ่ง "รออนุมัติ" ของคนอื่นถูกถอน (`groupStepTaken`); กลุ่มที่ไม่มีใครมีบัญชีแจ้งผู้ตั้งรหัสผ่าน และคนแรกที่ได้บัญชีได้รับงานค้าง; พนักงานที่ลาออกแล้วอนุมัติขั้นกลุ่มไม่ได้และไม่ได้รับแจ้ง
+  - เลขที่คำขอเกิน RQ-YYYY-9999 นับต่อถูกต้อง (เรียงตามความยาวก่อน)
+  - ฟอร์มสร้างคำขอ: กดขั้น 2/3 โดยยังไม่เลือกบริการ บอก "เลือกบริการก่อนไปขั้นถัดไป"; กด Esc ระหว่างส่งปิดไม่ได้ (ฟอร์มตัดสินและ Workflow editor ด้วย)
+  - Workflow editor: เปิด workflow อื่นแล้วแผงตำแหน่งที่เปิดค้างถูกปิด; ค้นหา Workflow ที่มีช่องว่างนำหน้ายังหาเจอ
+- **Security**: อีเมลแจ้งเตือนคำขอ escape ชื่อพนักงาน หัวข้อ และชื่อผู้อนุมัติ (หัวเรื่องอีเมลถอด entity กลับเป็นข้อความ); Stock อนุมัติ/ปฏิเสธ/จ่ายของ ตรวจสถานะซ้ำหลังล็อกแถว กันจ่ายของซ้ำเมื่อกดพร้อมกัน
+- **ความสม่ำเสมอ**
+  - การ์ดตัวเลขใช้ `shared/components/stat-card.tsx` ร่วมกัน (หน้าคำขอ + Workflow) มี skeleton ระหว่างโหลด
+  - error จาก server ในฟอร์มสร้างคำขอ ฟอร์มตัดสิน และ Workflow editor เป็นแถบสั่นแบบมาตรฐานแทน toast/ข้อความถูกตัด; Workflow editor ใช้ `SaveButton`
+  - วันที่ในหน้ารายละเอียดและเส้นทางอนุมัติใช้ `formatDateTime()` (ไม่มีวินาที)
+  - ป้ายตัวกรองแบบเดียวกับโมดูลอื่น (ไอคอนนำ + label ผูกช่อง); ป้าย "ใหม่" สีน้ำเงิน; แท็บรออนุมัติว่างมีข้อความเฉพาะ; ปุ่มยกเลิกคำขอเป็นปุ่มแดง + ไอคอน Ban แบบหน้าสัญญา; การ์ด Ticket ที่เชื่อมเป็นลิงก์จริง
+  - ปุ่ม × ของ dialog/sheet ทั้งระบบขึ้นกรอบเฉพาะตอนใช้คีย์บอร์ด (`focus-visible`)
+  - ฟอร์มสร้างคำขอขั้นแรกไม่มี scrollbar เกินมา 2px
+- **ภาษา**: ข้อความ hardcode ย้ายเข้า lang (`req_err_required`, `req_err_pick_service`, `wf_step_move_up/down`, `wf_step_remove`); เลิกใช้ " - " เป็นตัวคั่นประโยค; คำอธิบายขั้นกรอกไม่พูดถึงช่องหัวข้อที่ไม่มี; ลบคีย์ที่ไม่ได้ใช้ 5 ตัว
+
+### Request + Workflow: WCAG คีย์บอร์ด, N+1 และเก็บตก — 2026-10-10
+- **WCAG**
+  - แถวในหน้าภาพรวม (คิวรออนุมัติ, ความเคลื่อนไหวล่าสุด) ชื่อเป็นปุ่มจริงที่ขยายคลุมทั้งแถว กด Tab/Enter เปิดได้ กรอบ focus ล้อมทั้งแถว; ตารางมีปุ่ม 👁 ทุกแถว (รวมแถวที่ต้องอนุมัติ)
+  - ชื่อให้ปุ่ม/ช่อง: สวิตช์ใช้งาน/Auto Ticket, ประเภทขั้น, ช่อง "ทดสอบกับ", แผนก, เพิ่มคน, ช่องค้นหา; ฟอร์มคำขอ: dropdown ผูก label ที่ตัว trigger (`SelectField`), ปุ่มเลือกสองทางเป็น radiogroup ใช้ลูกศรได้ (`ChoicePair`), `DateInput` ส่ง `aria-invalid`/`aria-describedby` ต่อ
+  - `aria-pressed` บนชิปขอบเขต ชิปตำแหน่ง และ "ตามตำแหน่ง / ระบุคน"; ปุ่ม "แก้ไข/เสร็จ" มี `aria-expanded`; stepper มี `aria-current`; แถบอัปโหลดเป็น progressbar; ผลทดสอบเส้นทางประกาศผ่าน `aria-live`; แถบเส้นทางที่ล้นกด Tab เข้าไปเลื่อนได้
+  - ส่งฟอร์มคำขอไม่ผ่าน focus ไปช่องแรกที่ผิด (`focusFirstError`)
+  - หัวข้อ: หัวการ์ดภาพรวมเป็น `h2`, `SectionLabel` เป็น heading ระดับ 3; ภาษาไทยไม่ใช้ตัวพิมพ์ใหญ่/ระยะห่างตัวอักษร (`[&:lang(th)]`) ทั้งใน SectionLabel ทุกหน้าและป้ายในหน้าคำขอ/Workflow
+- **N+1**: รายการคำขอใช้ 15 query คงที่ไม่ว่ากี่แถว (เดิม 19 → 37 เมื่อ 3 → 10 แถว) ด้วย `RequestApproval::preloadGroupNames()` + `chaperone('request')`; `can_complete` ถามสิทธิ์ครั้งเดียวต่อ request; ผู้รับแจ้งเตือนใช้ `User::holdingPermission()` แทนโหลดผู้ใช้ทั้งหมด; test `RequestListQueryCountTest`
+- **เก็บตก**
+  - ฟอร์มสร้างคำขอ reset ระหว่าง render (ไม่เห็นข้อมูลรอบก่อนแวบ) และล้าง timer ปิดเมื่อ unmount
+  - ทดสอบเส้นทางใน Workflow: คำตอบเก่าไม่ทับคำตอบใหม่, ทดสอบไม่สำเร็จบอกข้อความ, ระหว่างโหลดมีข้อความ
+  - ชื่อ Workflow ว่างบันทึกไม่ได้ ขึ้น error ใต้ช่อง
+  - ตัวเลขบนแท็บ "คำขอ" คือคำขอทั้งหมดที่เห็นได้ ไม่เปลี่ยนตามตัวกรอง
+  - ขั้นทีม IT ใช้ไอคอนธงเหมือนกันทั้ง editor, หน้าดู และแถบเส้นทาง
+  - โหลดรายการไม่สำเร็จขึ้น "โหลดข้อมูลไม่สำเร็จ" + ปุ่มลองใหม่ (`shared/components/load-failed.tsx`) แทน "ไม่พบข้อมูล"
+
+### Request + Workflow: Contrast โหมดสว่างและมืด (WCAG 1.4.3 / 1.4.11) — 2026-10-10
+วัดจากหน้าจริงทั้งสองโหมด ตัวอักษรอย่างน้อย 4.5:1 ไอคอนอย่างน้อย 3:1 สีพื้นป้ายคงเดิม เข้มขึ้นเฉพาะตัวอักษรในโหมดสว่าง โหมดมืดใช้สีเดิม
+- **`StatusBadge` (ทั้งระบบ)**: เหลือง/เขียว/แดง/เทา ใช้ตัวอักษรเข้มขึ้นหนึ่งระดับในโหมดสว่าง (amber-700, emerald-700, red-700, `foreground/65`) เช่น "รออนุมัติ" 2.96 → 4.62, "เสร็จสิ้น" 3.34 → 4.86, "ไม่อนุมัติ" 4.1 → 5.48
+- **`PageTabs` (ทั้งระบบ)**: ชิปตัวเลขเทา/เหลือง/แดงบนแท็บผ่าน 4.5 ในโหมดสว่าง
+- **`FocusDialogHeader` (ทั้งระบบ)**: ไอคอนสีของหัว dialog ปรับด้วย `readableInk` ให้ได้ 3:1 ทั้งสองโหมด (เช่นกลุ่มเมลในโหมดมืด 2.96 → ผ่าน)
+- **ปุ่ม "อนุมัติ"**: emerald-700 (3.77 → 5.36)
+- **Workflow**: เลขขั้นสีเขียว, เครื่องหมายขั้นในผลทดสอบ, ชิปตำแหน่ง, ชิปประเภทคำขอ และคำอธิบายในกล่องทดสอบผ่าน 4.5; การ์ดที่ปิดใช้งานไม่จางทั้งใบแล้ว (`opacity-70` ทำให้เหลือ 2.7) ใช้เส้นขอบประ + พื้นเทาอ่อน + ชื่อสีเทาแทน
+- **คำขอ**: ไอคอนบริการในฟอร์มสร้างปรับด้วย `readableInk` ("โทรศัพท์" โหมดมืด 2.5 → 3.26); ✓ ในเส้นทางอนุมัติพื้น emerald-600 (2.47 → ผ่าน 3:1); ตัวย่อชื่อผู้ขอ, แถบ error สั่น และแถบเตือนบัญชีไม่ผูกพนักงานผ่าน 4.5
+- **ทั้งระบบ (โหมดสว่างเท่านั้น)**
+  - สีเทากลาง `--muted-foreground` 47% → 45% คำอธิบายใต้ชื่อหน้าและข้อความรองบนพื้นเทา ผ่าน 4.5 (เดิม 4.29–4.45) หน้าตาแทบไม่ต่าง
+  - ลูกศร ▾ ของ `Select` และ `SearchSelect` เลิกใช้ `opacity-50` ใช้สีเทากลางแบบ `SearchableSelect` (1.96 → 5.06)
+  - ข้อความบนพื้นแดงอ่อน (`bg-destructive/10`) ใช้ red-700 ทุกโมดูล: แถบ error สั่นใน Ticket/Employee/login/profile/import, ชิปตัวเลขแดง (4.1 → 5.5–6.1) ส่วนกล่องไอคอนในหน้า error และหน้าไม่มีสิทธิ์คงเดิม
+  - ลองเข้มทั้ง token `--destructive` แล้ว ปุ่มลบสีแดงเข้มขึ้นจนเห็นชัด จึงไม่เปลี่ยน token แก้เฉพาะข้อความบนพื้นแดงอ่อน
+
+### Request + Workflow: เกลาภาษาไทย/อังกฤษให้เป็นธรรมชาติ — 2026-10-10
+- **คำหลัก**: งานที่รอผู้อนุมัติใช้ "พิจารณา" แทน "ตัดสิน/ตัดสินใจ" ("รอคุณพิจารณา", "เวลาพิจารณาเฉลี่ย", แท็บ "รอฉันพิจารณา"); สถานะยังเป็น "รออนุมัติ"; "ผู้บังคับบัญชา" ในข้อความถึงผู้ขอเป็น "หัวหน้า"; "เซ็น" เป็น "อนุมัติ"; ปุ่ม "ยืนยันเสร็จสิ้น" เป็น "ปิดงาน" / "Mark as done"
+- **ฟอร์มสร้างคำขอ**: หัวฟอร์ม "ขออนุมัติใช้บริการ IT" และคำอธิบายหน้า "ขออนุมัติใช้บริการ IT แล้วติดตามได้ว่าอนุมัติถึงขั้นไหนแล้ว" (เป็นฟอร์มขออนุมัติ ไม่ใช่ขอความช่วยเหลือ), "ต้องการขออนุมัติเรื่องอะไร?" / "What do you need approval for?", ตัวอย่างในช่องเหตุผลเป็นประโยคจริง, ข้อความเตือน HR/IT สั้นและบอกสิ่งที่ต้องทำ, เหตุผลข้ามขั้นภาษาไทย "ข้ามเพราะ…"
+- **Workflow**: "ทดสอบกับสายบังคับบัญชาจริง" แทน "รันตาม…", คำอธิบายการไล่สายบังคับบัญชาเขียนใหม่, "ชื่อขั้น" แทน "ป้ายที่แสดง", ปลายแถบเส้นทาง "เสร็จสิ้น" แทน "ปิดเคส" (ไม่ใช่ทุกสายเปิดเคส), KPI "จากทั้งหมด 13 ประเภทคำขอ"
+- **การแจ้งเตือนคำขอ**: เลิกใช้ " - " เป็นตัวคั่น ใช้ประโยคเดียวหรือวงเล็บแทน ทั้ง TH/EN
+- **อังกฤษ**: เลิกใช้ "Filed", em dash และคำแข็ง ๆ ("Display label", "People you name"); คำเตือน/ปุ่มเป็นประโยคธรรมดา; เหตุผลข้ามขั้น EN คงเดิม (ตรงกับฝั่ง server และ `SkipReasonWordingTest`)
+- `req_kpi_awaiting_of`, `wf_kpi_active_sub` ใช้ `{n}` แทนการต่อตัวเลขท้ายข้อความ
+
+### Ticket: การ์ดสรุปหน้าภาพรวม เหลือ 4 ใบ — 2026-10-10
+- แทน 7 การ์ดเดิม (Ticket ใหม่, ปิดแล้ว, ยังไม่ปิด, รับเคสทันเป้า, ทัน SLA, งานซ่อมทัน KPI, เวลารับเฉลี่ย) และการ์ด "สถานะปัจจุบัน" ด้วย 4 ใบตาม mockup แบบ ข (`components/ticket-overview-tiles.tsx`)
+- หน้าตาเหมือนการ์ด KPI ของโมดูลอื่น (ชื่อ + ไอคอน, ตัวเลขใหญ่, คำอธิบายบรรทัดเดียว) ไม่มี footer; "เกิน SLA" และ "รอคนรับ" มีพื้นแดง/เหลืองเมื่อมีงานค้าง ไม่มีงานค้างเป็นการ์ดปกติตัวเลขเขียว; "ปิดทัน SLA" มีแถบแนวนอนพร้อมเส้นเป้าข้างตัวเลข
+- โหลดช้า: `tickets/summary` ถาม `service_requests.type` ทีละ Ticket ผ่าน `TicketSla` (121 query) โหลดความสัมพันธ์ไว้ก่อนแล้วเหลือ 14 query; ต้นเหตุใหญ่ฝั่งเครื่อง dev คือ PHP ไม่ได้เปิด opcache และ `php artisan serve` บน Windows รับทีละ request
+- **ณ ตอนนี้** (ไม่ขึ้นกับช่วงวันที่): "เกิน SLA" (จากที่ยังไม่ปิดกี่ใบ, ค้างนานสุดกี่วัน) และ "รอคนรับ" (กำลังทำอยู่อีกกี่ใบ) กดทั้งการ์ดเพื่อเปิดรายการที่กรองไว้; ไม่มีงานค้างจะกดไม่ได้
+- **ตามช่วงวันที่**: "ปิดทัน SLA (เป้า N%)" นับแบบเดียวกับรายงาน "ภาพรวม Ticket & SLA" (Ticket ที่เปิดในช่วง และปิดเสร็จแล้ว) สีตามระยะห่างจากเป้า พร้อม ▲/▼ จุด และแยก "จากคำขอ / ผู้ใช้เปิดเอง"; "Ticket ค้างเพิ่มขึ้น/ลดลง" พร้อมกราฟแท่งเล็กเปิดใหม่และปิดแล้ว 6 ช่วงข้างตัวเลข ทั้งสองการ์ดลิงก์ไปรายงานด้วยช่วงวันที่เดียวกัน (เฉพาะผู้มี `tickets.view_all`)
+- ตัวเลข SLA เดิมของหน้านี้ (79%) นับจาก Ticket ที่ปิดในช่วง จึงไม่ตรงกับรายงาน (84%) การ์ดใหม่ใช้ตัวเลขของรายงานเพื่อให้กดไปแล้วเห็นเลขเดียวกัน
+- API `tickets/summary` เพิ่ม `over_sla_oldest_days`, `flow` และ `period_sla` (ผ่าน `TicketOverviewReportService::slaFor`) ฟิลด์เดิมยังอยู่ครบ
+- ตามหมวด และ Ticket ล่าสุด วางคู่กันบนจอกว้าง (2 : 3)
+- ตัวเลือกช่วงเวลาเพิ่ม "ทั้งหมด" (`?range=all`, API `days=all`): เป็นค่าเริ่มต้นเมื่อเปิดหน้า (30 วันต้องเลือกเอง และอยู่ใน URL เป็น `?range=30`) นับตั้งแต่ Ticket ใบแรกถึงวันนี้ ไม่มีช่วงก่อนหน้าให้เทียบ ค่าเปลี่ยนแปลง (delta) จึงเป็น null
+
+### หัว "ภาพรวม" และปุ่มช่วงเวลา บนแท็บภาพรวมทุกโมดูล — 2026-10-10
+- คอมโพเนนต์กลาง `shared/components/overview-period.tsx`: `OverviewHeader` (ไอคอน + "ภาพรวม" + ปุ่ม 7 วัน / 30 วัน / 90 วัน / ทั้งหมด / กำหนดเอง), `useOverviewPeriod` เก็บใน URL (`?range=7|30|90|custom&from&to`) ค่าเริ่มต้น "ทั้งหมด" ไม่ใส่ใน URL; Ticket ย้ายมาใช้ตัวนี้
+- Backend `App\Support\OverviewPeriod`: อ่าน `?days` / `?from&to` (ไม่ส่ง = ทั้งหมด) และแบ่งคอลัมน์กราฟตามความยาวช่วง: ไม่เกิน 14 วันรายวัน, ไม่เกิน 120 วันรายสัปดาห์, ไม่เกิน 2 ปีรายเดือน, เกินนั้นรายปี (`MonthBarChart` แสดงป้ายได้ทั้ง 4 แบบ และไม่เน้นแท่งสุดท้ายถ้าช่วงที่เลือกจบในอดีต)
+- ปุ่มช่วงเวลาใส่เฉพาะโมดูลที่มีตัวเลขตามช่วงจริง ตัวเลข "ณ ตอนนี้" ไม่เปลี่ยน (badge ใน sidebar ยังตรงเดิม)
+  - **Employee**: พนักงานเข้าใหม่ (เดิมนับตั้งแต่ 2023-01-01 ตายตัว), คนลาออกในช่วง (`resigned_in_period` แทน `resigned_this_year`), กราฟรับเข้า (`hires_trend` แทน 12 เดือน), รายชื่อเข้าใหม่/ลาออกล่าสุด
+  - **Request**: การ์ดอนุมัติแล้ว / ไม่อนุมัติ / เวลาพิจารณาเฉลี่ย อ่าน `meta.period` = คำขอที่ยื่นในช่วง แยกตามสถานะปัจจุบัน (ทั้งหมด = เท่ากับตัวเลขในแท็บ); เวลาพิจารณาเฉลี่ยเลิกจำกัด 200 รายการล่าสุด
+  - **Access**: สิทธิ์เพิ่ม/ลดต่อช่องทาง (`net_in_period`) และ "สิทธิ์ที่เพิ่มในช่วงนี้" (`added_in_period`) แทน 30 วันตายตัว
+  - **Asset**: กราฟส่งมอบ/รับคืน (`activity {unit, data}` แทน 12 เดือน)
+- **Contract, Stock**: มีแค่หัว "ภาพรวม" ไม่มีปุ่ม เพราะทุกการ์ดเป็นสถานะ ณ วันนี้ (ผู้ใช้เลือกแบบนี้)
+
+### ระยะใต้หัวหน้า (ชื่อ + Sub Title) เท่ากันทุกหน้า — 2026-10-10
+- วัดจากหน้าจริง: 10 หน้าเว้น 24px (`space-y-6`) แต่ คำขอ, Workflow, การเข้าถึง, ศูนย์รายงาน เว้น 20px (`space-y-5`) และหน้ารายงานย่อยทุกตัวเว้น 16px (`space-y-4`)
+- ปรับเป็น 24px ทั้งหมด: ตัวครอบ 4 หน้านั้นเป็น `space-y-6`; `ReportHeader` ใส่ `mb-6` (ระยะระหว่างส่วนอื่นของหน้ารายงานยัง 16px เท่าเดิม)
+- Sub Title ของการเข้าถึง (`mt-0.5`) และศูนย์รายงาน (`mt-1`) เอา margin ออก บล็อกหัวเรื่องสูง 52px เท่ากันทุกหน้า
+
+### หัว "ภาพรวม" วางเท่ากันทุกแท็บภาพรวม — 2026-10-10
+- วัดจากหน้าจริง: คำขอ/การเข้าถึงเว้นขอบ 16px (ที่อื่น 20px), ทรัพย์สิน/สัญญาเว้นหัวถึงการ์ด 24px, สัญญา/คลังอะไหล่หัวเตี้ยกว่า 9px เพราะไม่มีปุ่มช่วงเวลา
+- `OverviewHeader` กำหนดเอง: สูงขั้นต่ำ 32px (มีหรือไม่มีปุ่มก็เท่ากัน) และเว้นใต้หัว 20px; หน้าต่าง ๆ เลิกใส่ margin เอง
+- แท็บภาพรวมของคำขอ และพื้นที่แท็บของการเข้าถึง ใช้ขอบ `p-5` (20px) เหมือนโมดูลอื่น
+- ผลวัดหลังแก้ ทั้ง 7 หน้า: แถบแท็บ → หัว 20px, หัวสูง 32px, หัว → การ์ด 20px, ขอบซ้าย 21px
+
+### ยกเลิกคำขอต้องใส่เหตุผล — 2026-10-10
+- ผู้ขอ (หรือ HR ที่ยื่นแทนพนักงานใหม่) ยกเลิกได้เฉพาะตอนรออนุมัติเหมือนเดิม แต่ต้องกรอก "เหตุผลที่ยกเลิก" ทุกครั้ง แบบเดียวกับที่ IT ต้องใส่เหตุผลเมื่อปิดงานโดยไม่ได้ส่งมอบ
+- DB: `service_requests` เพิ่ม `cancel_reason`, `cancelled_by_user_id` (FK users, null เมื่อผู้ใช้ถูกลบ), `cancelled_by_name` (เก็บชื่อตอนกด เหมือน `submitted_by_name`)
+- API `POST service-requests/{id}/cancel` รับ `reason` (บังคับ, ไม่เกิน 2000 ตัวอักษร); resource ส่ง `cancel_reason`, `cancelled_by` และ `activity.by` ของคำขอที่ยกเลิกเป็นชื่อคนกด
+- หน้าจอ: ปุ่ม "ยกเลิกคำขอ" เปิด `cancel-request-dialog.tsx` (ช่องเหตุผลบังคับ, กันปิดเมื่อพิมพ์ค้าง) แทน confirm เดิม; เส้นทางอนุมัติแสดง "ยกเลิกคำขอ" พร้อมชื่อคนกด เวลา และเหตุผล ก่อนขั้นที่ยังไม่ถึง
+- คำขอที่ยกเลิกไปก่อนหน้านี้ไม่มีเหตุผล (ค่าว่าง)
+
+### รายงานคำขอ 3 หน้าใหม่ (ภาพรวมคำขอ / การอนุมัติคำขอ / คำขอที่รอ IT ส่งมอบ) — 2026-10-10
+- รวมรายงานคำขอ 7 เรื่องที่เสนอไว้ลงใน 3 หน้าเดิม ตาม mockup ที่ตกลง (artifact v63) แทนตารางล้วนของเดิม
+- **ภาพรวมคำขอ** (`requests.overview` แทน `requests.summary`, `/reports/requests-overview`): การ์ดสรุป 5 ใบ (รออนุมัติตอนนี้เป็นตัวเลข ณ วันนี้ ที่เหลือตามช่วงวันที่), ยื่นและเสร็จสิ้นรายเดือน, ตามประเภทและสถานะ (อัตราอนุมัติ), ใช้เวลากี่วันจนเสร็จสิ้น (มัธยฐาน แยกขั้นอนุมัติ/ขั้น IT), รายการที่ขอบ่อย (สลับ ทั้งหมด / ยื่นเอง / พนักงานใหม่ ใน `?items=`), แผนกไหนขออะไร
+- **การอนุมัติคำขอ** (`requests.approvals` แทน `requests.approval_time`, `/reports/requests-approvals`): ค้างอยู่ตอนนี้และสาเหตุ (ผู้อนุมัติลาออก / ยังไม่มีบัญชี / รอเกิน 7 วัน / ไม่เกิน 7 วัน ไม่ขึ้นกับช่วงวันที่), ตารางผู้อนุมัติ (10 คนแรก + แถวขั้นของแผนก), ไม่อนุมัติและยกเลิก (เหตุผลอยู่ในแถวของคำขอ, `?end=`), ขั้นที่ระบบข้าม พร้อม "สิ่งที่ควรดู" ที่เป็นกฎตายตัวครบ 5 เหตุผล
+- **คำขอที่รอ IT ส่งมอบ** (`requests.it_pending` คงคีย์เดิม): รอมานานแค่ไหน (กล่องกดดูว่ามีผู้รับผิดชอบหรือยัง) เทียบกับที่เสร็จใน 30 วันล่าสุด, อยู่กับใคร (สลับ ผู้รับผิดชอบ / ประเภทคำขอ ใน `?by=` ไม่โหลดตารางใหม่), พนักงานใหม่พร้อมก่อนวันเริ่มงานไหม (เทียบ `employees.joined_at`), "ข้อมูล ณ" ท้ายแถวตัวกรอง
+- กติกาที่ใช้ร่วมกัน (`RequestLabels`): นับวันเต็มตามวันที่ (`wholeDays`), กลุ่มอายุ เกิน 7 / 4–7 / ไม่เกิน 3 วัน, ช่วงก่อนหน้าที่เทียบได้เมื่อไม่เริ่มก่อนคำขอใบแรก (`previousPeriod`), เส้นแนวโน้มรูปแบบเดียว (`trend`: ไม่มีช่วงก่อนหน้าให้เทียบ / ยังไม่มีข้อมูลให้เทียบ), ตัวกรองแผนก `department_id` (แผนกปัจจุบันของพนักงาน ถ้าไม่มีใช้ชื่อแผนกที่บันทึกตอนยื่น)
+- การ์ดสรุป: footer บรรทัดเดียว, แถบหลายสีมีคำอธิบายสี, เส้นแนวโน้ม (Delta + Sparkline สีเดียวกับ ▲/▼) เฉพาะการ์ดที่ไม่มีแถบ; รูปแบบ `days` ทั้งบนจอและ PDF
+- ส่วนกลางที่เพิ่ม: `TabularFilterBar` มีช่อง `trailing` (+ extra `filterTrail`), extra `cardOnlyFilters` สำหรับตัวกรองที่เปลี่ยนแค่การ์ด
+- ทดสอบ: ItPendingRequestReportTest, RequestApprovalsReportTest, RequestOverviewReportTest (รายงานทั้งโฟลเดอร์ 253 test ผ่าน) และตรวจใน Chrome ทั้ง 3 หน้า (โหมดสว่าง/มืด, popover, ปุ่มสลับ)
+- รีวิวด้วย /code-review (backend + frontend), /web-design-guidelines, /frontend-design, /humanizer แล้วแก้ตามผล เช่น ตัวเลข "ตอนนี้" ไม่ขึ้นกับช่วงวันที่, 30 วันนับ 30 วันจริง, error state, ลำดับ DOM ตรงกับที่เห็น
+- ยังไม่ได้ทดสอบที่ความกว้าง 768px ใน Chrome (เครื่องมือย่อหน้าต่างไม่ได้)
+
+### "รอมานานแค่ไหน" ลงสีแบบการ์ดกดรับมอบ — 2026-10-10
+- กล่อง 3 กลุ่ม (ทั้งรออยู่ตอนนี้และเสร็จสิ้นใน 30 วัน) ใช้การวางสีเดียวกับ "พนักงานกดรับมอบเร็วแค่ไหน": พื้นสีจางตามกลุ่ม แดง/เหลือง/เทา, ขอบบนสี, ตัวเลขสีของกลุ่ม (0 ยังเป็นสีเทา) และเลิกใช้กรอบเทารอบกล่อง
+- พื้นจาง 7% ในโหมดสว่าง (10% ทำให้ป้ายตัวเล็กได้ contrast 4.35 ต่ำกว่า 4.5) และ 10% ในโหมดมืด; กล่องที่กดดูรายละเอียดได้ขึ้นเส้นขอบตอน hover แทนการเข้มพื้น
+- วัด contrast ใน Chrome: โหมดสว่าง ตัวเลข 4.77–9.49 ป้าย 4.57–4.79, โหมดมืด ตัวเลข 8.68–10.88 ป้าย 6.06–6.58
+
+### หน้าคำขอที่รอ IT ส่งมอบ: วางการ์ดคู่ แสดงครั้งละ 5 และคำว่า "ส่งมอบแล้ว" — 2026-10-10
+- จอกว้าง 1280px ขึ้นไป: "รอมานานแค่ไหน" (1/3) อยู่ข้าง "อยู่กับใคร" (2/3) สูงเท่ากัน; ในการ์ดรอมานาน "รออยู่ตอนนี้" อยู่บน "ส่งมอบแล้วใน 30 วันล่าสุด" อยู่ล่าง แต่ละส่วนสูงครึ่งหนึ่ง กล่องตัวเลขยืดตาม; จอแคบกว่านั้นเรียงบนล่างเหมือนเดิม
+- "อยู่กับใคร" แสดงครั้งละ 5 แถว (ทั้งแยกตามผู้รับผิดชอบและประเภทคำขอ) ที่เหลืออยู่หลัง "แสดงทั้งหมด (n)"; แถว "ยังไม่มีผู้รับผิดชอบ" และ "ยังไม่มี Ticket" แสดงเสมอ
+- คำ: "เสร็จสิ้นใน 30 วันล่าสุด" → "ส่งมอบแล้วใน 30 วันล่าสุด" (หน้าจอและหัวคอลัมน์ Excel), ตัวเลขมีหน่วย "คำขอ" ทั้งสองส่วน, บรรทัดรอง "ใช้เวลาจนส่งมอบ เฉลี่ย n วัน (ช่วงวันที่)"
+- ทดสอบใน Chrome: ประเภทคำขอใช้ข้อมูลจริง 9 แถว (5 → 9 → 5); ผู้รับผิดชอบมีจริง 3 คน จึงเติมข้อมูลจำลอง 4 คนเฉพาะในหน้าเว็บ (ไม่แตะฐานข้อมูล) ได้ 5 → 7 → 5
+
+### รายงานคำขอ: ชื่อหัวการ์ดทางการขึ้น และการ์ดระยะเวลารอไม่ยืดตาม — 2026-10-10
+- ชื่อหัวการ์ดทั้ง 3 หน้าเลิกใช้คำถาม/ภาษาพูด: ระยะเวลารอส่งมอบ, ภาระงานที่รอส่งมอบ, ความพร้อมของพนักงานใหม่, คำขอที่ยื่นและเสร็จสิ้นรายเดือน, คำขอตามประเภทและสถานะ, ระยะเวลาดำเนินการจนเสร็จสิ้น, คำขอแยกตามแผนก, ขั้นอนุมัติที่ค้างและสาเหตุ, คำขอที่ไม่อนุมัติและยกเลิก, ขั้นอนุมัติที่ระบบข้าม (หัวชีต Excel/PDF ที่ใช้ชื่อเดียวกันเปลี่ยนตาม; ภาษาอังกฤษปรับให้ตรง)
+- การ์ดระยะเวลารอส่งมอบไม่ยืดตามการ์ดภาระงานอีก (กดแสดงทั้งหมดตอนมี 20 คน กล่องตัวเลขเคยสูงเกือบ 500px): สูงตามเนื้อหาและค้างอยู่บนจอ (sticky) ตอนเลื่อนดูรายชื่อยาว
+- ทดสอบใน Chrome ด้วยผู้รับผิดชอบจำลอง 20 คนในหน้าเว็บ (ไม่แตะฐานข้อมูล): 5 → 20 → 5 แถว, การ์ดซ้ายสูง 303px ค้างอยู่บนจอ, หน้าต่างหลักไม่เลื่อนซ้อน
+
+### ประวัติโอนย้าย: การ์ดกดรับมอบ ชื่อทางการและ contrast — 2026-10-10
+- "พนักงานกดรับมอบเร็วแค่ไหน" → "ระยะเวลาที่พนักงานกดรับมอบ" (EN: Time for employees to accept)
+- กล่อง 5 กลุ่มใช้พื้นจาง 7% ในโหมดสว่าง (โหมดมืดคง 10%) เพราะ 10% ทำให้ป้ายตัวเล็ก "วันเดียวกัน"/"รอกดรับ" ได้ contrast ราว 4.35
+- วัดใน Chrome: โหมดสว่าง ตัวเลข 4.77–9.49 ป้าย 4.57–4.79, โหมดมืด ตัวเลข 8.68–10.88 ป้าย 6.06–6.58
+- "ส่งมอบให้แผนกไหน" → "การส่งมอบแยกตามแผนก" (EN: Handed out by department)
+
+### หัวการ์ดรายงานแยกจากเนื้อการ์ดในโหมดสว่าง — 2026-10-10
+- วัดจากหน้าจริง: หัวการ์ด (`bg-brand/[0.04]` = #f6f9fe) แทบเป็นสีเดียวกับพื้นหลังหน้า (#f6f8fb, 1.01) และต่างจากเนื้อการ์ดแค่ 1.06 ขณะที่โหมดมืดต่าง 1.16 / 1.23 จึงดูกลืนเฉพาะโหมดสว่าง
+- `card-heading.ts` (`CARD_HEADING_TINT`, ใช้กับหัวการ์ดทุกใบในโมดูลรายงาน): โหมดสว่างใช้ `bg-brand/10` (#e9effd, หัว vs เนื้อ 1.15 ใกล้โหมดมืด) และตัวหนังสือเทาในหัวการ์ดเข้มขึ้นเป็น hsl(215 18% 40%) เฉพาะโหมดสว่าง เพื่อให้ตัวเล็กยังผ่าน 4.5:1 บนพื้นที่เข้มขึ้น; โหมดมืดไม่เปลี่ยน
+- WCAG: สีพื้นของหัวการ์ดเป็นการจัดหน้า ไม่อยู่ในเกณฑ์ 1.4.11; ที่ต้องดูคือตัวหนังสือบนพื้นใหม่ ซึ่งวัดแล้วผ่าน 4.5 ทุกจุดใน 6 หน้า (รอ IT ส่งมอบ, ภาพรวมคำขอ, การอนุมัติคำขอ, ประวัติโอนย้าย, Ticket & SLA, หน้ารวมรายงาน) ทั้งสองโหมด
+- ปรับต่อ: น้ำเงิน 10% ดูแปลก (สีเดียวกับแถวที่ถูกเลือก `bg-brand/10`, ต่างจากหัวตารางสีเทาและหัวการ์ดโหมดมืด, ปุ่มสลับสีน้ำเงินกลืนบนพื้นน้ำเงิน) จึงเปลี่ยนเป็นเทาอมฟ้า hsl(214 20% 94%) (#eceff3): หัว vs เนื้อ 1.15, หัว vs พื้นหลังหน้า 1.08; ตัวหนังสือในหัวการ์ดยังผ่าน 4.5 ทุกจุดใน 6 หน้า
+- ปรับต่อตามที่ผู้ใช้เลือก: หัวการ์ดโหมดสว่างเป็นสีขาวเหมือนเนื้อการ์ด แยกด้วยเส้นใต้หัว (`border-b` ที่ทุกแถวหัวมีอยู่แล้ว); เลิกปรับสีตัวหนังสือเทาในหัว เพราะสีปกติบนพื้นขาวผ่าน 4.5 อยู่แล้ว (≈4.95); โหมดมืดคง `bg-muted`
+
+### หัวการ์ดและหัวตารางแบบเดียวกันทั้งระบบ — 2026-10-10
+- ค่ากลางใหม่ `resources/js/shared/lib/surface.ts`: `CARD_HEADING` (`dark:bg-muted`) สำหรับแถบหัวการ์ด และ `TABLE_HEAD` (`dark:bg-muted/50`) สำหรับแถวหัวคอลัมน์ — โหมดสว่างเป็นสีขาวเหมือนเนื้อการ์ด แยกด้วยเส้นใต้หัว; โหมดมืดยกขึ้นจากการ์ด (หัวการ์ด 1.16, หัวตาราง 1.07 เบากว่าเพื่อไม่ให้ติดกันเป็นแถบเดียว)
+- เดิมนอกโมดูลรายงานหัวการ์ดไม่มีสีพื้น โหมดมืดจึงจมเป็นสีเดียวกับการ์ด; หัวตาราง/แผงในฟอร์มเป็นเทาจางทั้งสองโหมด
+- ใช้กับ: แท็บภาพรวมของแดชบอร์ด พนักงาน ทรัพย์สิน การเข้าถึง คลังอะไหล่ Ticket สัญญา คำขอ, `PermissionCardHeader` (หน้าสิทธิ์, ใส่ `rounded-t-[inherit]` เพราะการ์ดไม่ตัดขอบ), แผงหัวในฟอร์ม (นับสต็อก, เบิกพัสดุ, แถบเครื่องมือเทมเพลตอีเมล, ไฟล์แนบสัญญา), DataTable กลาง + TableSkeleton, หัวตารางที่เขียนเองในทรัพย์สิน/สัญญา/คลังอะไหล่/Ticket/ตั้งค่า SLA/สิทธิ์/การเข้าถึง/พนักงาน และหัวตาราง + หัวกลุ่มย่อยในโมดูลรายงาน; `card-heading.ts` ของรายงาน re-export ค่ากลาง
+- ไม่แตะ: แถบ Master สีน้ำเงินในหน้าสิทธิ์, แถบสีตามสถานะ, หัว/ท้าย dialog, แถวรวมของตาราง, ตัวอย่างอีเมลและหน้าพิมพ์ใบทบทวนสิทธิ์
+- ตรวจใน Chrome ด้วยปุ่มสลับธีมจริง 10 หน้า: โหมดมืดหัวการ์ดยกขึ้น 1.16 ทุกหน้า ไม่มีมุมเหลี่ยมโผล่, ตัวหนังสือในแถบทุกจุดผ่าน 4.5 ทั้งสองโหมด; โหมดสว่างหัวการ์ดขาวเท่าเนื้อการ์ด
+
+### รายงานรอ IT ส่งมอบ: การ์ดระยะเวลารอส่งมอบสูงเท่าการ์ดภาระงาน — 2026-10-12
+- ตอนรายการในการ์ด "ภาระงานที่รอส่งมอบ" ยังย่ออยู่ การ์ด "ระยะเวลารอส่งมอบ" ยืดสูงเท่ากัน และแบ่งพื้นที่ "รออยู่ตอนนี้" กับ "ส่งมอบแล้วใน 30 วันล่าสุด" ครึ่งต่อครึ่ง (เนื้อหาอยู่กลางแต่ละครึ่ง)
+- กด "แสดงทั้งหมด" แล้ว การ์ดระยะเวลากลับไปสูงเท่าเนื้อหาของตัวเองและค้างอยู่ตอนเลื่อนหน้าเหมือนเดิม; สถานะย่อ/ขยายย้ายขึ้นไปที่ `ItPendingCards` เพื่อเลือกการจัดแถว (จำแยกตามมุมมองผู้รับผิดชอบ/ประเภทคำขอเหมือนเดิม)
+- ตรวจใน Chrome (1920px): ย่อ 366/366px, ขยาย การ์ดระยะเวลา 319px การ์ดภาระงาน 566px
+- ปรับต่อ: ตอนกด "แสดงทั้งหมด" การ์ดระยะเวลาเคยหดกลับไปสูงเท่าเนื้อหา (366 → 319px) ดูเหมือนการ์ดเล็กลง; ตอนนี้วัดความสูงตอนย่อไว้ก่อนขยาย แล้วคงไว้ด้วย `minHeight` (แบบเดียวกับ `heldHeight` ของ DataTable) เก็บแยกตามมุมมอง กดย่อแล้วล้างค่า; ตรวจใน Chrome: ย่อ 366/366, ขยาย 366/566, สลับมุมมองไปกลับยังคงค่า, ย่อกลับ 366/366
+
+### หาผู้รับแจ้งเตือนจากสิทธิ์ด้วย query เดียว และย้ายรายชื่อช่างไป service — 2026-10-12
+- เดิมทุกบริการที่ส่งแจ้งเตือนดึงผู้ใช้ทั้งหมด (`User::all()`) แล้วเช็กสิทธิ์ทีละคน (คนละ 1–2 query) ตอนนี้ใช้ `User::holdingPermission()` แบบเดียวกับหน้าคำขอ ได้คนกลุ่มเดิม เรียงตาม id เหมือนเดิม
+- ครอบ: แจ้งเตือนสัญญาใกล้หมดอายุ, สรุปสัญญารายสัปดาห์, ขอคืนทรัพย์สิน, พนักงานลาออก (ทรัพย์สินและสิทธิ์ Access), พนักงานใหม่/ตั้งบัญชี, Stock, เปิด Ticket ใหม่, เตือนเกิน SLA, สรุป Ticket ทางอีเมล
+- เพิ่ม scope `User::holdingAnyPermission([...])` (มีสิทธิ์ข้อใดข้อหนึ่ง) ใช้กับการแจ้งเตือน Access ตอนพนักงานลาออก ต่อกับ `holdingPermission()` ได้ (ต้องครบทุกเงื่อนไข)
+- สรุป Ticket ทางอีเมล: โหลดสิทธิ์ของแต่ละคนครั้งเดียว ไม่ query ใหม่ทุกเคส
+- รายชื่อช่างในหน้าต่างมอบหมาย/ส่งต่อเคส (`GET /api/tickets/staff`) ย้ายจาก controller ไปที่ `TicketService::staff()` (เรียงตามชื่อแบบเดิม); `TicketService::takersFor()` ใช้รายชื่อเดียวกันตามระดับเคส ใช้ทั้งตอนเปิด Ticket และ `TicketSlaAlertService`
+- ข้อความแจ้งเตือนคำขอใน `NotificationCatalogue` ตรงกับข้อความในหน้าจอแล้ว (รอบเกลาภาษาเอาขีด " - " ออกจากหน้าจอแต่ยังไม่ได้แก้ฝั่ง server)
+- test ใหม่ `UserPermissionScopeTest`: scope เลือกคนตรงกับ `hasPermission()` และรายชื่อช่างใช้จำนวน query คงที่ (โค้ดเดิม 8 → 32 query เมื่อเพิ่มผู้ใช้ 8 คน, โค้ดใหม่ 1)
+
+### รายงานภาพรวมสิทธิ์การเข้าถึง: การ์ดให้–ถอนสิทธิ์รายเดือนไม่ยืดตามการ์ดผู้ลาออก — 2026-10-12
+- เดิมกด "แสดงทั้งหมด" ในการ์ด "ผู้ลาออกที่ยังถือสิทธิ์" แล้วการ์ดรายเดือนยืดตาม (620 → 682/741px); ตอนนี้ทำแบบเดียวกับรายงานรอ IT ส่งมอบ: ตอนย่อสูงเท่ากัน, เปิดกลุ่มใดกลุ่มหนึ่งแล้วการ์ดรายเดือนคงความสูงตอนย่อไว้และค้างอยู่ตอนเลื่อนหน้า (`lg:sticky`), ปิดครบทุกกลุ่มแล้วกลับมาสูงเท่ากัน
+- `Group` (รายการแบบพับได้ที่ใช้ร่วมในรายงานการเข้าถึง) รับ `open`/`onToggle` จากภายนอกได้แบบไม่บังคับ ที่อื่นยังพับเองเหมือนเดิม; สถานะของสองกลุ่มในการ์ดผู้ลาออกย้ายขึ้นไปที่ `AccessOverviewCards`
+- ตรวจใน Chrome (1920px): ย่อ 620/620, เปิดกลุ่มแรก 620/682, เปิดทั้งสอง 620/741, เปิดเฉพาะกลุ่มที่สอง 620/679, ปิดทั้งหมด 620/620
+- ปรับต่อ: แถวล่าง (การ์ด "ตามแผนก" กับ "Resource ที่ต้องดูแล") ทำแบบเดียวกัน: ตอนย่อสูงเท่ากัน, เปิดตารางแผนกหรือกลุ่มใดในการ์ด Resource แล้ว การ์ดทั้งคู่คงความสูงตอนย่อไว้ ฝั่งที่สั้นกว่าค้างอยู่ตอนเลื่อนหน้า, แถวรวมของตารางแผนกยังอยู่ท้ายการ์ด
+- รวมกลไกเป็น `useFoldRow(keys)` ใช้ทั้งสองแถว (เก็บสถานะย่อ/ขยายของทุกรายการในแถว วัดความสูงการ์ดทั้งคู่ตอนเริ่มเปิด ล้างเมื่อปิดครบ); `DepartmentCard` และ `CareCard` รับ `open`/`onToggle` จากหน้า
+- ตรวจใน Chrome (1920px): ย่อ 784/784, เปิด 1 กลุ่ม 784/843, 2 กลุ่ม 784/902, 3 กลุ่ม 784/1020, ปิดครบ 784/784; แถวบนยังเหมือนเดิม (620/620 → 620/682); ตารางแผนกตอนนี้มี 11 แผนกยังไม่ถึงจำนวนที่ต้องพับ จึงยังไม่ได้ทดสอบฝั่งนั้นกับข้อมูลจริง
+
+### รายงานตรวจสอบสมาชิกและเจ้าของ: การ์ดพื้นที่ File Share ตามแผนกไม่ยืดตามการ์ดแชร์เรียงตามขนาด — 2026-10-12
+- ทำแบบเดียวกับรายงานภาพรวมสิทธิ์การเข้าถึง: ตอนย่อสูงเท่ากัน, เปิดกลุ่ม "กำหนดขนาด" หรือ "ไม่จำกัดขนาด" แล้วการ์ดพื้นที่ตามแผนกคงความสูงตอนย่อไว้และค้างอยู่ตอนเลื่อนหน้า แถวรวมยังอยู่ท้ายการ์ด
+- ใช้ `useFoldRow` / `heldStyle` ที่ export จาก `access-overview-cards.tsx`
+- ตรวจใน Chrome (1920px): ย่อ 452/452, เปิดกลุ่มกำหนดขนาด 452/589, ปิด 452/452 (กลุ่มไม่จำกัดขนาดมี 1 แชร์ ไม่มีปุ่มพับ)
+
+### รายงานการใช้ License ซอฟต์แวร์: การ์ดเรียกคืนได้จากผู้ลาออก กับคำขอที่รอ License ไม่ยืดตามกัน — 2026-10-12
+- ทำแบบเดียวกับรายงานการเข้าถึงอื่น: ตอนย่อสูงเท่ากัน, เปิดรายการฝั่งใดฝั่งหนึ่ง (ผู้ลาออก หรือ อนุมัติแล้ว/รออนุมัติ) แล้วอีกการ์ดคงความสูงตอนย่อไว้และค้างอยู่ตอนเลื่อนหน้า; ใช้ `useFoldRow` / `heldStyle`
+- ตรวจใน Chrome (1920px): ย่อ 374/374, เปิดรายการผู้ลาออก 436/374, ปิด 374/374; การ์ดคำขอตอนนี้มี 2 รายการ ยังไม่มีปุ่มพับ จึงยังไม่ได้ทดสอบฝั่งนั้นกับข้อมูลจริง
+
+### การ์ด KPI ของรายงาน: footer แบบรายการแยกอยู่บรรทัดเดียว — 2026-10-12
+- footer ที่เป็น "จุดสี ชื่อ ตัวเลข" หลายชิ้น (เช่น "สิทธิ์ที่ใช้งานอยู่", "Resource ที่ต้องดูแล") เคยขึ้น 2 บรรทัดในการ์ดกว้าง 311px; ตอนนี้อยู่บรรทัดเดียวเสมอ จุดสีและตัวเลขครบทุกชิ้น ชื่อที่ไม่พอถูกตัดด้วย "…" (grid `auto-cols-[minmax(0,max-content)]` แบ่งที่ให้แต่ละชิ้นเท่า ๆ กัน ชื่อสั้นแสดงเต็ม)
+- ชี้หรือแตะที่ footer เปิด `InfoPopover` แบบเดียวกับกราฟให้–ถอนสิทธิ์รายเดือน: ชื่อการ์ด แล้วแต่ละชิ้นพร้อมจุดสีและจำนวนเต็ม (แตะได้บน iPad และกด Enter ได้)
+- ใช้กับทุกรายงานที่มีการ์ดแบบนี้ (`summary-strip.tsx` ใช้ร่วมกัน) เช่น SLA, ทรัพย์สิน, คำขอ
+- รายงานภาพรวมสิทธิ์การเข้าถึง: ตอนกรองประเภท การ์ด "สิทธิ์ที่ใช้งานอยู่" แยกเฉพาะประเภทที่เลือก (เดิมแสดงครบ 4 ประเภทโดยอีก 3 เป็น 0); test ใหม่ `test_a_type_filter_splits_the_active_tile_by_that_type_only`
+- ปรับต่อ: รายงานตรวจสอบสมาชิกและเจ้าของ การ์ด "Resource" ตอนกรองประเภทแยกเฉพาะประเภทที่เลือกเช่นกัน (test ใหม่ `test_a_type_filter_splits_the_resource_tile_by_that_type_only`)
+- การ์ดแบบรายการแยกที่ทุกชิ้นเป็น 0 (เช่น "ต้องหาเจ้าของ" ตอนกรอง Social / Internet) แสดงรางแถบสีเทาว่าง ๆ แทนการไม่มีแถบ ความสูงการ์ดจึงเท่ากับการ์ดข้าง ๆ
+
+### รายงานการใช้ License ซอฟต์แวร์: การ์ด KPI มีกราฟ — 2026-10-12
+- สีใช้ชุดเดียวกับตาราง License ด้านล่าง (น้ำเงิน = ผู้ถือที่ยังทำงาน, แดง = ผู้ลาออกที่ยังถือ, เทา = ว่าง); กราฟอยู่ข้างตัวเลขใหญ่ ชี้หรือแตะแล้วเปิด `InfoPopover` พร้อมจุดสีและตัวเลขครบ
+- License ที่ซื้อ: แถบแยก ผู้ถือที่ยังทำงาน / ผู้ลาออกที่ยังถือ / ว่าง (แทนบรรทัด "ไม่จำกัดจำนวน n รายการ")
+- ใช้ไป: กราฟเส้นจำนวน License ที่ถืออยู่ ณ สิ้นเดือน 6 เดือนล่าสุด (เดือนนี้ = ถึงวันนี้) + บรรทัด "6 เดือนล่าสุด ▲ รวมแล้วเพิ่มขึ้น n"
+- License เต็ม: ช่องละ 1 ซอฟต์แวร์ที่จำกัดจำนวน สีตามสถานะ แดง = เต็มมีคำขอรอ, ส้ม = เต็ม (หรือเกิน), เขียว = ยังว่าง เรียงจากแย่สุด + จุดนับแต่ละสถานะ
+- ผู้ลาออกที่ยังถือ: แท่งตามระยะที่ลาออกมา ≤7 / 8–30 / 31–90 / >90 วัน (ไม่ระบุวันสุดท้ายนับเป็นกลุ่มสุดท้าย) + "n คน ลาออกนานสุด d วัน"
+- ส่วนกลาง: `ReportSummary::withChart()` (kind line / blocks / columns, ไม่บังคับ) + `tile-chart.tsx`; `KpiTile` มีช่อง `aside` ข้างตัวเลข และ footer ชิดล่างการ์ด (`mt-auto`) ทุกรายงาน การ์ดที่มีกราฟไม่วาดแถบแยกซ้ำ
+- test: แก้ `test_tiles_count_software_seats_used_full_and_leavers` + ใหม่ `test_tile_charts_draw_seats_by_month_each_limited_software_and_how_long_leavers_have_gone`; test รายงานทั้งหมด 256 ผ่าน
+- ตรวจใน Chrome (1920px) ทั้งโหมดสว่างและมืด (สลับด้วยปุ่มธีมแล้วสลับกลับ)
+- ปรับต่อ: กราฟของ "ใช้ไป", "License เต็ม", "ผู้ลาออกที่ยังถือ" ใหญ่เกินไป ย่อเป็นกราฟจิ๋ววางขวาของ footer แบบเดียวกับเส้นเล็กของการ์ด "ให้สิทธิ์ในช่วงวันที่" ในรายงานภาพรวมสิทธิ์การเข้าถึง: เส้น 70×20px สีตามทิศทาง (ขึ้น = เขียว, ลง = แดง) จุดเฉพาะเดือนล่าสุด, ช่องสี่เหลี่ยม 10px ต่อซอฟต์แวร์, แท่งเล็ก 4 แท่ง (ช่วงที่เป็น 0 เป็นขีดเทา) ชื่อช่วงอยู่ใน tooltip; ตัวเลขใหญ่กลับไปอยู่บรรทัดของตัวเอง (ถอดช่อง `aside` ของ `KpiTile` ออก)
+- ปรับต่อ: การ์ด "License เต็ม" เลิกใช้ช่องสี่เหลี่ยมต่อซอฟต์แวร์ (ถ้ามีหลายสิบตัวแถวช่องยาวเกินการ์ดและเบียดจุดนับ ทั้งยังบอกซ้ำกับจุดนับ) เปลี่ยนเป็นแถบแยกสีใต้ตัวเลขแบบการ์ดอื่น (แดง = เต็มมีคำขอรอ, ส้ม = เต็ม, เขียว = ยังว่าง) ความยาวคงที่ไม่ว่ามีกี่ตัว; ลบกราฟแบบ blocks ออกจาก `ReportSummary`, `types.ts`, `tile-chart.tsx` และ test
+
+### รายงานภาพรวมคำขอ: เอาสูตรอัตราอนุมัติออกจากหัวการ์ด — 2026-10-12
+- การ์ด "คำขอตามประเภทและสถานะ" ไม่แสดงบรรทัด "อัตราอนุมัติ = อนุมัติครบ ÷ (อนุมัติครบ + ไม่อนุมัติ)" แล้ว ลบคีย์ `rep_rqo_types_note` ทั้งไทยและอังกฤษ (ไม่มีที่อื่นใช้)
+- ข้อความกระดิ่งที่เก็บในตาราง `notification_templates` (ตัวที่กระดิ่งใช้จริง) ยังเป็นคำเก่าที่มี " - " และหน้าตั้งค่าแจ้งเตือนขึ้นว่า "ไม่ใช่ข้อความมาตรฐาน" migration `2026_10_12_111034` เปลี่ยนเป็นคำใหม่ 10 รายการ เฉพาะคอลัมน์ที่ยังเป็นข้อความมาตรฐานเดิมตรงตัว ข้อความที่ผู้ดูแลแก้เองไม่ถูกทับ; `down()` คืนคำเดิม รันบนฐานข้อมูลจริงแล้ว test `NotificationWordingMigrationTest`
+
+### รายงานคำขอ: คำอธิบายข้างชื่อการ์ดย้ายไปที่ที่เหมาะกว่า — 2026-10-12
+- เดิม 12 จุดใน 3 หน้า (ภาพรวมคำขอ, การอนุมัติคำขอ, รอ IT ส่งมอบ) ใส่ข้อความต่อท้ายชื่อการ์ด ปน 3 แบบ: วิธีนับ, ตัวเลขสรุป, วิธีใช้ ข้อความยาวดันคำอธิบายสีตกบรรทัดและอ่านเหมือนชื่อการ์ดสองท่อน
+- วิธีนับ (8 จุด) → ปุ่ม ⓘ ข้างชื่อ (`CardTitle` prop `info`, เปิด `InfoPopover` ด้วยการชี้ แตะ หรือ Enter): รายเดือน (ย้ายจากบรรทัดใต้กราฟ), ระยะเวลาจนเสร็จสิ้น, แยกตามแผนก, ขั้นที่ค้าง, ผู้อนุมัติ, ไม่อนุมัติและยกเลิก, ระบบข้าม, ระยะเวลารอส่งมอบ, ภาระงาน (มุมมองผู้รับผิดชอบ)
+- ตัวเลขสรุป → บรรทัดเล็กท้ายการ์ด (`CardFoot` ใหม่ใน chart-parts): "ยื่นมากสุด …" ใต้กราฟรายเดือน, "จาก n คำขอที่เลือกรายการ", "n คน เริ่มงาน …"
+- วิธีใช้ → เอาออก: "กดชื่อเพื่อกรองทั้งหน้า" (ชี้แถวมีคำแนะนำอยู่แล้ว) และ "n คำขอ n ประเภท กดเพื่อกรองทั้งหน้า" (ซ้ำกับการ์ด KPI และปุ่มแสดงทั้งหมด) ลบคีย์ `rep_rqi_who_note_type`
+- รายงานอื่นยังใช้ `note` เหมือนเดิม
+
+### หน้า Ticket: สีอ่านง่ายทั้งโหมดสว่างและมืด โดยยังสดใส — 2026-10-12
+- การ์ดเตือน "เกิน SLA" / "รอคนรับ": กล่องไอคอนเป็นสีทึบ (แดง `bg-red-500` ไอคอนขาว, ส้ม `bg-amber-400` ไอคอนเข้ม) แทนพื้นจาง เด่นขึ้นและไอคอนผ่าน 3:1 (เดิมนาฬิกาส้ม 2.88); หัวการ์ดตัวเล็กเป็นแดง/ส้มระดับ 700 (เดิม "รอคนรับ" 3.13, "เกิน SLA" 4.48) ตัวเลขใหญ่คงสีสดระดับ 600 เพราะตัวใหญ่ต้องการแค่ 3:1; ลูกศรแนวโน้ม SLA (ตัวเล็ก) เป็นระดับ 700
+- สีแบรนด์สำหรับตัวหนังสือเล็กบนพื้นแบรนด์จาง: `--brand-ink` (Tailwind `text-brand-ink`) คำนวณใน `useApplyTheme` จากสีแบรนด์ที่ตั้งไว้ ด้วย `readableInk` ให้ได้ 4.5:1 บนพื้นจางสองชั้น (โหมดมืดใช้สีแบรนด์เดิมซึ่งผ่านอยู่แล้ว) ใช้กับตัวเลขบนเมนูซ้าย (4.21 → 5.89), เมนูที่เลือกอยู่, ตัวย่อชื่อในรูปโปรไฟล์ และตัวเลขบนแท็บที่เลือกในหน้าต่าง; สีแบรนด์ที่ผู้ดูแลเปลี่ยนเองก็ได้ค่าที่อ่านผ่านเสมอ
+- เมนูซ้าย: บรรทัด © เป็นสีเทาปกติ (เดิม 2.37)
+- หน้าต่างรายละเอียด Ticket: ✓ ขั้น "ปิดเคสแล้ว" เป็นพื้น `emerald-600` (เดิม 2.47 ในโหมดมืด), บรรทัด SLA ที่ผ่านไปแล้วจางด้วยสีเทาแทนความโปร่งแสง (เดิม 3.30), ป้ายประเภทและตัวเลขบนแท็บใช้เทาแบบ `text-foreground/65 dark:text-muted-foreground`
+- รางเทาของแถบ (การ์ด "ปิดทัน SLA (เป้า 90%)" หน้า Ticket และแถบทุกตัวในหน้ารายงาน) เป็น `bg-slate-200 dark:bg-muted` (2026-10-13): `bg-muted` (#F1F5F9) บนการ์ดขาวแทบมองไม่เห็นในโหมดสว่าง; โหมดมืดใช้สีเดิม; จุด legend "ว่าง" ของรายงาน License เปลี่ยนตามราง
+- ตรวจใน Chrome ทั้งสองโหมด (ปิด transition ตอนวัด เพราะแท็บที่ไม่ได้แสดงค้างสีกลางทาง): แท็บภาพรวม, Tickets ทั้งหมด, งานของฉัน, เมนูซ้าย และหน้าต่างรายละเอียด (แท็บปัญหาและความคืบหน้า) ไม่มีจุดต่ำกว่าเกณฑ์; ดูด้วยตาแล้วสียังสด
+- ปรับต่อ: อีก 3 ข้อความที่อธิบายว่าตัวเลขนับยังไง ย้ายเข้า ⓘ ของการ์ดนั้นด้วย (`info` รับหลายย่อหน้าได้): "แท่งคือมัธยฐานขั้นอนุมัติต่อด้วยมัธยฐานขั้น IT…" (เดิมเป็นบรรทัดมีเส้นคั่นล่างการ์ดระยะเวลาดำเนินการ ตอนนี้เป็นย่อหน้าที่สองใน ⓘ), "นับจาก n คำขอที่เลือกรายการ" (การ์ดรายการที่ขอบ่อย), "นับพนักงานที่เริ่มงาน … ({n} คน)" (การ์ดความพร้อมของพนักงานใหม่); ลบ `CardFoot` เพราะไม่มีที่ใช้แล้ว เหลือบรรทัดท้ายการ์ดแค่ "ยื่นมากสุด …" ใต้กราฟรายเดือน
+
+### รายงานการเข้าถึง: คำอธิบายข้างชื่อการ์ดย้ายเข้า ⓘ — 2026-10-12
+- ภาพรวมสิทธิ์การเข้าถึง: "ให้มากสุด {เดือน} (n สิทธิ์)" ของการ์ดให้–ถอนสิทธิ์รายเดือน
+- ตรวจสอบสมาชิกและเจ้าของ: "ขนาดที่จัดสรรให้แต่ละแชร์ ไม่ใช่พื้นที่ที่ใช้จริง" (การ์ดพื้นที่ File Share ตามแผนก, เหลือคำอธิบายสี "ขนาดที่จัดสรร" ด้านขวา) และ "กดที่แถวเพื่อดูรายชื่อ" (การ์ดแยกตาม Resource)
+- การใช้ License ซอฟต์แวร์: "กดที่แถวเพื่อดูผู้ถือ" (การ์ดการใช้ License ต่อซอฟต์แวร์)
+- ใช้ `CardTitle` prop `info` แบบเดียวกับรายงานคำขอ
+
+### รายงาน SLA ของ Ticket: "และอีก n เคส" รวมเป็นลิงก์เดียว — 2026-10-12
+- การ์ด "ปิดไม่ทัน SLA ช้าไปเท่าไร" ส่วนล่าง "ยังเปิดอยู่และเกิน SLA" แสดง 4 เคสแรกแล้วต่อท้าย "และอีก n เคส" (ข้อความกดไม่ได้) แยกจากลิงก์ "ดูทั้งหมดในรายงาน Ticket ค้าง และเกิน SLA" ด้านล่าง อ่านแล้วงงว่าเป็นเคสอะไรและต้องกดตรงไหน
+- ตอนนี้เมื่อมีเคสที่ไม่ได้แสดง ลิงก์ล่างสุดเขียนว่า "ดูอีก n เคสในรายงาน Ticket ค้าง และเกิน SLA" (คีย์ใหม่ `rep_rs_open_more_link`), แสดงครบแล้วใช้ข้อความเดิม; ข้อความ "และอีก n เคส" เหลือเฉพาะคนที่เปิดรายงาน Ticket ค้างไม่ได้
+- ใช้กับทั้ง SLA ของ Ticket ที่ผู้ใช้เปิดเอง และ SLA ของ Ticket จากคำขอ; ตรวจใน Chrome ทั้งสองหน้า
+
+### รายงาน Ticket และตัดจำหน่าย: คำอธิบายข้างชื่อการ์ดย้ายเข้า ⓘ — 2026-10-12
+- Ticket ค้าง และเกิน SLA: "ซ้ายคือเกิน SLA แล้ว ขวาคือยังมีเวลา" (บอร์ด)
+- SLA ของ Ticket จากคำขอ: "กดแถวเพื่อดูรายการ Ticket ของประเภทนั้น"
+- SLA ของ Ticket ที่ผู้ใช้เปิดเอง: "กดแถวเพื่อดูรายการ Ticket ของกลุ่มนั้นด้านล่าง" (เดิมเป็นบรรทัดท้ายการ์ด; การ์ดนี้ไม่มีชื่อ ⓘ อยู่ต่อจากปุ่มเลือก "แยกตาม")
+- ตัดจำหน่ายทรัพย์สิน: "เครื่องซื้อใช้ไปกี่ปีก่อนตัดจำหน่าย" และ "ทุกสัญญาที่มีทรัพย์สินผูกอยู่ตอนนี้ นับทุกช่วงเวลา ไม่กรองตามวันที่ที่เลือก"
+- ปุ่ม ⓘ แยกเป็น `InfoMark` ใน chart-parts ใช้ทั้ง `CardTitle` และ `Heading` ของ backlog-board (prop `info` เหมือนกัน)
+
+### เก็บงานค้างในเครื่อง 3 ไฟล์ — 2026-10-12
+- `.gitignore` ไม่สนใจไฟล์สำรอง `/claude.md-bk`; `attachment-preview.tsx` ลบ comment อธิบายยาวเรื่องการซูมด้วยล้อเมาส์ (ตามกฎ comment บรรทัดเดียว โค้ดไม่เปลี่ยน); `use-tab-param.ts` จัดรูปแบบตาม prettier (โค้ดไม่เปลี่ยน)
+- `lang/th/report.ts` เว้นวรรคหน้า "และ" ในชื่อและคำอธิบายรายงาน เช่น "ตรวจสอบสมาชิก และเจ้าของ", "สัญญา และการเช่า" (ผู้ใช้แก้เอง)
+
+### การ์ด KPI: ชื่อสั้นใน footer — 2026-10-12
+- footer แบบรายการแยกตัดชื่อด้วย "…" เมื่อที่ไม่พอ บางการ์ดถูกตัดจนอ่านไม่ออก ("Ema… 34", "รายเดือน… 6", "Open So… 0", "เต็ม มีคำ… 1", "เจ้าของลาออกแ… 2")
+- แต่ละชิ้นของ split รับ `short_key` แบบไม่บังคับ (`ReportSummary` + `types.ts`); footer ใช้ชื่อสั้น ส่วน tooltip และตัวอ่านหน้าจอยังใช้ชื่อเต็ม
+- ชื่อสั้น: Email / File / Social (ประเภท Access, `AccessFacts::TYPE_SHORT_KEYS` ใช้ทั้งภาพรวมสิทธิ์และตรวจสอบสมาชิก), เจ้าของออก, รายเดือน/ปี (แทน "รายเดือน/รายปี"), Open, ใช้งาน / ลาออก (License ที่ซื้อ), มีคำขอ / ว่าง (License เต็ม)
+- ตรวจใน Chrome: ภาพรวมสิทธิ์และ License ซอฟต์แวร์ ไม่มีชื่อไหนถูกตัดที่จอ 1920px; test รายงาน 256 ผ่าน (เพิ่ม assertion ชื่อสั้นใน AccessOverviewReportTest)
+- ปรับต่อ: รางเทาของการ์ดที่ทุกชิ้นเป็น 0 เข้มขึ้นเฉพาะโหมดสว่าง (`bg-slate-200`, เดิม `bg-muted` แทบกลืนกับการ์ดสีขาว) โหมดมืดและแถบที่มีค่าไม่เปลี่ยน (ผู้ใช้เลือกแบบ 1)
+- ปรับต่อ: ผู้ใช้ลอง slate-300 (เข้มไป) และ slate-200 แล้วเลือกกลับไปใช้ `bg-muted` เหมือนรางของแถบอื่น
+
+### เกลาถ้อยคำใน ⓘ ของการ์ดรายงาน — 2026-10-12
+- คำเรียกการกดใช้แบบเดียว: "กดแถวเพื่อ…" / "Press a row…" (เดิมปน "กดที่แถว", "Click"); เรื่องช่วงวันที่ใช้ "ไม่ขึ้นกับช่วงวันที่"; ประโยคยาวแบ่งเป็นความคิดทีละเรื่อง
+- แก้ 16 ข้อความไทย 12 ข้อความอังกฤษ เช่น "ให้สิทธิ์มากสุดเดือนสิงหาคม 2026 (5 สิทธิ์)", "ฝั่งซ้ายคือเคสที่เกิน SLA แล้ว ฝั่งขวาคือเคสที่ยังไม่ถึงกำหนด", "คำขอที่ยังรออนุมัติ แยกตามสาเหตุที่ค้าง ไม่ขึ้นกับช่วงวันที่", "ทุกสัญญาที่มีทรัพย์สินผูกอยู่ตอนนี้ ไม่ขึ้นกับช่วงวันที่"
+- ปรับต่อ: `lang/en/report.ts` 4 ข้อความที่มี `'s` เปลี่ยนจาก `'…\'s…'` เป็น `"…'s…"` ตาม prettier (ข้อความบนจอไม่เปลี่ยน) ไฟล์ผ่าน `prettier --check` แล้ว
+- ปรับต่อ: ไล่ `prettier --check` ทั้ง `resources/js/lang/` เหลือไม่ผ่านแค่ `en/stock.ts` 1 บรรทัด (ข้อความยาวที่ต้องตัดขึ้นบรรทัดใหม่) แก้แล้ว ตอนนี้ทุกไฟล์ภาษาผ่าน prettier
+
+### รายงานการอนุมัติคำขอ: แถวในการ์ดขั้นอนุมัติที่ค้างตรงกันทุกคอลัมน์ — 2026-10-12
+- เดิม 4 คอลัมน์วางอิสระ คอลัมน์ที่มีบรรทัดอธิบาย (ผู้อนุมัติลาออกแล้ว, ยังไม่มีบัญชี) เริ่มรายการต่ำกว่า และแถวสูงไม่เท่ากัน แถวที่ 1–3 กับปุ่มแสดงทั้งหมดจึงไม่ตรงกัน
+- จอกว้าง (xl) ทั้ง 4 คอลัมน์ใช้แถวร่วมกันด้วย CSS subgrid: หัว / บรรทัดอธิบาย (คอลัมน์ที่ไม่มีเว้นที่ไว้) / รายการ / ปุ่มแสดงทั้งหมด (บรรทัดสุดท้ายเสมอ); สถานะแสดงทั้งหมดย้ายขึ้นไปที่ `StuckCard` เพื่อนับจำนวนแถว; เนื้อหาในแถวชิดบน; จอแคบเรียงลงมาเหมือนเดิม
+- ตรวจใน Chrome: แถว 167 / 259 / 335px และปุ่มแสดงทั้งหมด 410px เท่ากันทุกคอลัมน์; กดแสดงทั้งหมดคอลัมน์หนึ่งแล้วปุ่มของทุกคอลัมน์เลื่อนลงไปบรรทัดเดียวกัน
+- ตรวจจอแคบ (iframe 1024px และ 768px ในหน้าเดียวกัน เพราะปรับขนาดหน้าต่าง Chrome ไม่ได้): 4 คอลัมน์เรียงลงมาทีละอัน สูงเท่าเนื้อหาพอดี ไม่มีช่องว่างเกิน; กดแสดงทั้งหมดคอลัมน์รอเกิน 7 วัน (14 แถว) คอลัมน์อื่นไม่ถูกยืด
+- ปรับต่อ: บรรทัดอธิบายของคอลัมน์ "ผู้อนุมัติลาออกแล้ว" (ใครลาออกเมื่อไร ไม่มีใครอนุมัติแทนได้ ย่อหน้าละคน) และ "ผู้อนุมัติยังไม่มีบัญชี" ย้ายเข้า ⓘ ข้างหัวคอลัมน์ (`InfoMark`); แถวคำอธิบายหายจากทุกคอลัมน์ รายการเริ่มต่อจากหัวทันทีและยังตรงกันทั้ง 4 คอลัมน์
+- ตรวจจอแคบหลังย้ายเข้า ⓘ (iframe 1024px และ 768px): คอลัมน์เรียงลงมาสูงเท่าเนื้อหา, ⓘ อยู่ข้างหัวคอลัมน์ผู้อนุมัติลาออกแล้วและยังไม่มีบัญชี, กด ⓘ ที่ 768px แล้ว tooltip เปิดเหนือปุ่มและอยู่ในจอทั้งหมด
+- ปรับต่อ: รายละเอียดในแต่ละรายการเรียงบรรทัดละเรื่องเท่ากันทุกรายการ: รอใคร / ตำแหน่งและขั้นที่ / ผู้ขอ (เดิมต่อกันแล้วตัดบรรทัดเอง บางรายการ 2 บรรทัด บางรายการ 3 และจับคู่ไม่เหมือนกัน); บรรทัดตำแหน่งชี้ดูชื่อเต็มได้ถ้าถูกตัด; ตรวจใน Chrome ที่จอกว้างและ 768px ไม่มีบรรทัดไหนถูกตัด
+
+### รายงานทรัพย์สิน: คำอธิบายข้างชื่อการ์ด 7 จุดสุดท้าย — 2026-10-12
+- เข้า ⓘ: "ส่งมอบมากสุด…" (ประวัติโอนย้าย เข้า–ออกคลังรายเดือน), "ย้ายที่ตั้งโดยไม่เปลี่ยนผู้ถือ" (อัปเดตสถานที่), "มากสุด…" (ประกันหมดรายเดือน, ตัดจำหน่ายรายเดือน), "เรียงจากหมวดที่ใกล้หมดก่อน" และ "ต้องติดต่อใครก่อนประกันหมด" (ประกันใกล้หมดอายุ)
+- "n เหตุผล" ของการ์ดเหตุผลที่ตัดจำหน่ายย้ายไปฝั่งขวาต่อท้ายคำอธิบายสี ตัวหนาแบบเดียวกับจำนวนในการ์ดอื่น
+- ตอนนี้การ์ดรายงานไม่มีข้อความต่อท้ายชื่อแล้ว (`CardTitle` prop `note` ไม่มีการ์ดรายงานใช้)
+- ปรับต่อ: ตัด "n เหตุผล" ออกจากการ์ดเหตุผลที่ตัดจำหน่ายตามที่ผู้ใช้ขอ ลบคีย์ `rep_wo_reason_count` ทั้งไทยและอังกฤษ
+
+### รายงาน: ตารางในการ์ดไม่ดันหน้าให้เลื่อนแนวนอนบน iPad mini — 2026-10-12
+- ตรวจ 14 หน้ารายงานใน iframe กว้าง 768px: หน้าการตัดจำหน่ายทรัพย์สิน `main` เลื่อนแนวนอนได้ (753/689px)
+- ต้นเหตุ: ข้อความสำหรับโปรแกรมอ่านหน้าจอ (`sr-only`, position absolute) ในตารางการ์ดเครื่องเช่าตามสัญญายึดตำแหน่งกับ `main` (relative) แทนกล่องเลื่อนของตาราง เมื่อตารางกว้างกว่าจอจึงหลุดออกนอกกล่องและดัน `main`
+- แก้: กล่องเลื่อนตารางในการ์ดรายงานทุกใบ (12 ไฟล์ + ตารางแผนก 2 จุด) เป็น `relative overflow-x-auto` ให้ข้อความแบบนี้อยู่ในกล่อง; กล่องเลื่อนของกราฟรายเดือนไม่แตะ (ป้ายเดือนจัดตำแหน่งแบบ absolute)
+- ตรวจซ้ำ 14 หน้าที่ 768px ไม่มีหน้าไหนเลื่อนแนวนอน ชื่อใน footer การ์ด KPI ไม่ถูกตัด
+
+### ไล่ตรวจงานที่ค้างตรวจ — 2026-10-12
+- โหมดมืด (สลับด้วยปุ่มธีมแล้วสลับกลับ): 6 หน้ารายงาน ตัวหนังสือ footer การ์ด KPI ต่ำสุด 7.08:1, ไอคอน ⓘ 6.09:1, ลิงก์ SLA 5.93:1, tooltip อ่านชัด
+- แผงในฟอร์ม/dialog (เปิดดูอย่างเดียว ไม่บันทึก): นับสต็อกใหม่ (แผงเลือก SKU), จ่ายของ (แผงจ่ายจากคลัง), แก้ไขเทมเพลตอีเมล (แถบเครื่องมือ) โหมดสว่างขาวมีเส้นคั่น มุมมน; โหมดมืดยกขึ้น 1.16 ตัวหนังสือ ≥ 6.09:1; หน้า Workflow ไม่มีแถบหัวการ์ด ไม่มีอะไรต้องปรับ
+- แสดงทั้งหมดที่ข้อมูลจริงยังไม่ถึงเกณฑ์: ลดเกณฑ์ในโค้ดชั่วคราว (ตารางแผนก 10→5, รายการกลุ่ม 3→1) ทดสอบแล้วคืนค่า — ตารางแผนกภาพรวมสิทธิ์ ย่อ 430/430 ขยาย 620/430 แถวรวมอยู่ท้ายการ์ด; การ์ดคำขอหน้า License ย่อ 201/201 ขยาย 201/233
+- พบ: ที่จอ 1500px การ์ด KPI แคบราว 185px ชื่อใน footer การ์ดซอฟต์แวร์ถูกตัดมาก และ footer การ์ดใช้ไปตกเป็น 2 บรรทัด (ผู้ใช้เลือกปล่อยไว้แบบเดิม)
+
+### พนักงาน: วันทำงานวันสุดท้ายต้องไม่ก่อนวันเริ่มงาน — 2026-10-13
+- พบจากรายงานสรุปเรื่องค้างของพนักงาน (mockup): EMP-79 เริ่มงาน 3 ต.ค. 26 แต่วันทำงานวันสุดท้าย 28 ก.ย. 26 ระบบรับไว้ได้ 2 ทาง
+- ลาออก (`EmployeeController::resign`): `last_day` ต้อง `after_or_equal` วันเริ่มงาน (ถ้าไม่มีวันเริ่มงานไม่ตรวจ)
+- แก้ข้อมูลพนักงาน (`StoreEmployeeRequest`): ถ้ามีวันทำงานวันสุดท้ายแล้ว `joined_at` ต้อง `before_or_equal` วันนั้น
+- หน้าต่างลาออก: ตรวจก่อนส่ง และถ้าเซิร์ฟเวอร์ปฏิเสธ `last_day` ช่องวันที่ขึ้นแดง "ต้องไม่ก่อนวันเริ่มงาน (3 ต.ค. 2026)"; ฟอร์มแก้ไขพนักงาน ช่องวันเริ่มงานขึ้น "ต้องไม่หลังวันทำงานวันสุดท้าย (…)"; คีย์ใหม่ `resign_err_before_join`, `resign_err_before_join_plain`, `emp_err_start_after_last_day` (ไทย/อังกฤษ)
+- ข้อมูลเดิมของ EMP-79 ไม่ได้แก้ในฐานข้อมูล ผู้ใช้แก้เองผ่านหน้าจอ
+- test: `tests/Feature/EmployeeResignDatesTest.php` 6 กรณี ผ่านพร้อม `EmployeeResignAssetsTest` (12 passed)
+- ปรับต่อ: วันเดียวกันก็ไม่ได้แล้ว ลาออกใช้ `after` แก้ไขใช้ `before` ข้อความเปลี่ยนเป็น "กรุณาเลือกวันหลังวันเริ่มงาน (…)" และ "กรุณาเลือกวันก่อนวันทำงานวันสุดท้าย (…)" (อังกฤษ "Pick a date after/before …"); test เพิ่มเป็น 8 กรณี (14 passed รวม `EmployeeResignAssetsTest`); ข้อมูลจริงมีแค่ EMP-79 ที่ติดเงื่อนไขนี้
+
+### ระบบ: ตั้งค่ารูปแบบวันที่กลาง (ช่วงที่ 1) — 2026-10-13
+- ตั้งค่า → ระบบ มีส่วน "วันที่และเวลา" ใต้ Branding: รูปแบบวันที่ 6 แบบ (13/10/2026, 13-10-2026, 2026/10/13, 2026-10-13, 13 ต.ค. 2026, 13 ตุลาคม 2026), ปี ค.ศ./พ.ศ., เวลา 24/12 ชม. พร้อมบรรทัดตัวอย่าง ค่าเริ่มต้น 13/10/2026 ค.ศ. 24 ชม. บันทึกผ่าน `PUT /api/settings/datetime` (สิทธิ์ settings.system, ค่าอื่นนอกรายการตอบ 422) และส่งกลับใน `GET /api/settings` เฉพาะผู้ที่ล็อกอิน
+- กฎ: วันและเดือนเติม 0 เสมอ, พ.ศ. = ค.ศ. + 543 ใช้กับทุกรูปแบบ, ป้ายกราฟ/ช่วงวันที่ใช้ชื่อเดือนเสมอ (ปีตามที่ตั้ง), ค่าที่อ่านไม่ได้แสดง "—", ค่าใน DB/API ยังเป็น YYYY-MM-DD
+- ตัวจัดรูปแบบกลาง: `shared/lib/datetime.ts` (หน้าเว็บ ใช้ผ่าน `useDateFormat()` / `currentDateFormat()`) และ `App\Support\DateDisplay` (อีเมล/Excel/PDF ในช่วงที่ 3) อ่านชื่อเดือนจาก `shared/lib/date-names.json` ไฟล์เดียว ไม่ใช้ Intl หรือ locale ของเครื่อง; ค่าที่ตั้งถูกจำใน `useUiStore` (persist) ไม่กระพริบตอนเปิดหน้า
+- `tests/Fixtures/date-format-cases.json` 51 กรณีตรวจทั้งสองฝั่ง: `npm run test:dates` และ `php artisan test --compact tests/Unit/DateDisplayTest.php`; endpoint: `tests/Feature/DateTimeSettingsTest.php`
+- ใช้ค่าที่ตั้งแล้ว: ช่องเลือกวันที่ ปฏิทิน (ปีตาม ค.ศ./พ.ศ.) ช่วงวันที่ภาพรวม แถบเวลาสร้าง/แก้ไข และทุกจุดที่เคยใช้ `formatDateTime`/`formatDateShort`/`formatRangeShort` (ลบตัวช่วยเดิมแล้ว) เช่น Ticket, สต็อก, คำขอ, ประวัติอีเมล, สิทธิ์
+- ESLint เตือนเมื่อใช้ `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString` นอกตัวจัดรูปแบบ (เหลือ 16 จุด ส่วนใหญ่ในรายงาน) ช่วงที่ 2 ไล่แก้ทีละโมดูล (รวมค่า ISO ที่ยังพิมพ์ตรง ๆ เช่นรายชื่อพนักงาน สัญญา) แล้วเปลี่ยนเป็น error; ช่วงที่ 3 อีเมล Excel PDF
+- แก้จาก code review: ออกจากแท็บระบบแล้วไม่ถามทิ้งข้อมูลค้าง (SystemTab ล้างสถานะตอนออก); บันทึกส่วนอื่นหรือโหลด settings ซ้ำไม่ล้างค่าวันที่ที่ยังไม่บันทึก (`sameDateConfig`); หน้า login (guest) ไม่รีเซ็ตรูปแบบที่จำไว้; ภาษาที่ไม่ใช่ th ใช้ชื่อเดือนอังกฤษทั้งสองฝั่ง (fixture 53 กรณี); ย่อ comment หัวไฟล์ที่แตะ
+- เลื่อนไปช่วงหลัง: `report-scope` (บรรทัด "ณ วันที่" ยังเป็น ค.ศ.) ย้ายในช่วงที่ 2; queue worker ต้องล้าง cache ของ AppSetting ก่อนแต่ละ job ในช่วงที่ 3
+- ทดสอบ sign out / sign in จริงกับผู้ใช้: หน้า login (guest) ไม่รีเซ็ตรูปแบบที่จำไว้ ผ่าน; เจอว่าหลัง sign in รูปแบบที่จำไว้ทับค่าของระบบจนกว่าจะรีโหลด เพราะ `useLogin` ลบ query ทั้งหมดรวม `['settings']` ที่ `useHydrateSettings` (ระดับ App) ยังดูอยู่ → แก้ให้ลบทุก query ยกเว้น settings แล้วดึง settings ใหม่ด้วยสิทธิ์ผู้ใช้ (`use-auth.ts`) ทดสอบซ้ำแล้ว sign in เสร็จแสดง 23/09/2026 09:54 ทันที
+- ปรับประสิทธิภาพ: `dateTime()` และ `range()` อ่านค่าครั้งเดียวแล้วส่งส่วนที่อ่านแล้วต่อให้ตัวจัดรูปแบบภายใน (เดิมอ่านซ้ำ 3 รอบ) ฝั่ง PHP อ่านค่าตั้งครั้งเดียวต่อการเรียก ผลลัพธ์ไม่เปลี่ยน (fixture 53 กรณีผ่านทั้งสองฝั่ง)
+
+### ตาราง: คอลัมน์วันที่ไม่ล้นเมื่อใช้รูปแบบยาว — 2026-10-13
+- พบจากภาพหน้าจอผู้ใช้ (ตั้งค่า เดือนเต็ม + 12 ชม.): คอลัมน์ "วันที่แจ้ง" กว้างตายตัว 145px (รายการ Ticket) และ 140px (รายงานภาพรวม Ticket) ใน `table-fixed` ข้อความ "23 กันยายน 2026 9:54 AM" ล้นทับคอลัมน์หัวข้อ หัวคอลัมน์ไม่ตรงแถว
+- `DateTimeCell` (shared/components): วันที่บรรทัดบน เวลาสีจางบรรทัดล่าง แต่ละบรรทัดไม่ตัดคำ; `useDateColumnWidth()` (shared/hooks) วัดความกว้างจากวันที่/เวลาที่ยาวที่สุดที่รูปแบบปัจจุบันพิมพ์ได้ (`dateWidthSamples`: ทุกเดือนวันที่ 28, 12:59 PM ฯลฯ) ด้วยฟอนต์จริงของเซลล์ แล้วบวก padding แถว — ตั้งสั้นคอลัมน์แคบลงเอง ตั้งยาวไม่ล้น
+- ใช้กับ: รายการ Ticket, รายงานภาพรวม Ticket, drawer พนักงาน (แท็บ Ticket/คำขอ), ประวัติการส่งอีเมล, รายการทรัพย์สินในรายงานทรัพย์สิน; วันครบกำหนดในหน้าต่างอัปเดต Ticket และวันที่ไฟล์แนบใน drawer Ticket ไม่ตัดเป็น "…" แล้ว (ขึ้นบรรทัดได้); "ส่งครั้งถัดไป" ในรายงานตามกำหนดเวลาขึ้นบรรทัดได้แทนการบีบข้อความข้าง ๆ
+- ตรวจด้วยสคริปต์ใน Chrome (iframe 768/1280 × รูปแบบที่ตั้งจริง + 13/10/2026 24 ชม. จำลองใน iframe × 5 หน้า = 20 กรณี): ก่อนแก้ล้น 4 กรณี (Ticket list/รายงาน Ticket ทั้งสองความกว้าง) หลังแก้ 0 ไม่มีตัด/ขึ้นบรรทัดผิด ไม่มีหน้าเลื่อนแนวนอน; โหมดมืด/สว่างดูแล้ว; test `dateWidthSamples` ใน `npm run test:dates` (56 ผ่าน)
+- ข้อสังเกต (มีอยู่เดิม ยังไม่แก้): ที่ 768px ตาราง Ticket คอลัมน์หัวข้อหดจนหาย เพราะคอลัมน์อื่นกำหนดความกว้างรวมเกินการ์ด
+
+### Demo seeder: ยกเลิกคำขอต้องมีเหตุผล — 2026-10-13
+- `DemoSeederTest` ล้ม 6 กรณีด้วย `ArgumentCountError` ตั้งแต่ commit 304a4db1 (ยกเลิกคำขอต้องมีเหตุผล) เพราะ `DemoRequests` ยังเรียก `RequestService::cancel()` แบบไม่ส่งเหตุผล
+- แผนคำขอ demo เขียนเหตุผลไว้ใน outcome แบบ `cancelled:<เหตุผล>` (2 ใบ: Visio, webcam) แล้วส่งต่อให้ `cancel()`; เหตุผลของคำขอเองตัดส่วนที่เป็นเหตุผลการยกเลิกออก
+- test เพิ่ม: มีคำขอที่ผู้ขอยกเลิกเอง และทุกใบมี `cancel_reason` (ใบที่ IT ปิดว่าส่งมอบไม่ได้เก็บเหตุผลที่ขั้นส่งมอบ ไม่นับ); `DemoSeederTest` 11 passed
+
+### ระบบ: รูปแบบวันที่กลาง (ช่วงที่ 2 หน้าเว็บ) — 2026-10-13
+- ทุกหน้าเว็บแสดงวันที่ตามที่ตั้งใน Settings → ระบบ: สัญญา (รายการ, เส้นเวลา ปีใต้เดือนตาม ค.ศ./พ.ศ., drawer, หน้าตรวจทาน), ทรัพย์สิน (drawer, ประวัติ, Ticket, ประวัติโอนย้าย, หน้าต่างดูสัญญา), พนักงาน/โปรไฟล์ (รายชื่อ, ภาพรวม, drawer, ข้อความยืนยันลาออก), สต็อก (ความเคลื่อนไหวล่าสุด, รายละเอียดสินค้า), Dashboard (พนักงานใหม่, แกนกราฟปริมาณงาน: เลขวัน + ชื่อเดือนบรรทัดล่างตรงที่เปลี่ยนเดือน), ประวัติการแก้ไข (ค่าที่เป็นวันที่), รายงานทุกหน้า
+- รายงาน: ตัวช่วย monthLabel/shortDate/shortMoment/endDate/as of อ่านค่าที่ตั้ง; ตารางรายการท้ายรายงาน (tabular) คอลัมน์วันเวลาเรียงสองบรรทัด; ปี 2 หลักใต้เดือนตาม ค.ศ./พ.ศ. (`shortYear`); หัวข้อเดือนใช้ชื่อเดือนเต็ม เช่น กันยายน 2026 (`monthYearLong`, ผู้ใช้เลือก) ทั้ง TS และ PHP; `ReportDateScope` วาดหน้ารายงานใหม่เมื่อค่าวันที่เปลี่ยน
+- กราฟเดือนกลาง (MonthBarChart) เลิกใช้ชื่อเดือนในโค้ด; `isDateString` แยกค่าวันที่จากข้อความทั่วไป; ชื่อวันในสัปดาห์ (SLA) ยังใช้ Intl เพราะไม่มีวันที่
+- ESLint ห้าม `Intl.DateTimeFormat`/`toLocaleDateString`/`toLocaleTimeString` นอกตัวจัดรูปแบบเป็น error แล้ว
+- บรรทัดรองในการ์ดรายงาน (ภาพรวมสิทธิ์/License: วันสุดท้าย ขอเมื่อ; ประวัติโอนย้าย: ส่งมอบ ตั้งแต่) ขึ้นบรรทัดใหม่แทนตัดเป็น "…" เมื่อวันที่แบบเดือนเต็มยาวเกินคอลัมน์ที่ 1280px
+- ตรวจด้วยสคริปต์ใน Chrome (หน้า /robots.txt เป็นที่รัน ไม่โดน Vite รีโหลด) ทุกหน้าก่อน/หลังแก้: ไม่มี YYYY-MM-DD ค้าง ไม่ล้น ไม่ตัด ไม่เลื่อนแนวนอน; จำลอง พ.ศ. ในเบราว์เซอร์ (ไม่แตะค่าที่ตั้งจริง)
+- ยังไม่ทำ (ช่วงที่ 3): อีเมล Excel PDF และตัวอย่างค่าในหน้าแก้เทมเพลตอีเมล
+
+### รายงาน: สรุปเรื่องค้างของพนักงาน — 2026-10-13
+- `employees.open_items` "สรุปเรื่องค้างของพนักงาน" มาแทน `employees.leaver_assets` (ลบคลาสเดิม ไม่มี redirect หรือ fallback) นับ ณ วันนี้ ไม่มีช่วงวันที่ สิทธิ์ `employees.view` ตัวกรอง แผนก + เรื่อง (ทรัพย์สินค้างคืน / สิทธิ์ค้างถอน / บัญชีผู้ใช้งาน / ข้อมูลไม่ครบ) + ค้นหา (รหัส ชื่อ รหัสทรัพย์สิน ชื่อผู้ใช้); เรื่องเลือกว่าจะแสดงการ์ดไหน ช่องตัวเลขเป็นไปตามแผนกและคำค้นอย่างเดียว
+- กฎ: ทรัพย์สินค้างคืน = พนักงาน `resigned` (รวมที่ยังไม่ถึงวันสุดท้าย) ที่มี `assets.owner_employee_id`; สิทธิ์ค้างถอน = `hasLeft()` และ `revoked_at IS NULL`; บัญชี = ของผู้ลาออก / `must_change_password` / รหัสหมดอายุ (เฉพาะเมื่อ `password_expiry_days` > 0, `password_changed_at` ว่างไม่นับ) 1 บัญชีต่อ 1 แถว; ข้อมูลไม่ครบนับคนที่ยังทำงานอยู่ 7 แบบ (หัวหน้าลาออก ไม่มีหัวหน้า อีเมล แผนก ส่วนงาน ตำแหน่ง) ยกเว้นตำแหน่งพิเศษไม่นับ หัวหน้า/แผนก/ส่วนงาน และวันที่ไม่สอดคล้องนับทุกคน
+- สิทธิ์ข้อมูลบัญชี: บล็อก `acct`, ช่องตัวเลข, ตัวเลือกเรื่อง และแถวบัญชีใน Excel/PDF/ตั้งเวลาส่ง มีเฉพาะผู้ที่มี `employees.set_credentials` (backend ไม่เลือกแถวบัญชีให้คนอื่นเลย) และชื่อผู้ใช้ในช่องค้นหาไม่ทำให้พบพนักงานสำหรับคนที่ไม่มีสิทธิ์นี้
+- แถวของไฟล์มาจาก `OpenItems::query()` (UNION ALL ของ select บาง ๆ 4 กลุ่ม เก็บชนิดกับ id แล้วโหลดรายละเอียดทีหลัง) ใช้ชุดเดียวกับการ์ด (`OpenItems::collect()`) จึงไม่ต่างกัน; row id = `id * 16 + ชนิด` ไม่ซ้ำ; ค้นหาใช้ binding กับ `escape '!'` ทำให้ `%` `_` `!` เป็นตัวอักษรจริง; หน้าไม่แสดงตารางแถว (`showsTable` false) การ์ดทั้ง 4 คือรายการ; `TabularReportView` เพิ่ม `extras.hideSummary` ให้หน้าวาดช่องตัวเลขเอง
+- ไฟล์: `app/Services/Report/Employee/{OpenItems,OpenItemRow,EmployeeOpenItemsReport}.php`, `EmployeeOpenItemsBreakdownController`, `GET /api/reports/employees/open-items/breakdown`, หน้า `pages/employees-open-items.tsx`, `components/{employee-open-items-cards,open-items-tables}.tsx`, lang `rep_ef_*`
+- test: `EmployeeOpenItemsReportTest` 12 passed (88 assertions) ครอบ กลุ่มทรัพย์สิน/สิทธิ์/ข้อมูลไม่ครบ, ซ่อนบัญชีเมื่อไม่มี `set_credentials` ทั้ง JSON/แถว/Excel, ค้นหาชื่อผู้ใช้, นโยบายรหัสผ่าน, แผนก + ค้นหาแบบตัวอักษรจริง, ตัวกรองเรื่อง, สถานะว่าง; `EmployeeReportsTest` + `ReportCatalogueTest` 13 passed; `tests/Feature/Report` ทั้งชุด 267 passed; `tests/Unit` 98 passed; `tsc` และ ESLint สะอาด (ยังไม่ได้เปิดหน้าในเบราว์เซอร์)
+
+### รายงาน: ภาพรวมพนักงาน — 2026-10-13
+- `employees.overview` "ภาพรวมพนักงาน" มาแทน `employees.joiners_leavers` (ลบคลาสและหน้าเดิม ไม่มี redirect) สิทธิ์ `employees.view` ตัวกรอง ช่วงวันที่ (ค่าเริ่มต้นต้นปีถึงสิ้นเดือนนี้) + แผนก + รายการ (ทั้งหมด / เข้าใหม่ / ลาออก มีผลกับรายชื่ออย่างเดียว)
+- กฎ: ปลายช่วง = วันสุดท้ายของช่วง หรือวันนี้ถ้ายังไม่ถึง; ทำงานอยู่ ณ วัน D = เริ่มงานแล้วและไม่ลาออกก่อน D; เข้าใหม่นับเฉพาะคนที่เริ่มงานแล้ว (ที่เหลือเป็น "รอเริ่มงานอีก N คน"); ลาออก = `last_day` ในช่วง; คนที่เข้าและออกในช่วงเดียวกันนับทั้งสองฝั่งและขึ้น 2 แถว (row id = id×2 / id×2+1); อัตราลาออก = ลาออก ÷ ค่าเฉลี่ยต้นกับปลายช่วง × 100
+- การ์ด: ช่องตัวเลข 5 ช่องผ่าน `summary()` (ReportSummary เพิ่ม `withProgress()` แถบความคืบหน้าไม่มีป้าย %), กราฟเส้นอัตรากำลังรายเดือน (เกิน 24 เดือนเป็นไตรมาส เกิน 72 เป็นปี ผู้ลาออกนับในวันถัดจากวันสุดท้าย กดจุดดูรายชื่อเข้าออก), ตารางแผนกพับดูส่วนงานได้ + แถวรวม + แผนกที่ยังไม่มีพนักงาน, ผู้ลาออกที่ยังถือสิทธิ์ (นับถึงวันนี้ ลิงก์ไปภาพรวมสิทธิ์เฉพาะคนที่เปิดได้)
+- ไฟล์: `EmployeeOverviewReport`, `EmployeeOverviewBreakdownController`, `GET /api/reports/employees/overview/breakdown`, `pages/employees-overview.tsx`, `components/employee-overview-cards.tsx`, lang `rep_eo_*` `rep_k_eo_*` `rep_n_eo_*` `rep_c_eo_*`
+- test: `EmployeeOverviewReportTest` 17 passed; `tests/Feature/Report` ทั้งชุด 282 passed; tsc + ESLint สะอาด; ดูในเบราว์เซอร์กับข้อมูล demo ที่ 1280 สว่าง/มืด และ 768 มืด ไม่มีหน้าเลื่อนแนวนอน
+- เหตุการณ์: ระหว่างสร้าง agent ที่ทำงานใน worktree รัน phpunit แบบ `--no-configuration` ทำให้ `RefreshDatabase` ล้างฐาน MariaDB ของเครื่อง dev (13:59) แล้ว seed ใหม่ด้วยข้อมูล demo
+- แก้จาก code review (ทั้ง 2 รายงาน): จุดแรกของกราฟอัตรากำลังเริ่มนับจากวันก่อนช่วง (คนที่เริ่มงานวันแรกของช่วงไม่ถูกนับซ้ำใน base); สรุปเรื่องค้าง: รหัสผ่านหมดอายุใช้กฎเดียวกับ `User::isPasswordExpired()` (ไม่เคยเปลี่ยน = หมดอายุ, เทียบกับเวลาปัจจุบัน), ค้นหาด้วย serial ของทรัพย์สินได้เหมือนรายงานเดิม, สลับ "เรื่อง" ไม่ดึงแถวใหม่ (`cardOnlyFilters`); ย่อ comment หัวไฟล์ให้ไม่เกิน 3 บรรทัด, ป้าย Q ของไตรมาสย้ายไป lang; test เพิ่ม 3 กรณี `tests/Feature/Report` 285 passed
+- คงไว้ตามม็อกอัปที่อนุมัติ (review ทักแต่ไม่แก้): ผู้ลาออกที่วันสุดท้ายตรงกับวันปิดช่วงในอดีตนับในจุดสุดท้าย, ตารางแผนกนับ "ออก" รวมคนที่ยังไม่ถึงวันสุดท้าย (ⓘ อธิบายแล้ว), ไทล์ "ทั้งหมด" นับเป็นเรื่อง
+- ปรับต่อ (ผู้ใช้เลือกจากภาพเทียบ): กราฟอัตรากำลังไม่นับผู้ลาออกที่วันสุดท้ายอยู่ที่ปลายกราฟหรือหลังจากนั้น (เส้นกับป้าย −N ตรงกัน, ⓘ บอกจำนวนที่ยังไม่หายจากยอด); ตารางแผนกนับ "ออก" เฉพาะคนที่พ้นวันสุดท้ายแล้ว ณ ปลายช่วง (ต้นช่วง + เข้า − ออก = ปลายช่วง ทุกแถว); สรุปเรื่องค้าง ไทล์ "ทั้งหมด" นับข้อมูลไม่ครบเป็นคน (บัญชีนับเป็นบัญชี); test เพิ่ม 2 กรณี `tests/Feature/Report` 287 passed
+- การ์ดผู้ลาออกที่ยังถือสิทธิ์ตอนว่างเหลือบรรทัดเดียว "ไม่มีผู้ลาออกที่ยังถือสิทธิ์" (ไม่บอกจำนวนผู้ลาออกที่ถอนสิทธิ์ครบแล้วซ้ำอีกบรรทัด)
+- เส้นเล็กในไทล์ "ลาออก" เป็นสีแดง (เดิมเทา เพราะ strip เลือกสีจากแนวโน้ม ซึ่งไทล์นี้ไม่มี): `SummaryChart` แบบเส้นรับ `tone: 'good'|'bad'` ได้ ไทล์อื่นสีเดิม
+- ไทล์ "ลาออก" เทียบอัตราลาออกกับช่วงก่อนหน้าที่ยาวเท่ากัน: บรรทัดบน "อัตราลาออก N%" บรรทัดล่าง "▲/▼ x.x จากช่วงก่อนหน้า" (เพิ่ม = แดง, ลด = เขียว, ไม่มีช่วงก่อนให้เทียบ = เทา) ใช้ `DeltaFooter` เดิมของรายงานคำขอ เพิ่ม `lead` (บรรทัดบน) และ `trend.decimals`; ไทล์อื่นแสดงเหมือนเดิม; test เพิ่ม 2 กรณี
+
+### ระบบ: รูปแบบวันที่กลาง (ช่วงที่ 3 อีเมล Excel PDF) — 2026-10-13
+- อีเมล: ตัวแปรวันที่ทุกตัว (คำขอ สต็อก สัญญา พนักงาน ทรัพย์สิน) ผ่าน `DateDisplay::emailDate()` ตามรูปแบบที่ตั้ง ชื่อเดือนภาษาอังกฤษเพราะเทมเพลตเป็นอังกฤษ (ผู้ใช้เลือก) วันที่ว่างยังเป็น "-" เหมือนช่องอื่นในอีเมล; รอบรายงานตั้งเวลาเป็น "28 Sep – 04 Oct 2026" / "As of 04/10/2026"; ตัวอย่างในหน้าแก้เทมเพลต (body จาก server, หัวข้อจากหน้าเว็บ) ตามที่ตั้งเช่นกัน
+- Excel: คอลัมน์ date/datetime ของรายงานตาราง (`ReportColumn::exportValue`), ชีต Ticket ภาพรวม (raw/history/rows), ชีตสรุป (สร้างเมื่อ, ช่วงวันที่ — ทั้งเดือนแสดงเป็น "ก.ย. 2026"), ชีตย่อยของรายงาน (เดือน วันสุดท้าย ส่งมอบ อนุมัติ ฯลฯ) ตามที่ตั้ง ช่องว่างยังว่าง (`cellDate`/`cellDateTime`); คอลัมน์ "เดือนที่แจ้ง" คงเป็น YYYY-MM ให้เรียง/pivot ได้; ลบชื่อเดือนไทยที่เขียนซ้ำในรายงาน 5 ไฟล์
+- PDF: รายงานตาราง, Ticket ภาพรวม, ใบตรวจสอบสมาชิก, ประวัติสินค้า, ฉลาก Serial
+- queue worker อ่านค่าตั้งใหม่ทุกงาน (`JobProcessing` → `AppSetting::flushCache()`) เปลี่ยนรูปแบบแล้วไฟล์ที่สร้างในคิวตามทันที
+- test ทั้งชุด 1897 ผ่าน (sqlite); test ใหม่: email แบบ พ.ศ. + ชื่อเดือน, ตัวอย่างเทมเพลต, summary sheet ทั้งเดือน, ชีตเดือน พ.ศ., PDF 4 ฉบับ (ดักข้อมูลที่ส่งเข้า view แล้ว render ตรวจ), cache ของ queue
+- อัตรากำลังตามแผนกแสดง 10 แผนก ที่เหลือพับไว้ใต้ "แสดงทั้งหมด (N)" แถวรวมอยู่ท้ายการ์ดเสมอ; การ์ดแผนกกับการ์ดผู้ลาออกที่ยังถือสิทธิ์สูงเท่ากันตอนพับ (ใช้ `useFoldRow` แบบภาพรวมสิทธิ์การเข้าถึง) กางใบไหนอีกใบคงความสูงเดิม
+- คำอธิบายสีของกราฟอัตรากำลังเว้นวรรคหลังเครื่องหมาย: "+ เข้า 12" / "− ออก 3" (เดิมติดกันเป็น "+เข้า" เพราะ JSX ตัดช่องว่างตอนขึ้นบรรทัดใหม่)
+
+### รายงานภาพรวมของทรัพย์สิน: แผนกแสดง 10 แถว การ์ดคู่สูงเท่ากัน — 2026-10-13
+- "ทรัพย์สินแยกตามแผนก" แสดง 10 แผนก ที่เหลืออยู่ใต้ "แสดงทั้งหมด (N)" (เดิมเกิน 10 แค่แผนกเดียวจะไม่พับ และพับเป็นแถว "อื่น ๆ (n)") — แผนกไม่มีแถว "อื่น ๆ" แล้ว หมวดหมู่ยังพับแบบเดิม
+- การ์ดแผนกกับการ์ดสถานะ/หมวดหมู่สูงเท่ากันตอนพับ กางใบไหนอีกใบคงความสูงเดิม (`useFoldRow` แบบภาพรวมสิทธิ์) ตรวจในเบราว์เซอร์: พับ 626/626, กางแผนก 676/626, กางหมวดหมู่ 626/770
+- ปรับต่อ: การ์ดคู่ทั้งในภาพรวมพนักงาน (แผนก / ผู้ลาออกที่ยังถือสิทธิ์) และภาพรวมทรัพย์สิน (แผนก / สถานะ+หมวดหมู่) ใช้กฎเดียวกับ "ให้–ถอนสิทธิ์รายเดือน" คู่กับ "ผู้ลาออกที่ยังถือสิทธิ์": ใบที่กางยืดไป ใบที่ไม่ได้กดคงความสูงเดิมและค้างอยู่ในจอ (sticky) ตอนเลื่อนผ่านใบที่ยาว
+- แก้: กาง "ผู้ลาออกที่ยังถือสิทธิ์" แล้วรายการกลายเป็นกล่องเลื่อนสูง 320px คนสุดท้ายถูกตัดครึ่ง (ยืม `Group` ของภาพรวมสิทธิ์ที่เลื่อนในกล่อง) — `Group` รับ `grow` ให้รายการยืดตามจำนวนคน การ์ดนี้ใช้ `grow` ภาพรวมสิทธิ์ยังเลื่อนในกล่องเหมือนเดิม; ดูด้วยตาแล้วทั้งกางผู้ลาออก (เห็นครบ 4 คน) และกางแผนก (การ์ดผู้ลาออกค้างในจอ)
+- แก้: ปุ่ม "แสดงทั้งหมด (N)" / "ย่อ" ของการ์ดผู้ลาออกที่ยังถือสิทธิ์ลอยกลางการ์ดเมื่อการ์ดถูกยืดเท่าการ์ดแผนก — ปุ่มของทั้งสองการ์ดอยู่ท้ายการ์ดเสมอ (ผู้ลาออก: เหนือลิงก์ภาพรวมสิทธิ์, แผนก: เหนือแถวรวม) ดูด้วยตาแล้วทั้งตอนพับและตอนกาง
+- การ์ดผู้ลาออกที่ยังถือสิทธิ์ (จอกว้าง ≥ 1024px) ใช้ความสูงของการ์ดแผนกแล้วแสดงผู้ลาออกเท่าที่พอดีความสูงนั้น (วัดจริงด้วย ResizeObserver ไม่มีแถวถูกตัด) ที่เหลืออยู่ใต้ "แสดงทั้งหมด (N)" ท้ายการ์ด ถ้าใส่ได้หมดไม่มีปุ่ม; กางแล้วยืดตามจำนวนคน การ์ดแผนกค้างในจอ; iPad (จอเรียงแนวตั้ง) แสดง 5 คน; `Group` เลิกใช้ `grow` (การ์ดนี้วาดรายการเอง) `GroupRow` รับ `className`
+- ดูด้วยตาแล้วกับข้อมูล demo ผู้ลาออกที่ยังถือสิทธิ์ 4, 10 และ 20 คน: พับ (4 คนเต็มความสูง ปุ่มตรงแนวกับปุ่มแผนก), กาง 20 คน (การ์ดแผนกค้างด้านบน ท้ายการ์ดสองใบตรงกัน); ภาพรวมสิทธิ์ไม่เปลี่ยน
+- ที่ว่างใต้คนสุดท้าย (ไม่พอทั้งแถว) ใช้แสดงคนถัดไปแบบจางลง (กดไม่ได้ `inert` โปรแกรมอ่านหน้าจอข้าม) ปุ่ม "แสดงทั้งหมด (N)" อยู่ใต้ส่วนที่จาง — การ์ดไม่เหลือที่ว่าง; ใส่ได้ครบไม่มีส่วนจาง ดูด้วยตาแล้วโหมดสว่าง/มืด
+- กราฟอัตรากำลังไม่บอก "นับถึง <วันที่>" ใต้กราฟแล้ว (จุดสุดท้ายมีป้าย "วันนี้" อยู่แล้ว) ลบคีย์ `rep_eo_flow_as_of`
+- สรุปเรื่องค้าง: ตารางทั้ง 4 การ์ดแสดงแถบแบ่งหน้า "แสดง [20 ▾]" + เลื่อนหน้าทุกครั้งที่มีรายการ (เดิมซ่อนเมื่อไม่เกิน 20 แถว) ดูด้วยตาแล้วทุกการ์ด
+
+### รายงาน: ป้ายแกนกราฟรายสัปดาห์ไม่ซ้อนกัน — 2026-10-13
+- พบจากผู้ใช้: `/reports/tickets-overview?from=2026-07-16&to=2026-10-13` (14 สัปดาห์) ป้ายวันที่ใต้แท่งซ้อนกัน เพราะป้ายเปลี่ยนจาก "16/7" เป็น "16 ก.ค." (ยาวขึ้นเกือบเท่าตัว) แต่กราฟยังซ่อนป้ายเฉพาะเมื่อเกิน 16 สัปดาห์
+- `axis-labels.ts` `labelStep()` คำนวณว่าต้องเว้นกี่แท่งจากความยาวป้ายจริงเทียบความกว้างช่อง (ยังไม่เกิน 16 ป้ายเหมือนเดิม): ช่วง 14 สัปดาห์แสดง 7 ป้าย (เว้น 1) ช่วง 5 สัปดาห์ยังแสดงครบ ตรวจใน Chrome ไม่ซ้อน; test `tests/js/axis-labels.test.ts` 4 กรณี (รวมใน `npm run test:dates`)
+
+### รายงาน: กราฟรายสัปดาห์ 1 คู่ = 1 สัปดาห์ มีป้ายทุกคู่ และไม่ลากเส้นค้างไปวันข้างหน้า — 2026-10-13
+- พบจากผู้ใช้: ช่วง 17 ก.ย.–21 ต.ค. หัวการ์ดบอก "ถึง 21 ต.ค." แต่แกนจบที่ "19 ต.ค." (ป้ายเป็นวันแรกของแท่ง) ช่วงยาวป้ายเว้นทุก 2 สัปดาห์จนต้องนับเองว่าคู่ไหนสัปดาห์ไหน และสัปดาห์ที่ยังไม่ถึงแสดง 0 พร้อมเส้นค้างสะสมแบนต่อไป
+- ป้ายใต้ทุกคู่เป็นวันที่คู่นั้นนับจริง เช่น "21–27" คู่แรก/สุดท้ายที่ถูกช่วงตัดเป็น "17–20" / "19–21" บรรทัดล่างเป็นชื่อเดือน (ตามค่าตั้ง) ใต้คู่แรกและคู่ที่ขึ้นเดือนใหม่ ผู้ใช้เลือกแบบนี้ (`weekDays()` ใน `axis-labels.ts`)
+- ตัวอักษรป้ายย่อตามความหนาแน่น (ผู้ใช้ขอ): 10.5 ลงได้ถึง 8 หน่วย (`fitAxisFont()`) เล็กสุดแล้วยังไม่พอจึงเว้นป้าย (`labelStep()` รับขนาดตัวอักษร) — 14 สัปดาห์ป้ายครบขนาดเต็ม, 18 สัปดาห์ครบที่ ~8px, 1 ปีเว้นทุก 3 สัปดาห์
+- สัปดาห์ของกราฟเริ่มวันอาทิตย์ (อาทิตย์–เสาร์) ตรงกับปฏิทินเลือกวันที่ (พบจากผู้ใช้: เลือก 11–17 ต.ค. ซึ่งเป็นอา.–ส. แล้วขึ้น 2 คู่เพราะเดิมนับจันทร์–อาทิตย์) — ตอนนี้ได้ 1 คู่ "11–17"
+- ทั้งระบบนับสัปดาห์อาทิตย์–เสาร์เหมือนกัน (ผู้ใช้ขอ): กราฟรายสัปดาห์ในแท็บภาพรวม (`OverviewPeriod::columns()` ช่วง 15–120 วัน เช่น การเคลื่อนไหวทรัพย์สิน พนักงานเข้าใหม่) และรายงานตั้งเวลารายสัปดาห์ — ยังส่งทุกวันจันทร์ (ผู้ใช้เลือก) แต่ครอบคลุมอาทิตย์–เสาร์ก่อนหน้า เช่น จ. 19 ต.ค. ส่งข้อมูล 11–17 ต.ค. ("ยอด ณ สิ้นวันเสาร์ที่แล้ว" สำหรับรายงานแบบ ณ วันที่); อีเมลสรุปประจำสัปดาห์ (Ticket/สัญญา/สต็อก/คำขอ) ไม่เกี่ยว เพราะเป็นภาพ ณ วันส่ง ไม่ได้นับช่วงสัปดาห์
+- สัปดาห์ที่ยังไม่เริ่ม: server ส่ง `backlog: null` กราฟไม่วาดแท่ง/เส้นค้าง แรเงาจางพร้อมคำว่า "ยังไม่ถึง" (`rep_weekly_future`) เส้นค้างจบที่สัปดาห์ปัจจุบันพร้อมป้าย "N ค้าง"
+- test: PHPUnit สัปดาห์อนาคตได้ `null`; node `weekDays` 4 กรณี + ขนาดตัวอักษร 3 กรณี (`npm run test:dates` 74 ผ่าน); วัดใน Chrome ที่ 768px และ 1400px ช่วง 5/14/18/53 สัปดาห์ ไม่มีข้อความชนกันหรือล้นกรอบ
+
+### รายงานพนักงาน: แก้จาก code review (ที่ค้าง) — 2026-10-13
+- กราฟอัตรากำลังนับยอดแต่ละจุดจากวันที่เป็นข้อความที่อ่านครั้งเดียวต่อคน แทนการเทียบวันที่ทีละคนทุกจุด (กราฟ 86 → 10 ms), ตารางแผนกคำนวณเฉพาะตอนวาดการ์ด ไม่คำนวณทุกครั้งที่เปลี่ยนหน้ารายชื่อ (ตัวเลขไทล์ต่อหน้า 137 → 43 ms, การ์ด 150 → 78 ms ที่พนักงาน 86 คน); ฟังก์ชันซ้ำ: ใช้ `TabularReport::dayRange()` แทน `range()` ของรายงานเอง, `AccessFacts::daysSince()` ใช้ร่วมกับ `OpenItems` (ลบ `daysOut` ซ้ำ), ชื่อไทย/อังกฤษใช้ `localName()` ใน access-parts ที่เดียว (`deptName` เรียกต่อ, ลบ `nameOf` / `personName`); `tests/Feature/Report` 299 passed; ดูด้วยตาแล้ว 3 หน้า (ภาพรวมพนักงาน สรุปเรื่องค้าง ภาพรวมสิทธิ์)
+
+### รายงาน: ไฟล์ Excel/PDF บอกช่วงวันที่และตัวกรองที่ใช้ — 2026-10-13
+- เดิมแผ่น "สรุป" ของรายงานแบบตาราง (20 รายงาน) มีแค่ชื่อ เวลาสร้าง และตัวเลขสรุป ส่งไฟล์ต่อแล้วคนรับไม่รู้ว่าครอบช่วงไหน กรองอะไร (ไฟล์ประกัน "ใกล้หมด" กับ "หมดแล้ว" ดูเหมือนกัน)
+- แผ่น "สรุป" ใต้ชื่อรายงานมี "ช่วงวันที่" (หรือ "ณ วันที่") ตามรูปแบบวันที่ที่ตั้ง แล้วต่อด้วยตัวกรองที่ใช้ทีละบรรทัด รวมค่าเริ่มต้น เช่น "แสดง: ใกล้หมด" ถ้าไม่ได้กรองเขียน "ตัวกรอง: ไม่ได้กรอง"; ตัวเลือกที่กำหนดแค่การแสดงผล (เช่น จัดกลุ่มตาม) ไม่นับ — PDF แสดงบรรทัดเดียวกันใต้หัวกระดาษ
+- ชื่อตัวกรองและตัวเลือกใช้คำเดียวกับหน้าเว็บ อ่านจาก `resources/js/lang/th/*.ts` (`ThaiWords`) ไม่เขียนซ้ำใน PHP; `TabularReport::scopeLines()` สร้างบรรทัดให้ทั้ง Excel และ PDF
+- คอลัมน์ "เหลือ (วัน)" (ประกันใกล้หมด สัญญาใกล้หมด): Excel คงเป็นตัวเลขติดลบไว้ให้เรียง/คำนวณได้ แผ่นสรุปมีหมายเหตุ "ติดลบ คือเลยกำหนดมาแล้ว"; PDF เขียน "เลยมา n วัน" แบบหน้าเว็บ
+- test: `ReportFileScopeTest` (ตัวกรองและตัวเลือกของทุกรายงานแบบตารางมีคำภาษาไทย, ไม่ได้กรอง, ช่วงกลับด้าน + ตัวเลือกการแสดงผลไม่นับ), `WarrantyExpiringReportTest` แผ่นสรุป + PDF "เลยมา 5 วัน", `TabularReportEngineTest` ไฟล์ที่สร้างผ่านคิวมีตัวกรอง; `tests/Feature/Report` 299 passed; pint ผ่าน
+
+### รายงานแบบตาราง: เปลี่ยนหน้ารายการไม่คำนวณตัวเลขไทล์ใหม่ — 2026-10-13
+- เดิมทุกครั้งที่เปลี่ยนหน้าหรือจำนวนแถว `GET /api/reports/r/{key}/rows` คำนวณตัวเลขไทล์และกราฟใหม่ทั้งหมด ทั้งที่ตัวกรองเดิม (ทั้ง 20 รายงาน)
+- เพิ่ม `GET /api/reports/r/{key}/summary` (ตัวเลขไทล์ + กราฟ สิทธิ์และการตรวจตัวกรองเดียวกับ rows) และ `rows?only_rows=1` (แถว + meta เท่านั้น); ถ้าไม่ส่ง `only_rows` rows ทำงานเหมือนเดิม
+- หน้า (`TabularReportView`): แถวใช้ `only_rows=1` ตัวเลขไทล์/กราฟใช้ `useTabularSummary` ที่ผูกกับตัวกรองอย่างเดียว เปลี่ยนหน้าไม่ถาม summary ซ้ำ; หน้าที่วาดไทล์เองและไม่มีกราฟ (สรุปเรื่องค้าง) ไม่เรียก summary เลย
+- ตรวจใน Chrome (network): ภาพรวมพนักงานโหลดครั้งแรก rows + summary, กดหน้าถัดไปมีแค่ rows `only_rows=1`; ดูด้วยตาแล้ว ภาพรวมพนักงาน ภาพรวมทรัพย์สิน (ไทล์ + กราฟ) สัญญาใกล้หมดอายุ สรุปเรื่องค้าง
+- test: `TabularReportEngineTest` เพิ่ม 2 กรณี (rows `only_rows` ไม่มี summary/charts แต่แถวเหมือนเดิม, summary ตรงกับที่ rows เคยส่ง, summary ต้องมีสิทธิ์และตรวจตัวกรอง); `tests/Feature/Report` 301 passed
+- เปลี่ยน path API กลางของรายงานแบบตารางจาก `/api/reports/r/{key}/…` เป็น `/api/reports/tabular/{key}/…` (definition, rows, summary, export, schedule) ชื่อสื่อความหมายแทนตัวอักษรเดียว ชื่อ route `api.reports.tabular.*` เท่าเดิม; ไม่มี path เดิมไว้รองรับ (ยังไม่ขึ้นใช้งานจริง); หน้าเว็บ `/reports/r/:key` ที่ redirect ลิงก์หน้าเก่า (App.tsx) ไม่เกี่ยวกับ API ไม่ได้แตะ; `tests/Feature/Report` 301 passed, หน้าเว็บเรียก path ใหม่ได้ 200 (ดูใน network)
+
+### พนักงาน: แก้ช่องโหว่และบัคจากการรีวิวโมดูล — 2026-10-13
+- **ความปลอดภัย**
+  - ตั้งรหัสผ่านหรือเปลี่ยนชื่อผู้ใช้ของบัญชี Administrator (`PUT /employees/{id}/credentials`) ได้เฉพาะ Administrator — ตอบ 403 `super_account` หน้าต่างจัดการบัญชีขึ้นข้อความ `cred_err_super_account` (หน้าแก้ไขพนักงานกันไว้แล้ว แต่ส่วนบัญชีไม่ได้กัน); บัญชีอื่นไม่เทียบสิทธิ์กัน ผู้ใช้เลือกกันเฉพาะ Administrator เพราะ Template อื่นแก้/ลบได้ และการเทียบสิทธิ์ซับซ้อนเกินไป
+  - บันทึกลาออกของพนักงานที่ผูกบัญชี Administrator ได้เฉพาะ Administrator (`super_account`) และบันทึกลาออกซ้ำกับคนที่ลาออกแล้วไม่ได้ (`already_resigned`) — เดิมกดซ้ำแล้วอีเมล/แจ้งเตือนส่งซ้ำทั้งชุด
+  - ฟอร์มแก้ไขพนักงานไม่รับ `status` แล้ว — เดิมผู้มีสิทธิ์แค่แก้ไขส่ง `status=resigned` เองได้ ข้ามสิทธิ์ลาออก/ยกเลิกลาออก และไม่เรียกคืนอุปกรณ์
+  - อีเมลแจ้งพนักงานใหม่ แจ้งถอนสิทธิ์ และแจ้งพนักงานลาออก กรอง HTML ในชื่อ รหัส ตำแหน่ง หน่วยงาน แผนก (`e()`) แบบโมดูลคำขอ
+- **บัค**
+  - แก้ไขพนักงานพร้อมเปลี่ยนรูป ช่องที่ล้างค่าออกถูกล้างจริง (ส่งเป็นค่าว่างแทนการตัดทิ้ง)
+  - ย้ายหน่วยงานไปแผนกอื่นไม่ได้ถ้ายังมีพนักงานอยู่ (`section_has_employees_move`) หน้าต่างหน่วยงานแสดง error ใต้ช่องแผนก (เดิมไม่แสดง error ใด ๆ)
+  - แท็บหน่วยงานแสดงตารางเสมอ ปุ่ม "เพิ่มหน่วยงาน" ไม่หายตอนยังไม่มีหน่วยงาน และขึ้นแอนิเมชันระหว่างโหลด
+  - หน้าต่างพนักงานแสดงชื่อหัวหน้าแม้หัวหน้าลาออกแล้วหรือผู้ดูไม่มีสิทธิ์ดูผังองค์กร (`manager_name`/`manager_name_th` ใน `GET /employees/{id}`)
+  - หลังบันทึก/ยกเลิกลาออกหรือแก้ไข แท็บอุปกรณ์ Ticket คำขอ และสายอนุมัติในหน้าต่างพนักงานโหลดใหม่
+  - นำเข้า CSV ตรวจความยาวและเบอร์โทรเหมือนฟอร์ม แจ้งเป็นรายแถวแทน error 500
+  - ไม่แก้: ยกเลิกลาออกไม่คืนสถานะอุปกรณ์ — ออกแบบไว้แบบนี้และกล่องยืนยันการลาออกบอกผู้ใช้แล้ว
+- test: `EmployeeSafeguardsTest` 6 กรณี, `EmployeeImportTest` + `NewEmployeeEmailTest` เพิ่มอย่างละ 1; ทั้งชุด 1920 passed; tsc + eslint + prettier + pint ผ่าน
+
+### พนักงาน: แท็บเล็ต คีย์บอร์ด สีโหมดสว่าง และความสม่ำเสมอของดีไซน์ — 2026-10-13
+- **สี (ผู้ใช้อนุมัติโหมดสว่าง ต้องสดใสและชัด):** วัดใน Chrome ทุกแท็บ หน้าต่างพนักงานทุกแท็บ ฟอร์มเพิ่ม/แก้ไข ทั้งโหมดสว่างและมืด ไม่มีข้อความต่ำกว่าเกณฑ์ (เดิมผังองค์กร ตัวย่อชื่อ 3.6–4.2:1 รหัสแผนก 3.1:1, ป้าย "ใช้งาน" 3.3:1 "ยังไม่มีบัญชีใช้งาน" 3.0:1)
+  - สีแผนก `lib/org-tree.ts`: `deptFill()` (L 0.52 พื้นวงกลมใต้ตัวอักษรขาว ≥ 4.8:1) และ `deptInk()` (ตัวอักษรรหัสแผนก L 0.46 สว่าง / 0.80 มืด ผ่าน `--dept-ink`) แถบสีตกแต่งยังใช้ `deptColor()` L 0.60 เดิม
+  - ป้ายสถานะใช้ `StatusBadge`; ตัวหนังสือเล็กบนพื้นสีจาง -700 (สว่าง) / -400 (มืด); ตัวหนังสือสีแบรนด์บนพื้นแบรนด์จางใช้ `text-brand-ink` รวมถึงป้ายรหัสใน `FocusDialogHeader` (ของกลาง ทุกโมดูล); สวิตช์ปิดเข้มขึ้นให้เห็นขอบ
+- **แท็บเล็ต (วัดที่ 768px):** หน้าต่างพนักงานแถบซ้ายแคบลงต่ำกว่า xl แท็บครบไม่ล้น ไม่ตัดบรรทัด กล่องตัวเลข 2×2; `focusDialogContentClass` ใช้ `dvh` และเว้นขอบ 16px (หน้าต่างรายละเอียดทรัพย์สิน สต็อก Ticket ตรวจที่ 768 แล้วไม่ล้น); ผังองค์กรบีบนิ้วซูมได้ แผนที่ย่อซ่อนต่ำกว่า lg; คำอธิบายที่เคยอยู่ใน `title` (ปุ่มลบที่กดไม่ได้ เมนูแก้ไขที่ปิดไว้ ไอคอนตำแหน่งพิเศษ) แสดงด้วย InfoHint/ป๊อปอัป/บรรทัดในเมนู แตะได้; ฟอร์มแก้ไขและลาออกแบ่ง 2 คอลัมน์ตั้งแต่ lg; ช่องอีเมล/เบอร์/ชื่อผู้ใช้ตั้ง type, inputMode และปิดพิมพ์ใหญ่อัตโนมัติ
+- **คีย์บอร์ดและโปรแกรมอ่านหน้าจอ:** แถวตารางที่กดได้ (`DataTable onRowClick`, ของกลาง) กด Tab ถึงและเปิดด้วย Enter/Space; ปุ่มไอคอนทุกปุ่มมีชื่อ; ปุ่มเลือกรูปใช้คีย์บอร์ดได้; ช่องรหัสผ่านผูกป้ายชื่อ (`Field controlId`) ปุ่มแสดง/ซ่อนรหัสผ่านกดถึง (`password-input.tsx`); แท็บหน้าต่างพนักงานเป็น tablist จริง (ลูกศร Home End); การ์ดผังองค์กรเลือกด้วยคีย์บอร์ดได้; `SearchableSelect` (ของกลาง) Esc ปิดแค่เมนู ลูกศรเลือกตัวเลือก ปุ่มล้างกดถึง; error ทุกจุดเป็น `role="alert"`; คัดลอกแจ้งว่าคัดลอกแล้วเฉพาะเมื่อคัดลอกสำเร็จจริง
+- **ความสม่ำเสมอ:** รายชื่อพนักงานใช้ `DataTable` แบบ server (แบบหน้าสต็อก) + `FilterPopover`; ไทล์ภาพรวมใช้ `StatCard`; ฟอร์มเพิ่ม/แก้ไข/ลาออก/บัญชีมีแถบ error สั่นด้านบน (`FormErrorBanner` ใน `field.tsx`) และปุ่มสถานะกำลังบันทึก; หน้าต่างตำแหน่ง/แผนกแสดง error ใต้ช่องที่ผิด กด Enter บันทึก; หน้าต่างแก้ไขไม่กระพริบตอนปิด; สมาชิกแผนก/ตำแหน่ง/หน่วยงานเว้นขอบที่ 768 และไม่ขึ้น "0 คน" ระหว่างโหลด; ชื่อภาษาไทยแสดงก่อนเมื่อใช้ภาษาไทย; ข้อความตายตัวย้ายเข้าไฟล์ภาษา; เลิกใช้ " - " เป็นตัวคั่นในข้อความพนักงาน (เว้นคำอธิบายชื่อผู้ใช้ที่ - เป็นตัวอักษรที่ใช้ได้)
+- กรอบโฟกัสของแท็บหน้าโมดูล (`PageTabs`) ขาดด้านล่าง เพราะแถบแท็บเลื่อนด้านข้างได้จึงตัดสิ่งที่ล้นขอบ — วาดกรอบด้านในแท็บแทน (`ring-inset`) เหมือนแท็บในหน้าต่างพนักงาน และ `DialogTabs` ให้เหมือนกัน (ของกลาง ทุกโมดูล)
+- หน้าต่างพนักงาน แท็บภาพรวม: "เพิ่มเมื่อ / แก้ไขล่าสุด" ชิดขวาล่างของพื้นที่แท็บ (เหนือปุ่มแก้ไข) แทนการต่อท้ายกล่องตัวเลข (ผู้ใช้ขอ)
+- หน้าต่างสมาชิกแผนก/ตำแหน่ง/หน่วยงานกระโดดตอนเปิด (พบจากผู้ใช้ วิดีโอ docs/debug): ระหว่างโหลดขึ้นแถวรอ 6 แถวแล้วหดเหลือจำนวนจริง หน้าต่างอยู่กลางจอจึงเลื่อนขึ้นลง — ใช้จำนวนสมาชิกจากแถวที่กด: 0 คนแสดง "ไม่พบข้อมูล" ทันที มีสมาชิกแสดงแถวรอเท่าจำนวนจริง (`DataTable loadingRows`) และแถวรอมีวงกลมขนาดรูปโปรไฟล์ (`loadingAvatar`) ให้สูงเท่าแถวจริง; หัวหน้าต่างแสดงจำนวนทันที วัดใน Chrome ความสูงหน้าต่างไม่เปลี่ยนระหว่างโหลด
+- แถบแท็บหน้าต่างพนักงานเลิกเขียนเอง ใช้ `DialogTabs` ของกลางแบบหน้าต่างทรัพย์สิน สัญญา สต็อก Ticket: `DialogTabs` เป็น tablist จริง (role tab/tablist, aria-selected, ลูกศร Home End, `panelId` + `dialogTabId()` ให้แผงอ้างถึงแท็บ) เลื่อนด้านข้างเมื่อแท็บยาวเกิน ไอคอนแสดงตั้งแต่ lg ระยะในแท็บ 12px ต่ำกว่า lg / 16px ตั้งแต่ lg — วัดที่ 768: แท็บพนักงานครบ 6 ตัวไม่ล้น ตัวอักษร 14px เท่าหน้าต่างอื่น; หน้าต่างทรัพย์สิน Ticket สต็อกไม่ล้น; ลบคีย์ `emp_v_soon` ที่ไม่มีที่ใช้
+- หน้าต่างพนักงาน แท็บว่างทั้ง 4 (อุปกรณ์ Ticket คำขอ สิทธิ์เข้าถึง) ใช้ `EmptyPane` ตัวเดียว: กล่องไอคอนเทา + ข้อความ — เดิม "ไม่มีสิทธิ์เข้าถึง" เป็นข้อความเปล่าไม่มีไอคอน (พบจากผู้ใช้) ตอนนี้มีไอคอนโล่แบบเดียวกับแท็บ
+- ช่องหัวหน้าในฟอร์มแก้ไขและเพิ่มพนักงานแสดงรายชื่อ 4 คนก่อนเลื่อน (ผู้ใช้ขอ; เดิมเห็นแค่ 2 คนเพราะพื้นที่ใต้ช่องเหลือน้อยและเกณฑ์พลิกขึ้นบนคือ 180px): `SearchableSelect` รับ `maxRows` — วัดความสูงแถวจริงหลังเปิด (offsetHeight ไม่หลงตอนหน้าต่างกำลังขยาย) และใช้ความสูงที่ต้องการ (แถวมีรูป 52px) ตัดสินว่าจะเปิดลงหรือพลิกขึ้น ตรวจใน Chrome: เปิดขึ้นบน 4 แถวพอดี
+- หมายเหตุ: แท็บ Assets/Tickets/Requests ในหน้าต่างพนักงานต้องเป็น `flex flex-col` ไม่งั้นตารางแบบเต็มความสูงหดเหลือแถวเดียว
+- ตรวจ: tsc + eslint + prettier ผ่าน; Chrome โหมดสว่าง/มืดทุกแท็บและฟอร์ม (เปิดดูไม่บันทึก) และ 768px; ยังไม่ได้ลองบน iPad จริง (บีบนิ้วซูม คีย์บอร์ดบนจอ)
+
+### คำขอ: หน้าต่างดูคำขอไม่กระโดดตอนเปิด — 2026-10-13
+- พบจากผู้ใช้ (อาการเดียวกับหน้าต่างสมาชิกของพนักงาน): หน้าต่างดูคำขอสูงตามเนื้อหาและอยู่กลางจอ ระหว่างโหลดเป็นโครงร่างสูง 427px แล้วขยายเป็น 694–783px เมื่อข้อมูลมาถึง ขอบบนเลื่อนขึ้นทุกครั้ง (วัดใน Chrome)
+- `request-detail-dialog.tsx` ใช้ความสูงคงที่ `h-[min(860px,calc(100dvh-72px))]` และเว้นขอบ 16px แบบหน้าต่างรายละเอียดของโมดูลอื่น (ทรัพย์สิน สัญญา สต็อก Ticket พนักงาน) เนื้อหาเลื่อนในตัว ปุ่มอยู่ล่างเสมอ (`content-start` กันแถว grid ยืด) — วัดใหม่ ความสูงและตำแหน่งเท่าเดิมตั้งแต่โหลดจนเสร็จ
+
+### สิทธิ์การเข้าถึง: หน้าต่างดู Resource ไม่กระโดดตอนเปิด และแถบล่างไม่ถูกตัด — 2026-10-13
+- พบจากผู้ใช้ (อาการเดียวกับหน้าต่างดูคำขอ): หน้าต่าง `members-drawer.tsx` สูงตามเนื้อหา ระหว่างโหลด 721px ที่ระยะ 95px จากขอบบน แล้วขยายเป็น 839px ที่ 36px (วัดใน Chrome จอสูง 855px) และเมื่อโหลดเสร็จเนื้อหาสูง 868px เกินหน้าต่าง แถบล่าง (ลบ/แก้ไข) ถูกตัด 31px
+- ใช้ `focusDialogContentClass` (ความสูงคงที่ เว้นขอบ 16px เหมือนหน้าต่างรายละเอียดอื่น) และให้ส่วนสมาชิกเป็นส่วนเดียวที่เลื่อน (`min-h-0 flex-1 overflow-y-auto`) หัวหน้าต่าง ส่วนเจ้าของ และแถบล่างแสดงครบเสมอ — วัดใหม่ 839px ที่ 36px ตั้งแต่โหลดจนเสร็จ ไม่มีส่วนถูกตัด
+
+### พนักงาน: ภาษาไทย/อังกฤษใช้คำเดียวกับทั้งระบบ และอ่านเป็นภาษาคน — 2026-10-13
+- ผู้ใช้ขอ (humanizer): ไล่ `lang/{th,en}/employee.ts` ทั้งไฟล์ เทียบคำกับหน้าที่เป็นเจ้าของคำนั้น — แก้ไทย 90 คีย์ อังกฤษ 56 คีย์ ไม่เปลี่ยนชื่อคีย์
+- คำเดียวกับระบบ: บัญชีใช้ "ชื่อผู้ใช้ / รหัสผ่าน / บัญชีเข้าใช้งาน" แบบหน้าเข้าสู่ระบบ (เลิกปน Username, Password, Credentials, User & Password); ปุ่ม "สร้างบัญชีเข้าใช้งาน" / "Create login account"; หัวหน้าใช้ "หัวหน้า" / "Manager" (เลิกปน Report to, ผู้บังคับบัญชา, หัวหน้างาน); ทรัพย์สินใช้ "ทรัพย์สิน" แบบโมดูลทรัพย์สิน (แท็บ คำเตือนลาออก) และสถานะตรงกับโมดูลทรัพย์สิน (พร้อมส่งมอบ / Ready to deploy, Deployed, Pending return, Write-off); สิทธิ์เข้าถึงใช้ "Email Groups / File Shares / Social / Internet" และ "หน้าการเข้าถึง" / "Access Directory" แบบโมดูล Access; "Ticket" แทน "ใบแจ้งซ่อม"; "Workflow" และหน้า "สิทธิ์การใช้งาน" ตามชื่อเมนู; บัญชี super ใช้ชื่อบทบาท "Administrator"; สถานะพนักงานในภาพรวมใช้ "ใช้งาน" เท่าป้ายสถานะ (เดิม "สถานะปกติ")
+- ภาษาคน: ประโยค passive/ทางการเกิน ("รายการต่อไปนี้จะถูกบันทึกกับ…", "สายอนุมัติ…\"ลาออก\"แล้ว", "Whether … is unknown, so saving is held back") เขียนใหม่ให้สั้นและบอกว่าต้องทำอะไร; เว้นวรรคผิด ("ลบ หน่วยงาน นี้ไม่ได้", "สิทธิ์ และอุปกรณ์"); "ไม่มีสิทธิ์เข้าถึง" ในแท็บว่างอ่านเหมือน "คุณไม่มีสิทธิ์" → "พนักงานยังไม่มีสิทธิ์เข้าถึง"; คำอธิบายผังองค์กรภาษาอังกฤษพูดถึงปุ่ม +/– ที่ไม่มีจริง → ตัวเลขลูกน้อง; เครื่องหมายคำพูดโค้งในภาษาอังกฤษเป็นแบบตรง; หัวข้อ/ปุ่มอังกฤษเป็น sentence case
+- ไม่แตะ: คีย์ที่ไม่มีที่ใช้ราว 20 คีย์ (เช่น `kpi_*`, `reset_password_desc`, `dept_location`) คงไว้ ยังไม่ลบ
+
+### รายงาน: กลุ่ม "Requests (workflow)" เป็น "Requests" — 2026-10-13
+- ผู้ใช้ขอ: ชื่อกลุ่มรายงานคำขอภาษาอังกฤษในศูนย์รายงานเหลือ "Requests" (`rep_domain_requests` ใน `lang/en/report.ts`; ภาษาไทย "คำขอ" เดิมอยู่แล้ว)
+
+### My Profile อยู่ใน URL — 2026-10-13
+- ผู้ใช้ขอ: กด My Profile แล้ว URL ได้ `?dialog=profile` และลง history — ปุ่ม Back ปิด drawer, Forward เปิดกลับ, ลิงก์หรือ reload ที่มี `?dialog=profile` เปิด drawer ให้เลย; ปิด (✕, ปิด, Esc) ย้อน history ที่เปิดไว้ จึงไม่มี entry ซ้อนกัน; param อื่น (`?tab=`, ตัวกรอง) คงไว้
+- ใช้ `useDialogParam` ตัวเดียวกับ dialog Export/Schedule ของรายงาน (`app-shell.tsx`); ลิงก์ "ดูทั้งหมด" ใน drawer ไม่ต้องสั่งปิดเอง หน้าใหม่ไม่มี param จึงปิดเอง (เดิมสั่งปิดแล้วจะชนกับการย้อน history)
+- ตรวจในเบราว์เซอร์ (build ใหม่): เปิด/Back/Forward/ปุ่มปิด/Esc ได้ตามนี้; ยังไม่ได้ลองกดลิงก์ "ดูทั้งหมด" เพราะบัญชี Administrator ไม่มีรายการ
+
+### Change password กลับมาที่ My Profile — 2026-10-13
+- ผู้ใช้แจ้ง: ปิด dialog Change password แล้ว `?dialog=profile` หายไปด้วย (ปุ่มใน drawer สั่งปิด drawer ก่อนแล้วค่อยเปิด dialog ผ่าน flag ใน store)
+- ตอนนี้ Change password เป็น `?dialog=password` ซ้อน history ต่อจาก `?dialog=profile`: ยกเลิก / Back / เปลี่ยนรหัสสำเร็จ → กลับมา My Profile; เปิด-ปิดซ้ำไม่เพิ่ม history; ลิงก์หรือ reload ที่มี `?dialog=password` เปิด dialog ให้ (ยกเลิกแล้วอยู่หน้าเดิม)
+- การแจ้งเตือนรหัสผ่านใกล้หมดอายุ (กระดิ่งและ toast) เปิดด้วย `?dialog=password` เหมือนกัน; ลบ `passwordDialogOpen` / `setPasswordDialog` ออกจาก `stores/ui.ts`
+- ไฟล์: `app-shell.tsx`, `profile-drawer.tsx` (prop `onChangePassword`), `notifications-dropdown.tsx`, `use-notification-toasts.ts`, `stores/ui.ts`
+- ตรวจในเบราว์เซอร์ (build ใหม่): profile → password → ยกเลิกกลับ profile, Back/Forward ทีละขั้น, เปิดจาก URL ตรงได้; tsc และ ESLint ผ่าน
+
+### Set your password อยู่ใน URL — 2026-10-13
+- ผู้ใช้ขอ: dialog "Set your password" (บัญชีที่ต้องตั้งรหัสผ่านเอง `must_change_password`) มี URL ด้วย
+- ตอน dialog ขึ้น URL ได้ `?dialog=set-password` (param อื่นคงไว้) และหายเองเมื่อตั้งรหัสสำเร็จ; ใช้ replace ไม่เพิ่ม history เพราะผู้ใช้ไม่ได้เปิดเองและปิดด้วย Back ไม่ได้; URL ตามสถานะบัญชีเท่านั้น — ลิงก์ที่มี `?dialog=set-password` ของบัญชีที่ไม่ต้องตั้งรหัส จะถูกตัด param ออกและไม่ขึ้น dialog
+- hook ใหม่ `useShownDialogParam(name, shown)` ใน `shared/hooks/use-dialog-param.ts` เรียกจาก `app-shell.tsx`
+- ตรวจในเบราว์เซอร์ (build ใหม่, สลับ flag ใน cache ของแท็บทดสอบ ไม่แตะ DB): ขึ้น dialog → URL มี param, history ไม่เพิ่ม; ล้าง flag → param หาย; เปิดลิงก์ที่มี param ด้วยบัญชีปกติ → ตัด param ไม่ขึ้น dialog; tsc และ ESLint ผ่าน
+
+### Change password ซ้อนบน My Profile — 2026-10-13
+- ผู้ใช้แจ้ง: กด Change password จาก My Profile แล้ว dialog ไม่ได้อยู่ซ้อนบนโปรไฟล์ (โปรไฟล์หายไป)
+- `ChangePasswordDialog` แบบที่ผู้ใช้เปิดเอง (มี `onClose`) เปลี่ยนเป็น Radix Dialog จึงซ้อนบน My Profile ได้ (Radix จัดลำดับชั้น focus/คลิก/Esc เอง แบบเดียวกับ dialog ครอปรูป); แบบบังคับเมื่อรหัสหมดอายุยังเป็นหน้าทับเต็มจอเหมือนเดิม
+- `useDialogParam` เพิ่ม `setOpen(name, { over: true })` จำ dialog ที่อยู่ข้างใต้ไว้ใน history entry และคืนค่าตัวที่ 3 (`under`); URL ยังเป็น `?dialog=password` — ปุ่มใน My Profile เปิดแบบ over จึงเห็นโปรไฟล์ข้างหลัง ส่วนจากการแจ้งเตือน/ลิงก์ตรงขึ้นเดี่ยว ๆ
+- ตรวจในเบราว์เซอร์ (ไทย, สว่างและมืด): ซ้อนกัน 2 ชั้น focus อยู่ช่องรหัสปัจจุบันและพิมพ์ได้; ยกเลิกตอนมีข้อความ → ถามก่อนทิ้ง (ขึ้นบนสุด) → กลับ My Profile; Esc ปิดเฉพาะ dialog รหัสผ่าน; Back/Forward สลับ 2 ชั้นถูก; reload ตอนซ้อนยังซ้อนอยู่; เปิด `?dialog=password` ตรงขึ้นเดี่ยว; tsc และ ESLint ผ่าน
+
+### My Profile และรหัสผ่าน: แก้จากรีวิว (ความปลอดภัย + บัคที่ทำให้ติดค้าง) — 2026-10-13
+- **ไฟล์และ PDF ต้องผ่านด่านเดียวกับ API:** `/files/*` และ `/pdf/*` (`routes/web.php`) เพิ่ม `BlockResignedEmployees` + `CheckPasswordExpiry`; เดิมบัญชีที่รหัสหมดอายุ ต้องตั้งรหัสใหม่ หรือผู้ลาออกที่ยังมี cookie จำการเข้าสู่ระบบ ยังดาวน์โหลดไฟล์แนบ Ticket/สัญญา/คำขอ และ PDF สต็อกได้ (API ตอบ 403/401 แต่ route เว็บไม่ตรวจ)
+- **รหัสผ่านใหม่ต้องไม่ซ้ำรหัสปัจจุบัน:** `AuthController::changePassword` ตอบ 422 `validation.password_reused` ("รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน"); เดิมใส่รหัสเดิมซ้ำได้ ทำให้นาฬิกาหมดอายุเริ่มใหม่ และตั้งกลับเป็นรหัสชั่วคราวที่แอดมินให้ได้
+- **เตือนหมดเวลาใช้งานกดได้เสมอ:** `SessionTimeoutModal` เป็น Radix Dialog ชั้นบนสุด (z 10000, Esc และคลิกนอกกรอบไม่ปิด) — เดิมเป็น div ธรรมดา ตอนเปิด My Profile หรือเปลี่ยนรหัสผ่านอยู่ ปุ่ม "อยู่ต่อ" กดไม่ได้ (Radix ปิด pointer-events ของหน้า) จึงถูกออกจากระบบ
+- **หน้ารหัสหมดอายุ/ตั้งรหัสใหม่ไม่ถูกบัง:** `app-shell.tsx` ไม่เปิด My Profile ระหว่างที่ต้องเปลี่ยนรหัส (`must_change_password` หรือ `password_expired`) แม้ URL ยังมี `?dialog=profile` (reload / Back) — เดิม My Profile ขึ้นมาทับแล้วหน้ารหัสกดอะไรไม่ได้ และแวบขึ้น 1 เฟรมพร้อมยิง API ก่อนหน้าตั้งรหัส
+- **ไม่ถอยประวัติซ้ำ:** Change password ปิดตัวเองผ่าน `onSuccess` ของ `mutate()` ซึ่งไม่ทำงานถ้า dialog ถูกปิดไปแล้ว — เดิมกดยกเลิกระหว่างบันทึกแล้วบันทึกสำเร็จจะ `navigate(-1)` สองครั้ง หลุดออกจาก My Profile หรือออกจากหน้า
+- test: `PasswordExpiryEnforcementTest`, `ResignedAccountAccessTest`, `MustChangePasswordTest` (3 test ใหม่ เห็นแดงก่อนแก้); ไฟล์ที่เกี่ยวข้อง 103 passed; tsc + build ผ่าน; หน้าจอยังไม่ได้ตรวจใน Chrome (ต้อง login)
+- **ชั้น dialog ใน URL (ต่อ):** `useListParams`, `useTabParam` (แบบ replace) และ `useShownDialogParam` เขียน URL โดยคง history state (`keepDialogState()`) ไว้ — เดิมการเขียนแบบ replace ล้าง `dialogUnder`/`dialogPushed` ทิ้ง My Profile เลยหายจากใต้ Change password และปิดแล้วเหลือ entry ค้าง; หน้ารหัสหมดอายุล้าง `?dialog=` ทิ้งในที่ (`setOpen(null, { inPlace: true })`) เปลี่ยนรหัสบนหน้านั้นแล้วจึงไม่มี Change password ถามซ้ำ; ปุ่มเปลี่ยนรหัสผ่านใน My Profile ไม่ถาม "ทิ้งการแก้ไข?" แล้ว (drawer อยู่ข้างใต้พร้อมข้อมูลที่แก้) และฟอร์มเติมค่าครั้งเดียวต่อการเปิด — เปลี่ยนรหัสสำเร็จไม่ล้างชื่อ/เบอร์ที่ยังไม่บันทึก; กระดิ่งและ toast ใช้ callback จาก AppShell แทน `useDialogParam` ของตัวเอง
+- **หน้ารหัสผ่านทั้ง 3 แบบใช้ชิ้นเดียวกัน:** `BlockingDialog` (Radix ที่ปิดได้เฉพาะปุ่มของมัน: role dialog, focus วนอยู่ข้างใน, เลื่อนได้เมื่อจอเตี้ยหรือคีย์บอร์ดบัง) ใช้กับหน้ารหัสหมดอายุ ตั้งรหัสผ่าน และเตือนหมดเวลา; `PasswordForm` + `PasswordDialogHead` ใช้กับเปลี่ยนรหัสผ่าน หน้ารหัสหมดอายุ และตั้งรหัสผ่าน: ปุ่มแสดง/ซ่อนทุกช่อง (`PasswordInput` ย้ายไป `shared/components`), error ขึ้นใต้ช่องของมันพร้อม focus ช่องแรก (เดิมทุก error ขึ้นใต้ "ยืนยันรหัส") รวมถึง error จาก server (`current_password` / `password`), error อื่นเป็น `FormErrorBanner`, checklist ผูก `aria-describedby` กับช่องรหัสใหม่และบอก screen reader ว่าแต่ละข้อ "ผ่านแล้ว/ยังไม่ผ่าน", ปุ่มบันทึกหมุนระหว่างส่ง, สำเร็จขึ้น toast "บันทึกรหัสผ่านใหม่แล้ว", มีช่อง username ซ่อนให้ password manager; เปลี่ยนรหัสผ่านที่ผู้ใช้เปิดเองใช้ไอคอนกุญแจสีแบรนด์ (สีเหลืองเหลือเฉพาะหน้ารหัสหมดอายุ); ช่องรหัสผ่านไม่มี placeholder (จุด •••• ดูเหมือนกรอกไว้แล้ว); คีย์ `pwd_ph_*` ลบ เพิ่ม `pwd_err_current_required`, `pwd_saved_toast`, `pwd_rule_met/unmet`
+- **My Profile:** ช่องกรอกใช้ `Field` (label ผูก id, `aria-required`, error ใต้ช่อง, autocomplete given-name/family-name/tel, เบอร์เป็น `type="tel"`); แท็บใช้ `DialogTabs` (tablist จริง ปุ่มลูกศร เลื่อนข้างได้) + tabpanel; ปุ่มกล้องมีชื่อ ขนาด 32px มีวง focus; แท็บที่โหลดอยู่เป็นแถว skeleton และว่างใช้ `EmptyPane` (ย้ายไป `shared/components` ใช้ร่วมกับ Employee viewer); cover เลิกใช้ inline style; `88dvh`; rail 232px ต่ำกว่า xl (300px ที่ xl) และหัวข้อ rail แบบ Employee viewer; รูปตัวอย่างสร้าง object URL ครั้งเดียวต่อรูปแล้วคืน (เดิมสร้างใหม่ทุก render)
+- ตรวจใน Chrome (iframe 768×1024 และจอ desktop, สว่าง/มืด, สลับ flag ใน cache ของแท็บ ไม่บันทึกอะไร): label ผูกครบ 5 ช่อง, tablist/tabpanel, 768px: rail 232 ฟอร์ม 503 ช่องละ 230 ไม่มีเลื่อนแนวนอน; เปลี่ยนรหัสผ่านซ้อนบน My Profile, กดบันทึกตอนว่างไม่ยิง request และ error ขึ้นถูกช่อง; หน้ารหัสหมดอายุ/ตั้งรหัส: ชื่อ dialog ถูก Tab วนอยู่ข้างใน, หน้ารหัสหมดอายุล้าง `?dialog=password` ทิ้ง; จอสูง 480px เลื่อนถึงปุ่มสุดท้ายได้; tsc + eslint + build ผ่าน
+- **My Profile ใช้ชิ้นส่วนเดียวกับ Employee viewer:** `modules/employee/components/employee-panes.tsx` (export ผ่าน barrel) รวม `RailRow` (มีปุ่มคัดลอก), `IdChip`, `RAIL_HEADING`, `AccessPane`, `AssetsPane`, `TicketsPane`, `RequestsPane` ที่ย้ายออกมาจาก `employee-view-drawer.tsx` (เหลือ 773 บรรทัดจาก 1,157) ทุก pane รับ `emptyText` เอง; My Profile ป้อนข้อมูลจาก endpoint ของตัวเอง (`/assets/mine` แปลงเป็นแถวแบบเดียวกัน, `/access/mine` ชนิดเดียวกันอยู่แล้ว, Ticket ที่ตัวเองแจ้ง, คำขอ `scope=mine` อย่างละ 50 รายการ + ลิงก์ "เปิดหน้าเต็ม") ไม่ใช้ endpoint รายคนของโมดูลพนักงาน เพราะต้องมีสิทธิ์ `employees.view`; แท็บใหม่ "คำขอ" สำหรับคนที่มี `requests.submit`; ชื่อแท็บใช้คำเดียวกับ Employee viewer (ทรัพย์สิน / Tickets / คำขอ / สิทธิ์เข้าถึง) ลบคีย์ `profile_tab_assets/tickets/access` เพิ่ม `profile_no_requests`; อีเมล เบอร์ และชื่อผู้ใช้คัดลอกได้ (ประกาศให้ screen reader แบบ viewer); แท็บภาพรวม แผนผังองค์กร และ KPI ไม่นำมา เพราะต้องใช้ `employees.view`
+- ตรวจใน Chrome: ทุกแท็บของ My Profile แสดงเป็นตาราง/กลุ่มแบบ viewer (ทดสอบด้วยข้อมูลจริงของพนักงานอื่นใส่ cache ของแท็บ ไม่บันทึก), แท็บพอดีใน desktop (778px), ที่ 768px ถ้าตัวเลขสามหลักแถบแท็บเลื่อนข้างเล็กน้อยแบบ viewer; Employee viewer ยังแสดง chip, rail, ตาราง Ticket และข้อความว่างเดิม; tsc + eslint + build ผ่าน
+- **My Profile แถบ "ข้อมูลพนักงาน" เพิ่มหน่วยงานและหัวหน้า:** เรียงแบบ Employee viewer (หน่วยงาน, แผนก, ตำแหน่ง, หัวหน้า) ไอคอนเดียวกัน; รหัสพนักงานและวันเริ่มงานย้ายไปบนสุดของแท็บข้อมูลส่วนตัวเป็นช่องอ่านอย่างเดียว (`readOnly` พื้น muted โฟกัสและคัดลอกได้ เพราะ HR เป็นคนตั้ง) ข้อมูลจาก `GET /employees/{ตัวเอง}` ที่ส่ง `section` และ `manager_name` อยู่แล้ว ภาษาไทยใช้ `_th` ก่อน; test `EmployeeSafeguardsTest::test_my_profile_record_names_my_section_and_manager_without_employees_view` (ผ่านทันทีเพราะ API ทำอยู่แล้ว ใส่ไว้กันถอย)
+- **คำใน My Profile และหน้ารหัสผ่าน (TH/EN):** ใช้คำของระบบ (บัญชีเข้าใช้งาน / Login account, แจ้ง Ticket, ทรัพย์สินที่ถือครองตามหน้าทรัพย์สินของฉัน, แท็บ TH "Ticket"); ข้อความบอกสิ่งที่เกิดจริงแทนคำกว้าง ๆ (ตั้งรหัสผ่าน: "ตั้งรหัสผ่านใหม่แทนรหัสชั่วคราวก่อนใช้งานต่อ" ไม่ระบุว่าใครตั้งเพราะคนที่จัดการบัญชีพนักงานไม่จำเป็นต้องเป็น IT, เปลี่ยนรหัสผ่าน: "อุปกรณ์อื่นที่ใช้บัญชีนี้อยู่ต้องเข้าสู่ระบบใหม่", หมดอายุ: ต้องไม่ซ้ำรหัสเดิม); error บอกวิธีแก้ ("กรุณาลองใหม่", รูปต้องไม่เกิน 2 MB); ช่องนามสกุลว่างแจ้ง "กรุณากรอกนามสกุล" (เดิมขึ้น "กรุณากรอกชื่อ"); ช่องยืนยันว่างแจ้ง "กรุณากรอกรหัสผ่านใหม่อีกครั้ง" แยกจาก "ไม่ตรงกับรหัสผ่านใหม่ด้านบน"; server `validation.current_password` → "รหัสผ่านปัจจุบันไม่ถูกต้อง" / "Your current password is incorrect." (test ใน `SecuritySettingsTest`); EN "Nothing is signed out to you" (ชนกับปุ่ม Sign out) → "You don't hold any assets yet.", คอลัมน์ "Request at" → "Reported"; ลบ key ที่ไม่มีใครใช้ `profile_sub/photo_bad/photo_big/edit_via/no_assets`
+
+### หน้าต่างเตือนหมดเวลาใช้งาน (Session): แก้จากรีวิว — 2026-10-14
+- **เวลาเริ่มเตือน:** `modules/auth/lib/session-warning.ts` `warnSecondsFor()` = น้อยกว่าระหว่าง 2 นาที กับ 50% ของเวลาที่ตั้ง (เดิม 25%: ตั้ง 1 นาทีเหลือเวลาตอบแค่ 10–15 วิ) ตั้ง 1 นาทีเตือนที่ 30 วิ, 5 นาทีขึ้นไปเตือนที่ 2 นาที hook ส่ง `warnSeconds` ให้ dialog แทนการเขียน 120 ซ้ำใน modal
+- **dialog:** เหลือวงกลมอย่างเดียว (เอาแถบด้านบนออก) วงกลมเริ่มว่างทุกครั้งและเต็มตามเวลาเตือนจริง สีตามสัดส่วนที่เหลือ (เขียวครึ่งแรก เหลือง 25% แดง 25% สุดท้าย) เป็น class ตามโหมดมืด ไม่มี inline style ตัวเลขแบบนาฬิกา `1:45` / `0:30` อยู่ในวงกลมเท่านั้น (เดิมประโยคอ่านว่า "อีก 1:45 วินาที" และตัวเลขเล็กสีจางไม่ผ่าน 4.5:1) transition ปิดเมื่อตั้งลดการเคลื่อนไหว
+- **คำ:** หัวข้อ "ต้องการใช้งานต่อหรือไม่" / "Do you want to continue?", ประโยค 2 บรรทัด "ไม่มีการใช้งานเป็นระยะเวลาหนึ่ง / บัญชีของคุณจะออกจากระบบโดยอัตโนมัติเมื่อหมดเวลา", ปุ่ม "ใช้งานต่อ" และ "ออกจากระบบ" (`profile_signout`); ลบ `session_expiring_seconds`, `session_logout_now`
+- **โปรแกรมอ่านหน้าจอ:** ตอนเปิดอ่านเวลาที่เหลือจริงต่อท้ายประโยค ("เหลือเวลาอีก 1 นาที 15 วินาที") แล้วประกาศใน live region ตอนเหลือ 1 นาที / 30 / 10 วินาทีที่ยังมาไม่ถึง ไอคอนและวงกลมซ่อน
+- **focus กลับที่เดิม:** `BlockingDialog` (dialog เตือนนี้ + หน้ารหัสหมดอายุ + ตั้งรหัสผ่าน) จำ element ที่มี focus ก่อนเปิดแล้วคืนให้ตอนปิด Radix คืน focus ให้แต่ปุ่ม Trigger ซึ่ง dialog ที่ระบบเปิดเองไม่มี focus จึงตกไป body
+- **หลายแท็บใช้นาฬิกาเดียวกัน:** เดิมแต่ละแท็บนับเวลาไม่ได้ใช้งานเอง แท็บที่ถูกทิ้งไว้ (เช่น กด "ใช้งานต่อ" ในแท็บ A แล้วไปทำงานแท็บ B) จะนับจนหมดแล้วเรียก `POST /logout` ซึ่ง invalidate session ที่ทุกแท็บใช้ร่วมกัน แท็บที่กำลังใช้อยู่เลยหลุดตาม ตอนนี้แท็บที่มีการใช้งานเขียนเวลาลง `localStorage` (`itsd:last-activity` ไม่เกินทุก 5 วิ) และส่งผ่าน `BroadcastChannel` (`itsd-session`) ทุกแท็บนับจากเวลาล่าสุดของทุกแท็บ การใช้งานแท็บอื่นหลังเตือนขึ้นจะปิด dialog ของแท็บที่เตือน กด "ใช้งานต่อ" แท็บไหนก็ปิดทุกแท็บ แท็บที่จะออกจากระบบเช็กนาฬิการ่วมอีกครั้งก่อนออก และเมื่อออกจริง แท็บอื่นไปหน้า login พร้อมแถบ "Session หมดอายุ" ทันที; test `node --test tests/js/session-warning.test.ts` (`newerActivity`, `shouldShareActivity`, `dismissesWarning`, `parseSessionMessage`)
+- **timeout ฝั่ง server ทำงานจริง:** เดิม request ที่หน้าเว็บดึงเองทุก 15 วิ (การแจ้งเตือน, badge sidebar, ทรัพย์สินของฉัน, รายการ export ทุก 3 วิ, refetch อัตโนมัติ) รีเซ็ตเวลาใช้งานทุกครั้ง server จึงไม่เคยหมดเวลาตราบใดที่เปิดแท็บไว้ ตอนนี้ `CheckSessionTimeout` นับเป็นการใช้งานเฉพาะ `GET /session/ping` กับ request ที่ไม่ใช่ GET (ครอบคลุมการดึงอัตโนมัติทุกตัว รวมตัวในอนาคต) และ browser ส่ง ping เมื่อมีการใช้งานจริง ไม่ถี่กว่า `heartbeatMsFor()` (1/3 ของเวลา สูงสุด 1 นาที; 1 นาที = 20 วิ; ถ้า browser ยังไม่รู้ค่าหรือเป็น 0 ใช้ 1 นาที) ต่อ browser (`itsd:last-ping` เขียนเมื่อ ping สำเร็จเท่านั้น) และส่งตามท้ายอีกครั้งหลังช่วงที่ถูกหน่วง; session แบบ "จดจำฉันไว้" ไม่ส่ง
+- **จากรีวิวโค้ด (9 ข้อ):** เวลาใช้งานล่าสุดย้ายจาก session payload ไป cache (`session-idle:{clock}` โดย `_sec_idle_clock` ใน session) เพราะ session แบบ database บันทึกทั้งก้อนทุก request ทำให้ request ที่วิ่งพร้อมกันเขียนทับเวลาของ ping ได้; clock ที่เริ่มแล้วแต่หาเวลาใน cache ไม่เจอถือว่าหมดเวลา (ไม่เริ่มนับใหม่); server เผื่อเวลา `GRACE_SECONDS` = 60 (เท่ารอบ heartbeat ยาวสุด) browser จึงเตือนและออกจากระบบตรงเวลาก่อน server เสมอ ping ที่หายหรือปิดแท็บก่อนส่ง ping ตามท้ายไม่ทำให้หลุดก่อนเวลา; สัญญาณ logout ไปแท็บอื่นส่งหลัง server logout เสร็จ (เดิมแท็บอื่นเจอ session ยังอยู่แล้วเด้งกลับ); ย่อ comment ใน `http.ts`; ลบ header `X-Background-Poll`; `SESSION_LIFETIME` ของ Laravel ยังต่ออายุทุก request เหมือนเดิม; test `SessionTimeoutTest` (11), `RememberMeTest`, `SecuritySettingsTest`, `heartbeatMsFor`/`pingDelay`
+- **ข้อความบนหน้า login ตรงสาเหตุ:** ทดสอบจริงใน Chrome (ตั้ง 5 นาที, server ตัดที่ 15:37:16 หลังการใช้งานล่าสุด 15:31:09 ไม่มีแท็บไหนเรียก logout) เจอว่า request ดึงข้อมูล 2 ตัวล้มพร้อมกัน ตัวแรกได้ `session_expired` ตัวที่สองได้ 401 ธรรมดาแล้วเขียน URL ทับเป็น `signed_out` หน้า login จึงขึ้น "ออกจากระบบแล้ว" แทน "Session หมดอายุ"; ตอนนี้ทุกการพาไปหน้า login ผ่าน `shared/lib/login-redirect.ts` (`redirectToLogin`) ซึ่งไปได้ครั้งเดียว เหตุผลแรกชนะ ใช้ทั้งใน `http.ts` และนาฬิกาหมดเวลา; ทดสอบรอบสองเจอว่าข้ามแท็บยังผิด (แท็บที่ส่ง request ตอนหมดเวลาพอดีได้ `session_expired` แท็บอื่นได้ 401 ธรรมดาทีหลัง) จึงให้แท็บแรกที่ออกเพราะหมดเวลาประกาศ `logout` ผ่าน `BroadcastChannel` (`SESSION_CHANNEL` ย้ายมาอยู่ใน `login-redirect.ts`) แท็บอื่นไปหน้า login พร้อม "Session หมดอายุ" ทันที และแท็บที่ได้ยินข่าวไม่ประกาศซ้ำ; test `node --test tests/js/login-redirect.test.ts`
+- **หน้า login:** `?reason=session_expired` แสดงแถบสีน้ำเงิน "Session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" ที่ตำแหน่งเดียวกับแถบรหัสผิด (ขึ้นทีละแถบ) แล้วลบ `reason` ออกจาก URL; `?reason=signed_out` (401 ระหว่างใช้งาน เช่น เปลี่ยนรหัสผ่านจากอีกเครื่อง หรือ IT รีเซ็ตรหัสให้ ซึ่งตัดทุกเครื่อง) แสดง "ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้ง" ไอคอน LogOut ที่ตำแหน่งเดียวกัน ข้อความกลาง ๆ เพราะ 401 ไม่บอกสาเหตุ
+- test: `node --test tests/js/session-warning.test.ts` (เวลาเตือนทุกค่าที่ตั้งได้ จุดเปลี่ยนสี ข้อความเวลา milestone) เห็นแดงก่อนเขียน lib; ตรวจใน Chrome ด้วยการตั้งเวลา 1 นาทีใน cache ของแท็บ (บล็อก request logout ไว้) ทั้งโหมดสว่าง/มืด: เปิดที่ 0:28 focus อยู่ที่ "ใช้งานต่อ" ประกาศ 10 วินาทีครั้งเดียว วงกลมเหลืองที่ 0:09 กด "ใช้งานต่อ" แล้ว focus กลับปุ่มเดิม; แถบหน้า login อยู่บรรทัดเดียว
+
+### ตาราง Ticket: คอลัมน์หัวข้อถูกบีบจนข้อความซ้อนกัน — 2026-10-15
+- **สาเหตุ:** ตาราง Ticket กำหนดความกว้างตายตัว 7 คอลัมน์ (รวม 962px) ให้ "หัวข้อ" ได้ที่เหลือ จอแคบกว่า ~1400px หัวข้อเหลือ 0px ข้อความล้นทับคอลัมน์ข้าง ๆ; การ์ด "กิจกรรมล่าสุด" ใช้ `max-w-0` หัวข้อเหลือ "[." ที่ 1440
+- **DataTable กลาง:** ตารางที่มีทั้งคอลัมน์กว้างตายตัวและคอลัมน์ยืด ได้ความกว้างขั้นต่ำ = คอลัมน์ตายตัว + ขั้นต่ำของคอลัมน์ยืด (ค่าเริ่ม 12rem ตั้งเองได้ด้วย `minWidth`) จอแคบตารางเลื่อนซ้าย-ขวาในการ์ดแทนการบีบ; ไม่นับคอลัมน์ `hideBelow`, ไม่ใช้กับ `fillHeight` (ไม่มีแถบเลื่อน), ใส่เป็นคลาส `min-w-(--flex-floor)` ให้ `min-w-*` ของผู้เรียกชนะทุก breakpoint
+- **หน้าอื่นที่อาการเดียวกัน:** "กิจกรรมล่าสุด" หัวข้อขั้นต่ำ 12rem รหัส/ประเภท/ผู้แจ้งไม่ตัดบรรทัด; รายงาน Ticket ตารางเจ้าหน้าที่ คอลัมน์แท่ง `minWidth: '3rem'` ยังพอดีการ์ดที่ 768; หน้าแจ้งเตือน รหัส "NT-01" ไม่ตัดเป็น 2 บรรทัด; ตรวจแล้วไม่มีอาการ: อีเมล, Log, สัญญา, แท็บในหน้าต่างพนักงาน
+- ตรวจ: วัดใน Chrome 768/900/1100/1366/1440 หัวข้อ Ticket 192px ทุกขนาด หน้าไม่ล้นจอ; `/code-review` แก้ 7 ข้อ (ตารางเจ้าหน้าที่กว้างเกิน, คอลัมน์ hideBelow, fillHeight, รหัสตัดบรรทัด, ขั้นต่ำต่อคอลัมน์, เป็นคลาสแทน style, comment ยาว) ข้ามตัวเลขจางบนชิป (อีกหน้าต่างกำลังแก้); eslint + tsc + build ผ่าน
+
+### Tooltip กลาง: ใช้ได้ทั้งเมาส์ แตะ iPad และคีย์บอร์ด ในโมดูลหลัก — 2026-10-15
+ไล่ทุกโมดูลหลัก (ไม่รวมรายงาน) แล้วพบ tooltip แบบเก่า (`title` ของเบราว์เซอร์, `InfoHint` ที่เปิดด้วย hover/focus, tooltip ทำมือ) ซึ่งแตะบน iPad แล้วไม่ขึ้น
+- **ของกลาง:** `shared/components/info-popover.tsx` เพิ่ม `as="span"` (ห่อปุ่มที่ปิดอยู่), `tabbable`, `isolate` (คลิกและ Enter/Space บนตัวเปิดหรือใน note ไม่ไหลไปถึงแถวที่กดได้), `openOnFocus`, `inactive` (โครงเดิมไม่มี note ตัวข้างในจึงไม่ถูกสร้างใหม่) และ `disabled` (`aria-disabled`); `NoteRow` แถว "สัญลักษณ์ + คำ + ตัวเลข" หน้าตาและ props เดียวกับของรายงาน
+- **`InfoHint` (i):** ไส้ในเป็น `InfoPopover` ทั้ง 26 จุด (หน้าสิทธิ์ + หน้าพนักงาน) ไม่ต้องแก้ที่เรียกใช้; ยังเปิดตอน Tab มาถึง และขึ้นบรรทัดใหม่ตามเดิม
+- **โมดูลรายงานใช้ตัวกลางแล้ว:** 13 ไฟล์ import `InfoPopover` จาก `@/shared/components/info-popover`, `tile-chart.tsx` ใช้ `NoteRow` กลาง และลบ `modules/report/components/info-popover.tsx` ที่ซ้ำ (ตัวกลางมีทุกอย่างของตัวเดิม ไม่ส่งตัวเลือกใหม่ก็ทำงานเหมือนเดิม) ลองในเบราว์เซอร์ 4 หน้า (ประกัน, Ticket, ต่ออายุสัญญา, พนักงาน) โน้ตเปิดได้ทุกแบบ
+- **`DisabledReason` (ใหม่):** บอกเหตุผลที่ปุ่มกดไม่ได้ เมาส์ชี้ แตะ หรือ Tab มาถึงก็เห็น; ใช้กับปุ่มลบในคลังอะไหล่ (เดิม `pointer-events-none` ทำให้ title ไม่ขึ้นแม้บน desktop), ปุ่มแก้/ลบกลุ่ม Admin ในหน้าสิทธิ์ (เพิ่ม `aria-label` ให้ปุ่มไอคอน), ปุ่มคืนค่าในหน้าแจ้งเตือนและเทมเพลตอีเมล; หน้าเพิ่มพนักงานไม่เปลี่ยนเพราะเหตุผลขึ้นบนหน้าอยู่แล้ว
+- **ไอคอนล็อก:** แถวทรัพย์สินที่เลือกไม่ได้ และทรัพย์สินที่ถอดออกจากสัญญาไม่ได้ (ไอคอนอยู่ข้างแถว ไม่ห่อแถว เพื่อให้ checkbox ยังบอกชื่อและสถานะ) แตะหรือชี้แล้วเห็นเหตุผล
+- **กราฟ:** แท่งปริมาณ Ticket ใน Dashboard (วันที่ เข้าใหม่ ค้างสะสม พร้อมสัญลักษณ์สี แท่งที่เปิดอยู่เป็นสีเข้ม, ไม่อยู่ในลำดับ Tab) และแถบประเภททรัพย์สิน (จำนวนต่อสถานะ + รวม) เป็น note แบบรายงาน; จุดบนไทม์ไลน์สัญญาขยายค้างไว้ขณะ note เปิด (เห็นว่าเป็นจุดไหนหลังแตะ)
+- **คำเข้า lang:** ปุ่ม Bold/Italic/... ในตัวแก้เทมเพลตอีเมล และคำแนะนำหมุนล้อในช่องขนาด File Share (เดิมเขียนไทย/อังกฤษไว้ในโค้ด)
+- **ไม่ได้ทำ:** tooltip บอก error รายบรรทัดในตัวแก้โค้ดอีเมล (อยู่ในชั้น `aria-hidden`), `title` ที่เป็นชื่อปุ่มไอคอนหรือข้อความเต็มของตัวหนังสือที่ถูกตัด; โมดูลรายงานยังใช้ `InfoPopover`/`NoteRow` ของตัวเองจนกว่าจะย้าย import
+- ตรวจ: eslint + prettier + tsc + build ผ่าน; `/frontend-design` (เพิ่มสถานะเปิดของจุด/แถบหลังแตะ, รวม `NoteRow`) และ `/code-review` (แก้ 6 ข้อ: คลิกใน note ทะลุถึงแถว, checkbox สัญญาเสียความหมาย, InfoHint ไม่เปิดตอน focus, `isolate` กลืนปุ่ม Tab/Escape, ไม่มี `aria-disabled`, ตัวข้างในถูกสร้างใหม่เมื่อเหตุผลเปลี่ยน; ไม่แก้ inline style สีที่ผู้ดูแลตั้งเอง); ลองใน Chrome: Dashboard, สิทธิ์, คลังอะไหล่, ทรัพย์สิน (แถบ + ไอคอนล็อก), แจ้งเตือนอีเมล, ฟอร์มสัญญา; การเปิดตอนกด Tab จริงยังไม่ได้ลองเพราะแท็บทดสอบถูกพับไว้
+
+### รายงานสัญญา 3 หน้า: แก้จากรีวิว (WCAG + แท็บเล็ต + ความตรงกันกับโมดูลสัญญา) — 2026-10-15
+รีวิวด้วย `/code-review`, `/security-review`, `/web-design-guidelines`, `/frontend-design` และวัดจริงใน Chrome (1600/768, สว่าง/มืด)
+- **ตารางถูกตัดบนแท็บเล็ต:** `useTableFitsWidth` (ของกลาง) วัดครั้งเดียวตอน mount ตารางที่มาทีหลังหรือถูกสร้างใหม่จึงค้าง `overflow-clip` คอลัมน์ขวาของตารางเครื่องในหน้าสัญญาเช่าหายและเลื่อนไม่ได้ที่ 768; ตอนนี้ตาม `<table>` ตัวปัจจุบันด้วย MutationObserver (commit แยก 3572d947)
+- **"ครบกำหนดวันนี้" คำเดียวทุกที่:** สัญญาที่หมดวันนี้เคยถูกเรียก 3 แบบ (เกินกำหนด 0 วัน / เกินกำหนด / ครบกำหนดวันนี้); ป้ายวันเหลือ ป้ายสถานะ หน้าต่างรายละเอียด จุดบนไทม์ไลน์ในหน้าสัญญา และสถานะในรายงานภาพรวม/สัญญาเช่า ใช้ `contract_due_today` (สีแดงเหมือนเดิม)
+- **สีประเภทสัญญาที่เดียว:** `modules/contract/tones.ts` (`CONTRACT_TYPE_TONE` ผ่าน barrel) รายงานดึงไปใช้ ไม่คัดลอกเอง
+- **ตัวเลข:** ปิดการแจ้งเตือนทุกช่วงแล้วสิ่งที่ต้องทำเป็น "ติดต่อผู้ขาย" (เดิม "ยังไม่ถึงช่วงแจ้งเตือน"); สัญญาเกินกำหนดดูแค่เมล "หมดอายุ" (ระบบไม่ส่งช่วงก่อนหน้าแล้ว เดิมขึ้น "ยังไม่ได้ส่ง" ตลอดไป); "ต้องจ่ายใน 12 เดือน" นับจากวันนี้เหมือน "คงเหลือ" (เดิมมากกว่ายอดคงเหลือได้) กราฟรายเดือนยังแสดงทั้งเดือน; ค่าเช่าต่อเครื่องหารด้วยเครื่องเช่าเท่านั้น (เดิมนับเครื่องซื้อด้วย ถูกไปครึ่งหนึ่ง); 999,800 เป็น "1M" (เดิม "1000K"); `?within=` นอกรายการใช้ค่าเริ่มต้น; รายงานต่ออายุ/สัญญาเช่าเก็บผลคำนวณต่อชุดตัวกรอง ไฟล์ส่งออกไม่ query ซ้ำ
+- **คำ:** "เลยกำหนด" → "เกินกำหนด", "ผู้ยกเลิก" → "ยกเลิกโดย", สถานะสัญญาเช่า "ในช่วงแจ้งเตือน" → "ใกล้หมดอายุ" ตรงกับไฟล์ส่งออกและโมดูล
+- **WCAG:** เลข 0 ในตาราง `text-muted-foreground` (เดิม /60 = 2.37); ตัวหนังสือเดือนปัจจุบัน `text-brand-ink`; โปรแกรมอ่านหน้าจอบอกว่าคอลัมน์ไหนเดือนปัจจุบัน; "ปิดช้า" มีไอคอน + คำ sr-only (เดิมสีแดงอย่างเดียว); ปุ่ม (i) พื้นที่กด 24px; หัวกลุ่ม "ไม่ผูกเครื่อง" อยู่ใน `<tbody>` ของตัวเอง; แถวรวมผู้ขายอยู่ใน `<tfoot>`; หัวข้อรอบบิลเป็น `<h3>`; เลิก `aria-live` ที่อ่านไทล์ 5 ช่องซ้ำทุกครั้งที่เปลี่ยนตัวกรอง; บรรทัดท้ายการ์ดขึ้น 2 บรรทัดแทนตัด "…"; ตัวเลขสีขาวในแท่งกราฟคงไว้ตามที่ผู้ใช้เลือก
+- **ความสม่ำเสมอ:** `CountBar`/`PieceDetail` ย้ายไป `chart-parts` (รายงานประกันกับสัญญาเช่าใช้ตัวเดียว); ปุ่มสลับช่วงใช้ `Segments` กลาง (สูง 32px); `contract-cells.tsx` รวมรหัสสัญญา ชื่อ+ผู้ขาย (กว้างเดียว ขึ้น 2 บรรทัด ไม่ตัด) และป้ายประเภท; สองหน้าวางการ์ดคู่ที่ xl เหมือนกัน; แท็บเล็ตซ่อน "รายเดือน" ในตารางผู้ขาย (มีรายปีแล้ว) และ "ยกเลิกโดย" ในตารางที่ปิดแล้ว
+- **ความปลอดภัย:** ไม่พบช่องโหว่ที่ใช้ได้จริง; รายงานสัญญาเช่าต้องมี `assets.view` ด้วย (แถวบอกผู้ถือเครื่องและแผนก); `config/dompdf.php` `enable_php` → false; `config/excel.php` + `SafeValueBinder` (กันสูตรใน Excel) ต้อง commit ไปพร้อมงานรายงาน
+- ตรวจ: test ใหม่ 5 ข้อเห็นแดงก่อนแก้ (ไม่มีแจ้งเตือน, เมลหมดอายุ, ค่าเช่าผสม, ต้องมี assets.view, 12 เดือนไม่เกินคงเหลือ) `tests/Feature/Report` + `ContractApiTest` 389 passed; pint + eslint + tsc + build ผ่าน; Chrome 3 หน้า 1600/768 สว่าง/มืด ไม่มีตัวหนังสือต่ำกว่าเกณฑ์ ไม่มีตารางถูกตัด หน้าไม่ล้นจอ ชื่อสัญญาไม่ถูกตัด
+- **หน้ารายงานเปิดตามสิทธิ์ครบชุดเหมือน server:** `routes.tsx` เปลี่ยนจาก `anyOf` เป็น `allOf` ตรงกับ `requires` ของ `ReportCatalogue` (`RequirePermission` รับ `allOf`) คนที่ไม่มีสิทธิ์ดูทรัพย์สินไม่เปิดหน้ารายงานสัญญาเช่าได้อีก (เดิมเปิดได้แล้วเจอ error) และแบบเดียวกันกับรายงาน Ticket 4 หน้า (ต้องมีสิทธิ์ปิดเคสด้วย) และรายงานสมาชิก Resource; test `node --test tests/js/report-route-permissions.test.ts` เทียบทุกหน้ากับ catalogue
+- **ปุ่มลบในคลังอะไหล่ที่ลบไม่ได้:** `disabled:opacity-50` เท่าปุ่มกลาง (เดิม 30% แทบมองไม่เห็น) ดูในเบราว์เซอร์แล้วยังจางกว่าปุ่มที่ลบได้ชัดเจน
+- **ทดสอบจริงที่ค้าง:** Tab มาถึงไอคอน (i) แล้ว note ขึ้นเอง ออกแล้วปิด; ฟอร์มสัญญาที่มีทรัพย์สินตัดจำหน่าย (จำลองคำตอบในแท็บทดสอบ ไม่แตะข้อมูลจริง) ไอคอนล็อกอยู่ข้างแถว checkbox ยังติ๊กและกดถอดไม่ได้ แตะแล้วขึ้นเหตุผล; แท็บเอกสารแนบมี 3 ไฟล์ที่จอ 768 รายการอยู่บน ตัวอย่างอยู่ล่าง ปุ่มเปิดแท็บใหม่/ดาวน์โหลดสูง 30px; PHPUnit ทั้งชุด 1999 passed
+- commit: การแก้ในไฟล์รายงานไปพร้อม d0c368c7 (งานรายงานสัญญา 3 หน้า); รายงานประกันใช้ `CountBar` กลาง และ `SafeValueBinder` + `config/excel.php` อยู่ใน 0b3fb81d
+
+### โมดูลสัญญา: แก้จากรีวิว (บัค + ความปลอดภัย + WCAG) — 2026-10-15
+- **มูลค่ารายปี (การ์ดภาพรวม):** รวม `annualValue()` ของสัญญาที่ยังใช้งาน (รายเดือน ×12, รายไตรมาส ×4) เดิมรวม `value` ดิบต่อรอบบิล เลยต่ำกว่าจริงและไม่ตรงกับการ์ดผู้ขาย
+- **ต่ออายุด้วยการแก้วันสิ้นสุด:** รีเซ็ตบันทึกการแจ้งเตือนและกระดิ่ง (`resetForContract`) แบบเดียวกับ "เปิดใช้อีกครั้ง" รอบใหม่จึงได้อีเมลเตือนครบ แก้ไขโดยไม่เปลี่ยนวันสิ้นสุดไม่รีเซ็ต
+- **ยกเลิกซ้ำ / เปิดใช้สัญญาที่ยังใช้งานอยู่:** ตอบ 422 ผู้ยกเลิกและเหตุผลเดิมไม่ถูกเขียนทับ
+- **ข้อความยืนยันสิ้นสุดสัญญา:** เดิมบอกว่า "ปิดถาวร ย้อนกลับไม่ได้" แต่มีปุ่มเปิดใช้อีกครั้ง ตอนนี้บอกว่าปิดสัญญาและหยุดแจ้งเตือน ผู้มีสิทธิ์เปิดใช้อีกครั้งได้; ลบ `contract_expire_early_warn` ที่ไม่มีใครใช้
+- **ฟอร์มบันทึกได้ครึ่งทาง:** สร้างสัญญาสำเร็จแต่อัปโหลดไฟล์ล้ม กดบันทึกซ้ำจะแก้ไขสัญญาเดิม (ไม่สร้างซ้ำ/ไม่ติด "รหัสซ้ำ") ไฟล์ที่ลบไปแล้วไม่ลบซ้ำ ไฟล์ที่อัปโหลดแล้วไม่อัปซ้ำ
+- **error จาก server ลงช่องที่ผิด:** 422 ของแต่ละช่อง (เช่น รหัสซ้ำ) ขึ้นใต้ช่องนั้นและพาไปขั้นที่ช่องอยู่ error ไฟล์ขึ้นที่ส่วนเอกสารแนบ error อื่นขึ้นเป็น `FormErrorBanner` บนฟอร์ม (`contract_save_failed`)
+- **ทรัพย์สินรีเฟรชตาม:** บันทึก/ยกเลิก/ลบสัญญาแล้ว invalidate `assets-list`, `asset`, `asset-contract`, `asset-contract-options`, `assets-linkable`
+- **โหลดน้อยลง:** แท็บภาพรวมไม่โหลดรายการสัญญา; ช่องค้นหาเขียน `?search=` หลังหยุดพิมพ์ 350ms และรับค่าที่เปลี่ยนจากที่อื่น (ล้างตัวกรอง); API รายการไม่โหลดทรัพย์สินและไฟล์แนบของทุกแถว
+- **หน้าต่างรายละเอียดไม่กระพริบตอนปิด:** ไม่รีเซ็ตแท็บเป็นภาพรวมระหว่างปิด
+- **ฟอร์มแก้ไขอยู่ใน URL:** `?view=<id>&edit=1` reload หรือแชร์ลิงก์แล้วเปิดฟอร์มกลับมา ใช้สำเนาสัญญาตอนเปิดฟอร์ม refetch จึงไม่ล้างที่พิมพ์ไว้; การเขียน `?view/?add/?edit` ใช้ `keepDialogState()`
+- **WCAG (รอบ ข.):** วัดใน Chrome ทั้งโหมดสว่างและมืด (สีโหมดมืดตามที่ `useApplyTheme` ตั้งจริง) และดูด้วยตา สีคงความสด ปรับเฉพาะตัวหนังสือเล็ก: ข้อความแดงใต้การ์ด `red-500→600` (3.82→ผ่าน), ป้ายจำนวนวันในคิวงาน `amber-600→700` บนพื้น `amber-500/10` กว้างเท่ากัน `w-16` (2.84→ผ่าน, ชื่อตรงแนว), ป้ายปี/เดือน/"ปัจจุบัน" บนคอลัมน์เดือนนี้ `text-brand-ink` (3.53→ผ่าน), ป้าย "ใหม่" ใช้ `StatusBadge` สีเขียว (เดิมขาวบนเขียว ~2.5), ป้ายวันเหลือหัวหน้าต่าง `amber-700`, ป้ายแจ้งเตือนที่ปิดใช้ `text-muted-foreground` ขีดฆ่า (เดิม /40 = 1.72) และที่เปิด `text-brand-ink`; `contract_days_short` ภาษาไทยเป็น "{n} วัน" (เดิม "{n}d")
+- **คีย์บอร์ดและโปรแกรมอ่านหน้าจอ:** แถวตารางกด Tab/Enter/Space ได้พร้อมกรอบ focus แบบ DataTable; ช่องเลือกไฟล์เป็น `sr-only` (เดิม `hidden` กด Tab ไม่ถึง) มีกรอบ focus ที่กรอบเลือกไฟล์; ช่องค้นหาทรัพย์สินมีกรอบ focus (เดิม `ring-0`); รายการทรัพย์สินเป็น `role=checkbox` + `aria-checked`; ป้ายแจ้งเตือนในฟอร์ม `aria-pressed` ในกลุ่มที่มีชื่อ; ป้ายแจ้งเตือนในหน้าต่างรายละเอียดมีคำบอกสถานะ (sr-only); ไฟล์ที่เลือกในแท็บเอกสารแนบ `aria-pressed`; ปุ่มลบไฟล์มีชื่อ; ช่องค้นหาสัญญา `type=search` + `aria-label`; error ไฟล์ `role=alert`; ช่องมูลค่ารวมผูก label/error ด้วย render-prop `Field`; กดถัดไป/บันทึกแล้ว focus ไปช่องแรกที่ผิด (`focusFirstError`, ใส่ `name` ให้ช่องแจ้งเตือน); `ChoiceCard` (ชิ้นกลาง) บอก `aria-pressed` ตาม `selected` มีผลกับการ์ดเลือกประเภทของ Ticket/ทรัพย์สินด้วย
+- **การเคลื่อนไหวและเป้ากด:** ไอคอนแถบเตือนกระพริบ 3 ครั้ง (4.2 วิ ต่ำกว่า 5 วิของ WCAG 2.2.2) ด้วย Tailwind `motion-safe:animate-[pulse_1.4s_ease-in-out_3]` แทนแท็ก `<style>` ที่กระพริบตลอด; จุดบนไทม์ไลน์มี `aria-label` และพื้นที่กด 24px (`before:-inset-1.5`) โดยหน้าตาเท่าเดิม
+- **ความปลอดภัย (ระดับต่ำ):** ชื่อ รหัส ผู้ขาย รายละเอียดสัญญา และชื่อผู้รับ escape ในอีเมลแจ้งเตือนหมดอายุ; อัปโหลดไฟล์แนบต้องมี `contracts.edit` หรือ `contracts.create` เฉพาะสัญญาที่ตัวเองสร้าง (`created_by`)
+- test: `ContractApiTest` (มูลค่ารายปี, ยกเลิกซ้ำ, เปิดใช้สัญญาที่ใช้งานอยู่, รายการไม่โหลดทรัพย์สิน), `ContractExpiryAlertTest` (ต่ออายุรีเซ็ต, แก้ไม่เปลี่ยนวันไม่รีเซ็ต, escape อีเมล), `ContractAttachmentTest` (สิทธิ์อัปโหลด) เห็นแดงก่อนแก้; ยังไม่ได้ลองฝั่งหน้าเว็บใน Chrome
+- **ตาราง "สัญญาทั้งหมด" ใช้ `DataTable` กลาง (server mode) แบบหน้าพนักงาน:** เลิกใช้ตาราง ตัวแบ่งหน้า และ `useHeldHeight`/`useTableFitsWidth` ที่เขียนเอง; สัญญาที่เพิ่งสร้างยังปักบนสุดพร้อมป้าย "ใหม่"; ความกว้างคอลัมน์คงที่
+- **ชื่อถูกตัดเป็นจุดไข่ปลา (…):** ผู้ขายถูกตัด ("Dell Technologies (Thail…") ทั้งที่คอลัมน์รายละเอียดเหลือที่ ตอนนี้คอลัมน์ผู้ขายกว้างขึ้น และผู้ขายกับรายละเอียดขึ้นบรรทัดที่ 2 ได้ (`line-clamp-2`, ชี้ดูข้อความเต็ม) ที่จอ 1920 ไม่มีชื่อไหนถูกตัด ที่ 768 เหลือรายละเอียดยาวมากอันเดียวที่ตัดหลัง 2 บรรทัด
+- **แท็บเล็ต (768):** ต่ำกว่า lg ซ่อนคอลัมน์วันเริ่มและสถานะ (ป้ายวันเหลือบอกยกเลิก/สิ้นสุด/เกินกำหนดอยู่แล้ว) ตารางกว้าง 1000px (เดิม 1252); ฟอร์มเพิ่ม/แก้ไขใช้ `focusDialogContentClass` (ขอบ 16px, `dvh` คีย์บอร์ด iPad ไม่บังปุ่ม); ลิงก์ "ตรวจสอบ →" บนแถบเตือนสูง 24px; แท็บเอกสารแนบเรียงบน-ล่างต่ำกว่า lg (รายการไฟล์สูงสุด 160px, ตัวอย่าง PDF สูงอย่างน้อย 360px) มีปุ่มเปิดแท็บใหม่สำหรับ iPad อยู่แล้ว; หน้าต่างยกเลิกสัญญา `max-h-[calc(100dvh-2rem)]` เลื่อนได้
+- **ใช้ชิ้นกลางแทนของที่เขียนเอง:** `StatCard` (การ์ดภาพรวม), `RecordStamps` (เพิ่ม/แก้ไขล่าสุด บนหัวหน้าต่างรายละเอียด, ลบคีย์ `contract_by`), `StatusBadge` (ป้ายวันเหลือบนหัวหน้าต่าง), `FileDropZone` + `formatFileSize` (เลือกไฟล์ในฟอร์ม ลากวางได้, ลบ `formatSize` ที่ซ้ำ 2 ที่), `EmptyPane` (แท็บทรัพย์สินและเอกสารแนบที่ว่าง), `FormErrorBanner` (error จาก server ในหน้าต่างยกเลิก แยกจาก error ของช่องเหตุผล), `AssetStatusBadge` ผ่าน barrel `@/modules/asset` (สถานะทรัพย์สินเป็นคำแปลและสีจากตั้งค่า แทน "pending acceptance" ดิบ)
+- **เล็ก ๆ:** เงินผู้ขายใช้ `formatCompact` (฿8.2M แทน ฿8200K) และในฟอร์มใช้ `format`; แถบผู้ขายไม่เป็น `NaN%` เมื่อยอดสูงสุดเป็น 0; คิวงานว่างบอก "ไม่มีสัญญาที่ต้องดำเนินการ" (เดิม "—"); `text-brand` บนพื้นแบรนด์อ่อน (ขั้นที่ผ่านแล้ว, การ์ดประเภทที่เลือก) เป็น `text-brand-ink`
+- **ไทม์ไลน์หมดอายุ มีจุดเรียงเป็นเสาแนวตั้งที่ขอบขวาช่อง ก.ค.:** server ส่งสัญญาที่หมดภายใน 365 วัน (ถึง ต.ค. ปีหน้า) แต่แกนมีแค่ 2 เดือนก่อนถึง 9 เดือนหน้า สัญญาที่หมด ส.ค.–ต.ค. จึงถูกปักไว้ที่ขอบเดียวกันแล้วซ้อนขึ้นเป็นแถว ดูเหมือนหมดใน ก.ค. ตอนนี้ server ส่งเฉพาะวันสิ้นสุดที่อยู่บนแกน (วันแรกของเดือนที่ย้อนไป 2 เดือน ถึงสิ้นเดือนที่ 9 ข้างหน้า) และหน้าเว็บข้ามจุดที่อยู่นอกแกนแทนการปักไว้ที่ขอบ; test `test_summary_timeline_holds_only_contracts_ending_inside_the_axis` เห็นแดงก่อนแก้; ดูใน Chrome แล้ว ช่อง ก.ค. เหลือ 3 จุดตรงกับ DB
+- **ไทม์ไลน์ ฝั่งเลยกำหนดก็เคยเสี่ยงแบบเดียวกัน:** เดิมดึงย้อนหลัง 95 วัน แต่แกนย้อนได้ 2 เดือนเต็ม สัญญาที่เลยกำหนด ~75–95 วันจะซ้อนกันที่ขอบซ้ายช่องแรก (ตอนนั้นไม่มีใน DB) ตัวกรองตามแกนแก้ทั้งสองฝั่ง; หัวข้อเปลี่ยนเป็น "ไทม์ไลน์การหมดอายุ" (เดิมบอก "12 เดือนข้างหน้า" ซึ่งไม่ตรงกับแกน)
+- **tooltip ของจุดบนไทม์ไลน์ใช้ `InfoPopover` ตัวกลาง** (`shared/components/info-popover.tsx` สำเนาจากของรายงาน): รหัส + ป้ายวันเหลือ (`DaysCell` สีเดียวกับตาราง), ชื่อสัญญา 2 บรรทัด, ผู้ขาย, วันหมดอายุ, ปุ่ม "ดูสัญญา"; ชี้เมาส์เห็น note คลิกหรือ Enter เปิดสัญญาทันทีเหมือนเดิม แตะบน iPad เปิด note ก่อนแล้วกด "ดูสัญญา" (note ปิดตัวเอง); ตัวกลางมี prop `onActivate` และ `content` แบบฟังก์ชันที่ได้ `close` เพิ่ม; โมดูลรายงานยังใช้ `modules/report/components/info-popover.tsx` ของตัวเอง (คืนเป็นแบบเดิม ไม่ส่งออกผ่าน barrel) รอย้าย 14 ไฟล์ที่ import มาใช้ตัวกลางหลังงานรายงานที่ค้างอยู่ commit แล้วจึงลบสำเนานั้น; เลิกใช้ `title` ของเบราว์เซอร์; วัดใน Chrome สว่าง 5.06–17.22 มืด 5.25–16.41
+- **ภาษาในโมดูลสัญญา (ไทย/อังกฤษ):** ไล่ทุกคีย์แล้วแก้ตามที่ผู้ใช้อนุมัติ: คำอังกฤษที่หลุดในภาษาไทย (Contract No, write-off, asset, tag, Asset ID, Serial, Hardware) เป็นคำไทยของระบบ; คำเดียวกันใช้ชื่อเดียว (ผู้ขาย แทน ผู้จำหน่าย ในฟอร์ม, เกินกำหนด แทน เลยกำหนด และ "หมดอายุไป {n} วัน", เลขที่สัญญา แทน รหัสอ้างอิง, เพิ่มเมื่อ/แก้ไขล่าสุด ตาม RecordStamps, รหัสทรัพย์สิน/หมายเลขซีเรียล/ผู้ถือครอง ตามโมดูลทรัพย์สิน, "และ" แทน "&"); แถบเตือนเป็น "สัญญาใกล้หมดอายุ 18 สัญญา" (ไม่มีวรรคหน้า ":"); อังกฤษเลิก Title Case, "!" และตัวพิมพ์ใหญ่ทั้งคำ ("18 contracts expiring soon", "Now"), ข้อความ error วันที่ตรงกับกฎ ("Can't be before the start date"); ลบคีย์ที่ไม่มีใครใช้ 5 ตัว (รวม `expiring_soon_hint` ที่ความหมายอังกฤษผิด); ตรวจใน Chrome ทั้งสองภาษา
+- ตรวจ: eslint + prettier + tsc (เฉพาะโมดูลสัญญา ไฟล์ settings ที่ค้างจากงานอื่นยัง error) + `npm run build` ผ่าน; ดูใน Chrome ที่ 1920 และ iframe 768×1024 ทั้งโหมดสว่าง/มืด วัด contrast สีที่เปลี่ยน: สว่าง 4.62–6.75 มืด 4.72–8.94; ยังไม่ได้ดูแท็บเอกสารแนบแบบมีไฟล์ (ไม่มีสัญญาไหนมีไฟล์แนบใน DB)
+### รายงานพนักงาน 2 อัน: ตัวเลขถูก สีและคำตรงกับโมดูลพนักงาน และ Excel ไม่รันสูตร — 2026-10-13
+- **ความปลอดภัย (ทุกไฟล์ Excel ในระบบ):** ข้อความที่ขึ้นต้นด้วย `=` `+` `-` `@` แท็บ หรือ CR (เช่น เหตุผลลาออก `=HYPERLINK(...)`) เคยถูกเขียนเป็นสูตรที่ทำงานได้ — `App\Exports\SafeValueBinder` ผ่าน `config/excel.php` (`value_binder.default`) เขียนเป็นข้อความธรรมดา ตัวเลขและสตริงที่เป็นตัวเลขล้วน ("-5", "+1.5") ยังเป็นตัวเลขเหมือนเดิม
+- **ตัวเลข (ภาพรวมพนักงาน):** คำขอเตรียมพนักงานใหม่ — ยกเลิกไม่นับ, เสร็จ = completed เท่านั้น, ถูกปฏิเสธนับว่ายังค้าง (เดิมคำขอที่ถูกปฏิเสธทำให้ขึ้น "พร้อม"); ผู้ลาออกที่ไม่มีวันสุดท้ายถือว่าออก "เมื่อวาน" (เข้าระบบไม่ได้แล้วตาม `Employee::hasLeft()`) และวันสุดท้ายก่อนวันเริ่มงานถือเป็นวันเริ่มงาน — `lastDay()` ตัวเดียวใช้ทั้งเส้นอัตรากำลัง ตารางแผนก ไทล์ และแถวรายการ ต้นช่วง + เข้า − ออก = ปลายช่วงทุกแถว
+- **สองรายงานลำดับเดียวกัน:** การ์ด "ผู้ลาออกที่ยังถือสิทธิ์" ใช้ `OpenItems::access()` ชุดเดียวกับรายงานเรื่องค้าง (ไม่มีวันสุดท้ายอยู่ท้าย, เรียงรหัสแบบธรรมชาติ) แทน query ที่โหลดผู้ลาออกทุกคน; ลบแคช `$facts` ที่ไม่เคยทำงานและ `left_total` ที่ไม่มีใครอ่าน; API breakdown ทั้งสองส่ง `message`
+- **สีตรงกับโมดูล:** ป้ายลาออกสีแดง (เดิมเหลือง); สถานะทรัพย์สินใช้ `AssetStatusBadge` ของโมดูลทรัพย์สิน (สีจากหน้าตั้งค่า → ทรัพย์สิน) แทนสีที่กำหนดเองและผิด; ปัญหาบัญชี: บัญชีของผู้ลาออกแดง รหัสผ่านต้องเปลี่ยน/หมดอายุเหลือง (เดิมม่วง ซึ่งในระบบหมายถึงเช่า / Email Group) "อื่น ๆ" เป็นเทา ทุกสีมีค่าโหมดมืด; ผู้ใช้บอกว่าเหลือง 2 เฉดแยกยาก จึงไล่ตามความเร่งด่วนเป็น แดง (บัญชีผู้ลาออก) ส้ม (รหัสหมดอายุ) เหลืองสด (ยังไม่เปลี่ยนรหัส) และจุดเรื่องในไทล์ "ทั้งหมด" เป็น แดง ฟ้า ส้ม บานเย็น (ข้อมูลไม่ครบ ใช้บานเย็นทั้งจุดและแถบในไทล์ของตัวเอง)
+- **คำตรงกับโมดูล:** ส่วนงาน → หน่วยงาน, บัญชีผู้ใช้งาน → บัญชีเข้าใช้งาน, คอลัมน์ "บัญชี" → ชื่อผู้ใช้, Email Groups / File Shares / Social / Internet ทั้งหน้าเว็บและไฟล์ส่งออก
+- **ความสม่ำเสมอ:** ไทล์รายงานเรื่องค้างคำอธิบายบรรทัดเดียว + รายละเอียดในป๊อปอัป แบบ SummaryStrip; ไทล์ "ทั้งหมด" ไม่มีแถบสีที่รวมคนกับบัญชีและนับคนซ้ำ; โปรแกรมอ่านหน้าจออ่านสรุปกราฟครั้งเดียว; หน้าและจำนวนแถวของตารางแต่ละเรื่องอยู่ในลิงก์ (`{topic}_page` / `{topic}_per`) และกลับหน้า 1 เมื่อเปลี่ยนตัวกรอง (`use-tabular-filters`); ตัวเลขในปุ่มแบ่งกลุ่มเลิกจาง (รายงาน Access, Backlog, ประกัน และพนักงาน)
+- ตรวจ: วัดใน Chrome ทั้งสองรายงาน โหมดสว่าง/มืด ไม่มีข้อความต่ำกว่าเกณฑ์; test `ExcelSafeValueBinderTest` + เพิ่ม/แก้ใน `EmployeeOverviewReportTest`, `EmployeeOpenItemsReportTest`; ทั้งชุด 1928 passed; tsc + eslint + prettier + pint ผ่าน
+- **WCAG ต่อ:** ชิปสิทธิ์ในการ์ด "ผู้ลาออกที่ยังถือสิทธิ์" แสดงชื่อประเภทสั้น (Email / File / Social / Software) ข้างจุดสี (เดิมบอกด้วยสีอย่างเดียว ชื่ออยู่ใน title ที่แตะไม่ได้); ลิงก์ชื่อคนและรหัสทรัพย์สินใช้ `text-brand-ink` (อ่านได้แม้แอดมินเลือกสีแบรนด์อ่อน)
+- **แท็บเล็ต/จอแคบ (วัดใน iframe 768 / 1024 / 1280 / 1440):** ตารางแผนก `min-w` 40rem → 34rem ไม่ต้องเลื่อนด้านข้างที่ 1024 และ 1280 (เดิม 592/640 และ 570/640); ไทล์ใน `SummaryStrip` (ของกลาง ทุกรายงาน) ซ่อนกราฟเส้นเล็กเมื่อไทล์แคบกว่า 11.5rem ด้วย container query ข้อความ "อัตราลาออก 24.3%" / "▲ 9.4 จากช่วงก่อนหน้า" จึงไม่ถูกตัดที่ 1280–1440 (ไทล์กว้างยังมีกราฟ); ชื่อแผนก หน่วยงาน และชื่อคนที่ยาวขึ้นบรรทัดที่ 2 (`line-clamp-2`) แทนการตัดแล้วซ่อนไว้ใน title; ชิปในตารางเรื่องค้างตัดขึ้นบรรทัดใหม่ได้ ตารางไม่กว้างเกินจอ
+- **โปรแกรมอ่านหน้าจอ (กราฟอัตรากำลัง):** ปุ่มของแต่ละเดือนเดิมบอกแค่ "มีนาคม 2569 61 คน" และป๊อปอัปที่บอกใครเข้า/ออกไม่ถูกอ่าน (โฟกัสค้างที่ปุ่ม) — ชื่อปุ่มรวมจำนวนเข้า/ออกแล้ว เช่น "พฤษภาคม 2569 60 คน เข้า 1 ออก 2" (ไม่พูดส่วนที่เป็น 0) ตรวจจาก accessibility tree ของ Chrome ทุกเดือนตรงกับตัวเลขบนกราฟ ยังไม่ได้ลองกับโปรแกรมอ่านหน้าจอจริง
+
+### รายงานสัญญา 3 หน้า ตาม mockup — 2026-10-14
+แทนรายงานตารางเดิม 2 ตัวด้วยรายงานวิเคราะห์ 3 หน้า (mockup: artifact หน้า ctov / ctren / ctrent v117) ใช้ค่าตามกำหนดในสัญญาเท่านั้น ระบบไม่มีข้อมูลการจ่ายเงินจริง
+- **key ใหม่** ใน `ReportCatalogue` (สิทธิ์ `contracts.view`): `contracts.overview` แทน `contracts.monthly_cost`, `contracts.renewals` แทน `contracts.expiring`, และ `contracts.rentals` (ใหม่) ตรวจแล้วไม่มีแถวใน `report_pins` / `report_schedules` / `report_exports` ที่ใช้ key เก่า จึงไม่ต้องย้ายข้อมูล ไฟล์เดิมย้ายด้วย `git mv`
+- **ของกลาง:** `ContractBilling` (ต่อเดือน/ต่อปีอิง `Contract::annualValue()`, วันเรียกเก็บ = วันเริ่ม + k × รอบ ด้วย `addMonthsNoOverflow` ก่อนวันสิ้นสุด, ยอดคงเหลือตามสัญญา) · endpoint `GET /api/reports/contracts/{overview|renewals|rentals}/breakdown` · `contract-tones.ts` (สีประเภทตรงกับหน้า /contracts, เช่าม่วง ซื้อส้ม) · `contract-month-card.tsx` กราฟ 12 เดือนแยกสีตามประเภท (tooltip ทุกแท่งตอนชี้/โฟกัส, กดดูรายการสัญญาของเดือน, ชิ้นเล็กสุด 3px) · `contract-left-pill.tsx` ป้ายเหลือเวลาแบบเดียวทั้ง 3 หน้า ใช้คำและสีเดียวกับคอลัมน์วันที่เหลือของ /contracts (แดง "เกินกำหนด N วัน" ตั้งแต่วันสิ้นสุด, เหลือง/ฟ้า "N วัน") · `rich()` ใน `chart-parts.tsx` · `TabularReportView` รับ `afterTable` และ `emptyState` เพิ่ม
+- **ภาพรวมและค่าใช้จ่ายสัญญา:** ไทล์ 5 ช่อง (สัญญาที่ใช้งาน, ต่อเดือน, ต้องจ่ายใน 12 เดือน, คงเหลือตามสัญญา, ผู้ขายรายใหญ่สุด) · เงินที่ต้องจ่ายตามรอบบิล + บรรทัดงวดใหญ่สุดใต้กราฟ (แต่ละแท่งนับงวดที่ครบกำหนดตั้งแต่วันที่ 1 ถึงสิ้นเดือน รวมงวดของเดือนนี้ที่ผ่านไปแล้ว; ไทล์ "ต้องจ่ายใน 12 เดือน" = ผลรวม 12 แท่ง; "คงเหลือตามสัญญา" และ "จ่ายครั้งถัดไป" ยังนับจากวันนี้) · ค่าใช้จ่ายต่อปีตามประเภท + ตามรอบการเรียกเก็บแบบ grid 3 ช่อง · ค่าใช้จ่ายตามผู้ขาย (แถวรวม) · รายการสัญญาที่ใช้งาน (จ่ายครั้งถัดไป, คงเหลือ) "สัญญาที่ใช้งาน" = เริ่มแล้วและยังไม่ถึงวันสิ้นสุด ไม่ยกเลิก/ไม่สิ้นสุด
+- **ต่ออายุและสิ้นสุดสัญญา:** ตัวกรอง หมดภายใน / ประเภท / ผู้ขาย · ไทล์ 5 ช่อง · สัญญาที่จะหมดในแต่ละเดือน · สัญญาตามเวลาที่เหลือ (แท่งสีเดียวตามความเร่งด่วน, ประเภทอยู่ใน tooltip ของแถว) · รายการที่ต้องต่ออายุหรือปิด พร้อมคอลัมน์แจ้งเตือน (อ่าน `contract_alert_logs`: ส่งแล้วครั้งล่าสุด / ยังไม่ได้ส่ง / เริ่มเตือนอีก N วัน) และสิ่งที่ต้องทำตามกฎตายตัว · สัญญาที่ปิดไปแล้ว (ปิดเมื่อ ปีนี้ / 12 เดือน / ทั้งหมด, สรุปอยู่ใน ⓘ, งวดที่ไม่ต้องจ่ายหลังยกเลิก) ไทล์ "สัญญาหมดอายุใน 30 วัน" ในศูนย์รายงานใช้รายงานนี้
+- **สัญญาเช่าและทรัพย์สิน:** เฉพาะสัญญาฮาร์ดแวร์ · ตัวกรอง สัญญา (เปิดอยู่/ทั้งหมด) / ผู้ขาย / หมวดเครื่อง · ไทล์ 5 ช่อง · สถานะเครื่องตามสัญญา (6 คอลัมน์, สัญญาไม่ผูกเครื่องแยกกลุ่มท้าย) · ค่าเช่าเทียบราคาซื้อต่อรุ่น (เช่าครบราคาซื้อในกี่เดือน, ตลอดสัญญาเทียบซื้อ) · รายการเครื่องตามสัญญา พร้อมปุ่มดูเฉพาะเครื่องที่ต้องคืน ค่าเช่าต่อเครื่อง = ค่าใช้จ่ายต่อเดือนของสัญญา ÷ เครื่องที่ผูกและยังไม่ตัดจำหน่าย
+- **ไฟล์ส่งออก:** xlsx/pdf ทุกหน้า พร้อมชีตของการ์ดก่อนชีตรายการ
+- **แก้จาก code review:** สถานะแจ้งเตือนเช็ก "ยังไม่ได้ส่ง" ก่อน "ส่งแล้ว" (เดิมมี log ช่วงแรกแล้วซ่อนช่วงหลังที่ไม่ได้ส่ง) และแสดงเฉพาะช่วงล่าสุดที่ส่ง เพราะงานแจ้งเตือนบันทึกทุกช่วงที่เมลเดียวครอบคลุม · ค่าเช่าเฉลี่ยต่อเครื่องในไทล์ใช้ค่าต่อเครื่องเดียวกับตาราง (ไม่เพี้ยนเมื่อกรองหมวด) · สัญญาที่ปิดกรองช่วงใน SQL และไม่โหลดซ้ำ · breakdown ของหน้าภาพรวมคำนวณครั้งเดียวต่อชุดตัวกรอง · ย้าย doc comment ของ API ที่วางผิดที่ · แถวรวมของตารางผู้ขายใช้ยอดต่อเดือนเดียวกับไทล์ (เดิมรวมยอดที่ปัดแต่ละแถวแล้วต่างกัน 0.01)
+- **ตรวจ:** `tests/Feature/Report` 342 passed (ใหม่ `ContractOverviewReportTest`, `ContractRenewalsReportTest`, `ContractRentalsReportTest`; `TabularReportEngineTest` ย้ายมาใช้ `contracts.renewals`) · tsc + eslint + prettier + pint ผ่าน · `npm run build` ผ่าน · เปิดดูในแอปจริงทั้ง 3 หน้า: ไม่มี error ใน console, tooltip/popover ของกราฟ, tooltip แถวเวลาที่เหลือ, โหมดมืด/สว่าง, ที่ 768px หน้าไม่เลื่อนแนวนอน
+- **คำตรงกับโมดูลสัญญาหลัก (2026-10-15):** "เลยวันสิ้นสุด" เป็น "เกินกำหนด" (ไทล์ แถบเวลาที่เหลือ สิ่งที่ต้องทำ ไฟล์ส่งออก และไทล์สัญญาในศูนย์รายงาน) · "ในช่วงแจ้งเตือน" เป็น "ใกล้หมดอายุ" · วันสิ้นสุดวันนี้นับเป็นเกินกำหนดเหมือน `Contract::status` · ชื่อสัญญาในรายงานใช้ช่อง "ชื่อสัญญา" แบบหน้าต่างรายละเอียด ไทม์ไลน์ และต้องดำเนินการของ /contracts · ไทล์ "สัญญาที่ใช้งาน" มี ⓘ บอกว่านับรวมสัญญาใกล้หมดอายุ และไทล์ "ใช้งาน" ในหน้าสัญญาไม่นับ ตัวเลขจึงต่างกัน
+
+### ตั้งค่า: แก้บัคจากการรีวิวโมดูล — 2026-10-14
+- **Ticket & SLA ข้อความเตือนงานซ่อมไม่ขึ้น:** ค่าเป้าหมายงานซ่อมที่ผิดถูกเก็บด้วย key `work_class` แต่ตารางอ่านด้วย `category:work_class` (`workKey`) กดบันทึกแล้วจึงไม่เกิดอะไรเลย ตอนนี้เก็บด้วย `workKey(row)` ช่องที่ผิดขึ้นขอบแดงพร้อมข้อความ
+- **ข้อความที่พิมพ์ค้างไว้หาย:** ทุกการบันทึกในหน้าตั้งค่าอัปเดตข้อมูลชุดเดียวกัน และหน้าเคยเขียนทับฟอร์มบริษัทและชื่อแบรนด์ทั้งหมด ตอนนี้ (`pages/index.tsx`) เขียนทับเฉพาะกลุ่มที่ยังไม่ได้แก้ (บริษัท / แบรนด์) กลุ่มที่กดบันทึกรับค่าที่เซิร์ฟเวอร์ตอบกลับ
+- **ล้างช่องที่ไม่บังคับไม่ได้:** หน้าต่างแก้ไขข้อมูลหลัก (ยี่ห้อ หมวดหมู่ ซัพพลายเออร์ คลังสินค้า หน่วยนับ ประเภทการรับประกัน เหตุผลตัดจำหน่าย) ส่งช่องว่างเป็น `undefined` ซึ่งไม่ถูกส่งไป ค่าเดิมจึงค้าง ตอนนี้ส่ง `null` และ type ใน `masterDataApi.ts` / `use-master-data.ts` รับ `null`
+- **ลบได้ทั้งที่ยังมีคนใช้:** ลบสถานที่ตรวจคำขอด้วย (`service_requests.location_id` เป็น `nullOnDelete` คำขอเคยเสียสถานที่ไปเงียบ ๆ) และลบยี่ห้อตรวจรุ่นด้วย (`asset_models.brand_id`) ได้ 409 `in_use` เหมือนข้อมูลหลักอื่น ข้อความ "ยังมีทรัพย์สินหรือคำขอใช้สถานที่นี้อยู่ {count} รายการ"
+- ตรวจ: test ใหม่ใน `LocationApiTest` (สถานที่ที่คำขอใช้ลบไม่ได้ / ที่ไม่มีใครใช้ลบได้) และ `MasterDataTest` (ยี่ห้อที่มีรุ่นลบไม่ได้ / ล้างช่องด้วย null ได้) ผ่าน; test ลบที่เกี่ยวข้องทั้งหมด 27 passed; tsc + eslint + prettier + pint ผ่าน; ลองใน Chrome แล้ว (บล็อก request ที่ไม่ใช่ GET ไว้ ไม่มีอะไรถูกบันทึก): SLA ใส่ 0 ชั่วโมงขึ้นขอบแดง + ข้อความ และไม่ส่งอะไรออกไป; พิมพ์ชื่อแบรนด์ค้างแล้วทำให้ข้อมูลตั้งค่าโหลดใหม่ ชื่อที่พิมพ์ยังอยู่ ส่วนข้อมูลบริษัทที่ไม่ได้แก้รับค่าใหม่; ล้างคำอธิบายยี่ห้อส่ง `"description":null`
+- **หัวข้อในแท็บระบบไม่มีไอคอน:** `SystemSectionHead` เคยมีไอคอนหน้าหัวข้อ "Branding" และ "วันที่และเวลา" ซึ่งหัวข้อของแท็บอื่นไม่มี ตอนนี้เหลือหัวข้อ + คำอธิบายแบบเดียวกับแท็บอื่น
+- **แท็บระบบใช้ปุ่มบันทึกปุ่มเดียว:** Branding กับวันที่และเวลาเคยมีปุ่มบันทึกแยก ตอนนี้มีปุ่มเดียวท้ายแท็บ กดแล้วบันทึกเฉพาะส่วนที่แก้ (โลโก้ ชื่อ สี และรูปแบบวันที่) ขึ้นเครื่องหมายบันทึกแล้วเมื่อทุกส่วนผ่าน ส่วนที่ไม่ผ่านยังเก็บค่าที่แก้ไว้; ปุ่มกดไม่ได้ถ้าชื่อแบรนด์ว่าง; แต่ละส่วนรายงานสถานะและเปิดให้แท็บเรียก `save()` ผ่าน `types.ts` (`SectionStatus` / `SectionSaver`) แทนปุ่มของตัวเอง (`BrandingTab` → `BrandingSection`, ตัด `embedded` ที่ไม่มีใครใช้); การบันทึก Branding ที่ล้มกลางทางไม่ทิ้ง promise rejection ไว้แล้ว และโลโก้ที่อัปโหลดผ่านแล้วไม่ถูกอัปโหลดซ้ำตอนกดอีกครั้ง
+- **ช่องกรอกทุกหมวดเรียงตารางเดียวกัน:** เดิมแต่ละหมวดกว้างไม่เท่ากัน (บริษัท 768 / ระบบ 672 / อีเมลและความปลอดภัย 576 px) ช่องครึ่งแถวจึงกว้าง 376 / 328 / 282 px และบางช่องเต็มแถว ตอนนี้หมวดที่เป็นฟอร์ม (บริษัท ระบบ อีเมล ทรัพย์สิน ความปลอดภัย) ใช้ `components/form-layout.ts` ชุดเดียว: กว้าง `max-w-3xl` ช่อง 2 คอลัมน์เท่ากัน (`grid-cols-1 sm:grid-cols-2 gap-4` จอแคบเหลือคอลัมน์เดียว) ระยะแถว `space-y-5`; ช่องเดี่ยว (รูปแบบวันที่ การเข้ารหัส) อยู่คอลัมน์เดียว มีแค่ที่อยู่ที่เต็มแถว; Branding: ชื่อแอป | ชื่อรอง, โลโก้ | สีธีม; วันที่และเวลา: รูปแบบวันที่ | ตัวอย่าง, ปี | เวลา; อีเมล: เซิร์ฟเวอร์ | พอร์ต + การเข้ารหัส (แบ่งครึ่งคอลัมน์ขวา), ชื่อผู้ใช้ | รหัสผ่าน, อีเมลผู้ส่ง | ชื่อผู้ส่ง และปุ่มย้ายไปขวา (ส่งทดสอบ แล้วบันทึก) เหมือนหมวดอื่น; ช่องเลือกในหมวดความปลอดภัยสูง 40 px เท่าช่องอื่น วัดใน Chrome ทุกหมวด: คอลัมน์ x0/x392 กว้าง 376 สูง 40 ปุ่มบันทึกชิดขวาที่ 768 (ตาราง SLA ข้อมูลหลัก ข้อมูลคำขอ คงความกว้างเดิมเพราะเป็นตาราง)
+
+### ตั้งค่า: หน้า Ticket & SLA ออกแบบใหม่ — 2026-10-15
+ตาม mockup (artifact 7d8Uxw8B…) ที่ผู้ใช้ปรับคำและตัดส่วนเกินแล้ว
+- **การ์ด "สรุปการตั้งค่า" บนสุด:** เวลาทำการ, รับเคสภายใน, ปิดเคสภายใน (แจ้งปัญหาตามความสำคัญ / ส่งช่างซ่อม / เคสจากคำขอ) และเป้าหมาย SLA ค่าในการ์ดเปลี่ยนตามที่แก้ทันที กดแต่ละช่องแล้วเลื่อนไปที่ส่วนนั้น (ไม่เปลี่ยน URL) และขึ้น "ต้องแก้" เมื่อส่วนนั้นมีข้อผิดพลาด
+- **เรียงตามการ์ด:** วันและเวลาทำการขึ้นก่อน (วันทำงานเป็นช่องติ๊ก, แถบเวลา 24 ชม. ที่เห็นช่วงพัก) → รับเคสภายในคู่กับเป้าหมาย SLA → ปิดเคสตามความสำคัญ → เป้าหมายงานซ่อม → เคสจากคำขอ
+- **กรอกง่ายขึ้น:** "นับด้วย" เป็นปุ่มคู่ (radio) "เวลาทำการ / นับต่อเนื่อง" แทน dropdown; "≈ 3 วันทำการ" อยู่บรรทัดเดียวกับช่อง; ตารางเป็น grid แถวเตี้ย ที่จอแคบ (container < 42rem) แถวพับเป็น 2 ช่องและมีป้ายกำกับ
+- **บันทึก:** แถบบันทึกติดล่างจอ (`sticky -bottom-6`, การ์ดหน้าตั้งค่าเปลี่ยน `overflow-hidden` → `overflow-clip` ให้ sticky ทำงาน) มีแค่ปุ่มบันทึก ซึ่งกดได้เมื่อมีการแก้ และขึ้นเครื่องหมายถูกเมื่อบันทึกเสร็จ; กดบันทึกแล้วผิด ขึ้นกล่องสรุปข้อผิดพลาด (role=alert รับโฟกัส) แต่ละข้อกดแล้วไปโฟกัสช่องนั้น ข้อผิดพลาดตามการแก้จนบันทึกผ่าน
+- **WCAG:** ทุกช่องมีชื่อ (เช่น "ปิดเคสภายใน วิกฤต หน่วยชั่วโมง"), คำใบ้และข้อผิดพลาดผูก `aria-describedby`, ปุ่มคู่และวันทำงานเป็น fieldset + legend, ปุ่มลบมีชื่อแถว; `SearchSelect` (ของกลาง) รับ `id` / `ariaLabel` และบอก `aria-expanded`
+- **คำ:** ภาษาไทยกระชับตามรีวิว 2 รอบ; "เวลาปฏิทิน" → "นับต่อเนื่อง" และ "ช่างภายในองค์กร" → "ช่างในบริษัท" ทั้งระบบ (ตั้งค่า, Ticket, สิทธิ์, รายงาน รวม `TicketLabels` / `TicketReportScope`); EN "Calendar time" → "Round the clock"; ลบคีย์ที่ไม่ใช้แล้ว
+- **ไฟล์:** `tickets-sla-tab.tsx` (state + layout) แยกชิ้นเล็กไป `sla-parts.tsx` (SlaSummary, ClockToggle, DayPicker, NumberField, ErrorSummary, WorkdayBar); แถวงานซ่อมมี `uid` ฝั่งหน้าเว็บ แก้ประเภท/ช่างแล้วแถวไม่ถูกสร้างใหม่ (ไม่หลุดโฟกัส)
+- **ตรวจ:** tsc + eslint + prettier + pint ผ่าน; test ที่เกี่ยวกับ SLA/รายงาน Ticket 103 passed; ใน Chrome: โหมดสว่าง/มืดไม่มีข้อความต่ำกว่าเกณฑ์ (เหลือแค่เมนูหมวดที่เลือก 4.49:1 ซึ่งเป็นของหน้าตั้งค่า), ที่ 768 ไม่มีเลื่อนแนวนอน, บล็อกการบันทึกแล้วลองใส่ค่าผิด กล่องข้อผิดพลาดขึ้นและพาไปช่องได้ ไม่มีอะไรถูกส่ง
+- **ช่องเลือกเวลา (`shared/ui/time-input.tsx`) ออกแบบใหม่:** หน้าต่างเลือกมีหัว "ชั่วโมง / นาที", ซ่อนแถบเลื่อนของเบราว์เซอร์, ตัวเลือกสูง 36px ตัวอักษรแบบเดียวกับช่องอื่น (`tabular-nums` แทน mono); เป็น listbox ที่ลูกศรขึ้นลง Home End เลื่อนได้ และเปิดแล้วโฟกัสชั่วโมงที่เลือกอยู่; ปุ่มล้างเวลาเป็นปุ่มจริงที่มีชื่อ (เดิมเป็น span ซ้อนในปุ่ม); เพิ่ม prop `invalid` ให้ขอบแดงอยู่ที่ช่อง (`className` ไปที่กรอบนอกสำหรับกำหนดความกว้าง) ใช้อยู่ที่หน้า SLA ที่เดียว
+
+### ฟอนต์: ใช้ Noto Sans Thai ทั้งระบบ — 2026-10-15
+- `--font-sans` ใน `resources/css/app.css` เหลือ `'Noto Sans Thai'` ตัวเดียว (เดิม Manrope สำหรับอังกฤษ/ตัวเลข + Noto Sans Thai สำหรับไทย) Noto Sans Thai มีชุดอักษร latin / latin-ext ในตัว จึงใช้ฟอนต์เดียวได้ทั้งหน้า
+- โหลดฟอนต์ใน `app.blade.php` และหน้า error (`errors/layout.blade.php`) เป็น Noto Sans Thai 400–800 ไม่โหลด Manrope แล้ว (800 ใช้กับ `font-extrabold` 17 จุด) JetBrains Mono ถูกถอดออกทั้งหมดเมื่อ 2026-10-16 (ดูหัวข้อ "ฟอนต์: ถอด JetBrains Mono")
+- หน้าตั้งค่าเลิกใช้ตัวพิมพ์ดีด 7 จุด (ช่อง SMTP host / ชื่อผู้ใช้ / อีเมลผู้ส่ง, Port และเลขผู้เสียภาษีเป็น `tabular-nums`, อีเมลในตารางซัพพลายเออร์, ตัวเลขจำนวนในข้อมูลคำขอ)
+- ตรวจใน Chrome: `document.fonts` โหลด Noto Sans Thai 400/500/600/700 ไม่มี Manrope; หน้าตั้งค่า (อีเมล, Ticket & SLA) และ Dashboard แสดงผลปกติ
+
+### ตั้งค่า → ระบบ: วันที่และเวลาออกแบบใหม่ — 2026-10-15
+- จัดบล็อกใหม่ หน้าตาเดิม: บรรทัด "ตัวอย่าง 15 ต.ค. 2569 09:56" ด้านบน (เปลี่ยนตามที่เลือกทันที) แล้วแถวเดียวด้านล่าง [รูปแบบวันที่ (dropdown เดิม)] [พ.ศ. | ค.ศ.] [24 ชม. | 12 ชม.] จอแคบตัดขึ้นบรรทัดเอง
+- ปุ่มคู่ปีและเวลาแยกเป็น `components/segmented-radio.tsx` (radio จริง + legend) ใช้ร่วมกับปุ่ม "นับด้วย" ของหน้า SLA (`ClockToggle`) หน้าตาเดียวกันทั้งหน้าตั้งค่า; ป้ายรูปแบบวันที่ผูกกับช่องด้วย `controlId` + `id` ที่ SelectTrigger; คีย์ `set_datetime_example` → `set_datetime_preview`
+- ลองแบบการ์ด 6 ใบแล้ว ผู้ใช้ว่าหลุดธีมเดิมเกินไป จึงกลับมาใช้ dropdown
+
+### ตั้งค่า → ระบบ: สีธีมเพิ่มเป็นชุด 6 สีที่คัดแล้ว — 2026-10-15
+- เดิมมี 3 สี (น้ำเงิน ม่วง ดำ) ตอนนี้ 6 สี: น้ำเงิน #2563eb (ค่าเริ่มต้น), น้ำเงินเข้ม #1e40af, คราม #4f46e5, ม่วง #7c3aed, ฟ้าทะเล #0369a1, ดำ #0f172a (`THEME_ACCENTS` ใน `pages/index.tsx`)
+- เกณฑ์คัด (คำนวณจริง): ตัวอักษรสีธีมบนพื้นขาว ≥ 4.5:1 (ต่ำสุด 5.17), ตัวอักษรบนปุ่มสีธีม ≥ 4.5:1, โหมดมืดหลัง `resolveBrand` ≥ 5.6:1, ไม่ชนสีที่มีความหมาย (แดง/เขียว/เหลือง-ส้ม) และยังแยกกันออกในโหมดมืด — ตัด teal (คล้ายเขียว "สำเร็จ"), fuchsia, purple (ใกล้ม่วง), เทา #475569 กับฟ้าอมเขียว #0e7490 (ในโหมดมืดเหมือน ดำ และ ฟ้าทะเล)
+- ตัวเลือกสีเป็น radio จริงใน fieldset (legend "สีธีม") มีชื่อสีให้โปรแกรมอ่านหน้าจอ (เดิมอ่านรหัส hex) และชื่อสีที่เลือกแสดงใต้วงสี; สีที่เคยบันทึกไว้นอกชุดยังแสดงเป็นวง "สีปัจจุบัน" ไม่หายไปเอง
+- ไม่ได้แก้ backend (รับ #rrggbb ใดก็ได้อยู่แล้ว) กราฟและรายงานที่ใช้สีธีมปลอดภัยกับทุกสีในชุด ไฟล์ Excel/PDF/อีเมลไม่ใช้สีธีม
+
+### ตั้งค่า: แก้ทุกข้อจากรีวิวรอบสอง (WCAG, แท็บเล็ต, ความสม่ำเสมอ, animation) — 2026-10-15
+**บัค**
+- หน้าต่างข้อมูลหลัก 7 แบบ (ยี่ห้อ รุ่น หมวดหมู่ ผู้จำหน่าย คลัง สถานที่ และหน่วยนับ/ประเภทรับประกัน/เหตุผลตัดจำหน่ายใน `lookup-section`) + หน้าต่างตัวเลือกคำขอ: ขึ้นเครื่องหมายถูกจริง (`SaveButton success`), กดบันทึกหรือ Enter ซ้ำระหว่างบันทึกไม่ส่งซ้ำ, ปิดตัวเองด้วย `useCloseAfterSave` ใน `components/modal-timing.ts` (ล้าง timer ตอนปิด); Enter ระหว่างพิมพ์ไทย (IME) ไม่ส่งฟอร์ม (`!e.nativeEvent.isComposing`); ชื่อว่างหรือชื่อซ้ำขึ้นใต้ช่องและโฟกัสช่อง (เดิมปุ่มกดไม่ได้เงียบ ๆ / ข้อความเด้ง); `maxLength` ตาม backend
+- ตารางข้อมูลหลัก 9 ตารางส่ง `loading` ไม่ขึ้น "ไม่พบข้อมูล" แวบก่อนข้อมูลมา; ฟอร์มบริษัท ระบบ อีเมล ความปลอดภัยแสดง skeleton ระหว่างโหลดแทนค่าตั้งต้นผิด ๆ
+- รูปโลโก้ตัวอย่างสร้าง object URL ครั้งเดียวต่อไฟล์และคืนตัวเดิม; ปุ่มส่งอีเมลทดสอบมี "กำลังส่ง…" และกดไม่ได้ระหว่างมีการแก้ที่ยังไม่บันทึก (บอกให้บันทึกก่อน)
+
+**WCAG**
+- ความปลอดภัยใช้ `Switch` ของกลาง (มีชื่อ, ราง 3:1) แทนตัวที่ทำเอง และช่องเลือกระยะเวลาอ้างป้ายของแถว; ปุ่มแก้ไข/ลบในตารางมีชื่อแถว; ป้ายผูกกับช่อง (การเข้ารหัส, ยี่ห้อในหน้าต่างรุ่น, ไอคอนหมวดหมู่, สวิตช์สถานะตัวเลือกคำขอ, ปุ่มอัปโหลดโลโก้ชื่อ "อัปโหลด โลโก้")
+- เมนูหมวดมีชื่อ, `aria-current`, สี `text-brand-ink`, เลื่อนหมวดที่เลือกมาให้เห็นบนแท็บเล็ต; บันทึกแล้วผิด โฟกัสไปช่องแรกที่ผิด (บริษัท อีเมล) และกล่องข้อผิดพลาด SLA สั่นแบบ `FormErrorBanner`; ข้อความผิดของช่องเวลาและวันทำงานผูก `aria-describedby` (`TimeInput` รับ `ariaDescribedBy`); ทุกหน้าต่างมี DialogDescription
+- วัดใน Chrome ทุกหมวด + 8 รายการข้อมูลหลัก + ข้อมูลคำขอ ทั้งโหมดสว่าง/มืด: ไม่มีข้อความต่ำกว่าเกณฑ์ (ก่อนแก้: เมนู 4.49, ตัวเลขข้อมูลคำขอ 2.2–3.3, รางสวิตช์ 1.33/1.47)
+
+**แท็บเล็ต**: ที่ 768 ไม่มีหมวดไหนล้น; ตาราง SLA แสดงป้าย "ปิดเคสภายใน" / "นับด้วย" ในแถวเมื่อหัวคอลัมน์ถูกซ่อน
+
+**ความสม่ำเสมอ**: แท็บย่อยข้อมูลหลักและข้อมูลคำขอใช้ `PageTabs` (ข้อมูลคำขอจำ `?list=` ใน URL แล้ว); `RowActions` ตัวเดียวทุกตาราง; หน้าว่างใช้ `EmptyPane`; หน้าต่างตัวเลือกคำขอใช้ DialogHeader/SaveButton/ความกว้างเดียวกับหน้าต่างอื่น; ตัวเลือกสีสถานะทรัพย์สินเป็น radio แบบสีธีม; โน้ตใช้สไตล์เดียว; ลบ ComingSoon ที่ไม่มีทางแสดง; ขนาดตัวอักษรนอกมาตรฐานในหน้าตั้งค่าเหลือ 0 จุด; ข้อความตายตัวย้ายเข้าไฟล์ภาษา ("Select country…", "Manufacturing", "Auto", "No results", "ไม่พบไอคอน", placeholder ในหน้าต่างคำขอ); ตัดเครื่องหมายคั่น " - " / " — " ในไฟล์ภาษา, EN ใช้ sentence case
+**Animation**: popover (ช่องวันที่ เวลา info) และช่องเลือกแบบค้นหาเปิดแบบ fade + zoom เหมือน Select; ปุ่มคู่ วันทำงาน ลิงก์สรุป SLA และปุ่มในแถวมี `transition-colors`/hover; ตั้งค่าลดการเคลื่อนไหวแล้ว skeleton (`animate-pulse`) หยุดนิ่ง; ลบ CSS placeholder ฟอนต์ mono ที่ไม่ใช้แล้ว
+- ตรวจ: tsc + eslint + prettier ผ่านทุกไฟล์ที่แก้ (34 ไฟล์), คีย์ภาษา th/en เท่ากัน (settings 288, common 167); ลองในหน้าจริง: หน้าต่างยี่ห้อชื่อว่างขึ้นข้อความใต้ช่อง + โฟกัส, Enter ระหว่าง IME ไม่ส่ง, ไม่มี request ใดถูกส่ง
+- **Stock (นอกหน้าตั้งค่า แต่บัคเดียวกัน):** หน้าต่างรายการอะไหล่ (`stock-item-modal`), รับเข้า/เบิกออก/โอน/คืน (`movement-drawer`) และขอเบิก (`request-drawer`) เคยรอ 1.1 วินาทีก่อนปิดโดยไม่มีเครื่องหมายถูก และกดบันทึกซ้ำได้ระหว่างนั้น (เบิกซ้ำ = ตัดสต็อกสองครั้ง) ตอนนี้ขึ้นเครื่องหมายถูก, กดซ้ำ/Enter ซ้ำระหว่างบันทึกไม่ส่ง (`useRef` กันใน movement และ request), ปิดด้วย hook กลาง `shared/hooks/use-close-after-save.ts` (ย้ายมาจาก settings `modal-timing.ts` ให้โมดูลอื่นใช้ได้โดยไม่ข้ามโมดูล) ไม่มี `CLOSE_DELAY_MS` ซ้ำในโค้ดแล้ว; ลองใน Chrome: กด "ส่งคำขอ" 3 ครั้งติด ส่งออก 1 ครั้ง (บล็อกไว้ ไม่ถึง server)
+- **ความกว้างเดียวกันทุกหมวด + ปุ่มบันทึกแบบเดียว:** `FORM_WIDTH` เป็น `max-w-[52rem]` (เดิมฟอร์ม 48rem, SLA 52rem แยก) เพราะตารางงานซ่อม 5 คอลัมน์ต้องใช้ความกว้างนี้ไม่ให้ "ช่างในบริษัท" ถูกตัด; หน้า Ticket & SLA เลิกใช้แถบบันทึกค้างล่างจอ ใช้แถวปุ่มบันทึกท้ายเนื้อหาชิดขวาแบบหมวดอื่น; วัดใน Chrome: ทุกหมวดกว้าง 832px ขอบขวาปุ่มบันทึกตรงกันทุกหมวด
+
+### สลับโหมดมืด/สว่าง: ทุกส่วนเปลี่ยนพร้อมกัน — 2026-10-15
+- อาการ: ตอนสลับโหมด พื้นหลังและตัวอักษรส่วนใหญ่เปลี่ยนทันที แต่ปุ่ม แท็บ ช่องกรอก (หลายร้อยจุดที่มี `transition-colors` / `transition-all` ไว้สำหรับ hover) ค่อย ๆ เปลี่ยนราว 0.15 วินาที และส่วนที่คำนวณสีใน JS (วงสีธีม ผังองค์กร กราฟ) เปลี่ยนก่อนคลาส `dark` หนึ่งเฟรม เพราะคลาสถูกสลับใน `useEffect` ซึ่งทำงานหลังวาดจอ
+- แก้ใน `shared/hooks/use-apply-theme.ts`: สลับคลาส `dark` และตั้ง `--brand` / `--brand-foreground` / `--brand-ink` ใน `useLayoutEffect` เดียว (ก่อนวาดจอ เฟรมเดียวกับสีที่คำนวณใน render) และหยุด transition ทั้งหน้าเฉพาะตอนสลับ (style ชั่วคราว `transition:none` แล้วเอาออกเฟรมถัดไป หรือหลัง 150ms ถ้าแท็บถูกซ่อน) hover ยังค่อย ๆ เปลี่ยนสีตามปกติ
+- วัดใน Chrome (หน้า Ticket & SLA): 100 จุดที่มี transition สีเปลี่ยนตามโหมด ทั้ง 100 จุดเป็นสีของโหมดใหม่ทันทีหลังสลับ; หลังสลับ transition กลับมาเป็น 0.15s
+
+### ตั้งค่า: รีวิวคำทั้งโมดูล (ไทย + อังกฤษ) — 2026-10-15
+- หน้าตั้งค่าใช้โดยแอดมิน IT จึงใช้คำอังกฤษที่คุ้นกว่า: "Session timeout", "Email log", "Branding", "SMTP host"; คำอธิบายหมวดความปลอดภัยเป็น "Session timeout และอายุรหัสผ่าน"
+- ภาษาไทยกระชับขึ้น: ชื่อบริษัท (อังกฤษ) / (ไทย), ที่อยู่, "คลังสินค้า" → "คลัง", ชื่อสีธีมตัด "สี" ออก, ตัวอย่างใน placeholder ชื่อแอป, ข้อความบันทึกไม่ได้, ข้อมูลที่ยังถูกใช้, คำอธิบายระยะเวลาเก็บข้อมูลและข้อมูลหลัก, ข้อมูลคำขอ "แสดง"
+- ภาษาอังกฤษ: คำอธิบาย Branding / อีเมล / ระยะเวลาเก็บข้อมูล / ข้อมูลหลัก, Name (English) / Name (Thai), Shown, Not translated, Address, Orange, ข้อความอีเมลผิดรูปแบบ
+- ลบคีย์ที่ไม่มีที่ใช้ 12 คีย์ (`set_display*`, `md_type*`, `set_workflow`, `set_integrations` ฯลฯ) ตรวจด้วย grep ก่อนลบ; ไฟล์ไทยและอังกฤษมี 276 คีย์เท่ากัน
+- รอบเพิ่ม 6 คีย์: คำอธิบาย Session timeout และรหัสผ่านหมดอายุ, คำอธิบายหมวดบริษัท (เดิมบอกว่าแสดงในส่วนหัวและอีเมล ซึ่งไม่จริง ตอนนี้บอกตามที่ใช้จริง คือท้ายเมนูด้านซ้าย และรายงาน Excel / PDF), คำอธิบายหมวดข้อมูลคำขอ, ประโยคเปลี่ยนชื่อตัวเลือก (บอกผลว่า "คำขอเก่าจะแสดงชื่อใหม่ตามไปด้วย" แทนคำว่า id) และประโยคลบตัวเลือก
+- คำแนะนำใต้ช่องโลโก้แยกเป็น 2 บรรทัด (เงื่อนไขไฟล์ / ใช้เป็น favicon และในอีเมล) คีย์ใหม่ `set_logo_usage`
+- ตรวจ: tsc + eslint + prettier ผ่าน; ใน Chrome หมวดบริษัท ระบบ ข้อมูลหลัก อีเมล ความปลอดภัย แสดงคำใหม่ครบ
+
+### อีเมลและการแจ้งเตือน: แก้ทุกข้อจากรีวิว (บัค, WCAG, แท็บเล็ต, ความสม่ำเสมอ, animation) — 2026-10-15
+- **บัคที่หนัก:**
+  - หน้าต่างแก้ Template ที่ 768px: ช่องแก้ HTML เคยถูกบีบจนเหลือแค่แถบเครื่องมือ ตอนนี้ฟอร์มขึ้นก่อน (สูงอย่างน้อย 24rem) แล้วตามด้วยตัวอย่าง และลำดับโฟกัสตรงกับที่เห็น
+  - ตัวอย่างอีเมลในโหมดมืด: แถบ จาก / ถึง / หัวจดหมาย เคยเป็นตัวสีขาวบนพื้นสว่าง (1.06:1) ตอนนี้แถบและการ์ดใช้สีสว่างแบบอีเมลจริงทั้งสองโหมด
+  - ตารางที่ 768px: ซ่อนคอลัมน์รองต่ำกว่า `lg` ด้วยตัวเลือกใหม่ `hideBelow` ของ `DataTable` กลาง ชื่อจึงไม่ถูกตัดจนอ่านไม่ออก
+- **บัคอื่น:**
+  - ตัวอย่างสด: ผลเก่าไม่มาทับผลใหม่ (รับเฉพาะคำขอล่าสุด) และถ้าโหลดไม่ได้จะขึ้นข้อความพร้อมปุ่มลองใหม่แทน skeleton ค้าง
+  - สวิตช์ในตาราง: ล้มเหลวแล้วขึ้น toast และกดซ้ำไม่ได้ระหว่างบันทึก
+  - บันทึกชื่อ หัวจดหมาย หรือเนื้อหาว่างไม่ได้แล้ว (ตรวจที่ server ด้วย `required`): ขอบแดง ข้อความใต้ช่อง แถบแจ้งเตือนสั่น และโฟกัสไปช่องแรกที่ผิด; กดบันทึกซ้ำและ Ctrl+S ระหว่างถามยืนยันไม่ส่งซ้ำ
+  - ชิป "ทั้งหมด" ในแท็บ Logs ใช้ `counts.all` ของทั้ง log (เดิมเปลี่ยนตามตัวกรอง); ปุ่ม Reset all แสดงเฉพาะแท็บ Email; หน้าต่างประวัติแสดง skeleton ระหว่างโหลดและข้อความโหลดไม่ได้พร้อมปุ่มลองใหม่; ข้อผิดพลาดยาวตัดบรรทัด
+  - ตัวตรวจ HTML: `>` ในค่า attribute ไม่ถูกนับเป็นปิดแท็ก และหาเลขบรรทัดด้วย binary search แทนการตัดสตริงทุกแท็ก
+  - iframe ตัวอย่างปรับความสูงเมื่อความกว้างเปลี่ยน และลิงก์ในอีเมลคลิกแล้วไม่เปิดหน้าอื่นในกรอบ
+- **WCAG:** ใช้ `PageTabs` กลางแทนแท็บที่ทำเอง (`role=tab`, `aria-selected`, กรอบโฟกัส); การ์ดสรุปเป็น `StatCard` กลาง (กดด้วยคีย์บอร์ดได้ และมี skeleton ระหว่างโหลด); ชิปตัวกรองมี `aria-pressed`; สวิตช์เป็น `Switch` กลางพร้อมชื่อ; ช่องค้นหามี `aria-label`, `type=search` และ `name`; ช่องหัวจดหมาย ช่อง HTML และตัวเลือก "แทรกตัวแปร" ผูกกับป้ายแล้ว; มีข้อความประกาศตอนบันทึก ส่ง คืนค่า และกำลังอัปเดตตัวอย่าง; ตัวเลขบนชิปและป้ายเล็กผ่าน 4.5:1 (เฉด -700/-400, `text-brand-ink`); ไอคอนตกแต่งมี `aria-hidden`
+- **ความสม่ำเสมอ:** ใช้ของกลาง (`EmptyPane`, `SaveButton`, `FormErrorBanner`, `LoadFailed`); หน้าต่างแก้ Template เปิดด้วย `?dialog=<id>` ผ่าน `useDialogParam` (กด Back แล้วปิด) และแถวใน Logs ใช้ `?view=<id>`; เลิกจำตัวกรองใน localStorage (เก็บใน URL อย่างเดียว); ชิปหมวดเป็นภาษาไทยตามชื่อเมนู; ข้อความตายตัวย้ายเข้าไฟล์ภาษา; เลิกใช้ `font-mono` นอกช่อง HTML และขนาด 9.5–11px; เนื้อหาหน้าต่างไม่หายระหว่าง animation ปิด (`useRecordView`); ย่อ comment ยาว; ลบ `SettingToggle` ที่ไม่มีใครใช้แล้ว และคีย์ภาษาที่ไม่ใช้ 4 คีย์
+- **แท็บ Notification** (`notification-settings-pane.tsx`): ใช้ `SaveButton` + `useCloseAfterSave` + กันกดซ้ำ, ถามก่อนคืนค่ามาตรฐาน, `?dialog=<id>`, `Switch`/`StatCard`/`EmptyPane` กลาง, ปุ่มแก้ไข 32px มีชื่อ, คำเตือนไม่มีช่องทางอีเมลใช้ `InfoPopover`, ซ่อนคอลัมน์ทำงานเมื่อ / ผู้รับต่ำกว่า `lg`
+- **Animation:** ปุ่มเลื่อนของ `Switch` กลางขยับด้วย `transform` แทน `transition-all` + `left`; ไอคอนหมุนและลูกศรหยุดเมื่อตั้งค่าลดการเคลื่อนไหว; ชิปใช้ `transition-colors`
+- **ของกลางที่เพิ่ม:** `Column.hideBelow` (`DataTable`), `StatCard` ไม่ต้องใส่ `sub` ก็ได้
+- **ตรวจ:**
+  - tsc (0 error ทั้งโปรเจกต์), eslint, prettier และ pint ผ่าน
+  - เทสต์ Email/Notification 197 ข้อผ่าน รวมเทสต์ใหม่ใน `EmailDeliveryLogTest` (`counts.all`) และ `NotificationPermissionGateTest` (บันทึกค่าว่างไม่ได้); `tests/js/html-issues.test.ts` 4 ข้อผ่าน
+  - Chrome: วัดสีโหมดสว่างและมืดผ่านทุกแท็บและทั้งสองหน้าต่าง; ที่ 768px ไม่มีอะไรล้น และช่อง HTML สูง 205px; กด Back แล้วหน้าต่างปิด; บันทึกค่าว่างแล้วโฟกัสไปช่องที่ผิด · หน้า /contracts: ไทล์ "ใช้งาน" ในแท็บภาพรวมเปลี่ยนชื่อเป็น "ใช้งานปกติ" (key ใหม่ `contract_active_normal`) เพราะนับเฉพาะสัญญาที่ยังไม่ใกล้หมดอายุ ป้ายสถานะ "ใช้งาน" ในตารางยังเหมือนเดิม
+
+### กระดิ่งแจ้งเตือน: ปรับข้อความทั้งชุด — 2026-10-15
+- ข้อความ 32 จาก 48 รายการ (ไทยและอังกฤษ) เลิกใช้ " - " คั่นกลาง และเขียนเป็นประโยคต่อกันแทน; ตัด "แตะ / กดเพื่อดู" และ "กรุณา / โปรด" ออก; ข้อความถึงผู้แจ้งใช้ "Ticket ของคุณ" ส่วนข้อความถึงทีม IT ใช้ "เคส"; คำตรงกับโมดูล ("เสร็จสิ้น", "อะไหล่", "ไม่อนุมัติ", "เกินขั้นสูง"); แก้ภาษาอังกฤษที่ผิดไวยากรณ์ 3 ข้อ
+- แก้ 3 ที่ให้ตรงกัน คือ `NotificationCatalogue` (ค่ามาตรฐาน), `lang/*/notification.ts` และตาราง `notification_templates` ผ่าน migration `2026_10_15_144607_update_bell_wording_without_separators…` ซึ่งเปลี่ยนเฉพาะคอลัมน์ที่ยังเป็นข้อความมาตรฐานเดิม ข้อความที่แอดมินแก้เองไม่ถูกแตะ และ `down()` คืนข้อความเดิมได้; รันกับฐานข้อมูลจริงแล้ว ทุกแถวตรงกับค่ามาตรฐานใหม่
+- บรรทัดหัวของอะไหล่เป็น "ชื่อ (รหัส)" เหมือนสัญญา พนักงาน และทรัพย์สิน ส่วน Ticket และคำขอเป็น "รหัส ชื่อ" (ไม่มีขีด) เพราะชื่อเรื่องยาวถูกตัด และเลขเคสคือสิ่งที่ทีม IT ใช้อ้างอิง ลองใน Chrome แล้ว เลขเคสขึ้นหน้าทุกรายการ (`notification-display.tsx`); กลุ่ม "อื่นๆ" เป็น "อื่น ๆ"
+- เทสต์: `NotificationWordingMigrationTest` ครอบ migration ใหม่ (ย้ายข้อความ, คงข้อความของแอดมิน, ย้อนกลับ) และตรวจว่าไม่มีข้อความมาตรฐานไหนใช้ " - "; เทสต์ของ migration ครั้งก่อนเทียบกับข้อความของ migration นั้นเองแทนค่ามาตรฐานปัจจุบัน; เทสต์ Notification/Email/PasswordExpiry/ProductionSeed 232 ข้อผ่าน; tsc, eslint, prettier และ pint ผ่าน
+
+### กระดิ่งแจ้งเตือน: ตัวกรองหมวดโหลดจาก server + ปุ่มโหลดเพิ่ม — 2026-10-15
+- ปัญหา: กระดิ่งโหลดมาแค่ 30 รายการล่าสุด แล้วกรองหมวดจากรายการที่มีอยู่ ชิป "คำขอ 18" จึงกดแล้วขึ้น "ไม่มีการแจ้งเตือน" เมื่อ 18 รายการนั้นเก่ากว่า 30 รายการล่าสุด
+- `GET /api/notifications` รับ `kinds[]` (ชนิด "type|module" แบบที่ `counts` รายงาน) และ `offset`; ตอบ `matching`, `has_more` และ `unread` ต่อชนิดใน `counts`; กรองใน PHP (ไม่ใช้ JSON path ซึ่งต่างกันระหว่าง MariaDB กับ SQLite); เรียกแบบไม่มีพารามิเตอร์ยังได้ผลเหมือนเดิม
+- กระดิ่ง (`notifications-dropdown.tsx`): แต่ละแท็บโหลดรายการของหมวดตัวเองผ่าน `useNotificationFeed` (infinite query ใต้ key `notifications` จึงถูก invalidate พร้อมกัน); ท้ายรายการมีปุ่ม "โหลดเพิ่ม" แทนข้อความ "แสดง 30 รายการล่าสุด จากทั้งหมด N"; ชิปแสดงจำนวนที่ยังไม่อ่าน; มี skeleton ระหว่างโหลด; แถวที่ซ้ำหลังลบจะแสดงครั้งเดียว; การลบอัปเดตรายการทุกแท็บทันที; ชิปมี `aria-pressed`; ตัวเลขบนชิปที่เลือกผ่าน 4.5:1; ปุ่มปิดมีชื่อ; คำขอหลัก (badge และ toast) ยังเหมือนเดิม
+- คีย์ `notif_showing` → `notif_load_more`
+- ตรวจ:
+  - เทสต์ใหม่ใน `NotificationApiTest` (offset, กรองตามชนิดโดยตัวเลขรวมไม่เปลี่ยน, ตรวจค่าที่ส่งมา); เทสต์ Notification/Email/PasswordExpiry/ProductionSeed/GuestAccess 258 ข้อผ่าน
+  - tsc, eslint, prettier และ pint ผ่าน
+  - Chrome (บล็อกการบันทึก): แท็บคำขอแสดงครบ 18 รายการ, โหลดเพิ่มได้ 30 → 60, วัดสีโหมดสว่างและมืดผ่าน; ค่าของบัญชีและสถานะยังไม่อ่าน (138) ไม่เปลี่ยน
+- ชื่อยาวในกระดิ่ง (เลือกแบบ 2 จากหน้าเทียบ 4 แบบ): แถวที่ชื่อถูกตัด เมื่อชี้เมาส์หรือกด Tab มาที่แถว จะขึ้น tooltip ชื่อเต็มใต้แถว (`Tooltip` กลาง รอ 0.4 วินาที) แถวชื่อสั้นไม่ขึ้น; แถวแยกเป็น `NotificationRow` และกด Tab ถึงแล้ว (Enter / Space เปิดได้ มีกรอบโฟกัส); คำขอขึ้นเลขก่อนชื่อแบบเดียวกับ Ticket; ลองใน Chrome แล้ว วัดสี tooltip โหมดสว่างและมืดผ่าน
+
+### เครื่อง demo: `composer run demo` — 2026-10-15
+- เปิด 4 อย่างพร้อมกันโดยไม่ใช้ vite dev server: `php artisan serve`, `queue:listen` (ส่งอีเมลที่เข้าคิว), `schedule:work` (แจ้งเตือนสัญญา 08:00, สรุปรายสัปดาห์, รายงานตั้งเวลา) และ `vite build --watch` (build ไฟล์หน้าเว็บใหม่เมื่อโค้ดเปลี่ยน) ตัวไหนหยุดจะเปิดใหม่เองหลัง 3 วินาที
+- ลบ `public/hot` ก่อนเริ่ม ถ้ามีค้างจาก `composer run dev` หน้าเว็บจะไปหา vite dev server ที่ไม่ได้เปิด
+- เหตุผล: เดิมเครื่อง demo เปิดแค่ `php artisan serve` งานตั้งเวลาและ queue จึงไม่เคยรัน (`contract_alert_logs` และ `contract_bell_logs` ว่าง อีเมลไม่ออก)
+
+### รายงาน: ตัวเลขในแท่งกราฟ — 2026-10-15
+- ตัวเลขในชิ้นแท่งของทุกรายงานใช้กติกาเดียว `PIECE_INK` ใน `chart-tones.ts`: โหมดสว่างตัวเลขขาวมีเงาบาง (เหมือนเดิม) โหมดมืดตัวเลขดำเกือบสนิท (`slate-950`) ไม่มีเงา ตามที่ผู้ใช้เลือก สีแท่งไม่เปลี่ยน
+- ใช้กับ: กราฟรายเดือนของรายงานสัญญา, `CountBar` (สัญญาเช่า ประกัน), รายงานประกัน, โอนย้าย, ตัดจำหน่าย และแถบในรายงานสิทธิ์การเข้าถึง
+- กราฟรายเดือน "เงินที่ต้องจ่ายตามรอบบิล" / "สัญญาที่จะหมดในแต่ละเดือน" (`contract-month-card.tsx`) และ "ประกันหมดรายเดือน" ไม่มีตัวเลขในชิ้นแท่งแล้ว เหลือยอดรวมบนหัวแท่ง ยอดแยกตามประเภท/สถานะดูจาก tooltip ของแท่ง (ชี้ แตะ หรือ Tab)
+- ตรวจใน Chrome ทั้งโหมดสว่างและมืด: หน้าภาพรวมสัญญา ประกัน ตัดจำหน่าย สิทธิ์การเข้าถึง
+
+### ค้นหาแบบแยกคำ (Multi-word AND) ทุกรายการและรายงาน — 2026-10-16
+- ตัวช่วยกลาง `App\Support\SearchTerms`: ล้างตัวอักษรที่มองไม่เห็น (zero-width) และช่องว่างพิเศษ (NBSP) → แยกคำตามช่องว่าง ตัดคำซ้ำ (ไม่เกิน 100 ตัวอักษร 6 คำ ส่วนที่เกินถูกตัดทิ้ง ไม่ขึ้น error) → แต่ละคำต้องเจอในฟิลด์ใดฟิลด์หนึ่ง เรียงลำดับไหนก็ได้ (AND ของ OR)
+- `%` `_` `!` นับเป็นตัวอักษรธรรมดา (`LIKE ? escape '!'` ใช้ได้ทั้ง MariaDB และ SQLite) และค่าที่ไม่ใช่ string เช่น `?search[]=` ถือว่าไม่ได้ค้น
+- ใช้กับรายการหลัก 8 หน้า (พนักงาน, Ticket, ทรัพย์สิน, สัญญา, สต็อก, คำขอ, ประวัติอีเมล, Audit Log) และรายงาน 9 ตัวที่มีช่องค้นหา ฟิลด์ที่ค้นเหมือนเดิม ยกเว้นที่เพิ่ม:
+  - พนักงาน: อีเมล และ username (ค้นทั้ง `employees.username` และ `users.username` เพราะข้อมูลจริงมีพนักงานที่มีบัญชี 4 จาก 14 คนที่ `employees.username` ว่าง)
+  - ทรัพย์สิน: ชื่อผู้ถือภาษาไทย / Ticket: ชื่อผู้แจ้ง (ไทย/อังกฤษ)
+  - คำขอ: ประเภทคำขอ (ไทย/อังกฤษ) เทียบทีละคำ เช่น `somchai คอมพิวเตอร์`
+- Audit Log: API ใช้ `?search=` แทน `?q=` ให้ตรงกับรายการอื่น (URL ของหน้าเว็บใช้ `?search=` อยู่แล้ว)
+- การเรียงคงที่: สัญญา สต็อก และ Audit Log เพิ่ม `id` ต่อท้ายการเรียง เมื่อค่าที่เรียงเท่ากัน แถวจะไม่สลับหรือซ้ำข้ามหน้า
+- สิทธิ์: ทุกหน้ากรองตามสิทธิ์ก่อน คำค้นต่อท้ายด้วย AND (มี test ว่าผู้ใช้ทั่วไปค้นไม่เจอ Ticket ของคนอื่น) และไม่มีหน้าไหนค้นจากฟิลด์ที่ผู้ดูมองไม่เห็น
+- ข้อควรระวัง: ห้ามใส่เงื่อนไข `orWhere` เป็นเงื่อนไขเดียวใน callback ของ `whereHas` เพราะ Laravel จะครอบกลุ่มด้วย OR แล้วทุกแถวผ่าน ให้ใช้ `SearchTerms::anyLike()` หรือ `related()`
+- Query plan บน MariaDB จริง: `%` อยู่หน้าคำจึงใช้ index ไม่ได้ (full scan) แต่ subquery ของ relation ถูก materialize ครั้งเดียวต่อคำ ข้อมูลตอนนี้ไม่เกิน 800 แถวต่อตาราง ยังไม่ต้องเพิ่ม index หรือแก้ schema
+- Test: `tests/Unit/Support/SearchTermsTest.php` (ไทย/อังกฤษ, ช่องว่างเกิน, zero-width, ตัวอักษรพิเศษ, คำค้นว่าง, ขีดจำกัด) และ `tests/Feature/ListSearchTest.php` (สลับลำดับคำ, ค้นข้ามฟิลด์, wildcard, สิทธิ์, การเรียงคงที่)
+- ข้อความในช่องค้นหาของรายชื่อพนักงาน: "ค้นหาด้วยชื่อ รหัสพนักงาน username หรืออีเมล" / "Search by name, ID, username or email"
+- ช่องค้นหารายการหลักรอให้หยุดพิมพ์ 300ms ก่อนส่ง (`shared/hooks/use-debounced-search.ts`): ช่องค้นหาและ `?search=` ยังเปลี่ยนทุกตัวอักษร แต่ส่งไป server ครั้งเดียวต่อคำ ล้างช่องว่างแล้วส่งทันที เพิ่มช่องว่างหรือ zero-width ไม่ส่งซ้ำ ใช้กับ พนักงาน, Ticket, ทรัพย์สิน, สัญญา, สต็อก, คำขอ, Audit Log (ประวัติอีเมลรอ 350ms อยู่แล้ว รายงานรอ 300ms อยู่แล้ว)
+- ทดสอบในแอปจริงบน MariaDB ทั้ง 8 รายการ + รายงาน 9 ตัว: ผลตรงกับ DB ทุกเคส, ไล่ทุกหน้าของสัญญา/สต็อก/Audit Log ไม่มีแถวซ้ำหรือหาย, พิมพ์ 16 ตัวส่ง request ครั้งเดียว (`tests/js/debounced-search.test.ts`)
+- รอบ 2: พิมพ์ชื่อกับนามสกุลติดกันได้ เช่น `สมชายใจดี`, `SomchaiJaidee` หรือคร่อมรอยต่อ `ชายใจ` — `SearchTerms::joined()` เทียบกับฟิลด์ที่ต่อกันไม่มีช่องว่าง (`CONCAT(COALESCE(..))` บน MariaDB, `||` บน SQLite) และ `SearchTerms::personName()` เป็นชุดฟิลด์ชื่อคนมาตรฐาน (ชื่อ/นามสกุล ไทย-อังกฤษ แยกกันและต่อกัน) ใช้กับ รายชื่อพนักงาน, ผู้แจ้ง Ticket, ผู้ถือทรัพย์สิน, รายงานเรื่องค้างของพนักงาน, รายงาน License (แทน `CONCAT_WS` ที่ใช้ได้แค่ MySQL) และรายงานโอนย้าย (ชื่ออังกฤษเหมือนเดิม) — สลับลำดับแบบติดกัน (`ใจดีสมชาย`) ไม่รองรับ ให้เว้นวรรคแทน
+
+### My Profile รวมหน้า "ทรัพย์สิน และการเข้าถึงของฉัน" — 2026-10-16
+- ลบหน้า `my-assets-access` และ redirect `/my-assets` เดิม แท็บ Assets ใน drawer My Profile รับหน้าที่ต่อ: ตารางรอรับ (ปุ่ม รับมอบ) อยู่บนสุด ตามด้วยตาราง ทรัพย์สินของฉัน (ปุ่ม ส่งคืน)
+- ลิงก์ลึก `?dialog=profile&section=assets` ใช้โดยกระดิ่ง อีเมล การ์ดบน Dashboard และปุ่มอวาตาร์ใน sidebar (เอาเมนู "ทรัพย์สิน และการเข้าถึงของฉัน" ออกแล้ว)
+- `/assets/mine` เพิ่ม `handed_over_at` จากแถวล่าสุดของ handover trail
+- เพิ่ม lang namespace `lang/<locale>/profile.ts` และลบคีย์ `mya_*` / `my_assets_*` ที่ไม่มีใครอ่านออกจาก `asset.ts` ทั้งสองภาษา
+- การ์ด "รอคุณกดรับ" บน Dashboard เปลี่ยนเป็นแถบบรรทัดเดียว (mockup บอร์ด C): ตัวเลขจำนวนรายการ ประโยคบอกว่า IT ส่งมอบแล้วและกดรับเพื่ออะไร chip สรุปตามรุ่น (ประเภท + รุ่น + ×จำนวน จัดกลุ่มฝั่งหน้าเว็บด้วย `groupPendingAssets`) และปุ่ม "ไปกดรับที่โปรไฟล์ของฉัน" เปิด Drawer; payload `pending_acceptance` เพิ่ม `category` / `category_th`
+- ปรับหลัง user test (2026-10-16): ตารางใน Drawer แสดง 5 แถวแล้วพับที่เหลือเป็น "แสดงทั้งหมด" (สีเทาเหมือนแถวพับในรายงาน); แถวที่กดรับแล้วค้างที่เดิมพร้อมป้าย "รับมอบแล้ว" และหายเองหลังหยุดกด 3 วินาที (แก้คลิกติดกันแล้วโดนคนละชิ้นเพราะแถวเลื่อน) + ปุ่ม "รับมอบทั้งหมด" มี confirm; วันที่ในตารางเหลือวันอย่างเดียวจัดกึ่งกลาง; เปิด Drawer แล้วโฟกัสอยู่ที่ตัว Drawer ไม่ขึ้นวงแหวนที่ปุ่มใด; ปิด Drawer แล้วแท็บเดิมค้างไว้จนปิดสนิท; skeleton ทุกส่วน (แท็บทรัพย์สิน, cover, rail, ข้อมูลส่วนตัว) เป็นรูปร่างเดียวกับของจริง; แท็บ Ticket/คำขอใช้ตารางเดียวกับ View Detail ของพนักงาน ไม่มีลิงก์ "เปิดหน้าเต็ม"
+- `useDialogParam` รองรับ companion params และ `resolveNotificationTarget` เก็บ query ของหน้าเดิมไว้ให้ ไม่ทำ redirect จาก `/my-assets-access` เพราะยังเป็นช่วงก่อน go-live
+
+### ฟอนต์: ถอด JetBrains Mono ออกทั้งแอป — 2026-10-16
+- หน้าเว็บเหลือ Noto Sans Thai ตัวเดียว: เลิกโหลด JetBrains Mono จาก Google Fonts ใน `app.blade.php` ลบตัวแปร `--font-mono` และกฎ `.font-mono` ใน `app.css` และลบคลาส `font-mono` ออกจากคอมโพเนนต์ทั้งหมด (~550 จุด 138 ไฟล์) รวมถึง `font-sans` / `placeholder:font-sans` ที่มีไว้หนี mono
+- ตัวเลขของ Noto Sans Thai กว้างเท่ากันอยู่แล้ว (วัดใน Chrome: 0 กับ 1 กว้างเท่ากัน) จึงไม่ต้องใส่ `tabular-nums` แทน
+- เซลล์ตารางที่เดิมอาศัย CSS `table .font-mono { white-space: nowrap }` เปลี่ยนเป็นคลาส `whitespace-nowrap` ตรงจุด กฎกลางเหลือเฉพาะ `table th`
+- ถอด prop `mono` ที่เหลือหน้าที่แค่สลับฟอนต์/ลดขนาดตัวอักษร ออกจาก KV / ReviewRow / RailRow / IdChip / InfoCell / ReadOnlyField และถอด flag `mono` ของฟิลด์คำขอตลอดสาย (`RequestSchemas`, `RequestService::fieldsDisplay`, type `fields_display`, `OnboardingServiceField`) ค่าของทั้งสองฝั่งแสดงขนาดเดียวกับข้อความปกติแล้ว
+- `useDateColumnWidth` วัดความกว้างด้วย `text-xs` ธรรมดา และ `dateFieldClass` ไม่ใส่ mono แล้ว
+- PDF ยังใช้ Sarabun (DomPDF ต้องฝัง TTF) และอีเมลยังใช้ Segoe UI/Arial ตามเดิม
+
+### Stock: รีวิว WCAG / Tablet / ความสม่ำเสมอ / Security แล้วแก้ทั้งโมดูล — 2026-10-16
+- **Security (backend)**: โอนย้ายแบบ serial ตรวจ `serial_ids` แล้ว (`validateTransferSerials` — ต้องเป็นของ SKU นั้น อยู่ในสต็อก และอยู่ในคลังต้นทาง) และจำนวนที่ย้ายคิดจาก serial ที่ผ่านตัวกรองจริง ยอดต่อคลังกับตำแหน่ง serial จึงไม่แยกจากกันอีก; `from_label`/`to_label` ของ movement และ `warehouse` ของใบนับต้องเป็นคลังที่มีอยู่ (`exists:warehouses,name` ยกเว้น `Unassigned`) จึงสร้างคลังใหม่จากช่องกรอกไม่ได้โดยไม่มีสิทธิ์ masterdata (`Warehouse::resolveId` ไม่แก้ เพราะ Asset ยังใช้); `StockCountService::commit` ทำงานใน transaction ทั้งก้อน re-check สถานะ draft และ lock แถว count/item ก่อนปรับสต็อก (commit ซ้ำครั้งที่สองถูกปฏิเสธ)
+- เทสต์ใหม่ใน `StockTransferTest`, `StockCountTest`, `StockItemTest` (serial ของ SKU อื่น/ที่จ่ายออก/อยู่คนละคลัง, คลังไม่รู้จัก, commit ซ้ำ, tie-breaker หน้าเท่ากัน, ค้นหาตามรุ่น) และ 6 ไฟล์เทสต์เดิมเพิ่ม `setUp` สร้างคลังก่อนรับเข้า — 155 ผ่าน
+- **WCAG**: ช่องกรอกทุกช่องมีชื่อ (ช่องนับต่อแถว, จำนวนต่อคลัง, scan, serial, ค้นหา, filter select ใช้ `<label htmlFor>`), ปุ่มไอคอนมี `aria-label`, แถว Lot ขยายด้วย `<button aria-expanded>` แทน `<tr onClick>`, scan box ย้าย focus ring ไป wrapper, checkbox วาดเองเปลี่ยนเป็น `Checkbox` จริง, segment/chips มี `aria-pressed`, ตัวนับสดมี `aria-live`, `<th scope="col">` + caption, `DialogDescription` ทุก dialog, ไอคอนประดับ `aria-hidden`
+- **Contrast โหมดสว่าง**: ข้อความเล็ก `text-emerald/amber/blue-600` → `-700 dark:-400` (ตามกติกาเข้มขึ้นหนึ่งขั้น สีพื้นไม่เปลี่ยน) ปุ่มอนุมัติ `bg-emerald-700`; animation วนไม่รู้จบ 3 จุด (`cf-blink`, `sc-led`, `sc-ping`) เหลือกะพริบ 3 รอบ (`ALERT_BLINK`) และลบป้าย "live"
+- **Tablet 768px**: ใบนับสต็อก `w-[calc(100vw-2rem)] max-w-3xl`; Overview `md:grid-cols-2` การ์ดสูงตามเนื้อหาใต้ `lg` + `overscroll-contain`; ตาราง history/lot/serial เลิก `whitespace-nowrap` ในช่องข้อความยาวและ wrapper เป็น `overflow-x-auto`; drawer โหลดรายการ SKU/serial เฉพาะตอนเปิด (`useStockItems(filters, enabled)`, `useExistingSerials(enabled)`)
+- **ความสม่ำเสมอ**: ลบ `lang === 'th' ? … : …` ทั้ง 20 จุด → คีย์ใน `lang/*/stock.ts` (เพิ่ม 25 คีย์ ลบ 3 คีย์ที่ไม่มีใครอ่าน), รายละเอียด SKU ใช้ `FocusDialogHeader` แทน header ที่คัดลอกเอง, KPI ใช้ `StatCard` (กดได้ → แท็บแจ้งเตือน/คำขอ), tone map ของ movement เหลือชุดเดียวใน `pages/shared.ts` พร้อม `sign`, eyebrow ตัวพิมพ์ใหญ่ tracked บนภาษาไทยทั้งหมดเปลี่ยนเป็นตัวหนาเล็กธรรมดา, ฟอร์มใช้ `Field error=` / `FormErrorBanner` / `Switch` / `Textarea` ของ shared, picker ใบนับใหม่มี discard guard, ปุ่มบอกสิ่งที่เกิด ("เพิ่ม SKU", "เริ่มนับสต็อก"), ฟอร์ม movement/request เริ่มจากไม่เลือก SKU, ข้อความไม่ใช้ " - " / " | " คั่น, พิมพ์/PDF เป็น `<a target="_blank">`
+- **Code review**: พิมพ์ค้นหาแล้วรีเซ็ตหน้าเมื่อคำค้นถูกส่งจริง (ไม่ยิง request 2 รอบ), `unit_cost` ใน history ผ่าน `useCurrency`, comment เล่าประวัติใน controller/หน้า ย่อเหลือบรรทัดเดียว
+- ยังไม่ได้ทำ: หน้า Asset มี pattern รีเซ็ตหน้าทุกคีย์เหมือนกัน (`asset/pages/index.tsx` ~851); การ์ด KPI "คำขอ" ยังแสดง 0 ให้คนไม่มีสิทธิ์ `stock.view_request`; `SerialToggle` ของ shared ยังใช้ track `/30`
+- ตรวจด้วยตาที่ 768px (iframe จำลอง iPad mini บนเครื่อง demo) ทั้งโหมดสว่าง/มืด แล้วแก้เพิ่ม: ตาราง Stock items / Events / Requests กำหนด `width` ต่อคอลัมน์ + `whitespace-nowrap` ที่ SKU/เลขเอกสาร/เวลา และ `hideBelow: 'lg'` ที่หมวด/อ้างอิง/ผู้บันทึก จึงเลื่อนแนวนอนแทนการบีบจนตัดบรรทัด; `DataTable` (shared) ซ่อน `<col>` ของคอลัมน์ `hideBelow` ด้วย (`hidden lg:table-column`) ไม่เช่นนั้น `table-fixed` ยังนับความกว้างของคอลัมน์ที่ซ่อนและเลื่อนความกว้างไปทั้งแถว; การ์ดความเคลื่อนไหวล่าสุดใน Overview แสดงวันที่อย่างเดียวใต้ `lg` ชื่อสินค้าจึงไม่ถูกตัดเหลือ 10 ตัวอักษร; `stock_minmax_alerts` ไทย = "แจ้งเตือนสต็อก" (เดิมเป็นอังกฤษในหน้าไทย)
+- การ์ด KPI "คำขอ" บน Overview: ผู้ใช้ที่ไม่มีสิทธิ์ `stock.view_request` เห็น "—" กับข้อความ "ไม่มีสิทธิ์ดูคำขอ" แทนเลข 0 (การ์ดยังครบ 4 ใบ ไม่ซ่อน เพราะ grid จะเว้นช่อง)
+
+### Topbar aria-label, Asset ค้นหายิงครั้งเดียว, SerialToggle ผ่าน 3:1 — 2026-10-16
+- ปุ่มเมนูด้านข้าง / ภาษา / ธีม / กระดิ่งใน `topbar.tsx` มี `aria-label` (กระดิ่งบอกจำนวนที่ยังไม่อ่าน) ไอคอนและป้ายตัวเลขเป็น `aria-hidden`; เพิ่มคีย์ `toggle_sidebar` ใน common
+- หน้า Asset: พิมพ์ค้นหาเขียนแค่ `?search` แล้วรีเซ็ตหน้าเมื่อคำค้นถูกส่งหลัง debounce (pattern เดียวกับ Stock) วัดจริง: พิมพ์ 4 ตัวอักษรจากหน้า 2 ยิง `/api/assets` 1 ครั้ง
+- `SerialToggle` ใช้ track เดียวกับ shared `Switch` (`bg-muted-foreground/80 dark:/60`) ผ่าน contrast 3:1 และ thumb เลื่อนด้วย `translate-x` แทน `left`
+- ฟอร์มบันทึกการเคลื่อนไหว (`movement-drawer.tsx`) ตัดโหมด "จ่ายออก" ที่ไม่มีทางเปิดออก และประกาศ `MovementKind = receive | return | transfer` ให้ type บังคับ: การจ่ายออกเกิดได้ทางเดียวคือ คำขอเบิก → อนุมัติ → จ่าย (กติกาของระบบ) ลบคีย์ `stock_issue_to_ph`
+
+### สิทธิ์กลุ่ม "โปรไฟล์ของฉัน" — 2026-10-16
+- การดูทรัพย์สิน/สิทธิ์เข้าถึงของตัวเองไม่ต้องมีสิทธิ์อีกต่อไป แค่บัญชีผูกพนักงาน (`/assets/mine`, `/access/mine`, pill ใน sidebar, กระดิ่งและอีเมลตอน IT โอนของ)
+- key ใหม่ `profile.edit` (เดิม `employees.edit_own`) และ `profile.return_assets` (เดิม `assets.return`) อยู่กลุ่ม "โปรไฟล์ของฉัน" ไม่มี master; ลบ `assets.my` และ `access.my`
+- migration `2026_10_16_120000_rename_self_service_permissions` เปลี่ยนชื่อแถวใน `role_permissions` กันซ้ำ เก็บค่า `allowed` เดิมไว้ และ rollback ได้ ต้องรัน `php artisan migrate` บน DB จริงหลัง deploy ถึงจะมีผล ระหว่างนั้นปุ่มขอคืน/แก้ข้อมูลส่วนตัวจะถูกปฏิเสธ
+- หน้า Permission มี card "โปรไฟล์ของฉัน" สวิตช์ 2 ตัว card Employee ไม่มี edit_own แล้ว, hint ใน dialog โอนย้ายเหลือกรณี "ยังไม่มีบัญชี"
+
+### ยืนยันก่อนบันทึกการแก้ไขทุกโมดูล — 2026-10-16
+- ทุกฟอร์ม "แก้ไข" (23 ฟอร์มใน 11 โมดูล) ถามยืนยันก่อนบันทึกด้วยกล่องเดียวกัน ผ่าน `useConfirmEdit()` ใน `shared/ui/confirm-dialog.tsx` ข้อความอยู่ที่เดียวใน `lang/*/common.ts`: หัวข้อ "ยืนยันการแก้ไขข้อมูล", คำอธิบาย "ระบบจะบันทึกข้อมูลที่แก้ไขแทนข้อมูลเดิมของรายการนี้ กรุณาตรวจสอบความถูกต้องก่อนบันทึก", ปุ่ม "บันทึกการแก้ไข" / "ยกเลิก"
+- กล่องแสดงชื่อและรหัสของรายการ "ที่บันทึกไว้" (ไม่ใช่ค่าที่เพิ่งพิมพ์) ส่วนหน้าตั้งค่า บริษัท / Branding / อีเมล ใช้ชื่อหมวดแทน (`shared/lib/edit-confirm.ts` + test `tests/js/edit-confirm.test.ts`)
+- กติกา: ถามเฉพาะโหมดแก้ไข ถามเฉพาะเมื่อมีการเปลี่ยนข้อมูล ถามหลังผ่านการตรวจในฟอร์มแล้ว กดยกเลิกกลับไปที่ฟอร์มโดยข้อมูลยังอยู่ และถามครั้งเดียวต่อการบันทึก (ถ้าเส้นทางนั้นมีกล่องตรวจทานของตัวเองแล้ว เช่น เปลี่ยนแผนกพนักงาน / ย้ายสมาชิกกลุ่ม Role / คำเตือนตัวแปรใน Email template จะไม่ถามซ้ำ)
+- ฟอร์มที่ใช้: Employee (พนักงาน แผนก ฝ่าย ตำแหน่ง), Asset, Contract, Ticket, Access Resource, Role, Group Role, Workflow, Settings (ยี่ห้อ รุ่น หมวด ผู้จำหน่าย คลัง สถานที่ บริษัท Branding อีเมล), Email template, My Profile, Stock (ย้ายจากข้อความเดิม `stock_edit_confirm` มาใช้ชุดกลาง)
+- ฟอร์ม Role เดิมปิดตัวเองก่อนถาม ตอนนี้ค้างไว้ กดยกเลิกแล้วชื่อที่พิมพ์ไม่หาย ถ้าบันทึกไม่สำเร็จแสดง toast (ทั้งเพิ่มและแก้ไข); กดบันทึกซ้ำเร็ว ๆ ส่ง request ครั้งเดียว (กันด้วย ref ไม่ใช่ isPending ที่ยังไม่ render) จึงไม่เกิด Role ซ้ำ และปุ่มบันทึกตอนแก้ไขกดได้เมื่อมีการเปลี่ยนเท่านั้น
+- ไม่รวม: การกระทำที่เปลี่ยนสถานะ (มอบหมาย ส่งต่อ ปิดเคส ลาออก โอนย้าย ตัดจำหน่าย ยกเลิก อนุมัติ ตั้งรหัสผ่าน ย้ายที่ตั้งทรัพย์สิน จัดการสมาชิก Access) และตั้งค่าที่บันทึกทันที; การเปลี่ยนแค่รูปแบบวันที่ในแท็บระบบไม่ถาม
+- กล่องยืนยันกลาง (ทุก variant): ปิดแล้ว focus กลับไปที่ปุ่มที่เปิด เว้นแต่ฟอร์มย้าย focus ไปช่องที่ error เองแล้ว (เดิมหลุดไป body) บรรทัดชื่อรายการถูกอ่านเป็นคำอธิบายของกล่อง ไอคอน `aria-hidden` ข้อความผิดพลาด `role=alert`
+- ตรวจใน Chrome: ข้อความ contrast 4.84–17.22 (สว่าง) และ 5.91–16.41 (มืด), ปุ่ม 38px, ใช้คีย์บอร์ดล้วนได้ (Enter เปิด, Tab ไปปุ่มยืนยัน, Enter บันทึก, Esc ยกเลิก), ที่ 768px กล่องกว้าง 426px ไม่มี scroll แนวนอน
+
+### ชุดข้อมูล Performance 3 ปี (DB `itservices_perf`) — 2026-10-17
+- ใช้ทดสอบ Performance: องค์กร 1,000 คน คอม 900 อุปกรณ์อื่น 1,300 จำลองการใช้งาน 3 ปี (2023-11 ถึง 2026-10-16) แยกจาก DB จริงทั้งหมด ไม่แตะข้อมูลใน `itservices`
+- สร้างและนำเข้า (4 ขั้น ต้อง migrate DB จริงให้ทันโค้ดก่อน เพราะค่าตั้งต้นและตาราง `migrations` คัดลอกมาจาก DB จริงแบบอ่านอย่างเดียว):
+  ```
+  php artisan perf:generate                 # → storage/perf/itservices_perf.sql (ไม่ commit)
+  mysql -uroot -p -e "CREATE DATABASE itservices_perf CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+  php artisan migrate --database=perf       # โครงสร้างจาก migration ชุดเดียวกับของจริง
+  mysql -uroot -p itservices_perf < storage/perf/itservices_perf.sql
+  php artisan migrate --database=perf       # migration ที่ DB จริงยังไม่ได้รัน (ถ้ามี)
+  ```
+- ใช้งาน: ตั้ง `DB_DATABASE=itservices_perf` ใน `.env` แล้วรัน `composer run demo` (บัญชี `admin` เดิม และบัญชีสร้างใหม่ทุกคนใช้รหัส `Password1!`) `--seed=` ให้ไฟล์เดิมเสมอ `--scale=0.1` ย่อทุกตารางข้อมูลเคลื่อนไหว
+- ผลรอบเต็ม: 1,794,493 แถว ไฟล์ 462 MB สร้าง 145 วินาที (RAM สูงสุด 1.5 GB) นำเข้า 26 วินาที DB 714 MB: audit_logs 733,565 · notifications 579,550 · ticket_updates 149,908 · request_approvals 81,880 · email_logs 75,552 · tickets 60,000 · service_requests 24,000 · stock_movements 24,485 · assets 2,350 · employees 1,000
+- notifications / audit_logs / email_logs สร้างตามเหตุการณ์ในอัตราเดียวกับแอป ไม่ได้ถูกจำกัดให้ตรงเป้าในแผน จึงมากกว่า 200,000 / 300,000 / 70,000
+- ทุกตารางที่ไม่ใช่ runtime มีข้อมูล ยกเว้น `workflow_step_approvers` (ว่างในค่าตั้งต้นที่คัดลอกมา) ไม่มีไฟล์แนบจริงบนดิสก์ (มีแค่แถวใน DB) ตรวจ FK ทั้ง 137 ความสัมพันธ์ไม่มีแถวกำพร้า
+- ตัวสร้างอยู่ที่ `app/Support/Perf/` (1 ไฟล์ต่อขั้น: Copy, Org, Assets, Stock, Access, Requests, Tickets, Logs) คำสั่ง `perf:generate` ทดสอบด้วย `tests/Unit/Perf` และ `tests/Feature/Perf`
+- แก้บั๊กในระบบจริงระหว่างทาง: `DocNumber::next()` ออกเลขเอกสาร stock ซ้ำเมื่อเกิน 999 ใบต่อประเภทต่อปี (เรียงสตริงแล้วอ่าน 3 หลักท้าย) ตอนนี้นับเชิงตัวเลข
+
+### Dashboard ใหม่ (หน้าแรก `/`) — 2026-10-17
+- หน้าแรกเขียนใหม่ตาม mockup แบบ A: คำทักทาย + ส่วน "งานที่รอคุณ" (งานของฉันแยกตาม SLA, Ticket รอคนรับ, คำขอรอคุณพิจารณา, คำขอรอทีม IT ดำเนินการ แยกอายุ, สัญญาใกล้หมดอายุ + ป้ายเกินกำหนด, รอคุณรับมอบ) แล้วตามด้วย "ของฉัน", "งาน IT", "คำขอ", "พนักงานและกิจกรรม" grid 5 ช่อง การ์ดคู่ 3+2 ใช้ `KpiTile` / `CardTitle` / `FoldToggle` / `Sparkline` / `useFoldRow` ของรายงานผ่าน barrel `@/modules/report` (`KpiTile` เพิ่ม prop `icon`)
+- สิทธิ์: โมดูลใหม่ `dashboard` 5 สวิตช์ (`view_it`, `view_requests`, `view_contracts`, `view_hr`, `view_activity`) ไม่มี master และไม่ขึ้นกับสิทธิ์โมดูล ส่วน "ของฉัน" และช่องส่วนตัวทุกคนเห็น การ์ด "Dashboard" อยู่หมวด "ภาพรวม" ในหน้าสิทธิ์การใช้งาน; migration `2026_10_16_174105_backfill_dashboard_permissions` ให้สวิตช์ตามสิทธิ์เดิม (`tickets.view_all` → view_it, `requests.view_all` → view_requests, `contracts.module` → view_contracts, `employees.view_dashboard` → view_hr, `system.view_audit` → view_activity) แบบ upsert เพราะการบันทึก Role Template เขียนสวิตช์เป็นปิดไว้ก่อนได้ รันบน DB จริงแล้ว
+- ลิงก์จาก Dashboard เข้าโมดูลยังตรวจสิทธิ์ของหน้าปลายทาง (`modules/dashboard/lib/links.ts` + `useDashLinks`): ไม่มีสิทธิ์ ตัวเลขยังแสดงแต่กดไม่ได้ "คำขอของฉัน" เปิดแท็บคำขอใน drawer โปรไฟล์ (ไม่ใช่รายการคำขอทั้งระบบ) ทรัพย์สิน/สิทธิ์เข้าถึงเปิด drawer เมื่อบัญชีผูกพนักงาน
+- API `GET /api/dashboard/summary` ส่งเฉพาะ block ที่มีสิทธิ์ (`mine` เสมอ + `it`, `requests`, `contracts`, `hr`, `activity`) คำนวณใน `app/Services/Dashboard/` คลาสละส่วน (`MineBlock`, `ItBlock`, `RequestsBlock`, `ContractsBlock`, `PeopleBlock`, `DailySeries`) `DashboardSummaryService` เหลือแค่ประกอบตามสิทธิ์
+- ตัวเลขตรงกับรายงาน: ปิดทัน SLA และเวลาแก้ไขเฉลี่ย 30 วันใช้ `TicketOverviewReportService::kpisForAll()` (สูตรเดียวกับรายงานภาพรวม Ticket มี parity test) สถานะ SLA ของเคสที่ค้างใช้ `TicketMetrics::liveSlaState()` ร่วมกับรายงานงานค้าง สัญญาใกล้หมดอายุนับแบบเดียวกับรายการสัญญา (ช่วงแจ้งเตือนของแต่ละสัญญา) คำขอค้างใช้เกณฑ์ของ `RequestStalledService` (3 วัน)
+- ต่างจาก spec ตามที่ตกลง: สัญญาแบ่ง "ใน 30 วัน / หลัง 30 วัน", การ์ดคำขอค้างใช้เกณฑ์ 3 วัน, ตัวเลขไม่ใช้ font-mono, ช่องรอรับมอบแสดงรุ่นแทนวันส่งมอบ, การ์ดสิทธิ์ใช้การ์ดกลาง
+- Test: `tests/Feature/Dashboard/*BlockTest.php`, `DashboardSummaryTest`, `DashboardPermissionsTest`, `Report/TicketLiveSlaStateTest`, `tests/js/dash-math.test.ts`, `tests/js/dash-links.test.ts` ตรวจใน Chrome ทั้งโหมดสว่าง/มืด และ 768px กับบัญชีพนักงานทั่วไปและผู้ดูแลระบบ
+- ไฟล์ `.sql` มี hash รหัสผ่านของ admin และ app_settings ทั้งหมดจาก DB จริง เก็บใน `storage/perf` (gitignore) อย่าส่งต่อ ส่วนรหัสผ่านที่สร้างใหม่ตั้งเป็นวันใกล้ปัจจุบันเพื่อไม่ให้นโยบายรหัสผ่านหมดอายุล็อกผู้ใช้
+
+### สิทธิ์โมดูลคำขอ — 2026-10-17
+- `requests.module` เป็นประตูจริงของหน้าคำขอทั้งฝั่ง API และหน้าเว็บ (รายการ, เมนู, route, badge แถบข้าง) ผู้อนุมัติที่มีแค่สิทธิ์โมดูลเห็นคำขอที่รอตัวเองโดยไม่ต้องมีสิทธิ์ยื่น ส่วน `requests.submit` คุมปุ่มสร้าง แท็บคำขอใน drawer โปรไฟล์ และลิงก์ "คำขอของฉัน" เหมือนเดิม
+- สิทธิ์ใหม่ `requests.cancel_any` "ยกเลิกคำขอของผู้อื่น" อยู่ใต้ `requests.view_all` ยกเลิกคำขอที่ยังรออนุมัติของคนอื่นได้ (ต้องระบุเหตุผล สถานะต้องรออนุมัติเหมือนเจ้าของยกเลิก) Audit log เติม "(for the owner)" ท้ายเลขคำขอ ค่าเริ่มต้นให้ admin และ it_supervisorleader
+- "ยื่นคำขอ" แยกเป็น 13 สวิตช์ตามประเภทคำขอ (`requests.submit_<type>`) ใต้หัวข้อ "ประเภทคำขอที่ยื่นได้" เปิด "ยื่นคำขอ" = เปิดทั้ง 13 แล้วปิดทีละประเภทได้ (ปิดประเภทสุดท้าย "ยื่นคำขอ" จะปิดตามด้วย) Server ตรวจประเภทตอนยื่น (403) และ `GET /service-requests/options` ส่งเฉพาะประเภทที่ยื่นได้ ปุ่มสร้างและ `?add=1` เปิดเมื่อยื่นได้อย่างน้อย 1 ประเภท คำขอพนักงานใหม่จาก HR ไม่ผ่านสวิตช์เหล่านี้
+- ข้อมูลสิทธิ์: Role ที่ยื่นได้อยู่แล้วได้ครบ 13 ประเภท และ `cancel_any` ให้เฉพาะ admin/it_supervisorleader ที่มี `view_all` DB จริงมีแถวครบแล้ว (2026-10-17) migration backfill ถูกรวมเข้า baseline แล้ว ติดตั้งใหม่ได้ค่าจาก `Permissions::defaults()` ผ่าน seeder
+- Bell ใหม่ `notif_request_cancelled_for_owner` "{actor} ยกเลิกคำขอแทนผู้ขอแล้ว" ส่งให้ผู้อนุมัติที่คำขอรออยู่เมื่อคนอื่นยกเลิกแทนเจ้าของ (เจ้าของหรือผู้ยื่นแทนยกเลิกเองยังได้ "ผู้ขอยกเลิกคำขอแล้ว" เหมือนเดิม) ไม่ส่งอีเมล และไม่แจ้งเจ้าของ เปิด/ปิด และแก้ข้อความได้ในโมดูลอีเมลและแจ้งเตือน DB จริงเพิ่มแถวด้วย `php artisan db:seed --class=NotificationTemplateSeeder` (firstOrCreate ไม่ทับข้อความที่แก้ไว้)
+- Bell ใหม่ `notif_request_not_delivered` "ยกเลิกโดย {actor}: {remark}" ส่งให้ผู้ขอและผู้ติดตามเมื่อ IT ปิดเคสของคำขอที่อนุมัติครบแล้วแบบยกเลิก แทนข้อความ "ผู้ขอยกเลิกคำขอแล้ว" ที่ไม่ตรงความจริง อีเมล `request.not_delivered` เหมือนเดิม bell เก่าที่ส่งไปแล้วยังแสดงข้อความเดิม DB จริงเพิ่มแถวด้วย `DB_DATABASE=itservices php artisan db:seed --class=NotificationTemplateSeeder`
+
+### รวม migration เข้า baseline 0001 (ครั้งที่ 2) — 2026-10-17
+- `database/migrations` เหลือเฉพาะ 18 ไฟล์ baseline `0001_01_01_000000…000017` อีกครั้ง: ย้าย migration โครงสร้าง 10 ตัว (written_off_at / returned_to_vendor / writeoff_reason_id ของ assets, คอลัมน์ created_by/updated_by/cancelled_by ของหลายตาราง, subject ของ audit_logs, ตาราง `writeoff_reasons`, revoked_by + granted_at/revoked_at เป็น datetime ของ access_memberships, ข้อมูลการยกเลิกของ service_requests) เข้าไฟล์โดเมนของแต่ละตาราง และลบ migration ที่แก้ข้อมูลอย่างเดียว 6 ตัว (ข้อความแจ้งเตือน/อีเมล อยู่ใน `NotificationCatalogue` / `EmailTemplates` แล้ว, สิทธิ์อยู่ใน `Permissions::defaults()` แล้ว)
+- created_by/updated_by ของ departments / positions / sections / employees ประกาศคอลัมน์ใน 000001 แต่ใส่ foreign key ใน 000002 (หลังสร้าง users)
+- เหตุผลการตัดจำหน่าย 6 รายการมาตรฐานย้ายจาก migration ไป `WriteoffReasonSeeder` (เรียกจาก `DatabaseSeeder`, firstOrCreate) test ที่ใช้เหตุผลเหล่านี้ seed ใน `setUp`
+- ลบ test ที่ทดสอบ migration ข้อมูลโดยตรง (BackfillRequestTypePermissions, NotificationWording, RenameSelfServicePermissions และ 2 test backfill ใน DashboardPermissionsTest)
+- ตรวจแล้ว: สร้าง DB ทดลองจาก baseline ใหม่ → `mariadb-dump --no-data` ตรงกับ DB จริงทุกบรรทัด, `db:seed` ได้เหตุผล 6 รายการ, `migrate:rollback` ได้ครบ; test ทั้งชุด 2146 ผ่าน; ตาราง `migrations` ของ DB จริงลบ 16 แถวของไฟล์ที่ถูกรวม เหลือ 18 แถว `migrate` = Nothing to migrate (ไม่แตะข้อมูลอื่น)
+
+### กระดิ่งแจ้งเตือน: รีวิว UX/UI, WCAG, Tablet, code และ security แล้วแก้ — 2026-10-17
+- รีวิวด้วย 4 agent (frontend-design + WCAG/Tablet ใน Chrome, web-design-guidelines + ความสม่ำเสมอ, code-review, security-review) Security ผ่าน (ไม่มี IDOR/XSS/open redirect, CSRF ครบ)
+- WCAG: ถาดเป็น `role=dialog` มีชื่อ, กระดิ่ง `aria-haspopup=dialog` + `aria-controls`, แถวเป็น `<button>` เต็มแถว (::after) และปุ่มปิดอยู่ข้าง ๆ ไม่ซ้อนกัน, วงโฟกัสสีแบรนด์เต็ม (เดิม 40% ≈ 1.8:1), Esc/ปุ่มปิด/เปิดแถว คืนโฟกัสให้กระดิ่ง, ลบแถวแล้วโฟกัสไปแถวถัดไป, ตัวเลขยังไม่อ่านเป็น `role=status`, แถวยังไม่อ่านบอก screen reader, ลูกศรขึ้น/ลงเลื่อนระหว่างแถว, ชิปโมดูลเป็น tablist
+- บัค: ลบไม่สำเร็จแถวไม่หายค้าง (แสดงกลับ + toast), โหลดไม่สำเร็จแสดง `LoadFailed` แทน "ไม่มีการแจ้งเตือน", poll เบื้องหลังได้ 5xx ไม่เด้งหน้าจอ error เต็มจอ (`quietServerError`), ตัวแปรในข้อความแทนทุกตำแหน่งและไม่เพี้ยนเมื่อมี `$`
+- Tablet: ปิดถาดเมื่อโฟกัสออกไปข้างหลัง, ปุ่มสูงขึ้นบนจอสัมผัส, "อ่านแล้วทั้งหมด" ห่างจากปุ่มปิด, รายการสูงถึง min(60vh, 560px), ไม่ลากหน้าเลื่อนตาม
+- ความสม่ำเสมอ: ใช้ `Button` / `Skeleton` / `EmptyPane` / `relativeTime` กลาง, ผิวถาดเหมือน popover อื่น, ตารางสีโทนเดียวของกระดิ่งและ toast
+- ความเร็ว: คอลัมน์ `notifications.kind` ("type|module", ตั้งตอนสร้างผ่าน `DatabaseNotification::creating` + migration backfill) + index → นับและแบ่งหน้าใน SQL เรียง created_at แล้ว id; "อ่านแล้วทั้งหมด" เป็น UPDATE เดียว; ส่งแจ้งเตือนไม่เปลี่ยนเวลา "แก้ไขล่าสุด" ของ template; ผู้ใช้ที่มี 20,574 แถวใน itservices_perf: โหลดอย่างเดียวเดิม 183 ms → ทั้ง endpoint ใหม่ 51 ms
+
+### ชื่อโมดูลคลังเป็นคำเดียว — 2026-10-17
+- เมนูข้าง หัวหน้าคลัง การ์ดในหน้าสิทธิ์การใช้งาน และหมวดในศูนย์รายงาน ใช้ "คลังอะไหล่" เหมือนกันหมด (เดิมมี คลังพัสดุไอที, คลังพัสดุ, สต็อก ปนกัน) ภาษาอังกฤษใช้ "Stock" ทุกที่
+- คำ Min/Max ในหน้าคลังและรายงาน กับคำ "ขั้นต่ำ/ขั้นสูง" ในการแจ้งเตือนและอีเมล คงไว้ทั้งสองแบบตามที่ตกลง
+
+### รายงานคลังอะไหล่ 3 หน้า ตาม mockup — 2026-10-17
+- รับเข้าและเบิกจ่าย (`stock.movements`): ช่องตัวเลข 5 ช่องแยกตามประเภท กราฟรายเดือนแบบหน้าประวัติโอนย้าย (เข้าเหนือเส้น ออกใต้เส้น 12 เดือน เดือนนอกช่วงจาง กดดูรายละเอียด) คำขอเบิกที่ค้าง ณ วันนี้ ผู้ขอเบิกและแผนกที่เบิกสูงสุด 10 อันดับ (เรียงตามมูลค่า ชิ้น หรือครั้ง) และส่วนต่างจากการนับสต็อก ค่าเริ่มต้นของช่วงวันที่เปลี่ยนเป็น 12 เดือนล่าสุด
+- การ์ดคำขอเบิกและอันดับผู้ขอเบิกต้องมีสิทธิ์ `stock.view_request` การ์ดส่วนต่างจากการนับสต็อกต้องมี `stock.view_count` ไม่มีสิทธิ์ การ์ดไม่แสดงและไม่อยู่ในไฟล์ Excel/PDF
+- มูลค่าของเบิกออก คืนของ และปรับยอด (ซึ่งไม่มีต้นทุนในแถว) คิดจากต้นทุนเฉลี่ยของ lot ที่รับเข้าก่อนวันนั้น (`StockCostBook`) รับเข้าใช้ต้นทุนของแถว
+- มูลค่าคงคลัง (`stock.valuation`): ณ วันที่เลือกย้อนหลังได้ มูลค่าตามหมวดและตามคลังครั้งละ 10 แถว (ตามคลังมีเฉพาะวันนี้ เพราะยอดรายคลังเป็นยอดปัจจุบัน) และรายการที่ไม่เคลื่อนไหวเกิน 90 / 180 วัน / 1 ปี
+- ต่ำกว่าขั้นต่ำและเกินขั้นสูง (`stock.below_min`): รวมรายการเกิน Max แล้ว ตารางบอกที่มาของทุกตัวเลข (ราคารับเข้าล่าสุด ต้นทุนเฉลี่ย ที่ควรสั่ง ส่วนที่เกิน) ใช้แถบระดับ Min/Max เดียวกับหน้าคลัง (`StockLevelBar` ย้ายไปเป็น component ของโมดูลคลัง) และการ์ดตามหมวด
+- key รายงานและสิทธิ์เดิมไม่เปลี่ยน ทั้ง 3 รายงานมี endpoint `reports/stock/*/breakdown` และแผ่นงานเพิ่มในไฟล์ส่งออก
+
+### สิทธิ์รายงานแยกจาก Workspace — 2026-10-17
+- โมดูลสิทธิ์ใหม่ `reports` (การ์ด "รายงาน" ใบแรกในกลุ่ม Administration ของหน้าสิทธิ์การใช้งาน): `reports.module` เปิดเมนูและหน้า `/reports`; 7 สวิตช์หมวด `reports.tickets / assets / contracts / stock / requests / employees / access` เปิดรายงานของหมวดนั้น; `reports.export` ส่งออก Excel/PDF; `reports.schedule` ตั้งเวลาส่งอีเมล ปิดสวิตช์หลักแล้วสวิตช์ลูกหายหมด (`Permissions::reportHierarchy()` / `normalizeReports()`)
+- `ReportCatalogue` ทุกรายงาน `requires` = `reports.module` + สวิตช์หมวดของตัวเอง สิทธิ์ Workspace (`tickets.view_all`, `assets.view` ฯลฯ) อย่างเดียวเปิดรายงานไม่ได้แล้ว รายงานการเช่าไม่ต้องมี `assets.view` และรายงานสมาชิก Resource ไม่ต้องมีสิทธิ์ดู 3 registry
+- ข้อมูลในรายงาน: รายงาน Ticket ยังเห็นเฉพาะ `tickets.level_*` ของผู้อ่าน (ไม่มีระดับใดเลย = ข้อมูลว่าง); รายงานรับเข้าและเบิกจ่ายแสดงคำขอเบิกค้าง อันดับผู้ขอเบิก และส่วนต่างการนับครบทุกการ์ด (รวมในไฟล์ส่งออก) ไม่ดู `stock.view_request / approve / fulfill / view_count` แล้ว; สรุปเรื่องค้างของพนักงานแสดงกลุ่มบัญชีเข้าใช้งานและค้นหาด้วย username ได้ ไม่ดู `employees.set_credentials` แล้ว
+- Export: สั่งส่งออกต้องมี `reports.export` (+ เปิดรายงานนั้นได้) "ไฟล์ส่งออกของฉัน" ดู/ดาวน์โหลดได้เมื่อมี export หรือ schedule (ไฟล์ตั้งเวลาที่ใหญ่เกินแนบอีเมลอยู่ที่นี่) ลองใหม่ต้องมี export ลบไฟล์ของตัวเองได้เสมอ งานสร้างไฟล์ของคนที่โดนถอนสิทธิ์ล้มด้วย `forbidden`
+- Schedule: สร้าง แก้ (รวมสวิตช์หยุด) ลบ ส่งทันที ต้องมี `reports.schedule` รายการยังดูได้ ถึงเวลาส่งแล้วเจ้าของไม่มีสิทธิ์ → ปิด schedule ด้วย `forbidden` และแจ้งกระดิ่งเดิม
+- หน้าเว็บ: ปุ่มส่งออก/ตั้งเวลา กดไม่ได้พร้อมบอกเหตุผล (`DisabledReason`) และ `?dialog=export|schedule` ใน URL ไม่เปิดหน้าต่างถ้าไม่มีสิทธิ์; หน้ารายงาน เมนู ลิงก์ SLA บน Dashboard และแท็บภาพรวม Ticket ใช้สิทธิ์ใหม่; ลิงก์จากรายงานเข้าโมดูล (`useCanOpen`) เช็ค `permission` ของเมนูด้วย (เดิมเช็คแค่ `anyOf` ทำให้เมนูทรัพย์สิน สัญญา คลัง การเข้าถึง พนักงาน ผ่านทุกคน)
+- หลัง code review: ลิงก์ `?view=` จากรายงานแสดงเฉพาะเมื่อมีสิทธิ์ที่หน้าปลายทางเช็คจริง (`canOpenRecord`); "ไฟล์ส่งออกของฉัน" ไม่แสดงไฟล์ของรายงานที่เปิดไม่ได้แล้ว; PDF ทบทวนสมาชิก Resource ต้องมี `reports.export`; ปุ่มหยุด/แก้/ส่งทันทีของรายการตั้งเวลาต้องเปิดรายงานนั้นได้ด้วย; `?dialog=` ที่ไม่มีสิทธิ์ถูกล้างจาก URL; `ReportCatalogue::forUser()` อ่านสิทธิ์ครั้งเดียว (เดิม 44 query); การ์ดสิทธิ์ 11 ใบใช้ `PermissionSwitch` ตัวเดียวกัน (การ์ดโปรไฟล์ของฉันใช้ของตัวเองเพราะหน้าตาต่าง)
+- Migration `2026_10_17_190000_backfill_report_permissions` (upsert, รันซ้ำได้): role ที่วันนี้เปิดรายงานหมวดใดได้ ได้สวิตช์หมวดนั้น + module + export + schedule; `Permissions::defaults()` ใช้กฎเดียวกัน (test ผูกไว้) ยังไม่ได้รันบน DB จริง
+
+### ล็อกอินซ้อนจากอีกแท็บ: แท็บเก่าตามบัญชีใหม่ — 2026-10-17
+- เบราว์เซอร์เดียวใช้ session เดียว (มาตรฐานทั่วไป) ล็อกอินจากอีกแท็บด้วยบัญชีอื่นจึงสลับบัญชีทั้งเบราว์เซอร์ ไม่ถือเป็นบัค
+- ที่แก้: เดิมแท็บเก่ายังโชว์บัญชีเดิม แต่คำสั่งที่ส่งออกไปทำในนามบัญชีใหม่ ตอนนี้ล็อกอินสำเร็จแล้วระบบแจ้ง id ผู้ใช้ไปทางช่อง `itsd-session` แท็บที่ถือบัญชีอื่นจะขึ้นกล่อง "เปลี่ยนบัญชีแล้ว" (แบบ A จาก 3 แบบที่เสนอ เปลือกเดียวกับกล่องเตือน session หมดเวลา) ข้อความ "เปลี่ยนเป็นบัญชี {ชื่อ} แล้ว เพราะมีการเข้าสู่ระบบในแท็บอื่น" ปิดไม่ได้ มีปุ่มเดียว "โหลดหน้าใหม่" หน้าเดิมยังเห็นแต่กดอะไรไม่ได้
+- กันอีกชั้น: กลับมาที่แท็บ (`visibilitychange`) จะเช็ก `/me` ถ้าเป็นคนละบัญชีก็ขึ้นกล่องเดียวกัน
+- ไฟล์: `modules/auth/hooks/use-account-sync.ts`, `modules/auth/components/account-switched-dialog.tsx` (ใหม่), `announceSignIn()` ใน `shared/lib/login-redirect.ts`, ข้อความ `login` ใน `session-warning.ts`
+
+### รีวิว Dashboard และแท็บภาพรวม: รอบ 1 WCAG และคีย์บอร์ด — 2026-10-17
+- รีวิวด้วย agent 5 ตัว (code-review, security, Dashboard, ภาพรวม 7 โมดูล, ความสม่ำเสมอกับหน้าโมดูล) และเปิดทุกหน้าที่ 768px: ไม่พบช่องโหว่ หน้าต่างไม่ scroll แนวนอนทุกหน้า
+- กรอบโฟกัสในภาพรวม Access ใช้ `ring-ring` 2px แทน `ring-brand/40` 3px (เดิมต่างจากพื้น 1.8:1) ปุ่มถอนสิทธิ์ใช้ `ring-destructive` เต็มสี จุดกะพริบใน Access กะพริบ 3 ครั้งแล้วหยุด
+- ตาราง "ล่าสุด" ในภาพรวม Ticket: หัวเรื่องเป็นปุ่ม กด Tab และ Enter เปิด Ticket ได้ แถวในภาพรวม Stock (คลังและหมวด) มีกรอบโฟกัส
+- ลูกศรเพิ่ม/ลดบน Dashboard โหมดสว่างเข้มขึ้นหนึ่งระดับ (`emerald-700`, `red-700`) ตัวเลขตามประเภทในภาพรวมทรัพย์สินผ่าน `readableInk` (เดิมใช้สีสถานะที่ผู้ดูแลตั้งตรง ๆ ได้ 3.7–4.4:1)
+- กราฟ "Ticket เปิดใหม่ต่อวัน": ตัวกราฟซ่อนจากโปรแกรมอ่านหน้าจอ มีรายการวันที่และจำนวนแบบ sr-only แทน ตัวอักษรในกราฟ 11px
+- ตรวจแล้วไม่ต้องแก้: จุดไทม์ไลน์สัญญามีพื้นที่กด 24px อยู่แล้ว, ลิงก์ "ดูทั้งหมด" ขยายพื้นที่กดบนจอสัมผัสแล้ว, skeleton หยุดตาม reduced-motion ใน `app.css` แล้ว
+
+### Dashboard: คำ TH/EN ตรงกับโมดูลหลัก — 2026-10-17
+- รีวิวครบ 98 คีย์ `dash_*` เทียบกับคำของโมดูล Ticket / คำขอ / ทรัพย์สิน / พนักงาน แก้ 17 คีย์ไทย 17 คีย์อังกฤษ เช่น "Ticket รอรับเคส" / "Unassigned tickets" (โมดูลใช้ "รับเคส"), "คำขอรอ IT ดำเนินการ" (ชื่อแท็บ), "ทรัพย์สินของฉัน", "รออนุมัติโดย", "Needs your decision"
+- ช่วงเวลาเขียนครบทั้งสองภาษา: "ปิดทัน SLA ใน 30 วัน" / "Closed within SLA, last 30 days", "เปิดใหม่ใน 14 วัน" ฯลฯ ข้อความว่างของ "คำขอค้างเกิน {n} วัน" บอกตัวเลขเดียวกับหัวการ์ด
+- ตัดศัพท์ระบบ: "window" → ช่วงเวลา, "carrying a case", "Waited", "Avg." ไม่ย่อคำ
+- โมดูลคำขอ: ชื่อคำขอเป็น "เรื่อง" / "Title" ทั้งหัวคอลัมน์และหน้ารายละเอียด (`req_col_title`, `req_subject`) แยกจาก "หัวข้อ" / "Subject" ของ Ticket ที่ผู้แจ้งพิมพ์เอง
+
+### รีวิว Dashboard และแท็บภาพรวม: รอบ 2 ตัวเลขกับลิงก์ตรงกัน + โหลดไม่สำเร็จ — 2026-10-17
+- กติกา: การ์ดลิงก์ไปที่ไหน รายการปลายทางต้องมีจำนวนเท่าตัวเลขบนการ์ดพอดี ถ้าไม่มีตัวกรองที่ทำได้ การ์ดเป็นตัวเลขสถิติที่กดไม่ได้
+- รายการคำขอมีตัวกรอง "วันที่ยื่น" (7 / 30 / 90 วัน หรือกำหนดเอง) ผ่าน `?filed_days=` หรือ `?filed_from=&filed_to=` (แยกชื่อจาก `from`/`to` ของแท็บภาพรวม) การ์ด "อนุมัติแล้ว / ไม่อนุมัติ" ในภาพรวมคำขอพาไปพร้อมช่วงเวลาที่เลือก
+- Dashboard คำขอ: "เสร็จสิ้นแล้ว" และ "ไม่อนุมัติหรือยกเลิก" นับคำขอที่ยื่นใน 30 วันล่าสุด (เดิมนับตามวันที่จบ) ป้ายเขียน "(ยื่นใน 30 วัน)" การ์ดไม่อนุมัติ/ยกเลิก กดแยกที่ "ไม่อนุมัติ n" และ "ยกเลิก n" ตามที่ผู้ใช้เลือก
+- Dashboard IT: งานค้าง เปิดใหม่ และปิดใน 14 วัน ไม่เป็นลิงก์แล้ว (รายการ Ticket ไม่มีตัวกรองที่นับตรง) badge "เกิน SLA n" เป็นลิงก์ไป `?sla=over_sla`; "คำขอรอ IT ดำเนินการ" ไปแท็บคิว IT สำหรับคนที่ปิดงานได้
+- งานที่รอคุณ: ซ่อนการ์ดที่เป็น 0 (Ticket รอรับเคส, คำขอรอ IT, สัญญาใกล้หมดอายุ) การ์ดสัญญาไม่มี badge "เกินกำหนด" แล้ว (สัญญาที่เกินกำหนดไม่อยู่ในรายการ "ใกล้หมดอายุ" ที่การ์ดลิงก์ไป)
+- ภาพรวม Stock: การ์ดแจ้งเตือนนับรวม "ไม่เคลื่อนไหว" ตามรายการ `status=alerts` ปุ่ม "ดู SKU ที่มีการแจ้งเตือนทั้งหมด (n)" ใช้จำนวนเดียวกัน
+- โหลดไม่สำเร็จ: Dashboard และแท็บภาพรวมทั้ง 7 แสดง `LoadFailedPanel` (ข้อความ + ปุ่มลองใหม่) แทนเลข 0 หรือ skeleton ค้าง Dashboard ที่โหลดซ้ำพลาดยังแสดงตัวเลขเดิม
+
+### รีวิว Dashboard และแท็บภาพรวม: รอบ 3 ความสม่ำเสมอ — 2026-10-17
+- สีสถานะตามโมดูล: "กำลังดำเนินการ" เป็นสีม่วงบน Dashboard (ภาระงานของทีม, Ticket ของฉัน) ตาม badge ของ Ticket (ผู้ใช้เลือกม่วง); "ใช้งาน" ในภาพรวมพนักงานเป็นสีเขียวตาม badge ในรายการ; "ใกล้หมดอายุ" ในภาพรวมสัญญาเป็นสีเหลืองอำพัน
+- SLA เทียบเป้าใช้ 3 ระดับเดียวกันทั้งระบบ (`slaLevel` ใน `kpi-tile.tsx`): ถึงเป้าเขียว, ห่างไม่เกิน 10 จุดเหลืองอำพัน, ห่างกว่านั้นแดง ใช้กับ Dashboard, รายงานภาพรวม Ticket และแถบ meter ของ KpiTile
+- Animation: แถวค่อย ๆ ปรากฏห่างกัน 40ms (`.row-in` ใน `app.css` + `rowDelay` ใน `shared/lib/row-in.ts`) ใช้ทั้ง Dashboard และแท็บภาพรวม 7 โมดูล หยุดเมื่อผู้ใช้ตั้งค่าลดการเคลื่อนไหว Dashboard ไม่ฉีด `<style>` เองแล้ว
+- ตัวเลขเรียงตรงคอลัมน์ (`tabular-nums`) ในภาพรวม Access และการ์ด KPI ของ Ticket
+- ชื่อภาษาไทยบน Dashboard: คำทักทาย, ผู้รับผิดชอบใน Ticket ของฉัน, ภาระงานของทีม และ "รออนุมัติโดย" (backend ส่ง `*_th` คู่กับชื่อเดิม)
+- ยังไม่ได้ทำ: รวมการ์ด KPI 4 แบบเป็นตัวเดียว และระยะห่างระหว่างการ์ดของแต่ละแท็บ (ต้องออกแบบรวมก่อน)
+
+### รายงานคลังอะไหล่ 3 หน้า: รีวิว WCAG / Tablet / ความสม่ำเสมอ / code / security แล้วแก้ — 2026-10-17
+- รีวิวด้วย 4 agent: Security ไม่พบช่องโหว่; code review พบปัญหาตัวเลข; WCAG/Tablet ผ่านเรื่อง contrast ตัวอักษรและ 768px; ความสม่ำเสมอพบสีไม่ตรงโมดูลคลัง
+- ตัวเลข:
+  - การเคลื่อนไหวและรอบนับผูกคลังด้วย id (`from_warehouse_id` / `to_warehouse_id`, `stock_counts.warehouse_id`) ชื่อคลังเดิมเก็บไว้เป็นประวัติ เปลี่ยนชื่อคลังแล้วประวัติไม่หายจากรายงาน
+  - การ์ดส่วนต่างการนับไม่นับรอบ Manual และรอบนับทุกคลังขึ้นในคลังที่มันปรับยอด
+  - ล็อกรายการระหว่างนับ (`StockCountLock`): รายการในรอบนับที่ยังเป็นร่างรับเข้า คืน ย้าย หรือจ่ายตามคำขอในคลังที่นับไม่ได้ (422 `count_in_progress` + เลขรอบนับ) ปุ่มบันทึกและปุ่มจ่ายกดไม่ได้พร้อมบอกเหตุผล หน้าตรวจนับบอกว่าล็อกกี่รายการ
+  - ราคารับเข้า 0 ไม่ถูกใช้เป็นราคาล่าสุด; "รอจ่าย N วัน" นับจากวันอนุมัติ; ห้ามบันทึกวันที่อนาคตและ `last_move_at` ไม่ถอยหลัง
+  - ไฟล์ Excel/PDF: หัวไฟล์ตรงกับช่องสรุปบนจอ และมีแผ่นงานคำขอเบิกที่ค้าง
+  - Migration `2026_10_17_214137_link_stock_movements_and_counts_to_warehouses` (FK + index `moved_at`) รันบน `itservices_perf` แล้ว
+- WCAG/Tablet: แถบตามหมวดใช้ `CountBar` (ตัวเลขในแถบ แตะดูรายละเอียด); แถบ Min/Max เข้มขึ้นในโหมดสว่าง; กราฟรายเดือนมีเส้นขอบแยกชิ้น; skeleton สูงเท่าของจริง; แถว "อีก N คน" ไม่มีแถบ; error card เป็น `role=alert`; ช่องค้นหาเต็มความกว้างบนจอแคบ; ปุ่ม segment ขยายบนจอสัมผัส
+- ความสม่ำเสมอ: จำนวนที่ลดลงเป็นสีแดงเหมือน `/stock`; แถบ "ต่ำกว่า Min" เป็นสีเหลือง (กระทบหน้า `/stock` ด้วย); "อนุมัติแล้ว" เป็นน้ำเงิน; หมวดในช่องมูลค่าใช้เฉดของสีแบรนด์; ป้ายไม่เคลื่อนไหวเป็นสีเทา; ป้ายประเภทการเคลื่อนไหวมีไอคอน; ท้ายช่องสรุปบรรทัดเดียว; ปุ่มเรียงลำดับและจำนวนวันใช้ `Segments` ร่วมและเก็บใน URL (`people_by`, `dept_by`, `dead_days`); ชื่อรายงาน "รับเข้าและเบิกออก" และ "ต่ำกว่า Min และเกิน Max"
+- ภาษา (TH/EN) ตรวจ 125 key + คำใน Excel/PDF: ใช้คำของโมดูลคลัง (ล็อต, commit/committed, variance, fulfil, transfer, ต้นทุน/หน่วย / Unit cost, ผู้ขอ, หมดสต็อก, Movements, "Below Min" ทั้งโมดูลและรายงาน) และเกลาให้อ่านเป็นธรรมชาติ ("วันที่แล้ว", "ยังขาดอีก … จึงจะถึง Min", "ที่เบิกมากที่สุด", ข้อความ ⓘ การนับบอกว่าไม่รวมรอบแมนนวล); เครื่องหมายคำพูดตรงแบบทั้งแอป; คง "มูลค่าคงคลัง" ไว้
+- ไม่แก้ (ตั้งใจ): มูลค่า "วันนี้" ยังเท่ากับมูลค่า FIFO ของ lot เหมือนหน้า `/stock` (ข้อเสนอให้คิดส่วนที่ไม่มี lot จะทำให้ไม่ตรงกับโมดูล); ค่าคงที่ TH/TD/NUM ที่ซ้ำในรายงาน 8 ไฟล์ยังไม่รวม
+
+### การ์ด KPI ตัวเดียวทั้งระบบ — 2026-10-17
+- `shared/components/stat-card.tsx` (`StatCard`) เป็นการ์ดตัวเลขตัวเดียว รวมความสามารถของ 5 แบบเดิม: ป้าย + ไอคอน, ตัวเลข (ตัวคั่นหลักพันอัตโนมัติ, หน่วย), badge, กราฟเล็กข้างตัวเลข, แถบเทียบเป้า 3 ระดับ, แถบสัดส่วน, คำอธิบาย, สีเตือนเหลืองอำพัน/แดง (การ์ดสีอ่อน + ไอคอนสีทึบ), loading ขนาดเท่าของจริง, กดได้ทั้งใบ
+- 2 ขนาด: ปกติ (เว้นขอบ 20px ตัวเลข 30px คำอธิบาย 1 บรรทัด) ในแท็บภาพรวม และ `compact` (16px / 24px) บน Dashboard และรายงาน `KpiTile` เหลือเป็นตัวเรียก `StatCard size="compact"`
+- เอาสำเนาออก: `Tile` ของ Ticket, StatCard ในหน้าทรัพย์สิน, การ์ดที่เขียนเองในภาพรวม Access `slaLevel` ย้ายไป `shared/lib/sla-level.ts`
+- ระยะห่างแท็บภาพรวม: ระหว่างส่วน 16px (`space-y-4`), ระหว่างการ์ดคู่ 16px (`gap-4`), การ์ดคู่ของคลังอะไหล่เริ่มที่ 1024px
+- ยังไม่ทำ (ผู้ใช้ขอไว้ก่อน): จำนวนคอลัมน์ของแถวการ์ดบนแท็บเล็ตแนวตั้ง, คำบอกช่วงเวลา "ใน 30 วัน / ตอนนี้" ในคำอธิบายการ์ด
+
+### ช่องค้นหาบอกว่าค้นอะไรได้ + ชื่อไทยในรายงานโอนย้าย — 2026-10-17
+- ช่องค้นหาทุกหน้าใช้คำที่บอกฟิลด์ที่ค้นได้จริง เช่น ทรัพย์สิน "ค้นหารหัส, Tag, Serial หรือผู้ถือครอง…", Ticket "ค้นหาเลขที่ Ticket, หัวข้อ หรือผู้แจ้ง…", คำขอ "ค้นหาเลขที่, ประเภท หรือผู้ขอ…" (TH/EN ครบ)
+- `aria-label` ของช่องค้นหาเป็นคำเดียวกับ placeholder ตัด "…" ท้ายออก (`searchLabel()` ใน `shared/lib/search-words.ts`) ช่องที่ยังไม่มีได้เพิ่มแล้ว: Ticket, บันทึกการตรวจสอบสิทธิ์, รายการรายงาน, เลือกทรัพย์สินผูกสัญญา, ตัวเลือกไอคอน, ช่องค้นในเมนูเลือก
+- `DataTable` รับ `searchPlaceholder` และ `SearchableSelect` รับ `searchPlaceholder` สำหรับช่องค้นในเมนู ตัวเลือกพนักงานบอกตามสิ่งที่ค้นได้ (ชื่อ/รหัส + แผนก หรือ ตำแหน่ง) ตัวเลือกทรัพย์สินตอนรับเคสก็เช่นกัน
+- ข้อความยาวเกินช่องตัดด้วย "…" (`text-ellipsis`) ช่องค้นหาผังองค์กรกว้างขึ้นเป็น 224px
+- ค้นหาแบบทุกคำ ลำดับใดก็ได้ (`matchesAllWords`) ใช้เพิ่มใน Template อีเมล, รายการแจ้งเตือน และการเลือกทรัพย์สินผูกสัญญา
+- รายงานประวัติโอนย้ายและรับคืน: คอลัมน์ "จาก / ไปยัง" และการ์ด "ค้างอยู่ตอนนี้" แสดงชื่อพนักงานภาษาไทยเมื่อมี ทั้งบนจอ Excel และ PDF
+- ไม่ทำ (ผู้ใช้ตัดสินใจ): ไอคอน ⓘ อธิบายฟิลด์ที่ค้นได้
+- ช่องค้นหาในรายงาน 9 หน้าบอกฟิลด์ของรายงานนั้น (`ReportFilter::search()->placeholderKey('rep_ph_…')` → `placeholder_key`) เช่น Ticket ค้าง "ค้นหาเลขที่ Ticket หรือหัวข้อ…", รายงานคลัง "ค้นหา SKU หรือชื่อ…" ช่องกว้างขึ้นเป็น 256px; แท็บประวัติการโอนแก้คำเป็น "ค้นหารหัสทรัพย์สิน, รุ่น หรือชื่อพนักงาน…" (ค่าที่เก็บคือรหัสทรัพย์สิน ไม่ใช่ Tag และค้นได้ทุกฝั่ง)
+- ผู้บันทึกในประวัติรายการคลัง (แท็บในรายละเอียด, หน้าประวัติเต็ม, PDF, รายละเอียด Lot) แสดงชื่อไทยจาก `user_id` ที่เก็บอยู่แล้ว (`recorded_by_th`)
+- ผู้ดำเนินการการโอนทรัพย์สิน: เพิ่ม `asset_transfers.performed_by_user_id` (migration `2026_10_17_231352`, รันบน `itservices_perf` แล้ว) ชื่อเดิมเก็บไว้เป็นชื่อ ณ วันทำรายการ ข้อมูลเก่าเติม id จากชื่อที่ตรงกับผู้ใช้คนเดียวเท่านั้น (ใน demo เหลือ 266 แถวของชื่อที่ซ้ำ 2 บัญชี แสดงชื่อเดิม) แสดงชื่อไทยในแท็บประวัติการโอน, แท็บประวัติในรายละเอียดทรัพย์สิน (รวมชื่อ "จาก / ไปยัง") และรายงานโอนย้าย (ตาราง, การ์ดย้ายที่ตั้ง, Excel/PDF) และค้นด้วยชื่อไทยของผู้ดำเนินการได้
+
+### คำอธิบายใต้การ์ด KPI บรรทัดเดียวทั้งระบบ — 2026-10-17
+- ตรวจทุกหน้าที่มีการ์ด (Dashboard, ภาพรวม 7 โมดูล, รายงาน 22 หน้า) ที่ 768px และ 1024px: เจอคำอธิบายขึ้น 2 บรรทัดหรือถูกตัด 14 การ์ด
+- กติกาเดียว: คำอธิบายใต้การ์ดมี 1 บรรทัด ทั้งขนาดปกติและขนาดแน่น (`StatCard` ตัด "…" เมื่อยาว) ข้อความเต็มขึ้นเมื่อชี้ (`footerTitle` หรือข้อความที่ถูกตัดเอง) โน้ตจากรายงานส่ง `full_key` สำหรับข้อความเต็ม
+- ย่อคำตามที่ผู้ใช้อนุมัติ: ภาพรวม Ticket (ค้างนานสุด…, คำขอ… เปิดเอง…, เปิด… ปิด…), คำขอ (จาก n ที่รออนุมัติ), คลังอะไหล่ (หมด ต่ำ เกิน ไม่เคลื่อนไหว), Dashboard (≤7 วัน, 8–14 วัน, >14 วัน, ใกล้ครบ), รายงานภาพรวม Ticket (จาก n ช่วงก่อน, ▼ชม. จากช่วงก่อน + 90% ใน tooltip, เปิด/กำลังทำ ไม่มีจุดสี "กำลังทำ" สีม่วง), ตัดจำหน่าย (2 เลขสัญญาแรก และอีก n สัญญา), สิทธิ์การเข้าถึง (n จาก m คนยังไม่มีสิทธิ์)
+- คงไว้ 2 บรรทัดตามที่ผู้ใช้ตั้งใจ: การ์ด "ลาออก" ในรายงานพนักงาน
+
+## UI polish: ชื่อไทย ตัวเลข empty state ตาราง Tablet และการค้นหา (2026-10-18)
+
+งานชุดเดียว 5 ส่วน (commit `bab392c6` ถึง `8df35fac` และรอบแก้ตามรีวิวต่อจากนั้น) แก้ความไม่สม่ำเสมอที่ผู้ใช้เจอทุกวัน ทดสอบอัตโนมัติผ่าน: PHP 2346 ผ่าน, JS 172 ผ่าน, `tsc` ผ่าน ยังไม่ได้ตรวจด้วยตาใน Chrome (Tablet 768 และ 1024 px, โหมดสว่างและมืด)
+
+### ส่วน A: สองภาษา (ไทย/อังกฤษ)
+- ชื่อคน: ใช้ `otherName` และ `localName` ตัวเดียวแสดงชื่อไทยเมื่อเลือกภาษาไทยและมีชื่อไทย ไม่มีก็ใช้ชื่อเดิม `requestTitle` สร้างชื่อคำขอแทนผู้อื่นเป็นภาษาไทยได้
+- แก้บั๊กชื่อไทยที่หน้าจอ: modal กลุ่ม, drawer พนักงาน, ผังองค์กร, รายงาน Ticket, ล็อตและการเคลื่อนไหวของคลัง, ฟอร์มคำขอ
+- ฟังก์ชันชื่อของรายงานที่เขียนซ้ำกันถูกรวมเข้าตัวกลาง (`shared`) แล้วลบสำเนาในรายงานออก
+- Backend ส่งฟิลด์ `_th` เพิ่ม: คำขอ/ใบเบิก/รอบนับ/Workflow ของคลัง, ข้อความในกระดิ่ง (`requester_name_th`), รายงาน Ticket (`assignee_name_th`)
+- เก็บคำที่ยังเป็นอังกฤษใน lang 127 ค่า ตามกติกา A1 ถึง A13
+- ข้อความที่เขียนตรงในโค้ดย้ายเข้า key ของ lang
+- ส่วนหัว (eyebrow) ของ dialog Ticket แสดงเลข Ticket แค่ครั้งเดียว และชื่อ dialog สำหรับโปรแกรมอ่านหน้าจอยังมีเลข Ticket อยู่
+- หน้า error ตามภาษาที่เลือก และ preset ของ Workflow ตามภาษา
+
+### ส่วน B: ตัวคั่นหลักพัน (จุลภาค)
+- ตัวเลขทั้งแอปผ่าน `formatNumber` / `useNumberFormat` / `formatStatValue` ในรูปแบบเดียว (`1,234`)
+- ครอบคลุมตัวแบ่งหน้า, กราฟ, `StatCard`, ตัวเลขในประโยคของทุกโมดูล และ helper ในโมดูลที่เขียนซ้ำถูกรวมเข้าตัวกลาง
+- ค่าทศนิยมและช่องกรอกยังคงค่าเดิมเป๊ะหลังจัดรูปแบบ
+- อีเมลใช้ `number_format`, PDF (รายงานและประวัติคลัง) ใส่ตัวคั่นเช่นกัน
+- Excel ใช้ format `#,##0` และ `#,##0.00` โดยค่าในเซลล์ยังเป็นตัวเลข คำนวณต่อได้
+- คอลัมน์ที่มีทศนิยม (ชั่วโมง, อายุเป็นปี, ค้างมาเป็นวัน, เหลือกี่ชั่วโมง) ระบุจำนวนทศนิยมใน `ReportColumn::number()` ทำให้ Excel (`#,##0.0`), PDF และหน้าเว็บแสดงเหมือนกัน เช่น 5.5 ไม่กลายเป็น 6
+
+### ส่วน C: Empty state
+- คอมโพเนนต์ `EmptyState` ตัวเดียว มี 5 แบบ: Inbox (ยังไม่มีข้อมูล), SearchX (ค้น/กรองแล้วไม่พบ), Lock (ไม่มีสิทธิ์), MousePointerClick (ต้องเลือกก่อน), CircleCheck (ไม่มีอะไรค้าง)
+- ตัวห่อเดิม (การ์ด, pane, ตาราง) เรียก `EmptyState` และรับแค่ title กับ hint
+- มี key ชื่อเรื่องและคำแนะนำ 239 คู่ ทั้งไทยและอังกฤษ
+- คำแนะนำที่พูดถึงปุ่มใช้ `{button}` ดึงคำจาก key ของปุ่มจริง และแสดงเฉพาะผู้ใช้ที่เห็นปุ่มนั้น คำแนะนำที่ชวนให้ทำอย่างอื่น (เพิ่มสมาชิก, นำเข้า CSV, เปิด Ticket) ก็แสดงเฉพาะผู้ที่มีสิทธิ์ทำสิ่งนั้น
+- ใน dialog, popover และตัวเลือก ใช้แบบกะทัดรัด ไม่กินที่ รวมถึงกลุ่มว่างในการ์ด "ขั้นอนุมัติที่ค้างและสาเหตุ" ของรายงานการอนุมัติคำขอ
+- หน้าไม่มีสิทธิ์ยังมีหัวเรื่อง `h1` และ dialog สมาชิกล้างคำค้นตอนเปิด ไม่ใช่ตอนปิด
+
+### ส่วน D: ตารางบน Tablet
+- ตารางพนักงาน, Ticket และ Access ปรับขนาดตามกติกาเดียวกับสัญญาและคลัง: หนึ่งบรรทัดต่อเซลล์, ข้อความยาวตัดด้วย `TruncText`
+- คอลัมน์แรกตรึงไว้ในตารางพนักงาน (รหัส) และ Ticket (วันที่แจ้ง) ตาราง Access ไม่ตรึงคอลัมน์
+- ความกว้างของป้ายสถานะและ SLA เป็นค่าประมาณ ยังต้องวัดจริงตอนตรวจด้วยตา ช่องสถานะซ่อนส่วนที่เกิน ป้ายจึงไม่ล้นออกนอกช่อง
+- หน้า Access คอลัมน์การทำงานกว้างต่ำสุดเท่าปุ่มไอคอน (60px) คำบนปุ่มแสดงตั้งแต่จอ xl ขึ้นไป ซึ่งคอลัมน์กว้างเป็น 132px
+
+### ส่วน E: การค้นหา
+- เพิ่มฟิลด์ที่ค้นได้ในแต่ละรายการ: Ticket (ผู้รับเคส, รหัสผู้แจ้ง, ทรัพย์สิน, เลขคำขอ), คำขอ (ชื่อไทย, รหัส, แผนกของผู้ขอ), ทรัพย์สิน (ยี่ห้อ, แผนกผู้ถือ, ที่ตั้ง, สัญญา), กลุ่มอีเมลและ File Share (ค้นด้วยเจ้าของ), dialog สมาชิก (แผนกและฝ่ายภาษาไทย)
+- ช่องค้นหาใหม่ในแท็บคำขอและการเคลื่อนไหวของคลัง ค้นที่ server และ query ของแท็บรายการสินค้าทำงานเฉพาะตอนอยู่แท็บนั้น
+- รายการที่ค้นฝั่ง client (Workflow, แค็ตตาล็อกรายงาน, ตัวเลือกไอคอน, คู่มือนำเข้า) ค้นแบบทุกคำ ลำดับใดก็ได้
+- รายงาน: ค้นสมาชิก ผู้ขอ และตารางในหน้าภาพรวมได้ placeholder บอกฟิลด์ที่ค้นจริง
+- ภาพรวมคำขอ, Access และทรัพย์สิน: คำค้นกรองเฉพาะตาราง การ์ดสรุปและกราฟยังนับทั้งหมด และไม่โหลดการ์ดใหม่ระหว่างพิมพ์ค้น
+
+### ข้อตัดสินใจที่ควรรู้
+- ชื่อไทยของผู้อนุมัติ, ผู้จ่าย และหมวดในรอบนับของคลังจะเป็น null เสมอ เพราะตารางเหล่านั้นเก็บแค่ชื่อเป็นข้อความ ถ้าต้องการค่าจริงต้องเพิ่มคอลัมน์ id พร้อม migration
+- Workflow preset 3 ตัวยังเป็นภาษาอังกฤษในโหมดไทย จนกว่าจะอนุมัติคำ
+- แถว `notification_templates` ใน DB จริงของ `notif_cred_required` ยังเป็นข้อความกระดิ่งเดิม จนกว่าจะแก้เองหรือรีเซ็ต
+- test parity ของ SLA ล็อกวันที่ seed แล้ว ผลไม่ขึ้นกับวันที่รัน
+- placeholder ของรายงาน 6 ตัวที่ session อื่นเพิ่มไว้ก่อนหน้า คงไว้ตามเดิม
+
+## สิทธิ์: หน้า Role Templates จัดผังใหม่ (2026-10-18)
+ปรับหน้าเดิมให้อ่านง่ายขึ้น ไม่ได้สร้างหน้าใหม่ (ตาม mockup "Guideline แบบ 2") ลอจิกเปิด-ปิดแบบลำดับชั้นของทุกการ์ดยังเหมือนเดิม
+
+### ผังการ์ด
+- การ์ดทุกโมดูลเต็มแถว เรียงต่อกันลงมา ภายในแบ่งเป็นช่องมีเส้นคั่น 3 คอลัมน์ (2 คอลัมน์บน Tablet, 1 คอลัมน์ในจอแคบ) ตามความกว้างการ์ด (container query)
+- ใช้คอมโพเนนต์กลาง `permission-layout.tsx` ทุกการ์ด: `PermissionCard`, `PermissionCell`, `GroupHead`, `SetHead`, `ChildList`, `ChildRow`, `PlainRow`, `GeneralCell`, `spreadRows`
+- สวิตช์ที่มีสวิตช์ลูกมีแถบหัวสีพื้น `muted`; หัวชุดที่ไม่มีสวิตช์ของตัวเอง (Ticket Level, หมวดรายงาน) ใช้แถบเดียวกัน
+- สวิตช์เดี่ยวที่อยู่ปนกับกลุ่มย้ายไปอยู่ใต้หัว "ทั่วไป"; การ์ดที่มีแต่สวิตช์เดี่ยวกระจายเป็น 3 ช่อง
+- กลุ่มที่มีลูกเกิน 6 รายการกว้าง 2 ช่อง และเรียงลูกเป็น 2 คอลัมน์
+- ปิดสวิตช์หลักของโมดูลแล้ว ส่วนเนื้อหาซ่อน และแสดง "ปิดอยู่ เปิดเพื่อเลือกสิทธิ์อีก N รายการ" (ส่วน self-service ของ Ticket ยังแสดงอยู่)
+
+### ส่วนที่แก้แต่ยังไม่บันทึก
+- ชื่อสวิตช์ที่เปลี่ยน ตัวเลขบนหัวการ์ด และตัวเลขรวมของหมวด เป็นสีส้ม ตัวหนา เทียบกับค่าที่บันทึกไว้ (เปิดแล้วปิดกลับ = ไม่นับ)
+- หัวหน้าแบบ sticky: ชื่อ Role กับข้อมูลย่อทางซ้าย, ช่องค้นหาสิทธิ์, บรรทัด "● ยังไม่บันทึก N" เหนือปุ่มบันทึก (กันที่ไว้เสมอ ปุ่มไม่ขยับ)
+- ค้นหากรองการ์ดตามชื่อโมดูลและชื่อสิทธิ์ และไฮไลต์คำที่ตรง
+
+### ยืนยันและผลการบันทึก
+- กดบันทึกแล้วขึ้น alert กลางจอ (`centered-alert.tsx` ใช้เฉพาะหน้านี้) "ยืนยันบันทึกข้อมูล" บอกชื่อ Role และจำนวนสิทธิ์ที่เปลี่ยน
+- บันทึกสำเร็จแสดงเครื่องหมายถูกสั้น ๆ แล้วขึ้น "บันทึกสิทธิ์แล้ว" พร้อมจำนวนคนที่ได้รับผล; ระหว่างบันทึกปิด alert ไม่ได้
+
+### การเข้าถึง (WCAG)
+- สวิตช์ทุกตัวมี `aria-label` (ลูกในกลุ่มอ่านชื่อกลุ่มนำหน้า)
+- สีรางของสวิตช์ตอนปิดเข้มขึ้น ให้ contrast ผ่าน 3:1
+- บรรทัดยังไม่บันทึกเป็น `role="status"` อ่านออกเสียงเมื่อจำนวนเปลี่ยน
+
+## พนักงาน: กดแท็บผังองค์กรแล้วไม่ค้าง (2026-10-18)
+- สาเหตุคือการจัดผังด้วย dagre (800 คน ใช้ราว 260ms บน PC) และการวาดการ์ด 800 ใบ ซึ่งทำในจังหวะเดียวกับที่กดแท็บ หน้าจอจึงนิ่งราว 200ms บน PC ส่วนการดึงข้อมูลใช้แค่ราว 130ms บน iPad mini 5 น่าจะนานกว่านี้หลายเท่า (ยังไม่ได้วัดบนเครื่องจริง)
+- จัดผังใน Web Worker (`lib/org-layout.worker.ts`, `hooks/use-org-layout.ts`) และเก็บผลแยกตามชุดข้อมูลและแนวตั้ง/แนวนอน กลับมาที่แท็บหรือสลับแนวตั้ง/แนวนอนซ้ำจึงไม่ต้องคำนวณใหม่ ถ้าเบราว์เซอร์ใช้ Worker ไม่ได้จะคำนวณบน main thread แทน
+- กดแท็บแล้ว Spinner "กำลังโหลดผังองค์กร…" ขึ้นในพื้นที่ผังภายในราว 20ms ผังเริ่มวาดหลังจากจอแสดง Spinner แล้ว จากนั้นค่อย ๆ ปรากฏภายใน 0.3 วินาที (ไม่ fade ถ้าเครื่องตั้งลดการเคลื่อนไหวไว้) Spinner หมุนด้วย CSS transform จึงยังหมุนอยู่ระหว่างที่เบราว์เซอร์วาดการ์ด
+- สลับแนวตั้ง/แนวนอนก็แสดง Spinner ระหว่างจัดผัง ตอนดึงข้อมูลครั้งแรกใช้ Spinner ตัวเดียวกันแทนการ์ด skeleton
+
+## สัญญา: ตารางสัญญาทั้งหมดพอดีจอ Full HD (2026-10-18)
+- ที่ 1920px ตารางเคยกว้างเกินที่ว่าง 129px จึงต้องเลื่อนแนวนอน ตอนนี้พอดี (1557px) ไม่มีช่องไหนถูกตัด
+- เลขที่สัญญา 150 → 104px (เลขยาวสุดกว้าง 69px) ป้าย "ใหม่" ย้ายไปอยู่ใต้เลขที่ ไม่ต้องกันที่ไว้ข้าง ๆ
+- ผู้ขาย 260 → 220px (ชื่อยาวตัดด้วย "…" และดูเต็มได้เหมือนเดิม), ประเภทสัญญา 130 → 110px, เริ่มต้น/สิ้นสุด 110 → 100px, ชื่อสัญญากว้างอย่างน้อย 15rem (เดิม 16rem)
+- จอที่แคบกว่า Full HD (Tablet) ยังเลื่อนแนวนอนตามมาตรฐานตาราง
+
+## ตาราง: เมนู ⋮ ในทรัพย์สิน สัญญา และ Ticket (2026-10-18)
+- รายการทรัพย์สิน: ปุ่มรับมอบ / ยืนยันรับคืน / โอน / แก้ไข รวมอยู่ในเมนู ⋮ (`asset/components/asset-row-menu.tsx`) ทุกแถวมี "ดูรายละเอียด" รายการที่เป็นการรับของยังเป็นสีเขียวเหมือนปุ่มเดิม
+- รายการสัญญาเพิ่มคอลัมน์ ⋮ (`contract/components/contract-row-menu.tsx`) มี "ดูข้อมูล" และ "แก้ไข" (แก้ไขขึ้นเฉพาะสัญญาที่ยังไม่ยกเลิก/หมดอายุ) ส่วนยกเลิก หมดอายุ ลบ และเปิดใช้ใหม่ยังอยู่ในหน้ารายละเอียด เพราะต้องรู้ทรัพย์สินที่ผูกอยู่ ซึ่งรายการไม่ได้โหลดมา
+- คอลัมน์ ⋮ ตรึงชิดขวาทั้งสองตาราง บน Tablet ที่ตารางเลื่อนแนวนอนจึงเห็นเมนูตลอด
+- ที่ 1920px ตารางทรัพย์สินเคยกว้าง 1660px ในที่ว่าง 1557px ตอนนี้ต้องการแค่ 1533px: ป้าย Tag กว้างสุด 7rem (Tag จริงยาวไม่เกิน 10 ตัว ยาวกว่านั้นตัดด้วย "…" และดูเต็มได้จาก title), แบรนด์/รุ่น 12 → 10rem, ผู้ขาย 12 → 9rem
+- ตารางสัญญาที่มี ⋮ แล้วต้องการ 1522px: ชื่อสัญญาอย่างน้อย 13rem, ผู้ขาย 200px, มูลค่า/มูลค่าทั้งหมด 130px, ทรัพย์สินที่ผูก 100px ไม่มีช่องไหนล้น
+- คำขอเบิกในคลังอะไหล่เคยเกินจอ 5px คอลัมน์จัดการกว้างสุด 190 → 176px (ปุ่มกว้างสุด 128px) ปุ่มอนุมัติ / ปฏิเสธ / จ่ายของไม่ย้ายเข้า ⋮ เพราะเป็นงานหลักของหน้านี้
+- Ticket ทั้งหมด / งานของฉัน / Ticket ของฉัน: เพิ่มคอลัมน์ ⋮ ตรึงขวา (`ticket/components/ticket-row-menu.tsx`) มีดูข้อมูล แก้ไข รับเคส มอบหมาย อัปเดต ส่งต่อ ปิดเคส และยกเลิกเคส ตามสิทธิ์และสถานะ เงื่อนไขของแต่ละปุ่มย้ายไปไว้ที่ `ticket-actions.ts` ซึ่งเมนูและปุ่มท้ายหน้ารายละเอียดใช้ร่วมกัน ปุ่มจึงตรงกันทั้งสองที่ "อัปเดต" จากเมนูจะโหลด Ticket ตัวเต็มก่อนเปิด เพราะข้อมูลคาดการณ์กำหนดปิดเคสมีเฉพาะตอนเปิดดูทีละใบ ตารางกว้างอย่างน้อย 1333px ยังพอดีจอ Full HD
+- ฟอร์มเพิ่ม/แก้ไขทรัพย์สิน: ช่อง Tag มีไอคอนป้ายหน้าคำ เหมือนป้าย Tag ในตาราง `Field` รับ prop `icon` แล้ว
+- นับสต็อก: ปุ่มยกเลิกใบนับฉบับร่างเปลี่ยนไอคอนจากวงกลมขีดฆ่าเป็นคลิปบอร์ดกากบาท (`ClipboardX`) ให้เข้าชุดกับปุ่มเริ่มนับสต็อก
+
+## ตาราง: hover ทั้งแถวรวมคอลัมน์ที่ตรึง (2026-10-18)
+- คอลัมน์ที่ตรึง (คอลัมน์แรกและ ⋮) มีพื้นทึบสีการ์ดเพื่อไม่ให้ช่องที่เลื่อนผ่านโผล่ทะลุ พื้นทึบนี้เลยบังสี hover ของแถว ทำให้ไฮไลต์ขาดตรงสองคอลัมน์นั้น
+- ตอนนี้แถวเก็บสีไว้ในตัวแปร `--row-tint` (`.row-hover` ใน app.css ตอน hover / focus) ช่องตรึงใช้ `.pin-cell` คือพื้นการ์ดทึบแล้ววางสีของแถวทับ ไฮไลต์จึงต่อกันทั้งแถวและยังบังเนื้อหาที่เลื่อนผ่านเหมือนเดิม
+- แก้ที่ `DataTable` จุดเดียว ใช้ได้ทุกหน้าที่ใช้ DataTable: พนักงาน, Ticket ทุกแท็บ, คำขอ, สัญญา, คลังอะไหล่ (รายการ / นับสต็อก / ความเคลื่อนไหว / คำขอเบิก) ส่วนตารางทรัพย์สินเขียนตารางเอง จึงแก้แยก ทั้ง hover, แถวที่ติ๊กเลือก และแถวที่ล็อก
+- สีแถวพิเศษย้ายมาใช้ `--row-tint` ด้วย ช่องตรึงจึงได้สีเดียวกับทั้งแถว: แถวสัญญาใหม่ (เขียว) และคำขอแทนพนักงานใหม่ (ม่วง `REQUEST_ONBOARDING_ROW`)
+
+## ความปลอดภัยโมดูลสิทธิ์ (2026-10-18)
+แก้ช่องโหว่จากการรีวิวโมดูล Permission ทั้งหมดอยู่ใน commit `762a7050..6bc94fc5` มีเทสต์ใน `tests/Feature/PermissionSecurityTest.php` (67 ข้อ) และ `tests/Unit/SystemPermissionHierarchyTest.php`
+
+### สิ่งที่แต่ละข้อกันไว้
+- **ชื่อ Role ต้องตรงทุกตัวอักษร** (`App\Support\RoleKeys`): ส่ง "SUPER" หรือ "Super" มาแทน `super` ไม่ได้แล้ว เดิม MariaDB เทียบแบบไม่สนตัวพิมพ์ เลยหลุดตัวกันของ Administrator ได้ (เทสต์บน sqlite จำลองการเทียบแบบนี้ไม่ได้ ตัวกันจริงคือการเทียบใน PHP)
+- **กลุ่มเริ่มต้นเป็นกลุ่มของผู้ดูแลระบบสูงสุดไม่ได้** แม้ผู้ดูแลระบบสูงสุดตั้งเองก็ไม่ได้ เพราะพนักงานใหม่และคนที่หลุดกลุ่มจะได้สิทธิ์ทั้งหมด ค่าเก่าที่ชี้ไปกลุ่มแบบนี้ถูกมองข้ามทุกจุดผ่าน `GroupRole::defaultForNewEmployees()` (ย้ายคนที่ไม่มีกลุ่ม, เพิ่มพนักงาน, นำเข้า CSV, ตั้งบัญชีเข้าระบบ, หน้า Permission)
+- **เฉพาะผู้ดูแลระบบสูงสุดที่ย้าย เพิ่ม เอาออก แก้ไข ลาออก ลบ หรือตั้งบัญชีให้ผู้ดูแลระบบสูงสุดได้** "ผู้ดูแลระบบสูงสุด" นับทั้งคนที่มีบัญชี super และคนในกลุ่ม Administrator ที่ยังไม่มีบัญชี กติกาอยู่ที่เดียวคือ `SuperAdmins::protectedEmployeeIds()` ใช้ทั้งหน้ากลุ่มบทบาทและหน้าพนักงาน
+- **ต้องเหลือผู้ดูแลระบบสูงสุดอย่างน้อย 1 คนเสมอ** (`SuperAdmins::keepAtLeastOne`): การบันทึกที่ทำให้จำนวนลดจากมีเป็นไม่มีจะถูกยกเลิกทั้งหมด (422) บัญชีที่ไม่ผูกพนักงานก็นับ ระบบที่ไม่มีผู้ดูแลระบบสูงสุดอยู่แล้วจะไม่ถูกล็อก ตัวนับอ่านแถวแบบล็อก การลบพร้อมกันจึงต้องรอกัน
+- **ผู้จัดการสิทธิ์ที่ไม่ใช่ผู้ดูแลระบบสูงสุด** ให้ได้เฉพาะสิทธิ์ที่ตัวเองมี (ถอดสิทธิ์ที่ตัวเองไม่มีได้), แก้บทบาทของตัวเอง ย้ายตัวเองเข้า-ออกกลุ่ม เปลี่ยนบทบาทหรือลบกลุ่มที่ตัวเองอยู่ไม่ได้, ตั้งกลุ่มเริ่มต้นหรือเปลี่ยนบทบาทของกลุ่มเริ่มต้น (แม้ไม่มีสมาชิก) ให้สูงกว่าตัวเองไม่ได้ สิทธิ์เก่าที่ถูกถอดจากระบบแล้วไม่นับ (`Role::allowedKeys()`)
+- **ไม่มีใครลบข้อมูลพนักงานของตัวเองได้** เดิมลบสำเร็จแต่ตอบ 500 เพราะบันทึกการตรวจสอบอ้างถึงบัญชีที่ถูกลบไปแล้ว
+- **บันทึกการตรวจสอบของกลุ่มบอกครบ**: สมาชิกที่เพิ่ม สมาชิกที่เอาออก และบัญชีที่บทบาทเปลี่ยน (จาก → เป็น) เขียนใน transaction เดียวกับการบันทึก ถ้าถูกปฏิเสธจะไม่มีบันทึกค้าง การบันทึกสิทธิ์ของ Role ล็อกแถว Role ไว้ระหว่างบันทึก
+- **ไม่มี 500 อีก**: ลบ route `permissions/{role}/members` ที่ไม่มีโค้ดรองรับ ตัวกรองบันทึกการตรวจสอบที่ผิดรูปแบบ (array, หมวดที่ไม่มี, จำนวนแถวนอก 10–100) ตอบ 422
+- **สิทธิ์ `system.*` ทำตามสวิตช์หลักที่ server ด้วย**: ไม่มี `system.manage_permissions` จะไม่เก็บสิทธิ์ย่อยในกลุ่มนี้ (`Permissions::normalizeSystem`) แถวที่บันทึกไว้ก่อนแก้ไม่ถูกล้าง แต่ตอนแก้ใน DB จริงไม่มีแถวแบบนั้น
+- **หน้าเว็บบอกเหตุผลที่ถูกปฏิเสธเป็นไทย/อังกฤษ** หน้าต่างแก้กลุ่มไม่ปิดและไม่ล้างค่าที่กรอก ซ่อนบทบาทและกลุ่มของผู้ดูแลระบบสูงสุดจากคนที่ไม่ใช่ผู้ดูแลระบบสูงสุด ปุ่มลบพนักงานเป็นสีเทาพร้อมเหตุผลเมื่อเป็นข้อมูลของตัวเองหรือเป็นผู้ดูแลระบบสูงสุด สวิตช์ "ดูบันทึกการตรวจสอบ" มีคำอธิบายว่าเห็นข้อมูลที่ถูกลบไปแล้วด้วย
+
+### กติกาที่ผู้ใช้เลือก
+- ให้ได้ไม่เกินสิทธิ์ที่ตัวเองมี และห้ามแก้สิทธิ์ของตัวเอง (ผู้ดูแลระบบสูงสุดทำได้ทุกอย่าง)
+- สิทธิ์ดูบันทึกการตรวจสอบยังเห็นทุกโมดูลเหมือนเดิม เพิ่มแค่คำอธิบาย
+- `APP_DEBUG` ผู้ใช้ตั้งใน `.env` เอง
+
+### ข้อจำกัดที่ยอมรับไว้
+- เอาคนออกจากกลุ่ม คนนั้นได้บทบาทของกลุ่มเริ่มต้น แม้บทบาทนั้นสูงกว่าผู้จัดการที่ทำ (กลุ่มเริ่มต้นถูกตรวจเพดานตอนตั้งแล้ว)
+- บันทึกกลุ่มซ้ำจะเขียนบทบาทของกลุ่มทับให้สมาชิกทุกคนอีกรอบ รวมถึงบัญชีที่เคยถูกปรับไว้ต่าง
+- ผู้ดูแลระบบสูงสุดที่ลาออกแล้วยังนับว่ายังเหลืออยู่
+- คนที่มีสิทธิ์ตั้งบัญชีเข้าระบบเป็นคนกำหนดรหัสผ่านของบัญชีใหม่ (ยกเว้นผู้ดูแลระบบสูงสุด) ตามหน้าที่ของสิทธิ์นี้
+- ตัวล็อกการลบผู้ดูแลระบบสูงสุดพร้อมกันยังไม่ได้ลองบน MariaDB จริง (sqlite ไม่มีการล็อก)
+
+### เหตุผลจาก comment ที่ย่อออก
+- นำเข้า CSV: จองรหัสพนักงานที่พิมพ์มาในไฟล์ก่อน แล้วค่อยออกรหัสให้แถวที่เว้นว่าง เพราะตัวออกรหัสนับจาก max(id) และมองไม่เห็นรหัสในไฟล์เดียวกัน ถ้าไม่จองก่อนจะได้รหัสซ้ำแล้วนำเข้าพังที่ unique key
+- ลบพนักงาน: ลบบัญชีเข้าระบบไปด้วย และลบได้เฉพาะข้อมูลที่กรอกผิด (คนออกใช้บันทึกลาออก) ถ้ายังมีอะไรอ้างถึงคนนั้นจะลบไม่ได้ เพราะ Ticket และสิทธิ์เข้าถึงจะถูกลบตามที่ระดับฐานข้อมูล รูปพนักงานลบหลังบันทึกสำเร็จเท่านั้น
+- ตั้งบัญชีเข้าระบบเมื่อไม่มีกลุ่มเริ่มต้น: ระบบปฏิเสธ (`NO_ROLE_CONFIGURED`) ไม่สร้าง Role "user" ที่ไม่มีสิทธิ์ขึ้นมาเอง
+- บัญชีผูกกับพนักงานด้วย `employee_id` หรือชื่อผู้ใช้ ไม่ใช้อีเมล
+- ถ้าถูกยกเลิกกลางทาง ระบบล้าง cache ของ `AppSetting` เพื่อไม่ให้ค่ากลุ่มเริ่มต้นที่ถูกยกเลิกค้างอยู่
+
+## ตาราง: iPad แตะข้อความที่ถูกตัดดูข้อความเต็ม แตะสองครั้งเปิดรายการ (2026-10-18)
+- บน iPad ข้อความในตารางถูกตัด "…" เกือบทุกช่อง เดิมแตะแล้วได้แค่ tooltip ไม่มีทางเปิดหน้ารายละเอียดจากข้อความนั้น
+- ตอนนี้ในแถวที่กดเปิดได้: แตะ 1 ครั้งบนข้อความที่ถูกตัด = tooltip ข้อความเต็มขึ้นทันที, แตะ 2 ครั้ง (ภายใน 0.3 วินาที) = ปิด tooltip แล้วเปิดหน้ารายละเอียด แตะตรงอื่นของแถวยังเปิดหน้ารายละเอียดด้วยการแตะครั้งเดียวเหมือนเดิม (`976a279a` กลับด้านจาก `e3b47a69` ตามที่ผู้ใช้ต้องการ)
+- ใช้กับ `TruncText` เท่านั้น (`InfoPopover` prop `doubleTapInRow`) แถวที่กดได้มี `data-row-click` (DataTable และตารางทรัพย์สิน) tooltip อื่น เช่น เหตุผลที่ปุ่มกดไม่ได้ ยังแตะครั้งเดียวเปิดเหมือนเดิม เมาส์และคีย์บอร์ดไม่เปลี่ยน
+- ช่องข้อความใส่ `touch-manipulation` กัน Safari ซูมตอนแตะสองครั้ง
+
+## ตาราง: Rows per page 10/25/50/100 และปุ่มอนุมัติในรายการคำขอ (2026-10-18)
+- ทุกตาราง (DataTable, ตารางทรัพย์สิน, หน้าสิทธิ์, รายงาน) เลือกจำนวนแถวต่อหน้าได้ 10, 25, 50, 100 ค่าเริ่มต้น 10 รายงานเลิกใช้รายการของตัวเอง หันมาใช้ `PAGE_SIZES` ตัวกลาง ลิงก์เก่าที่มี `?per=20` จะกลับไปใช้ค่าเริ่มต้น
+- รายการคำขอ: หน้าที่มีคำขอให้อนุมัติ คอลัมน์จัดการเคยกว้าง 300px ตารางกว้าง 1636px ในที่ 1565px ปุ่ม Reject ถูกตัดและปุ่มดูตกขอบ ตอนนี้คอลัมน์กว้างสุด 276px ตรึงชิดขวา เรื่องอย่างน้อย 14rem ผู้ขอ 180px แผนก 176px รออนุมัติโดย 200px ตารางพอดี 1565px ปุ่ม Approve / Reject / ดู อยู่ในจอครบ
+- ให้ 10 แถวอยู่ในจอ Full HD (1920×911 ในเบราว์เซอร์) โดยไม่ต้องเลื่อน: ระยะใต้ชื่อหน้าและคำอธิบาย 24 → 12px (11 หน้าโมดูลที่มีตาราง), ขอบบน-ล่างของพื้นที่เนื้อหา 24 → 16px (`app-shell` และ `--sticky-top` ตามเป็น -1rem หัวตารางยังติดชิดขอบบน), ระยะบน-ล่างในแถวตารางของความหนาแน่นปกติ 10 → 8px (`--row-py`)
+- วัดแล้วพอดีจอ: พนักงาน, Ticket, คำขอ, นับสต็อก ยังต้องเลื่อนเพราะมีแถบเตือนหรือการ์ดสรุปด้านบน: ทรัพย์สิน 27px, ความเคลื่อนไหว 79px, รายการสต็อก 104px, สัญญา 128px, คำขอเบิก 152px
+
+## สิทธิ์: แท็บกลุ่มบทบาทเป็นตาราง และหน้าต่างเพิ่มสมาชิกแบบสองช่อง (2026-10-18)
+ทำตาม mockup ที่อนุมัติบนบอร์ด Permission Navigation (หน้า "กลุ่มบทบาท: ตาราง แบบหน้า Email Groups")
+
+### ตารางกลุ่ม
+- DataTable แบบหน้า Email Groups: ชื่อกลุ่ม (ไอคอน + badge "เริ่มต้น" สีน้ำเงิน), บทบาท (จุดสีของบทบาท), จำนวนสมาชิก, เมนู ⋮ ท้ายแถว (แก้ไข / ลบกลุ่ม; กลุ่มที่ดูได้อย่างเดียวมีแค่ ดู) กดได้ทั้งแถว ชี้แล้วพื้นแถวเปลี่ยนสีเหมือนตารางอื่น
+- ตัวกรองมีบทบาทและ "เรียงตาม" (กลุ่มเริ่มต้นก่อน, ชื่อ A-Z / Z-A, จำนวนสมาชิกมาก/น้อยสุดก่อน); คำค้น ตัวกรอง การเรียง หน้า และกลุ่มที่เปิดอยู่ (`?view=` / `?add=1`) อยู่ใน URL
+- "กลุ่มเริ่มต้น" (i) เป็นตัวเลือกในแถวเครื่องมือ เลือกแล้วยืนยันใน alert กลางจอ; กลุ่มผู้ดูแลระบบสูงสุดเลือกเป็นค่าเริ่มต้นไม่ได้
+- กลุ่มผู้ดูแลระบบสูงสุดมีไอคอนกุญแจสำหรับคนที่ไม่ใช่ผู้ดูแลระบบสูงสุด และเปิดแบบดูอย่างเดียว
+
+### หน้าต่างเพิ่ม / แก้ไขกลุ่ม (Focus Dialog)
+- ชื่อกลุ่มกับบทบาทอยู่ด้านบน (ข้างคำว่า "บทบาท" บอกว่าสมาชิกจะได้รับสิทธิ์ของบทบาทไหน) ด้านล่างแบ่งสองช่องโครงเดียวกัน: "เพิ่มสมาชิก" (ค้นหา + แผนก, ติ๊กหลายคน, "เลือกทั้งแผนก") และ "สมาชิกปัจจุบัน" ตัวแบ่งหน้าอยู่ล่างสุดของแต่ละช่องเสมอ
+- ติ๊กแล้วคนนั้นขึ้นในสมาชิกปัจจุบันทันทีเป็นสีส้ม ("ย้ายจาก X" / "เพิ่มใหม่"); นำออกแล้วแถวยังอยู่ ขีดฆ่า บอกว่าจะย้ายไปกลุ่มเริ่มต้น มีปุ่มยกเลิก
+- ท้ายหน้าต่างบอก "● ยังไม่บันทึก N" กดบันทึกแล้วยืนยันใน alert กลางจอ (เพิ่ม/นำออก/ย้ายมาจากกลุ่มอื่น/เปลี่ยนบทบาท/เปลี่ยนชื่อ) แล้วขึ้น "บันทึกกลุ่มแล้ว"
+- ปุ่มลบกลุ่มอยู่ซ้ายของ footer (ใช้กล่องยืนยันเดียวกับเมนูในตาราง) บอกว่าสมาชิกจะย้ายไปไหน; ปิดตอนยังไม่บันทึกจะถามก่อนทิ้ง; ชื่อว่างหรือซ้ำ และไม่เลือกบทบาท ขึ้นข้อความใต้ช่อง
+- คนที่ไม่ใช่ผู้ดูแลระบบสูงสุด: แก้แถวของตัวเองและบทบาทของกลุ่มที่ตัวเองอยู่ไม่ได้, บทบาทที่มีสิทธิ์มากกว่าตัวเองเป็นสีเทา, บัญชีผู้ดูแลระบบสูงสุดย้ายไม่ได้ (ตรงกับกติกาที่ server บังคับอยู่แล้ว)
+- จอแคบกว่า 1024px สองช่องเปลี่ยนเป็นแท็บ "เพิ่มสมาชิก | สมาชิกปัจจุบัน (N)"
+
+### Server
+- `GET /group-roles` ส่งแค่จำนวนสมาชิก (`member_count`) และ `includes_me` ไม่ส่งรายชื่อสมาชิกทุกคนแล้ว (กลุ่ม User มี 982 คน)
+- ใหม่ `GET /group-roles/{id}/members` และ `GET /group-roles-candidates` ดึงทีละหน้า ค้นหาด้วย SearchTerms กรองแผนก; `all=1` คืนทั้งแผนกเมื่อระบุแผนก (สูงสุด 500) — `GroupRoleMemberService`
+- บันทึกส่งแค่ `add_ids` / `remove_ids` (ยังรับ `employee_ids` แบบเดิม) คนที่นำออกยังย้ายไปกลุ่มเริ่มต้นตามเดิม
+- เทส `GroupRoleMemberPagingTest` (8 ข้อ) และเทสสิทธิ์เดิมผ่านทั้งหมด
+
+## คลัง: หน้าต่างรอบนับ (แท็บตรวจนับ) ลิงก์ได้ พอดีจอ และแก้บั๊กจากการรีวิว (2026-10-18)
+- รอบนับที่เปิดอยู่อยู่ใน URL `?count=<id>` รีโหลดหรือส่งลิงก์แล้วเปิดรอบเดิม เปลี่ยนแท็บแล้วล้าง; กระดิ่ง "รอบนับค้างอยู่" เปิดรอบนั้นตรง ๆ (ใช้ `count` ไม่ใช้ `view` เพราะ `?view=` เปิดรายละเอียดสินค้าอยู่แล้ว)
+- หน้าต่างสูงไม่เกินจอ: หัว ตัวสรุป โหมดยืนยัน และปุ่มอยู่ในจอเสมอ เฉพาะรายการสินค้าที่เลื่อน (เดิมที่ Full HD หัวหลุดขอบบนและปุ่มยืนยันตกขอบล่าง และบน iPad แนวนอนกดยืนยันไม่ได้)
+- ลิงก์รอบนับที่ไม่มีอยู่ขึ้น "ไม่พบรายการ" (RecordMissing) แทนการหมุนค้าง; โหลดไม่สำเร็จมีปุ่มลองใหม่
+- กด Back ตอนพิมพ์จำนวนค้างไว้: หน้าต่างกลับมาพร้อมตัวเลขที่พิมพ์ และถามก่อนทิ้ง
+- ตัวเลขที่พิมพ์ไม่ถูกข้อมูลที่โหลดซ้ำทับ; เปิดรอบใหม่เริ่มที่โหมด Auto เสมอ; เปิดรอบ B หลังปิดรอบ A ไม่แสดงข้อมูลรอบ A แวบขึ้นมา
+- เริ่มรอบนับไม่สำเร็จ (เช่น สินค้าถูกล็อกโดยรอบอื่น) หน้าต่างเลือกสินค้ายังเปิดอยู่พร้อมรายการที่เลือก
+- ช่วงแสดงผล "บันทึกแล้ว" หลังยืนยัน ไม่มีปุ่มบันทึกร่างและโหมดยืนยันให้กดซ้ำ; ชื่อสินค้ายาวตัดด้วย "…" ตารางไม่ล้นแนวนอนบน Tablet
+
+## Tag 10 ตัวอักษร, ยกเลิก/สิ้นสุด/ลบสัญญาจากเมนู ⋮, สี hover เข้มขึ้น (2026-10-18)
+- Tag ทรัพย์สินยาวได้ไม่เกิน 10 ตัวอักษร (`StoreAssetRequest` `max:10` นับภาษาไทยเป็นตัวอักษร, ช่องในฟอร์ม `maxLength`) คำอธิบายใต้ช่องบอกข้อจำกัด ตัวอย่างเปลี่ยนเป็น "เช่น พีซีบัญชี" / "e.g. Lobby PC" ทรัพย์สินเดิมที่ Tag ยาวกว่านี้ (ข้อมูล demo ใน `itservices_perf` ทุกรายการ) ต้องย่อ Tag ตอนแก้ไขครั้งถัดไป ไม่งั้นบันทึกไม่ผ่าน
+- เมนู ⋮ ของสัญญามี ยกเลิกสัญญา (ใช้งานอยู่), สิ้นสุดสัญญา (เกินกำหนด), ลบสัญญา (ใช้งานอยู่และไม่มีทรัพย์สินผูก), เปิดใช้ใหม่ (ยกเลิก/สิ้นสุดแล้ว) ตามสิทธิ์เดียวกับปุ่มท้ายหน้ารายละเอียด ขั้นตอนทั้งหมด (คำเตือนทรัพย์สินที่ยังไม่ตัดจำหน่าย, กล่องยืนยัน, หน้าต่างเหตุผลการยกเลิก) ย้ายไปไว้ที่ `contract/hooks/use-contract-actions.tsx` ใช้ร่วมกับหน้ารายละเอียด รายการสัญญาส่ง `open_assets_count` (ทรัพย์สินที่ผูกและยังไม่ตัดจำหน่าย) มาเพิ่ม เพราะรายการไม่ได้โหลดทรัพย์สินมาทั้งแถว
+- สี hover / focus ของแถวตารางในโหมดสว่างใช้ `--accent` เต็ม (#eff2f5) แทน 50% ที่จางจนแทบไม่เห็น โหมดมืดเหมือนเดิม ตั้งเป็นโทเค็น `--row-hover`
+
+## Ticket: ตรวจหน้าต่างรับเคส มอบหมาย ส่งต่อ อัปเดต ปิดเคส ยกเลิกเคส (2026-10-18)
+ทดสอบกดจริงทุกปุ่มบนข้อมูล demo ทั้ง Full HD และ iPad 768 รวมกับผลรีวิวโค้ด
+- กดยืนยันแล้ว หน้ารายละเอียดด้านหลังเคยแสดงสถานะเก่าประมาณ 1 วินาที (ยัง "เปิด / ยังไม่มีผู้รับผิดชอบ" และปุ่มรับเคสยังกดได้) ตอนนี้ปุ่มหมุนรอจนข้อมูลเคสโหลดใหม่เสร็จแล้วค่อยปิดหน้าต่าง (`useTicketMutations` คืน promise ของการ refetch)
+- ส่งต่อเคสแล้ว "รับเคสโดย" ทั้งในไทม์ไลน์และแถบสถานะเปลี่ยนเป็นชื่อผู้รับคนใหม่ ตอนนี้ใช้ชื่อคนแรกที่ถือเคส (จากรายการส่งต่อครั้งแรก)
+- รายชื่อเจ้าหน้าที่ในหน้าต่างมอบหมาย / ส่งต่อถูกขอบหน้าต่างตัด เห็นแค่ 2-3 ชื่อ ตอนนี้รายการยื่นออกนอกหน้าต่างได้ (`preferDown`)
+- หน้าต่างยกเลิกเคส: ช่องเปลี่ยนเป็น "เหตุผลที่ยกเลิก" ปุ่มปิดเป็น "ย้อนกลับ" ไม่ให้มีสองปุ่มที่ขึ้นต้นว่า "ยกเลิก"
+- หน้ารายละเอียด: เอาปุ่มรับเคส / อัปเดตที่ซ้ำกับ footer ออกจากแถบด้านบน และเปิดมาไม่มีกรอบ focus ที่ปุ่ม; หน้าต่างรับเคสไม่โฟกัสช่องบันทึก (ไม่บังคับ) จึงไม่เด้งคีย์บอร์ดบน iPad
+- ปุ่มอัปเดต / ปิดเคส / ยกเลิกเคส แสดงเฉพาะคนที่มีสิทธิ์ `tickets.resolve` (ตรงกับ server); เมนู ⋮ ไม่มีเส้นคั่นค้างท้ายเมนู และมีเส้นคั่นก่อนปิดเคส / ยกเลิกเคส
+- หน้าต่างอัปเดต: ติ๊ก "ส่งงานซ่อม" ใหม่กลับไปที่ประเภทงานเดิมของเคส (ไม่ใช่ตัวแรกในรายการ); เคสที่ส่งซ่อมอยู่แล้วยังเอาติ๊กออกได้แม้ไม่มีเป้าหมายงานซ่อมให้เลือก; เปิดจากหน้ารายละเอียดใช้ข้อมูลเคสฉบับเต็ม
+- ปุ่มความสำคัญ (รับเคส / มอบหมาย) รวมเป็น `priority-picker.tsx` บอกปุ่มที่เลือกด้วย `aria-pressed`; ช่องข้อความจำกัดความยาวเท่ากับ server (2000 / 5000)
+- ชื่อในไทม์ไลน์ตามภาษาที่เลือก: บันทึกความคืบหน้าส่ง `author_name_th`, การส่งต่อเก็บ `from_th` / `to_th` เพิ่ม (รายการเก่าแสดงชื่อเดิม); ข้อความ " - " ในคำแนะนำสองที่เปลี่ยนเป็นวงเล็บ / เว้นวรรค
+- Server: รับเคส มอบหมาย ส่งต่อ ปิดเคส อ่านเคสใหม่แบบล็อกแถว (`lockForUpdate`) ก่อนเขียน สองคนกดพร้อมกันจะผ่านคนเดียว อีกคนได้ข้อความว่าเคสมีคนรับไปแล้ว / เปลี่ยนผู้รับผิดชอบไปแล้ว (`case_moved`)
+- ตรวจเมนู ⋮: เปิด / ปิดมี animation (enter / exit 150ms), กด Escape แล้ว focus กลับมาที่ปุ่ม ⋮, ปิดหน้าต่างที่เปิดจากเมนูแล้วหน้ายังกดได้ตามปกติ
+- เทส `TicketActionRaceTest` (6 ข้อ) และเทส Ticket เดิมทั้งหมด 350 ข้อผ่าน; fixture ของเทสอีเมลปิดเคส / ส่งต่อปรับให้เคสอยู่ในสถานะกำลังดำเนินการก่อน (service ไม่ยอมปิดหรือส่งต่อเคสที่ยังเปิดอยู่แล้ว)
+
+## คำเตือนเหนือตารางย้ายขึ้นหัวหน้าเป็นปุ่ม (2026-10-18)
+- ตาม mockup แบบ A1 (canvas `JXwgT76NcAPY9H9vGiSnRd`): แถบเตือนเต็มความกว้างเหนือการ์ดเปลี่ยนเป็นปุ่มมีขอบข้างปุ่มหลักของหน้า ไอคอน + ข้อความ + › สูง 40px เท่าปุ่มหลัก ชี้เมาส์แล้วพื้นเป็นสีอ่อนของโทนนั้น โฟกัสด้วยคีย์บอร์ดมีวงสีน้ำเงิน กดแล้วกรองรายการ กดซ้ำกลับมาแสดงทั้งหมด (`aria-pressed`) ส่วนกลาง `shared/components/alert-button.tsx` (โทน amber / red)
+- สัญญา: "ใกล้หมดอายุ N สัญญา" (อำพัน) และ "เกินกำหนด N สัญญา" (แดง) แทนแถบ 2 แถบ
+- คลังอะไหล่ (ทุกแท็บ): ปุ่มเดียวแทนการ์ด "แจ้งเตือนสต็อก" มีชนิดเดียวใช้ชื่อชนิด ("เกิน Max 300 รายการ") หลายชนิดใช้ "แจ้งเตือนสต็อก N รายการ" แดงเมื่อมีหมดสต็อกหรือต่ำกว่า Min
+- ทรัพย์สิน: "รอรับคืน N รายการ" แทนแถบด้านบน (`pending-return-strip.tsx` → `pending-return-button.tsx`)
+- คำขอเบิก: ตัวกรองสถานะอยู่บรรทัดเดียวกับช่องค้นหา (กล่องที่ห่อไม่มีความกว้าง ช่องค้นหา `w-full` เลยดันตัวกรองลงบรรทัดใหม่)
+- วัดที่ 1920×911 แสดง 10 แถว: สัญญา, คลังอะไหล่ (สินค้าในคลัง / คำขอเบิก / เหตุการณ์) พอดีจอ ทรัพย์สินยังเกิน 129px เพราะแถวสูง 63px (ป้าย Tag ใต้รหัส, ระยะในแถวคงที่ 10px ไม่ตาม `--row-py`) บน Tablet 768px ปุ่มเตือนลงไปอยู่บรรทัดใต้ชื่อหน้า
+
+## Ticket: ปิดเคสกับปิดคำขอเป็นธุรกรรมเดียว (2026-10-18)
+- เดิมปิดเคสแล้วส่งกระดิ่ง / อีเมลทันที แล้วค่อยปิดคำขอที่เคสมาจาก ถ้าขั้นหลังล้มเหลว เคสปิดไปแล้ว ผู้ขอได้อีเมลแล้ว แต่คำขอค้าง "อนุมัติแล้ว" และกดปิดซ้ำไม่ได้
+- ใหม่ `TicketClosureService::close`: ปิดเคส (`TicketService::closeRow`) และปิดคำขอ (`RequestService::settleRowsFromTicket`) ใน `DB::transaction` เดียว ล้มเหลวย้อนกลับทั้งคู่ กระดิ่ง อีเมล และ AuditLog ส่งหลัง commit เท่านั้น (`announceClosed`, `announceSettledFromTicket`) และถ้าการแจ้งเตือนล้มเหลวจะบันทึก log ไว้ ไม่ทำให้การปิดเคสถูกรายงานว่าล้มเหลว
+- Controller เรียก service เดียว; `TicketService::resolve` และ `RequestService::settleFromTicket` ถูกแยกเป็นเมธอดข้างบนแทน
+- เทส: ปิดคำขอล้มเหลว → เคสยังกำลังดำเนินการ คำขอยังอนุมัติแล้ว ไม่มีอีเมล / กระดิ่ง และกดปิดใหม่ได้ (`RequestAutoTicketTest`)
+
+## สิทธิ์: แก้หน้ากลุ่มบทบาทหลังรีวิว (2026-10-18)
+รีวิวงานปรับหน้ากลุ่มบทบาท (`d2066c61..9efa59aa`) ด้านความปลอดภัย โค้ด UX และ WCAG แล้วแก้ใน `f32ab941`, `1b231d2f`, `eb404875` (server) และ `9659d4bf`, `845fdc17`, `2b89dba3` (หน้าเว็บ) รายละเอียดรีวิวอยู่ที่ `.superpowers/permission-review/group-redesign-review.md`
+
+### Server
+- **ไม่มีใครแก้สิทธิ์ของตัวเองได้ รวมผู้ดูแลระบบสูงสุด:** เอาตัวเองเข้า-ออกกลุ่ม เปลี่ยนบทบาทของกลุ่มที่ตัวเองอยู่ หรือลบกลุ่มตัวเองไม่ได้ (403 `own_access` "แก้สิทธิ์ของตัวเองไม่ได้") เปลี่ยนชื่อกลุ่มและเพิ่มคนอื่นเข้ากลุ่มตัวเองยังทำได้
+- **บันทึกกลุ่มโดยไม่ส่งรายชื่อสมาชิก = สมาชิกไม่เปลี่ยน** (เดิมกลุ่มว่างทั้งกลุ่ม) และต้องส่ง `role` มาเสมอ ส่ง `employee_ids` ปนกับ `add_ids`/`remove_ids` ได้ 422
+- **บันทึกพร้อมกัน:** MariaDB ที่ใช้อยู่เปิด `innodb_snapshot_isolation` ระบบจึงล็อกแถวก่อนอ่านทุกจุด (บัญชี super → กลุ่ม → สมาชิก → แถวของคนที่ย้ายเข้า) แล้วตรวจตัวกันทุกตัวบนข้อมูลที่ล็อกแล้ว ถ้าชนกันจริงจะลองใหม่เองสูงสุด 3 ครั้ง (สร้าง/แก้/ลบกลุ่ม) ไม่ขึ้น 500 ส่วนลบพนักงานไม่ลองซ้ำ
+- เพิ่มคนอื่นเข้ากลุ่มโดยไม่เปลี่ยนบทบาท ตั้งบทบาทให้เฉพาะคนที่เพิ่งเพิ่ม บัญชีของคนเดิม (รวมตัวเราเอง) ไม่ถูกเขียนทับ
+- เพิ่มทั้งแผนกได้ไม่จำกัดจำนวน (เอาเพดาน 500 ออก); แถวรายชื่อมี `is_me` ใช้กติกาเดียวกับ server
+- เทสต์ความปลอดภัยครอบแบบส่ง `add_ids`/`remove_ids` ที่หน้าเว็บใช้จริง, กฎ "ต้องเหลือผู้ดูแลระบบสูงสุด" ครบทั้งสร้าง/แก้/ลบ และลำดับการปฏิเสธ
+
+### หน้าเว็บ
+- หน้าต่างกลุ่มไม่รีเซ็ตกลางการบันทึก ไม่เปลี่ยนเนื้อหาระหว่างปิด และหน้าต่างยืนยันไม่เปลี่ยนระหว่าง "กำลังบันทึก / บันทึกแล้ว" (โหลดรายการใหม่หลังปิด)
+- โหลดไม่สำเร็จแสดง "โหลดไม่สำเร็จ" พร้อมลองใหม่ ทั้งตาราง สองช่องรายชื่อ และการเพิ่มทั้งแผนก
+- แถวของตัวเองล็อก ปุ่มลบกลุ่มที่ตัวเองอยู่และกลุ่มที่ตั้งเป็นค่าเริ่มต้นไม่ได้เป็นสีเทาพร้อมเหตุผลที่คีย์บอร์ด/โปรแกรมอ่านหน้าจอเข้าถึงได้
+- WCAG: ช่องเลือกแผนกมีชื่อ, เหตุผลที่เลือกบทบาทไม่ได้ขึ้นบรรทัดใหม่แทนการตัด, บันทึกไม่ผ่านแล้วโฟกัสช่องแรกที่ผิด, error อ่านออกเสียง, ปุ่ม "เอากลับ" บอกชื่อคน
+- Tablet: ข้อความ "ย้ายจาก…" กว้างไม่เกิน 45%, กลุ่มใหม่ที่ 768px เปิดที่ "เพิ่มสมาชิก"
+- Design: แถบสีบทบาทแบบเดียวกับหน้า Role Templates, ไอคอนกุญแจทุกจุดที่แก้ไม่ได้, ตัวกรองเรียงลำดับไม่มีช่องค้นหา
+- คำที่ผู้ใช้อนุมัติ 2 รอบ (เอากลับ, เพิ่มได้เฉพาะผู้ดูแลระบบสูงสุด, รูปเอกพจน์ภาษาอังกฤษ, Role Group ตัวใหญ่, ดูกลุ่มบทบาท ฯลฯ)
+
+### ข้อจำกัดที่ยอมรับไว้
+- ป้าย "protected" บอกผู้ที่มีสิทธิ์จัดการกลุ่มได้ว่าใครมีบัญชีผู้ดูแลระบบสูงสุด (การบันทึกที่ถูกปฏิเสธก็บอกเรื่องเดียวกันอยู่แล้ว)
+- ถ้าบันทึกรอล็อกจนหมดเวลา ระบบลองซ้ำได้ 3 รอบ request เดียวอาจนานราว 2 นาที (เจอยาก)
+- ลบกลุ่มพร้อมกับมีคนตั้งกลุ่มนั้นเป็นค่าเริ่มต้นพอดี ค่าเริ่มต้นจะชี้กลุ่มที่ถูกลบ ระบบถือว่าไม่มีกลุ่มเริ่มต้น
+- คนที่มีสิทธิ์จัดการกลุ่มแต่ไม่มีสิทธิ์จัดการบทบาท ยังเลือกบทบาทในหน้าต่างกลุ่มไม่ได้ (ต้องมี API รายชื่อบทบาท ยังไม่ทำ)
+- จำนวนใน "ทั้งแผนก (N คน)" ยังนับรวมตัวเราและคนที่ล็อก
+
+## หน้าต่างที่เปิดจากเมนู ⋮ คืน focus ให้ปุ่ม ⋮ (2026-10-18)
+- เดิมเปิดหน้าต่างจากรายการในเมนู ⋮ แล้วปิด focus ไปตกที่ตัวหน้าเว็บ (รายการเมนูที่ควรได้ focus คืนหายไปแล้ว) คนใช้คีย์บอร์ดต้องเริ่ม Tab ใหม่จากบนสุด
+- แก้ที่ shared ครั้งเดียว ใช้ได้ทุกหน้า: `DropdownMenuTrigger` จำตัวเองตอนเปิดเมนู, `DropdownMenuItem` จดเวลาที่เลือก, `DialogContent` / `SheetContent` ที่เปิดภายใน 1.5 วินาทีหลังเลือกรายการรับปุ่มนั้นไว้ (ครั้งเดียว) แล้วคืน focus ตอนปิด (`shared/lib/menu-return-focus.ts`, `shared/hooks/use-menu-return-focus.ts`)
+- หน้าต่างที่จัดการ focus เอง (เช่นกล่องยืนยัน `useConfirm`) ยังใช้ของเดิมก่อน ระบบเข้าไปช่วยเฉพาะตอนที่ focus หลุดไปที่ตัวหน้าเว็บ; หน้าต่างที่เปิดจากปุ่มปกติทำงานเหมือนเดิม
+- กรอบ focus ที่ปุ่ม ⋮ ขึ้นเฉพาะตอนใช้คีย์บอร์ด ใช้เมาส์ไม่ขึ้น
+- ตรวจใน Chrome: Ticket (ดูข้อมูล / รับเคส) และกลุ่มบทบาท (แก้ไข / ลบกลุ่ม → ยกเลิก) ทั้งเมาส์และคีย์บอร์ด; เทส `tests/js/menu-return-focus.test.ts`
+
+## ทรัพย์สิน: หัวคอลัมน์ภาษาอังกฤษสั้นลง ตารางพอดีจอ 1920 (2026-10-18)
+- หัวคอลัมน์ภาษาอังกฤษ (ผู้ใช้เลือกชุดสั้น): Warranty / Lease end → Cover ends, Purchase date → Purchased (key ใหม่ `asset_col_purchased` เพราะ `asset_purchase_date` ใช้ในฟอร์มด้วย), Handed over → Issued, Holder / Department → Holder (แผนกยังอยู่บรรทัดล่าง) ภาษาไทยไม่เปลี่ยนคำ
+- ผู้ถือครอง / แผนก กว้างไม่เกิน 8.5rem และคลัง / สถานที่ไม่เกิน 7rem ชื่อยาวตัดด้วย "…" และดูเต็มได้จาก `TruncText` (แทน `title`) มีผลทั้งสองภาษา
+- วัดที่ 1920 (ที่ว่าง 1557px): ไทยหน้ามีผู้ถือครอง 1577 → 1541px, ไม่มีผู้ถือครอง 1528px; อังกฤษหน้ามีผู้ถือครอง 1724 → 1543px, ไม่มีผู้ถือครอง 1741 → 1513px
+
+## คลังอะไหล่ › เหตุการณ์: ตารางพอดีจอ 1920 (2026-10-18)
+- เดิมคอลัมน์รวมกัน 1604px ในที่ 1557px ลดเฉพาะความกว้างที่เผื่อเกินเนื้อหา (วัดจาก 100 แถว ทั้งไทยและอังกฤษ): เวลา 140 → 130, ประเภท 120 → 114, ต้นทุน/หน่วย 110 → 100, มูลค่า 120 → 110, อ้างอิง 140 → 120, หมายเหตุอย่างน้อย 12rem → 10rem ตอนนี้ต้องการ 1516px ไม่มีช่องไหนล้น
+
+## Toast: คิวเข้าทีละใบ สูงสุด 5 ใบ และแก้ WCAG (2026-10-18)
+- กติกาใหม่: Toast ที่มีเวลา (สำเร็จ / ข้อมูล / เตือน) เข้าคิวตามลำดับที่เกิด ขึ้นทีละใบห่างกัน 1.5 วินาที (`TOAST_STAGGER_MS`) บนจอได้สูงสุด 5 ใบ (`TOAST_MAX_TIMED`) ใบที่เกินรอจนมีใบหายไป; Toast Error ที่ต้องปิดเอง ขึ้นทันทีและไม่นับรวมใน 5 ใบ อยู่ด้านบนของกอง
+- บัคเดิมที่แก้: ยิงหลายใบพร้อมกันแล้วใบที่ 4 เป็นต้นไปขึ้นพร้อมกันทีเดียว (เพดาน stagger 3.6 วินาที), ใบใหม่ดันใบเก่าหลุดจอโดยไม่มี animation แล้วใบเก่าเด้งกลับมาทีหลังพร้อมนับเวลาใหม่ (กฎ "แสดงใบใหม่สุด"), Error 3 ใบเต็มช่องแล้ว Toast อื่นค้างในคิวไม่ขึ้นเลย ตอนนี้คิวเป็น FIFO ตัวเดียวใน store (`promoteNext`, `nextPromotionAt`, `visibleToasts`) ไม่มีการดันใบที่ขึ้นแล้วออก
+- หยุดนับเวลาตอนชี้ / focus ใช้สถานะเดียว (เดิมชี้แล้ว focus ซ้ำทำให้เวลาที่เหลือติดลบ และมี timer ซ้อนจนปิดใบที่กำลังชี้อยู่)
+- WCAG: live region สองชั้นที่ mount ค้างไว้ตลอด (Error = assertive, อื่น ๆ = polite) แทน role ต่อใบที่เกิดพร้อมข้อความ (screen reader บางตัวไม่อ่าน); Toast ที่กดได้ใช้ `<button>` แยกจากปุ่มปิด (เดิม div กดได้ซ้อนปุ่ม); ปุ่มปิด 24×24 px มีพื้นที่กด 40 px สำหรับ iPad; ไอคอน `aria-hidden`; ข้อความ Error แสดงเต็มไม่ตัด 2 บรรทัด
+- 429 ใช้ key เดียว (`http-throttle`) คำขอขนานที่ได้ Retry-After ต่างกันไม่ซ้อนหลายใบ
+- เทส `tests/js/toast-queue.test.ts`; ตรวจใน Chrome: ยิง 8 ใบ (มี Error 1) ขึ้นทีละใบตามระยะห่าง ไม่มีใบไหนเข้าพร้อมกันหรือเด้งกลับ โหมดสว่าง / มืด
+- ย้าย Toast ไปขวาบนใต้ Topbar (`top-[4.75rem]`) เพราะมุมขวาล่างทับปุ่มหลักของ Dialog (ถัดไป / บันทึก) บน iPad และ Error ค้างจนกดปิด; ไอคอนบนวงกลมเหลืองของ Toast เตือนเป็นสีเข้ม (`text-amber-950`) แทนสีขาวที่คอนทราสต์ ~2.1:1
+- ระยะห่าง 2.5 → 1.5 วินาที: ยิง 20 ใบ (อยู่ใบละ 6 วินาที) ขึ้นครบ 5 ใบบนจอที่วินาทีที่ 6 ใบสุดท้ายเข้าที่ 29 วินาที หายหมดที่ 35 วินาที (เดิม 54 วินาที)
+
+## สัญญา: แก้ไขจากเมนู ⋮ เปิดฟอร์มอย่างเดียว บันทึกแล้วไปหน้ารายละเอียด (2026-10-18)
+- เดิมเลือก "แก้ไข" จาก ⋮ แล้ว URL เป็น `?view=<id>&edit=1` หน้ารายละเอียดเปิดซ้อนอยู่ใต้ฟอร์ม และกดยกเลิกแล้วค้างอยู่ที่หน้ารายละเอียดที่ไม่ได้เปิดเอง ตอนนี้ฟอร์มใช้ `?edit=<id>` แยกจาก `?view`: จาก ⋮ เปิดฟอร์มอย่างเดียว ยกเลิกกลับตาราง บันทึกแล้วเปิดหน้ารายละเอียดของสัญญานั้น (`onSaved`); จากปุ่มแก้ไขในหน้ารายละเอียด ยกเลิกกลับหน้ารายละเอียดเหมือนเดิม
+- ลิงก์ / รีโหลด `?edit=` และ `?add=1` เปิดฟอร์มเฉพาะคนที่มีสิทธิ์ และไม่เปิดแก้ไขสัญญาที่ยกเลิก / สิ้นสุดแล้ว; ลิงก์สัญญาที่ไม่มีอยู่ขึ้น "ไม่พบรายการ"
+- ฟอร์มแก้ไขรอข้อมูลที่โหลดใหม่เสร็จก่อนเติมค่า (ไม่ใช้ข้อมูลเก่าใน cache ที่อาจทับการแก้ของคนอื่น)
+- สร้างสัญญาจากแท็บภาพรวมแล้วกด Back ไม่เปิดฟอร์มเปล่าซ้ำ (สลับไปแท็บทั้งหมดหลังฟอร์มปิดและลบ `?add` ออกแล้ว)
+- ระหว่างปิด หัวฟอร์มไม่เปลี่ยนเป็น "สัญญาใหม่" และหน้าต่างยกเลิกสัญญาไม่กระตุกเพราะชื่อ / รหัสหาย (เก็บสำเนาไว้ระหว่าง animation)
+- ตรวจเมนู ⋮ หน้าอื่น: ทรัพย์สิน พนักงาน Ticket เปิดฟอร์มแก้ไขอย่างเดียวอยู่แล้ว (ไม่มีหน้ารายละเอียดซ้อน) แต่บันทึกแล้วกลับตาราง ไม่เปิดหน้ารายละเอียด
+
+## สิทธิ์: ทำสำเนา Role Template และจานสีกำหนดเองแบบใหม่ (2026-10-18)
+- ทุกแถวในรายการบทบาทมีปุ่ม ⋮ แสดงตลอด (เดิมปุ่มแก้ไข / ลบซ่อนจนกว่าจะชี้): แก้ไขชื่อและสี / ทำสำเนา / ลบบทบาท (สีแดง) ส่วน Administrator มีแค่ "ทำสำเนา"; ต่ำกว่า lg ปุ่ม ⋮ อยู่ข้างตัวเลือกบทบาทในหัวที่ติดด้านบน รายการในเมนูสูง 40px (`role-row-menu.tsx`)
+- ทำสำเนาใช้ Dialog เดียวกับเพิ่มบทบาท (`RoleModal` โหมด `duplicate`): หัว "ทำสำเนาบทบาท" จาก <ชื่อเดิม>, ชื่อเริ่มต้น "<ชื่อเดิม> (สำเนา)", สีเดิม, บอกจำนวนสิทธิ์ที่จะคัดลอก ไม่รวมสมาชิก สร้างเสร็จแล้วเปิดบทบาทใหม่ทันที (mutation รอ matrix โหลดใหม่ก่อน จึงไม่โดนตัด `?role=` ที่ยังไม่รู้จัก)
+- API `POST /api/roles/{key}/duplicate` (`RoleDuplicateService`): คัดลอกเฉพาะสิทธิ์ที่บันทึกไว้ของต้นฉบับ (Administrator = ทั้ง catalogue แต่สำเนาไม่ใช่ super), ไม่คัดลอกสมาชิก, key ไม่ซ้ำ (`Role::uniqueKeyFor`), เพดานสิทธิ์เดียวกับการบันทึกบทบาท (คนที่ไม่ใช่ super คัดลอกได้เฉพาะบทบาทที่สิทธิ์ไม่เกินตัวเอง ไม่งั้น 403 `grant_ceiling` ขึ้นข้อความเดิมของหน้า), บันทึก audit "Duplicated role"; เทส `tests/Feature/RoleDuplicateTest.php`
+- จานสีกำหนดเอง (`color-swatch-picker.tsx`, ใช้ร่วมทุกที่): ตาราง 3×12 ไม่มีช่องว่าง ทุกสีคอนทราสต์ ≥ 3:1 ทั้งบนการ์ดสว่าง (#ffffff) และมืด (#131720); ช่อง "รหัสสี" มี # นำหน้าคงที่ กับตัวอย่างสีครึ่งต่อครึ่ง กดไอคอน ☀ / ☾ สลับพื้นตัวอย่างสว่าง / มืด; สีที่อ่อนหรือเข้มเกินไปขึ้นเหตุผลบรรทัดเดียวกับปุ่ม และกดนำไปใช้ไม่ได้ (`contrastProblem`)
+- ตรวจใน Chrome: เมนู Administrator / บทบาทอื่น, ทำสำเนา Staff ได้สิทธิ์ 19 รายการ สมาชิก 0 แล้วเปิดบทบาทใหม่, โหมดมืด, iPad 768px; ลบสำเนาทดสอบออกแล้ว
+- ทำสำเนาบทบาทที่มีสิทธิ์เกินตัวเอง ขึ้นข้อความเฉพาะ "ทำสำเนาไม่ได้ เพราะ <บทบาท> มีสิทธิ์ที่คุณไม่มี" (`perm_duplicate_ceiling`, อ่าน code ด้วย `refusalCode`) ตอนบันทึกสิทธิ์ยังใช้ข้อความเดิม; ลองจริงด้วยบัญชีทดสอบที่มีแค่สิทธิ์จัดการสิทธิ์ / บทบาท แล้วลบบัญชีออก
+- ทรัพย์สิน / พนักงาน / Ticket ใช้กติกาเดียวกัน: ฟอร์มแก้ไขอยู่ใน URL `?edit=<id>` (เดิมเป็น state ในหน้า รีโหลดแล้วหาย) จากเมนู ⋮ เปิดฟอร์มอย่างเดียว ยกเลิกกลับตาราง บันทึกแล้วเปิดหน้ารายละเอียด (`?view=<id>`); จากปุ่มแก้ไขในหน้ารายละเอียด ยกเลิกกลับหน้ารายละเอียด; ลิงก์ / รีโหลดเปิดฟอร์มเฉพาะเมื่อเมนูจะให้แก้ (สิทธิ์, ทรัพย์สินที่ตัดจำหน่ายแล้ว, พนักงานลาออก / ผู้ดูแลระบบสูงสุด, Ticket ตาม `canEditTicket`); id ที่ไม่มีขึ้น "ไม่พบรายการ"; ฟอร์มรับ prop `onSaved` (`AssetFormDrawer`, `EditEmployeeDialog`, `EditTicketDrawer`)
+
+## เมนู ⋮: focus ไม่หลุดเมื่อแถวหาย, การ์ดไทม์ไลน์สัญญาไม่มี inline style (2026-10-18)
+- ลบแถว (หรือยกเลิก / สิ้นสุดสัญญาที่ทำให้แถวหลุดจากตัวกรอง) จากเมนู ⋮ แล้ว focus เคยหลุดไปที่ตัวหน้าเว็บ เพราะปุ่ม ⋮ ที่ต้องรับ focus คืนหายไปพร้อมแถว ตอนนี้ Dialog / Sheet ที่เปิดจาก ⋮ จำตำแหน่งแถวไว้ตอนเปิด ถ้าปุ่มหายไป focus จะย้ายไปที่ปุ่ม ⋮ ของแถวที่มาอยู่ตำแหน่งเดิม (หรือแถวบนถ้าเป็นแถวสุดท้าย) และรอถ้าตารางกำลังขึ้น skeleton; เลิกตามเมื่อผู้ใช้ย้าย focus / คลิกที่อื่น หรือครบ 15 วินาที (`followRowOnRemoval`, `rowToRefocus` ใน `shared/lib/menu-return-focus.ts`) ใช้ได้ทุกตารางที่มีเมนู ⋮
+- การ์ดไทม์ไลน์และแถบผู้ขายในแท็บภาพรวมของสัญญาเลิกใช้ `style={{…}}` 4 จุด: ค่าที่คำนวณได้ส่งเป็น CSS variable ผ่าน ref (`styleVars()` ใน `shared/lib/style-vars.ts`) แล้วใช้คลาส Tailwind `h-(--plot-h)`, `left-(--x)`, `bottom-(--y)`, `w-(--w)`; จุดบนไทม์ไลน์ย้ายตำแหน่งไปที่ span ครอบ (InfoPopover ไม่ส่ง ref ออกมา)
+- เทส `tests/js/style-vars.test.ts`, `tests/js/menu-return-focus.test.ts` (เพิ่ม 4 ข้อ); เทส JS ทั้งหมด 270 ข้อผ่าน; ตรวจ CSS ที่ build ว่ามีคลาสใหม่ครบ ยังไม่ได้ตรวจด้วยตา (Chrome extension ของ session นี้เชื่อมไม่ได้)
+
+## สิทธิ์: บัค WCAG Tablet และปรับโครงสร้าง (2026-10-18)
+ขั้น 2–4 ของรีวิวโมดูลสิทธิ์ (แผน `docs/superpowers/plans/2026-10-18-permission-steps-2-4.md`) commit `f80f3dbc..1a728a07` คำทั้งหมดผ่านการอนุมัติจาก `.superpowers/permission-review/steps-2-4-wording.md`
+
+### Role Templates
+- Role ที่เลือกอยู่ใน URL (`?role=<key>`, Role แรกไม่มี) ปุ่ม Back/Forward เลื่อนระหว่าง Role ได้ ถ้า key ไม่มีอยู่จริงจะถูกลบออกจาก URL
+- มีสวิตช์ที่ยังไม่บันทึก: เปลี่ยน Role เปลี่ยนแท็บ กดลิงก์ในแอป หรือ Back/Forward จะถามก่อน (ตัวกันกลาง `useNavigationGuard` + `useNavigationGuardHost` ใน AppShell, `guardNavigation()` สำหรับโค้ดที่สั่งเปลี่ยนหน้าเอง เช่นกระดิ่ง) รีโหลดหรือปิดแท็บใช้ prompt ของ browser ลิงก์ mailto/tel และเว็บอื่นไม่ถาม
+- แก้พร้อมกัน 2 คน: ทุก Role มี `version` บันทึกที่เวอร์ชันเก่าได้ 409 `role_changed` ไม่เขียนอะไร หน้าเว็บโหลดค่าล่าสุดแล้ววางเฉพาะสวิตช์ที่เราเปลี่ยนทับค่าของอีกคน ให้ตรวจแล้วกดบันทึกใหม่ (ไม่ทับงานคนอื่น)
+- ร่างสิทธิ์ไม่หายเมื่อโหลดข้อมูลใหม่, ตัวนับการ์ดกับตัวนับรวมใช้กฎเดียว, ผลค้นหาที่ซ่อนใต้โมดูลที่ปิดมีข้อความบอก, ค้นไม่เจอใช้ EmptyState, skeleton ตามผังการ์ด
+- Tablet (ต่ำกว่า lg): รายชื่อ Role เป็นช่องเลือกใน header ที่ติดด้านบน พร้อมปุ่มแก้/ลบ/เมนู
+- WCAG: แท็บใช้ `PageTabs`, หัวข้อ h2/h3 และการ์ดเป็น `role=group`, สวิตช์พื้นที่กด 36×28 กดที่ชื่อสลับได้, คำอธิบายผูกกับสวิตช์ (`aria-describedby`) และขึ้นเองเมื่อกด Tab มาถึง, สวิตช์ที่ล็อกเป็น `aria-disabled` พร้อมเหตุผล, ปุ่มบนจอสัมผัส 36px, ไอคอน i เข้มขึ้นทั้งระบบ, CenteredAlert มีแอนิเมชันปิดและคืนโฟกัส
+
+### กลุ่มบทบาท
+- กลุ่มที่ไม่มีบทบาท สมาชิกได้บทบาทพื้นฐาน `user` เหมือนคนที่ไม่มีกลุ่ม
+- รายชื่อบทบาทในหน้าต่างกลุ่มมาจาก `GET /api/group-roles` (`roles`) คนที่มีแค่สิทธิ์จัดการกลุ่มก็เลือกได้ บทบาทที่สูงกว่าสิทธิ์ตัวเองเป็นสีเทา
+- "ทั้งแผนก (N คน)" นับเฉพาะคนที่เพิ่มได้จริง (`meta.addable`) ถ้าเป็น 0 ปิดพร้อมเหตุผล
+- เอาคนออกจากกลุ่มไม่ได้ ถ้าคนนั้นจะตกไปได้บทบาทที่สูงกว่าสิทธิ์ของผู้แก้ (ผู้ใช้เลือกเก็บกฎนี้ 2026-10-18)
+- ย้ายคนออกจำนวนมากใช้ query จำนวนคงที่ (เดิมทีละคน)
+
+### บันทึกการตรวจสอบ
+- ใช้ `DataTable` กลาง แบ่งหน้าฝั่ง server ตัวกรองอยู่ใน URL มีสถานะโหลดและ "โหลดไม่สำเร็จ"
+- ชื่อเหตุการณ์และชื่อฟิลด์เป็นภาษาไทย/อังกฤษ (`audit_ev_*`, `audit_field_*`), `owner_employee_id` เป็น "ผู้ถือครอง" สำหรับทรัพย์สิน และ "เจ้าของ" สำหรับรายการอื่น, ผู้จำหน่ายใช้ "ผู้จำหน่าย"
+- ค่าแสดงเป็นคำของโมดูล, ใช่/ไม่ใช่ เฉพาะคอลัมน์ boolean ที่รู้จัก, ตัวเลขมีจุลภาคเฉพาะคอลัมน์มูลค่า, รหัสอ้างอิงแสดงเป็นชื่อ
+- แถว "ลบ" กดดูข้อมูลที่ถูกลบได้ ไม่เก็บข้อมูลลับลงบันทึก (รหัสผ่าน, token, product key, ช่องที่เข้ารหัส และคอลัมน์ชื่อคล้าย password/secret/token)
+- หมวดตัวกรองตรงแบบตัวแรกที่เจอ หมวดเข้าสู่ระบบมาก่อน "เปลี่ยนรหัสผ่านตัวเอง" จึงไม่ไปอยู่หมวดแก้ไข; "ทำสำเนาบทบาท" อยู่หมวดสร้าง; บันทึก "แก้สิทธิ์" ผูกกับ Role และไม่บันทึกถ้าไม่ได้เปลี่ยนอะไร
+- แก้บัคเดิม: การแสดงชื่อฟิลด์ "เหตุผลการตัดจำหน่าย" ทำให้ error, แก้ Role โดยไม่ส่งสีได้ 500 (ตอนนี้ใช้สีเดิม)
+
+### ปรับโครงสร้าง
+- Controller ของสิทธิ์ทั้ง 3 ตัวเหลือแค่ตรวจสิทธิ์ ตรวจข้อมูล เรียก Service และตอบกลับ: `GroupRoleService`, `GroupRoleGuards`, `GroupMembershipWriter`, `GroupRoleAuditDetails`, `RolePermissionService`, `RoleMatrixService`, `RoleService`; Form Request อยู่ใน `App\Http\Requests\Permission`; `Permissions::normalize()` รวมกฎ 12 ขั้น; `App\Support\GrantCeiling` คือข้อความปฏิเสธที่เดียว
+- ตรวจเทียบ API 92 ครั้ง โค้ดเก่ากับใหม่ตอบเหมือนกันทุกไบต์ เทสต์เดิมไม่ได้แก้
+- หน้าเว็บมีต้นไม้สิทธิ์ชุดเดียว (`lib/permission-specs.ts`) และกฎเปิดปิดเดียว (`cascadeToggle`)
+
+### ข้อจำกัดและงานต่อ
+- สวิตช์ที่ล็อก เหตุผลยังได้ยินเฉพาะผ่านโปรแกรมอ่านหน้าจอ คนที่มองเห็นแต่ใช้คีย์บอร์ดยังไม่เห็น
+- ยังไม่ได้รวม `normalize*` ฝั่ง server ให้เป็นกฎเดียว, server ยังไม่ส่งโครงสร้างต้นไม้ให้หน้าเว็บ (ต้องเพิ่ม API), ยังไม่มี component ต้นไม้กลางตัวเดียว และยังไม่มี `RoleResource`
+- ประวัติ Forward อาจหายบางส่วนหลังกด "แก้ไขต่อ"; ลำดับ popstate ต้องเช็กบน iPad จริง
+- ยังไม่ได้ตรวจหน้าจอใน Chrome ที่ 768/1024 ทั้งโหมดสว่าง/มืด ไทย/อังกฤษ
+
+## ฟอร์มแก้ไข: ตรวจด้วยตา `?edit=<id>` และแก้ 3 จุดที่เจอ (2026-10-18)
+- ตรวจ 6 ข้อใน forward-session (ฟอร์มขึ้นอย่างเดียว, ยกเลิก, บันทึกแล้วเปิดรายละเอียด, ยกเลิกจากรายละเอียด, รีโหลด / รายการที่แก้ไม่ได้ / id ที่ไม่มี, เปิดทันทีและไม่หายระหว่างปิด) ครบ 4 หน้า สัญญา ทรัพย์สิน พนักงาน Ticket ที่ Full HD และ iPad 768 ผ่านทั้งหมด ใช้บัญชีทดสอบชั่วคราวและคืนค่าข้อมูลที่บันทึกแล้ว
+- ฟอร์มทรัพย์สิน: error จาก server ขึ้นใต้ช่องของตัวเอง (เดิมทุกกรณีขึ้น "บันทึกไม่สำเร็จ" ใต้ช่องรุ่น) ช่อง Tag แสดง error ได้, error ที่ไม่ใช่ของช่องใดเป็น Toast; ข้อความ server เรียกช่องนี้ว่า "Tag" ตามฟอร์ม (`StoreAssetRequest::attributes`, "ตัวย่อ" ยังเป็นของแผนก)
+- ฟอร์มแก้ไข Ticket: เปิดแล้วโฟกัสการ์ดประเภทที่เลือกอยู่ (เดิมโฟกัสการ์ดแรก และกรอบโฟกัสหน้าตาเหมือนการ์ดที่เลือก จึงดูเหมือนเลือก 2 ใบ); ปุ่มบันทึกกดได้เมื่อมีการแก้เท่านั้น เหมือนฟอร์มทรัพย์สิน / พนักงาน
+
+## ปุ่ม Back: ปิดหน้าต่าง และถามก่อนทิ้งฟอร์มที่แก้ค้าง (2026-10-18)
+- **Back ปิดหน้าต่าง:** หน้าต่างใน URL (`?view` / `?edit` / `?add` / `?count`) เปิดแบบเพิ่มประวัติ (push) Back จึงปิดหน้าต่างก่อนออกจากหน้า Forward เปิดกลับ; ปิดด้วย X / ยกเลิกจะย้อนประวัติแทนการลบค่า ส่วนหน้าต่างที่เปิดจากลิงก์ตรงหรือรีโหลดจะลบค่าแบบแทนที่ (ไม่หลุดออกจากแอป); บันทึกฟอร์มแล้วไปหน้ารายละเอียดเขียนแบบแทนที่ Back จึงไม่เปิดฟอร์มที่บันทึกแล้วกลับมา — hook กลาง `usePageDialogs` (`open` / `close` / `replace`, ตัดสินด้วย `pageDialogClose`) ใช้ใน สัญญา ทรัพย์สิน พนักงาน Ticket คำขอ คลังอะไหล่ (รายการ + รอบนับ) Access กลุ่มบทบาท Workflow (Email templates ทำแบบนี้อยู่แล้ว; `?view` ของกราฟรายงานเป็นตัวเลือกมุมมอง ไม่ใช่หน้าต่าง)
+- พนักงาน: ลิงก์โปรไฟล์ในหน้ารายละเอียดสลับคนในที่เดิม ปุ่มปิดจึงปิดหน้าต่างเลย; Workflow: ดู → แก้ไขสลับในที่เดิม ปิดตัวแก้ไขแล้วกลับรายการ
+- **ถามก่อนทิ้งข้อมูล:** `useDiscardGuard` ลงทะเบียนตัวกันการนำทางให้ทุกฟอร์ม Back / Forward / ลิงก์ที่เปลี่ยน `?view` `?edit` `?add` `?count` `?dialog` หรือออกจากหน้า ถามด้วยกล่อง "ทิ้งข้อมูลที่กรอกไว้?" ตัวเดียวกับปุ่มปิด; ตัวกันเป็น stack (ฟอร์มในหน้าต่างซ้อนหน้าที่แก้ค้าง); การย้อนที่แอปสั่งเองหลังยืนยัน / บันทึกผ่านได้ครั้งเดียว (`passNextBack`); หน้ารอบนับเลิกใช้ตัวกัน Back เฉพาะหน้าเดิม
+- **บัคเดิมของตัวกัน Back ที่แก้:** listener บน window ทำงานตามลำดับที่เพิ่ม (capture ไม่ได้มาก่อน) React Router เพิ่ม `popstate` ตอน BrowserRouter mount ก่อนตัวกัน และ render แบบ sync ตัวกันจึงเห็นฟอร์มปิดไปแล้วทุกครั้ง — ย้ายไปเพิ่ม listener ตอนโหลดโมดูล
+- เทส: `tests/js/dialog-search.test.ts` (+3 `pageDialogClose`), เทส JS ทั้งหมด 280 ข้อผ่าน; ตรวจใน Chrome: ทุกหน้าข้างต้นเปิดแล้ว Back ปิด, สัญญา: ⋮ แก้ไข → ยกเลิก → ตาราง, รายละเอียด → แก้ไข → ยกเลิก → รายละเอียด → Back → ตาราง, ⋮ แก้ไข → บันทึก → รายละเอียด → Back → ตาราง, ฟอร์มแก้ค้าง → Back → ถาม → แก้ไขต่อ / ทิ้ง ถูกต้อง; รอบนับฉบับร่างพิมพ์ค้าง → Back → ถาม → ทิ้ง → ปิด
+
+## หน้าต่างทุกตัวมีคำอธิบายตามมาตรฐาน (คำเตือน "Missing Description") (2026-10-18)
+- Radix (ไลบรารีหน้าต่าง) ตามแนวทาง WAI-ARIA ต้องการให้หน้าต่างมี `Description` ให้ screen reader อ่าน หรือบอกชัดด้วย `aria-describedby={undefined}` ว่าตั้งใจไม่มี ไม่อย่างนั้นเตือน "Missing `Description` or `aria-describedby={undefined}` for {DialogContent}" ใน console
+- **ต้นเหตุส่วนใหญ่:** กล่องยืนยันกลาง (`useConfirm`) ตั้ง `id` ของคำอธิบายเองทับ id ของ Radix จึงเตือนทุกครั้งที่เปิดกล่องยืนยัน ทั้งที่อ่านได้จริง — ตอนนี้ใช้ id ของ Radix และต่อ id ของกล่องชื่อรายการ (entity) เข้า `aria-describedby` ผ่าน callback ref screen reader อ่านทั้งข้อความและชื่อรายการเหมือนเดิม
+- **ใส่คำอธิบายจริง (sr-only):** รายละเอียดพนักงาน (ตำแหน่ง, แผนก), โปรไฟล์ (ชื่อเจ้าของ)
+- **บอกชัดว่าไม่มีคำอธิบาย:** ฟอร์มแผนก / ตำแหน่ง / หน่วยงาน (หัวเรื่องและชื่อช่องบอกครบ), ดูไฟล์แนบ (หัวเรื่องคือชื่อไฟล์), Role ตอนไม่ได้ทำสำเนา, ตัวเลือกคำขอตอนไม่มีรายการ
+- **แก้บัค:** หน้าต่างยกเลิกสัญญาไม่มีคำอธิบายในจังหวะแรกที่เปิด (สำเนาที่เก็บไว้มาช้าไปหนึ่ง render) ตอนนี้ใช้สัญญาที่เปิดอยู่ก่อน
+- ตรวจใน Chrome ด้วย console: รายละเอียดพนักงาน, ฟอร์มแผนก / ตำแหน่ง / หน่วยงาน, โปรไฟล์, กล่องยืนยันการแก้ไขสัญญา (มีกล่องชื่อรายการ — ผูก 2 id), กล่อง "ยังปิดสัญญาไม่ได้" ไม่มีคำเตือนแล้ว
+
+## Sidebar / Topbar: รีวิว, เมนูบน iPad, WCAG และตัวเลขเมนู Ticket (2026-10-18)
+
+- รีวิว Sidebar + Topbar (WCAG, Tablet, ความสม่ำเสมอ, code review, ความปลอดภัย) จากโค้ดและด้วยตาใน Chrome (Full HD + iframe 768, สว่าง/มืด) — ไม่พบช่องโหว่; contrast ผ่านทุกจุด
+- แก้แล้ว: ตัวเลขบนเมนู Ticket นับให้ทุกคนที่เห็นเมนู (`tickets.module` / `tickets.create` / `tickets.my`) เดิมนับเฉพาะ `tickets.create` (`SidebarBadgeService::gatedAny`, เทสใน `SidebarBadgeTest`) — `74450081`
+- เมนูข้างบนจอ < 1280px (iPad) ตาม mockup https://claude.ai/artifact/XMg1j7hL1FVBCguza5pbBF — `076f8a85`
+  - แถบไอคอนขยายเป็นเมนูทับเนื้อหา (clip-path, เปิด 240ms / ปิด 180ms) มีพื้นหลังทึบ เนื้อหาไม่ถูกเบียด; ไอคอนอยู่กับที่ ชื่อเมนูค่อยขึ้น
+  - ปุ่ม ≡ เลื่อนไปมุมขวาของหัวเมนูและหมุนเป็น X (ปุ่มเดียว focus / `aria-expanded` ไม่หลุด)
+  - ปิดเมื่อเลือกเมนู, Esc, แตะพื้นหลัง, Back/Forward, ขยายจอ (ค่าเปิดชั่วคราวไม่ค้างอีก); เปิดอยู่ Tab วนในเมนู ส่วนอื่น `inert`
+  - Breadcrumb เป็น `<nav>` + `aria-current` ตัดชื่อหน้าด้วย … ปุ่มกระดิ่งไม่หลุดจอ; ลดการเคลื่อนไหว = จาง 120ms อย่างเดียว
+  - CSS `.nav-*` ใน `app.css` (ผูก `data-nav` / `data-narrow` ที่ AppShell), `menu-focus.ts` + `tests/js/menu-focus.test.ts`
+- WCAG / Tablet — `a757920b`: ลิงก์ "ข้ามไปที่เนื้อหา", ปุ่มแถบบนและปุ่มออกจากระบบ 40px บนจอ < 1280px, ตัวเลขเมนูจอแคบคั่นหลักพัน + ข้อความ screen reader ("พนักงาน, รอดำเนินการ 651 รายการ"), ปุ่มภาษามี `lang` และข้อความอยู่ใน `lang/`
+- จอ ≥ 1280px: ภายหลังผู้ใช้เลือกให้ animation เหมือน iPad — `575eb39d` เมนูยังดันเนื้อหา แต่ใช้แผงเดียวกับจอแคบ ความกว้างยืด 64↔256px (240/180ms) ไอคอนอยู่กับที่ ชื่อเมนูค่อยขึ้น (หน้าตาตอนจบเปลี่ยนเล็กน้อย: แถว 36px ไอคอนห่างขอบ 15px, แถบไอคอนมีช่องหัวกลุ่ม 20px, บรรทัด © คงที่เดิมเหนือขอบ footer ตามที่ผู้ใช้ขอ); ไม่ทำปัดเพื่อปิด; ข้อความ © คง 10px
+- Topbar micro-interactions — `b7122b3a`, `8a5011cf`: ขอบเมนูกับปุ่ม ≡ ขยับพร้อมกันทุกเฟรม (เงาแยกชั้น); ปุ่มแถบบนทุกตัว hover จาง 150ms + ยุบตอนกด; ไอคอน ☾/☀ หมุนเข้า 200ms (keyframe เพราะการสลับโหมดหยุด transition 1 เฟรม); ถาดแจ้งเตือนมี animation ตอนปิด 100ms และรับ focus ตอนเปิด; ตัวเลขกระดิ่งเป็น pill กว้างตามข้อความ และเด้งเมื่อมีแจ้งเตือนใหม่ (`count-rise.ts`) — ทั้งหมดปิดเมื่อลดการเคลื่อนไหว
+
+## ช่องกรอกทุกช่องมี id หรือ name (Chrome Issues: "A form field element should have an id or name attribute") (2026-10-18)
+- Chrome แนะนำให้ `<input>` / `<textarea>` / `<select>` มี `id` หรือ `name` เพื่อให้ autofill ทำงานถูกต้อง (ไม่ใช่ error)
+- `Input` และ `Textarea` กลางใส่ id อัตโนมัติ (`useId`) เมื่อผู้เรียกไม่ได้ส่ง `id` หรือ `name` (ตั้งหลัง props จึงชนะ `id={undefined}`); ช่องที่อยู่ใน `Field` ได้ id จาก Field เหมือนเดิม
+- ช่องที่เขียน `<input>` ตรง 17 จุดได้ `name` ที่สื่อความหมาย: ไฟล์รูป / โลโก้ / ไฟล์แนบ (`photo`, `logo`, `files`), ช่องค้นหาใน SearchableSelect / SearchSelect / ผังองค์กร / icon picker (`search`, `icon_search`), ตัวเลือกวัน SLA, serial ที่ติ๊กในคลัง, ขนาดพื้นที่ Access, ตัวแทรกตัวแปรอีเมล, zoom ตัดรูป
+- ตรวจใน Chrome: ฟอร์มสร้าง Ticket / ทรัพย์สิน / พนักงาน / สัญญา / คำขอ / สินค้าคลัง / Software (Access), หน้า Role Templates, ตั้งค่า (+ SLA), อีเมลและการแจ้งเตือน, รายงาน, Workflow — ไม่เหลือช่องที่ไม่มีทั้ง id และ name
+
+## รายงาน: งานสร้างไฟล์ใช้หน่วยความจำได้ถึง 4GB (2026-10-18)
+- ตรวจ PDF ทั้ง 22 รายงาน + ประวัติ SKU (ผลตรวจ https://claude.ai/artifact/YDEovaV5D4JmjbwaJVGtDk): PDF ที่มีรายการ 600–1,000 แถว ใช้หน่วยความจำ 570MB–2.2GB แต่ PHP ตั้งไว้ 512M จึงล้ม 11 รายงาน (fatal error จับด้วย try/catch ไม่ได้ ไฟล์ค้าง "กำลังสร้าง" แล้วกลายเป็นสร้างไม่สำเร็จ)
+- `GenerateReportExport` และ `SendScheduledReport` ตั้ง `memory_limit` เป็น `GenerateReportExport::MEMORY_LIMIT` (4G) ก่อนสร้างไฟล์ ค่ากลางของ PHP ยัง 512M
+- วัดจริง: ประวัติโอนย้ายและรับคืน (973 แถว 127 หน้า) ใช้ 2.2GB ใช้เวลา ~70 วินาที สร้างผ่านในโปรเซส 512M ที่ยกเพดานแล้ว; เทส `ReportJobMemoryLimitTest`
+- ยังค้าง: ลดแถวใน PDF, แยกคิว Export ออกจากคิวอีเมล, หัว/ท้ายกระดาษ (ดู `forward-session.md`)
+
+## URL ไฟล์เป็น path แบบ relative (Chrome Issues: "Mixed content") (2026-10-18)
+- เปิดเว็บผ่าน HTTPS แล้ว Chrome เตือน Mixed content ที่รูปพนักงาน (`photo?v=…` ถูก "Automatically upgraded") เพราะ URL ไฟล์สร้างด้วย `route()` แบบเต็ม ซึ่งยึด scheme ที่ server เห็น (http หลัง proxy / tunnel)
+- URL ไฟล์ทั้ง 6 แบบ (รูปพนักงาน, โลโก้ Software / Social, ไฟล์แนบสัญญา / คำขอ / Ticket) เปลี่ยนเป็น path (`route(..., false)`) ใช้แค่ในหน้าเว็บของแอปเอง (ไม่มีในอีเมล / PDF) เบราว์เซอร์จึงเรียกด้วย scheme และ host เดียวกับหน้าเว็บ
+- เทส `RelativeFileUrlsTest` (2 ข้อ); เทสที่เกี่ยวกับไฟล์ / ผู้ใช้ / Access / สัญญา / คำขอ / Ticket 1,291 ข้อผ่าน
+
+## รายงาน: ไฟล์ Excel ทั้ง 22 รายงานพร้อมใช้กับ Power BI และส่ง Audit ภายนอก (2026-10-18)
+ตรวจไฟล์ Excel จริงของทุกรายงานบน `itservices_perf` (ผลตรวจครั้งแรก: artifact "Audit ไฟล์ Excel รายงาน") แล้วแก้ที่ engine กลางและรายโดเมน commit `621a9a5f..` (ดู `git log --grep=report`)
+
+### ความปลอดภัย
+- ผู้ลาออก (พ้นวันทำงานวันสุดท้าย) สร้างไฟล์ในคิวไม่ได้ และรายงานตามกำหนดเวลาของเขาหยุดเองในรอบถัดไป (`ReportCatalogue::canExport` / `canSchedule` ตรวจ `hasLeft()` เพราะงานในคิวไม่ผ่าน middleware กันผู้ลาออก) เดิมไฟล์ยังส่งไปอีเมลภายนอกได้ไม่มีกำหนด
+- อีเมล `report.scheduled` escape ทุกค่า (`e()`) ชื่อผู้ใช้ที่แก้เองได้จึงแทรก HTML ลงอีเมลไม่ได้แล้ว `renderTemplate()` ถอด entity ในหัวเรื่องเหมือน `send()`
+
+### ทุกไฟล์ (engine กลาง)
+- **ค่า 0 ไม่หาย:** ชีตข้อมูล ชีตจัดกลุ่ม และชีตสรุป ใช้ `WithStrictNullComparison` (เดิม maatwebsite เขียน 0 เป็นช่องว่างใน 21 รายงาน เช่นตัวชี้วัดที่เป็น 0 และคำขอที่เสร็จในวันที่ยื่น)
+- **วันที่เป็นเซลล์วันที่จริง** ปี ค.ศ. รูปแบบ `yyyy-mm-dd` / `yyyy-mm-dd hh:mm` / เดือน `yyyy-mm` ไม่ขึ้นกับหน้าตั้งค่า (ชีตสรุปและ PDF ยังตามหน้าตั้งค่า) — `ReportColumn::sheetValue()`, ชีตจัดกลุ่มใช้ `CellDate` แทนข้อความ
+- ชีตข้อมูลชื่อ **"ข้อมูลดิบ"** ทุกไฟล์ และมีชีต **"คำอธิบายคอลัมน์"** (ชนิดข้อมูล ค่าที่เป็นไปได้ และวิธีคิดของคอลัมน์ที่คำนวณ — `meanings()` ของแต่ละรายงาน, เทสบังคับให้คอลัมน์เงิน / วันคงเหลือ / ชั่วโมงคงเหลือมีคำอธิบาย)
+- ชีตสรุปบอก **ผู้ส่งออก ชื่อระบบ จำนวนแถวในชีตข้อมูล** และคอลัมน์ที่ผู้ส่งออกเลือกไม่แสดง; Properties ของไฟล์ (Creator = ชื่อระบบ, Last modified by = ผู้ส่งออก, Title, Subject = key รายงาน)
+- ทุกชีตตาราง: หัวตารางตัวหนา ตรึงแถวแรก เปิด AutoFilter; ชื่อชีตยาวเกิน 31 ตัวอักษรถูกย่อ
+- "—" ที่หน้าจอใช้แทน "ไม่มี" เป็นช่องว่างในไฟล์
+
+### ข้อมูลดิบรายโดเมน
+- **รหัสสำหรับเชื่อมตาราง:** ทุกคอลัมน์แผนกมี "รหัสแผนก" ต่อท้าย (`ReportColumn::withCode()`), รหัสพนักงานผู้ถือ / เจ้าของ Resource / ผู้แจ้ง / ผู้ขอ เป็นคอลัมน์แยก (หมวด ผู้ขาย คลัง ไม่มีรหัสในระบบ จึงใช้ชื่อ)
+- **คีย์ของแถว:** รับเข้า/เบิกออก ประวัติโอนย้าย สิทธิ์การเข้าถึง 3 รายงาน และการอนุมัติคำขอ มี "เลขที่รายการในระบบ" (`hasRowId()`)
+- **แยกค่าที่รวมกัน:** "Min – Max" อยู่บนหน้าจออย่างเดียว (`screenOnly()`) ไฟล์มี Min / Max แยก, "31/34" เป็น "คำขอเตรียมเครื่องที่เสร็จ" + "ทั้งหมด", ภาพรวม Ticket "วัด SLA ได้ / ตรง SLA" เป็น 2 แถว
+- **ค่าจากโค้ดเป็นคำไทย:** ชนิดและสถานะผู้อนุมัติ, "ลาออกแล้ว" เป็น ใช่ / ไม่ใช่, ประกันที่ไม่ได้บันทึก (เดิม "—")
+- ต่ออายุสัญญา: เพิ่มสถานะแจ้งเตือน, วันที่แจ้งเตือนล่าสุด, จำนวนทรัพย์สินเช่าในสัญญา / ที่พนักงานใช้อยู่ (ประโยค "แจ้งเตือน" / "สิ่งที่ต้องทำ" ยังอยู่)
+- ค่าแผนกในข้อมูลแถวของหน้าเว็บมี `code` เพิ่ม (หน้าเว็บไม่ได้ใช้)
+
+### ตรวจซ้ำและเทส
+- สร้างไฟล์ทั้ง 22 รายงานใหม่แล้วตรวจด้วยสคริปต์: วันที่ที่เป็นข้อความ 0 เซลล์ (เดิม 221,348), "—" 0, ตัวชี้วัด 0 ที่หาย 0, คีย์ซ้ำ 0, จำนวนแถวในสรุปตรงกับชีตข้อมูลทุกไฟล์
+- เทสใหม่ `ExcelAnalysisReadyTest` (14 ข้อ) + `ReportScheduleTest` (ผู้ลาออก, escape) ; ปรับเทสเดิมให้ตรวจรูปแบบใหม่; เทสรายงาน + อีเมลผ่านทั้งหมด
+
+### ข้อจำกัดและงานต่อ
+- ผู้ดูแลยังดู / หยุดกำหนดการส่งรายงานของคนอื่นไม่ได้ (ต้องมีหน้าใหม่) — ตอนนี้กำหนดการของผู้ลาออกหยุดเองหลังวันสุดท้าย
+- คอลัมน์ที่เป็นชื่ออย่างเดียว (หมวด ผู้ขาย คลัง) ยังไม่มีรหัส เพราะตารางไม่มีคอลัมน์รหัส
+- ไฟล์ Excel จากตัวเลือกคอลัมน์ยังตัดคอลัมน์ที่ผู้ใช้ซ่อนออก (บันทึกไว้ในชีตสรุป) ถ้าจะส่ง Audit ให้ส่งออกแบบไม่ซ่อนคอลัมน์
+
+## คลัง: PDF และหน้าประวัติ SKU พร้อมส่ง Audit (2026-10-18)
+- **หัวกระดาษกลาง** `pdf/partials/letterhead` (+ `letterhead-style`): โลโก้ ชื่อนิติบุคคล ที่อยู่+ประเทศ เลขผู้เสียภาษี จาก Settings ผ่าน `App\Support\CompanyProfile` ที่อ่านข้อมูลบริษัทจุดเดียว ไม่มีชื่อบริษัทตัวอย่าง (เดิมพิมพ์ "ABCD Electric Company" เมื่อยังไม่ตั้งค่า) — ยังไม่ตั้งชื่อ ใช้ชื่อแอปแทน; เส้นใต้หัวใช้สีหลักใน Settings
+- **ท้ายกระดาษทุกหน้า** `App\Support\PdfFooter::stamp()` วาดหลัง render (ชื่อแอป, Printed by … on …, Page x / y) แทน `<script type="text/php">` ที่ไม่ทำงานเพราะปิด `enable_php`
+- **มุมมองใหม่ Return / ประวัติการรับคืน** ทั้งหน้าเว็บและ PDF (เดิมการคืนมองไม่เห็นที่ไหนเลย), มุมมองเบิกมีคอลัมน์จำนวน (อยู่ก่อน Serial), ทุกมุมมองมีแถวรวมจำนวน
+- **Summary = บัญชีคุม**: คงเหลือ, มูลค่า FIFO, กระทบยอด (รับ + คืน + ปรับเพิ่ม − เบิก − ปรับลด = คงเหลือ, โอนไม่เปลี่ยนยอด) บอก "Reconciled / Off by n", คงเหลือแยกคลัง, ล็อตต้นทุนที่ยังเหลือพร้อมมูลค่า; หน้าเว็บแสดงชุดเดียวกัน (`components/history-summary.tsx`)
+- PDF คงภาษาอังกฤษ (ผู้ใช้เลือก) ใช้สีตามหน้าเว็บ: รับเข้าเขียว เบิกแดง คืน teal ปรับเหลืองอำพัน โอนน้ำเงิน
+- ย้ายการสร้างประวัติออกจาก controller ไป `App\Services\Stock\StockHistoryService`; เทส `StockItemHistoryPdfTest` (มุมมอง return, กระทบยอด, หัวกระดาษไม่มีชื่อตัวอย่าง)
+
+## รายงาน: คิวแยก, เก็บไฟล์ 30 วัน, อีเมลพร้อมลิงก์ดาวน์โหลด (2026-10-18)
+- **คิวแยก** `ReportExport::QUEUE = 'reports'`: `GenerateReportExport` และ `SendScheduledReport` สร้างไฟล์บนคิว reports อีเมล/การแจ้งเตือนอยู่คิว default ไม่ต้องรอไฟล์ใหญ่อีก; `composer run dev` / `composer run demo` เพิ่ม worker `queue:listen --queue=reports` (**เซิร์ฟเวอร์จริงต้องรัน worker คิว reports เพิ่มอีกตัว** ไม่อย่างนั้นไฟล์จะค้าง "รอคิว")
+- **เก็บไฟล์ 30 วัน** (`KEEP_DAYS` 7 → 30) ข้อความในหน้าต่างส่งออกบอก 30 วันและอีเมล
+- **อีเมลเมื่อไฟล์เสร็จ** เทมเพลตใหม่ `report.export_ready` (แก้/ปิด/รีเซ็ตได้ที่หน้า Email Templates, มีคำ "ส่งเมื่อ / ส่งถึง" และค่าตัวอย่างในพรีวิว) ปุ่ม Download file เป็นลิงก์ลงลายเซ็น (`URL::temporarySignedRoute`, ลงลายเซ็นเฉพาะ path จึงใช้ได้ทุก host) หมดอายุพร้อมไฟล์
+- **ลิงก์ใช้ได้เฉพาะเจ้าของ**: `/files/report-exports/{id}` ต้อง signed + ล็อกอินเป็นเจ้าของ + ยังมีสิทธิ์รายงาน; ยังไม่ล็อกอิน → `/login?next=` แล้วโหลดต่อให้ (`redirectGuestsTo` ใน bootstrap, `serverFileTarget()` รับเฉพาะ `/files/…` `/pdf/…` กัน open redirect); อีเมลถูกส่งต่อ คนอื่นกดก็ไม่ได้ไฟล์
+- **บันทึก Audit Log ทุกการดาวน์โหลด** ("Downloaded report export" + via app/email) ทั้งจากหน้า "ไฟล์ส่งออกของฉัน" และจากอีเมล
+- เพิ่มเทมเพลตลง `itservices_perf` ด้วย `EmailTemplateSeeder` (firstOrCreate เพิ่มเฉพาะที่ขาด); เทส `ReportExportEmailTest`, `tests/js/login-redirect.test.ts`; แก้ `PdfNumberFormatTest` ให้ตรงกับหน้า PDF ประวัติ SKU ใหม่ (พังตั้งแต่ `fd7459ae`)
+
+## รายงาน: PDF ทุกฉบับมีหัวกระดาษบริษัท การ์ดมีบริบท สี ท้ายกระดาษ และช่องลงชื่อ (2026-10-18)
+- ใช้กับ 21 รายงานแบบตาราง (`pdf/reports/tabular.blade.php`) + ภาพรวม Ticket & SLA (`ticket-overview.blade.php`) ตาม mockup ในผลตรวจ https://claude.ai/artifact/YDEovaV5D4JmjbwaJVGtDk
+- **หัวกระดาษ** `pdf/partials/letterhead` (ข้อมูลบริษัทจาก Settings ผ่าน `CompanyProfile`): ชื่อรายงาน, **เลขที่เอกสาร** (`RPT-yymmdd-NNNN` จากแถว export, `SCH-yymmdd-NNNN` รายงานอัตโนมัติ — เก็บใน Audit Log การดาวน์โหลดและ API "ไฟล์ส่งออกของฉัน" `document_no`), "ข้อมูล ณ", ตัวกรองทุกตัว (ภาพรวม Ticket เดิมพิมพ์แค่ช่วงวันที่)
+- **การ์ด** `TileText`: ใช้คำเดียวกับหน้าเว็บ (`rep_k_*` ผ่าน ThaiWords), ตัวเลขมีหน่วย (บาท/ชม./%), ป้ายสัดส่วนหรือเป้า, บรรทัดบริบท (การแยกย่อย / note / การเปลี่ยนแปลง +n −n สีดี-แย่ตาม up_is_good), เส้นบนการ์ดเป็นสีตามสถานะ การ์ดกว้างเท่ากัน
+- **ตาราง**: ตัวเลขชิดขวาไม่ตัดบรรทัด, เลขที่/วันที่บรรทัดเดียว, "—" ทุกช่องว่าง, % ในคอลัมน์ที่หัวมี %, "เลยมา N วัน" / "เกิน N ชม." สีแดง, หัวรายการบอกจำนวนแถวเสมอ, หัวข้อไม่ค้างท้ายหน้า
+- **ภาพรวม Ticket & SLA**: เพิ่มตารางรายสัปดาห์ (เปิดใหม่/ปิดแล้ว/ค้างสะสม), อายุงานค้าง, เทียบช่วงก่อนหน้า, เป้า SLA, P90, สัดส่วนหมวด, คอลัมน์ผู้แจ้งและที่มา, ชื่อไทยของเจ้าหน้าที่, คำ "ปิดทัน SLA" ตามหน้าเว็บ
+- **ท้ายกระดาษทุกหน้า** (`PdfFooter`): ชื่อแอป, พิมพ์โดย…เมื่อ…, หน้า x / y — รวมใบทบทวนสมาชิก Access (เลิกใช้ชื่อบริษัทตัวอย่างด้วย)
+- **ช่องลงชื่อ** ผู้จัดทำ (ชื่อผู้พิมพ์) / ผู้ตรวจทาน / ผู้อนุมัติ ท้ายทุกรายงาน
+- เทส `PdfNumberFormatTest::test_tabular_pdf_prints_document_facts_tile_context_and_sign_off`; ยังเหลือรายตัว: ตารางสรุปที่ขาดของ Ticket ค้าง/พนักงาน, ป้าย "ไม่ขึ้นกับตัวกรอง", เงินในตารางสรุปทศนิยมไม่เท่ากัน, หน้านิยามตัวชี้วัด
+
+## Motion audit ทั้งระบบ และรอบ 1: มาตรฐานจังหวะ (2026-10-18)
+
+- รายงาน: https://claude.ai/artifact/Tn5dLzcDPQWGXoGMhNhoX5 (สูง 1, กลาง 12, ต่ำ 20, รอตัดสิน 4)
+- รอบ 1 `ae8c1594`: ค่าจังหวะกลาง `--motion-*` / `--ease-enter` / `--ease-exit` ใน app.css; ป๊อปอัป Radix `.motion-pop` เข้า 150 ออก 120ms; Dialog/Sheet `.motion-sheet` 240/180ms (Sheet เดิม 500/300); ป๊อปอัปทำมือ 3 ตัวมีขาออกผ่าน `usePresence` (shared/hooks/use-presence.ts); `.press` / `.press-icon` ให้ปุ่มทำมือยุบตอนกด; hover แถว/Toast เฉพาะอุปกรณ์ที่ hover ได้ (ไม่ค้างบน iPad); สวิตช์สิทธิ์ใช้ transform; ไม่มี `transition-all` เหลือ
+- ตรวจในหน้าจริง: FilterPopover ปิด 120ms แล้วถอดออก, เมนู ⋮ 150/120ms, Dialog 240/180ms ตาม easing มาตรฐาน
+- รอบ 2 ฟอร์ม `95f500d3`, `7cf02b62`: `useFormError` + `FormErrorBanner` (สั่นทุกครั้งที่ส่งไม่ผ่าน) แทน toast / ข้อความที่ปักผิดช่อง / แถบทำมือ ใน 31 ฟอร์ม (ทรัพย์สิน 6, การแจ้งเตือน, สิทธิ์ 2, ตั้งค่า master data 6, พนักงาน 4, Access, Ticket 7, คำขอ 3); ปุ่มบันทึกเป็น `SaveButton` (spinner + "กำลังบันทึก…", ไม่จาง, aria-busy); error ใต้ช่องค่อย ๆ ขึ้น; ไม่มีแถบสรุป "กรอกไม่ครบ" ตามกติกาเดิม — หน้าต่างรับคืนทรัพย์สินไม่ปิดเองเมื่อพลาดแล้ว
+- รอบ 3 หน้าข้อมูล `cb32ea5c`: ตารางแสดง skeleton เฉพาะตอนเปลี่ยนหน้า/ตัวกรอง (`isLoading || (isFetching && isPlaceholderData)`) ไม่กะพริบหลังบันทึก; การ์ดรายงานมีแถบบางด้านบนตอนโหลดใหม่ (`CardsUpdating` ไม่จาง); Toast ออกด้วย transform แล้วยุบแถว (grid 1fr→0fr) และปิดทั้งกลุ่มก็มี animation; ขั้นที่กำลังทำของ Ticket ใช้ `.trail-live` เหมือนคำขอ; ไอคอนแจ้งเตือนใช้ `.alert-blink` กลาง; แถวภาพรวมสัญญา/คลังขึ้นเหมือนกัน; แถบกราฟนิ่งทุกที่; spinner หมุนต่อเมื่อลดการเคลื่อนไหว; skeleton แทน spinner ในคลัง; แถว hover ใช้ `.row-hover`; ลูกศรหมุน; Checkbox/Switch/ช่องกรอก/เมนูสม่ำเสมอ
+- ข้อค้าง: แตะเลขบรรทัดสีแดงในแม่แบบอีเมลเปิดรายการ "HTML ผิด" พร้อมไฮไลต์บรรทัดนั้น (iPad อ่านได้แล้ว); จุดแจ้งเตือนภาพรวม Access ใช้ `.alert-blink`; skeleton ตัวอย่างอีเมลและตารางกลุ่มบทบาทตรวจแล้วถูกอยู่แล้ว
+
+## iPad: Sidebar ชิดขึ้น, โลโก้กลับหน้าแรก, ตัวกรองกับปุ่มเรียงใหม่, การ์ด KPI รายงานไม่มีช่องว่าง (2026-10-18)
+
+- Sidebar ตอนหด: หัวกลุ่มในแถบไอคอนเหลือเส้นสั้น + ระยะ 12px (กลุ่มแรกไม่มี) เหมือนก่อน `575eb39d` ที่เผื่อช่องหัวกลุ่ม 20px ไว้ทุกกลุ่ม; ตอนเปิดเมนูยังสูง 20px และยืด/หดพร้อม animation เมนู (`.nav-head` ใน `app.css` ติดไปใน commit `ae8c1594` ของ session motion)
+- กดโลโก้ / ชื่อแอป / ชื่อรอง ไปหน้า Dashboard (`/`) และปิดเมนูบน iPad; โฟกัสคีย์บอร์ดขึ้นกรอบรอบโลโก้
+- ตัวกรองกับปุ่มบน iPad แนวตั้ง (768px): ช่องค้นหาหดได้ถึง 192px แทนการกว้างเต็มแถว จึงไม่ดันตัวกรองลงบรรทัดใหม่
+  - `DataTable` (ใช้ร่วมทุกหน้า): ช่องค้นหา + ตัวกรองจองไว้ 22rem ถ้าไม่พอ ปุ่มด้านขวาลงไปอยู่แถวของตัวเองทั้งชุด
+  - คลัง › คำขอเบิก, ประวัติสิทธิ์: อยู่แถวเดียว; คลัง › สินค้าในคลัง: แถว 2 = รับเข้า / คืน / โอนย้าย ซ้าย, SKU ใหม่ชิดขวา; หัวหน้าคลังปุ่มลงใต้ชื่อหน้าแบบหน้าทรัพย์สิน
+  - สิทธิ์ › กลุ่มบทบาท: แถว 2 = กลุ่มเริ่มต้นซ้าย, กลุ่มบทบาทใหม่ชิดขวา; Role Templates: ช่องค้นหาเต็มแถวคู่ปุ่มบันทึก
+  - Access › หน้าต่างสมาชิก File Share: แถวเพิ่มสมาชิกกว้างเต็มแถว ช่องเลือกพนักงานยืดตามที่เหลือ
+- Access › หน้าต่างดูรายละเอียด (ทุกแท็บ): หัวตารางสมาชิกติดขอบบนตอนเลื่อน (`[--sticky-top:-1rem]` แบบเดียวกับ `<main>` เพราะหน้าต่าง portal ออกนอก main) เดิมติดต่ำลง 16px แถวโผล่เหนือหัว
+- คลัง › นับสต็อก: คำอธิบายสั้นชิดซ้ายของแถว ปุ่ม "เริ่มนับสต็อก" ชิดขวา (`stock_count_start_hint`, ผูก `aria-describedby`)
+- การ์ด KPI ทั้ง 22 รายงาน (`summary-columns.ts`, ใช้กับ Ticket ภาพรวมด้วย): 5 ใบ แนวตั้ง 2+2+1 ใบสุดท้ายเต็มแถว, แนวนอน 3+2 ใบล่างกว้างขึ้น, ≥ 1280px 5 ใบแถวเดียวเหมือนเดิม; 3 ใบแนวตั้ง 2+1 เต็มแถว — ลองแบบ 5 ใบแถวเดียวที่ 1024px แล้วข้อความถูกตัดมากที่สุดจึงไม่ใช้; เทส `tests/js/summary-columns.test.ts`
+- ตรวจด้วยตาใน iframe 768 / 1024 (และ 1920) ทุกหน้าที่แก้ + วัด DOM ทั้ง 22 รายงานทั้งสองแนว
+
+## ระบบ log หลังขึ้น prod: แยกโฟลเดอร์ รหัสอ้างอิง error หน้าเว็บ และไฟล์สรุปให้ Claude (2026-10-18)
+
+- **โฟลเดอร์** `storage/logs/` ไฟล์รายวัน `<โฟลเดอร์>-YYYY-MM-DD.log`: `backend/` (request), `queue/` (queue worker), `schedule/` (งานตั้งเวลา + คำสั่ง artisan), `frontend/` (error หน้าเว็บ), `digest/` (ไฟล์สรุป) — channel `source` (`App\Support\LogSource`) เลือกโฟลเดอร์ตอนรัน; `backend/emergency.log` ใช้เมื่อระบบ log เองพัง; `laravel.log` เดิมไม่แตะ
+- **รหัสอ้างอิง** middleware `AssignRequestId` (global): `request_id` + method + path (ไม่เก็บ query string) ติดทุกบรรทัดผ่าน `Context` (งาน queue ได้รหัสของ request ต้นทาง), header `X-Request-Id`; หน้า error เต็มจอแสดง "รหัสอ้างอิงสำหรับแจ้ง IT"
+- **error หน้าเว็บ** `shared/lib/client-error-report.ts`: `window.onerror`, `unhandledrejection`, `vite:preloadError` (reload เองได้ 1 ครั้งใน 60 วิ), `ErrorBoundary` ครอบ `<App />` (หน้าจอ "หน้าจอนี้แสดงผลไม่ได้") → `POST /api/client-errors` (คนยังไม่ login ส่งได้, 20 ครั้ง/นาที/IP, message ≤ 1000 stack ≤ 5000, ซ้ำในหน้าเดียวส่งครั้งเดียว ไม่เกิน 10 ครั้งต่อการโหลดหน้า, ข้าม error ของ API เพราะมีใน backend แล้ว)
+- **ไฟล์สรุป** `php artisan logs:digest --days=7` (ตั้งเวลาทุกจันทร์ 07:00) → `storage/logs/digest/digest-YYYY-MM-DD.md`: จัดกลุ่ม warning ขึ้นไปต่อโฟลเดอร์ (class + file:line หรือข้อความที่แทนตัวเลข/ค่าในเครื่องหมายคำพูด), จำนวน, แรก/ล่าสุด, request id ล่าสุด, trace 12 บรรทัด; ปิดบังอีเมล ค่าใน SQL ค่า query string และ path ที่ติดตั้ง; สุขภาพระบบ (jobs ค้าง + อายุ, failed_jobs, เมลที่ส่งไม่ออก, scheduler — heartbeat ทุกนาที `SchedulerHeartbeat`, ขนาดโฟลเดอร์); การใช้งานจาก audit_logs
+- **ลบไฟล์** `logs:prune` (02:00) ลบไฟล์ที่วันที่ในชื่อเก่ากว่า `LOG_DAILY_DAYS` (ค่าเริ่มต้น 90, 0 = เก็บตลอด) ทั้ง 5 โฟลเดอร์ (`LogFileRetentionService`)
+- **เทส** เขียน log ลงโฟลเดอร์ชั่วคราว (`tests/TestCase.php`) ไม่แตะ `storage/logs`; `ClientErrorReportTest`, `LogDigestTest`, `LogFileRetentionTest`
+- **ค่า .env บน prod**: `APP_DEBUG=false`, `LOG_STACK=source`, `LOG_LEVEL=warning`, `LOG_DAILY_DAYS=90` และต้องรัน scheduler + queue worker
+- วิธีส่งให้ Claude: รัน `php artisan logs:digest` บนเครื่อง prod แล้วแนบไฟล์ `.md` จาก `storage/logs/digest/` (ไม่มี API ดึง log โดยตั้งใจ)
+
+## รายงาน: ตารางสรุปที่เคยมีแค่บนเว็บ ลง PDF/Excel แล้ว (Ticket ค้าง, พนักงาน) (2026-10-18)
+- **Ticket ค้าง และเกิน SLA** (`TicketBacklogReport::exportSections`): กระดานครบกำหนด 6 ช่วงเวลาที่เหลือ (ณ ตอนพิมพ์) + สัดส่วน, ค้างอยู่กับใคร (เกิน SLA / ครบใน 24 ชม. / ยังมีเวลา / รวม เรียงเกิน SLA มากสุด), ค้างตามหมวด + แถวรวม — ไม่ใช้ตัวกรอง SLA เหมือนกระดานบนเว็บ
+- **ภาพรวมพนักงาน**: จำนวนพนักงาน เข้าใหม่ ลาออก ตามช่วง (ต้นช่วง/ปลายช่วง/เปลี่ยนไป), ตามแผนก (ณ วันที่) + สัดส่วน + แถวรวม (ต้นช่วง + เข้า − ออก = ปลายช่วง), ผู้ลาออกที่ยังถือสิทธิ์พร้อมรายการสิทธิ์ (บอกว่าไม่ขึ้นกับช่วงวันที่)
+- **สรุปเรื่องค้างของพนักงาน**: สรุปตามเรื่อง (คน/จำนวน/ค้างนานสุด), บัญชีเข้าใช้งานแยกประเภท, ข้อมูลไม่ครบแยกปัญหา
+- ตารางเหล่านี้เป็นชีตใน Excel ด้วย (ใช้ `exportSections` ร่วมกัน); เทสใน `TicketTabularReportsTest`, `EmployeeOverviewReportTest`, `EmployeeOpenItemsReportTest`
+
+## รายงาน: PDF บอกว่าตัวเลขไหนไม่ตามช่วงวันที่หรือตัวกรอง (2026-10-19)
+- ตารางสรุปใน PDF มีบรรทัดหมายเหตุ (`exportSections` → `note`, PDF เท่านั้น ชีต Excel คงเป็นตารางล้วน) ใช้คำเดียวกับหน้าเว็บ: **"ตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่"** — รออนุมัติตอนนี้ (การอนุมัติคำขอ), ผู้ลาออกที่ยังถือสิทธิ์ (ภาพรวมสิทธิ์ / ภาพรวมพนักงาน), ค้างอยู่ตอนนี้ (โอนย้าย), อายุงานค้าง (ภาพรวม Ticket); "...และตัวกรองแผนก" Resource ที่ต้องดูแล; "...และตัวกรองคลัง" คำขอเบิกที่ค้าง; "ไม่ขึ้นกับตัวกรอง SLA" กระดาน Ticket ค้าง
+- ตารางที่หน้าเว็บตั้งใจแสดงทุกกลุ่ม (SLA ตามประเภทคำขอ, SLA แยกตามมิติที่เลือก) ไม่กรองเฉพาะในไฟล์ เพื่อให้ตรงกับหน้าเว็บ แต่บอก "ทุกประเภทคำขอ ไม่ขึ้นกับตัวกรองประเภทคำขอ" เมื่อมีการกรอง
+- มูลค่าคงคลังวันที่ในอดีต: แสดงหัว "มูลค่าตามคลัง" พร้อม "แยกตามคลังได้เฉพาะวันนี้ วันที่ในอดีตมีเฉพาะยอดรวม" (`empty`) แทนการหายเงียบ; Excel ไม่สร้างชีตว่าง
+- รับเข้าและเบิกออก: เอาการ์ด "ทั้งหมด" ออก (นับตามประเภทและคำค้น ขณะที่การ์ดอื่นไม่นับ) จำนวนแถวอยู่ที่หัวรายการแล้ว
+- ภาพรวมสัญญา: การ์ด "ต้องจ่ายใน 12 เดือน" / "คงเหลือตามสัญญา" บอก "รวมสัญญาที่ยังไม่เริ่ม n สัญญา" (key ใหม่ `rep_cov_k_next12_file`, `rep_cov_k_remaining_file`) อธิบายว่าทำไมยอดไม่ตรงกับรายการที่มีแต่สัญญาที่ใช้อยู่
+
+## รายงาน: คอลัมน์เงินในตารางสรุปมี "(บาท)" และทศนิยม 2 ตำแหน่ง, มูลค่าคงคลังบอก FIFO (2026-10-19)
+- ตารางสรุป (`exportSections`) ระบุคอลัมน์เงินด้วย `money` → `TabularReport::sectionHeadings()` เติม "(บาท)" ให้หัวคอลัมน์ ทั้ง PDF และชีต Excel; PDF แสดงทศนิยม 2 ตำแหน่ง, Excel ตั้งรูปแบบ `#,##0.00` (ค่าในเซลล์ยังเป็นตัวเลข)
+- ทำแล้วใน: ภาพรวมสัญญา (รอบบิลทุกประเภท, ต่อปีตามประเภท/รอบ, ตามผู้ขาย), ต่ออายุ (รายเดือน, ตามเวลาที่เหลือ, งวดที่ไม่ต้องจ่าย), สัญญาเช่า (ค่าเช่าต่อเครื่องต่อเดือน/ต่อปี, เทียบราคาซื้อ), ตัดจำหน่าย (มูลค่าซื้อ), รับเข้าเบิกออก (รายเดือน, ผู้ขอ, แผนก, ผลนับ), มูลค่าคงคลัง (ตามหมวด, ตามคลัง, ของเสื่อม)
+- รายงานมูลค่าคงคลัง: คอลัมน์ "มูลค่าคงคลัง (FIFO)" (หน้าเว็บ Excel PDF) ส่วน "ต้นทุนเฉลี่ย" คงคำเดิมตามระบบ (= มูลค่า FIFO ÷ คงเหลือ) อธิบายในหน้าคำอธิบาย
+
+## รายงาน: หน้า "คำอธิบายตัวเลขและคอลัมน์" ท้าย PDF (2026-10-19)
+- ทุก PDF รายงานมีหน้าสุดท้ายก่อนช่องลงชื่อ: **ตัวเลขสรุป** (เฉพาะการ์ดที่หน้าเว็บมีคำอธิบาย ⓘ — `TabularReport::summaryMeanings()`, ตอนนี้มีภาพรวมสัญญา 3 การ์ด), **คอลัมน์** (คำอธิบายชุดเดียวกับชีต "คำอธิบายคอลัมน์" ใน Excel เฉพาะคอลัมน์ที่พิมพ์), **หมายเหตุการนับ** (`countingNotes()`: เวลาประเทศไทย, ความหมายของ "ข้อมูล ณ" / "ตอนนี้", เพดาน 1,000 แถว + รายงานเพิ่มเอง: เป้า SLA จริงจากหน้าตั้งค่า, กติกาเกิน SLA, มูลค่า FIFO และต้นทุนเฉลี่ย)
+- ภาพรวม Ticket & SLA มีหมายเหตุการนับของตัวเอง (ช่วงที่นับ, เป้า SLA, ความหมายเกิน SLA)
+- เว็บมีคำอธิบาย ⓘ ของการ์ดอยู่น้อย (8 จุด) คำอธิบายการ์ดของรายงานอื่นยังต้องร่างให้ผู้ใช้รีวิวก่อน
+
+## รายงานตามกำหนดเวลา: เก็บไฟล์ 30 วัน และส่งลิงก์ดาวน์โหลดให้ผู้รับที่มีบัญชี (2026-10-19)
+ต่อจากงาน "own queue, 30-day files, emailed download link" (`0d54a004`) ซึ่งทำกับ Export ปกติ ส่วนนี้ทำกับรายงานที่ตั้งส่งทางอีเมล (ผู้ใช้เลือก "แนบไฟล์ + ลิงก์")
+- ทุกรอบที่ส่ง ไฟล์ถูกเก็บเป็นไฟล์ส่งออกของผู้ตั้งรายงาน ("ไฟล์ส่งออกของฉัน") 30 วัน และบันทึกผู้รับที่มีบัญชีของรอบนั้นใน `report_exports.shared_with` (migration `2026_10_19_004150`, รันแล้วบน `itservices_perf`) — เดิมเก็บเฉพาะไฟล์ที่ใหญ่เกิน 10 MB
+- อีเมลแยกตามผู้รับ: ผู้รับที่มีบัญชีและเปิดรายงานนั้นได้ (ยังไม่ลาออก) ได้ไฟล์แนบ + ปุ่ม Download file (ลิงก์ลงลายเซ็น ต้อง login ใช้ได้จนไฟล์หมดอายุ) ผู้รับภายนอกหรือบัญชีที่ไม่มีสิทธิ์รายงานได้ไฟล์แนบเหมือนเดิม
+- ไฟล์ใหญ่เกิน 10 MB: ไม่แนบ ผู้รับที่มีบัญชีใช้ปุ่มดาวน์โหลด ผู้รับภายนอกได้ข้อความให้ขอไฟล์จากผู้ตั้งรายงาน ผู้ตั้งรายงานได้กระดิ่งแจ้งเหมือนเดิม
+- ลิงก์ในอีเมล (`files.report-export`) เปิดได้เฉพาะเจ้าของ หรือผู้รับที่อยู่ใน `shared_with` ของรอบนั้นและเปิดรายงานได้ คนอื่นได้ 404; ทุกการดาวน์โหลดบันทึก audit log
+- เทส `ReportScheduleTest` (+2: ลิงก์ของผู้รับที่มีบัญชี / ไม่มีบัญชี / ไม่มีสิทธิ์ / หมดอายุ 30 วัน, ไฟล์ใหญ่); เทสรายงาน อีเมล และการแจ้งเตือน 657 ข้อผ่าน
+- ข้อสังเกต: รายงานที่ส่งบ่อย (รายวัน) จะมีไฟล์ในหน้าไฟล์ส่งออกของผู้ตั้งรายงานเพิ่มวันละ 1 ไฟล์ ไฟล์หมดอายุถูกลบตามรอบ `reports:prune-exports`
+
+## ตรวจ Autofill ทุกช่องกรอก + security review (2026-10-19)
+ตรวจทุกโมดูลด้วย agent 8 ตัว แล้วแก้ 3 รอบ
+- **รอบ 1 ความปลอดภัย** (`a7ade6c2`):
+  - อีเมล: หัวเรื่อง Ticket ชื่อคน ชื่อ/Tag ทรัพย์สิน และชื่อ SKU เคยใส่ลงเนื้ออีเมล HTML โดยไม่ escape ทำให้ผู้แจ้งใส่ลิงก์หลอกในหัวเรื่องแล้วระบบส่งถึงทีม IT ได้ ตอนนี้ทุกค่าที่พิมพ์ผ่าน `e()` ใน TicketService, TicketDigestService, ContractDigestService, AssetService, StockNotificationService (หัวเรื่องอีเมลยังเป็นข้อความปกติ เพราะ `sendTemplate` decode entity อยู่แล้ว) — เทส `TicketEmailEscapingTest`
+  - Product key ของ Software ไม่ใช้ `type=password` แล้ว (Chrome เคยเติมรหัส login ของแอดมินลงไป และชวนบันทึก key ลงตัวจัดการรหัสผ่าน) เป็นช่องข้อความ ซ่อนด้วย `-webkit-text-security` + attribute ให้ password manager ข้าม
+  - หน้า login: ปิด autocapitalize / autocorrect / spellcheck ทั้งสองช่อง (รหัสที่กดดูจะไม่ถูกส่งไปตัวตรวจคำออนไลน์); ฟอร์มเปลี่ยนรหัสใช้อีเมลแทน username ที่ซ่อนไว้ ถ้าบัญชีไม่มี username
+- **รอบ 2 autofill** (`7f5a03e7`, 44 ไฟล์): ช่องค้นหาใน SearchableSelect / SearchSelect / DataTable / IconPicker และช่องค้นหาประจำหน้า เป็น `autocomplete="off"`; ข้อมูลของคนอื่น (Vendor, SMTP from, ข้อมูลบริษัท, ผู้รับรายงาน, อีเมลที่ขอเปิดใหม่, Access) ไม่ถูกเติมด้วยข้อมูลของผู้ใช้เอง; เบอร์ติดต่อกลับของ Ticket เป็น `type=tel autocomplete=tel`; รหัส Serial เลขสัญญา จำนวนเงิน และ master data เป็น off; step label ของ workflow ไม่ใส่ off เพื่อให้ datalist ขึ้นใน Firefox
+- **รอบ 3 ช่องจำนวนคลังอะไหล่** (`8794faf6`): จำนวนรับเข้า/คืน/โอน, จำนวนแถว serial, จำนวนที่ขอเบิก, จำนวนที่จัดสรร, min/max ของ SKU เปลี่ยนจาก `type=number` เป็นช่องตัวเลขจำนวนเต็ม (`digitsOnly`) ล้อหน้านับสต็อก — เลื่อนเมาส์แล้วค่าไม่เปลี่ยน, พิมพ์ทศนิยมไม่ได้, ช่องโอนลบให้ว่างได้
+- ข้อจำกัด: Firefox ไม่รองรับ `-webkit-text-security` ทุกรุ่น ช่อง Product key อาจแสดงเป็นข้อความ (key ไม่ใช่รหัสผ่านของผู้ใช้)
+- ตั้งใจคงไว้ (ผู้ใช้ตัดสินใจ 2026-10-19): ผู้มีสิทธิ์ `employees.reset_password` ตั้งรหัสผ่านให้บัญชีที่มีสิทธิ์สูงกว่าตัวเองได้ (กันเฉพาะ super admin) ให้ helpdesk ช่วยได้ทุกคน
+
+## รายงาน: ไฟล์ Excel มีครบทุกคอลัมน์เสมอ (2026-10-19)
+- ปุ่มเลือกคอลัมน์มีผลกับหน้าจอและ PDF เท่านั้น ชีต "ข้อมูลดิบ" ใน Excel มีทุกคอลัมน์ (ยกเว้นคอลัมน์ที่เป็นของหน้าจออย่างเดียว) ทั้ง Export ปกติและรายงานตามกำหนดเวลา ไฟล์ของรายงานเดียวกันจึงมีคอลัมน์เหมือนกันทุกครั้ง ใช้ส่ง Audit และนำเข้า Power BI ซ้ำได้ (ผู้ใช้เลือกแบบ A)
+- `TabularReport::sheetColumns()` ไม่อ่านตัวเลือกคอลัมน์แล้ว; เอาบรรทัด "คอลัมน์ที่ซ่อนไว้ตอนส่งออก" ในชีตสรุปออก
+- คำบนหน้าจอ: ปุ่มเลือกคอลัมน์ "…ไฟล์ PDF จะมีเฉพาะคอลัมน์ที่เลือก ส่วน Excel มีครบทุกคอลัมน์", หน้าต่างส่งออก "PDF มีเฉพาะ {n} คอลัมน์ที่แสดงอยู่ ไฟล์ Excel มีครบทุกคอลัมน์"
+- เทส: `ExcelAnalysisReadyTest`, `ReportHubTest`, `TicketTabularReportsTest` ปรับตามกติกาใหม่; เทสรายงาน 472 ข้อ และเทส JS 292 ข้อผ่าน
+
+## รายงาน: PDF มีกดรับภายใน 2 วัน แถวรวมตัดจำหน่าย และผู้ขอในรายงานอนุมัติ (2026-10-19)
+ต่อจากผลตรวจ PDF 22 รายงาน (ข้อเสนอข้อ 3 ผู้ใช้เลือกแบบ A) `73aa7660`
+- ประวัติโอนย้ายและรับคืน: ตาราง "การกดรับมอบ" เพิ่ม 2 แถว "กดรับภายใน 2 วัน" (ครั้ง) และ "(% จากส่งมอบให้พนักงาน)" ตัวเลขเดียวกับการ์ดบนหน้าเว็บ (กดรับภายใน 48 ชั่วโมง ÷ ส่งมอบให้พนักงาน)
+- การตัดจำหน่ายทรัพย์สิน: ตาราง "ตามหมวดหมู่" ใน PDF มีแถวรวม "รวม n หมวด" ตัวหนาท้ายตาราง คิดจากทุกเครื่อง (อายุใช้งานเฉลี่ยเป็นค่าเฉลี่ยจริง ไม่ใช่ค่าเฉลี่ยของแต่ละหมวด) — ตารางสรุปรับ `total` ได้แล้ว (PDF เท่านั้น ชีต Excel คงเป็นตารางล้วนให้โปรแกรมวิเคราะห์อ่าน)
+- การอนุมัติคำขอ: คอลัมน์ "ผู้ขอ" อยู่ถัดจากเลขที่คำขอ ทั้งหน้าเว็บ PDF และ Excel, "แผนกผู้ขอ" เป็นคอลัมน์ซ่อน เปิดได้จากปุ่มเลือกคอลัมน์ (key `rep_c_rqa_requester_department`) ผู้ตรวจดูจาก PDF ได้ว่าผู้ขอกับผู้อนุมัติเป็นคนละคน
+- คำอธิบายคอลัมน์รหัสแผนกใน Excel ไม่ระบุชื่อโปรแกรมแล้ว: "รหัสแผนก ใช้เชื่อมกับตารางแผนก (ชื่อเปลี่ยนได้ รหัสไม่เปลี่ยน)" (17 จุด) และวันที่ใน Excel "นำเข้าโปรแกรมอื่นได้ทันที"
+- ตัดสินแล้ว: อีโมจิหรืออักษรพิเศษที่ฟอนต์ PDF ไม่มี ให้แสดงเป็นกล่องสี่เหลี่ยมตามเดิม ไม่กรอง (ข้อมูลจริงไม่มีอีโมจิ)
+- เทส: `AssetTransferHistoryReportTest`, `AssetWriteoffReportTest` (+1), `RequestApprovalsReportTest` (+1); เทสรายงาน 474 ข้อผ่าน
+
+## รายงาน: รหัสหมวด ยี่ห้อ ผู้ขาย คลัง สถานที่ ในไฟล์ Excel ใช้เลข ID (2026-10-19)
+- ผู้ใช้เลือกไม่เพิ่มคอลัมน์รหัสในฐานข้อมูล ให้ใช้เลข ID ของระบบเป็นรหัส: ชีต "ข้อมูลดิบ" มีคอลัมน์ "รหัสหมวดหมู่" / "รหัสหมวด" (คลังอะไหล่) / "รหัสยี่ห้อ" / "รหัสผู้ขาย" / "รหัสคลัง" / "รหัสสถานที่" ต่อท้ายคอลัมน์ชื่อ ค่าไม่ซ้ำและไม่เปลี่ยนแม้แก้ชื่อ ใช้เชื่อมตารางใน Power BI (แผนกยังใช้ DEP-xxxx เหมือนเดิม)
+- อยู่ใน 10 รายงาน: ภาพรวมทรัพย์สิน, ประวัติโอนย้าย, ประกันใกล้หมดอายุ, ตัดจำหน่าย, ภาพรวมสัญญา, ต่ออายุสัญญา, สัญญาเช่า และคลังอะไหล่ 3 รายงาน
+- `ReportColumn::withCode()` รับฟังก์ชันอ่านรหัสจากแถวได้ (เช่น `category_id`); รายงานโอนย้ายเก็บ id ใน trail
+- ตรวจกับข้อมูลจริง: ทุกแถวที่มีชื่อมีรหัสครบทั้ง 10 รายงาน; เทส `ExcelAnalysisReadyTest` (+1), เทสรายงานผ่านทั้งหมด
+- ยังไม่ได้ทำ: หน้าตั้งค่ายังไม่แสดงเลข ID ให้ผู้ตรวจเทียบ (ถ้าต้องการเพิ่มคอลัมน์ ID ในตารางหน้าตั้งค่าได้ภายหลัง)
+
+## รายงานตามกำหนดเวลา: งานค้างทยอยส่งนาทีละ 1 รายงาน (2026-10-19)
+- `SendScheduledReport` ผ่าน `RateLimited('report-schedules')` (`Limit::perMinute(1)` ใน AppServiceProvider) — ถ้ามีงานค้างใน queue `reports` (เช่น worker ดับไปหลายชั่วโมง) ระบบส่งทีละ 1 รายงานต่อนาที งานที่เกินรอคิวแล้วส่งนาทีถัดไป ไม่ตกหล่น
+- เลิกใช้ `$tries = 1` (การรอคิวนับเป็น attempt) เป็น `retryUntil` 1 วัน + `maxExceptions = 1` + `failOnTimeout` — error หรือ timeout จริงยังจบที่ครั้งเดียว ไม่ส่งซ้ำ
+- ผู้ใช้เลือกเว้นระยะอย่างเดียว: รอบเก่าที่ค้างของรายงานเดียวกันยังส่งครบทุกรอบ (ไม่ข้าม)
+- สาเหตุที่พบ: `composer run demo` ที่รันอยู่เปิดก่อนเพิ่ม worker `reports` (`0d54a004`) งานส่งรายงานจึงค้างใน queue ไม่มี log อีเมล ต้องรันคำสั่งใหม่
+- เทส `ReportScheduleThrottleTest`
+
+## Email log: ยังไม่ตั้งค่า SMTP = ส่งไม่สำเร็จ พร้อมเหตุผล (2026-10-19)
+- เดิมเมื่อ `mail_settings` ว่าง ระบบใช้ค่าสำรองใน `.env` (`MAIL_MAILER=log`) ซึ่งเขียนอีเมลลงไฟล์ log แต่ log อีเมลบันทึก `sent` (ตั้งแต่ 2026-10-13 มี 755 แถวที่ไม่ได้ส่งจริง ไม่ได้แก้แถวเก่า)
+- ตอนนี้ `deliver()` เช็ก transport ของ mailer ที่ใช้จริง ถ้าเป็น `log` บันทึก `failed` + `EmailNotificationService::NOT_CONFIGURED_ERROR` ("SMTP is not set up in Settings > Email: …") และคืน false รายงานตามกำหนดเวลาจึงเป็น `delivery_failed` และเจ้าของได้กระดิ่ง อีเมลยังถูกเขียนลงไฟล์ log ให้ดูเนื้อหาได้
+- เทส `EmailDeliveryLogTest` (+2)
+
+## รายงาน: "เวลาแก้ไข" นับตั้งแต่รับเคสจนปิดเคส (2026-10-19)
+`d42ac741` ผู้ใช้ตัดสินว่าเวลาแก้ไขต้องไม่รวมเวลารอคนรับ และให้ใช้กับทุกที่ที่ใช้คำนี้
+- `TicketMetrics::workHours()` = `responded_at` ถึง `resolved_at` ชั่วโมงตามปฏิทิน (กำหนด SLA ปิดเคสก็นับจากรับเคสอยู่แล้ว)
+- ภาพรวม Ticket & SLA: การ์ดเวลาแก้ไขโดยเฉลี่ย, P90 ("90% แก้ไขเสร็จไม่เกิน"), ช่วงก่อนหน้า, ตารางผู้รับผิดชอบ, คอลัมน์ "เวลาแก้ไข" ของรายการ (API เปลี่ยนจาก `resolve_hours` เป็น `work_hours`), PDF, ชีตสรุป Excel และ Dashboard ส่วน IT (ใช้ service เดียวกัน)
+- SLA ของ Ticket ที่ผู้ใช้เปิดเอง: การ์ด "เวลาแก้ไขโดยเฉลี่ย" เป็นเวลารับเคสถึงปิดเคส บรรทัดล่าง "รอคนรับเฉลี่ย n ชม." (key `rep_n_ms_wait_avg`) แทนแถบแยกรอคนรับ / ลงมือแก้
+- คงเดิม: "เวลาปิดเคส" (เปิดถึงปิด) ในรายงาน Ticket จากคำขอ, คอลัมน์ในตารางแยกกลุ่ม "ปิดเคส (เฉลี่ย)" และชีตข้อมูลดิบ
+- ข้อมูลจริง 30 วัน (เสร็จสิ้น 1,719 เคส ทุกเคสมีเวลารับเคส): เดิม 98.8 ชม. ตอนนี้ 75.5 ชม.
+- เทส: `TicketOverviewReportTest`, `ItBlockTest`, `TicketManualSlaReportTest` (+การ์ดนี้), `TicketOverviewExportTest`, `ExcelNumberFormatTest`, snapshot `ticket-sla-breakdown-*.json`; เทสรายงานและ Dashboard 498 ข้อผ่าน
+
+## รายงาน: การ์ดนับตรงกับชื่อ (2026-10-19)
+`727dc75d` จากการไล่ร่างคำอธิบายการ์ด (ผู้ใช้เห็นด้วยข้อ 48, 96, 105)
+- ตัดจำหน่าย: "เครื่องเช่าค้างคืน" และตาราง "เครื่องเช่าตามสัญญา" นับเฉพาะเครื่องเช่า เครื่องซื้อที่ผูกสัญญา MA ไม่นับเป็นของที่ต้องคืนผู้ให้เช่า
+- เรื่องค้างของพนักงาน: การ์ดนับทุกเรื่องเสมอเหมือนการ์ดบนหน้าเว็บ ตัวกรองเรื่องมีผลกับรายการเท่านั้น (เดิม PDF แสดง 0 ในการ์ดเรื่องอื่น)
+- ภาพรวมสิทธิ์: "Resource ที่ต้องดูแล" นับ Resource ละครั้ง ตัวที่ไม่มีเจ้าของและไม่มีสมาชิกอยู่ในกลุ่มเจ้าของ ไม่ซ้ำในกลุ่มไม่มีสมาชิก
+- เทส: `AssetWriteoffReportTest` (+1), `EmployeeOpenItemsReportTest`, `AccessOverviewReportTest`; เทสรายงาน 497 ข้อผ่าน
+
+## รายงาน: การ์ดตัวเลขทุกใบมี ⓘ บอกวิธีนับ ทั้งหน้าเว็บและ PDF (2026-10-19)
+`9f99bf53`, `cf756812` ผู้ใช้เลือกแบบ A (คำชุดเดียวใช้ทั้งเว็บและ PDF) หลังดู mockup https://claude.ai/artifact/H3YhYDFKgg6f9o1tgciwNU
+- คำอธิบาย 110 ข้อใน `lang/th|en/report.ts` คีย์ `rep_info_<รายงาน>_<การ์ด>` ร่างจากวิธีที่โค้ดนับ ผู้ใช้รีวิวในหน้าผลตรวจ PDF ข้อสังเกตที่ควรบอกคนอ่าน (นับเป็นครั้ง, รวมทุกหน่วยนับ, ต้นทุนเฉลี่ยไม่ใช่ FIFO ฯลฯ) อยู่ในประโยคแล้ว; 6 การ์ดใช้คำ ⓘ เดิมของหน้าเว็บ
+- `TabularReport::tileInfoKey()` หาคีย์ของการ์ด (`infoKeys()` ชี้ไปคำเดิม, การ์ดหมดประกันทุกช่วงใช้คำเดียว) endpoint summary ส่ง `info_key` ให้หน้าเว็บ, `SummaryStrip` วาด `InfoMark` ข้าง badge; หน้าที่วาดการ์ดเอง 7 หน้า + ภาพรวม Ticket ใส่ ⓘ ด้วยคำเดียวกัน (การ์ดที่รวม 2 ตัวเลขของไฟล์แสดง 2 บรรทัด)
+- PDF หน้าคำอธิบาย "ตัวเลขสรุป" อ่านคำชุดเดียวกันทุกการ์ด (ยกเลิก `summaryMeanings()`), ภาพรวม Ticket & SLA มีหัวข้อนี้แล้ว
+- หัวการ์ดใน PDF ตรงกับหน้าเว็บ (`tileLabels()`): รายการที่มีของ, เกินกำหนด ยังไม่ปิด, สัญญาในรายการ, ปรับยอดจากการนับสต็อก (ชิ้น), บรรทัดค้างอยู่ตอนนี้ใช้ เปิด / กำลังทำ
+- คำ ⓘ "ต้องจ่ายใน 12 เดือน" แก้เป็น "นับจากวันนี้" ตามที่โค้ดนับ
+- เทส `TileInfoTest` บังคับให้การ์ดทุกใบของทุกรายงานมีคำอธิบาย รายงานใหม่ต้องเพิ่ม `rep_info_*` ด้วย
+- เพดานหน่วยความจำงานสร้างไฟล์เขียนเป็น `4096M` (`71909705`) ค่าเท่าเดิม
+
+## เมนูข้างบน iPad จริง: แถบล่างไม่ตกขอบจอ (2026-10-19)
+`dea40939` ผู้ใช้ทดสอบบน iPad mini ด้วย Safari และ Chrome ทั้งแนวตั้งและแนวนอน (ภาพใน `docs/test/11`)
+- shell (`app-shell.tsx`) และเมนูข้างแบบกว้าง (`sidebar.tsx`) เปลี่ยนจาก `h-screen` (100vh) เป็น `h-dvh` เพราะบน iPad ค่า 100vh เท่ากับความสูงตอนแถบเบราว์เซอร์ยุบ รูปผู้ใช้กับปุ่มออกจากระบบจึงตกขอบจอ บนคอมพิวเตอร์สองค่าเท่ากัน หน้าตาไม่เปลี่ยน
+- ตรวจใน Chrome บนคอมที่ 768 / 910 / 1440 ไม่เจอปัญหานี้ ต้องดูบนเครื่องจริง
+- ยังเหลือหน้าต่าง 4 อันที่ใช้ 100vh แบบเดิม (สร้าง Ticket, มอบหมาย Ticket, สร้างคำขอ, แก้เทมเพลตอีเมล) ยังไม่ได้แก้
+- ซูมที่ค้างหลังรีโหลดบน iPad เป็นค่าที่เบราว์เซอร์จำแยกตามเว็บไซต์ ไม่ได้มาจากแอป
+
+## เมนูข้างบอกว่ายังมีเมนูต่อด้านล่าง (2026-10-19)
+`09cef78a` ผู้ใช้เลือกแบบ 4 จาก mockup https://claude.ai/artifact/BoxfXUHJ5uqj72roL8SeGw (iPad แนวนอนจอเตี้ยกว่าเมนูของ admin)
+- เมนูยาวเกินจอ ขอบล่างจาง + ลูกศร ▾ แตะแล้วเลื่อนลงหนึ่งหน้า; เลื่อนลงแล้วขอบบนจาง; สุดทางแล้วหายเอง; เมนูพอดีจอไม่เห็นอะไร (`nav-scroll.ts`, `use-nav-scroll.ts`, `NavScrollCue` ใน `sidebar.tsx`) ใช้ทั้งรางไอคอนและเมนูเต็ม
+- ▾ เป็นทางลัดสำหรับนิ้ว (aria-hidden, ไม่อยู่ในลำดับ Tab) คีย์บอร์ด / VoiceOver ไล่ได้ครบ; scroll-padding กันเมนูที่ได้โฟกัสไม่ให้อยู่ใต้ขอบจาง (WCAG 2.4.11); ลดการเคลื่อนไหวแล้วกระโดดแทนเลื่อนนุ่ม
+- เปลี่ยนหน้าแล้วเลื่อนเมนูของหน้านั้นเข้ามาในจอ (เปิดตั้งค่า / อีเมลแล้วเห็นแถบเลือก)
+- ปุ่มโปรไฟล์มี aria-label (เดิมอ่านเป็นตัวย่อชื่อ หรือไม่มีชื่อเลยถ้ามีรูป)
+- เทส `tests/js/nav-scroll.test.ts`; ตรวจในกรอบ 1024×639 แล้ว ทั้งราง เมนูเต็ม และหน้าตั้งค่า
+
+## รีวิวหน้าอีเมลและการแจ้งเตือน รอบ 1: บัคที่กระทบข้อมูล (2026-10-19)
+รีวิวหน้า /email-notifications ครบ 5 ด้าน (WCAG/แท็บเล็ต, ดีไซน์, logic, ความปลอดภัย, ตรวจด้วยตา) แล้วแก้เป็นรอบ ความปลอดภัยไม่พบช่องโหว่
+- `email_logs.body_html` เป็น `MEDIUMTEXT` (เดิม TEXT 64 KB; contract.weekly_digest ใหญ่ถึง 51 KB แล้ว) + คอลัมน์ `is_test` และ `action` (migration `2026_10_19_131057`, รันบน `itservices_perf` แล้ว แถวเดิม 55,702 ไม่เปลี่ยน)
+- บันทึก log ผ่าน `writeLog()`: หัวเรื่องเกิน 255 ตัวอักษรถูกตัด, บันทึก log ไม่สำเร็จไม่ทำให้อีเมลที่ส่งไปแล้วล้มเหลว (เขียน warning ลง log)
+- ส่งอีเมลจริงอัปเดต `last_sent_at` ด้วย `toBase()` — "แก้ไขล่าสุด" ของเทมเพลตไม่เปลี่ยนเองอีก
+- ส่งทดสอบ (เทมเพลต + ทดสอบ SMTP) ติด `is_test` ไม่นับเป็น "ส่งล่าสุด" และไม่นับในการ์ด; ช่องที่ล้างว่างใน editor ใช้ข้อความที่บันทึกไว้แทน (ไม่ขึ้น 422)
+- หน้า log แสดงปุ่มตามที่อีเมลจริงมี (`action`) ไม่มีปุ่มก็ไม่แสดง; แถวเก่าก่อน migration ยังเป็นปุ่ม "Open in portal"
+- การ์ด "อัตราการส่งสำเร็จ" (ผู้ใช้เลือก ก + ข): ตั้ง SMTP แล้ว = % ของ 30 วันล่าสุด ไม่นับส่งทดสอบและแถว "ยังไม่ตั้งค่า SMTP" พร้อมบรรทัด "ส่งได้ X จาก Y"; ยังไม่ตั้ง = "ยังไม่ตั้งค่า" สีเหลืองอำพัน กดไปหน้าตั้งค่า → อีเมล (ถ้ามีสิทธิ์ `settings.email`) — `EmailNotificationService::deliveryStats()`
+- แท็บประวัติการส่งและการ์ดที่ลิงก์ไปแท็บนั้นแสดงเฉพาะคนที่มีสิทธิ์ `notifications.logs`
+- ตารางเทมเพลตและตารางการแจ้งเตือนโหลดไม่สำเร็จ = แสดง LoadFailed + ลองใหม่ (ไม่ใช่ "ไม่มีเทมเพลต"); การ์ดการแจ้งเตือนแสดง "—" ไม่ใช่ 0
+- ข้อตกลง: ตัวกรองแบบชิปในหน้านี้คงไว้ (ผู้ใช้เลือก)
+- เทส `EmailDeliveryRecordTest` (8)
+
+## รายงาน: ผู้ดูแลจัดการรายงานที่ตั้งส่งอัตโนมัติของทุกคน (2026-10-19)
+ออกแบบจาก mockup ที่ผู้ใช้อนุมัติ (artifact "จัดการรายงานอัตโนมัติ")
+- **ปุ่ม "จัดการ"** มุมขวาของการ์ด "รายงานที่ตั้งส่งอัตโนมัติ" ใน Report Center (รูปแบบเดียวกับ "ลบทั้งหมด" ของการ์ดไฟล์ส่งออก) เห็นเฉพาะผู้มีสิทธิ์ใหม่ `reports.schedule_manage` "จัดการรายงานอัตโนมัติของทุกคน" (หน้าสิทธิ์ หมวดรายงาน กลุ่มการใช้งานเพิ่มเติม; ไม่ได้ให้ Role ใดโดยค่าเริ่มต้น)
+- **หน้าต่างกลางจอ** (`manage-schedules-dialog.tsx`): ตารางกำหนดการของทุกคน (เจ้าของ+แผนก, รายงาน, รอบส่ง, ผู้รับ พร้อมจำนวนอีเมลภายนอก, ส่งล่าสุด) ค้นหาเจ้าของ/รายงาน/อีเมล และตัวกรองสถานะ + มีผู้รับภายนอก; กดแถวแล้วรายละเอียดเลื่อนออกจากขวาทับตาราง (Esc / ✕ / กดแถวเดิมปิด, กดแถวอื่นสลับ)
+- **ผู้ดูแลทำได้:** หยุดส่ง / เปิดส่งต่อ, ลบกำหนดการ, เอาผู้รับออกทีละคนด้วยกล่องยืนยันมาตรฐาน (ผู้รับคนสุดท้ายเอาออกไม่ได้ ให้หยุดหรือลบแทน) ไม่ต้องใส่เหตุผล ไม่แจ้งเจ้าของทางกระดิ่ง (ผู้ใช้เลือก) เจ้าของเพิ่มอีเมลกลับเองได้
+- **API:** `GET /api/reports/schedules/manage`, `PATCH|DELETE /api/reports/schedules/{id}/manage`, `DELETE /api/reports/schedules/{id}/recipients?email=` (`ReportScheduleAdminController` → `ReportScheduleAdminService`, `ManageReportScheduleRequest`, `ManagedReportScheduleResource` บอกผู้รับที่มีบัญชี) ทุกการกระทำบันทึก audit log (`Paused/Resumed/Deleted scheduled report`, `Removed scheduled report recipient`) พร้อมคำไทย/อังกฤษในหน้าบันทึกการตรวจสอบ
+- **ยังไม่มี:** ประวัติการส่งย้อนหลังหลายรอบ (ระบบเก็บเฉพาะรอบล่าสุดของกำหนดการ) แผงรายละเอียดจึงแสดงเฉพาะการส่งล่าสุด
+- เทส `ReportScheduleAdminTest` (5 ข้อ), `ReportPermissionsTest`; เทส JS 298 ข้อผ่าน
+- **ตรวจใน Chrome ที่ 768 และ 1024 ทั้งสว่างและมืด** แก้ 2 จุด: ตารางกว้างเกินกรอบที่ 768 (คอลัมน์ส่งล่าสุดโดนตัด, "อีเมลภายนอก" ตก 3 บรรทัด) จึงกำหนดความกว้างคอลัมน์ ให้ชื่อรายงานตัดท้าย และซ่อน "รอบส่ง" ต่ำกว่า 1024 (ยังเห็นในแผงรายละเอียด); หัวตารางที่ตรึงไว้ลอยทับแผงรายละเอียด จึงยกแผงและฉากหลังขึ้น `z-20` หน้าสิทธิ์แสดงสวิตช์ใหม่ถูกต้อง (Administrator เปิดและล็อก, Role อื่นปิดอยู่) ยังไม่ได้ลองกล่องยืนยันเอาผู้รับออกบนจอจริง เพราะทุกกำหนดการในข้อมูลมีผู้รับคนเดียว
+
+## ตรวจหน้าสิทธิ์การใช้งานบน iPad: สีหัวคอลัมน์ที่ตรึงไว้ และเส้นตารางสิทธิ์ (2026-10-19)
+`7509908f` ผู้ใช้วงจุดในโหมดมืด (ภาพใน `docs/test/12`)
+- ตารางที่มีคอลัมน์ตรึง (คอลัมน์ปุ่มด้านขวา) หัวคอลัมน์ที่ตรึงเป็นสี muted ทึบ แต่หัวแถวอื่นเป็น muted 50% ทับพื้นการ์ด จึงสว่างกว่าเป็นก้อน แก้ที่ `DataTable` + `.pin-head` ใน app.css มีผลทุกตารางที่ตรึงคอลัมน์
+- การ์ดสิทธิ์ (บทบาท) แถวที่มีช่องว่าง เส้นแบ่งหยุดครึ่งทาง ตอนนี้ช่องสุดท้ายลากเส้นต่อให้ช่องว่างหลังมัน (`PermissionCell`) เจอ 10 จาก 14 การ์ด
+- ตรวจด้วยการวัดค่าในหน้าเว็บที่ 1024 และ 768 ทั้งโหมดสว่างและมืด (จับภาพหน้าจอจากเบราว์เซอร์ไม่ได้รอบนี้)
+
+## Role Templates: บทบาทของตัวเองเปิดแบบแก้ไม่ได้ (2026-10-19)
+`bc4137db` ผู้ใช้ทดสอบบันทึกจริงและเข้าด้วยบัญชีที่ไม่ใช่ผู้ดูแลระบบสูงสุด (ภาพใน `docs/test/10`)
+- บันทึกจริงด้วย admin ผ่านครบ และขึ้นใน audit log ทั้ง 3 รายการ คือแก้สิทธิ์ QA Notification viewer, แก้สิทธิ์ IT Supervisor/Leader และเพิ่มสมาชิกกลุ่ม
+- บัญชีในกลุ่ม IT Supervisor/Leader เปิดบทบาทของตัวเองแล้วกดสวิตช์ได้ พอกดบันทึก เซิร์ฟเวอร์ถึงปฏิเสธ (own_access) ในกล่องยืนยัน ซึ่งปุ่มบันทึกยังกดได้อยู่ ตอนนี้หน้าใช้กติกาเดียวกับเซิร์ฟเวอร์ตั้งแต่เปิด สวิตช์ทุกตัวล็อก พร้อมเหตุผล "แก้สิทธิ์ของตัวเองไม่ได้" และป้ายสีเหลืองแทนปุ่มบันทึก แบบเดียวกับ Administrator (`isOwnRole` ใน `lib/own-role.ts`, `ownRole` ใน context ของ `permission-layout.tsx`)
+- แท็บกลุ่มบทบาทบอกข้อจำกัดของกลุ่มตัวเองก่อนกดอยู่แล้ว (ลบกลุ่มไม่ได้ เปลี่ยนบทบาทไม่ได้) ไม่ต้องแก้
+- เทส `tests/js/own-role.test.ts`
+- ต่อรอบ 1: migration `2026_10_19_135505` ติด `is_test` ให้ log ส่งทดสอบเก่าจากหัวเรื่อง ("(test HH:MM)", "Test email") — บน `itservices_perf` ไม่มีแถวแบบนี้; แถวเก่าที่ไม่ได้เก็บปุ่มไม่แสดงปุ่ม (เดิมเดาเป็น "Open in portal") และมีบรรทัดบอกว่าบันทึกก่อนระบบเก็บปุ่ม (`action_recorded`)
+- Demo seeder: ส่งผู้ใช้ที่ทำรายการให้ AssetService และปิดเคสผ่าน `TicketClosureService` — `DemoSeederTest` ผ่านอีกครั้ง
+- หัวบทบาทอยู่บรรทัดเดียวบน iPad แนวนอน (`96fad21f`) ป้ายเหลือเหลือ "ดูอย่างเดียว / View only" เหตุผลย้ายไปบรรทัดใต้ชื่อพร้อมจำนวนสิทธิ์; ตั้งแต่ lg หัวไม่ตัดบรรทัด ชื่อยาวตัด … (ชี้ดูเต็ม) ช่องค้นหา 240px ก่อน xl; วัดที่ 1024 เหลือที่ให้ชื่อ 235px ชื่อยาวสุด 202px
+
+## งานค้างข้อ 3, 4, 6, 7, 8 จากรายการรอตัดสิน (2026-10-19)
+- **3. ตัวเลขเมนูข้าง** (`6320abaa`) นับสัญญาที่ต้องดูแลด้วย SQL (`Contract::needsRenewal()`) แทนการโหลดสัญญาทั้งหมดทุก 15 วินาที เทสเทียบกับกติกาเดิม 8 กรณี; หยุดดึงตอนแท็บถูกซ่อน และดึงใหม่ตอนกลับมาที่แท็บ
+- **4. ข้อความ screen reader ของตัวเลขเมนูบนจอ ≥ 1280px** มีอยู่แล้วตั้งแต่รวมเมนูเป็นแผงเดียว (`575eb39d`) ไม่ต้องแก้
+- **6. profile drawer** (`3981b553`) ชื่อในหัวและข้อมูลจาก HR (รหัสพนักงาน วันเริ่มงาน) ขึ้นบรรทัดใหม่แทนการตัดเป็น … ตารางทรัพย์สินยังตัดเหมือนตารางอื่น
+- **7. (i) ของสิทธิ์ลบพนักงาน** (`154e35fc`) การ์ดพนักงานเป็นการ์ดเดียวที่ไม่ส่งคำอธิบาย ตอนนี้ส่งแล้ว เทส `permission-tree-info.test.ts` ตรวจทุกการ์ด
+- **8. ภาพรวมของคลังอะไหล่** อยู่ใต้ "ทั่วไป" ไม่มีป้าย "ดู" เหมือนทุกโมดูลอยู่แล้ว ไม่ต้องแก้
+
+## หน้าไม่รอตัวเลขเมนูอีก ตัวเลขค่อย ๆ มาตามหลัก Micro-interaction (2026-10-19)
+`e5f5471b`, `b0d58927`
+- ทุกหน้าเคยหมุนรอจนตัวเลขเมนูโหลดเสร็จ (เดิมกันแถบ "รอรับคืน" ดันหน้าลง แต่แถบกลายเป็นปุ่มในหัวตั้งแต่ `b4a1f4de`) ตอนนี้หน้าแสดงทันทีที่รู้ว่าล็อกอิน ตัวเลขตามมาทีหลัง วัดที่หน้าทรัพย์สิน หน้าขึ้น 225ms ตัวเลข 285ms
+- กติกาการเคลื่อนไหว: ตัวเลขที่มาครั้งแรกคือผลการโหลด ไม่ใช่ข่าว จึงแค่จางเข้า (`motion-pop-in` 150ms) ทั้งจุดบนราง ตัวเลขในเมนู ป้ายรับมอบบนรูปผู้ใช้ และปุ่มแจ้งเตือนในหัวหน้า; ตัวเลขที่เพิ่มขึ้นตอนกำลังดูคือข่าว จึงเด้ง (`badge-pop`) แบบเดียวกับกระดิ่ง (`useCountRises` ใช้ร่วมกัน); ลดลงเปลี่ยนเฉย ๆ; ลดการเคลื่อนไหวแล้วเหลือแค่จาง
+- จุดบนรางกับตัวเลขในเมนูแยกชั้น: ชั้นนอกคุมการสลับราง/เมนู ชั้นในคุมการเคลื่อนไหว ตัวที่ซ่อนอยู่จึงไม่กะพริบขึ้นมา
+- เมนูข้างอ่านตัวเลขตาม id ของเมนูจาก server ตรง ๆ (เลิกคัดลอกทีละตัว); query ที่หาการนับสต็อกค้างใช้ `StockCountStatus::Draft` แทนข้อความ `'draft'` 3 จุด
+
+## ทุกความสูงใช้ dvh แทน vh (2026-10-19)
+`ad378196` ต่อจาก `dea40939` (shell) หน้าต่างและหน้าที่ยังคิดความสูงจาก 100vh อาจถูกตัดขอบล่าง (ปุ่มบันทึก / ยกเลิก) บน iPad เพราะ Safari และ Chrome นับ vh เป็นความสูงตอนแถบเบราว์เซอร์ยุบ
+- เปลี่ยนเป็น dvh ทั้งหมด 29 ไฟล์: หน้าต่าง Ticket (สร้าง แก้ มอบหมาย ส่งต่อ ปิดเคส รับเคส อัปเดต รายละเอียด), สร้างคำขอ, Workflow (แก้ ดู), แม่แบบอีเมล (แก้ ตัวอย่าง), ตัวหมุนตอนโหลด, หน้า login, ประวัติ SKU, หน้าไม่มีสิทธิ์ และความสูงบางส่วนในหน้าต่าง (ดูไฟล์แนบ ผังองค์กร รายชื่อสมาชิก นำเข้า); หน้า error Blade มี 100vh เป็นค่าสำรอง
+- บนคอมพิวเตอร์ vh กับ dvh เท่ากัน หน้าตาไม่เปลี่ยน; ของใหม่ให้ใช้ `dvh` / `h-dvh` / `min-h-dvh` เสมอ
+
+## หน้าต่างที่เปิดผ่าน ?dialog= ไม่ถามทิ้งข้อมูลหลังบันทึก (2026-10-19)
+ผู้ใช้เจอที่หน้าต่าง "ส่งรายงานทางอีเมลอัตโนมัติ": เพิ่มอีเมลแล้วกด "ตั้งเวลาส่ง" ระบบบันทึกแล้ว แต่ขึ้น "ทิ้งข้อมูลที่กรอกไว้?" ก่อนปิด และกดยกเลิกหลังกรอกข้อมูลก็ถามซ้ำ 2 รอบ
+- สาเหตุ `useDialogParam` ปิดหน้าต่างด้วยการถอย history แต่ไม่ได้เรียก `passNextBack()` แบบที่ `usePageDialogs` ทำ ตัวกัน Back จึงเข้าใจว่าผู้ใช้กด Back เองทั้งที่ฟอร์มยังนับว่ามีข้อมูลค้าง
+- แก้ที่ `shared/hooks/use-dialog-param.ts` จุดเดียว มีผลทุกหน้าต่างที่ใช้ `?dialog=` (ตั้งเวลาส่งและส่งออกรายงาน, แม่แบบอีเมล, ตั้งค่าการแจ้งเตือน, หน้าต่างของ shell)
+- ตรวจใน Chrome โดยดักคำขอบันทึกไว้ในหน้า ไม่ให้ถึง server: บันทึกแล้วปิดทันทีพร้อม toast, กดยกเลิกถามครั้งเดียว, กด Back ของเบราว์เซอร์ตอนฟอร์มมีข้อมูลยังถามเหมือนเดิม
+
+## งานต่อของโมดูลสิทธิ์ ข้อ 2, 5, 3 แบบเล็ก (2026-10-19)
+- **รวม normalize ฝั่ง server** (`f3e80651`) 11 ฟังก์ชันใน `Permissions.php` ใช้กติกาเดียวกัน (ไม่มี master ตัดทั้งโมดูล, ลูกต้องมีกลุ่มของมัน) ตอนนี้เรียก `normalizeTree()` ตัวเดียว Ticket ยังมีข้อยกเว้นของตัวเอง ชื่อฟังก์ชันเดิมคงไว้ เทสสิทธิ์ 261 ข้อผ่าน
+- **RoleResource** (`e09d9896`) สร้าง แก้ชื่อ และทำสำเนาบทบาท ส่งผ่าน `RoleResource` (key, name, color, is_system) แทน model ดิบ; type ฝั่งหน้าเว็บเป็น `RoleSummary` ให้ตรงของจริง มีเทสตรึงรูปแบบ
+- **เทสเทียบโครงสร้างสองฝั่ง** (`c964594a`) `tests/Fixtures/permission-trees.json` เป็นตัวกลาง: ฝั่ง PHP ตรึงกับ `*Hierarchy()` และรายการสิทธิ์ ฝั่ง JS ตรึงกับ `permission-specs.ts` ถ้าเพิ่มสิทธิ์ฝั่งเดียว เทสล้ม; เปลี่ยนตั้งใจให้แก้ specs แล้วรัน `UPDATE_PERMISSION_TREES=1 php artisan test --filter=PermissionTreeSnapshot`
+- ยังไม่ทำ: ให้ server ส่งโครงสร้างการ์ดทาง API และการ์ดตัวกลางตัวเดียว (งานใหญ่); เหตุผลของสวิตช์ที่ล็อกให้คนที่ใช้ตาเห็น อยู่ระหว่างทำ mockup
+
+## รายงานที่ตั้งส่งอัตโนมัติ: ไม่เกิน 3 รายการต่อ 1 รายงาน (2026-10-19)
+ผู้ใช้ขอให้ 1 รายงานตั้งส่งอัตโนมัติได้ไม่เกิน 3 รายการ
+- นับต่อคนต่อรายงาน (`ReportSchedule::MAX_PER_REPORT = 3`) คนอื่นตั้งรายงานเดียวกันได้อีก 3 ของตัวเอง เพดานรวมต่อคน 10 รายการ (`MAX_PER_USER`) ยังอยู่และเช็คก่อน
+- server ปฏิเสธรายการที่ 4 ด้วย `report_schedule_limit` (422 พร้อม `limit`) หน้าต่างตั้งเวลาส่งขึ้นข้อความ "รายงานนี้ตั้งส่งอัตโนมัติได้สูงสุด 3 รายการ ลบหรือแก้รายการเดิมก่อน"
+- หน้ารายงานแบบตาราง และหน้าภาพรวม Ticket & SLA ล็อกปุ่ม "ตั้งเวลาส่ง" เมื่อครบ ชี้แล้วขึ้นเหตุผล (`useReportSchedulesFull`) ปุ่มดึงรายการของตัวเองเฉพาะผู้มีสิทธิ์ตั้งเวลาส่ง
+- รายการเดิมที่เกิน 3 อยู่แล้วไม่ถูกลบ แค่ตั้งเพิ่มไม่ได้
+- เทส `test_one_report_takes_at_most_three_schedules_per_person`
+
+## หน้าไม่มีสิทธิ์ไม่พาไป Dashboard เองแล้ว (2026-10-19)
+จากการตรวจหน้า Error และขีดจำกัด (ผลตรวจ https://claude.ai/artifact/BSA1MJbj76vYWwrooj3Drv ข้อ W2) ผู้ใช้เลือกตามที่แนะนำ
+- `NoAccess` เอาตัวนับถอยหลัง 15 วินาทีกับแถบเวลาออก เดิมพาไป Dashboard เองโดยหยุดหรือขอเวลาเพิ่มไม่ได้ ซึ่งผิด WCAG 2.2.1 และหน่วย "s" เขียนตายตัว
+- เหลือปุ่ม "กลับหน้า Dashboard" แบบปุ่มขอบ สูง 40px อยู่ใน `EmptyState` (เดิมเป็นลิงก์ตัวหนังสือ สูงราว 20px) ลบคีย์ `auth_redirecting_to_dashboard` ที่ไม่ใช้แล้ว
+- เทส `tests/js/no-access-timing.test.ts` กันไม่ให้ตั้งเวลาหรือสั่ง navigate กลับมาอีก; ตรวจใน Chrome โดยตัดสิทธิ์ใน `/api/me` เฉพาะในหน้า (ไม่แตะ server) เปิด `/settings` แล้วรอ 17 วินาที ยังอยู่หน้าเดิม
+- **เหตุผลของสวิตช์ที่ล็อก** (`ff0e3f9a`) ผู้ใช้เลือกแบบ A จาก mockup https://claude.ai/artifact/1fkBMGprennjbz9zwS8wqf: ใต้หัวกลุ่มที่ปิดอยู่ (และตัวมันไม่ได้ล็อก) มีบรรทัดจาง "🔒 เปิด X ก่อน" ครั้งเดียวต่อกลุ่ม ใช้คำ `perm_lock_needs` เดิม จางเข้าตอนปิดกลุ่ม; Administrator และบทบาทของตัวเองไม่แสดง (มีป้ายเหลืองแล้ว); ตรวจในหน้าจริง บทบาท Staff ขึ้น "เปิด ดูคำขอทั้งหมด ก่อน" 1 จุด
+
+## การ์ดสิทธิ์ใน Role Templates วาดจาก layout ของ server (2026-10-19)
+
+- **server** (`c8a04691`) `app/Support/PermissionLayout.php` เมธอด `cards()` บอกว่าการ์ดไหนมีสิทธิ์ใดบ้าง; `GET /api/permissions` ส่ง `layout` มาด้วย; fixture `tests/Fixtures/permission-layout.json` เขียนใหม่ด้วย `UPDATE_PERMISSION_LAYOUT=1 php artisan test --filter=PermissionLayout`; `tests/Unit/PermissionLayoutTest.php` เช็คว่าทุกคีย์ในแคตตาล็อกอยู่ในการ์ดเดียวพอดี ลูกของกลุ่มตรงกับกฎตอนบันทึก และตรงกับ fixture
+- **โมเดลฝั่งหน้าเว็บ** (`a91ca4ba`) `resources/js/modules/permission/lib/card-layout.ts` (`cardCountSpec`, `cardKeys`, `cardRows`, `pageCards`, `cardSections`, `countingHas`, `rowShowsInfo`, `bareAria`) พร้อมเทส `tests/js/card-layout.test.ts`
+- **component เดียว** (`9b7437d7`, `8fc045d6`) `components/permission-tree-card.tsx` วาดการ์ดต้นไม้ทั้งสิบใบ ตัวนับ ผลค้นหา ขอบ rebase และสถานะ "เปลี่ยนแล้ว" ของแต่ละ section อ่านจาก layout ทั้งหมด
+- **การ์ดที่เหลือ** (`9ed4ec58`) การ์ดแบบแบน (Permissions, Settings) Profile Dashboard และ "อื่น ๆ" วาดจาก layout เช่นกัน ลบไฟล์เก่า 11 ไฟล์ `*-permission-tree.tsx`, `module-permission-card.tsx`, `lib/permission-specs.ts`, `tests/js/permission-tree-parity.test.ts`, `tests/js/permission-tree-info.test.ts`, `tests/Fixtures/permission-trees.json`, `tests/Unit/PermissionTreeSnapshotTest.php`; `PermissionMatrixTest` อ่าน `data.layout` แทนการแกะหน้าเว็บ
+- **ตรวจแล้ว** เก็บสวิตช์ สถานะ เหตุผลที่ล็อก หัวข้อ และโน้ตของหน้าจริงครบ 7 บทบาทก่อนแก้ แล้วเทียบหลังทุกขั้น ผลเหมือนเดิม (ภาษาไทย); JS 315 เทส, PHP กลุ่ม Permission และ Role 380 เทส, tsc ไม่มี error
+- **เว้นไว้ตั้งใจ** (หน้าตาเดิม รอผู้ใช้ตัดสินใจ) ไอคอน (i) ที่หัวแถบ master มีเฉพาะ Stock กับ Employees ทั้งที่ Access, Assets, Requests, Workflows มีคำอธิบาย; ไม่มี (i) ที่หัว "create" ของ Ticket และแถว Ticket Level; แถว Ticket Level กับแถวแจ้งเตือนคำขอ screen reader อ่านโดยไม่มีหัวข้อกำกับ
+- **เพิ่มสิทธิ์ใหม่** ทำ 4 อย่างคือ `Permissions::all()`, `*Hierarchy()` ของมัน, `PermissionLayout::cards()` (ถ้าต้องมีช่องหรือหัวข้อใหม่) และคำใน lang แล้วรันใหม่ด้วย `UPDATE_PERMISSION_LAYOUT=1`; การ์ดของโมดูลใหม่เอี่ยมจะไปอยู่ใน "อื่น ๆ" จนกว่าจะเพิ่มในรายการ section ของ `card-layout.ts`
+
+## หน้า Error: บัคและ logic ขั้น 1 (2026-10-19)
+จากผลตรวจหน้า Error และขีดจำกัด https://claude.ai/artifact/BSA1MJbj76vYWwrooj3Drv หมวดบัคและ logic (B8 ทำพร้อม Session limit ใน session นั้น) หน้าตายังเป็นแบบเดิม รอขั้น 3 ดีไซน์
+- **ลองใหม่และ Toast** (`008fbedd`) React Query ลองใหม่เฉพาะ 5xx กับเน็ตหลุด สูงสุด 2 ครั้ง (`shouldRetryQuery` ใน `shared/lib/http-errors.ts`) 401, 403, 404, 422, 429 ตอบทันที หน้าไม่มีสิทธิ์จึงไม่ช้า 3 วินาทีอีก Toast ที่ key เดียวกันขึ้นใบเดียวจนกว่าใบเดิมจะออกจากจอ
+- **5xx ไม่ปิดทั้งแอป** (`008fbedd`) การโหลดข้อมูลขึ้นจอเต็มเฉพาะเมื่อลองครบแล้วยังพังและจอไม่มีข้อมูลเดิมให้ดู (ดึงซ้ำเบื้องหลังที่พังยังเห็นข้อมูลล่าสุด) การบันทึกที่พังขึ้นในแบนเนอร์แดงของฟอร์มพร้อมรหัสอ้างอิง (`serverMessage` คืนคำมาตรฐาน `err_action_server` แทนข้อความของ server ซึ่งตอน APP_DEBUG เป็น SQL/stack trace) ถ้าไม่มีฟอร์มรับ ขึ้น Toast แดงพร้อมรหัสอ้างอิงแทน; ตัวจับอยู่ท้าย `shared/lib/http.ts` (QueryCache และ MutationCache)
+- **503 และลำดับความรุนแรง** (`008fbedd`) 503 ขึ้น "ปิดปรับปรุงชั่วคราว" พร้อมเวลาจาก Retry-After; error ที่มาทีหลังไม่ทับอันแรก ยกเว้นรุนแรงกว่า (ปิดปรับปรุง > server > เน็ตหลุด > ใช้งานถี่) รหัสอ้างอิงของ 5xx แรกจึงไม่หาย
+- **/me** (`008fbedd`) เฉพาะ 401 ที่ถือว่ายังไม่ล็อกอิน 429 หรือ server ล่มไม่พาไปหน้า login อีก (`isLoading` ของ `useAuth` คือยังไม่รู้ จนกว่า /me จะตอบได้)
+- **หน้าเชื่อมต่อไม่ได้** (`9ea4c73a`) เช็กใหม่เมื่อเบราว์เซอร์กลับมา online และทุก 10 วินาที ต่อได้แล้วปิดหน้าจอและดึงข้อมูลบนจอใหม่ ไม่ต้องโหลดหน้าใหม่ ปุ่มเป็น "ลองใหม่" (เช็กก่อน) กดแล้วยังไม่ได้ขึ้น "ยังเชื่อมต่อไม่ได้ ระบบจะลองเชื่อมต่อให้เองทุก 10 วินาที" (`useConnectionRecovery`)
+- **หน้า 404 ในแอป** (`9ea4c73a`) URL ที่ไม่มีขึ้น "ไม่พบหน้านี้" ในกรอบแอปพร้อมปุ่มกลับ Dashboard (`app/not-found.tsx`) คนที่ยังไม่ล็อกอินไป login ก่อนแล้วกลับมาที่หน้านี้
+- **ErrorBoundary ต่อหน้า** (`9ea4c73a`) หน้าเนื้อหาพังแล้วเมนูข้างยังอยู่ เปลี่ยนหน้าแล้วหายเอง (key = pathname) ตัวครอบทั้งแอปยังอยู่เป็นชั้นสุดท้าย
+- **แท็บที่เปลี่ยนบัญชีแล้ว** (`9ea4c73a`) หยุดนับเวลาหมดอายุและ heartbeat จึงไม่สั่ง logout บัญชีใหม่
+- **comment** แก้ที่ยังเขียน 60 ครั้งต่อนาที (จริง 300) และอ้าง services/http.ts
+- **ตรวจแล้ว** เทส `tests/js/http-errors.test.ts` และ `toast-queue.test.ts` (JS 325 เทสผ่าน, tsc ผ่าน); ใน Chrome จำลองด้วยการ patch XMLHttpRequest ในหน้า (ไม่ยิงคำขอจริงจนโดน 429) ได้ผลตามข้างบนทุกข้อ ยกเว้น /me ตอนเปิดหน้าและแท็บเปลี่ยนบัญชีที่ยังไม่ได้ลองจริง
+
+## หน้า Error: ดีไซน์ชุดเดียว (2026-10-19)
+ตาม spec `docs/superpowers/specs/2026-10-19-error-screens-design.md` และ mockup https://claude.ai/artifact/LCftKyrLJfiScxcfWFpcbf ทุกจอ error ของแอปใช้หน้าตาเดียวกัน ไอคอน 40px ไม่มีกรอบ หัวข้อ 16px ปุ่ม `h-10` เต็มกว้างเรียงลง รหัสอ้างอิงเป็น `X-Request-Id` ของ server เสมอ ไม่เคยสร้างในเบราว์เซอร์ และไม่มีข้อความบอกว่าส่งเรื่องให้ IT แล้ว
+- **ชิ้นส่วนกลาง** (`cf07bccc`, `754d720b`) `BlockingDialog` ใช้ overlay และจังหวะเปิดมาตรฐานร่วมกัน (ชั้น `top` = 10000 สำหรับ session หมดเวลาและเปลี่ยนบัญชี ชั้น `wall` = 9999 สำหรับ dialog error) กับ `ErrorState`, `ErrorIcon`, `ReferenceCode` (ปุ่มคัดลอกขึ้นเฉพาะที่ใช้ clipboard ได้ คือ https หรือ localhost, `c156c166`), `CountdownRing`, `useCountdown`
+- **Error ที่เจอระหว่างใช้งานเป็น dialog กลางจอ** (`98a0223e`) server, เน็ตหลุด, ใช้งานถี่ (429 นับถอยหลังจาก Retry-After) และปิดปรับปรุง (503) ขึ้นทับหน้าเดิมแทนจอเต็ม ทุกแบบมีปุ่ม "ลองใหม่" ส่วน "ปิด" มีเฉพาะ dialog server (กดแล้วเมนูข้างใช้ได้ทันที) เน็ตหลุดปิดเองเมื่อต่อได้ 429 กับ 503 รอนับถอยหลัง
+- **ปิดแล้วเงียบ** (`377b49b7`, `2e013ecc`) ปิด dialog server แล้ว error ของการอ่านบนหน้าเดิมไม่เปิดซ้ำ ออกไปหน้าอื่นแล้วเปิดได้อีก กลับมาหน้าเดิมก็เปิดได้ (`AppShell` เรียก `rearm()` ทุกครั้งที่ path เปลี่ยน) ลองใหม่ดึงเฉพาะ query ที่พัง (`retryFailedQueries`)
+- **dialog error ไม่แย่งปุ่มของ dialog ชั้นบน** (`2e013ecc`) Radix ให้ modal ที่เปิดทีหลังเป็นตัวที่กดได้ไม่ว่า z-index เท่าไร error ที่ขึ้นระหว่างเตือน session หมดเวลาจึงทำให้ "ใช้งานต่อ" กดไม่ได้ ตอนนี้ระหว่างที่ `BlockingDialog` ชั้น `top` (session หมดเวลา, เปลี่ยนบัญชี) เปิดอยู่ dialog error ยังไม่แสดง error รออยู่ใน store แล้วขึ้นหลัง dialog นั้นปิด (`shared/lib/top-dialogs.ts`)
+- **หน้าพัง (ErrorBoundary)** (`cc9cfc24`, `e52720a0`) แสดงรหัสอ้างอิงของรายงานที่ส่งขึ้น server (`client-error-report.ts` จำผลใน `report-cache.ts`) รหัสโผล่เฉพาะหน้าพังที่เป็นต้นเหตุ ไม่ตกไปอยู่บนหน้าพังรอบถัดไป
+- **ไม่พบหน้าและไม่มีสิทธิ์** (`4e5c44f8`) ใช้บล็อก error เดียวกัน (`<h1>` เป็นหัวหน้า) ชื่อแท็บเบราว์เซอร์กับ breadcrumb ตามสถานะหน้า
+- **หน้า Blade ของ Laravel** (`40d84f82`) 401, 403, 404, 419, 429, 500, 503 ตามภาษา โหมดสี และสีหลักของคนอ่าน ไม่พึ่ง Vite และ DB ตอนเรนเดอร์ (อ่านชื่อแบรนด์กับสีผ่าน `App\Support\ErrorPage` ครอบ `QueryException`) 503 บอกเวลาจาก Retry-After
+- **ตรวจแล้ว** JS 402 เทสผ่าน (เพิ่ม `countdown.test.ts`, `report-cache.test.ts`, `top-dialogs.test.ts` และเทสใน `http-errors.test.ts`) tsc และ prettier ผ่าน PHP `ErrorPagesTest` 24 เทส (รวมปุ่มและลิงก์ของทุกรหัส) กับ `ErrorPageTest` 1 เทสผ่าน pint ผ่าน ใน Chrome (Chrome จริง ล็อกอินอยู่ จำลองด้วยการ patch XMLHttpRequest) ดู dialog server ในโหมดมืดและอังกฤษ, กด "ปิด" แล้วเมนูใช้ได้, error ซ้ำบนหน้าเดิมไม่เปิดซ้ำ, ไปหน้าอื่นแล้วกลับมาหน้าเดิมเปิดได้อีก, dialog เปลี่ยนบัญชี (จำลอง `/api/me` ในแท็บเดียว) ขึ้นก่อนหรือหลัง error ก็ได้ dialog error ไม่อยู่ใน DOM ปุ่ม "โหลดหน้าใหม่" กดได้และ focus อยู่ในนั้น, หน้าพังในโหมดมืดอังกฤษ, หน้า /tickets/xyz โหมดมืดที่ 1280px และ 768px
+- **ยังไม่ได้ตรวจด้วยตา** หน้าไม่มีสิทธิ์ (บัญชี admin เข้าไม่ถึง) ฟอร์มที่เปิดค้างแล้ว error dialog ขึ้นทับ (หา query ที่ไม่มีข้อมูลโดยฟอร์มไม่ถูกปิดไม่ได้ ตรวจชั้น z-index จากโค้ดแทน) session หมดเวลาจริง (เทียบจากคลาสเท่านั้น) error ที่รอขึ้นหลังปิด dialog ชั้นบน (dialog เปลี่ยนบัญชีปิดได้ด้วยการโหลดหน้าใหม่เท่านั้น ตรวจจากโค้ดกับ `top-dialogs.test.ts`) และหน้า Blade บนเบราว์เซอร์ปิด JavaScript
+- **ค้างไว้ให้ดู** dialog ไม่มีแอนิเมชันตอนปิด (`BlockingDialog` เปิดค้างเสมอ) บรรทัดช่วงรอของ 429 ประกาศแค่ "พร้อมแล้ว" ยังไม่บอกเวลาเป็นคำ ข้อความ 503 ภาษาอังกฤษเขียน "about 1 minute" เมื่อเป็น 1 นาที (spec เขียนเป็น "{n} minutes") รอผู้ใช้ยืนยัน
+
+## หน้า Error: ฐานข้อมูลเต็ม ฟอนต์จาก server และ spinner (2026-10-19)
+- **ฐานข้อมูลเต็มหรือต่อไม่ได้ (N2)** (`6f7f7aa6`) MariaDB ตอบ 1040 (connection เต็ม), 1203 (เกิน max_user_connections) หรือ 2002 (ต่อไม่ได้) ตอนนี้ตอบ 503 พร้อม `Retry-After: 15` และ `message: server_busy` แทน 500 (`App\Support\DatabaseBusy` + render callback ใน `bootstrap/app.php`) ฝั่งแอปขึ้น dialog "ระบบมีผู้ใช้งานมาก" ไอคอนคน วงนับถอยหลังสีเหลือง (kind `busy` อยู่เหนือ server แต่ต่ำกว่าปิดปรับปรุง) หน้า Blade ขึ้นคำเดียวกันทั้งสองภาษา query error อื่นยังเป็น 500 และทุกครั้งยังเขียน log เหมือนเดิม query ไม่ลองซ้ำเมื่อเจอ 503 แล้ว เพราะ server ขอให้รอ ลองซ้ำมีแต่เพิ่มภาระให้ฐานข้อมูลที่เต็มอยู่
+- **ฟอนต์ Noto Sans Thai จาก server เอง (S7)** (`8cbc17c9`) เดิมโหลดจาก Google Fonts ซึ่งเครือข่ายปิดหรือ CDN โดนบล็อกจะใช้ไม่ได้ ตอนนี้ไฟล์ variable font (น้ำหนัก 100-900 ชุดไทย ละติน ละตินขยาย จาก `@fontsource-variable/noto-sans-thai` 5.3.0) อยู่ที่ `public/fonts/noto-sans-thai/` คู่กับ `OFL.txt` ตามที่สัญญา SIL OFL 1.1 กำหนด (ใช้และแจกต่อได้ ต้องแนบสัญญาไปกับไฟล์) หน้า SPA preload ชุดไทย หน้า Blade error ใช้ไฟล์เดียวกัน
+- **spinner ตอนเช็คการล็อกอิน (W5)** (`de164d05`) มี `role="status"` และคำ "กำลังโหลด…" สำหรับโปรแกรมอ่านหน้าจอ
+- **ตรวจแล้ว** PHP `DatabaseBusyTest` 7 เทส `DatabaseBusyPageTest` 4 เทส (JSON 503 + Retry-After, หน้า Blade ไทยและอังกฤษ, error อื่นยังเป็น 500) และเทส ErrorPage 25 เทสผ่าน JS 409 เทสผ่าน tsc eslint prettier pint ผ่าน ใน Chrome (จำลอง 503 ด้วยการ patch XMLHttpRequest ไม่ได้ยิงจริง) dialog busy นับ 15 วินาทีแล้วกดลองใหม่ได้ ประกาศ "ลองใหม่ได้แล้ว" ยิงคำขอครั้งเดียวไม่ลองซ้ำ, 503 ปิดปรับปรุงยังขึ้นแบบเดิมและแทน busy ได้, โหมดมืดภาษาอังกฤษ, ฟอนต์ไทยโหลดจาก `/fonts/` ทั้งหน้า login และหน้า Blade 404 ไม่มีคำขอไป Google, spinner มี role status
+- **ยังไม่ได้ตรวจด้วยตา** หน้า Blade busy บนเบราว์เซอร์ (ต้องทำให้ฐานข้อมูลเต็มจริง ตรวจด้วย feature test แทน)
+
+## Dialog บังคับจางออกตอนปิด (2026-10-20)
+- (`6a1fa6bd`) dialog error, เตือนใกล้หมดเวลา, ตั้งรหัสผ่านครั้งแรก และรหัสผ่านหมดอายุ เดิมหายทันทีตอนปิด เพราะ `BlockingDialog` เปิดค้างเสมอแล้วตัวที่เรียกถอดออกเลย Radix จึงไม่ได้เล่นตอนปิด ตอนนี้ `BlockingDialog` รับ `open` และตัวที่เรียกคงไว้อีก 180ms ด้วย `usePresence(open, SHEET_CLOSE_MS)` (hook เดิมของ FilterPopover) ปิดแบบจางออกและย่อลงเหมือน Dialog อื่น
+- ระหว่างจางออกเนื้อหาไม่เปลี่ยน dialog error เก็บชนิด Retry-After และรหัสอ้างอิงที่แสดงอยู่ไว้แม้ store ล้างแล้ว เตือนหมดเวลาเก็บเวลาค่าสุดท้ายไว้ วงไม่กระโดด หน้าต่างรหัสผ่านย้ายไปอยู่ใน `PasswordWall` (modules/auth) ที่เก็บหน้าต่างที่เปิดอยู่ไว้จนหายไป "เปลี่ยนบัญชีแล้ว" ไม่ได้แก้ เพราะปิดได้ทางเดียวคือโหลดหน้าใหม่
+- **ตรวจแล้ว** tsc eslint ผ่าน JS 440 เทส ใน Chrome (บัญชีจริง จำลองในหน้าเบราว์เซอร์ ไม่ได้แก้ข้อมูล) dialog error เปลี่ยนเป็น closed เล่น exit แล้วถูกถอดหลัง 183ms หน้าต่างตั้งรหัสผ่านจางจาก 1 ถึง 0.25 ใน 170ms โดยหัวข้อยังอยู่ครบ ส่วนเตือนหมดเวลายังไม่ได้ดูด้วยตา (ฐานข้อมูลนี้ปิดการหมดเวลาไว้)
+- **ลองดู dialog error ขึ้นทับหน้าต่างตั้งรหัสผ่าน** (ข้อค้างจากงานดีไซน์) พิมพ์รหัสค้างไว้ แล้วให้การโหลดเบื้องหลังตอบ 500 dialog error ขึ้นทับและรับโฟกัส พิมพ์ระหว่างนั้นไม่เข้าช่องรหัส กด "ปิด" แล้วโฟกัสกลับไปช่องรหัสเดิม ค่าที่พิมพ์ยังอยู่ครบและกรอกช่องยืนยันต่อได้ จึงไม่ติดค้าง
+
+## คำบอกช่วงเวลาบนการ์ด KPI ของแท็บภาพรวม (2026-10-19)
+
+- **กติกา** (`ecd2257f`) ตาม mockup kpi-unify ที่อนุมัติไว้ บรรทัดล่างของการ์ดบอกว่าตัวเลขนับช่วงไหน ใช้เฉพาะแท็บภาพรวมที่มีปุ่มช่วงเวลา (Ticket, พนักงาน, คำขอ, สิทธิ์การเข้าถึง, ทรัพย์สิน) ตัวเลขที่นับตามช่วงต่อด้วย "ใน 30 วัน" / "ปีนี้" / "ตั้งแต่ต้น" (ปุ่มทั้งหมด) / "ในช่วงที่เลือก" ตัวเลข ณ ปัจจุบันต่อด้วย "ตอนนี้" ส่วนสัญญา คลังอะไหล่ และ Dashboard ไม่มีปุ่มจึงไม่แก้ (Dashboard บอกช่วงไว้ในชื่อการ์ดอยู่แล้ว)
+- **ตัวช่วยกลาง** `usePeriodWords()` กับ `useShownPeriod()` ใน `shared/components/overview-period.tsx` และ `periodWordKey()` ใน `shared/lib/overview-period-core.ts` คำบอกช่วงเปลี่ยนพร้อมตัวเลข ระหว่างโหลดช่วงใหม่ที่ตัวเลขเก่ายังค้างอยู่ คำก็ยังเป็นของช่วงเก่า
+- **คำตรงกับสิ่งที่ตัวเลขนับจริง** (ไล่ดู backend ทีละใบ)
+  - คำขอ 3 ใบนับจากวันที่ยื่น จึงเขียน "เสร็จสิ้นอีก 8 จากที่ยื่นใน 30 วัน", "ยกเลิกอีก 3 จากที่ยื่นใน 30 วัน", "จากคำขอที่ยื่นใน 30 วัน" ใช้ "อีก" เพราะไม่ได้รวมอยู่ในตัวเลขใหญ่ ชี้เมาส์ขึ้น "นับคำขอที่ยื่นใน 30 วันล่าสุด อนุมัติแล้ว 12 เสร็จสิ้นอีก 8"
+  - Ticket ปิดทัน SLA นับเฉพาะเคสที่เสร็จสิ้นและมีกำหนด ตอนไม่มีข้อมูลเขียน "ยังไม่มีเคสที่วัดได้ใน 30 วัน" ลูกศรเขียน "เทียบ 30 วันก่อน" (ปีนี้ / กำหนดเอง เป็น "เทียบช่วงก่อนหน้า") ส่วนแยกคำขอกับเปิดเองย้ายไปตอนชี้เมาส์
+  - Ticket ค้างเพิ่มขึ้น เขียน "ใน 30 วัน ● เปิดใหม่ N ● ปิด N" ช่วงเวลาขึ้นก่อน เพราะที่ 1024px ตัวเลขหลักพันทำให้ท้ายบรรทัดโดนตัด บรรทัดนี้เปลี่ยนเป็น inline จึงมี "…" บอกตอนโดนตัด
+  - พนักงานเข้าใหม่และลาออกเขียน "เริ่มงาน 30 วันล่าสุด" / "ลาออก 30 วันล่าสุด" เพราะ "ใน 30 วัน" อ่านเป็นอนาคตได้ ปุ่มทั้งหมดเขียน "ทุกคนในระบบ" / "ลาออกทั้งหมด"
+  - ตำแหน่งนับเฉพาะคนที่ยังใช้งาน `GET /api/positions` เพิ่ม `active_employees_count` (`employees_count` เดิมรวมคนลาออก หน้าตำแหน่งยังใช้ตัวเดิม) เขียน "มีคน 20 ตำแหน่ง ตอนนี้"
+  - ทรัพย์สิน 4 ใบเป็นสถานะตอนนี้ทั้งหมด ("ตอนนี้", "พร้อมส่งมอบ 12 ตอนนี้") สิทธิ์การเข้าถึงเขียน "↑ เพิ่มขึ้น 5 สิทธิ์ใน 30 วัน" (ให้ใหม่ลบถอน)
+- **ตรวจแล้ว** `EmployeeApiTest` (ตัวนับตำแหน่ง) และ `tests/js/overview-period.test.ts` (คำไทยตามตารางที่ตกลง และคีย์ครบสองภาษา) ผ่าน PHP Employee 40 เทส JS 318 เทส ดูหน้าจริงที่ 768px และ 1024px ครบ 5 แท็บ เหลือโดนตัดแค่การ์ด Ticket ค้างเพิ่มขึ้นที่ 1024px กับตัวเลขหลักพัน (ช่วงเวลายังเห็น)
+- **แถว "สิทธิ์ที่ให้ใหม่ใน 30 วัน"** (`24db248e`) ในการ์ดสถานะการเข้าถึง นับสิทธิ์ที่ให้ในช่วงที่เลือกและยังไม่ถูกถอน เดิมเขียน "สิทธิ์ที่เพิ่มในช่วงนี้ / การมอบสิทธิ์ใหม่ในช่วงที่เลือก" ตอนนี้หัวแถวตามปุ่มช่วงเวลา (ทั้งหมด = "สิทธิ์ที่ใช้อยู่ทั้งหมด") คำรอง "นับเฉพาะที่ยังไม่ถูกถอน" บอกด้วยว่าทำไมไม่เท่ากับ "↑ เพิ่มขึ้น N สิทธิ์" บนการ์ดด้านบน (การ์ดนั้นคิดให้ใหม่ลบถอน) ส่วนชื่อการ์ด "ปิดทัน SLA (เป้า 90%)" ที่เคยโดนตัด แสดงครบแล้วหลังแถวการ์ดเป็น 2×2 (`17e0c6b9`)
+
+## แถวการ์ด KPI ของแท็บภาพรวมเป็น 2×2 บน iPad แนวนอน (2026-10-19)
+
+- (`17e0c6b9`) แท็บภาพรวมของ 7 โมดูล (Ticket, พนักงาน, คำขอ, สิทธิ์การเข้าถึง, ทรัพย์สิน, สัญญา, คลังอะไหล่) เดิมเรียงการ์ด 4 ใบแถวเดียวตั้งแต่ 1024px ทำให้ iPad mini แนวนอนเหลือที่บรรทัดล่างราว 160px คำบอกช่วงเวลาและชื่อการ์ด "ปิดทัน SLA (เป้า 90%)" โดนตัด ตอนนี้เรียง 4 ใบตั้งแต่ 1280px (`xl:grid-cols-4`) ต่ำกว่านั้นเป็น 2×2 (การ์ดกว้าง 420px ที่ 1024px) โครงตอนโหลดของแต่ละแท็บใช้คอลัมน์เดียวกัน; `StatGrid` ที่ 4 ใบ (`ROW_COLUMNS[4]` ใน `stat-card.tsx`) ก็เปลี่ยนตาม ใช้อยู่ที่ Ticket ที่เดียว
+- Dashboard และหน้ารายงานไม่ได้แตะ (หน้ารายงานใช้ `summary-columns.ts` ของตัวเอง)
+- **ตรวจแล้ว** เปิดหน้าจริงทั้ง 7 แท็บที่ 1024px ได้ 2 แถว ทุกแท็บ ที่ 1280px ยังเป็นแถวเดียว 4 ใบ; JS 325 เทส
+
+## จำกัดจำนวนเครื่อง เครื่องที่ล็อกอินอยู่ และบันทึก Login (2026-10-19)
+ตาม design doc `docs/superpowers/specs/2026-10-19-session-limit-design.md` และ mockup ที่ผู้ใช้อนุมัติ งานหลักอยู่ใน commit `e7541f57` ถึง `65ccb0b5` รอบแก้หลังตรวจทั้งฟีเจอร์อยู่ใน `7a4aa790` ถึง `e886152a` ยังไม่ push
+
+**สิ่งที่สร้าง**
+- **จำกัดเครื่องต่อบัญชี** (`9bbb8fa1`, `ffad17db`) Settings ส่วนความปลอดภัยมีสวิตช์กับปุ่ม 1 / 2 / 3 เครื่อง ค่าเริ่มต้นคือปิด (ไม่จำกัด แต่ยังบันทึกเครื่องไว้) เปิดแล้วเริ่มที่ 2 ใช้กับทุกบัญชีรวมผู้ดูแล
+- เปิดหรือลดจำนวนแล้วบัญชีที่เกินจะเหลือเครื่องที่ใช้ล่าสุดเครื่องเดียว เครื่องของคนที่กดบันทึกอยู่ยังอยู่เสมอ มี confirm ก่อนบันทึก
+- **เข้าเครื่องที่เกิน** (`c6cdca62`, `92f3a2dc`) login ครั้งที่เกินขึ้น dialog กลางจอบอกเครื่องที่ใช้อยู่ ต้องออกจากระบบอย่างน้อย 1 เครื่องจึงกด "เข้าสู่ระบบ" ได้ โดยไม่ต้องกรอกรหัสผ่านซ้ำ (token `pending` อายุ 5 นาที)
+- **บอกเหตุที่ถูกออกจากระบบ** (`831d3645`, `a3ff162d`, `6e11c251`, `65be0895`) เครื่องที่ถูกสั่งออกรู้ตอนส่งคำขอครั้งถัดไป แล้วหน้า login ขึ้นข้อความตามเหตุ (เครื่องอื่นเข้าแทน, สั่งออกจากโปรไฟล์, ผู้ดูแลจำกัดจำนวน, หมดเวลา, เปลี่ยนรหัสผ่าน, บัญชีถูกปิด)
+- เครื่องที่ติ๊กจดจำไว้ ถ้าถูกสั่งออกตอนปิดเบราว์เซอร์อยู่ เปิดมาใหม่ก็ยังเห็นเหตุผล ระบบอ่านจาก cookie จำฉัน แสดงครั้งเดียวแล้วลบ cookie นั้น (`eb70db1d`)
+- ลิงก์เปิดไฟล์หรือ PDF ขึ้นเหตุผลแบบเดียวกับในแอป (`8c6c845d`)
+- บัญชีที่ถูกปิดระหว่างใช้งานขึ้นว่า "บัญชีนี้ถูกปิดการใช้งานแล้ว กรุณาติดต่อ IT" แทน "ออกจากระบบแล้ว" (B8 จากผลตรวจหน้า Error, `e886152a`)
+- ชื่อที่พิมพ์ตอนเข้าสู่ระบบแล้วไม่ตรงบัญชีไหน ถ้ายาว 8 ตัวขึ้นไปเก็บโดยปิด 4 ตัวท้าย เช่น `Inaba@2••••` เพราะบางครั้งเป็นรหัสผ่านที่พิมพ์ผิดช่อง ไม่ถึง 8 ตัวเก็บตามที่พิมพ์ เพราะรหัสผ่านต้องยาวอย่างน้อย 8 ตัว แถวใหม่ปิดตอนบันทึก แถวเก่าปิดด้วย migration `2026_10_20_000005` ชื่อที่ตรงบัญชีเก็บตามที่พิมพ์ (`697c31b1`, `d060274f`, ผู้ใช้เลือก 2026-10-20)
+- คำใต้ "ถูกสั่งออก" ใช้ "เข้าเครื่องใหม่" ต่อ ไม่ใช้ "เข้าเครื่องที่ 3" เพราะเลขขึ้นกับจำนวนที่จำกัดตอนนั้นและต้องเพิ่มคอลัมน์ (ผู้ใช้เลือก 2026-10-20)
+- เกลาคำในหน้า login โปรไฟล์ แท็บ Login และ Settings 19 จุด ทั้งไทยและอังกฤษ (`8627279b`, หน้าเทียบคำ https://claude.ai/artifact/3pgRbEFKB4NrEeMDPQWYoD) เช่น เข้าไม่สำเร็จขึ้นว่า "เข้าสู่ระบบไม่สำเร็จ" แทน "รหัสผ่านไม่ถูกต้อง" เพราะรวมชื่อที่ไม่มีในระบบด้วย และหัวคอลัมน์ใช้ "เครื่อง" แบบเดียวกับทั้งฟีเจอร์
+- **โปรไฟล์ แท็บ "การเข้าสู่ระบบ"** (`5cf26201`, `0f9f6684`) การ์ดเครื่องที่ล็อกอินอยู่ (ป้าย "เครื่องนี้", ออกจากระบบเครื่องอื่นได้) กับประวัติ 10 รายการล่าสุด เปิดตรงได้ที่ `?dialog=profile&section=devices`
+- **Permissions แท็บ "Login"** (`a17fb2c6`, `682f364d`) บันทึกการเข้าสู่ระบบทุกบัญชี ค้นหา กรองเหตุการณ์ กรองวันที่ สถานะอยู่ใน URL ใช้สิทธิ์ใหม่ `system.view_logins` ซึ่ง migration ให้ role ที่มี `system.view_audit` อยู่แล้ว
+- **ที่ตั้ง** (`d7427b1a`, `8695b329`, `9bbb8fa1`) "ชื่อเครือข่าย" (IP หรือช่วง IP เป็นชื่อ เช่นสำนักงานใหญ่) ใน Settings มาก่อน ไม่ตรงค่อยอ่านฐาน DB-IP Lite City ผ่าน `geoip2/geoip2` (`storage/app/geoip/dbip-city-lite.mmdb`) แสดงเป็นอังกฤษ เช่น "Bangkok, Thailand"
+- `geoip:update` ดาวน์โหลดฐานใหม่ทุกวันที่ 3 ของเดือน 03:30 Settings ใส่เครดิต "IP Geolocation by DB-IP" ไม่มีไฟล์ก็แค่ไม่มีที่ตั้ง ไม่ error
+- **เก็บประวัติ** (`9bbb8fa1`, `65ccb0b5`) ค่าเริ่มต้น 365 วัน ตั้งที่ Settings ได้เป็น 0 (ไม่ลบ) หรืออย่างน้อย 90 วัน ตั้งต่ำกว่า 90 ไม่ได้ เพราะระบบใช้ประวัติ 90 วันนี้จำว่าบัญชีเคย login จาก IP ไหน
+- `logs:prune` ลบประวัติที่เกินช่วงทุกคืน และลบแถวเครื่องที่ออกจากระบบหรือหมดอายุแล้วที่เก่ากว่าช่วงเดียวกันด้วย (`6377cd69`)
+
+**กฎความปลอดภัย**
+- **remember me เป็นรายเครื่อง** (`d8032616`, `35269bb5`) token อยู่ที่ `user_devices` ไม่ใช่ `users.remember_token` เครื่องที่จำไว้อยู่ 7 วัน
+- cookie จำฉันแบบเก่าก่อนฟีเจอร์นี้ ต่อบัญชี อันแรกที่ถูกใช้หลัง deploy ยัง login ได้และถูกย้ายเป็น token ของเครื่องนั้น (`831d3645`) ส่วน cookie เก่าอันอื่นของบัญชีเดียวกันใช้ไม่ได้อีก คนที่ใช้เครื่องอื่นต้อง login ใหม่ครั้งเดียว; logout และการเปลี่ยนรหัสผ่านก็ทิ้ง token เก่าของบัญชีด้วย
+- **จำกัดความถี่ตอน login** (`d7427b1a`, `c6cdca62`, `860172e1`) แต่ละข้อแยกกัน
+  - 50 ครั้งต่อนาทีต่อ IP (สำนักงานเดียวกันใช้ IP เดียวกัน จึงตั้งไว้สูง)
+  - 5 ครั้งต่อนาทีต่อ username กับ IP เดิม
+  - ใส่ผิด 10 ครั้งใน 15 นาที รวมทุก IP บัญชีนั้นถูกล็อก 15 นาที นับต่อ id บัญชี จะพิมพ์อีเมลหรือ username ก็นับรวมกัน
+  - ชื่อที่ไม่มีในระบบนับแยกตามข้อความที่พิมพ์ (เก็บเป็น hash) คนนอกพิมพ์ "id:5" ผิดซ้ำ ๆ ก็ล็อกบัญชีที่ 5 ไม่ได้ (`7a4aa790`)
+  - IP ที่บัญชีนั้นเคย login สำเร็จใน 90 วันล่าสุดข้ามการล็อกข้าม IP ได้ เจ้าของบัญชีที่เข้าจากที่เดิมจึงไม่โดนล็อกเพราะคนนอกใส่รหัสผิด ส่วนที่ใส่ผิดยังนับอยู่
+  - ปุ่มออกจากระบบในหน้าต่างเครื่องเต็ม (token `pending`) กดได้ 10 ครั้งต่อนาทีต่อหน้าต่าง รวมทั้ง IP ไม่เกิน 50 ครั้งต่อนาที เกินแล้วหน้าต่างบอกให้รอ ไม่มีหน้าเตือนเต็มจอมาทับ (`fbbd5ec7`)
+- **token `pending` ผูกกับรหัสผ่าน** ถ้ารหัสผ่านถูกเปลี่ยนหรือรีเซ็ตระหว่างที่หน้าต่างเครื่องเต็มเปิดอยู่ หน้าต่างนั้นใช้เข้าระบบไม่ได้อีก ต้องกรอกรหัสผ่านใหม่ (`bb50661b`)
+- **ที่อยู่ IP** `trustProxies` เชื่อเฉพาะ `127.0.0.1` กับ `::1` (cloudflared เครื่องเดียวกัน) ห้ามใช้ `*` ไม่งั้นใครก็เขียน IP ลง log ได้
+- **"ใช้งาน" คือใช้จริง** `last_active_at` ขยับเฉพาะคำขอเขียนกับ ping กิจกรรม (ส่งทุกครั้งที่ล็อกอินอยู่ ไม่ใช่เฉพาะตอนเปิด idle timeout) poll กระดิ่งไม่นับ
+- เครื่องที่ไม่ได้จำไว้หมดอายุเมื่อไม่ได้ใช้จริงเกินระยะที่สั้นกว่าระหว่าง idle timeout (ถ้าเปิด) กับ `SESSION_LIFETIME` แล้วคำขอถัดไปตอบ 401
+- **เครื่องที่ล็อกอินอยู่ก่อน deploy** ได้แถว device ตอนส่งคำขอครั้งถัดไป ไม่มีใครถูกออกจากระบบเพราะ deploy
+
+**ขึ้น server**
+- รัน migration `2026_10_20_000001` ถึง `000005` (itservices_perf รันแล้วถึง 000004 เมื่อ 2026-10-20, 000005 รอรัน)
+- 000004 ให้ `system.view_logins` กับทุก role ที่มี `system.view_audit` รันซ้ำได้ บน itservices_perf role ที่ได้คือ IT Supervisor/Leader
+- รัน `php artisan geoip:update` หนึ่งครั้งหลัง deploy (ต้องออกเน็ตไป `download.db-ip.com`) จนกว่าจะรัน IP จะไม่มีที่ตั้ง ยกเว้น IP ที่ตั้งชื่อเครือข่ายไว้
+- บน itservices_perf รันแล้วเมื่อ 2026-10-20 ได้ฐานเดือน 2026-10 ที่ตั้งระดับเมืองเป็นค่าประมาณ IP ของ tunnel ขึ้นเป็น "Sao Hai, Thailand" IP ของสำนักงานจึงควรตั้งชื่อเครือข่ายไว้
+- PHP บน production ต้องมี extension `curl` (dependency ของ `geoip2/geoip2` ผ่าน `maxmind/web-service-common`) ตรวจหลัง `composer install`
+
+**เทสที่เพิ่ม**
+- ใน `tests/Feature/Auth` มี `UserDeviceActiveTest`, `DeviceServiceTest`, `DeviceRememberTest`, `TrackDeviceTest`, `LoginDeviceLimitTest`, `LoginEventApiTest`, `MyDevicesApiTest`, `NetworkNameApiTest`, `DeviceLimitSettingTest`, `LocationResolverTest`, `DbIpLookupTest`, `UpdateGeoIpDatabaseTest`, `TrustedProxyTest` และแก้ `RememberMeTest`
+- ใน `tests/Unit` มี `CidrTest`, `UserAgentLabelTest`
+- ใน `tests/js` มี `device-limit`, `device-limit-confirm`, `login-events`, `login-log-params`, `profile-load-failed` และแก้ `login-redirect`, `profile-section`, `card-layout` กับ fixture `permission-layout.json`
+- เทส `tests/Feature` เดิมที่ปรับให้เข้ากับตารางใหม่ คือ `LogRetentionTest`, `SecuritySettingsTest`, `Report/ReportExportEmailTest`, `Perf/PerfDatasetInvariantsTest`
+- รอบแก้หลังตรวจทั้งฟีเจอร์เพิ่มเทสใน `LoginDeviceLimitTest`, `TrackDeviceTest`, `DeviceServiceTest`, `UserDeviceActiveTest`, `LogRetentionTest` และ `tests/js/http-errors`, `login-redirect`
+
+**ยังไม่ทำ**
+- cookie จำฉันแบบเก่าหมดอายุครบทุกอันหลัง 2026-10-26 จากนั้นลบโค้ดที่รองรับแบบเก่าออกได้ (`parent::retrieveByToken` ใน `DeviceUserProvider`, การย้าย cookie เก่าใน `TrackDevice`)
+- การจำ IP ที่เคย login สำเร็จเทียบเลขตรงทุกหลัก ผู้ใช้ IPv6 ที่เลขท้ายเปลี่ยนเองบ่อยจึงมักไม่ถูกนับว่าเคยเข้าจากที่นั่น
+- ตาราง `cache` (CACHE_STORE=database) ไม่มีงานลบแถวที่หมดอายุ แถวจึงสะสมไปเรื่อย ๆ
+
+## Dialog ฟอร์มเล็ก 27 ตัวหน้าตาเดียว (2026-10-20)
+
+ปรับแบบ 4ข (ฟอร์มเล็กที่ใช้ FocusDialogHeader) 3 จุด แล้วเปลี่ยนแบบ 4ก (ฟอร์มเล็กหัวข้อธรรมดา) ให้ใช้หน้าตาเดียวกัน รอบนี้แตะแค่ 27 ตัวนี้ Dialog แบบอื่นไม่เปลี่ยน
+เอกสารออกแบบ `docs/superpowers/specs/2026-10-19-small-form-dialog-design.md` แผน `docs/superpowers/plans/2026-10-19-small-form-dialogs.md` mockup https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9 รายงานตรวจ Dialog https://claude.ai/artifact/2dbE2QEjM6VH42VcYBGR3a
+
+**ชิ้นส่วนกลางใน `shared/ui/dialog.tsx`** (`cd70ad95`)
+- `FormDialogContent` กว้าง 560 (`max-w-[560px]`) เพดานความสูง `100dvh - 4.5rem` ปุ่ม ✕ กดได้ 32px โดยไอคอนอยู่ที่เดิม (16px จากขอบบนและขวา)
+- `DialogBody` เนื้อหาใต้เส้นคั่น เลื่อนได้เมื่อเกินเพดาน ระยะระหว่างส่วน 24px
+- `DialogFooterBar` แถบท้ายแบบ Dialog ใหญ่ เทา 30% เส้นจาง 60% ปุ่มชิดขวา
+- `DialogContent` เพิ่มแค่ `closeClassName` (ไม่ส่งมาก็เหมือนเดิม) Dialog อื่นจึงไม่เปลี่ยน
+
+**แบบ 4ข 7 ตัว**
+- Ticket มอบหมาย ส่งต่อ ปิดเคส รับเคส อัปเดต (`ed7cc4b0`) และ export/schedule-report (`8f2a7c54`) ใช้แถบท้ายกับปุ่ม ✕ ใหม่ export/schedule จาก 576 เป็น 560 และมีเพดานความสูงแล้ว
+- คงไว้ตามที่ผู้ใช้สั่ง ไอคอนบนปุ่มทุกตัว ปุ่มยกเลิกแบบ ghost ของ export/schedule และเนื้อหาข้างในของ export/schedule (ไม่มีเส้นใต้หัว)
+
+**แบบ 4ก 20 ตัว** เปลี่ยนเป็น FocusDialogHeader เนื้อหา และแถบท้ายแบบ 4ข หัวข้อใช้คำเดิมทุกตัว
+- บรรทัดเหนือหัวข้อเป็นชื่อหมวดตอนเพิ่ม (ข้อมูลหลัก พนักงาน สิทธิ์การใช้งาน คลังอะไหล่ ข้อมูลคำขอ) หรือเลขที่ของรายการตอนทำกับรายการเดิม (รหัสทรัพย์สิน เลขที่สัญญา เลขที่คำขอ) ตอนแก้ไขมีชิปชื่อรายการต่อท้ายหัวข้อ ใช้ชื่อเดียวกับที่ส่งให้หน้าต่างยืนยันการแก้ไข
+- ตั้งค่า ข้อมูลหลัก 6 ตัว lookup และข้อมูลคำขอ (`05112a25`) `LookupSection` รับไอคอนกับบรรทัดบนจากหน้าที่เรียก เหตุผลตัดจำหน่ายจึงขึ้นเป็นหมวดทรัพย์สิน
+- แผนก ตำแหน่ง หน่วยงาน บทบาท (`b65b966d`) หน่วยงานใช้รหัสเป็นชิป ทำสำเนาบทบาทมี "ทำซ้ำจาก …" ใต้หัวข้อ
+- ทรัพย์สิน 4 ตัว (`02c45063`) รหัสหรือจำนวนที่เลือกอยู่เหนือหัวข้อ รุ่นอยู่ใต้หัวข้อ ไม่แสดงซ้ำ ปุ่มท้ายจากเดิมแบ่งครึ่งกลายเป็นชิดขวา
+- ยกเลิกสัญญา ยกเลิกคำขอ อนุมัติคำขอ คำขอเบิก (`59d40dcf`) เลขที่คำขอย้ายจากมุมขวาขึ้นไปเหนือหัวข้อ
+- หัวของหน้าต่างที่แก้ไขรายการเก็บสำเนาไว้ ตอนปิดหัวข้อกับชิปจึงไม่กระพริบเปลี่ยนระหว่าง animation
+
+**ตรวจแล้ว**
+- `tests/js/small-form-dialogs.test.ts` เช็กว่าทั้ง 27 ไฟล์ใช้ชิ้นส่วนกลางและไม่มี class แบบเก่า (ความกว้าง 480 512 520 576 พื้นเทา 20% DialogHeader DialogFooter) และ Dialog อื่นยังได้ปุ่ม ✕ แบบเดิม `npm run test:js` ผ่าน 419 ข้อ tsc และ eslint ผ่าน
+- เปิดดูใน Chrome ที่ 127.0.0.1 (ไม่ได้บันทึกอะไร) กว้าง 560 ปุ่ม ✕ 32px ไอคอนห่างขอบ 16px เท่าเดิม ชิปชื่อผู้จำหน่ายยาวไม่ล้นกรอบ โหมดมืดเห็นเส้นคั่นและแถบท้าย dropdown ใน Dialog เปิดได้เต็มเหนือแถบท้าย ที่จอ iPad แนวนอน 1024 × 768 Dialog ผู้จำหน่ายพอดีจอ และเมื่อจอเตี้ยลงเหลือ 478px เนื้อหาเลื่อนได้โดยแถบท้ายยังอยู่ในจอ
+
+**แก้หลังผู้ตรวจอ่านทั้งรอบ** (`f9c73ab4`)
+- ชิปชื่อรายการใน FocusDialogHeader จำกัดไม่เกินความกว้างแถวและตัดด้วย … ชื่อยาวถึง 120 ตัวอักษรจึงไม่ล้นขอบ Dialog 560 (ชิปสั้นของ Dialog อื่นหน้าตาเท่าเดิม)
+- ตัดจำหน่ายกับคืนผู้ให้เช่าใส่จำนวนที่เลือกกลับเข้าไปในคำอธิบายสำหรับโปรแกรมอ่านหน้าจอ
+
+**ยังไม่ทำ**
+- `network-name-modal` (งาน Session limit) ใช้ Shield กับ "ความปลอดภัย" รอทำรอบหลัง
+- ข้อเล็กจากผู้ตรวจที่ยังไม่แก้ บรรทัดบน "เลือกไว้ 0 รายการ" โผล่แวบตอนปิด Dialog ทรัพย์สินหลายตัวหลังบันทึก (มีมาตั้งแต่เดิม), แผนก ตำแหน่ง หน่วยงาน บทบาท อ่านหัวข้อซ้ำ 2 ครั้งให้โปรแกรมอ่านหน้าจอ, comment ยาวในไฟล์ทรัพย์สินและ export/schedule, เทสยังไม่บังคับ DialogBody ใน 4ก
+- Dialog ที่เปลี่ยนขนาดตามขั้นตอน (movement-drawer, counting-tab, requests-tab, import-dialog) resource-modal (540/600) และขนาดของ Dialog แบบอื่น ความกว้างยังเหลือ 18 ค่า
+
+## หน้าเข้าสู่ระบบแบบใหม่ ดีไซน์และ WCAG (2026-10-20)
+
+ทำตาม mockup ที่ผู้ใช้ตอบ OK (https://claude.ai/artifact/PUriccAbQ3WkXjYhzSg5Qj เวอร์ชัน 5 ต่อยอดจาก `docs/login-2/ina-tech-login-redesign.html`) และข้อ W T D A จากรายงานตรวจ Login (https://claude.ai/artifact/SmL5jdhQBCVQtPbQdNSdUJ) หมวด S ผู้ใช้ให้พักไว้
+
+**ผังหน้า**
+- แผงแบรนด์แสดงเฉพาะจอกว้าง 1280px ขึ้นไปที่ใช้เมาส์ (`split:` ใน app.css) iPad ทุกแนวและหน้าต่างแคบเป็นคอลัมน์เดียว มีหัวแบรนด์โลโก้ 64px ชิดซ้ายแนวเดียวกับฟอร์ม
+- จอสัมผัส (`touch:`) ช่องกรอกและปุ่มสูง 52px ปุ่มภาษาและธีม 44px ขึ้นไป ตัวหนังสือในช่อง 16px (Safari ไม่ซูม)
+- ฟอร์มยึดด้านบนไว้ที่ระยะคงที่ ข้อความ error ขึ้นแล้วฟอร์มไม่กระโดด จอเตี้ย (≤ 800px เช่น iPad แนวนอนที่มีข้อความแจ้ง) บีบระยะให้พอดีจอ
+- แถบ error และข้อความแจ้งเหตุที่ถูกออกจากระบบอยู่เหนือช่องชื่อผู้ใช้ เหมือนฟอร์มเปลี่ยนรหัสผ่าน
+
+**แผงแบรนด์** `login-brand-panel.tsx`
+- โหมดมืดผสมสีแบรนด์กับพื้นเข้ม ไม่ใช้ฟ้าอ่อน #6692f1 เต็มครึ่งจอ ตัวหนังสือบนแผงใช้สีเต็ม ผ่าน contrast ทั้งสองโหมด (W1, D6)
+- การ์ด Ticket ตัวอย่าง `sample-ticket-card.tsx` เดิน เปิด กำลังดำเนินการ เสร็จสิ้น ครั้งเดียวในไม่ถึง 5 วินาทีแล้วหยุด จึงไม่ต้องมีปุ่มหยุดตาม WCAG 2.2.2 (ผู้ใช้เลือก) ลดภาพเคลื่อนไหวแล้วเห็นตอนจบเลย ใช้ StatusBadge และคำสถานะของโมดูล Ticket
+- เลนส์เส้นตาราง `login-grid-lens.tsx` เส้นโป่งไม่เกิน 7px รอบเมาส์ ช่องใกล้เมาส์สว่างจาง ๆ ตามขอบที่โค้ง เฉพาะเมาส์และไม่ได้ตั้งลดภาพเคลื่อนไหว ไม่มี inline style อีกแล้ว (C12)
+
+**ฟอร์ม**
+- ใช้ Field, PasswordInput, FormErrorBanner, SaveButton ตัวกลาง (D1, D4) PasswordInput เพิ่ม `large` (ปุ่มตา 44px) กับ `inputClassName` ลบคำ `login_show_password` `login_hide_password` `login_theme`
+- focus ไปช่องแรกที่ผิดหลังข้อความ error ผูกกับช่องแล้ว (W4) โลโก้ข้างชื่อแบรนด์ alt ว่าง (W2) คำโปรยเป็นย่อหน้า ไม่ใช่ h2 (W3) ไอคอนทุกตัว aria-hidden (W5) ปุ่มธีมบอกปลายทาง (W9)
+- เตือน Caps Lock ใต้ช่องรหัสผ่าน และ "ลืมรหัสผ่าน?" เปิดคำบอกให้ติดต่อทีม IT
+- เข้าฉากแค่จาง 240ms ตามค่ากลาง (A1) ตัด active:translate-y-px ที่ซ้อน .press (A2) ปุ่มทำมือมี press / press-icon (A3)
+
+**Dialog จำกัดจำนวนเครื่อง**
+- ออกจากระบบเครื่องแล้ว focus ไปปุ่ม "เข้าสู่ระบบ" (W6) รายการเครื่องย้ายออกจากคำอธิบาย CenteredAlert มีช่อง `body` (W7)
+- บอก "ทำรายการให้เสร็จภายใน 5 นาที" จาก `expires_in` ที่ server ส่งมากับ 409 (`PendingLogin::TTL_SECONDS`) (W8) ปุ่มออกจากระบบสูง 40px
+
+**อื่น ๆ** วงหมุนตอนตรวจสิทธิ์เป็น Loader2 แบบเดียวกับปุ่ม (A4)
+
+**ตรวจแล้ว** tsc eslint pint ผ่าน `npm run test:js` 423 ข้อผ่าน `tests/Feature/Auth` 246 ผ่าน 1 ไม่ผ่าน (`TrackDeviceTest` "a device kept alive only by polls is signed out after its lifetime" ไม่เกี่ยวกับงานนี้ ไม่ได้แตะ TrackDevice) เปิดดูใน Chrome ที่ localhost. (ไม่มี cookie) คอมพิวเตอร์สองโหมด iPad 768 × 1024 และ 1024 × 768 จำลอง 422 กับ 409 ในหน้า
+
+**ยังไม่ทำ** D3 หัว Dialog 4 แบบ กับ D8 ฉากหลัง CenteredAlert รอคำตอบงาน Dialog audit, ข้อ C ที่เป็นตรรกะ (C1 C3 C4 C5 C6–C11), หมวด S ทั้งหมด
+
+## Login: ข้อ C จากรายงานตรวจ ยกเว้น C1 C7 (2026-10-20)
+
+ผู้ใช้สั่งทำทุกข้อ C ที่ยังเหลือยกเว้น C1 (ลิงก์ไฟล์ได้ JSON ดิบ) กับ C7 (เวลาไม่ใช้งานเกินอายุ session) รายงาน https://claude.ai/artifact/SmL5jdhQBCVQtPbQdNSdUJ
+
+- **C3 C4 C5 คำ error ของหน้า Login** ย้ายไป `modules/auth/lib/login-error.ts` (ฟังก์ชันล้วน มีเทส `tests/js/login-error.test.ts`) ไม่มีคำตอบ = คำเรื่องการเชื่อมต่อ, 5xx = `err_server_body`, 503 = `err_maintenance_later`, 419 = ให้โหลดหน้าใหม่ ภาษาอังกฤษขึ้น "1 minute" / "1 second" ถูกพหูพจน์ แถบ error ทุกแบบ mark ว่าแสดงในหน้าแล้ว จึงไม่มี toast ซ้ำ
+- **C4 แยก 429 สองแบบ** ล็อกบัญชี (5 ครั้งต่อชื่อและ IP, 10 ครั้งข้าม IP) ยังเป็น `too_many_attempts` ส่วนเพดาน 50 ครั้งต่อ IP และเพดานของ Dialog จำกัดเครื่องเปลี่ยนเป็น `too_many_sign_ins` หน้าเว็บขึ้น "มีการเข้าสู่ระบบจำนวนมากในขณะนี้" แทน "ลองผิดหลายครั้งเกินไป"
+- **C6 จดจำหมดอายุกลางทาง** UserResource ส่ง `remember_expires_at` ของเครื่องปัจจุบัน `useStillRemembered` ตั้งเวลาให้หน้าเว็บเริ่มนับเวลาไม่ใช้งานเมื่อจดจำหมด เหมือน server
+- **C8 เข้าสู่ระบบทับบัญชีเดิมในเบราว์เซอร์เดียวกัน** (แท็บ Login ที่เปิดค้าง) จบเครื่องของ session เดิมก่อน (`signed_out`) และลบ cookie จดจำที่เบราว์เซอร์ส่งมา บัญชีเดิมจึงไม่ค้างที่นั่งและไม่กลับมาเองเมื่อบัญชีใหม่หมดเวลา
+- **C9** cookie จดจำของบัญชีที่ปิดแล้วไม่บันทึกแถว "เข้าสู่ระบบ" ใน Login log (`reattach` / `start` รับ `recordEvent`) BlockResignedEmployees ยังจบเครื่องเป็น `account_closed`
+- **C10** เพิ่มคำเตือนห้ามล้าง cache ช่วงเวลาทำงานใต้หัวข้อคำสั่งที่ใช้บ่อย
+- **C11** CheckPasswordExpiry เรียก `User::isPasswordExpired()` กติกาอยู่ที่เดียว
+- **C13** ย่อ comment ยาวใน use-auth.ts, save-button.tsx และ AuthController
+- **C15** `phpunit.xml` กำหนด `SESSION_LIFETIME=120` เทสไม่ขึ้นกับ `.env` ของเครื่อง (ตอนนี้ .env เป็น 1200)
+
+**ตรวจแล้ว** tsc eslint pint ผ่าน `npm run test:js` 440 ข้อผ่าน `tests/Feature/Auth` 251 ข้อผ่าน (รวมเทสใหม่ C4 C6 C8 C9 และเทสอายุเครื่องที่เคยไม่ผ่าน) เทสรหัสผ่านหมดอายุ 3 ไฟล์ผ่าน `SessionTimeoutTest` "a get request does not count as activity" ล้มครั้งเดียวในการรันรวมรอบแรก รันซ้ำ 4 ครั้งผ่านหมด (ขึ้นกับจังหวะเวลา) ยังไม่ได้เปิดดูใน Chrome รอบนี้เพราะ extension หลุด หน้าตาไม่ได้เปลี่ยน เปลี่ยนแค่คำ
+
+## Login: C7 เวลาไม่ใช้งานไม่เกินอายุ session และ D8 ฉากหลัง CenteredAlert (2026-10-20)
+
+- **C7** ตั้ง "ออกจากระบบเมื่อไม่ได้ใช้งาน" ได้ไม่เกินอายุ session ของเซิร์ฟเวอร์ (`SESSION_LIFETIME` สูงสุด 1440) API ค่าความปลอดภัยส่ง `session_lifetime_minutes` กับ `session_timeout_effective_minutes` (ค่าที่ server ใช้จริง = ค่าที่ตั้ง แต่ไม่เกินอายุ session) app-shell นับเวลาตามค่าจริง หน้าตั้งค่าซ่อนตัวเลือกที่ยาวกว่าอายุ session และถ้าค่าที่บันทึกไว้เกิน (เช่น `.env` ถูกลดทีหลัง) ขึ้นบอกว่าใช้จริงกี่นาที เทสใหม่ 2 ข้อใน `SecuritySettingsTest`
+- **D8** CenteredAlert (Dialog จำกัดเครื่อง หน้าต่างยืนยันในหน้าสิทธิ์ ฯลฯ) ใช้ฉากหลังมาตรฐาน (ดำ 30% เบลอ 8px) และจังหวะเปิด 240ms ขยายจาก 0.95 แบบเดียวกับ BlockingDialog แทนฉากหลัง slate 50% เบลอ 2px 150ms
+
+**ตรวจแล้ว** tsc eslint pint ผ่าน `npm run test:js` 440 ข้อผ่าน `SecuritySettingsTest` กับ `tests/Feature/Auth` 266 ข้อผ่าน เปิดใน Chrome ที่ localhost. Dialog จำกัดเครื่องได้ฉากหลังใหม่ (เปิด 0.24s) และลองข้อความ error จากรอบก่อน 500 ขึ้น "เซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง" ไม่มี toast ซ้ำ, 429 ต่อ IP ขึ้น "มีการเข้าสู่ระบบจำนวนมากในขณะนี้ … 1 นาที", ล็อกบัญชีขึ้น "ลองผิดหลายครั้งเกินไป … 15 นาที"
+
+## เพดานคำขอนับต่อคน (S9 จากผลตรวจหน้า Error, 2026-10-20)
+`e6958b2c` (ยังไม่ push)
+
+**ปัญหาที่เคยเจอ** คนหนึ่งกด reload หน้า login จนถึงเพดาน แล้วอีกคนที่ไม่ได้ทำอะไรเข้าสู่ระบบไม่ได้ คนที่ยังไม่ล็อกอินถูกนับต่อ IP ทั้งสำนักงานใช้ IP เดียวกัน และก่อนตั้ง trustProxies (`d7427b1a`) ทั้งบริษัทเป็น `127.0.0.1` เดียวกัน คนเดียวกด F5 ค้างก็ใช้โควตา API 300 ครั้งต่อนาทีหมด ปุ่มเข้าสู่ระบบก็นับรวมในโควตานี้
+
+**ที่ทำ**
+- ล็อกอินแล้วนับต่อบัญชี ยังไม่ล็อกอินนับต่อเบราว์เซอร์ (cookie session) คนที่กดรัวติดคนเดียว
+- คนยังไม่ล็อกอินทุกเบราว์เซอร์ใน IP เดียวกันรวมไม่เกิน 3,000 ครั้งต่อนาที (`AppServiceProvider::SIGNED_OUT_IP_PER_MINUTE`) ไว้กันโปรแกรมที่ทิ้ง cookie แล้วยิงถล่ม
+- ปุ่มเข้าสู่ระบบและปุ่มออกจากระบบในหน้าต่างเครื่องเต็มไม่นับรวมโควตา API ใช้เพดานของการเข้าสู่ระบบอย่างเดียว
+- เพดานต่อคนต่อนาที API 300, หน้าเว็บ 120, `/pdf` 20, `/files` 600 เกินแล้ว API ตอบ 429 ส่วนหน้าเว็บขึ้นหน้า 429 แบบ Blade พร้อม Retry-After
+- ทุกครั้งที่ตอบ 429 บันทึก "Rate limit hit" ลง logs/backend พร้อม user, IP, route (`LogRateLimitHits` ชั้นนอกสุด จับได้ทั้ง throttle และ 429 ของการล็อกบัญชี) ไว้ดูว่ามีใครติดจริงแล้วปรับตัวเลข
+- คำขอที่ต้องล็อกอิน เช่น `/api/me` ตอบ 401 ก่อนถึงตัวนับ จึงไม่กินโควตาของคนที่ยังไม่ล็อกอิน
+
+**ตรวจแล้ว**
+- `tests/Feature/Auth/RateLimitPerPersonTest.php` 6 เทส สองเบราว์เซอร์ใน IP เดียวกัน คนหนึ่งใช้โควตาหมดแล้วอีกคนยังเปิดหน้าและเข้าสู่ระบบได้, ปุ่มเข้าสู่ระบบไม่ถูกนับ, reload หน้าเว็บเกิน 120 ติดเฉพาะเบราว์เซอร์นั้นและลง log, 429 ตอนล็อกบัญชีลง log, ค่าเพดานแต่ละตัว
+- เทส Auth ทั้งโฟลเดอร์และเทสที่เปิดหน้าเว็บ ไฟล์ PDF รวม 403 ข้อผ่านบน sqlite
+
+**ยังไม่ทำ** กฎจำกัดคำขอที่ Cloudflare (บล็อกการยิงถล่มก่อนถึงเครื่อง) ทำทีหลังได้
+
+## หน้าเข้าสู่ระบบ: ซ้ายกับขวาอยู่แนวเดียวกัน (2026-10-20)
+
+ผู้ใช้ทักว่าแผงแบรนด์กับฟอร์มสูงต่ำไม่เท่ากัน วัดที่จอ 1920 × 911 ปุ่มภาษา/ธีมกึ่งกลางอยู่ที่ y 41 แต่โลโก้อยู่ที่ y 74 และหัวข้อ "เข้าสู่ระบบ" เริ่มที่ y 168 ขณะที่คำโปรยเริ่มที่ y 237 (ฝั่งซ้ายจัดกลางระหว่างโลโก้กับ © ส่วนฝั่งขวาตรึงด้านบนด้วยระยะที่คิดเผื่อหัวแบรนด์ของ iPad)
+- ตัวแปร `--login-top` บนหน้า (`max(8.5rem, 50dvh - 15rem)`) เป็นเส้นเดียวที่คำโปรยกับหัวข้อฟอร์มเริ่ม เส้นนี้วางก้อนซ้ายไว้กลางจอ ฝั่งขวายังตรึงด้านบน error ขึ้นแล้วไม่กระโดด
+- ปุ่มภาษา/ธีมบนคอมพิวเตอร์กึ่งกลางตรงกับแถวโลโก้ และห่างขอบขวา 64px เท่ากับโลโก้ที่ห่างขอบซ้าย © อยู่ล่างซ้ายด้วย `mt-auto` จอเตี้ยจึงไม่ทับการ์ด
+- iPad ไม่เปลี่ยน (ค่าใหม่อยู่ใต้ `split:` ทั้งหมด)
+- วัดหลังแก้ที่จอ 1920 × 855 โลโก้กับปุ่มกึ่งกลางที่ y 74 ทั้งคู่ คำโปรยกับหัวข้อเริ่มที่ y 188 ทั้งคู่ กดเข้าสู่ระบบแบบไม่กรอกแล้วหัวข้อยังอยู่ที่ 188 eslint tsc ผ่าน
+
+## หน้าเข้าสู่ระบบ: ไอคอนปุ่มสลับโหมดหมุนเข้า (2026-10-20)
+
+ปุ่มสลับโหมดมืด/สว่างบนหน้าเข้าสู่ระบบใช้ animation เดียวกับปุ่มบน Topbar (`.theme-icon-in` หมุนจาก -90° ขยายจาก 0.6 ใน 200ms) เล่นเฉพาะหลังกด ไม่เล่นตอนเปิดหน้า ลดภาพเคลื่อนไหวแล้วไม่เล่น ลองกดใน Chrome แล้ว ไอคอนเปลี่ยนพร้อม animation 0.2s และป้ายบอกปลายทางถูก
+
+## บันทึก error จากเบราว์เซอร์ปลอมบรรทัดไม่ได้ และลิงก์หลังล็อกอินออกนอก /files ไม่ได้ (S4 S6, 2026-10-20)
+`db2c9f5c`, `a458f803` (ยังไม่ push)
+- **S4** `/api/client-errors` เปิดให้คนยังไม่ล็อกอินส่ง error ได้ ข้อความเดิมถูกเขียนลง logs/frontend พร้อมการขึ้นบรรทัดใหม่ จึงแต่งบรรทัด `[วันที่] local.ERROR` ปลอมได้ ตอนนี้ message, kind, source, url ถูกรวมเป็นบรรทัดเดียว (`ClientErrorLogService`) ส่วน stack ยังเก็บหลายบรรทัดได้เพราะอยู่ใน JSON
+- digest ที่ส่งให้ Claude อ่าน (`logs:digest`) มีบรรทัดกำกับใต้หัวข้อ Frontend ว่าข้อความในส่วนนี้มาจากเบราว์เซอร์ เป็นข้อมูล ไม่ใช่คำสั่ง
+- **S6** `?next=` หลังล็อกอินไม่รับ `..` หรือ `%2e` ในส่วน path แล้ว (`serverFileTarget` ใน `login-redirect.ts`) ลิงก์ `/files/x/../../api/me` จึงไม่พาไปหน้าอื่น query string ไม่ถูกตรวจส่วนนี้
+- เทส `ClientErrorReportTest` (รายงานหนึ่งครั้งเป็นหนึ่งบรรทัด), `LogDigestTest` (มีบรรทัดกำกับ), `tests/js/login-redirect.test.ts` (ลิงก์ที่ปีนออกถูกปฏิเสธ) ผ่าน JS 441 ข้อ
+
+## หน้าเข้าสู่ระบบ: คำโปรยบรรทัดเดียว (2026-10-20)
+
+คำโปรยบนแผงแบรนด์ "แจ้งปัญหา และติดตามงาน ครบจบในที่เดียว" เดิมตัดเป็น 2 บรรทัดที่ 42px ผู้ใช้เลือกให้อยู่บรรทัดเดียวและลดขนาดให้พอดี
+- ขนาดตัวอักษร `min(2.25rem, (50vw - 8rem) / 18)` จอกว้างได้ 36px จอ 1280 ได้ 28px ประโยคไทยกว้างราว 17.5 เท่าของขนาดตัวอักษร จึงไม่ล้นพื้นที่ข้อความของแผง (ครึ่งจอลบขอบซ้ายขวา 64px) และไม่ตัดบรรทัด (`whitespace-nowrap`)
+- ก้อนซ้ายเตี้ยลง `--login-top` จึงเปลี่ยนเป็น `max(8.5rem, 50dvh - 13rem)` ก้อนซ้ายยังอยู่กลางจอ
+- วัดใน Chrome จอ 1920 × 911 คำโปรย 36px บรรทัดเดียว เริ่มที่ y 248 เท่ากับหัวข้อ "เข้าสู่ระบบ" ก้อนซ้าย 248–664 กลางจอพอดี จอ 1280 × 800 ไทยกว้าง 496px อังกฤษ 370px ในพื้นที่ 512px eslint tsc ผ่าน
+
+## หน้าต่างในโมดูล Login: หัววงกลมแบบเดียวกัน (D3, 2026-10-20)
+
+ทำตาม mockup ที่ผู้ใช้ตอบ OK (https://claude.ai/artifact/QNV7aU8mjUpQ2V3UwXGZXn) หัวหน้าต่างในโมดูล Login เดิมมี 4 แบบ ตอนนี้เหลือ 3 แบบ ซึ่งต่างกันตามความหมาย
+- **ขอให้ทำ** (จำกัดเครื่อง ตั้งรหัสผ่าน เปลี่ยนรหัสผ่าน) วงกลมพื้นแบรนด์ 15% ไอคอนสีแบรนด์เข้ม หน้าต่างรหัสผ่านเดิมใช้พื้น 10%
+- **เตือน** (รหัสผ่านหมดอายุ) วงกลมรูปเดียวกัน พื้นเหลือง 15% (เดิม 10%) ไอคอนโหมดสว่างเป็น amber-600 ตรงกับสีรอของหน้า Error (เดิม amber-500) โหมดมืดยัง amber-400
+- **แจ้งเหตุ** (เปลี่ยนบัญชีแล้ว) ไอคอนไม่มีพื้นแบบหน้า Error ไม่เปลี่ยน
+- **นับเวลา** (ใกล้หมดเวลาใช้งาน) วงแหวนนับถอยหลังไม่เปลี่ยน เพราะบอกเวลาที่เหลือ
+- วงกลมเป็นคอมโพเนนต์เดียว `AlertIconCircle` (`shared/components/centered-alert.tsx`) ที่ CenteredAlert กับ `PasswordDialogHead` ใช้ร่วมกัน ค่าจึงไม่แยกกันอีก
+
+**ตรวจแล้ว** eslint tsc ผ่าน, build แล้วมี class ใหม่ครบ, เปิดหน้าต่างจำกัดเครื่องใน Chrome (จำลองคำตอบ 409 ในหน้า) วงกลมอยู่กลางและสีเท่าเดิม หน้าต่างรหัสผ่านต้องเข้าสู่ระบบก่อนจึงยังไม่ได้ดูด้วยตา
+
+## Tooltip เปิดได้ทีละอัน (2026-10-20)
+
+- บน iPad แตะข้อความที่ถูกตัดทีละช่อง tooltip ของช่องก่อนหน้าไม่ปิด ค้างซ้อนกันทุกอัน สาเหตุคือ `TruncText` ใช้ `isolate` กันไม่ให้การแตะไปเปิดแถว แต่ Radix Popover บนจอสัมผัสจะปิด tooltip เดิมก็ต่อเมื่อการแตะนั้นถึง document ด้วย
+- ตอนนี้ `InfoPopover` จำว่า tooltip อันไหนเปิดอยู่ (`shared/lib/one-open-note.ts`) เมื่ออันใหม่เปิด อันเก่าจะปิดก่อน ใช้ทั้งแอปและทุกวิธีที่เปิด (แตะ เมาส์ คีย์บอร์ด) ไม่ใช่แค่ในตาราง
+- คำอธิบายในหน้าสิทธิ์ที่เปิดค้างตามโฟกัสคีย์บอร์ด (`shown`) ยังเปิดอยู่ตราบที่สวิตช์ยังมีโฟกัส
+
+**ตรวจแล้ว** `tests/js/one-open-note.test.ts` ผ่าน 5 ข้อ, tsc eslint prettier ผ่าน ผู้ใช้ลองบน iPad จริงแล้ว
+
+## ลิงก์ไฟล์และ PDF ไปหน้าเข้าสู่ระบบแทน JSON ดิบ (C1, 2026-10-20)
+
+**ปัญหาที่เคยเจอ** ลิงก์ `/files/...` กับ `/pdf/...` ที่เปิดเป็นแท็บใหม่ ถ้าหมดเวลาใช้งาน บัญชีลาออกแล้ว หรือต้องเปลี่ยนรหัสผ่าน จะเห็น `{"message":"session_expired"}` (หรือ `account_closed` / `password_expired`) บนจอขาว เพราะ middleware สามตัวตอบ JSON ให้ SPA อย่างเดียว
+
+**ที่ทำ** คำขอที่ไม่ได้มาจาก SPA (`! expectsJson()`) ได้ redirect แทน คำขอจาก SPA ยังได้ JSON เดิม
+- หมดเวลาใช้งาน ไป `/login?reason=idle_timeout&next=<ลิงก์เดิม>` หน้า Login บอก "หมดเวลาใช้งาน" เข้าสู่ระบบแล้วเปิดไฟล์ต่อเลย
+- ลาออกแล้ว ไป `/login?reason=account_closed` ไม่มี next เพราะเข้าสู่ระบบไม่ได้อยู่แล้ว
+- ต้องเปลี่ยนรหัสผ่าน ไป `/` หน้าต่างบังคับเปลี่ยนรหัสผ่านขึ้นเอง ไม่ส่งไป `/login?next=` เพราะคนนั้นยังล็อกอินอยู่ หน้า Login จะส่งกลับไปที่ไฟล์ทันทีแล้ววนไม่จบ
+- เครื่องที่ถูกสั่งออก (TrackDevice) ได้ `next` ด้วย กลับมาเปิดไฟล์ได้หลังเข้าใหม่
+- ลิงก์หน้า Login สร้างที่เดียว `App\Support\LoginRedirect::to()` (ใส่ next เฉพาะ GET และไม่ใส่ให้บัญชีที่ปิดแล้ว)
+
+**ตรวจแล้ว** เทสใหม่ 4 ข้อ (ไฟล์และ PDF ตอนหมดเวลา, บัญชีลาออก, บัญชีที่ต้องเปลี่ยนรหัสผ่าน) และแก้ TrackDeviceTest ให้คาด next เทส Auth กับเทสที่เปิดไฟล์/PDF 396 ข้อผ่านบน sqlite pint ผ่าน เปิดหน้า Login ด้วย `?reason=idle_timeout&next=...` ใน Chrome ขึ้น "หมดเวลาใช้งาน กรุณาเข้าสู่ระบบอีกครั้ง" และเก็บ next ไว้ `?reason=account_closed` ขึ้น "บัญชีนี้ถูกปิดการใช้งานแล้ว กรุณาติดต่อ IT"
+
+## ความปลอดภัยหน้า Login: S3 S4 S9 S10 (2026-10-20)
+
+ทำตามที่ผู้ใช้สั่ง "S3, S4, S9, S10 แก้ได้" จากรายงานตรวจ Login (https://claude.ai/artifact/SmL5jdhQBCVQtPbQdNSdUJ) ข้อ S1 S7 ยังพักไว้ S2 S6 ทำตอนขึ้น production
+- **S10** `c60b6911` `GET /api/settings` อยู่นอกกลุ่มที่ต้องล็อกอิน (หน้า Login ใช้ตั้งธีม) session ที่หมดเวลา เครื่องที่ถูกสั่งออก หรือบัญชีลาออกยังได้ค่าตั้งระบบครบชุด ตอนนี้ route ผ่าน CheckSessionTimeout, TrackDevice, BlockResignedEmployees คนยังไม่ล็อกอินได้ค่าสาธารณะเหมือนเดิม คนที่ล็อกอินอยู่ได้คำตอบ 401 แบบเดียวกับ API อื่น
+- **S4** `97de1f1d` เปลี่ยนรหัสผ่านแล้ว session ที่ไม่ได้ติ๊กจดจำฉันเคยใช้ id เดิมต่อ ตอนนี้ย้ายไป id ใหม่และทำลาย id เก่า (`migrate(true)` คง CSRF token ไว้ คำขอที่ส่งค้างอยู่จึงไม่โดน 419) เครื่องตามไปผูกกับ id ใหม่ (`DeviceService::moveToSession`)
+- **S3** `1ed7f501` หน้าเปลี่ยนรหัสผ่านมีเพดาน 5 ครั้งต่อนาทีต่อบัญชี ใส่รหัสเดิมผิดแล้วนับรวมกับตัวล็อกบัญชีตอนเข้าสู่ระบบ (10 ครั้งใน 15 นาที) ถ้าเต็มจะตอบ 429 `too_many_attempts` และล็อกการเข้าสู่ระบบไปด้วย ทุกครั้งที่ผิดลง log backend เปลี่ยนสำเร็จแล้วล้างตัวนับ หน้าต่างเปลี่ยนรหัสผ่านขึ้น "ลองผิดหลายครั้งเกินไป กรุณาลองใหม่ในอีก …"
+- **S9** `601c9831` cookie จดจำฉันเคยใช้ token เดิมตลอดอายุ ตอนนี้ทุกครั้งที่ cookie พาเบราว์เซอร์กลับเข้าระบบ จะได้ token ใหม่สำหรับอายุที่เหลือ token เก่ายังใช้ได้อีก 1 นาทีให้คำขอที่ยิงพร้อมกันตอนเปิดเครื่อง (เข้าร่วมเครื่องเดิม ไม่บันทึกการเข้าสู่ระบบซ้ำ) หลังจากนั้น cookie เก่าหรือสำเนาของมันใช้ไม่ได้
+- C1 ทำให้เทสเดิม 1 ข้อใน `SecuritySettingsTest` ที่สร้างคำขอเองต้องส่ง Accept JSON (`29d9f8b7`)
+
+**ตรวจแล้ว** เทสใหม่ S10 3 ข้อ (`GuestAccessTest`), S4 1 ข้อ, S9 2 ข้อ (`DeviceRememberTest`), S3 4 ข้อ (`PasswordUpdateTest`) เทส Auth และเทสรหัสผ่าน/ตั้งค่า/ลาออก 329 ข้อผ่านบน sqlite pint eslint tsc ผ่าน ยังไม่ได้ลองด้วยตาในแอปจริงเพราะต้องเข้าสู่ระบบ
+
+## ปุ่ม ✕ ทุก Dialog กับมุมโค้ง 2 ค่า (2026-10-20)
+
+ข้อ W1 กับ D5 จากรายงานตรวจ Dialog https://claude.ai/artifact/2dbE2QEjM6VH42VcYBGR3a (`fe4fd6a7`)
+- **ปุ่ม ✕ (W1)** ทุก Dialog ที่ใช้ `DialogContent` กดได้ 32px ไอคอน 16px ยังห่างขอบบนและขวา 16px เท่าเดิม หน้าตาไม่เปลี่ยน แค่กดโดนง่ายขึ้นบน iPad ทำที่ตัวกลางครั้งเดียว จึงเอา prop `closeClassName` ที่ฟอร์มเล็กเคยใช้ออก Sheet ก็กดได้ 32px โดยไอคอนห่างขอบ 24px เท่าเดิม
+- **มุมโค้ง (D5)** เหลือ 2 ค่า Dialog ทั่วไป 10px (ค่าเริ่มต้น) หน้าต่างแจ้งเตือนกลางจอ BlockingDialog, CenteredAlert และเปลี่ยนรหัสผ่าน 14px ตามที่งานหน้า Error ตกลงไว้ หน้าดูพนักงาน โปรไฟล์ และหน้าต่างดูอีเมลที่ส่งแล้ว จาก 16px เป็น 10px (หน้าต่างแก้เทมเพลตตกไป แก้ตามใน `46f6e20f`)
+- เทส `tests/js/dialog-chrome.test.ts` เช็กปุ่ม ✕ ของ Dialog และ Sheet และไล่ทุกไฟล์ว่าไม่มี Dialog ที่มุมโค้งค่าอื่น ส่วน 14px ใช้ได้เฉพาะ 3 ไฟล์ข้างบน `npm run test:js` ผ่าน 449 ข้อ tsc และ eslint ผ่าน
+- ยังไม่ได้เปิดดูใน Chrome เพราะเบราว์เซอร์ออกจากระบบไปแล้ว
+
+## หน้าเข้าสู่ระบบ: คำสั้นลงสองข้อ (2026-10-20)
+
+- `login_forgot_help` "รีเซ็ตรหัสผ่านเองไม่ได้ ติดต่อทีม IT เพื่อขอรหัสผ่านใหม่" (ฉบับย่อของผู้ใช้เขียนว่า "ลืมรหัสผ่านเองไม่ได้" ซึ่งความหมายผิด จึงใช้คำว่ารีเซ็ตแบบเดียวกับหน้าพนักงาน) EN "You can't reset your password yourself. Ask the IT team for a new one."
+- `login_notice_limit` ตัดส่วนอธิบาย "บัญชีนี้จึงเหลือเฉพาะเครื่องที่ใช้ล่าสุด" ออก EN ตัดตาม
+
+## เวลาตอบตอนเข้าสู่ระบบไม่บอกว่ามีบัญชีนี้ (S7, 2026-10-20)
+
+ผู้ใช้เลือกแบบที่ 3 จากที่เสนอ เดิมชื่อที่ไม่มีในระบบไม่ได้ตรวจรหัสผ่านเลย มีแค่การหน่วงให้ครบ 200ms ส่วนชื่อที่มีจริงต้องตรวจ bcrypt ราว 190ms ตอนเครื่องหนักจึงช้ากว่าและเดาได้ว่าชื่อไหนมีบัญชี
+- ชื่อที่ไม่มีในระบบตรวจรหัสกับ hash หลอกหนึ่งรอบ ใช้ cost เดียวกับของจริง (`LoginRequest::standInHash()` สร้างครั้งเดียวเก็บใน cache สร้างใหม่เองเมื่อ `BCRYPT_ROUNDS` เปลี่ยน)
+- คงการหน่วง 200ms ไว้เกลี่ยความต่างเล็ก ๆ ที่เหลือ คนที่กรอกรหัสถูกไม่ต้องรอเหมือนเดิม
+- ภาระ CPU ไม่เพิ่มกรณีที่หนักที่สุด เพราะใส่ชื่อที่มีจริงก็ทำให้ server รัน bcrypt ได้เท่ากันอยู่แล้ว และมีเพดาน 50 ครั้งต่อนาทีต่อ IP คุม
+
+**ตรวจแล้ว** `LoginTimingTest` 4 ข้อ (ชื่อที่ไม่มีตรวจกับ hash หลอกหนึ่งครั้ง, hash หลอกสร้างครั้งเดียว, cost เปลี่ยนแล้วสร้างใหม่, เฉพาะรหัสถูกที่ไม่รอ) เทส Auth และที่เกี่ยวข้อง 289 ข้อผ่าน วัดบนเครื่องนี้ (cost 12) ตรวจรหัสผิดกับ hash จริง 189ms กับ hash หลอก 189ms เท่ากัน
+
+## เพดานลองรหัสต่อชื่อไม่ถูกเลี่ยงด้วยอักขระล่องหนหรือชื่อยาว (S1, 2026-10-20)
+
+**ปัญหาที่เคยเจอ** เพดาน "ผิดได้ 5 ครั้งต่อชื่อต่อ IP" ใช้ข้อความที่พิมพ์ตรง ๆ เป็น key แต่ MariaDB (`utf8mb4_unicode_ci`) มองข้ามอักขระล่องหนบางตัว `ad​min` จึงยังเจอบัญชี admin แต่ได้โควตาใหม่ทุกแบบที่พิมพ์ IP ออฟฟิศเป็น IP ที่ทุกบัญชีเคยเข้า เลยไม่โดนเพดานต่อบัญชีอีกชั้น เหลือแค่ 50 ครั้งต่อนาทีต่อ IP และชื่อที่แทรกอักขระล่องหนยาวราว 230 ตัวขึ้นไปทำให้ key ยาวเกินช่องของตาราง cache (255) ตัวนับบันทึกไม่ได้ทั้งสองชั้น
+- key ต่อ IP ใช้ id ของบัญชีเมื่อหาเจอ (`login-ip:id:<id>|<ip>`) ทุกแบบที่พิมพ์นับรวมที่เดียว ชื่อที่ไม่มีบัญชีใช้ hash ของชื่อที่ทำให้เป็นแบบเดียวกันแล้ว key จึงยาวคงที่
+- ตัดอักขระล่องหน (`\p{Cf}`) ออกก่อนค้นบัญชีและก่อนดูว่าเป็นอีเมลหรือไม่ ผลจึงเหมือนกันทุกฐานข้อมูล
+- ช่องชื่อผู้ใช้รับไม่เกิน 255 ตัว
+- Login log ยังเก็บชื่อตามที่พิมพ์ (ซ่อนท้ายถ้าไม่ตรงบัญชี) ไว้ดูย้อนหลัง
+
+**ตรวจแล้ว** เทสใหม่ 3 ข้อใน `LoginSecurityTest` (ห้าแบบที่แทรกอักขระล่องหนนับรวมกัน ครั้งที่ 6 โดน 429, ชื่อยาว 256 ตัวได้ 422 ด้วยคำเรื่องความยาว, key สั้นคงที่และชื่อที่ถูกแทรกได้ key เดียวกับชื่อจริง) ถอดโค้ดที่แก้ออกแล้วไม่ผ่านทั้ง 3 ข้อ เทส Auth และที่เกี่ยวข้องผ่านทั้งหมด ลองกับ MariaDB จริงแบบอ่านอย่างเดียว `admin`, `ad​min` (ZWSP), CGJ, VS16, `ADMIN` และชื่อยาว 245 ตัว ได้ `login-ip:id:1|…` กับ `login-user:id:1` ตัวเดียวกันทั้งหมด
+
+## หน้าต่างเปลี่ยนรหัสผ่านตอนถูกล็อก: แถบเดียว ไม่มี toast ซ้ำ (2026-10-20)
+
+ลองในแอปจริงด้วยบัญชีทดสอบ ครั้งที่ 6 ภายในนาทีได้ 429 ถูกต้อง แต่ขึ้นทั้งแถบในหน้าต่างและ toast มุมขวาบอกเรื่องเดียวกัน และ error "รหัสผ่านปัจจุบันไม่ถูกต้อง" ของครั้งก่อนยังค้างที่ช่อง
+- `showsOwnThrottle()` นับ `/password` เป็นหน้าที่บอกเวลารอเอง 429 จากหน้าต่างนี้จึงไม่ขึ้น toast (ทางรีเซ็ตรหัสของผู้ดูแล `/employees/{id}/password` ยังขึ้นตามเดิม)
+- ตอน 429 ล้าง error ของช่องที่ค้างจากครั้งก่อน เหลือแถบบอกเวลารอแถบเดียว
+- ลองซ้ำในแอปจริงแล้ว ครั้งที่ 6 ขึ้น "Too many attempts. Try again in 49 seconds." แถบเดียว `npm run test:js` 449 ข้อผ่าน
+
+## รวม migration เข้า baseline 0001 (ครั้งที่ 3, 2026-10-20)
+
+`database/migrations` เหลือ 18 ไฟล์ baseline `0001_01_01_000000…000017` อีกครั้ง ไฟล์ลงวันที่ 13 ตัวตั้งแต่ 2026-10-17 ถูกรวมหรือลบ
+- ย้ายโครงสร้าง 9 ตัวเข้าไฟล์โดเมนของตาราง คอลัมน์อยู่ตำแหน่งเดิมและ index เรียงเหมือนเดิม
+  - 000000 `notifications.kind` + index 2 ตัว
+  - 000002 index `audit_user_name_idx`, ตาราง `user_devices` และ `login_events`
+  - 000005 `asset_transfers.performed_by_user_id`
+  - 000006 `stock_movements.from_warehouse_id` / `to_warehouse_id` + index `moved_at`, `stock_counts.warehouse_id`
+  - 000010 `email_logs` (`body_html` เป็น MEDIUMTEXT, `action`, `is_test`) และตาราง `network_names`
+  - 000017 `report_exports.shared_with`
+- ลบ migration ที่แก้ข้อมูลอย่างเดียว 4 ตัว (backfill สิทธิ์รายงาน, ให้ `system.view_logins` กับผู้ดู audit, ธง `is_test` ของ log เก่า, ปิดท้ายชื่อที่พิมพ์ไม่ตรงบัญชี) ติดตั้งใหม่ได้สิทธิ์จาก `Permissions::defaults()` ผ่าน seeder ส่วน itservices_perf ได้ผลของทั้ง 4 ตัวครบแล้ว
+- ลบเทสที่ `require` ไฟล์ migration เหล่านั้น (ผู้ใช้อนุมัติ) คือ `ReportPermissionBackfillTest` ทั้งไฟล์, เทส migration 3 ข้อใน `LoginEventApiTest`, 1 ข้อใน `TypedNameMaskTest`, 1 ข้อใน `EmailDeliveryRecordTest`
+- comment ยาวในไฟล์ baseline ที่แก้ ย่อเหลือหัวไฟล์ 1–3 บรรทัดและป้ายบรรทัดเดียว
+- หัวข้อ "ขึ้น server" ของจำกัดจำนวนเครื่อง ไม่ต้องรัน migration `2026_10_20_000001`–`000005` แยกแล้ว ตารางอยู่ใน baseline
+
+**ตรวจแล้ว**
+- ฐานทดลอง migrate จากไฟล์ชุดเดิม กับฐานทดลอง migrate จาก baseline ใหม่ `mariadb-dump --no-data` (ตัด AUTO_INCREMENT) ตรงกันทุกบรรทัด และตรงกับ itservices_perf ด้วย
+- `migrate:rollback` แล้ว migrate ซ้ำ ได้โครงสร้างเดิม
+- Seeder บนฐานใหม่: `db:seed` กับ Department / Position / Section / MasterData รันผ่าน รันซ้ำไม่เพิ่มแถว template อีเมล 39, bell 50, workflow 13, ตัวเลือกคำขอ 10, SLA 13, เหตุผลตัดจำหน่าย 6 ตรงกับ itservices_perf ทุกแถว
+- เทสที่เกี่ยวข้อง 1006 ข้อผ่าน (Auth, Report, Seeder ทั้งหมดรวม DemoSeederTest, Stock, Asset, Notification, Audit, Email)
+- ตาราง `migrations` ของ itservices_perf ผู้ใช้ลบ 28 แถวของไฟล์ที่ไม่มีแล้ว เหลือ 18 แถว baseline `migrate` = Nothing to migrate
+
+**ยังไม่ได้ทำ**
+- ฐาน `itservices` ตัวเก่า (ไม่ได้ใช้ตั้งแต่ 2026-10-17) ยังไม่มีการเปลี่ยนแปลงของ 13 ไฟล์นี้
+
+## ลองด้วยตาตอนล็อกอินจริง: S9 ซ่อมเครื่องซ้ำ และ Dashboard โหลดเองหลังตั้งรหัส (2026-10-20)
+
+ลองด้วยบัญชีทดสอบชั่วคราวที่ 127.0.0.1 D3 S4 S3 ผ่าน (S3 แก้ toast ซ้ำแล้วใน `0ce9832a`) เจอสองเรื่อง
+- **cookie จดจำฉันกับการโหลดหน้าเว็บ** เพดานต่อคนของ route หน้าเว็บ (`AppServiceProvider::perPerson` จาก `e6958b2c`) เรียก `$request->user()` ตอนโหลดหน้า cookie จดจำฉันจึงพาเข้าระบบตรงนั้นโดยไม่ผ่าน TrackDevice เครื่องเดิมไม่ถูกย้ายมาใช้ ไม่ได้ token ใหม่ (S9 ไม่ทำงาน) แล้ว API ตัวถัดไปสร้างเครื่องใหม่ซ้ำ คนที่ติ๊กจดจำฉันได้เครื่องซ้ำเพิ่มทุกครั้งที่เปิดเบราว์เซอร์ใหม่ ตอนนี้เพดานอ่านแค่บัญชีที่ล็อกอินอยู่แล้ว (`signedInId()` ดูผู้ใช้ที่ guard มีอยู่ หรือ id ใน session) ไม่ปลุก cookie การพาเข้าระบบด้วย cookie เกิดที่ API ตัวแรกซึ่งผ่าน TrackDevice เทสใหม่ใน `DeviceRememberTest` จำลองโหลดหน้าแล้วตามด้วย `/api/me` ก่อนแก้ได้เครื่อง active 2 เครื่อง หลังแก้ 1 เครื่อง token ใหม่ และบันทึกการเข้าสู่ระบบครั้งเดียว `RateLimitPerPersonTest` ปรับให้จำลองผู้ใช้ที่ล็อกอินแล้วด้วย `actingAs`
+- **Dashboard หลังตั้งรหัสแบบบังคับ** ข้อมูลที่ถูกปฏิเสธ (403) ตอนหน้าต่างบังคับเปลี่ยนรหัสเปิดอยู่ค้างเป็น "Could not load the data" จนกด Try again ตอนนี้ตั้งรหัสสำเร็จแล้ว query ที่ error จะโหลดใหม่เอง (`password-form.tsx`) ยังไม่ได้ดูด้วยตาหลังแก้ เพราะแท็บทดสอบถูกใช้ล็อกอินบัญชีจริงไปแล้ว
+
+## เพดานความสูง Dialog ที่เหลือ กับระยะตัวอักษรภาษาไทย (2026-10-20)
+
+ข้อ T1 กับ D9 จากรายงานตรวจ Dialog https://claude.ai/artifact/2dbE2QEjM6VH42VcYBGR3a
+- **T1 เพดานความสูง** (`650ed999`) อีก 7 ไฟล์ที่ยังไม่มีเพดาน ได้แก่ asset-receive, manage-credentials, set-credentials (ทั้ง 2 หน้าต่าง), photo-crop, notification-settings-pane, network-name-modal และ stock-item-modal ได้ `max-h-[calc(100dvh-2rem)] overflow-y-auto` จอเตี้ยหรือแป้นพิมพ์ iPad ขึ้นแล้วเลื่อนดูปุ่มบันทึกได้ ตอนนี้ทุก Dialog มีเพดานแล้ว ยกเว้น useConfirm ที่เว้นไว้รอออกแบบใหม่
+- **D9 ระยะตัวอักษร** (`3d67eca8`) กฎเดียวใน `app.css` `.uppercase:lang(th) { letter-spacing: inherit }` อยู่นอก @layer จึงชนะ class tracking ครอบตัวพิมพ์ใหญ่ที่เว้นระยะราว 40 จุด เช่น "ขั้นที่ N" หัวตาราง หัวข้อย่อย หัวกลุ่มเมนู คำไทยกลับมาใช้ระยะเท่าข้อความรอบข้าง ข้อความที่ตั้ง `lang="en"` ยังเว้นระยะเหมือนเดิม
+- เทส `tests/js/dialog-chrome.test.ts` (เพดานของ 7 ไฟล์) และ `tests/js/thai-letter-spacing.test.ts` (กฎอยู่นอก @layer และไม่ใช้รูปที่ลบระยะของภาษาอังกฤษด้วย) `npm run test:js` ผ่าน 452 ข้อ tsc และ eslint ผ่าน
+- วัดใน Chrome ที่หน้า login (ยังไม่ได้เข้าสู่ระบบ) คำไทยตัวพิมพ์ใหญ่ได้ระยะ -0.08px เท่าตัวหนังสือปกติ ภาษาอังกฤษ 0.4px และ 2.24px เท่าเดิม ส่วน 7 Dialog ยังไม่ได้เปิดดูเพราะต้องเข้าสู่ระบบ
+
+## หน้าต่างยืนยันกลางจอแบบเดียว useConfirm ใช้กรอบ CenteredAlert (2026-10-20)
+
+ข้อ D6 W2 และ T1 ส่วนของ useConfirm จากรายงานตรวจ Dialog https://claude.ai/artifact/2dbE2QEjM6VH42VcYBGR3a ผู้ใช้อยากให้ useConfirm หน้าตาเหมือน CenteredAlert และให้รวมเป็นตัวกลางไฟล์เดียว (mockup บอร์ด L กับ M ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9 เอกสาร `docs/superpowers/specs/2026-10-20-confirm-dialog-centered-design.md`)
+- **ไฟล์เดียว** `shared/ui/confirm-dialog.tsx` มี 3 ส่วน วงกลมไอคอน `AlertIconCircle` กรอบ `CenteredAlert` และ `useConfirm` / `useConfirmEdit` / `ConfirmProvider` ลบ `shared/components/centered-alert.tsx` ไม่ทิ้งไฟล์ส่งต่อ แก้ import 4 ไฟล์ (ตัวห่อของโมดูลสิทธิ์ หน้าตั้งค่า หน้าต่างเครื่องที่ 3 ฟอร์มรหัสผ่าน) ไฟล์ที่เรียก useConfirm 44 ไฟล์ (77 จุด) ไม่ต้องแก้ (`500b1b9e`)
+- **กรอบได้ของเพิ่ม** สีแดงของวงกลม (`tone="danger"`) กรอบชื่อรายการ (`entity`) ที่โปรแกรมอ่านหน้าจออ่านพร้อมคำอธิบาย ขึ้นบรรทัดตาม `\n` เลือกปุ่มที่ได้โฟกัสตอนเปิด (`initialFocus`) บอกปุ่มที่เปิดหน้าต่าง (`opener`) และส่งโฟกัสกลับปุ่มเมนูแถวด้วย `useMenuReturnFocus` แบบเดียวกับ Dialog อื่น ผู้เรียกเดิม 5 ที่ไม่ได้ส่งค่าเหล่านี้ หน้าตาเหมือนเดิม (`71584f76`)
+- **useConfirm วาดด้วยกรอบนี้** กว้าง 384 มุม 14 ไอคอนวงกลมสีตามประเภท (ลบแดง แก้ไข brand เตือนเหลือง) ข้อความกลาง กรอบชื่อรายการใต้คำอธิบาย ปุ่มแบ่งครึ่งแถว ยกเลิกซ้าย ไม่มีปุ่ม ✕ (ปิดด้วย Esc หรือยกเลิก) มีเพดานความสูง 100dvh ข้อความ error เป็นบรรทัดแดงใต้คำอธิบาย พฤติกรรมเดิมอยู่ครบ ลบแล้วโฟกัสปุ่มยกเลิกก่อน ล็อกระหว่างทำงาน วงหมุนแล้ว ✓ แล้วปิดเอง ทำไม่สำเร็จค้างหน้าต่างไว้ เรียกซ้ำตอบ false ให้ตัวเก่า โฟกัสกลับปุ่มที่เปิดหรือ Dialog ที่ครอบอยู่ (`841b7962`)
+- **ปุ่มบันทึกในหน้าสิทธิ์** หน้าต่างยืนยันบันทึกสิทธิ์และกลุ่มเริ่มต้นใช้ `SaveButton` และสีเต็มตอนกำลังบันทึกกับตอน ✓ เดิมจางครึ่งหนึ่ง (`1c801659`)
+- **แก้หลังผู้ตรวจอ่าน** ชื่อรายการยาวเคยดันหน้าต่างให้เลื่อนด้านข้าง (ลูกของ grid ไม่ยอมหด) ใส่ `min-w-0` แล้วตัดท้ายด้วย … และ id ของกรอบชื่อรายการเคยถูกใส่ใน aria-describedby ก่อน Radix วางเนื้อหาลงจอ โปรแกรมอ่านหน้าจอจึงไม่อ่านชื่อรายการตอนเปิด เปลี่ยนเป็น callback ref ที่ใส่ตอนเนื้อหาติดจอ (`5fa7c0d3`)
+- ตัดสินใจเอง 5 ข้อ (ผู้ใช้เปลี่ยนได้) แจ้งอย่างเดียวใช้สีตามประเภทเดิม กรอบชื่อรายการจัดกลางตัดบรรทัดเดียว ไฟล์รวมอยู่ `shared/ui/` ชื่อเดิม ไอคอนแก้ไขเป็นสี brand และกรอบส่งโฟกัสกลับปุ่มเมนูแถวทุกผู้เรียก
+- ที่ยังไม่ทำ คำอธิบายที่มีคำยาวไม่มีช่องว่าง (อีเมลหรือ URL ยาว) ยังดันหน้าต่างได้ เพราะการใส่ `min-w-0` ทั้งกรอบจะกระทบผู้เรียกเดิม 5 ที่ ข้อย่อยที่ผู้ตรวจเห็นแต่ไม่ได้แก้ SaveButton ขึ้นคำว่าบันทึกหนึ่งเฟรมระหว่างวงหมุนกับ ✓ และหลังทำไม่สำเร็จโฟกัสอยู่ที่ตัวหน้าต่าง ต้องกด Tab ก่อนลองใหม่
+- เทส `tests/js/confirm-dialog.test.ts` 12 ข้อ และ `dialog-chrome.test.ts` (path มุม 14 และเพดานความสูงของ useConfirm) `npm run test:js` ผ่าน 464 ข้อ tsc และ eslint ผ่าน
+- **ตรวจด้วยตาใน Chrome** (localhost:8000 เปิดแล้วกดยกเลิกเท่านั้น) ลบยี่ห้อจากหน้าข้อมูลหลัก กว้าง 384 ไม่มี ✕ โฟกัสอยู่ที่ยกเลิก โปรแกรมอ่านหน้าจออ่านคำอธิบายกับชื่อ Acer กด Esc แล้วโฟกัสกลับปุ่ม "ลบ Acer" ชื่อยาวตัดท้ายด้วย … ไม่มีแถบเลื่อนด้านข้าง ยืนยันการแก้ไขจากฟอร์มยี่ห้อ กดยกเลิกแล้วโฟกัสกลับปุ่มบันทึกในฟอร์ม หน้าต่างเตือนทิ้งข้อมูลเป็นวงกลมเหลือง โฟกัสที่ "แก้ไขต่อ" โหมดมืด iPad แนวตั้ง 768×1024 และแนวนอนเตี้ย 1024×560 (iframe) ใช้ได้ ส่วนหน้าต่างของหน้าสิทธิ์และจำนวนเครื่องไม่ได้เปิดดู เพราะต้องกดบันทึกค่าจริงก่อน ส่วนที่แก้ในสองหน้านั้นเห็นเฉพาะตอนกำลังบันทึก
+
+## หน้าต่างเพิ่มชื่อเครือข่ายใช้แบบฟอร์มเล็ก (2026-10-20)
+
+ตัวที่ 28 ของรอบฟอร์มเล็ก ตอนนั้นไม่ได้รวมไว้ เพราะไฟล์นี้เพิ่งเกิดในงาน Session limit (mockup บอร์ด N ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9)
+- `modules/settings/components/network-name-modal.tsx` เปลี่ยนเป็น `FormDialogContent` กว้าง 560 หัว `FocusDialogHeader` ไอคอนโล่ บรรทัดบน "ความปลอดภัย" (`set_security`) ตอนแก้ไขมีชิปชื่อเครือข่าย เนื้อหาอยู่ใน `DialogBody` ปุ่มอยู่ใน `DialogFooterBar` คำ ตัวอย่างในช่อง และการบันทึกเหมือนเดิม
+- เทส `small-form-dialogs.test.ts` นับ 28 ตัว และเช็กไอคอน บรรทัดบน และชิปของหน้าต่างนี้ เอาไฟล์นี้ออกจากรายการเพดานความสูงใน `dialog-chrome.test.ts` เพราะได้เพดานจาก `FormDialogContent` แล้ว `npm run test:js` ผ่าน 465 ข้อ tsc และ eslint ผ่าน
+- ตรวจด้วยตาใน Chrome หน้าตั้งค่า ความปลอดภัย เปิดหน้าต่างเพิ่ม กว้าง 560 โฟกัสอยู่ที่ช่อง IP กดบันทึกตอนช่องว่างขึ้นกรอบแดงกับ "จำเป็นต้องกรอก" ทั้งสองช่อง แล้วกดยกเลิก (ยังไม่มีชื่อเครือข่ายในระบบ จึงยังไม่ได้เห็นตอนแก้ไขที่มีชิปของจริง)
+
+## มุมโค้งของหน้าต่างแก้เทมเพลตอีเมล กับเทสต์ที่อ่านแท็กไม่ครบ (2026-10-20)
+
+แก้ D5 ที่ทำไม่ครบใน `fe4fd6a7` (`46f6e20f`)
+- หน้าต่างแก้เทมเพลตอีเมล (`min(1500px,92vw)` × `min(900px,90dvh)`) ยังมีมุม 16px (`rounded-2xl`) เพราะรอบนั้นแก้ไปแค่หน้าต่างดูอีเมลที่ส่งแล้ว ตอนนี้เป็น 10px เหมือน Dialog อื่น ขนาดคงเดิม
+- เทสต์มุมโค้งและเพดานความสูงใน `dialog-chrome.test.ts` เคยอ่านแท็ก Dialog แค่ถึงเครื่องหมาย `>` ตัวแรก หน้าต่างนี้มี `onEscapeKeyDown={(e) => …}` อยู่ในแท็ก เทสต์จึงไม่เห็นคลาส เปลี่ยนเป็น `openTags()` ที่อ่านจนถึง `>` ที่อยู่นอกวงเล็บปีกกาและเครื่องหมายคำพูด มีเทสต์ของตัวอ่านเองด้วย `npm run test:js` ผ่าน 466 ข้อ
+- ตรวจทุกแท็ก Dialog ใหม่ทั้ง 79 แท็กด้วยตัวอ่านแบบเดียวกัน ตัวอ่านข้ามคอมเมนต์ในแท็กได้ (เดิมคอมเมนต์ที่มี ' เช่น don't ใน take-case-modal ทำให้ข้ามแท็กนั้นไปเงียบ ๆ) และถ้าอ่านแท็กไม่จบเทสต์จะไม่ผ่าน มุมโค้งไม่ถูกเหลือตัวนี้ตัวเดียว ดูด้วยตาใน Chrome แล้ว เปิดเทมเพลต ET-01 มุมโค้ง 10px กว้าง 1500 เท่าเดิม แล้วกดยกเลิก
+- เจอเพิ่มระหว่างตรวจ Dialog ใหญ่อีก 2 ตัวกว้าง 896 (ฟอร์มบันทึกการลาออก ใบตรวจสิทธิ์ในรายงาน) และ 9 หน้าต่างที่ไม่มีเพดานที่ตัวหน้าต่างแต่เนื้อหาข้างในเลื่อนได้ (ส่วนใหญ่ในคลังอะไหล่) อยู่ในแผน `docs/superpowers/plans/2026-10-20-large-dialog-sizes.md` ส่วน B รอผู้ใช้ตัดสิน
+
+## Dialog ใหญ่เหลือ 2 ความกว้าง กับความสูง 2 กติกา (2026-10-20)
+
+ข้อ D1 กับ D2 จากรายงานตรวจ Dialog ส่วนของ Dialog ใหญ่ (บอร์ด O ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9 แผน `docs/superpowers/plans/2026-10-20-large-dialog-sizes.md` ผู้ใช้อนุมัติ 5 ข้อตามที่เสนอ)
+- **ขนาดกลางใน `shared/ui/dialog.tsx`** นอกจาก `focusDialogContentClass` (1100 สูงคงที่ `min(860px, 100dvh − 72px)`) เพิ่ม `largeDialogContentClass` (1100 สูงตามเนื้อหาจนถึงเพดานเดียวกัน) กับ `mediumDialogContentClass` (768) ทุกตัวมี `w-[calc(100vw-2rem)]` จึงเว้นขอบ 16 บน iPad (`f52a35d4`)
+- **ย้าย 13 หน้าต่าง** (`a79b08e2`..`14083ae2`, `fd17fe71`, `705a488b`)
+  - สูงคงที่ เพราะเนื้อหาเปลี่ยนระหว่างเปิด สร้างคำขอ (เดิมสูง 760) ดูคำขอ (เดิมกว้าง 980) แก้สายอนุมัติ (980) ดูข้อมูลพนักงานและโปรไฟล์ (1080 สูง 88dvh ไม่เกิน 780) ลงทะเบียนทรัพย์สิน (880)
+  - สูงตามเนื้อหา สร้างและแก้ไข Ticket แก้ไขพนักงาน (หน้าตาเดิม ได้เพดาน 860 เพิ่ม) ฟอร์มลาออก (896 เปลี่ยนแค่ขนาด ไม่ใส่ overflow-hidden เพราะปฏิทินเปิดอยู่ในหน้าต่าง) ใบทบทวนสมาชิกในรายงาน (896 คงช่องว่าง 16px เดิม) ดูอีเมลที่ส่งแล้ว (820)
+  - 768 ดูสายอนุมัติ (760)
+  - คงไว้ หน้าต่างแก้เทมเพลตอีเมล 1500 และดู Ticket ที่สูงตามเนื้อหาตามที่ตั้งไว้
+- **บน iPad แนวตั้ง** ลงทะเบียนทรัพย์สิน สร้างคำขอ แก้และดูสายอนุมัติ ใบทบทวนสมาชิก เคยกว้างเต็มจอชนขอบ ตอนนี้เว้นขอบ 16
+- **แก้หลังผู้ตรวจอ่าน** ลงทะเบียนทรัพย์สินกับดูคำขอ รอบแรกจัดให้สูงตามเนื้อหา ทำให้หน้าต่างกระตุกตอนสลับซื้อหรือเช่า และตอนโหลดคำขอ จึงกลับเป็นสูงคงที่ตามกติกา (`fd17fe71`) ดูอีเมลที่ส่งแล้ว รอบแรกเสนอ 768 โดยเข้าใจผิดว่าอีเมลกว้างราว 600 ที่จริงอีเมลวาดตามความกว้างตอนส่ง 720 ถึง 980 ที่ 768 อีเมล 720 สลับเป็นหน้าตาจอแคบ ผู้ใช้เลือก 1100 ตอนนี้ช่องอีเมลกว้าง 1048 แสดงได้ครบทุกขนาด (`705a488b`)
+- **เส้นกรอบโฟกัสขาด (ผู้ใช้เห็นระหว่างตรวจ)** ปุ่มเต็มความกว้างในกล่องเลื่อนของหน้าต่างนำเข้าเสียเส้นซ้ายขวา เติม `-mx-2 px-2` รายการที่เลื่อนได้ (หน่วยงานในหน้าต่างนำเข้า สินค้าในหน้าต่างนับสต็อก เนื้อหาดูคำขอ) ตัดเส้นของตัวที่ชิดขอบตอนกด Tab เติม `scroll-py-2` (`11eab743`) ตรวจด้วยสคริปต์ที่กด Tab ทีละช่องแล้ววัดเส้นกับกล่องที่ตัด ใน 17 หน้าต่าง เหลือ 0 จุด
+- เทส `tests/js/large-dialog-sizes.test.ts` เช็กความกว้าง ระยะขอบ เพดาน สูงคงที่หรือตามเนื้อหา และคลาสที่ต้องคงไว้ ของทั้ง 13 หน้าต่าง `dialog-chrome.test.ts` เช็กระยะเผื่อเส้นโฟกัส `npm run test:js` ผ่าน 473 ข้อ tsc และ eslint ผ่าน
+- ตรวจด้วยตาใน Chrome (เปิดแล้วปิด ไม่บันทึก) จอ 1920 × 855 iPad แนวตั้งผ่าน iframe จอ 1024 × 600 สำหรับหน้าต่างที่เลื่อนข้างใน ยังไม่ได้เปิด แก้ไข Ticket (ไม่เจอ Ticket ที่แก้ได้) และหน้าต่างคลังอะไหล่ 5 ตัวที่ต้องมีข้อมูลก่อน หน้าต่างนำเข้าบนจอ 600 ห่างขอบแค่ 4px
+
+## หน้าต่างยืนยัน ชื่อรายการอยู่ใต้หัวข้อ ไม่มีกรอบ (2026-10-20)
+
+ผู้ใช้เห็นว่ากรอบชื่อรายการ (พื้นเทามีเส้นขอบ ชื่อกับรหัส 2 บรรทัด) ดูไม่ minimal จึงเลือกแบบ ค จากบอร์ด P ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9 (`8120d5e2`)
+- `shared/ui/confirm-dialog.tsx` ชื่อรายการอยู่ระหว่างหัวข้อกับคำอธิบาย ตัวกลาง 14px สีเข้ม บรรทัดที่สอง (รหัส เลขที่สัญญา จำนวนคน) เป็นสีเทาต่อท้ายหลังช่องว่าง คำอธิบายห่างลงมา 8px ใช้กับทุกจุดที่ส่ง `entity` มา ไม่ต้องแก้ผู้เรียก ส่วนอื่นของหน้าต่างเหมือนเดิม
+- ชื่อยาวขึ้นบรรทัดใหม่แทนการตัดด้วย … บรรทัดที่สองเป็น inline-block รหัสสั้นจึงไม่ถูกหักกลางคำ ก้อนข้อความได้ `min-w-0` คำยาวที่ไม่มีช่องว่างในชื่อรายการ (ชื่อไฟล์ อีเมล) จึงตัดอยู่ในกรอบ 384
+- โปรแกรมอ่านหน้าจออ่านชื่อรายการก่อนคำอธิบาย ตามลำดับที่ตาเห็น
+- ตัดสินใจเอง 3 ข้อ (ผู้ใช้เปลี่ยนได้) ชื่อยาวขึ้นบรรทัดใหม่ไม่ตัด รหัสสั้นไม่หักกลางคำ และลำดับการอ่าน
+- เทส `tests/js/confirm-dialog.test.ts` 15 ข้อ (ตำแหน่งใต้หัวข้อ ไม่มีกรอบ ขึ้นบรรทัดไม่ตัด บรรทัดที่สองสีเทาหลังช่องว่าง min-w-0 ลำดับการอ่าน) `npm run test:js` ผ่าน 476 ข้อ tsc และ eslint ผ่าน
+- ตรวจด้วยตาใน Chrome (localhost:8000 เปิดแล้วกด Esc เท่านั้น) ลบยี่ห้อ Acer ชื่ออยู่ใต้หัวข้อ โฟกัสที่ยกเลิก อ่าน Acer ก่อนคำอธิบาย สิ้นสุดสัญญา ชื่อกับเลขที่สัญญาสีเทาอยู่บรรทัดเดียวกัน ลองแทนชื่อยาวกับชื่อไฟล์ยาวในหน้าจอชั่วคราว ขึ้นบรรทัดใหม่ได้ กรอบยังกว้าง 384 ไม่มีแถบเลื่อนด้านข้าง โหมดมืด (สิ้นสุดสัญญา) ชื่อสีสว่าง เลขที่สัญญาสีเทาอ่านออก iPad แนวตั้ง 768 × 1024 (iframe ลบยี่ห้อ) กว้าง 384 ไม่มีแถบเลื่อนด้านข้าง รายงานตรวจ Dialog อัปเดต D6 G2 และแผนขั้น 4 แล้ว
+
+## หัว Dialog 3 ไฟล์ที่ลอก FocusDialogHeader มาเขียนเอง (D3 ส่วนที่ 1, 2026-10-20)
+
+ลงทะเบียนและแก้ไขทรัพย์สิน ดูทรัพย์สิน และดูสัญญาจากหน้าทรัพย์สิน ใช้ `FocusDialogHeader` ตัวกลางแล้ว (บอร์ด Q ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9, `4d733737`)
+- บรรทัดเล็กเหนือหัวข้อภาษาไทยเคยเป็น 10.5px ตัวหนา ตอนนี้ 12px กึ่งหนาเท่า Dialog อื่น
+- หัวฟอร์มทรัพย์สินเคยใช้ระยะบนล่าง 16/12 ตอนนี้ 20/16
+- ชิปรหัสเคยใช้สี brand ตรง ๆ ตอนนี้ใช้ brand-ink ที่ระบบเข้มให้พอ 4.5:1 เห็นต่างเมื่อองค์กรตั้งสีหลักอ่อน
+- ชิปป้าย ประเภท ซื้อหรือเช่า จำนวนวันที่เหลือ สถานะ และวันที่ทางขวา ย้ายไปอยู่ในช่อง `titleSuffix` กับ `headerRight` หน้าตาเดิม ไอคอนประเภททรัพย์สินมาจาก `useAssetTypeIcon()` ที่แยกออกมาจาก `AssetTypeIcon`
+- เทส `tests/js/focus-header.test.ts` `npm run test:js` ผ่าน 479 ข้อ tsc และ eslint ผ่าน ดูใน Chrome แล้ว ทั้ง 3 หน้าต่างบรรทัดบน 12px กึ่งหนา ชิปและวันที่อยู่ที่เดิม
+- ส่วนที่ 2 ของ D3 (หน้าต่าง 11 ไฟล์ที่ยังใช้หัวข้อธรรมดา 18px) ยังไม่ได้คุย
+
+## หน้าต่างเพิ่มและแก้ไขในหน้าตั้งค่าอยู่ใน URL (B1, 2026-10-20)
+
+- ข้อมูลหลัก (ยี่ห้อ รุ่น หมวดหมู่ ผู้จำหน่าย คลัง สถานที่ หน่วยนับ ประเภทการรับประกัน) เหตุผลตัดจำหน่าย และข้อมูลคำขอ เคยเปิดหน้าต่างด้วย state ในหน้า โหลดหน้าใหม่แล้วหายและส่งลิงก์ไม่ได้ ตอนนี้ใช้ `useListDialog()` (`modules/settings/hooks/use-list-dialog.ts`) เก็บไว้ใน `?add=1` กับ `?edit=<id>` ผ่าน `usePageDialogs` แบบหน้าทรัพย์สินและสัญญา (`b4b9a917`)
+- โหลดหน้าใหม่หรือเปิดจากลิงก์ หน้าต่างเปิดขึ้นมาเอง กด Back ปิดหน้าต่าง ลิงก์ที่ชี้ไปรายการที่ไม่มีแล้วตัดพารามิเตอร์ออกเอง หน้าตาไม่เปลี่ยน
+- เทส `tests/js/settings-list-dialogs.test.ts` `npm run test:js` ผ่าน 482 ข้อ tsc และ eslint ผ่าน ลองใน Chrome แล้ว (แก้ไขรุ่น โหลดหน้าใหม่ Esc เพิ่มรุ่นแล้ว Back ลิงก์รหัสที่ไม่มี แก้ไขหน่วยนับ แก้ไขตัวเลือกข้อมูลคำขอ เปิดแล้วปิดเท่านั้น)
+
+## Dialog เล็กแบบ 6 ทั้ง 7 ตัวเข้าชุดเดียวกับฟอร์มเล็กและกรอบกลางจอ (2026-10-20)
+
+แบบ 6 ในรายงานตรวจ Dialog คือหน้าต่างเล็กที่ไม่เข้ากลุ่มไหน แต่ละตัวมีหัว ท้าย และความกว้างของตัวเอง ผู้ใช้ผ่าน mockup บอร์ด R1 R2 R3 ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9 และให้ทำทั้ง 3 กลุ่ม
+- **กลุ่ม 1 ฟอร์มเล็กที่ตกรอบฟอร์มเล็ก** (`c432b1f9`) รับเข้าคลังและเรียกคืนทรัพย์สิน จัดการบัญชี สร้างบัญชี และหน้าต่างสร้างบัญชีเรียบร้อย ใช้ `FormDialogContent` กว้าง 560 หัว `FocusDialogHeader` เนื้อหา `DialogBody` และแถบท้าย `DialogFooterBar` เหมือนฟอร์มเล็ก 28 ตัว (เดิม 448 และ 384)
+  - รับเข้าคลังและเรียกคืน บรรทัดบนเป็นรหัสทรัพย์สิน ชิปเป็นรุ่น ไอคอนกล่องตามเมนูทรัพย์สิน (เดิมกรอบเขียวหรือเหลือง) เอากรอบรุ่นในเนื้อหาออก ตัดคำว่า "เดิมอยู่" เพราะช่องคลังตั้งเป็นคลังเดิมไว้แล้ว คำอธิบายใต้ช่องคลังผูกกับช่องผ่าน `help` เลือกหลายตัว บรรทัดบนเป็น "เลือกไว้ N รายการ" ไม่มีชิป
+  - สร้างบัญชีกับหน้าต่างสร้างบัญชีเรียบร้อยใช้หัวเดียวกับจัดการบัญชี บรรทัดบนเป็นชื่องาน ชื่อพนักงานเป็นหัวข้อ รหัสเป็นชิป หน้าต่างสร้างบัญชีเรียบร้อยมีบรรทัดสีเขียวแบบหลังรีเซ็ตรหัส ปุ่มคัดลอกเป็นปุ่มขอบ และเพิ่มปุ่ม "เสร็จสิ้น" เหมือนจัดการบัญชี (เดิมปิดได้ด้วย ✕ อย่างเดียว)
+- **กลุ่ม 2 ไม่พบข้อมูลนี้** (`0ffa0e67`) ใช้กรอบกลางจอแบบหน้าต่างยืนยัน กว้าง 384 มุม 14 ไอคอนวงกลมสีเทา (เพิ่มสี `neutral` ให้ `AlertIconCircle`) ปุ่มปิดเต็มแถว ไม่มี ✕ (เดิม 440 กรอบเทาสี่เหลี่ยม 56 มี ✕ กับปุ่มปิดซ้อนกัน) หน้าตาเดียวกันทั้งตอนเปิดจากลิงก์ และตอนหน้าต่างดูคำขอหรือดูอะไหล่เปิดเจอรายการที่ถูกลบ
+  - ปุ่มปิดรับโฟกัสเองตอนแผงนี้ขึ้น เพราะในหน้าต่างดูคำขอ หน้าต่างเปิดก่อนแล้วค่อยเปลี่ยนเป็นไม่พบข้อมูล ✕ ที่ถือโฟกัสอยู่ถูกซ่อน โฟกัสจึงหลุดไปที่ตัวหน้าเว็บ (เจอตอนตรวจใน Chrome)
+  - มุม 14 ต้องใส่ทั้ง `rounded-[14px]` และ `sm:rounded-[14px]` เพราะ `DialogContent` ตั้ง `sm:rounded-lg` ไว้ จอกว้างจะกลับเป็น 10
+  - ใบนับสต็อกก็ใช้แผงนี้เป็นเนื้อหา แต่ไม่ได้ส่งกรอบกลางจอมา แผงใหม่จึงยืดปุ่มปิดเต็มหน้าต่าง 768 ยังมี ✕ และมีหัวข้อซ้อน 2 อัน ตอนนี้ส่ง `recordMissingContentClass` แบบดูคำขอกับดูอะไหล่ และแสดงแผงอย่างเดียวไม่มีหัวข้อตอนโหลด (`d538b5fe`)
+- **กลุ่ม 3 เครื่องมือ** (`0ffa0e67`) เนื้อหาข้างในเหมือนเดิม
+  - ครอปรูปภาพ คง 384 และไม่มี ✕ หัว `FocusDialogHeader` ไอคอนครอป บรรทัดบน "พนักงาน" คำแนะนำย้ายไปใต้แถบซูม ปุ่มขนาดปกติใน `DialogFooterBar` (เดิมปุ่มเล็ก)
+  - ความเคลื่อนไหวสต็อก จาก 448 เป็น 560 หัว `FocusDialogHeader` บรรทัดบนเป็นเลขที่เอกสาร อ้างอิงอยู่ใต้หัวข้อ วันที่ชิดขวา ไอคอนสีตามประเภทเหมือนเดิม (`MV_TONE_HEX` ใน `modules/stock/pages/shared.ts`) ดูอย่างเดียวจึงไม่มีแถบท้าย
+- เทส `tests/js/small-form-dialogs.test.ts` นับฟอร์มเล็ก 31 ตัว และเช็กหัวของรับเข้าคลัง สร้างบัญชี กับปุ่มเสร็จสิ้น ไฟล์ใหม่ `tests/js/small-other-dialogs.test.ts` เช็กกรอบไม่พบข้อมูล โฟกัสปุ่มปิด ทุกหน้าที่ใช้แผงไม่พบข้อมูลต้องส่งกรอบกลางจอ ครอปรูป และความเคลื่อนไหวสต็อก `confirm-dialog.test.ts` เช็กสีเทา `dialog-chrome.test.ts` นับไม่พบข้อมูลเป็นหน้าต่างกลางจอ และเอา 3 ฟอร์มออกจากรายการเพดานความสูง (ได้จากตัวกลางแล้ว) `npm run test:js` ผ่าน 493 ข้อ tsc และ eslint ผ่าน
+- ตรวจด้วยตาใน Chrome ครบ 7 ตัวกับใบนับสต็อก (localhost:8000 เปิดแล้วกดยกเลิกหรือ Esc เท่านั้น) จอคอม โหมดมืด (ไม่พบข้อมูล ความเคลื่อนไหวสต็อก) และ iPad แนวตั้ง 768 (สร้างบัญชี กว้าง 560 ไม่มีแถบเลื่อนด้านข้าง) หน้าต่างสร้างบัญชีเรียบร้อยดูโดยดักคำขอที่ไม่ใช่การอ่านทั้งหมดไว้ในหน้าเว็บแล้วตอบกลับปลอม ไม่มีบัญชีถูกสร้างจริง (เช็กตาราง users แล้ว) ครอปรูปดูด้วยรูปทดสอบที่สร้างในเบราว์เซอร์แล้วกดยกเลิก
+- ที่ไม่ได้แก้ หัวข้อ "เรียกคืนสินทรัพย์" ใช้คำว่าสินทรัพย์ ต่างจากโมดูลที่ใช้ทรัพย์สิน และช่องรหัสผ่านในจัดการบัญชีกับสร้างบัญชีขึ้นจุดของ Chrome autofill ตอนเปิด (ค่าไม่ได้เข้า state เป็นเรื่องเดิม ไม่เกี่ยวกับรอบนี้)
+
+## หน้าต่างดูสมาชิกและรายงานตั้งเวลาไม่โฟกัสช่องค้นหาตอนเปิด (2026-10-20)
+
+ผู้ใช้ถามว่าหน้าต่างดูสมาชิกแผนก ตำแหน่ง หน่วยงาน โฟกัสลงช่องค้นหาทันทีที่เปิด ตั้งใจหรือเป็นบัค คำตอบคือเป็นบัค Radix ส่งโฟกัสไปที่สิ่งแรกที่กดได้ตอนเปิด หัวของหน้าต่างพวกนี้ไม่มีปุ่ม สิ่งแรกจึงเป็นช่องค้นหา บน iPad แป้นพิมพ์เด้งขึ้นบังรายชื่อทันที
+- เพิ่ม `focusDialogOnOpen` ใน `shared/ui/dialog.tsx` ให้โฟกัสอยู่ที่ตัวหน้าต่าง (แบบเดียวกับที่ดู Ticket โปรไฟล์ และกลุ่มบทบาทเขียนไว้เอง) แล้วใช้กับ 5 หน้าต่างที่ช่องค้นหาเป็นสิ่งแรก สมาชิกแผนก ตำแหน่ง หน่วยงาน สมาชิกสิทธิ์การเข้าถึง และจัดการรายงานตั้งเวลา
+- กด Tab ครั้งเดียวไปถึงช่องค้นหา เปิดด้วยคีย์บอร์ดก็ไม่มีกรอบขึ้นรอบหน้าต่าง
+- ไล่ดูหน้าต่างอื่นที่มีช่องค้นหาแล้ว ตั้งค่าการแจ้งเตือนโฟกัสที่สวิตช์ และดูสัญญาจากทรัพย์สินโฟกัสที่แท็บ ไม่ใช่ช่องพิมพ์ แป้นพิมพ์ไม่เด้ง จึงคงไว้
+- เทส `tests/js/dialog-open-focus.test.ts` `npm run test:js` ผ่าน 497 ข้อ tsc และ eslint ผ่าน ตรวจใน Chrome แล้ว 3 ตัว (แผนก ทั้งเปิดด้วยเมาส์และ Enter, สมาชิกสิทธิ์การเข้าถึง, จัดการรายงานตั้งเวลา)
+
+## ไอคอนหัว Dialog ไม่มีกรอบ สีตามความหมาย (2026-10-20)
+
+ผู้ใช้อยากให้หัว Dialog ดู minimal แต่ยังคงไอคอนไว้บอกผู้ใช้ว่ากำลังทำอะไร (บอร์ด U ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9 ผู้ใช้เลือก 32px, `4136c013`)
+- `FocusDialogHeader` ไม่มีกล่องสีพื้นหลัง 40px แล้ว เหลือไอคอนเส้น 32px (ความหนา 1.75) อยู่ในช่อง 40px เดิม ตัวหนังสือจึงไม่ขยับ ใช้ครบทุก Dialog ที่ใช้หัวตัวกลาง
+- เพิ่ม prop `tone` สีตามความหมาย `brand` งานทั่วไป `danger` งานที่ย้อนไม่ได้ `warn` ต้องระวัง `success` สำเร็จ ตอนนี้ยกเลิกสัญญา ยกเลิกคำขอ ไม่อนุมัติคำขอ ยกเลิกเคส Ticket และตัดจำหน่ายทรัพย์สินเป็นสีแดง
+- สีตามประเภท (`accent` เช่น สีของประเภท Resource หรือประเภทคำขอ) ยังใช้กับไอคอนและชิปเหมือนเดิม ระบบเข้มให้พอ 3:1 บนพื้นหน้าต่าง prop `round` ที่ไม่มีผลแล้วเอาออก
+- ไม่แตะ ไอคอนวงกลมในหน้าต่างยืนยัน ไอคอนบนปุ่ม ชิป บรรทัดบน ปุ่ม ✕
+- เทส `tests/js/focus-header.test.ts` `npm run test:js` ผ่าน 495 ข้อ tsc และ eslint ผ่าน ดูใน Chrome แล้ว แก้ไขยี่ห้อ (สีหลัก 32px ไม่มีพื้น) และตัดจำหน่ายทรัพย์สิน (สีแดง) เปิดแล้วปิด
+
+## แถบท้าย Dialog ทุกตัวใช้ DialogFooterBar (D4 รอบ 1, 2026-10-20)
+
+แถบท้ายที่เขียนเอง 20 ที่ใน 18 ไฟล์เปลี่ยนมาใช้ `DialogFooterBar` (บอร์ด S1 ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9, `20aa0aec`)
+- 8 ที่เคยเตี้ยกว่า (ระยะบนล่าง 12px) สูงขึ้น 4px เท่าตัวกลาง เช่น ลงทะเบียนทรัพย์สิน ดูทรัพย์สิน ดูสัญญา ดูอะไหล่ สมาชิก Resource
+- แบบเก่าพื้นเทา 20% เส้นสีเต็ม (สร้าง แก้ไข และดู Ticket แก้ไขพนักงาน 2 ที่) กับกลุ่มบทบาท เปลี่ยนเป็นพื้นเทา 30% เส้นจาง 60% เหมือนตัวอื่น
+- แต่ละตัวคงการวางปุ่มเดิม ตัวที่วางปุ่มชิดซ้ายแล้วดันปุ่มแก้ไขไปขวาใส่ `justify-start` ตัวที่แบ่งซ้ายขวาใส่ `justify-between` ตัวที่ขึ้นบรรทัดใหม่ได้ใส่ `flex-wrap` ระยะห่างระหว่างปุ่ม 8px ทุกตัว
+- ไม่แตะ แผงข้างของดู Ticket กับแก้เทมเพลตที่ใช้พื้นเทาแบบเดียวกัน ที่ครอปรูป และหน้าต่างกลางจอที่ปุ่มเต็มความกว้าง
+- เทสต์ใน `dialog-chrome.test.ts` ไม่ผ่านถ้ามีแถบท้ายพื้นเทาที่เขียนเอง `npm run test:js` ผ่าน 498 ข้อ tsc และ eslint ผ่าน ดูใน Chrome แล้ว ดูทรัพย์สิน (ปุ่มซ้าย แก้ไขขวาสุด) กับสัญญาใหม่ (ยกเลิกซ้าย จุดขั้นตอนกลาง ถัดไปขวา) แถบสูง 69px
+
+## หัว Dialog ที่ยังเป็นหัวข้อธรรมดา เปลี่ยนเป็นแบบ 4ข (D3 ส่วนที่ 2 กับ D4 รอบ 2, 2026-10-20)
+
+หน้าต่าง 12 ตัวใน 9 ไฟล์ที่ยังใช้หัวข้อ 18px กับแถบท้ายไม่มีพื้น เปลี่ยนเป็น `FocusDialogHeader` (ไอคอนไม่มีกรอบ 32px สีตามความหมาย) เนื้อหามีเส้นคั่น และ `DialogFooterBar` ความกว้างเดิมทุกตัว (บอร์ด S2 ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9, `95af6a6b`)
+- สมาชิกแผนก ตำแหน่ง หน่วยงาน ไอคอนคน บรรทัดบน "พนักงาน" ชิปรหัส จำนวนอยู่บรรทัดล่าง ไม่มีแถบท้ายเหมือนเดิม
+- ยืนยันการลาออก ไอคอนเตือนสีเหลือง ชิปรหัสพนักงาน หน้าต่างยังไม่ตัดขอบ ปฏิทินเลือกวันจึงไม่โดนตัด
+- เพิ่ม แก้ไขรายการสินค้า ไอคอนกล่อง ชิป SKU เฉพาะตอนแก้ไข
+- รับเข้า คืนของ ย้ายคลัง ไอคอนตามปุ่มบนหน้าคลังอะไหล่ เลือก SKU แล้วชิป SKU กับชื่อสินค้าขึ้นที่หัว
+- รับเข้าคลังเรียบร้อย ไอคอนถูกสีเขียว ชิปเป็นเลขที่เอกสารของรายการที่บันทึก
+- นับสต็อกใหม่ ใบนับสต็อก และหน้าต่างตรวจ Serial ไอคอนคลิปบอร์ด ใบนับแสดงเลขที่ใบนับเป็นบรรทัดบน ป้ายสถานะกับวิธีปรับยอดข้างหัวข้อ คลังอยู่บรรทัดล่าง หน้าต่างตรวจ Serial ไม่อยู่ในบอร์ด ทำตามใบนับเพื่อให้ไฟล์เดียวกันเหมือนกัน
+- จ่ายของ ไอคอนม่วงเดิม ชิปเป็นเลขที่คำขอ (ใช้ `requestNo()` ร่วมกับคอลัมน์ในตาราง)
+- นำเข้า (ใช้ร่วม) รับ `eyebrow` จากโมดูลที่เรียก หน้าพนักงานส่ง "พนักงาน"
+- หน้าต่างที่มีตัวเลือกแบบเลื่อนลงอยู่ข้างใน (นับสต็อกใหม่ รับเข้า จ่ายของ รายการสินค้า) ยังไม่ตัดขอบ รายการเลือกจึงไม่โดนตัด
+- เทส `tests/js/plain-header-dialogs.test.ts` `npm run test:js` ผ่าน 503 ข้อ tsc และ eslint ผ่าน ดูใน Chrome แล้ว เปิดแล้วยกเลิกทุกตัวยกเว้นรับเข้าคลังเรียบร้อยกับตรวจ Serial ที่ต้องบันทึกก่อนถึงจะขึ้น
+- ใบทบทวนสมาชิก (หน้ารายงานตรวจสอบสมาชิกและเจ้าของ) แถบท้ายตัวสุดท้ายที่ยังไม่ใช้ตัวกลาง ผู้ใช้เลือกแบบ ข ในบอร์ด S3 (`6c8cdbdc`) แถบท้ายเป็น `DialogFooterBar` เอาช่องขาว 16px ระหว่างหัว ตัวอย่างใบ และแถบท้ายออก ตัวอย่างใบมีเส้นคั่นจากหัวและสูงเต็มที่ที่เหลือใต้เพดาน เห็นรายชื่อเพิ่ม 1 แถวบนจอ 744 ตอนนี้ไม่เหลือ `DialogFooter` แบบไม่มีแถบในระบบ มีเทสต์ใน `dialog-chrome.test.ts` กันไว้ `npm run test:js` ผ่าน 505 ข้อ ดูใน Chrome แล้ว
+
+## ความกว้าง Dialog เหลือ 4 ขนาด และแถบท้ายที่เขียนเองที่เหลือ (D1 กับ D4, 2026-10-20)
+
+ทุกหน้าต่างกว้าง 384 560 768 หรือ 1100 ยกเว้นหน้าต่างแก้เทมเพลตอีเมล 1500 (บอร์ด V ใน https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9, `83b42662`)
+- 560 ใช้ `FormDialogContent` จ่ายของ (เดิม 512), รับเข้า คืนของ ย้ายคลัง (576) กับหน้ารับเข้าเรียบร้อย (512) ตอนนี้กว้างเท่ากัน หน้าต่างไม่หดหลังบันทึก, ตรวจ Serial (512), Resource (Software 600 ประเภทอื่น 540), รายการสินค้า (672), ตั้งค่าการแจ้งเตือน (672 ย้ายมาใช้ `DialogBody` กับ `DialogFooterBar` ด้วย ปุ่มเดิมเป็นแถวธรรมดาไม่มีแถบ)
+- 768 ใช้ `mediumDialogContentClass` นับสต็อกใหม่ (672, คง overflow-visible ให้รายการเลือกไม่โดนตัด) นำเข้าเท่ากันทุกขั้น (เดิม 512 672 768 ตามขั้น) ส่วนสมาชิกแผนก ตำแหน่ง หน่วยงาน ใบนับสต็อก และดูไฟล์แนบ กว้าง 768 อยู่แล้วแต่ตั้งเอง ตอนนี้ใช้ class กลาง ความสูงเปลี่ยนเป็นเพดานเดียวกับหน้าต่างอื่น min(860px, จอ − 72px) (สมาชิกเดิม 88% ของจอ ใบนับเดิมจอ − 32px)
+- แก้เทมเพลตอีเมล คงกว้าง 1500 ขอบข้าง 16px แบบหน้าต่างอื่น (เดิม 92% ของจอ) สูงคงที่ min(860px, จอ − 72px) (เดิม min(900px, 90% ของจอ))
+- แถบท้ายที่เขียนเองโดยไม่มีพื้นเทา 4 ที่ใช้ `DialogFooterBar` แก้เทมเพลตอีเมล ดูพนักงาน โปรไฟล์ ตั้งค่าการแจ้งเตือน ดูพนักงานกับโปรไฟล์คงระยะข้าง 20/28px ให้ตรงกับหัวแบบปก
+- เทส `tests/js/dialog-widths.test.ts` ไม่ผ่านถ้ามีความกว้างอื่นหรือแถบท้ายเขียนเองใน 4 ไฟล์นี้ `npm run test:js` ผ่าน 510 ข้อ tsc และ eslint ผ่าน วัดใน Chrome แล้ว (ภาพหน้าจอ timeout จึงวัดจาก DOM) รับเข้า รายการสินค้า จ่ายของ นับสต็อกใหม่ (รายการเลือกคลังเห็นครบ) ใบนับ สมาชิกแผนก นำเข้า ดูพนักงาน โปรไฟล์ Software (ช่องชื่อ 386px ไม่มีอะไรล้น) ตั้งค่าการแจ้งเตือน (ปุ่ม 4 ปุ่มแถวเดียว) แก้เทมเพลตอีเมล ยังไม่ได้เปิด หน้ารับเข้าเรียบร้อย ตรวจ Serial และดูไฟล์แนบ
+
+## ความสูงข้างในหน้าต่าง ใช้เพดานของกรอบ (D2, 2026-10-20)
+
+ส่วนข้างในหน้าต่างไม่ตั้งความสูงตามจอเองแล้ว ให้กรอบเป็นตัวกำหนดเพดาน (`54c39a2c`)
+- ดูไฟล์แนบ กรอบสูงคงที่ min(860px, จอ − 72px) รูป PDF หรือการ์ดไฟล์ยืดเต็มพื้นที่ บนจอสูง 911 ส่วนแสดง PDF สูง 796px (เดิม 656) และแก้ปัญหาที่ `83b42662` ทำไว้ บนจอสูงเกินราว 1130px ขอบล่างของไฟล์โดนตัด เพราะส่วนแสดงไฟล์สูง 72% ของจอแต่กรอบได้เพดาน 860px
+- Resource ส่วนกรอกยืดตามกรอบ 560 (เดิมตั้งเพดานเองที่จอ − 160px)
+- นำเข้า เนื้อหาเลื่อนในกรอบเดียว (เดิมเป็นกล่องเลื่อนสูงไม่เกิน 640px หรือ 58% ของจอ) เปิดคู่มือทั้งสองแล้วหน้าต่างสูงถึงเพดาน 839px บนจอ 911 แถบท้ายยังเห็น ระยะข้าง 24px กันกรอบโฟกัสขาด
+- คงไว้ ตารางในสมาชิกแผนก ตำแหน่ง หน่วยงาน สูง 52% ของจอให้หัวตารางและปุ่มเปลี่ยนหน้าอยู่ในสายตา และกล่องรายการเล็กในฟอร์มที่สูงเป็น rem
+- เทส `tests/js/dialog-heights.test.ts` ไม่ผ่านถ้ามีความสูงตามจออื่นข้างในหน้าต่าง `npm run test:js` ผ่าน 514 ข้อ วัดใน Chrome แล้ว ดูไฟล์ PDF ของ Ticket, เพิ่ม Software, นำเข้าพนักงาน
+- ตรวจ 2 หน้าต่างที่ต้องบันทึกก่อนถึงจะขึ้น โดยไม่บันทึกอะไรเลย (ดักคำขอไว้ ไม่มี PUT หรือ POST ออกไป)
+  - ตรวจ Serial แก้ช่องนับบนจอของใบนับร่าง SC-2026-010 ให้ต่ำกว่าระบบ 1 ชิ้น แล้วกดยืนยัน หน้าต่างขึ้นก่อนบันทึก กว้าง 560 สูงถึงเพดาน 839px เมื่อมี Serial 23 ตัว เลื่อนในตัว หัวเป็นเลขที่ใบนับ ปุ่มยืนยันกดไม่ได้จนกว่าจะติ๊ก จากนั้นกดกลับและทิ้งการแก้ไข ใบนับในฐานข้อมูลยังเป็นร่างและนับได้ 3 เท่าเดิม
+  - รับเข้าเรียบร้อย ใส่ผลรับเข้าตัวอย่างลงในหน้าเว็บโดยตรง ไม่ได้รับเข้าจริง กว้าง 560 เท่าฟอร์มรับเข้า ไอคอนถูกสีเขียว ชิปเลขที่เอกสาร Serial 6 ตัว ปุ่มพิมพ์ แถบท้ายรับเข้าอีกรายการกับเสร็จสิ้น
+
+## สีตัวอักษรเมนูและตัวรองเข้มขึ้น 1 ขั้น (2026-10-20)
+
+ผู้ใช้เลือกขั้น 1 ในบอร์ด W (https://claude.ai/artifact/6pD9AiP3B6BAM5DJyVE6a9) และให้ใช้กับทุกที่ที่ใช้ class สีนี้ จึงแก้ที่ token ใน `app.css` (`5297c9ed`)
+- `--sidebar-foreground` (`text-sidebar-foreground` ข้อความและไอคอนเมนู sidebar ที่ไม่ได้เลือก) โหมดสว่าง hsl(215, 20%, 35%) เป็น hsl(215, 22%, 28%) ความต่างจากพื้น 7.4 เป็น 9.8:1 โหมดมืด hsl(215, 16%, 70%) เป็น hsl(215, 18%, 77%)
+- `--muted-foreground` (`text-muted-foreground` ตัวรองทั้งระบบ ราว 1,400 จุดใน 237 ไฟล์ รวมหัวกลุ่มเมนู ชื่อบริษัท บทบาทใน sidebar) โหมดสว่าง hsl(215, 16%, 45%) เป็น hsl(215, 17%, 39%) 5.1 เป็น 6.3:1 โหมดมืด hsl(215, 15%, 65%) เป็น hsl(215, 16%, 71%)
+- หน้า error แบบ Blade ใช้สีตัวรองเดียวกัน
+- เมนูที่เลือก ตัวนับ สีหลัก และพื้นหลังไม่เปลี่ยน
+- เทส `tests/js/text-tones.test.ts` `npm run test:js` ผ่าน 517 ข้อ `ErrorPagesTest` ผ่าน 25 ข้อ วัดใน Chrome ทั้งสองโหมดแล้วตรงตามค่า (สลับธีมด้วยปุ่มของแอปแล้วสลับกลับ)
+
+## อัปเดตไลบรารีที่มีประกาศช่องโหว่ (2026-10-21)
+
+จากผลตรวจทั้งระบบ (https://claude.ai/artifact/7rJtKsrbj1f93a66FaDBbM หัวข้อไลบรารี) อัปเดตเฉพาะ patch และ minor ในเวอร์ชันหลักเดิม ไม่ขึ้น major
+- Composer อัปเดตเฉพาะแพ็กเกจที่มีประกาศกับของที่มันพึ่งพา รวม 57 แพ็กเกจ ด้วย `composer update <แพ็กเกจ> --with-dependencies` ไม่ใช้ `composer update` ทั้งหมด เพราะจะลากเครื่องมือ dev ขึ้น major ด้วย (laravel/mcp 0.7 → 1.1, laravel/roster 0.5 → 1.0)
+  - laravel/framework 12.60.2 → 12.70.0, dompdf/dompdf 3.1.5 → 3.1.6, guzzlehttp/guzzle 7.10.3 → 7.16.0, guzzlehttp/psr7 2.10.1 → 2.13.2, league/commonmark 2.8.2 → 2.10.4, league/flysystem 3.34.0 → 3.36.0, symfony 7.4.8 ถึง 7.4.12 → 7.4.17 ถึง 7.4.21, nesbot/carbon 3.11.4 → 3.15.0, monolog 3.10.0 → 3.12.1
+  - `composer audit` จาก 39 ประกาศใน 10 แพ็กเกจ เหลือ 0
+- npm ใช้ `npm audit fix` ไม่ใช้ --force เปลี่ยนเฉพาะ package-lock.json (package.json เดิม)
+  - axios 1.16.1 → 1.20.0, react-router และ react-router-dom 7.15.1 → 7.18.4, vite 6.1.1 → 6.4.4, esbuild 0.24.2 → 0.25.12, rollup 4.34.8 → 4.64.12, eslint 9.21.0 → 9.39.5, typescript-eslint 8.24.1 → 8.72.0, shell-quote 1.8.2 → 1.12.0 (มากับ concurrently)
+  - `npm audit` จาก 34 รายการ (วิกฤต 1 สูง 25) เหลือ 0 ตัวที่ไปถึงเบราว์เซอร์มีแค่ axios กับ react-router ที่เหลือใช้ตอน build หรือรัน dev
+- ยังเป็น Laravel 12 ซึ่งตอนนี้ได้แค่แพตช์ความปลอดภัย ถึงราว 24 ก.พ. 2027 การขึ้น Laravel 13 เป็นงานแยก
+- ตรวจหลังอัปเดต PHPUnit บน sqlite ผ่าน 2,857 บน MariaDB (ฐานแยก `itservices_test`) ผ่าน 2,840 ล้ม 17 ตัวเดิมก่อนอัปเดต ไม่มีตัวที่ล้มเพิ่ม (DB-1 กับเทสต์ที่ผูก sqlite ตามผลตรวจ), tsc ผ่าน, eslint warning เดิม 1 จุด, เทสต์ JS ผ่าน 517, `vite build` ผ่าน
+- หลังอัปเดตต้องปิดแล้วเปิด `composer run demo` ใหม่ เพราะ opcache กับ vite watch ยังถือไลบรารีชุดเดิม บน production ต้อง `composer install --no-dev` และ build หน้าเว็บใหม่
+- ข้อควรรู้ ระหว่าง `composer update` vendor อยู่ครึ่งทาง แอป error ทุกหน้าชั่วคราว ถ้ายกเลิกคำสั่งใน Claude Code แล้ว process ยังรันต่อ ให้รอจนจบ อย่าฆ่ากลางทาง
+
+## ค่า SMTP อยู่แถว id 1 เสมอ (DB-1, 2026-10-21)
+
+บั๊กจากผลตรวจทั้งระบบ พบตอนรันเทสต์บน MariaDB
+- `MailSetting::current()` ใช้ `firstOrCreate(['id' => 1])` แต่ `id` ไม่อยู่ใน fillable แถวที่สร้างจึงได้ id จากตัวนับ ถ้าตัวนับเลย 1 ไปแล้ว (แถวถูกลบ หรือ insert ที่ย้อนกลับบน MariaDB) ทุกครั้งที่เรียกจะสร้างแถวว่างใหม่ ค่าที่บันทึกจากหน้าตั้งค่าอ่านกลับไม่ได้ และอีเมลไม่ถูกส่ง ตอนนี้สร้างด้วย id 1 จริง (`unguarded`) และ `MailSettingSeeder` ใส่ id 1 ตรง ๆ
+- ฐานที่มีแถว id 1 อยู่แล้ว (itservices, itservices_perf) ไม่ต้องแก้ข้อมูล
+- เทส `MailSettingSingletonTest` 2 ตัว ล้มก่อนแก้ทั้งคู่ PHPUnit บน sqlite ผ่าน 2,859 (DashboardTest ล้มรอบแรกเพราะ vite watch กำลัง build ใหม่ รันซ้ำผ่าน) บน MariaDB เทสต์อีเมล 4 ตัวที่ล้มเพราะข้อนี้ผ่านแล้ว เหลือ 12 ตัวที่ผูกกับ sqlite (TEST-1 ในผลตรวจ)
