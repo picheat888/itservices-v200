@@ -293,6 +293,10 @@ export const common: Dict = {
     cmn_empty_searchable_select_hint: 'ลองค้นด้วยคำอื่น',
     cmn_refreshing: 'กำลังอัปเดต…',
     cmn_refreshed: 'อัปเดตแล้ว',
+    cmn_refresh_failed: 'อัปเดตไม่สำเร็จ',
+    cmn_reload_list: 'โหลดรายการใหม่',
+    cmn_item_removed: 'รายการนี้ไม่มีในระบบแล้ว เลือกใหม่',
+    cmn_no_longer_available: 'ไม่มีในระบบแล้ว',
     cmn_empty_icon_picker: 'ไม่พบไอคอน',
     cmn_empty_icon_picker_hint: 'ลองค้นด้วยคำภาษาอังกฤษ เช่น laptop',
 };

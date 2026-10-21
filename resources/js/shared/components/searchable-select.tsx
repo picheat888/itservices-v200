@@ -2,9 +2,12 @@ import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { usePresence } from '@/shared/hooks/use-presence';
+import type { SelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
+import { isRemovedValue, keepActiveIndex } from '@/shared/lib/select-refresh';
 import { cn } from '@/shared/lib/utils';
-import { ChevronsUpDown, X } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { AlertCircle, ChevronsUpDown, Loader2, RotateCw, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -46,6 +49,9 @@ export function SearchableSelect({
     onOpenChange,
     loading = false,
     selectedOption,
+    refresh,
+    emptyHint,
+    flagRemoved = false,
     id,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -74,6 +80,12 @@ export function SearchableSelect({
     loading?: boolean;
     /** Async mode: shown on the trigger when the chosen value is not among the current options. */
     selectedOption?: SearchOption;
+    /** Reload the list from the database on open (useSelectRefresh); ignored in async mode. */
+    refresh?: SelectRefresh;
+    /** Replaces the default hint when nothing matches. */
+    emptyHint?: string;
+    /** A chosen value the reloaded list no longer holds shows struck through with a note. */
+    flagRemoved?: boolean;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
     'aria-invalid'?: boolean;
@@ -107,6 +119,23 @@ export function SearchableSelect({
     // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
     const hasIcons = options.some((o) => o.icon !== undefined);
     const optionId = (index: number) => `${listId}-opt-${index}`;
+
+    // refresh: reload states, the highlight following its item, and a chosen value the list lost
+    const reloading = refresh !== undefined && !isAsync;
+    const lastFiltered = useRef(filtered);
+    const optionsKey = options.map((o) => o.value).join('\u0000');
+    useEffect(() => {
+        if (open) setActiveIndex((i) => keepActiveIndex(lastFiltered.current, filtered, i));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [optionsKey]);
+    useEffect(() => {
+        lastFiltered.current = filtered;
+    });
+    const lastLabel = useRef<{ value: string; label: string } | null>(null);
+    if (selected) lastLabel.current = { value: selected.value, label: selected.label };
+    const removed = flagRemoved && !refresh?.refreshing && isRemovedValue(value, options, refresh?.loaded ?? true);
+    const removedLabel = lastLabel.current?.value === value ? lastLabel.current.label : t('cmn_no_longer_available');
+    const removedNoteId = useId();
 
     // Clear the query whenever the menu closes so a stale search never hides every option.
     useEffect(() => {
@@ -232,6 +261,7 @@ export function SearchableSelect({
                     options.findIndex((o) => o.value === value),
                 ),
             );
+            if (reloading) refresh.refresh(false);
         }
         setOpen((o) => !o);
     };
@@ -297,7 +327,7 @@ export function SearchableSelect({
     // The menu body — shared between the inline and portaled wrappers.
     const menu = (
         <>
-            <div className="border-border border-b p-2">
+            <div className={cn('border-border border-b p-2', reloading && 'flex items-center gap-2')}>
                 <input
                     name="search"
                     autoComplete="off"
@@ -316,8 +346,41 @@ export function SearchableSelect({
                     aria-activedescendant={activeOption >= 0 ? optionId(activeOption) : undefined}
                     aria-label={searchLabel(searchPlaceholder ?? t('search_placeholder_short'))}
                     placeholder={searchPlaceholder ?? t('search_placeholder_short')}
-                    className="w-full bg-transparent px-1 text-sm text-ellipsis outline-none"
+                    className={cn('w-full bg-transparent px-1 text-sm text-ellipsis outline-none', reloading && 'min-w-0 flex-1')}
                 />
+                {refresh && !isAsync && (
+                    <>
+                        <span
+                            role="status"
+                            className={cn(
+                                'flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap',
+                                refresh.failed ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                            )}
+                        >
+                            {refresh.refreshing && (
+                                <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                    {t('cmn_refreshing')}
+                                </>
+                            )}
+                            {refresh.failed && (
+                                <>
+                                    <AlertCircle className="h-3.5 w-3.5" aria-hidden />
+                                    {t('cmn_refresh_failed')}
+                                </>
+                            )}
+                        </span>
+                        {refresh.failed && (
+                            <button
+                                type="button"
+                                onClick={() => refresh.refresh(true)}
+                                className="text-brand focus-visible:ring-brand/40 touch:h-10 h-7 shrink-0 rounded px-1 text-xs font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-hidden"
+                            >
+                                {t('retry')}
+                            </button>
+                        )}
+                    </>
+                )}
             </div>
             <div
                 id={listId}
@@ -335,15 +398,33 @@ export function SearchableSelect({
                         ))}
                     </div>
                 )}
-                {!(isAsync && loading) && filtered.length === 0 && q !== '' && (
+                {!(isAsync && loading) && filtered.length === 0 && (q !== '' || reloading) && (
                     <EmptyState
                         kind="search"
                         title={t('cmn_empty_searchable_select')}
-                        hint={t('cmn_empty_searchable_select_hint')}
+                        hint={q !== '' ? (emptyHint ?? t('cmn_empty_searchable_select_hint')) : emptyHint}
                         className="min-h-0 py-3"
-                    />
+                    >
+                        {refresh && !isAsync && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-10"
+                                disabled={refresh.refreshing}
+                                onClick={() => refresh.refresh(true)}
+                            >
+                                {refresh.refreshing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                ) : (
+                                    <RotateCw className="h-4 w-4" aria-hidden />
+                                )}
+                                {refresh.refreshing ? t('cmn_refreshing') : t('cmn_reload_list')}
+                            </Button>
+                        )}
+                    </EmptyState>
                 )}
-                {!(isAsync && loading) && filtered.length === 0 && q === '' && (
+                {!(isAsync && loading) && filtered.length === 0 && q === '' && !reloading && (
                     <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>
                 )}
                 {filtered.map((o, index) => (
@@ -390,103 +471,119 @@ export function SearchableSelect({
     const showClear = clearable && !!selected;
 
     return (
-        <div ref={ref} className="relative min-w-0">
-            <button
-                ref={triggerRef}
-                id={id}
-                type="button"
-                role="combobox"
-                onClick={toggle}
-                onKeyDown={(e) => {
-                    if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-                        e.preventDefault();
-                        toggle();
-                    }
-                }}
-                aria-invalid={ariaInvalid}
-                aria-describedby={ariaDescribedBy}
-                aria-required={ariaRequired}
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                aria-controls={open ? listId : undefined}
-                className={cn(
-                    'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
-                    active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
-                    // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).
-                    open && 'border-brand ring-brand/15 ring-[3px]',
-                )}
-            >
-                <span className="flex min-w-0 items-center gap-2">
-                    {/* Avatar slot renders only for option sets that supply the field (e.g. people pickers). */}
-                    {selected && selected.avatar !== undefined && (
-                        <UserAvatar name={selected.label} photoUrl={selected.avatar} className="h-6 w-6 shrink-0" textClassName="text-[10px]" />
-                    )}
-                    {/* Leading icon of the selected option (e.g. type icon / status dot). */}
-                    {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
-                    {/* Label truncates (full text in title); the sub stays pinned */}
-                    <span title={selected?.label} className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
-                        {selected ? selected.label : (placeholder ?? t('select_placeholder'))}
-                    </span>
-                    {selected?.sub && <span className="text-muted-foreground shrink-0 text-xs">{selected.sub}</span>}
-                </span>
-                <span className="flex shrink-0 items-center gap-1">
-                    {/* Room for the clear button, which sits over the trigger as its own control */}
-                    {showClear && <span className="w-6" aria-hidden />}
-                    <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
-                </span>
-            </button>
-            {showClear && (
+        <>
+            <div ref={ref} className="relative min-w-0">
                 <button
+                    ref={triggerRef}
+                    id={id}
                     type="button"
-                    aria-label={t('clear')}
-                    onClick={() => {
-                        onChange('');
-                        triggerRef.current?.focus();
+                    role="combobox"
+                    onClick={toggle}
+                    onKeyDown={(e) => {
+                        if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                            e.preventDefault();
+                            toggle();
+                        }
                     }}
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-brand/40 absolute top-1/2 right-8 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-hidden"
+                    aria-invalid={ariaInvalid}
+                    aria-describedby={cn(ariaDescribedBy, removed && removedNoteId) || undefined}
+                    aria-required={ariaRequired}
+                    aria-haspopup="listbox"
+                    aria-expanded={open}
+                    aria-controls={open ? listId : undefined}
+                    className={cn(
+                        'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
+                        active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
+                        removed && 'border-amber-600 dark:border-amber-400',
+                        // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).
+                        open && 'border-brand ring-brand/15 ring-[3px]',
+                    )}
                 >
-                    <X className="h-3.5 w-3.5" />
+                    <span className="flex min-w-0 items-center gap-2">
+                        {/* Avatar slot renders only for option sets that supply the field (e.g. people pickers). */}
+                        {selected && selected.avatar !== undefined && (
+                            <UserAvatar name={selected.label} photoUrl={selected.avatar} className="h-6 w-6 shrink-0" textClassName="text-[10px]" />
+                        )}
+                        {/* Leading icon of the selected option (e.g. type icon / status dot). */}
+                        {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
+                        {/* Label truncates (full text in title); the sub stays pinned */}
+                        <span
+                            title={selected?.label ?? (removed ? removedLabel : undefined)}
+                            className={cn(
+                                'min-w-0 truncate',
+                                !selected && !removed && 'text-muted-foreground',
+                                removed && 'decoration-muted-foreground line-through',
+                            )}
+                        >
+                            {selected ? selected.label : removed ? removedLabel : (placeholder ?? t('select_placeholder'))}
+                        </span>
+                        {selected?.sub && <span className="text-muted-foreground shrink-0 text-xs">{selected.sub}</span>}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1">
+                        {/* Room for the clear button, which sits over the trigger as its own control */}
+                        {showClear && <span className="w-6" aria-hidden />}
+                        <ChevronsUpDown className="text-muted-foreground h-4 w-4" />
+                    </span>
                 </button>
-            )}
-            {mounted &&
-                (dialogEl ? (
-                    // Portaled into the dialog content: escapes the body's overflow clip, stays in Radix's layer
-                    createPortal(
+                {showClear && (
+                    <button
+                        type="button"
+                        aria-label={t('clear')}
+                        onClick={() => {
+                            onChange('');
+                            triggerRef.current?.focus();
+                        }}
+                        className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-brand/40 absolute top-1/2 right-8 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-hidden"
+                    >
+                        <X className="h-3.5 w-3.5" />
+                    </button>
+                )}
+                {mounted &&
+                    (dialogEl ? (
+                        // Portaled into the dialog content: escapes the body's overflow clip, stays in Radix's layer
+                        createPortal(
+                            <div
+                                ref={menuRef}
+                                style={{
+                                    position: 'absolute',
+                                    left: coords.left,
+                                    // Trigger width is a floor, so a narrow column doesn't cut option labels
+                                    minWidth: coords.width,
+                                    maxWidth: 320,
+                                    width: 'max-content',
+                                    top: coords.top,
+                                    bottom: coords.bottom,
+                                    zIndex: 50,
+                                }}
+                                className={cn(
+                                    'border-border bg-popover overflow-hidden rounded-md border shadow-md',
+                                    coords.bottom !== undefined ? 'origin-bottom' : 'origin-top',
+                                    closing ? 'motion-pop-out' : 'motion-pop-in',
+                                )}
+                            >
+                                {menu}
+                            </div>,
+                            dialogEl,
+                        )
+                    ) : (
                         <div
                             ref={menuRef}
-                            style={{
-                                position: 'absolute',
-                                left: coords.left,
-                                // Trigger width is a floor, so a narrow column doesn't cut option labels
-                                minWidth: coords.width,
-                                maxWidth: 320,
-                                width: 'max-content',
-                                top: coords.top,
-                                bottom: coords.bottom,
-                                zIndex: 50,
-                            }}
                             className={cn(
-                                'border-border bg-popover overflow-hidden rounded-md border shadow-md',
-                                coords.bottom !== undefined ? 'origin-bottom' : 'origin-top',
+                                'border-border bg-popover absolute z-50 w-max max-w-[320px] min-w-full overflow-hidden rounded-md border shadow-md',
+                                dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
                                 closing ? 'motion-pop-out' : 'motion-pop-in',
                             )}
                         >
                             {menu}
-                        </div>,
-                        dialogEl,
-                    )
-                ) : (
-                    <div
-                        ref={menuRef}
-                        className={cn(
-                            'border-border bg-popover absolute z-50 w-max max-w-[320px] min-w-full overflow-hidden rounded-md border shadow-md',
-                            dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
-                            closing ? 'motion-pop-out' : 'motion-pop-in',
-                        )}
-                    >
-                        {menu}
-                    </div>
-                ))}
-        </div>
+                        </div>
+                    ))}
+            </div>
+            {removed && (
+                <p id={removedNoteId} role="status" className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                    <TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {t('cmn_item_removed')}
+                </p>
+            )}
+        </>
     );
 }

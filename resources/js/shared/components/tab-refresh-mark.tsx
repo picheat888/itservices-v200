@@ -9,7 +9,10 @@ export function TabRefreshMark({ mark }: { mark: RefreshMark }) {
         <>
             {mark === 'busy' && <Loader2 className="absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 animate-spin" aria-hidden="true" />}
             {mark === 'done' && (
-                <Check className="absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                <Check
+                    className="absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-emerald-600 dark:text-emerald-400"
+                    aria-hidden="true"
+                />
             )}
             <span role="status" className="sr-only">
                 {mark === 'busy' ? t('cmn_refreshing') : mark === 'done' ? t('cmn_refreshed') : ''}
