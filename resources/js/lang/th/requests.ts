@@ -114,6 +114,7 @@ export const requests: Dict = {
     req_requester_label: 'ผู้ขอ',
     req_service_section: 'ข้อมูลเฉพาะของบริการ',
     req_other_software: 'ไม่มีในรายการ พิมพ์ชื่อเอง',
+    req_not_listed_contact_it: 'ยังไม่มีในระบบ ติดต่อ IT ให้เพิ่ม แล้วกดโหลดรายการใหม่',
     req_attach_section: 'ไฟล์แนบ',
     req_attach_optional: 'แนบใบเสนอราคา ผังพื้นที่ หรือรูปภาพประกอบ (ไม่บังคับ)',
     req_attach_required: 'บริการนี้ต้องแนบไฟล์ เช่น ผังพื้นที่หรือรูปจุดที่ต้องการ',

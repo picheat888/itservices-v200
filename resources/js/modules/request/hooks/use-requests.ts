@@ -1,6 +1,8 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_MS } from '@/shared/lib/freshness';
+import type { RequestSourceOption } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { requestApi, type RequestListParams, type SubmitRequestPayload } from '../api/requestApi';
+import { requestApi, type RequestListParams, type RequestManagedChoice, type SubmitRequestPayload } from '../api/requestApi';
 
 /** Server-paginated request list (KPI meta rides along). */
 export const useRequests = (params: RequestListParams, enabled = true) =>
@@ -30,8 +32,27 @@ export const useRequestOptions = (enabled = true) =>
     useQuery({
         queryKey: ['request-options'],
         queryFn: requestApi.options,
-        staleTime: 5 * 60_000,
+        staleTime: FRESH_MS,
+        refetchOnWindowFocus: true,
         enabled,
+    });
+
+export const requestFieldOptionsKey = (type: string, field: string) => ['request-field-options', type, field] as const;
+
+/** One list of the New Request form: the catalog's rows first, reloaded only when its dropdown opens. */
+export const useRequestFieldOptions = <T extends RequestSourceOption | RequestManagedChoice>(
+    type: string,
+    field: string,
+    initial: T[] | undefined,
+    initialUpdatedAt: number,
+) =>
+    useQuery({
+        queryKey: requestFieldOptionsKey(type, field),
+        queryFn: () => requestApi.fieldOptions<T>(type, field),
+        initialData: initial,
+        initialDataUpdatedAt: initialUpdatedAt,
+        staleTime: FRESH_MS,
+        enabled: false,
     });
 
 export function useRequestMutations() {

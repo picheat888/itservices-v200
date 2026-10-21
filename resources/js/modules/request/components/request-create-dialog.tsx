@@ -10,12 +10,13 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { localLabel, localName } from '@/shared/lib/local-name';
 import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
-import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
+import type { RequestFieldSchema, RequestSourceOption, ServiceRequest, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { ChoiceCard } from '@/shared/ui/choice-card';
@@ -26,10 +27,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Send, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { type RequestTypeOption } from '../api/requestApi';
-import { useRequestMutations, useRequestOptions } from '../hooks/use-requests';
+import { type RequestManagedChoice, type RequestTypeOption } from '../api/requestApi';
+import { requestFieldOptionsKey, useRequestFieldOptions, useRequestMutations, useRequestOptions } from '../hooks/use-requests';
 
 const LAST_STEP = 2;
 
@@ -61,7 +63,8 @@ export function RequestCreateDialog({
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { user } = useAuth();
-    const { data: options } = useRequestOptions(open);
+    const { data: options, dataUpdatedAt: optionsUpdatedAt } = useRequestOptions(open);
+    const queryClient = useQueryClient();
     const { submit } = useRequestMutations();
 
     const [step, setStep] = useState(0);
@@ -414,6 +417,8 @@ export function RequestCreateDialog({
                                                     otherLabel={f.allow_other ? fieldLabel(schema.find((s) => s.key === f.allow_other)!) : undefined}
                                                     error={err[`field_${f.key}`]}
                                                     sources={options?.sources}
+                                                    requestType={type ?? ''}
+                                                    catalogUpdatedAt={optionsUpdatedAt}
                                                     onChange={(v) => {
                                                         setFields((prev) => ({ ...prev, [f.key]: v }));
                                                         clearErr(`field_${f.key}`);
@@ -489,7 +494,17 @@ export function RequestCreateDialog({
                                     {schema
                                         .filter((f) => (fields[f.key] ?? '') !== '')
                                         .map((f) => (
-                                            <ReviewRow key={f.key} k={fieldLabel(f)} v={displayValue(f, fields[f.key], lang, options?.sources)} />
+                                            <ReviewRow
+                                                key={f.key}
+                                                k={fieldLabel(f)}
+                                                v={displayValue(
+                                                    f,
+                                                    fields[f.key],
+                                                    lang,
+                                                    options?.sources,
+                                                    queryClient.getQueryData(requestFieldOptionsKey(type ?? '', f.key)),
+                                                )}
+                                            />
                                         ))}
                                     {files.length > 0 && (
                                         <ReviewRow k={t('req_attach_section')} v={t('req_attach_review').replace('{n}', fmtN(files.length))} />
@@ -592,6 +607,8 @@ function SchemaField({
     onOtherChange,
     lang,
     sources,
+    requestType,
+    catalogUpdatedAt,
 }: {
     schema: RequestFieldSchema;
     label: string;
@@ -604,6 +621,9 @@ function SchemaField({
     onOtherChange?: (v: string) => void;
     lang: string;
     sources?: Record<string, { id: number; label: string; detail: string | null }[]>;
+    requestType: string;
+    /** When the catalog that seeded the source and managed lists was fetched. */
+    catalogUpdatedAt: number;
 }) {
     const t = useT();
 
@@ -619,20 +639,16 @@ function SchemaField({
                     error={usingOther ? undefined : error}
                     name={schema.key}
                 >
-                    <SearchableSelect
+                    <SourceSelect
+                        requestType={requestType}
+                        field={schema.key}
+                        initial={list}
+                        initialUpdatedAt={catalogUpdatedAt}
+                        hidden={usingOther}
+                        emptyHint={schema.allow_other != null ? undefined : t('req_not_listed_contact_it')}
                         value={usingOther ? '' : value}
                         onChange={onChange}
                         clearable={!schema.required}
-                        options={
-                            usingOther
-                                ? []
-                                : list.map((o) => ({
-                                      value: String(o.id),
-                                      label: o.label,
-                                      hint: o.detail ?? undefined,
-                                      search: `${o.label} ${o.detail ?? ''}`,
-                                  }))
-                        }
                     />
                 </Field>
 
@@ -668,8 +684,27 @@ function SchemaField({
     if (schema.input === 'select') {
         const options = schema.options ?? [];
 
-        // Two fixed choices sit side by side; managed lists always keep the dropdown
-        if (options.length === 2 && !schema.managed) {
+        // Managed lists come from the database: reloaded on open like the source lists
+        if (schema.managed) {
+            return (
+                <Field label={label} required={schema.required} error={error} name={schema.key}>
+                    <ManagedSelect
+                        requestType={requestType}
+                        field={schema.key}
+                        initial={options}
+                        initialUpdatedAt={catalogUpdatedAt}
+                        lang={lang}
+                        placeholder={t('req_select_placeholder')}
+                        emptyHint={t('req_not_listed_contact_it')}
+                        value={value}
+                        onChange={onChange}
+                    />
+                </Field>
+            );
+        }
+
+        // Two fixed choices sit side by side
+        if (options.length === 2) {
             return (
                 <Field label={label} required={schema.required} error={error} name={schema.key}>
                     <ChoicePair
@@ -723,7 +758,98 @@ function SchemaField({
     );
 }
 
-type FieldWiring = { id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string };
+type FieldWiring = { id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; 'aria-required'?: boolean };
+
+/** A source-backed field: the catalog's rows at first, reloaded from the database when the dropdown opens. */
+function SourceSelect({
+    requestType,
+    field,
+    initial,
+    initialUpdatedAt,
+    hidden,
+    emptyHint,
+    value,
+    onChange,
+    clearable,
+    ...wiring
+}: FieldWiring & {
+    requestType: string;
+    field: string;
+    initial: RequestSourceOption[] | undefined;
+    initialUpdatedAt: number;
+    /** "Not on the list" is ticked: the list is set aside. */
+    hidden: boolean;
+    emptyHint?: string;
+    value: string;
+    onChange: (v: string) => void;
+    clearable: boolean;
+}) {
+    const query = useRequestFieldOptions<RequestSourceOption>(requestType, field, initial, initialUpdatedAt);
+    const refresh = useSelectRefresh(query);
+    const options = hidden
+        ? []
+        : (query.data ?? []).map((o) => ({
+              value: String(o.id),
+              label: o.label,
+              hint: o.detail ?? undefined,
+              search: `${o.label} ${o.detail ?? ''}`,
+          }));
+    return (
+        <SearchableSelect
+            {...wiring}
+            value={value}
+            onChange={onChange}
+            clearable={clearable}
+            options={options}
+            refresh={hidden ? undefined : refresh}
+            emptyHint={emptyHint}
+            flagRemoved={!hidden}
+        />
+    );
+}
+
+/** A managed list (Settings → Request data), searchable and reloaded when the dropdown opens. */
+function ManagedSelect({
+    requestType,
+    field,
+    initial,
+    initialUpdatedAt,
+    lang,
+    placeholder,
+    emptyHint,
+    value,
+    onChange,
+    ...wiring
+}: FieldWiring & {
+    requestType: string;
+    field: string;
+    initial: RequestManagedChoice[];
+    initialUpdatedAt: number;
+    lang: string;
+    placeholder: string;
+    emptyHint: string;
+    value: string;
+    onChange: (v: string) => void;
+}) {
+    const query = useRequestFieldOptions<RequestManagedChoice>(requestType, field, initial, initialUpdatedAt);
+    const refresh = useSelectRefresh(query);
+    const options = (query.data ?? []).map((o) => {
+        const label = localLabel(o, lang);
+        return { value: o.value, label, search: `${o.label_en} ${o.label_th}` };
+    });
+    return (
+        <SearchableSelect
+            {...wiring}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            options={options}
+            refresh={refresh}
+            emptyHint={emptyHint}
+            flagRemoved
+        />
+    );
+}
 
 /** Radix Select with Field's id and error wiring on the trigger (the Root renders no element). */
 function SelectField({
@@ -819,19 +945,22 @@ function ChoicePair({
     );
 }
 
-/** Resolve a review value for display (select label / source name). */
+/** Resolve a review value for display (select label / source name); `reloaded` is the field's own reloaded list, if any. */
 function displayValue(
     f: RequestFieldSchema,
     raw: string,
     lang: string,
     sources?: Record<string, { id: number; label: string; detail: string | null }[]>,
+    reloaded?: (RequestSourceOption | RequestManagedChoice)[],
 ): string {
     if (f.input === 'select') {
-        const opt = (f.options ?? []).find((o) => o.value === raw);
+        const choices = f.managed && reloaded ? (reloaded as RequestManagedChoice[]) : (f.options ?? []);
+        const opt = choices.find((o) => o.value === raw);
         return opt ? localLabel(opt, lang) : raw;
     }
     if (f.input === 'source') {
-        return sources?.[f.source ?? '']?.find((o) => String(o.id) === raw)?.label ?? raw;
+        const rows = (reloaded as RequestSourceOption[] | undefined) ?? sources?.[f.source ?? ''];
+        return rows?.find((o) => String(o.id) === raw)?.label ?? raw;
     }
     return raw;
 }

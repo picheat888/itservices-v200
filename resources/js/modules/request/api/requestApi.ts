@@ -82,6 +82,13 @@ export interface RequestAttachmentLimits {
     extensions: string[];
 }
 
+/** One choice of a managed list, as the per-field endpoint returns it. */
+export interface RequestManagedChoice {
+    value: string;
+    label_en: string;
+    label_th: string;
+}
+
 export interface RequestOptionsResponse {
     types: RequestTypeOption[];
     attachments: RequestAttachmentLimits;
@@ -98,6 +105,8 @@ export const requestApi = {
     list: (params: RequestListParams) => http.get<RequestPageResponse>('/service-requests', { params }).then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<ServiceRequest>>(`/service-requests/${id}`).then((r) => r.data.data),
     options: () => http.get<ApiEnvelope<RequestOptionsResponse>>('/service-requests/options').then((r) => r.data.data),
+    fieldOptions: <T extends RequestSourceOption | RequestManagedChoice>(type: string, field: string) =>
+        http.get<ApiEnvelope<T[]>>(`/service-requests/options/${encodeURIComponent(type)}/${encodeURIComponent(field)}`).then((r) => r.data.data),
     /**
      * One multipart POST: the request AND its files, so a service that requires a
      * file is never created without one. `onProgress` reports the whole body's

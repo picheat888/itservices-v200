@@ -117,6 +117,7 @@ export const requests: Dict = {
     req_requester_label: 'Requester',
     req_service_section: 'Service details',
     req_other_software: 'Not on the list? Type it in',
+    req_not_listed_contact_it: 'Not in the system yet. Ask IT to add it, then reload the list.',
     req_attach_section: 'Attachments',
     req_attach_optional: 'Attach a quote, a plan or a photo (optional)',
     req_attach_required: 'This service needs an attachment, such as a floor plan or a photo of the spot.',
