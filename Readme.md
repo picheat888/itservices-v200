@@ -7063,3 +7063,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ตรวจหลังอัปเดต PHPUnit บน sqlite ผ่าน 2,857 บน MariaDB (ฐานแยก `itservices_test`) ผ่าน 2,840 ล้ม 17 ตัวเดิมก่อนอัปเดต ไม่มีตัวที่ล้มเพิ่ม (DB-1 กับเทสต์ที่ผูก sqlite ตามผลตรวจ), tsc ผ่าน, eslint warning เดิม 1 จุด, เทสต์ JS ผ่าน 517, `vite build` ผ่าน
 - หลังอัปเดตต้องปิดแล้วเปิด `composer run demo` ใหม่ เพราะ opcache กับ vite watch ยังถือไลบรารีชุดเดิม บน production ต้อง `composer install --no-dev` และ build หน้าเว็บใหม่
 - ข้อควรรู้ ระหว่าง `composer update` vendor อยู่ครึ่งทาง แอป error ทุกหน้าชั่วคราว ถ้ายกเลิกคำสั่งใน Claude Code แล้ว process ยังรันต่อ ให้รอจนจบ อย่าฆ่ากลางทาง
+
+## ค่า SMTP อยู่แถว id 1 เสมอ (DB-1, 2026-10-21)
+
+บั๊กจากผลตรวจทั้งระบบ พบตอนรันเทสต์บน MariaDB
+- `MailSetting::current()` ใช้ `firstOrCreate(['id' => 1])` แต่ `id` ไม่อยู่ใน fillable แถวที่สร้างจึงได้ id จากตัวนับ ถ้าตัวนับเลย 1 ไปแล้ว (แถวถูกลบ หรือ insert ที่ย้อนกลับบน MariaDB) ทุกครั้งที่เรียกจะสร้างแถวว่างใหม่ ค่าที่บันทึกจากหน้าตั้งค่าอ่านกลับไม่ได้ และอีเมลไม่ถูกส่ง ตอนนี้สร้างด้วย id 1 จริง (`unguarded`) และ `MailSettingSeeder` ใส่ id 1 ตรง ๆ
+- ฐานที่มีแถว id 1 อยู่แล้ว (itservices, itservices_perf) ไม่ต้องแก้ข้อมูล
+- เทส `MailSettingSingletonTest` 2 ตัว ล้มก่อนแก้ทั้งคู่ PHPUnit บน sqlite ผ่าน 2,859 (DashboardTest ล้มรอบแรกเพราะ vite watch กำลัง build ใหม่ รันซ้ำผ่าน) บน MariaDB เทสต์อีเมล 4 ตัวที่ล้มเพราะข้อนี้ผ่านแล้ว เหลือ 12 ตัวที่ผูกกับ sqlite (TEST-1 ในผลตรวจ)
