@@ -58,6 +58,9 @@ const SITES: Site[] = [
     { file: 'modules/access/components/members-drawer.tsx', openRefetch: 1, seedOnce: 1, rebase: 1 },
     { file: 'modules/permission/hooks/use-permissions.ts', freshView: 6 },
     { file: 'modules/permission/pages/index.tsx', marks: 1 },
+    { file: 'modules/permission/components/group-role-dialog.tsx', refresh: 1, flagRemoved: 1, rebase: 1 },
+    { file: 'modules/permission/components/group-roles-tab.tsx', refresh: 1, openRefetch: 1 },
+    { file: 'modules/permission/components/group-member-picker.tsx', refresh: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
     { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
     { file: 'modules/ticket/pages/index.tsx', marks: 1, freshView: 2, openRefetch: 2 },
@@ -239,4 +242,13 @@ test('the access members drawer queries its members only while open', () => {
 test('the groups tab watches the group list only, not member or candidate pages', () => {
     assert.ok(read('modules/permission/pages/index.tsx').includes("useKeyFreshness(['group-roles'], { exact: true })"));
     assert.ok(read('shared/hooks/use-key-freshness.ts').includes('exact'));
+});
+
+test('the group dialog role list is a searchable list that keeps disabled roles and the locked state', () => {
+    const select = read('shared/components/searchable-select.tsx');
+    assert.equal(count(select, 'disabled?: boolean;'), 2);
+    assert.ok(select.includes('if (option.disabled)'));
+    const dialog = read('modules/permission/components/group-role-dialog.tsx');
+    assert.ok(!dialog.includes("from '@/shared/ui/select'"));
+    assert.ok(dialog.includes('disabled={roleLocked}'));
 });

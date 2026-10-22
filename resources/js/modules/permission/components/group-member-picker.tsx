@@ -6,13 +6,14 @@ import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { localName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { groupRoleApi, type GroupMember } from '../api/permissionApi';
 import { useGroupCandidates } from '../hooks/use-permissions';
 import { countKey, departmentLockKey } from '../lib/group-rules';
@@ -41,7 +42,9 @@ export function GroupMemberPicker({
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const qc = useQueryClient();
-    const { data: departments = [] } = useDepartments();
+    const departmentsQuery = useDepartments();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const [search, setSearch] = useState('');
     const [departmentId, setDepartmentId] = useState<number | null>(null);
     const [page, setPage] = useState(1);
@@ -126,6 +129,7 @@ export function GroupMemberPicker({
                         value={departmentId === null ? ALL : String(departmentId)}
                         onChange={pickDepartment}
                         options={departmentOptions}
+                        refresh={refreshDepartments}
                         active={departmentId !== null}
                         clearable={false}
                     />

@@ -3,19 +3,21 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SaveButton } from '@/shared/components/save-button';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { cn } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Lock, PencilLine, Trash2, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
-import { useBaseRoleLabel, useGroupRoleMutations, useGroupRoleOptions } from '../hooks/use-permissions';
+import { useBaseRoleLabel, useGroupRoleMutations, useGroupRoleOptions, useGroupRoles } from '../hooks/use-permissions';
 import { countKey, findRole, isOverCeiling, removeLine, roleLabel } from '../lib/group-rules';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
@@ -49,8 +51,15 @@ export function GroupRoleDialog({
     const { create, update, refreshList } = useGroupRoleMutations();
     const deleteGroup = useDeleteGroup(defaultGroup);
 
-    const [name, setName] = useState('');
-    const [role, setRole] = useState('');
+    // Name and role in one state, so a refresh of the group rebases them together
+    const [fields, setFields] = useState({ name: '', role: '' });
+    const { name, role } = fields;
+    const setName = (next: string) => setFields((f) => ({ ...f, name: next }));
+    const setRole = (next: string) => setFields((f) => ({ ...f, role: next }));
+    // What the form opened with, moved along by refreshes of the group
+    const [base, setBase] = useState({ name: '', role: '' });
+    const rolesQuery = useGroupRoles();
+    const refreshRoles = useSelectRefresh(rolesQuery);
     const [added, setAdded] = useState<Map<number, GroupMember>>(new Map());
     const [removed, setRemoved] = useState<Map<number, GroupMember>>(new Map());
     const [tab, setTab] = useState<'pick' | 'members'>('members');
@@ -58,7 +67,6 @@ export function GroupRoleDialog({
     const [saveStep, setSaveStep] = useState<SaveStep>('idle');
     const [saveError, setSaveError] = useState<unknown>(null);
     const nameRef = useRef<HTMLInputElement>(null);
-    const roleRef = useRef<HTMLButtonElement>(null);
 
     // Keep the last group while the dialog plays its exit animation
     const [shown, setShown] = useState<GroupRole | null>(liveGroup);
@@ -73,8 +81,9 @@ export function GroupRoleDialog({
     if (session !== seenSession) {
         setSeenSession(session);
         if (session !== null) {
-            setName(group?.name ?? '');
-            setRole(group?.role ?? '');
+            const values = { name: group?.name ?? '', role: group?.role ?? '' };
+            setFields(values);
+            setBase(values);
             setAdded(new Map());
             setRemoved(new Map());
             setTab(group ? 'members' : 'pick');
@@ -84,14 +93,16 @@ export function GroupRoleDialog({
         }
     }
 
+    useFormRebase({ fresh: open && group ? { name: group.name, role: group.role ?? '' } : null, base, setBase, setForm: setFields });
+
     const myPermissions = new Set(user?.permissions ?? []);
     const readOnly = group !== null && group.role === SUPER_ROLE && !isSuper;
     const roleLocked = readOnly || !!group?.includes_me;
     const chosenRole = role ? findRole(roles, role) : undefined;
     const paneKey = String(group?.id ?? 'new');
 
-    const nameChanged = group !== null && name.trim() !== group.name;
-    const roleChanged = group !== null && role !== (group.role ?? '');
+    const nameChanged = group !== null && name.trim() !== base.name;
+    const roleChanged = group !== null && role !== base.role;
     const changes = added.size + removed.size + (nameChanged ? 1 : 0) + (roleChanged ? 1 : 0);
     const dirty = group === null ? name.trim() !== '' || role !== '' || added.size > 0 : changes > 0;
     const memberCount = (group?.member_count ?? 0) + added.size - removed.size;
@@ -147,7 +158,8 @@ export function GroupRoleDialog({
     const openSave = () => {
         if (nameError || roleError) {
             setTried(true);
-            (nameError ? nameRef : roleRef).current?.focus();
+            if (nameError) nameRef.current?.focus();
+            else document.getElementById('gr-role')?.focus();
             return;
         }
         setSaveError(null);
@@ -263,27 +275,26 @@ export function GroupRoleDialog({
                                     {roleHelp ?? (chosenRole ? t('gr_role_help').replace('{role}', roleLabel(chosenRole)) : t('gr_role_help_none'))}
                                 </span>
                             </div>
-                            <Select value={role || undefined} onValueChange={setRole} disabled={roleLocked}>
-                                <SelectTrigger
-                                    ref={roleRef}
+                            <div className={cn(showRoleError && '[&_[role=combobox]]:border-destructive')}>
+                                <SearchableSelect
                                     id="gr-role"
+                                    value={role}
+                                    onChange={setRole}
+                                    disabled={roleLocked}
+                                    refresh={refreshRoles}
+                                    flagRemoved
                                     aria-invalid={showRoleError || undefined}
                                     aria-describedby={showRoleError ? 'gr-role-help gr-role-error' : 'gr-role-help'}
-                                    className={cn(showRoleError && 'border-destructive')}
-                                >
-                                    <SelectValue placeholder={t('select_placeholder')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {roles.map((r) => (
-                                        <SelectItem key={r.key} value={r.key} disabled={r.key !== role && isOverCeiling(r, isSuper, myPermissions)}>
-                                            <span className="flex items-center gap-2">
-                                                <RoleBar color={r.color} />
-                                                {roleLabel(r)}
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                    placeholder={t('select_placeholder')}
+                                    options={roles.map((r) => ({
+                                        value: r.key,
+                                        label: roleLabel(r),
+                                        search: roleLabel(r),
+                                        icon: <RoleBar color={r.color} />,
+                                        disabled: r.key !== role && isOverCeiling(r, isSuper, myPermissions),
+                                    }))}
+                                />
+                            </div>
                             {showRoleError && (
                                 <p id="gr-role-error" className="text-destructive text-xs">
                                     {roleError}

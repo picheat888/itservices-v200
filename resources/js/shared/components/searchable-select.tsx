@@ -26,6 +26,8 @@ export interface SearchOption {
     /** Optional leading visual (e.g. a type icon or status color dot). When any option
      *  has one, every row reserves the slot so labels stay aligned. */
     icon?: React.ReactNode;
+    /** Shown muted; it cannot be chosen. */
+    disabled?: boolean;
     search: string;
 }
 
@@ -54,6 +56,7 @@ export function SearchableSelect({
     emptyHint,
     flagRemoved = false,
     note,
+    disabled = false,
     id,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -90,6 +93,8 @@ export function SearchableSelect({
     flagRemoved?: boolean;
     /** An amber note under the trigger, e.g. a choice a refresh took out; pass null while there is none so its live region is in place. */
     note?: string | null;
+    /** The whole control is read-only. */
+    disabled?: boolean;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
     'aria-invalid'?: boolean;
@@ -321,6 +326,9 @@ export function SearchableSelect({
     }, [open, dialogEl]);
 
     const choose = (option: SearchOption) => {
+        if (option.disabled) {
+            return;
+        }
         onChange(option.value);
         setOpen(false);
         setQ('');
@@ -467,6 +475,7 @@ export function SearchableSelect({
                         type="button"
                         role="option"
                         aria-selected={o.value === value}
+                        aria-disabled={o.disabled || undefined}
                         tabIndex={-1}
                         onClick={() => choose(o)}
                         onMouseMove={() => {
@@ -478,6 +487,7 @@ export function SearchableSelect({
                         className={cn(
                             'hover:bg-accent flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm',
                             o.value === value && 'bg-accent/60',
+                            o.disabled && 'text-muted-foreground cursor-not-allowed hover:bg-transparent',
                             keyboardNav && index === activeOption && 'bg-accent',
                         )}
                     >
@@ -501,7 +511,7 @@ export function SearchableSelect({
         </>
     );
 
-    const showClear = clearable && !!selected;
+    const showClear = clearable && !!selected && !disabled;
 
     return (
         <>
@@ -511,6 +521,7 @@ export function SearchableSelect({
                     id={id}
                     type="button"
                     role="combobox"
+                    disabled={disabled}
                     onClick={toggle}
                     onKeyDown={(e) => {
                         if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
@@ -525,7 +536,7 @@ export function SearchableSelect({
                     aria-expanded={open}
                     aria-controls={open ? listId : undefined}
                     className={cn(
-                        'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
+                        'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
                         active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
                         (showRemovedNote || (showNote && !ariaInvalid)) && 'border-amber-600 dark:border-amber-400',
                         // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).

@@ -12,6 +12,8 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -42,7 +44,12 @@ export function GroupRolesTab() {
     const t = useT();
     const fmtN = useNumberFormat();
     const { user, isSuper } = useAuth();
-    const { data, isLoading, isFetching, isError, refetch } = useGroupRoles();
+    const groupsQuery = useGroupRoles();
+    const { data, isLoading, isFetching, isError, refetch } = groupsQuery;
+    const refreshRoles = useSelectRefresh(groupsQuery);
+    // The default-group select stays a plain list (its entries can be off with a reason); it asks again when opened
+    const [defaultOpen, setDefaultOpen] = useState(false);
+    useRefetchOnOpen(defaultOpen, groupsQuery);
     const setDefaultGroup = useSetDefaultGroup();
     const list = useListParams();
     const [defaultChange, setDefaultChange] = useState<DefaultStep | null>(null);
@@ -170,6 +177,7 @@ export function GroupRolesTab() {
                             value={roleFilter || ALL}
                             onChange={(v) => list.setFilter('role', v === ALL ? '' : v)}
                             options={roleFilterOptions}
+                            refresh={refreshRoles}
                             searchPlaceholder={t('gr_role_search')}
                         />
                     </div>
@@ -236,7 +244,12 @@ export function GroupRolesTab() {
                 <label htmlFor="gr-default">{t('gr_default_short')}</label>
                 <InfoHint text={t('perm_default_group_desc')} />
             </span>
-            <Select value={defaultGroupId !== null ? String(defaultGroupId) : NONE} onValueChange={askDefault} disabled={setDefaultGroup.isPending}>
+            <Select
+                value={defaultGroupId !== null ? String(defaultGroupId) : NONE}
+                onValueChange={askDefault}
+                onOpenChange={setDefaultOpen}
+                disabled={setDefaultGroup.isPending}
+            >
                 <SelectTrigger id="gr-default" className="w-44">
                     <SelectValue />
                 </SelectTrigger>
