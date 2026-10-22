@@ -1,3 +1,4 @@
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi, type WorkflowUpdatePayload } from '../api/workflowApi';
 
@@ -6,6 +7,7 @@ export const useWorkflows = () =>
     useQuery({
         queryKey: ['workflows'],
         queryFn: workflowApi.list,
+        ...FRESH_VIEW,
     });
 
 export function useWorkflowMutations() {

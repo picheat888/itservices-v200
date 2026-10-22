@@ -7,7 +7,11 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { FRESH_LIST } from '@/shared/lib/freshness';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -80,25 +84,29 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     }, [workflow]);
     const wf = workflow ?? shown;
 
-    const [name, setName] = useState('');
+    // The workflow's own fields in one state; they follow refreshes, the chain never does
+    const [fields, setFields] = useState({ name: '', active: true, autoTicket: true });
+    const { name, active, autoTicket } = fields;
+    const setName = (next: string) => setFields((f) => ({ ...f, name: next }));
+    const setActive = (next: boolean) => setFields((f) => ({ ...f, active: next }));
+    const setAutoTicket = (next: boolean) => setFields((f) => ({ ...f, autoTicket: next }));
+    const [fieldsBase, setFieldsBase] = useState({ name: '', active: true, autoTicket: true });
     const [nameErr, setNameErr] = useState('');
-    const [active, setActive] = useState(true);
-    const [autoTicket, setAutoTicket] = useState(true);
     const [steps, setSteps] = useState<EditableStep[]>([]);
     // Which step has its full position palette open (one at a time)
     const [openRanks, setOpenRanks] = useState<number | null>(null);
     const [serverError, setServerError] = useState('');
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
-    // Editable values as hydrated, for the unsaved-changes check.
+    // The steps as hydrated, for the unsaved-changes check
     const [baseline, setBaseline] = useState('');
 
     // Hydrate from the opened workflow; everything transient resets here
     useEffect(() => {
         if (!workflow) return;
-        setName(workflow.name);
+        const values = { name: workflow.name, active: workflow.active, autoTicket: workflow.auto_ticket };
+        setFields(values);
+        setFieldsBase(values);
         setNameErr('');
-        setActive(workflow.active);
-        setAutoTicket(workflow.auto_ticket);
         const hydrated: EditableStep[] = workflow.steps.map((s) => ({
             actor_type: s.actor_type,
             label_touched: true,
@@ -110,13 +118,20 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             position_ids: s.positions.map((p) => p.id),
         }));
         setSteps(hydrated);
-        setBaseline(JSON.stringify([workflow.name, workflow.active, workflow.auto_ticket, hydrated]));
+        setBaseline(JSON.stringify(hydrated));
         setServerError('');
         setSaveState('idle');
         setOpenRanks(null);
         setPreviewEmployee('');
         setPreviewRows(null);
     }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useFormRebase({
+        fresh: workflow ? { name: workflow.name, active: workflow.active, autoTicket: workflow.auto_ticket } : null,
+        base: fieldsBase,
+        setBase: setFieldsBase,
+        setForm: setFields,
+    });
 
     const updStep = (i: number, patch: Partial<EditableStep>) =>
         setSteps((list) => list.map((s, idx) => (idx === i ? withDerivedLabel({ ...s, ...patch }, positions, departments, t) : s)));
@@ -142,22 +157,25 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         ]);
 
     // Position titles, read through the workflows.manage gate
-    const { data: positionData } = useQuery({
+    const positionsQuery = useQuery({
         queryKey: ['workflow-position-options'],
         queryFn: workflowApi.positionOptions,
-        staleTime: 5 * 60_000,
         enabled: !!workflow,
+        ...FRESH_LIST,
     });
-    const positions = positionData ?? [];
+    const positions = positionsQuery.data ?? [];
     const { data: departments = [] } = useDepartments();
 
     // ── "Test with employee" resolution preview ──────────────────────────────
-    const { data: employees = [] } = useQuery({
+    const employeesQuery = useQuery({
         queryKey: ['workflow-employee-options'],
         queryFn: workflowApi.employeeOptions,
-        staleTime: 5 * 60_000,
         enabled: !!workflow,
+        ...FRESH_LIST,
     });
+    const employees = useMemo(() => employeesQuery.data ?? [], [employeesQuery.data]);
+    const refreshEmployees = useSelectRefresh(employeesQuery);
+    useRefetchOnOpen(!!workflow, positionsQuery, employeesQuery);
     const employeeOptions = useMemo(
         () =>
             employees.map((e) => ({
@@ -199,7 +217,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         return () => clearTimeout(timer);
     }, [previewEmployee, steps, wf?.request_type]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const isDirty = JSON.stringify([name, active, autoTicket, steps]) !== baseline;
+    const isDirty = JSON.stringify(fields) !== JSON.stringify(fieldsBase) || JSON.stringify(steps) !== baseline;
     const guardClose = useDiscardGuard(!!workflow && isDirty && saveState !== 'done');
 
     if (!wf) return null;
@@ -488,6 +506,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                     value={previewEmployee}
                                     onChange={setPreviewEmployee}
                                     options={employeeOptions}
+                                    refresh={refreshEmployees}
                                     clearable
                                 />
                             </div>
@@ -630,8 +649,12 @@ function DepartmentStepFields({
     t: (key: string) => string;
 }) {
     const lang = useUiStore((s) => s.lang);
-    const { data: departments = [] } = useDepartments();
-    const { data: members = [] } = useDepartmentMembers(step.department_id);
+    const departmentsQuery = useDepartments();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+    const membersQuery = useDepartmentMembers(step.department_id);
+    const refreshMembers = useSelectRefresh(membersQuery);
+    const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
     const byPerson = !!step.by_person;
     const named = step.approver_employee_ids.map((id) => members.find((m) => m.id === id)).filter((m): m is (typeof members)[number] => !!m);
     // Only active people can be added (the resolver drops leavers)
@@ -651,6 +674,7 @@ function DepartmentStepFields({
                         // A new department drops the people named in the old one
                         onChange={(v) => onChange({ department_id: v ? Number(v) : null, approver_employee_ids: [] })}
                         options={departments.map((d) => ({ value: String(d.id), label: localName(d, lang), search: nameSearch(d) }))}
+                        refresh={refreshDepartments}
                         placeholder={t('wf_step_department_pick')}
                     />
                 </span>
@@ -710,6 +734,7 @@ function DepartmentStepFields({
                             </label>
                             <SearchableSelect
                                 id={`${uid}-person`}
+                                refresh={refreshMembers}
                                 value=""
                                 onChange={(v) => {
                                     const id = Number(v);

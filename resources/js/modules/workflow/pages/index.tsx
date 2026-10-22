@@ -7,6 +7,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, toRecordId } from '@/shared/lib/utils';
@@ -26,7 +27,8 @@ import { useWorkflows } from '../hooks/use-workflows';
 export default function WorkflowsPage() {
     const t = useT();
     const fmtN = useNumberFormat();
-    const { data, isLoading, isError, refetch } = useWorkflows();
+    const workflowsQuery = useWorkflows();
+    const { data, isLoading, isError, refetch } = workflowsQuery;
     const workflows = useMemo(() => data?.data ?? [], [data]);
     const measureDays = data?.meta.measure_days ?? 30;
 
@@ -66,6 +68,8 @@ export default function WorkflowsPage() {
     const editing = byId(editingId);
     // Only once the list has arrived; a refetch must not flag the link as dead
     const missing = data != null && (viewingId != null || editingId != null) && !viewing && !editing;
+    // Both dialogs read the workflow from this list, so opening one asks for it again
+    useRefetchOnOpen(viewing !== null || editing !== null, workflowsQuery);
 
     const filtered = useMemo(() => {
         return workflows.filter((w) => {
