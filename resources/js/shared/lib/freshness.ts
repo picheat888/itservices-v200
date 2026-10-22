@@ -7,6 +7,17 @@ export function shouldRefetch(force: boolean, dataUpdatedAt: number, now: number
     return force || dataUpdatedAt === 0 || now - dataUpdatedAt >= FRESH_MS;
 }
 
+/** Query options for data on screen (lists, tab contents, open dialogs): asked again after five seconds, and on browser-tab return. */
+export const FRESH_VIEW = { staleTime: FRESH_MS, refetchOnWindowFocus: true } as const;
+
+/** Query options for a dropdown's source list: asked again when its dropdown opens (useSelectRefresh), not on browser-tab return. */
+export const FRESH_LIST = { staleTime: FRESH_MS } as const;
+
+/** True only on the closed-to-open step of a dialog. */
+export function justOpened(wasOpen: boolean, open: boolean): boolean {
+    return !wasOpen && open;
+}
+
 /** shouldRefetch, but never while a request for the same data is still running. */
 export function shouldRequest(force: boolean, fetching: boolean, dataUpdatedAt: number, now: number): boolean {
     return !fetching && shouldRefetch(force, dataUpdatedAt, now);
