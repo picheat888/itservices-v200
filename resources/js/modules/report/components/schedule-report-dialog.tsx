@@ -12,7 +12,9 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -22,7 +24,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { isAxiosError } from 'axios';
 import { CalendarClock, Loader2, ShieldAlert, X } from 'lucide-react';
-import { useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import type { ExportFormat, ScheduleFrequency, ScheduleInput } from '../types';
 import type { FilterChip } from './schedule-filter-summary';
 
@@ -66,6 +68,7 @@ export function ScheduleReportDialog({
     coverage,
     filterChips,
     initial,
+    fresh = null,
     onSubmit,
     isPending,
     error,
@@ -81,6 +84,8 @@ export function ScheduleReportDialog({
     filterChips?: FilterChip[];
     /** An existing schedule being edited; a new one starts from the reader's own address. */
     initial?: ScheduleInput;
+    /** The live copy of `initial`; fields the reader has not touched follow it. */
+    fresh?: ScheduleInput | null;
     onSubmit: (input: ScheduleInput) => Promise<unknown>;
     isPending: boolean;
     error: unknown;
@@ -89,32 +94,40 @@ export function ScheduleReportDialog({
     const t = useT();
     const fmtN = useNumberFormat();
     const { user } = useAuth();
-    const [format, setFormat] = useState<ExportFormat>(formats[0] ?? 'pdf');
-    const [frequency, setFrequency] = useState<ScheduleFrequency>('weekly');
-    const [hour, setHour] = useState(7);
-    const [recipients, setRecipients] = useState<string[]>([]);
+    // The schedule's fields in one state, so a refresh of the schedule rebases them together
+    const [form, setForm] = useState<ScheduleInput>({ format: formats[0] ?? 'pdf', frequency: 'weekly', send_hour: 7, recipients: [] });
+    const { format, frequency, send_hour: hour, recipients } = form;
+    const setFormat = (next: ExportFormat) => setForm((f) => ({ ...f, format: next }));
+    const setFrequency = (next: ScheduleFrequency) => setForm((f) => ({ ...f, frequency: next }));
+    const setHour = (next: number) => setForm((f) => ({ ...f, send_hour: next }));
+    const setRecipients = (next: string[]) => setForm((f) => ({ ...f, recipients: next }));
     const [draft, setDraft] = useState('');
     const [draftError, setDraftError] = useState<string | null>(null);
     const [seed, setSeed] = useState<ScheduleInput | null>(null);
 
-    // Reset the form each time the dialog opens — to the schedule being edited, or to defaults.
-    useEffect(() => {
-        if (!open) return;
+    // Seed once per opening, from the live schedule when there is one, or from defaults
+    useSeedOnce(open ? 'open' : null, () => {
+        const source = fresh ?? initial;
         const next: ScheduleInput = {
-            format: initial?.format ?? formats[0] ?? 'pdf',
-            frequency: initial?.frequency ?? 'weekly',
-            send_hour: initial?.send_hour ?? 7,
-            recipients: initial?.recipients ?? (user?.email ? [user.email] : []),
+            format: source?.format ?? formats[0] ?? 'pdf',
+            frequency: source?.frequency ?? 'weekly',
+            send_hour: source?.send_hour ?? 7,
+            recipients: source?.recipients ?? (user?.email ? [user.email] : []),
         };
-        setFormat(next.format);
-        setFrequency(next.frequency);
-        setHour(next.send_hour);
-        setRecipients(next.recipients);
+        setForm(next);
         setSeed(next);
         setDraft('');
         setDraftError(null);
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
-    }, [open]);
+    });
+    useFormRebase({
+        fresh:
+            open && initial && fresh && seed
+                ? { format: fresh.format, frequency: fresh.frequency, send_hour: fresh.send_hour, recipients: fresh.recipients }
+                : null,
+        base: seed ?? form,
+        setBase: setSeed,
+        setForm,
+    });
 
     const sameRecipients = (a: string[], b: string[]) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
     const isDirty =

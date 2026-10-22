@@ -478,7 +478,8 @@ export function useDeleteSchedule() {
 /** Everyone's schedules for the admin's "จัดการ" dialog; fetched only while it is open. */
 export const MANAGED_SCHEDULES_KEY = ['reports', 'schedules', 'manage'] as const;
 
-export const useManagedSchedules = (enabled: boolean) => useQuery({ queryKey: MANAGED_SCHEDULES_KEY, queryFn: reportApi.managedSchedules, enabled });
+export const useManagedSchedules = (enabled: boolean) =>
+    useQuery({ queryKey: MANAGED_SCHEDULES_KEY, queryFn: reportApi.managedSchedules, enabled, ...FRESH_VIEW });
 
 /** Pause / resume, delete and take a recipient off anyone's schedule; the admin's own card refreshes too. */
 export function useManageSchedule() {

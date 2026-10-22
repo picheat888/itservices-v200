@@ -12,6 +12,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -209,7 +210,9 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
     const t = useT();
     const fmtN = useNumberFormat();
     const labels = useLabels();
-    const { data: items = [], isLoading } = useManagedSchedules(open);
+    const manageQuery = useManagedSchedules(open);
+    const { data: items = [], isLoading } = manageQuery;
+    useRefetchOnOpen(open, manageQuery);
     const [query, setQuery] = useState('');
     const [status, setStatus] = useState<StatusFilter>('all');
     const [outsideOnly, setOutsideOnly] = useState(false);

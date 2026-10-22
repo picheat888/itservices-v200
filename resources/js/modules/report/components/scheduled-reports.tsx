@@ -11,6 +11,7 @@ import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -192,7 +193,8 @@ function ScheduleRow({ item, opens, onEdit }: { item: ReportScheduleItem; opens:
 
 export function ScheduledReports() {
     const t = useT();
-    const { data: items = [], isLoading } = useReportSchedules();
+    const schedulesQuery = useReportSchedules();
+    const { data: items = [], isLoading } = schedulesQuery;
     const { data: catalogue = [], isSuccess: catalogueLoaded } = useReportCatalogue();
     const update = useUpdateSchedule();
     const [editing, setEditing] = useState<ReportScheduleItem | null>(null);
@@ -200,6 +202,8 @@ export function ScheduledReports() {
     const [managing, setManaging] = useState(false);
     // The last schedule opened, kept while the dialog animates closed so it does not blank.
     const [shown, setShown] = useState<ReportScheduleItem | null>(null);
+    // The editor reads its schedule from this list, so opening it asks for the list again
+    useRefetchOnOpen(editing !== null, schedulesQuery);
 
     const formats = (key: string) => catalogue.find((r) => r.key === key)?.formats ?? ['pdf'];
 
@@ -268,6 +272,7 @@ export function ScheduledReports() {
                     coverage={scheduleCoverage(Object.keys(shown.filters))}
                     filterChips={filterChips}
                     initial={shown}
+                    fresh={items.find((item) => item.id === shown.id) ?? null}
                     onSubmit={(input) => update.mutateAsync({ id: shown.id, patch: input })}
                     isPending={update.isPending}
                     error={update.error}
