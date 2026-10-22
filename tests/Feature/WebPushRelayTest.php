@@ -113,6 +113,33 @@ class WebPushRelayTest extends TestCase
         $this->assertSame('big-1', $payload['id']);
     }
 
+    /** @param array<string, mixed> $payload */
+    private function assertWireIsThePayload(array $payload, User $user): void
+    {
+        $message = (new WebPushRelay($payload))->toWebPush($user, new WebPushRelay($payload));
+
+        $this->assertSame(json_encode($payload), json_encode($message->toArray()));
+        $this->assertSame(['TTL' => WebPushRelay::TTL_SECONDS], $message->getOptions());
+    }
+
+    public function test_the_wire_json_is_the_payload_itself_for_a_bell_a_truncated_bell_and_the_test_push(): void
+    {
+        Queue::fake();
+        $user = User::factory()->create(['preferences' => ['lang' => 'th']]);
+        $user->notify(new ContractExpiryNotification($this->makeContract(), 30));
+
+        $big = new DatabaseNotification;
+        $big->id = 'big-1';
+        $big->created_at = now();
+        $big->data = ['type' => 'ticket_assigned', 'subject' => str_repeat('ก', 5000)];
+        $truncated = WebPushPayload::for($big, $user);
+        $this->assertTrue($truncated['truncated']);
+
+        $this->assertWireIsThePayload(WebPushPayload::for($user->notifications()->first(), $user), $user);
+        $this->assertWireIsThePayload($truncated, $user);
+        $this->assertWireIsThePayload(WebPushPayload::test($user), $user);
+    }
+
     public function test_the_test_button_pushes_only_to_the_callers_given_endpoint(): void
     {
         Queue::fake();

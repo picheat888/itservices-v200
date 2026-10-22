@@ -8,7 +8,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class WebPushRelay extends Notification implements ShouldQueue
 {
@@ -25,10 +24,8 @@ class WebPushRelay extends Notification implements ShouldQueue
         return [WebPushChannel::class];
     }
 
-    public function toWebPush(object $notifiable, Notification $notification): WebPushMessage
+    public function toWebPush(object $notifiable, Notification $notification): WebPushPayloadMessage
     {
-        return (new WebPushMessage)
-            ->data($this->payload)
-            ->options(['TTL' => self::TTL_SECONDS]);
+        return new WebPushPayloadMessage($this->payload, ['TTL' => self::TTL_SECONDS]);
     }
 }
