@@ -114,3 +114,10 @@ test('the contract edit form decides it is refused from the copy it opened with'
     const page = read('modules/contract/pages/index.tsx');
     assert.ok(page.includes('const editRefused = editing != null &&'));
 });
+
+test('tab bars keep no room for the mark on idle tabs', () => {
+    for (const file of ['shared/components/page-tabs.tsx', 'shared/components/dialog-tabs.tsx']) {
+        assert.ok(!read(file).includes("'pr-8"), `${file} reserves room on every tab`);
+    }
+    assert.ok(!read('shared/components/tab-refresh-mark.tsx').includes('absolute'));
+});

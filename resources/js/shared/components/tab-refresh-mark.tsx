@@ -1,20 +1,32 @@
-// Spinner while a tab's data refetches, then a short check; sits in the tab's reserved right padding so the tab keeps its width.
+// A tab's refresh mark: a slot beside the label that opens only while the tab refreshes (spinner, then a short check), so idle tabs keep their labels centred.
 // TabBarStatus announces it once per bar, outside the tablist, because a tab's children are presentational.
 import { useT } from '@/lang';
-import { barRefreshMark, type RefreshMark } from '@/shared/lib/refresh-mark';
+import { barRefreshMark, slotView, type RefreshMark } from '@/shared/lib/refresh-mark';
+import { cn } from '@/shared/lib/utils';
 import { Check, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
+/** The -ml-1.5 cancels the tab's gap while closed; the inner pl-1.5 spaces the icon when open. */
 export function TabRefreshMark({ mark }: { mark: RefreshMark }) {
+    const [lastShown, setLastShown] = useState<'busy' | 'done'>('busy');
+    if (mark !== 'idle' && mark !== lastShown) setLastShown(mark);
+    const view = slotView(mark, lastShown);
     return (
-        <>
-            {mark === 'busy' && <Loader2 className="absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 animate-spin" aria-hidden="true" />}
-            {mark === 'done' && (
-                <Check
-                    className="absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-emerald-600 dark:text-emerald-400"
-                    aria-hidden="true"
-                />
+        <span
+            aria-hidden="true"
+            className={cn(
+                '-ml-1.5 inline-flex shrink-0 items-center overflow-hidden transition-[width,opacity] duration-200 ease-out motion-reduce:transition-none',
+                view.open ? 'w-5 opacity-100' : 'w-0 opacity-0',
             )}
-        </>
+        >
+            <span className="inline-flex shrink-0 pl-1.5">
+                {view.icon === 'spin' ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                )}
+            </span>
+        </span>
     );
 }
 

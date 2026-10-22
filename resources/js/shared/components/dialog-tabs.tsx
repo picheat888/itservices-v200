@@ -15,7 +15,7 @@ export interface DialogTab<T extends string> {
     dot?: boolean;
     /** Optional leading icon; opt in only for a bar whose tabs hold different kinds of thing. */
     icon?: LucideIcon;
-    /** Refresh mark of the tab's data (useRefreshMark); any tab setting it reserves room on every tab. */
+    /** Refresh mark of the tab's data (useTabFreshness); a slot beside the label opens only while it refreshes. */
     refresh?: RefreshMark;
 }
 
@@ -42,7 +42,7 @@ export function DialogTabs<T extends string>({
     panelId?: string;
 }) {
     const fmtN = useNumberFormat();
-    const reserveMark = tabs.some((tb) => tb.refresh !== undefined);
+    const hasMarks = tabs.some((tb) => tb.refresh !== undefined);
     const fallbackId = useId();
     const base = panelId ?? fallbackId;
     const listRef = useRef<HTMLDivElement>(null);
@@ -66,7 +66,7 @@ export function DialogTabs<T extends string>({
 
     return (
         <>
-            {reserveMark && <TabBarStatus marks={tabs.map((tb) => tb.refresh)} />}
+            {hasMarks && <TabBarStatus marks={tabs.map((tb) => tb.refresh)} />}
             <div
                 ref={listRef}
                 role="tablist"
@@ -89,7 +89,6 @@ export function DialogTabs<T extends string>({
                             className={cn(
                                 'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
                                 selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                                reserveMark && 'pr-8 lg:pr-8',
                             )}
                         >
                             {/* Icons show from lg up */}

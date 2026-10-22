@@ -57,3 +57,9 @@ export function keySourceState(states: readonly { fetchStatus: string; status: s
         dataUpdatedAt: states.reduce((max, s) => Math.max(max, s.dataUpdatedAt), 0),
     };
 }
+
+/** The tab mark's slot: open while busy or done, closed at rest; it closes still showing the icon it last showed. */
+export function slotView(mark: RefreshMark, lastShown: 'busy' | 'done'): { open: boolean; icon: 'spin' | 'check' } {
+    const shown = mark === 'idle' ? lastShown : mark;
+    return { open: mark !== 'idle', icon: shown === 'done' ? 'check' : 'spin' };
+}
