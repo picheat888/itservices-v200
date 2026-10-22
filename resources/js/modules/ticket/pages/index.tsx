@@ -168,9 +168,7 @@ export default function TicketsPage() {
     ];
 
     const [searchParams] = useSearchParams();
-    // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
-    // Only a tab this reader can see counts; otherwise the first visible one (a role with no
-    // ticket tabs at all still lands somewhere harmless).
+    // The tab lives in ?tab=; only a tab this reader can see counts, else the first visible one
     const isVisibleTab = (v: string | null): v is Tab => isTicketTab(v) && visibleTabs.includes(v);
     const [tab, setTab] = useTabParam(isVisibleTab, visibleTabs[0] ?? 'my');
 
@@ -193,12 +191,9 @@ export default function TicketsPage() {
     const [takeTicket, setTakeTicket] = useState<Ticket | null>(null);
     const [forwardTicket, setForwardTicket] = useState<Ticket | null>(null);
 
-    // The detail drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
-    // drops the param. Opening seeds the cache with the clicked ticket for an instant open; a
-    // deep-link (id not on the current page) fetches by id. URL = single source of truth.
+    // The detail drawer is URL-driven (?view=<id>): a row click seeds the cache, a deep link fetches by id
     const qc = useQueryClient();
-    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
-    // `!= null` guard and used to fetch /tickets/NaN.
+    // Only a real record id opens the drawer: Number('abc') is NaN and passes a `!= null` guard
     const openId = toRecordId(searchParams.get('view'));
     const detailQuery = useQuery({
         queryKey: ['ticket', 'view', openId],
@@ -223,24 +218,14 @@ export default function TicketsPage() {
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
     const [updateTicket, setUpdateTicket] = useState<Ticket | null>(null);
 
-    // The record the drawer is currently showing, which outlives `detail` on the way out:
-    // closing drops ?view=, the query switches off, and `detail` is undefined on the very
-    // next render. The drawer keeps its own copy so its body survives the exit animation —
-    // but the flags below are computed HERE from the record, and without the same retention
-    // they flipped false on the first exit frame: the "nobody owns this case" banner
-    // unmounted and the Take button left the footer, so the panel jumped a row shorter
-    // while it was still fading. Open/closed still follows `detail`, not this.
+    // Shown record outlives `detail` so the flags below hold through the exit animation; open/closed still follows `detail`
     const [shownDetail, setShownDetail] = useState<Ticket | null>(null);
     useEffect(() => {
         if (detail) setShownDetail(detail);
     }, [detail]);
     const shownTicket = detail ?? shownDetail;
 
-    // Editing is requester-only and only while the case is still Open — no
-    // admin/super override (a case's content belongs to the person who opened it).
-    // A case a service request opened is excluded outright: its words are a snapshot
-    // of what was approved, and the endpoint refuses the edit (UpdateTicketRequest).
-    // The requester also needs tickets.edit_own — the endpoint checks it first.
+    // Requester with tickets.edit_own, case still Open, not opened by a service request (mirrors UpdateTicketRequest)
     const canEditTicket = (tk: Ticket) =>
         has('tickets.edit_own') && tk.status === 'open' && tk.requester_id === user?.employee_id && !tk.from_request;
     const canEditDetail = !!shownTicket && canEditTicket(shownTicket);
@@ -323,8 +308,7 @@ export default function TicketsPage() {
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
 
-    // The dashboard's "Latest" card has its own fixed query — the tab list's
-    // search / filters / sort / page must never leak into it.
+    // The "Latest" card has its own fixed query; the tab list's search / filters / sort / page must never leak into it
     const latestQuery = useTickets({ page: 1, per_page: 5 }, canOverview && tab === 'overview');
     const latestData = latestQuery.data;
 
@@ -340,8 +324,7 @@ export default function TicketsPage() {
         seedRowCopy(qc, ['ticket', 'view', tk.id], tk);
         dialogs.open({ view: String(tk.id) });
     };
-    // Workflow modals stack over the still-open detail drawer (kept via ?view=) and bounce
-    // back to it on save/close — matching the edit-over-detail pattern of the sibling modules.
+    // Workflow modals stack over the still-open detail drawer (?view=) and return to it on save/close
     const startResolve = (tk: Ticket, mode: ResolveMode) => setResolveState({ ticket: tk, mode });
     // The progress dialog needs the single-ticket read (work-class forecast); the drawer may still hold a list row
     const startUpdateFromList = (tk: Ticket) => {
@@ -355,8 +338,7 @@ export default function TicketsPage() {
             .catch(() => setUpdateTicket(tk));
     };
 
-    // Filter-popover helpers (Stock-style): the active count drives the trigger badge;
-    // reset clears every list filter back to "all".
+    // Filter popover: the active count drives the trigger badge; reset clears every list filter
     const activeFilterCount =
         (statusFilter ? 1 : 0) + (catFilter ? 1 : 0) + (priFilter ? 1 : 0) + (slaFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
     const resetFilters = () => list.setParams({ status: null, category: null, priority: null, sla: null, sort: null, page: null });
@@ -410,9 +392,7 @@ export default function TicketsPage() {
                 </span>
             ),
         },
-        // Priority and the SLA clocks are the desk's own view of a case: one orders the queue,
-        // the other measures the team against its targets. A requester chose neither and can act
-        // on neither, and the API leaves both out for them too (TicketResource).
+        // Priority and SLA are desk-only columns; the API leaves both out for requesters too (TicketResource)
         ...(canTake
             ? [
                   {
@@ -749,8 +729,7 @@ export default function TicketsPage() {
             </Card>
 
             <CreateTicketDrawer open={adding} onClose={closeCreate} />
-            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
-                render and said nothing. This says it instead. */}
+            {/* A dead ?view= or ?edit= link says so here; the drawers render nothing for a null record */}
             <RecordMissingDialog open={detailMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <TicketDetailDrawer
                 ticket={detail ?? null}

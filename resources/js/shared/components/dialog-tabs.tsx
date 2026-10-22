@@ -13,11 +13,7 @@ export interface DialogTab<T extends string> {
     count?: number | null;
     /** Green dot in the count pill: something on this tab waits for the reader. */
     dot?: boolean;
-    /**
-     * Optional leading icon. A bar whose tabs hold different kinds of thing reads faster with
-     * one; a bar whose tabs are all the same kind (three sets of fields, say) reads slower,
-     * because an icon that cannot distinguish anything is decoration. Opt in per bar.
-     */
+    /** Optional leading icon; opt in only for a bar whose tabs hold different kinds of thing. */
     icon?: LucideIcon;
     /** Refresh mark of the tab's data (useRefreshMark); any tab setting it reserves room on every tab. */
     refresh?: RefreshMark;
@@ -26,10 +22,7 @@ export interface DialogTab<T extends string> {
 /** The DOM id DialogTabs gives a tab, for a panel's `aria-labelledby`. */
 export const dialogTabId = (panelId: string, id: string) => `${panelId}-tab-${id}`;
 
-/**
- * Underline tab bar shared by the focus dialogs (Asset / Contract / Stock / Ticket / Employee view).
- * A real tablist (arrow keys, Home, End) that scrolls sideways when a tablet runs out of width.
- */
+/** Underline tab bar of the focus dialogs; a real tablist (arrows, Home, End) that scrolls sideways on a tablet. */
 export function DialogTabs<T extends string>({
     tabs,
     active,

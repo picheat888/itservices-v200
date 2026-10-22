@@ -23,8 +23,7 @@ const WAREHOUSES = ['warehouses'] as const;
 const UNITS = ['units'] as const;
 const WARRANTY_TYPES = ['warranty-types'] as const;
 const WRITEOFF_REASONS = ['writeoff-reasons'] as const;
-// Distinct from the request module's ['request-options'] — that key caches the
-// New Request form's whole options payload, this one the admin list.
+// Admin list; must stay distinct from the request module's ['request-options'] (New Request form payload)
 const REQUEST_OPTION_MASTER = ['request-option-master'] as const;
 
 export const useBrands = (opts: LookupOptions = {}) => useQuery({ queryKey: BRANDS, queryFn: brandApi.list, ...FRESH_LIST, ...opts });
@@ -41,10 +40,7 @@ export const useRequestOptionLists = () => useQuery({ queryKey: REQUEST_OPTION_M
 
 type RequestOptionCache = { lists: RequestOptionList[]; options: RequestOption[] };
 
-/**
- * Rebuild the cached options with one list in a new order, leaving every other
- * list's rows exactly where they were.
- */
+/** Re-order one list in the cached options, leaving every other list's rows in place. */
 function applyOrder(options: RequestOption[], order: RequestOptionOrder): RequestOption[] {
     const rank = new Map(order.ids.map((id, i) => [id, i]));
     const inList = (o: RequestOption) => o.request_type === order.request_type && o.field_key === order.field_key;
@@ -54,10 +50,7 @@ function applyOrder(options: RequestOption[], order: RequestOptionOrder): Reques
     return options.map((o) => (inList(o) ? moved[next++] : o));
 }
 
-/**
- * Editing a choice list changes what the New Request form offers, so the
- * request module's cached form options are invalidated alongside.
- */
+/** Choice-list writes also invalidate the request module's cached New Request form options. */
 export function useRequestOptionMutations() {
     const qc = useQueryClient();
     const inv = () => {
@@ -74,8 +67,7 @@ export function useRequestOptionMutations() {
         remove: useMutation({ mutationFn: (id: number) => requestOptionApi.remove(id), onSuccess: inv }),
         reorder: useMutation({
             mutationFn: (p: RequestOptionOrder) => requestOptionApi.reorder(p),
-            // Keep the dropped row where it was dropped: paint the new order into
-            // the cache immediately instead of letting it spring back and settle.
+            // Paint the new order at once so the dropped row doesn't spring back
             onMutate: (p) => {
                 qc.setQueryData<RequestOptionCache>(REQUEST_OPTION_MASTER, (prev) =>
                     prev ? { ...prev, options: applyOrder(prev.options, p) } : prev,

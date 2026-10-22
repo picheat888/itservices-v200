@@ -38,12 +38,7 @@ const MAX_FILES = 10;
 /** Allowed extensions — mirrors the API's mimes rule. */
 const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
 
-/**
- * Correct a ticket's descriptive fields (subject / description / category / callback
- * phone) and manage its attachments in the same centered focus dialog as "Open Ticket".
- * Stacks over the detail drawer and bounces back to it on save/close. Workflow fields
- * (priority / status / assignee) are not editable here.
- */
+/** Edit a ticket's descriptive fields and attachments over the detail drawer; workflow fields are not editable here. */
 export function EditTicketDrawer({
     ticket,
     fresh,
@@ -75,18 +70,15 @@ export function EditTicketDrawer({
     const formError = useFormError();
     const clearFormError = formError.clear;
 
-    // Attachments: already-saved files (with pending removals) + newly picked files.
-    // Both are applied on Save (upload new, delete removed).
+    // Attachments: saved files (with pending removals) + new picks, both applied on Save
     const [removedIds, setRemovedIds] = useState<number[]>([]);
     const [pending, setPending] = useState<File[]>([]);
-    // How many of the new files (from the top) a failed save already put on the ticket —
-    // Save again sends only the rest.
+    // New files (from the top) a failed save already put on the ticket; Save again sends only the rest
     const [savedFiles, setSavedFiles] = useState(0);
     const [progress, setProgress] = useState<Record<number, number>>({});
     // Count of removed attachments already deleted during save (delete has no byte progress).
     const [deleted, setDeleted] = useState(0);
-    // Owns the whole save lifecycle (incl. a brief 100% hold) so the progress bar stays
-    // visible after the mutations' isPending flips back to false.
+    // Owns the save lifecycle (incl. the 100% hold) so the bar outlives the mutations' isPending
     const [saving, setSaving] = useState(false);
 
     // Retain a "shown" copy so the header doesn't blank out during the Radix exit animation.
@@ -119,9 +111,7 @@ export function EditTicketDrawer({
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
     const totalFiles = keptExisting.length + pending.length;
 
-    // The cap counts the files already saved, so only the free slots are offered.
-    // Files mirrored from the service request are left out of the count, and the
-    // server counts them the same way — they are the request's, not this case's.
+    // Only free slots are offered; files mirrored from the service request don't count, as on the server
     const ownExisting = keptExisting.filter((a) => !a.from_request).length;
     const addFiles = (list: FileList | File[]) => setPending((prev) => mergeFiles(prev, list, ACCEPT_EXT, MAX_FILES - ownExisting));
 
@@ -147,10 +137,7 @@ export function EditTicketDrawer({
                 id: ticket.id,
                 payload: { subject: subject.trim(), description: description.trim(), category, callback_phone: phone.trim() },
             });
-            // Removals first: the server caps a case at MAX_FILES, so swapping files on a full
-            // ticket has to free the slots before the new ones arrive — uploading first was
-            // refused as too_many_files. A file removed here was removed on purpose, so an
-            // upload failing afterwards still leaves the case as the reader asked.
+            // Removals first: on a full ticket the server refuses uploads (too_many_files) until slots are freed
             for (const attachmentId of removedIds) {
                 await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
                 removedNow.push(attachmentId);
@@ -172,9 +159,7 @@ export function EditTicketDrawer({
                 await new Promise((resolve) => setTimeout(resolve, 450));
             }
         } catch (err: unknown) {
-            // The global handler covers only dropped connections and server faults; a refusal
-            // is this dialog's to explain. Whatever did get saved is kept from being sent twice
-            // (a second removal of the same file would be refused as missing).
+            // Explain the refusal here; what did save is never sent twice (a repeat removal is refused as missing)
             setSavedFiles(saved);
             setExisting((prev) => prev.filter((a) => !removedNow.includes(a.id)));
             setRemovedIds((prev) => prev.filter((id) => !removedNow.includes(id)));
@@ -192,8 +177,7 @@ export function EditTicketDrawer({
     };
 
     const uploading = uploadAttachments.isPending;
-    // One overall bar for the whole save: each uploaded file contributes its byte fraction,
-    // each deleted file counts as one done step (delete has no byte-level progress).
+    // One bar for the whole save: uploads add their byte fraction, each delete counts as one step
     const totalOps = pending.length + removedIds.length;
     const overallPct = totalOps ? Math.round(((Object.values(progress).reduce((a, b) => a + b, 0) / 100 + deleted) / totalOps) * 100) : 0;
     const isDirty =
@@ -322,8 +306,7 @@ export function EditTicketDrawer({
                                             name={a.name}
                                             size={a.size}
                                             mime={a.mime}
-                                            // A file mirrored from the service request has no ✕: it belongs to
-                                            // the request, shares its bytes, and the endpoint refuses the delete.
+                                            // No ✕ for a file mirrored from the service request; the endpoint refuses the delete
                                             onRemove={saving || a.from_request ? undefined : () => setRemovedIds((prev) => [...prev, a.id])}
                                         />
                                     ))}

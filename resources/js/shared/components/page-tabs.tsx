@@ -10,10 +10,7 @@ export interface PageTab<T extends string> {
     label: string;
     /** Optional count pill after the label — hidden when null/0. */
     count?: number | null;
-    /**
-     * What the count means, which sets its colour: `alert` = work waiting on somebody (red),
-     * `warn` = something to look at (amber), `muted` = a plain total (grey, the default).
-     */
+    /** Count colour: `alert` = work waiting on somebody (red), `warn` = something to look at (amber), `muted` = a plain total (grey, default). */
     tone?: 'alert' | 'warn' | 'muted';
     /** Tooltip on the count pill. */
     countTitle?: string;
@@ -27,12 +24,7 @@ const TONES: Record<NonNullable<PageTab<string>['tone']>, string> = {
     muted: 'bg-accent text-foreground/65 dark:text-muted-foreground',
 };
 
-/**
- * The tab bar at the top of every Workspace module page (Tickets, Requests, Employees, Assets,
- * Contracts, Stock, Access). One look for all of them, and the same one the focus dialogs use
- * (DialogTabs): the active tab is brand-coloured with an underline inset by the same amount
- * on every tab, so a short label and a long one read as the same kind of control.
- */
+/** Tab bar of every Workspace module page, in the same look as DialogTabs (brand active tab, same-inset underline). */
 export function PageTabs<T extends string>({
     tabs,
     active,
@@ -46,9 +38,7 @@ export function PageTabs<T extends string>({
 }) {
     const fmtN = useNumberFormat();
     const reserveMark = tabs.some((tb) => tb.refresh !== undefined);
-    // One row that scrolls sideways when it runs out of room (a tablet in portrait), rather
-    // than wrapping into a second row that reads as a second set of tabs. The active tab is
-    // kept in view, so a deep link to the last tab doesn't open on a tab you can't see.
+    // One row that scrolls sideways instead of wrapping; the active tab is kept in view
     const listRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const tab = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');

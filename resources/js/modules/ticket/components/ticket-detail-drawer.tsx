@@ -37,17 +37,7 @@ import type { ResolveMode } from './resolve-ticket-modal';
 import { ticketActionFlags } from './ticket-actions';
 import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
 
-/**
- * One-line label/value row for the rail's compact sections (SLA, dates).
- *
- * `wrap` is for the one value that is a sentence rather than a timestamp — truncating the name
- * of the rule that set a deadline defeats the point of printing it.
- */
-/**
- * Bar colour per SLA state, mirroring the badge's tones (see SLA_TONE in ticket-meta).
- * Kept beside the bar rather than exported from there because the badge paints a chip and this
- * paints a fill — same meaning, different property.
- */
+/** Bar colour per SLA state, matching the badge's SLA_TONE in ticket-meta. */
 const SLA_BAR_TONE: Record<NonNullable<Ticket['sla']>['state'], string> = {
     on_track: 'bg-emerald-500',
     near_due: 'bg-amber-500',
@@ -56,6 +46,7 @@ const SLA_BAR_TONE: Record<NonNullable<Ticket['sla']>['state'], string> = {
     missed: 'bg-destructive',
 };
 
+/** One-line label/value row for the rail's SLA and date sections; `wrap` lets a sentence value wrap instead of truncating. */
 function RailRow({
     label,
     value,
@@ -160,14 +151,7 @@ function SpineStep({
     );
 }
 
-/**
- * How much time the case gets, said in the unit it was set in.
- *
- * A repair KPI is written as "30 days" and stored as 720 hours; printing the stored number
- * asks the reader to divide before they can check it against the agreement they signed.
- * Working-hours targets stay in hours — a working day is eight of them, so a day count there
- * would be an approximation standing where an exact figure belongs.
- */
+/** The case's SLA target in the unit it was set in: whole calendar days as days, working hours stay hours. */
 function slaTargetAmount(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
     const lang = useUiStore.getState().lang;
     if (target.clock === 'calendar') {
@@ -179,19 +163,11 @@ function slaTargetAmount(target: NonNullable<Ticket['sla_target']>, t: (key: str
     return t('ticket_sla_target_hours').replace('{n}', formatNumber(target.hours, lang));
 }
 
-/**
- * Which rule handed down that number — the line that stops a long deadline on an urgent case
- * reading as a bug.
- *
- * A case whose target came from no rule at all is the one place nobody chose the number:
- * it is named as the default rather than dressed up as a decision.
- */
+/** Which rule set the SLA target; a case no rule matched is named as the default. */
 function slaTargetSource(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
-    // A repair KPI winning the target is its own reason, not the "nobody chose this" default —
-    // without this branch a case classified as repair read as if nothing had been decided.
+    // A repair KPI that won the target is its own reason, not the default
     if (target.scope === 'work_class' && target.value) {
-        // Named as the work it is, not just who does it: "External technician" on a row
-        // labelled "Rule" reads as the person the case was given to, which is a different fact.
+        // Named as the work, not who does it: "External technician" alone reads as the assignee
         const meta = TICKET_WORK_CLASS_META[target.value as TicketWorkClass];
         return meta ? t('ticket_sla_target_repair').replace('{c}', t(meta.key)) : target.value;
     }
@@ -277,12 +253,7 @@ function progressEntries(ticket: Ticket, t: (key: string) => string, lang: strin
     return entries;
 }
 
-/**
- * Icon + dot tone per timeline row, and the body tint where the row deserves one.
- *
- * The closing rows wear the colours their status badge and the Details pane already use, so the
- * same outcome does not change colour depending on which tab you read it in.
- */
+/** Icon, dot tone and body tint per timeline row; closing rows wear their status badge colours. */
 const PROGRESS_META: Record<ProgressKind, { Icon: typeof Check; dot: string; body?: string }> = {
     taken: { Icon: Zap, dot: 'bg-brand/10 text-brand' },
     note: { Icon: MessageSquarePlus, dot: 'bg-muted text-muted-foreground' },
@@ -408,11 +379,7 @@ export function TicketDetailDrawer({
                             <div className="flex flex-wrap items-center justify-end gap-2">
                                 <TicketStatusBadge status={view.status} t={t} />
                                 {view.priority && <TicketPriorityBadge priority={view.priority} t={t} />}
-                                {/* A case out with a technician is a state of the case, like the two
-                                    beside it — not an aside to the button that set it, which is where
-                                    it used to sit, wedged into a row of actions. Named for who has the
-                                    work rather than "Repair": the difference between an in-house bench
-                                    and a vendor is the difference between days and weeks. */}
+                                {/* Work class is a state of the case, named for who has the work */}
                                 {view.work_class && view.work_class !== 'standard' && (
                                     <StatusBadge tone="gray" dot={false}>
                                         <Wrench className="h-3 w-3" />
@@ -445,9 +412,7 @@ export function TicketDetailDrawer({
                                 active={tab}
                                 onChange={setTab}
                                 tabs={[
-                                    // Three different kinds of thing — what was reported, what has
-                                    // happened since, what came attached — so each gets a mark that
-                                    // can be recognised before the word is read.
+                                    // Each tab holds a different kind of thing, so each gets an icon
                                     { id: 'details', label: t('ticket_tab_details'), icon: CircleAlert, refresh: marks.details },
                                     {
                                         id: 'progress',
@@ -462,19 +427,12 @@ export function TicketDetailDrawer({
 
                             {/* Only the pane content scrolls — the tab bar above stays put. */}
                             <div className="min-h-0 flex-1 px-6 py-4 sm:overflow-y-auto">
-                                {/* Details answers "what was reported"; Progress answers "what happened
-                                    since". The take note and the resolution belong to the second
-                                    question and live in that timeline — printing them here as well
-                                    made two tabs tell one story, and the subject was already the
-                                    dialog's own title two lines above. */}
+                                {/* Details = what was reported; the take note and resolution live in Progress */}
                                 {tab === 'details' && (
                                     <div className="space-y-5">
                                         <section>
                                             <SectionLabel>{t('ticket_description')}</SectionLabel>
-                                            {/* whitespace-pre-wrap: an auto-opened case writes one fact per
-                                                line (type, requester, each typed field, then the reason),
-                                                and without this every break collapsed into one paragraph —
-                                                which is how a structured summary came out as a wall of text. */}
+                                            {/* whitespace-pre-wrap: an auto-opened case writes one fact per line */}
                                             <p className="bg-muted/50 rounded-md px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
                                                 {view.description}
                                             </p>
@@ -520,8 +478,7 @@ export function TicketDetailDrawer({
                                                     const last = i === progress.length - 1;
                                                     return (
                                                         <li key={entry.key} className="flex gap-3">
-                                                            {/* Dot + connector: the same spine the rail uses, so the two
-                                                                timelines in this dialog read as one language. */}
+                                                            {/* Dot + connector, the same spine the rail uses */}
                                                             <div className="flex flex-col items-center">
                                                                 <span
                                                                     className={cn(
@@ -538,8 +495,7 @@ export function TicketDetailDrawer({
                                                                     <span className="text-sm leading-tight font-semibold">{entry.title}</span>
                                                                     <span className="text-muted-foreground text-[11px]">{fmtWhen(entry.when)}</span>
                                                                 </div>
-                                                                {/* Taking a case without leaving a note is allowed, so the
-                                                                    row stands on its own headline when there is no body. */}
+                                                                {/* A row without a body (a take with no note) stands on its headline */}
                                                                 {entry.body && (
                                                                     <p
                                                                         className={cn(
@@ -712,10 +668,7 @@ export function TicketDetailDrawer({
                                 )}
                             </div>
 
-                            {/* For the person waiting, not the desk: one date answering "when will
-                                this be done", with none of the target-vs-actual scoring below it.
-                                Hidden from anyone who gets the SLA block, which already carries the
-                                same instant under a name that means something to them. */}
+                            {/* Expected date for the requester; hidden when the SLA block shows the same instant */}
                             {!view.sla && view.status !== 'completed' && view.status !== 'canceled' && (
                                 <>
                                     <div className="bg-border/60 my-3 h-px" />
@@ -738,13 +691,7 @@ export function TicketDetailDrawer({
                                         <SectionLabel>{t('ticket_sla')}</SectionLabel>
                                         <TicketSlaBadge ticket={view} t={t} />
                                     </div>
-                                    {/* One of these two clocks is running and the other has
-                                        already settled — response until somebody picks the case
-                                        up, resolution from then on. They used to sit as
-                                        identical rows, so a deadline that was history read as
-                                        something still to hit, and the badge above named a
-                                        number with no row to point at. The live one carries the
-                                        bar; the settled one steps back. */}
+                                    {/* Live clock (response until taken, then resolution) carries the bar; the settled one steps back */}
                                     <div className="space-y-2 pl-1">
                                         {(() => {
                                             const liveIsResponse = view.status === 'open' && !view.responded_at;
@@ -752,14 +699,9 @@ export function TicketDetailDrawer({
                                             const pastLabel = liveIsResponse ? 'ticket_sla_resolve_due' : 'ticket_sla_response_due';
                                             const liveDue = liveIsResponse ? view.sla.response_due_at : view.sla.resolve_due_at;
                                             const pastDue = liveIsResponse ? view.sla.resolve_due_at : view.sla.response_due_at;
-                                            // A closed case has a verdict, not a countdown — the badge
-                                            // already says met or missed, and a full bar adds nothing.
+                                            // A closed case has a verdict (the badge), not a countdown bar
                                             const running = view.sla.state !== 'met' && view.sla.state !== 'missed';
-                                            // Nobody has taken it, so the resolution clock has not started
-                                            // (see TicketSla::resolveStart). The date the server carries is a
-                                            // placeholder that keeps the queue sortable, not a promise — and
-                                            // it moves the moment somebody picks the case up, so printing it
-                                            // as a deadline hands the reader a date that is about to be wrong.
+                                            // Untaken: resolve_due_at is only a sort placeholder (TicketSla::resolveStart), never print it
                                             const resolveNotStarted = !view.responded_at;
 
                                             return (
@@ -783,13 +725,7 @@ export function TicketDetailDrawer({
                                                 </>
                                             );
                                         })()}
-                                        {/* Where the resolution target came from. Without this, a three-day
-                                            deadline on a case marked critical reads as a bug.
-
-                                            Held back until somebody takes the case: until then there is no
-                                            deadline on screen for it to explain, and the number itself is not
-                                            settled — the priority that picks it is chosen at the moment of
-                                            taking. A figure shown next to nothing reads as a commitment. */}
+                                        {/* Where the resolution target came from; only once taken, as the priority that picks it is set at take */}
                                         {view.responded_at && view.sla_target && (
                                             <>
                                                 <RailRow label={t('ticket_sla_target_from')} value={slaTargetAmount(view.sla_target, t)} wrap />
@@ -799,21 +735,10 @@ export function TicketDetailDrawer({
                                     </div>
                                 </>
                             )}
-
-                            {/* No "Other" block: it held the creation time, which the first step of
-                                the spine above already gives, and updated_at, which moves whenever
-                                anything at all is touched and tells a reader nothing they can act on. */}
                         </aside>
                     </div>
 
-                    {/* ---- footer: role-/status-aware actions ----
-
-                         The bar is always there, so the dialog ends the same way for everybody.
-                         A requester gets only what is theirs to do — edit their own case while
-                         it is still open, and close the dialog — with none of the desk's work
-                         on it. Close only appears when the desk's buttons do not: putting it
-                         beside "Close the case" would be two buttons whose labels agree and
-                         whose consequences do not. */}
+                    {/* ---- footer: role-/status-aware actions; Close only when there are no desk actions ---- */}
                     <DialogFooterBar className="flex-wrap justify-start">
                         {canEdit && (
                             <Button variant="outline" onClick={() => onEdit(view)}>

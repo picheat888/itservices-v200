@@ -76,9 +76,6 @@ export function useTicketAssetPicker(enabled: boolean) {
     return { assets: query.data ?? [], pickerProps };
 }
 
-// The Tickets badge ("needs my attention") now comes from the combined
-// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
-
 /** Every write on a case; all but `create` refresh on failure too, since a refusal usually means the case moved on. */
 export function useTicketMutations() {
     const qc = useQueryClient();
