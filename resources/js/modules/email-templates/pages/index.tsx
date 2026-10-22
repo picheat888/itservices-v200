@@ -613,6 +613,8 @@ export default function EmailTemplatesPage() {
     const templateIds = useMemo(() => templates.map((tp) => String(tp.id)), [templates]);
     const [dialogId, setDialogId] = useDialogParam(templateIds);
     const editing = tab === 'email' && dialogId !== null ? (templates.find((tp) => String(tp.id) === dialogId) ?? null) : null;
+    // The editor reads its template from this list, so opening it asks for the list again
+    useRefetchOnOpen(editing !== null, templatesQuery);
     const setEditing = (tp: EmailTemplate | null) => setDialogId(tp ? String(tp.id) : null);
 
     // Module prefixes from the keys ("ticket" from "ticket.created") with their counts.

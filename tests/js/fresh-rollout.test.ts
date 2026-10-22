@@ -48,8 +48,8 @@ const SITES: Site[] = [
     { file: 'modules/settings/hooks/use-list-dialog.ts', openRefetch: 1 },
     { file: 'modules/email-templates/hooks/use-email-templates.ts', freshView: 3 },
     { file: 'modules/notification/hooks/use-notifications.ts', freshView: 1 },
-    { file: 'modules/email-templates/pages/index.tsx', marks: 1, openRefetch: 1, rebase: 1 },
-    { file: 'modules/notification/components/notification-settings-pane.tsx', rebase: 1 },
+    { file: 'modules/email-templates/pages/index.tsx', marks: 1, openRefetch: 2, rebase: 1 },
+    { file: 'modules/notification/components/notification-settings-pane.tsx', rebase: 1, openRefetch: 1 },
     { file: 'modules/workflow/hooks/use-workflows.ts', freshView: 1 },
     { file: 'modules/workflow/pages/index.tsx', openRefetch: 1 },
     { file: 'modules/workflow/components/workflow-editor-dialog.tsx', freshList: 2, refresh: 3, openRefetch: 1, rebase: 1 },
@@ -294,4 +294,17 @@ test('plan 6 access files carry no long history comments', () => {
     ]) {
         assert.ok(!/without this/i.test(read(file)), file);
     }
+});
+
+test('settings forms that stay open after a save reseed from the save response', () => {
+    const sla = read('modules/settings/components/tickets-sla-tab.tsx');
+    assert.ok(sla.includes('setSla(slaFrom('), 'SLA reseeds its form from the response');
+    assert.ok(sla.includes('setBase(slaFrom('), 'SLA reseeds its base from the response');
+    const page = read('modules/settings/pages/index.tsx');
+    assert.ok(page.includes('setForm(mailForm(d))') && page.includes('setBase(mailForm(d))'), 'Email reseeds from the response');
+});
+
+test('plan 7 touched files carry no stale or long comments', () => {
+    assert.ok(!read('modules/settings/components/model-modal.tsx').includes('Radix Select rejects'));
+    assert.ok(!read('modules/notification/hooks/use-notifications.ts').includes('kept cheap and long-lived: an administrator'));
 });

@@ -109,13 +109,7 @@ export function useDismissNotification() {
     });
 }
 
-/* ------------------------------------------------------------------------------------
- * Bell CONFIGURATION hooks — the Settings page, and the wording every tray reads.
- *
- * Same file as the tray hooks above on purpose: one module, one hooks file. The two
- * halves share a subject (what an alert says vs. which alerts you have) and a cache —
- * rewording a bell has to invalidate the wording every open tray is holding.
- * ---------------------------------------------------------------------------------- */
+// Bell configuration: the Settings page and the wording every tray reads (rewording invalidates the trays)
 
 const BELLS = ['notification-templates'] as const;
 const BELL_MESSAGES = ['notification-messages'] as const;
@@ -124,11 +118,7 @@ const BELL_MESSAGES = ['notification-messages'] as const;
 export const useNotificationTemplates = (enabled = true) =>
     useQuery({ queryKey: BELLS, queryFn: notificationTemplateApi.list, enabled, ...FRESH_VIEW });
 
-/**
- * The wording overrides, for rendering the tray. Fetched by every signed-in user, so it is
- * kept cheap and long-lived: an administrator rewording a bell is rare, and the tray falling
- * back to the bundled text in the meantime says the right thing anyway.
- */
+/** The wording overrides the tray renders; every user loads it, so it keeps a long cache. */
 export const useNotificationMessages = () =>
     useQuery({
         queryKey: BELL_MESSAGES,

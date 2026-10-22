@@ -19,7 +19,7 @@ import { Boxes } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssetModelMutations, useBrands } from '../hooks/use-master-data';
 
-// Radix Select rejects "" as an item value, so use a sentinel for "no brand".
+// "No brand" is a real option in the list, so it has its own value
 const NO_BRAND = '__none__';
 
 /** ModelModal — add or edit an asset model with an optional brand; Save shows a spinner, then a tick, then the dialog closes. */

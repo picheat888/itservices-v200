@@ -20,7 +20,6 @@ import { Boxes } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useCategoryMutations } from '../hooks/use-master-data';
 
-/** CategoryModal — add or edit a category; Save shows a spinner, then a tick, then the dialog closes. */
 type CategoryForm = { name: string; nameTh: string; icon: string | null; description: string };
 const EMPTY_CATEGORY: CategoryForm = { name: '', nameTh: '', icon: null, description: '' };
 // The form's values for a category (blank for a new one)
@@ -31,6 +30,7 @@ const categoryForm = (c?: Category | null): CategoryForm => ({
     description: c?.description ?? '',
 });
 
+/** CategoryModal — add or edit a category; Save shows a spinner, then a tick, then the dialog closes. */
 export function CategoryModal({ open, category, onClose }: { open: boolean; category?: Category | null; onClose: () => void }) {
     const t = useT();
     // The header keeps the record being edited while the dialog closes

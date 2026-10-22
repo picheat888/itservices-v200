@@ -15,6 +15,7 @@ import { TimeInput } from '@/shared/ui/time-input';
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    type SettingsData,
     type TicketSlaClock,
     type TicketSlaHours,
     type TicketSlaRequestTarget,
@@ -104,6 +105,20 @@ function expandRequestRows(stored: TicketSlaRequestTarget[], fallback: { resolve
     return REQUEST_TYPES.map((type) => byType.get(type) ?? { type, resolve: fallback.resolve, clock: fallback.clock, enabled: false });
 }
 
+/** The form's values from the stored settings; work rows take ids by position so a refresh compares equal. */
+function slaFrom(data: SettingsData): SlaForm {
+    const stored = data.ticket_sla;
+    const fallback = { resolve: stored?.medium?.resolve ?? 24, clock: stored?.medium?.clock ?? ('business' as TicketSlaClock) };
+    return {
+        draft: stored ?? {},
+        reqTargets: data.ticket_sla_request ? expandRequestRows(data.ticket_sla_request, fallback) : [],
+        workTargets: (data.ticket_sla_work_class ?? []).map((row, i) => ({ ...row, uid: i + 1 })),
+        respTarget: data.ticket_sla_response ?? EMPTY_SLA.respTarget,
+        goal: data.ticket_sla_goal ?? EMPTY_SLA.goal,
+        hours: data.ticket_sla_hours ?? EMPTY_SLA.hours,
+    };
+}
+
 const requestKey = (r: TicketSlaRequestTarget) => `${r.type}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`;
 const workKey = (r: Pick<TicketSlaWorkClassTarget, 'category' | 'work_class'>) => `${r.category}:${r.work_class}`;
 const workSignature = (r: TicketSlaWorkClassTarget) => `${workKey(r)}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`;
@@ -114,17 +129,6 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
     const t = useT();
     const { data } = useSettings();
     const update = useUpdateTicketSla();
-    const stored = data?.ticket_sla;
-    const storedRequest = data?.ticket_sla_request;
-    const storedWork = data?.ticket_sla_work_class;
-    const storedResponse = data?.ticket_sla_response;
-    const storedGoal = data?.ticket_sla_goal;
-    const storedHours = data?.ticket_sla_hours;
-    // Unconfigured request types show the saved medium target, never the draft one.
-    const reqFallback = useMemo(
-        () => ({ resolve: stored?.medium?.resolve ?? 24, clock: stored?.medium?.clock ?? ('business' as TicketSlaClock) }),
-        [stored?.medium?.resolve, stored?.medium?.clock],
-    );
     // Stored work rows take ids by position; rows added here count up from far above them
     const nextUid = useRef(10_000);
 
@@ -143,16 +147,7 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
     const setHours = piece('hours');
     // What the form opened with, moved along by refreshes of the stored settings
     const [base, setBase] = useState<SlaForm>(EMPTY_SLA);
-    const fresh: SlaForm | null = data
-        ? {
-              draft: stored ?? {},
-              reqTargets: storedRequest ? expandRequestRows(storedRequest, reqFallback) : [],
-              workTargets: (storedWork ?? []).map((row, i) => ({ ...row, uid: i + 1 })),
-              respTarget: storedResponse ?? EMPTY_SLA.respTarget,
-              goal: storedGoal ?? EMPTY_SLA.goal,
-              hours: storedHours ?? EMPTY_SLA.hours,
-          }
-        : null;
+    const fresh: SlaForm | null = data ? slaFrom(data) : null;
     useSeedOnce(fresh ? 'sla' : null, () => {
         if (!fresh) return;
         setSla(fresh);
@@ -291,7 +286,10 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                 ticket_sla_hours: hours,
             },
             {
-                onSuccess: () => {
+                onSuccess: (response) => {
+                    // The server orders work rows and fills request rows, so the form restarts from what it stored
+                    setSla(slaFrom(response));
+                    setBase(slaFrom(response));
                     setSaved(true);
                     setSubmitted(false);
                 },

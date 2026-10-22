@@ -18,6 +18,7 @@ import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { relativeTime } from '@/shared/lib/datetime';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
@@ -382,7 +383,8 @@ export function NotificationSettingsPane() {
     const t = useT();
     const fmtN = useNumberFormat();
     const rights = useBellRights();
-    const { data, isLoading, isError, refetch } = useNotificationTemplates();
+    const bellsQuery = useNotificationTemplates();
+    const { data, isLoading, isError, refetch } = bellsQuery;
     const { update } = useNotificationTemplateMutations();
     // Module chip, search, page and rows-per-page live in the URL
     const list = useListParams();
@@ -397,6 +399,8 @@ export function NotificationSettingsPane() {
     const [editParam, setEditParam] = useDialogParam(ids);
     const editId = editParam === null ? null : Number(editParam);
     const live = editId === null ? null : (all.find((n) => n.id === editId) ?? null);
+    // The edit dialog reads its bell from this list, so opening it asks for the list again
+    useRefetchOnOpen(live !== null, bellsQuery);
     const { record: editing } = useRecordView(editId, live);
     const openEditor = (n: NotificationTemplate) => setEditParam(String(n.id));
 

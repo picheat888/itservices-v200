@@ -964,8 +964,9 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         mutationFn: (payload: MailSettingsPayload) => settingsApi.updateMail(payload),
         onSuccess: (d) => {
             qc.setQueryData(MAIL_KEY, d);
-            // The stored password stays hidden, so the typed one is cleared once saved
-            setForm((f) => ({ ...f, password: '' }));
+            // The server trims what it stores and never sends the password back, so the form restarts from its reply
+            setForm(mailForm(d));
+            setBase(mailForm(d));
             setSaved(true);
         },
         onError: failed,
