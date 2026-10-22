@@ -193,6 +193,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         ->middleware('permission:settings.system')->name('api.settings.display');
     Route::put('settings/datetime', [SettingsController::class, 'updateDateTime'])
         ->middleware('permission:settings.system')->name('api.settings.datetime');
+    Route::put('settings/sound', [SettingsController::class, 'updateSound'])
+        ->middleware('permission:settings.sound')->name('api.settings.sound');
     Route::put('settings/assets', [SettingsController::class, 'updateAssets'])
         ->middleware('permission:settings.assets')->name('api.settings.assets');
     Route::put('settings/sla', [SettingsController::class, 'updateSla'])

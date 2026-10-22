@@ -176,6 +176,7 @@ const SPECS: Record<string, CountSpec> = {
             'settings.system',
             'settings.masterdata',
             'settings.email',
+            'settings.sound',
             'settings.sla',
             'settings.requestdata',
             'settings.assets',
@@ -274,7 +275,7 @@ test('coming-soon keys keep their tag and stay out of live counts', () => {
     assert.deepEqual([superHr?.comingSoon, superHr?.on, superHr?.locked], [true, false, true]);
 
     const settings = card('settings');
-    assert.deepEqual(countGranted(cardCountSpec(settings), countingHas(settings, all, isLive)), { on: 8, total: 9 });
+    assert.deepEqual(countGranted(cardCountSpec(settings), countingHas(settings, all, isLive)), { on: 9, total: 10 });
     const sla = cardRows(settings, all, false, isLive).cells[0].rows.find((r) => r.key === 'settings.sla');
     assert.equal(sla?.comingSoon, true);
 

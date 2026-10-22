@@ -21,6 +21,7 @@ use App\Services\Email\EmailNotificationService;
 use App\Services\Employee\EmployeeService;
 use App\Services\Settings\LogRetentionService;
 use App\Support\DateDisplay;
+use App\Support\NotificationSounds;
 use App\Support\TicketSla;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -51,6 +52,9 @@ class SettingsController extends Controller
         'date_format' => 'dmy_slash',
         'date_era' => 'ce',
         'time_format' => '24',
+        // Notification sound - system-wide, signed-in only.
+        'notification_sound' => NotificationSounds::DEFAULT,
+        'notification_sound_enabled' => '1',
     ];
 
     /**
@@ -348,6 +352,21 @@ class SettingsController extends Controller
             AppSetting::put($key, (string) $value);
         }
         AuditLog::record('Updated date and time settings', implode(', ', array_keys($data)));
+
+        return $this->show();
+    }
+
+    /** Notification sound and its system switch (Settings -> Sound). Gated by route middleware permission:settings.sound. */
+    public function updateSound(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'sound' => ['required', Rule::in(NotificationSounds::KEYS)],
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        AppSetting::put('notification_sound', $data['sound']);
+        AppSetting::put('notification_sound_enabled', $data['enabled'] ? '1' : '0');
+        AuditLog::record('Updated notification sound', $data['sound'].($data['enabled'] ? ', on' : ', off'));
 
         return $this->show();
     }

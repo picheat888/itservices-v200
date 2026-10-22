@@ -162,6 +162,7 @@ const LIVE = new Set<string>([
     'settings.system',
     'settings.masterdata',
     'settings.email',
+    'settings.sound',
     'settings.sla',
     'settings.requestdata',
     'settings.assets',

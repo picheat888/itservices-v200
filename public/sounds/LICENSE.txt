@@ -1,0 +1,8 @@
+Notification sounds
+
+pluck.mp3, ping.mp3, double.mp3 and knock.mp3 come from pixabay.com and are used under the
+Pixabay Content License (free for commercial use, no attribution required).
+
+The other fifteen sounds (chime, ding, bell, pop, two_note, glass, marimba, bubble, blip,
+tri_tone, rise, fall, soft, click, harp) are synthesised in the browser by this project
+and released under CC0.

@@ -394,6 +394,7 @@ export const permission: Dict = {
     'perm_act_settings.system': 'System (branding & display)',
     'perm_act_settings.masterdata': 'Master Data',
     'perm_act_settings.email': 'Email (SMTP) settings',
+    'perm_act_settings.sound': 'Notification sound',
     'perm_act_settings.sla': 'Ticket & SLA',
     'perm_act_settings.requestdata': 'Request Data',
     'perm_act_settings.assets': 'Asset settings',

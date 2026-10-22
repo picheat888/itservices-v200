@@ -94,7 +94,7 @@ class Permissions
                 'tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access',
                 'export', 'schedule', 'schedule_manage',
             ],
-            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'requestdata', 'assets', 'security'],
+            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sound', 'sla', 'requestdata', 'assets', 'security'],
         ];
     }
 
@@ -203,7 +203,7 @@ class Permissions
                 'profile.edit', 'profile.return_assets',
                 'reports.access', 'reports.assets', 'reports.contracts', 'reports.employees', 'reports.export', 'reports.module', 'reports.requests', 'reports.schedule', 'reports.stock', 'reports.tickets',
                 'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
-                'settings.access', 'settings.assets', 'settings.company', 'settings.masterdata', 'settings.requestdata', 'settings.sla',
+                'settings.access', 'settings.assets', 'settings.company', 'settings.masterdata', 'settings.requestdata', 'settings.sla', 'settings.sound',
                 'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',
                 'system.manage_permissions', 'system.view_audit', 'system.view_logins',
                 'tickets.assign', 'tickets.create', 'tickets.edit_own', 'tickets.forward', 'tickets.jobs', 'tickets.level_cctv', 'tickets.level_hardware', 'tickets.level_network', 'tickets.level_other', 'tickets.level_software', 'tickets.level_telephone', 'tickets.module', 'tickets.my', 'tickets.resolve', 'tickets.set_work_class', 'tickets.view_all', 'tickets.view_dashboard',
