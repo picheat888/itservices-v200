@@ -5,7 +5,8 @@ import type { Lang } from '@/lang/types';
 import type { AppNotification, NotificationData, Translate } from '@/modules/notification';
 import { notificationMessage, notificationTarget, notificationTitle } from '@/modules/notification/lib/notification-text';
 import { formatNumber } from '@/shared/lib/number';
-import { isApplePush, nextStack, stackBody, stackTarget, type StackState } from './stack';
+import { isApplePush, nextStack, serialQueue, stackBody, stackTarget, type StackState } from './stack';
+import { isWindowSource, sanitizeWording, type Wording } from './wording';
 
 // Service worker globals (the project's TypeScript lib is DOM, not WebWorker)
 interface SwExtendableEvent extends Event {
@@ -19,6 +20,7 @@ interface SwNotificationEvent extends SwExtendableEvent {
 }
 interface SwMessageEvent extends SwExtendableEvent {
     readonly data: unknown;
+    readonly source: unknown;
 }
 interface SwWindowClient {
     readonly visibilityState: DocumentVisibilityState;
@@ -40,7 +42,6 @@ interface SwScope {
     addEventListener(type: 'message', listener: (event: SwMessageEvent) => void): void;
 }
 
-type Wording = Record<string, { en?: string; th?: string }>;
 type PushPayload = { v?: number; id?: string; lang?: string; data?: NotificationData; truncated?: boolean; test?: boolean };
 
 const sw = self as unknown as SwScope;
@@ -48,23 +49,22 @@ const TAG = 'itsd-bell';
 const BELL_TARGET = '/?bell=1';
 const WORDING_CACHE = 'itsd-sw';
 const WORDING_URL = '/__sw/wording';
+const inOrder = serialQueue();
 
 // Wording overrides (Cache Storage)
 async function readWording(): Promise<Wording> {
     try {
         const cache = await caches.open(WORDING_CACHE);
         const response = await cache.match(WORDING_URL);
-        const parsed: unknown = response ? await response.json() : null;
-        return parsed && typeof parsed === 'object' ? (parsed as Wording) : {};
+        return sanitizeWording(response ? await response.json() : null);
     } catch {
         return {};
     }
 }
 
 async function saveWording(data: unknown): Promise<void> {
-    if (!data || typeof data !== 'object') return;
     const cache = await caches.open(WORDING_CACHE);
-    await cache.put(WORDING_URL, new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } }));
+    await cache.put(WORDING_URL, new Response(JSON.stringify(sanitizeWording(data)), { headers: { 'Content-Type': 'application/json' } }));
 }
 
 // Payload and stack state
@@ -104,20 +104,31 @@ function bellText(payload: PushPayload | null, t: Translate, lang: Lang): { titl
 
 /** A visible page plays the sound itself, except on Safari, which revokes a push that showed nothing. */
 async function pageShowsIt(): Promise<boolean> {
-    const subscription = await sw.registration.pushManager.getSubscription();
-    if (subscription && isApplePush(subscription.endpoint)) return false;
-    const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    return windows.some((client) => client.visibilityState === 'visible');
+    try {
+        const subscription = await sw.registration.pushManager.getSubscription();
+        if (subscription && isApplePush(subscription.endpoint)) return false;
+        const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        return windows.some((client) => client.visibilityState === 'visible');
+    } catch {
+        return false;
+    }
 }
 
 async function onPush(event: SwPushEvent): Promise<void> {
     const payload = parsePayload(event);
-    if (await pageShowsIt()) return;
+    // A test is sent from the open Profile drawer, so it shows even with a page in view
+    if (!payload?.test && (await pageShowsIt())) return;
 
     const lang: Lang = payload?.lang === 'th' ? 'th' : 'en';
     const wording = await readWording();
     const t: Translate = (key) => wording[key]?.[lang] ?? translate(lang, key);
-    const { title, message, target } = bellText(payload, t, lang);
+    let text: { title: string; message: string; target: string };
+    try {
+        text = bellText(payload, t, lang);
+    } catch {
+        text = { title: translate(lang, 'notif_title'), message: '', target: BELL_TARGET };
+    }
+    const { title, message, target } = text;
 
     // A test push always shows on its own
     const existing = payload?.test ? [] : await sw.registration.getNotifications({ tag: TAG });
@@ -153,6 +164,7 @@ async function clearStack(): Promise<void> {
 }
 
 async function onMessage(event: SwMessageEvent): Promise<void> {
+    if (!isWindowSource(event.source)) return;
     const message = event.data as { type?: string; data?: unknown } | null;
     if (message?.type === 'wording') await saveWording(message.data);
     if (message?.type === 'clear') await clearStack();
@@ -163,6 +175,6 @@ sw.addEventListener('install', (event) => event.waitUntil(sw.skipWaiting()));
 sw.addEventListener('activate', (event) => event.waitUntil(sw.clients.claim()));
 
 // Events
-sw.addEventListener('push', (event) => event.waitUntil(onPush(event)));
+sw.addEventListener('push', (event) => event.waitUntil(inOrder(() => onPush(event))));
 sw.addEventListener('notificationclick', (event) => event.waitUntil(onClick(event)));
 sw.addEventListener('message', (event) => event.waitUntil(onMessage(event)));

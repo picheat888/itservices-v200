@@ -40,3 +40,14 @@ export function isApplePush(endpoint: string): boolean {
         return false;
     }
 }
+
+/** Runs tasks one after another, so each push reads the notification the previous one wrote; a failure does not block the next. */
+export function serialQueue(): <T>(task: () => Promise<T>) => Promise<T> {
+    let tail: Promise<unknown> = Promise.resolve();
+
+    return <T>(task: () => Promise<T>): Promise<T> => {
+        const result = tail.then(task);
+        tail = result.catch(() => undefined);
+        return result;
+    };
+}

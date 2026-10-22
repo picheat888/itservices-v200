@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { REQUEST_TYPE_LABEL_KEY } from '../../resources/js/shared/lib/request-title.ts';
 import { isBellKey } from '../../resources/js/sw/bell-keys.ts';
-import { isApplePush, nextStack, stackBody, stackTarget } from '../../resources/js/sw/stack.ts';
+import { isApplePush, nextStack, serialQueue, stackBody, stackTarget } from '../../resources/js/sw/stack.ts';
+import { isWindowSource, sanitizeWording } from '../../resources/js/sw/wording.ts';
 
 const more = (n: number) => `และแจ้งเตือนใหม่อีก ${n} รายการ`;
 
@@ -67,4 +68,47 @@ test('screen text is left out of the service worker', () => {
     assert.equal(isBellKey('access_title'), false);
     assert.equal(isBellKey('req_status_pending'), false);
     assert.equal(isBellKey('rep_tickets_overview_hint'), false);
+});
+
+test('pushes are handled one at a time, so the second reads what the first wrote', async () => {
+    const run = serialQueue();
+    let shown: number | null = null;
+    const handle = (delay: number) =>
+        run(async () => {
+            const prev = shown;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            shown = (prev ?? 0) + 1;
+            return shown;
+        });
+    assert.deepEqual(await Promise.all([handle(20), handle(0)]), [1, 2]);
+});
+
+test('a failed push does not block the next one', async () => {
+    const run = serialQueue();
+    const failed = run(() => Promise.reject(new Error('bad text')));
+    const next = run(async () => 'shown');
+    await assert.rejects(failed);
+    assert.equal(await next, 'shown');
+});
+
+test('stored wording keeps only string en/th values', () => {
+    assert.deepEqual(
+        sanitizeWording({
+            notif_ticket_new: { en: 'New', th: 'ใหม่' },
+            notif_ticket_assigned: { en: 'Yours', th: null },
+            notif_resigned: { en: 1, th: { x: 1 } },
+            notif_departure: 'flat string',
+        }),
+        { notif_ticket_new: { en: 'New', th: 'ใหม่' }, notif_ticket_assigned: { en: 'Yours' } },
+    );
+    assert.deepEqual(sanitizeWording(null), {});
+    assert.deepEqual(sanitizeWording(['x']), {});
+    assert.deepEqual(sanitizeWording('x'), {});
+});
+
+test('wording and clear are accepted only from app tabs', () => {
+    assert.equal(isWindowSource({ type: 'window', id: '1' }), true);
+    assert.equal(isWindowSource({ type: 'worker', id: '2' }), false);
+    assert.equal(isWindowSource(null), false);
+    assert.equal(isWindowSource({}), false);
 });
