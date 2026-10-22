@@ -667,6 +667,17 @@ class ContractApiTest extends TestCase
         $this->assertDatabaseHas('contracts', ['code' => 'CT-DEC-1', 'value' => 1234.56, 'total_value' => 14814.72]);
     }
 
+    public function test_value_and_total_reject_more_than_two_decimals(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'Dec3 Co']);
+
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-DEC-3', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => '1234.567', 'total_value' => '99999999999999', 'billing_cycle' => 'monthly',
+        ])->assertStatus(422)->assertJsonValidationErrors(['value', 'total_value']);
+    }
+
     public function test_duration_reports_months_and_leftover_days(): void
     {
         $this->actingAs($this->super());
@@ -710,7 +721,7 @@ class ContractApiTest extends TestCase
         Contract::create(['vendor' => 'A', 'name' => 'Monthly', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addYears(2), 'value' => 10000, 'billing_cycle' => 'monthly']);
         Contract::create(['vendor' => 'B', 'name' => 'Quarterly', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addYears(2), 'value' => 20000, 'billing_cycle' => 'quarterly']);
 
-        $this->getJson('/api/contracts/summary')->assertOk()->assertJsonPath('annual_value', '฿200K');
+        $this->getJson('/api/contracts/summary')->assertOk()->assertJsonPath('annual_value', '฿200,000.00');
     }
 
     /** A second cancel (double click, stale tab) must not overwrite who cancelled it and why. */

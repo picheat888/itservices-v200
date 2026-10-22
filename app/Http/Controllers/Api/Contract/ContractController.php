@@ -130,7 +130,7 @@ class ContractController extends Controller
             ->map(fn ($group, $vendor) => [
                 'vendor' => $vendor,
                 'vendor_th' => $group->first()->vendor?->name_th,
-                'amount' => round($group->sum(fn ($c) => $c->annualValue())),
+                'amount' => round($group->sum(fn ($c) => $c->annualValue()), 2),
             ])
             ->sortByDesc('amount')
             ->take(5)
@@ -281,19 +281,9 @@ class ContractController extends Controller
         return response()->json(['message' => 'success']);
     }
 
-    /** Formats an amount as a compact "฿4.31M" / "฿820K" string (symbol per Settings currency). */
+    /** Formats an amount as "฿4,310,000.00" (symbol per Settings currency). */
     private function formatMoney(float $amount): string
     {
-        $symbol = AppSetting::currencySymbol();
-
-        if ($amount >= 1_000_000) {
-            return $symbol.number_format($amount / 1_000_000, 2).'M';
-        }
-
-        if ($amount >= 1_000) {
-            return $symbol.number_format($amount / 1_000).'K';
-        }
-
-        return $symbol.number_format($amount);
+        return AppSetting::currencySymbol().number_format($amount, 2);
     }
 }

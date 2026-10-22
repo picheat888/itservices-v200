@@ -82,12 +82,7 @@ export function useCurrency() {
     // Money formatter: symbol + thousands grouping + always 2 decimals (e.g. "฿1,234.50").
     const format = (value: number) => `${symbol}${formatNumber(value, lang, { decimals: 2 })}`;
 
-    // Compact money formatter for tight spaces (KPI cards): symbol + uppercase K/M/B
-    // (e.g. "฿1.2M"). Forced to en-US so the suffix is always uppercase Latin, not a
-    // locale-specific/lowercase form.
-    const formatCompact = (value: number) => `${symbol}${value.toLocaleString('en-US', { notation: 'compact', maximumFractionDigits: 1 })}`;
-
-    return { code, symbol, format, formatCompact };
+    return { code, symbol, format };
 }
 
 function useSyncStore() {

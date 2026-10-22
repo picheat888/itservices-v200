@@ -57,7 +57,7 @@ type Lang = 'th' | 'en';
 /** Money with 2 decimals, as tiles and tables show it. */
 export const contractMoney = (n: number, lang: Lang) => formatNumber(n, lang, { decimals: 2 });
 
-/** Money for chart axes and short labels: 950, 12K, 1.25M, 12.5M. */
+/** Money for chart axis ticks only: 950, 12K, 1.25M, 12.5M. */
 export function compactMoney(n: number): string {
     const abs = Math.abs(n);
     // 999,500 and up round to 1000K: show them as 1M

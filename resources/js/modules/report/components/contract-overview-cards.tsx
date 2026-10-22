@@ -13,7 +13,7 @@ import type { ContractOverviewBreakdown, TabularFilters } from '../types';
 import { CardsUpdating } from './cards-updating';
 import { CardTitle, CardEmpty as Empty, InfoMark, monthLabel, rich } from './chart-parts';
 import { FILL } from './chart-tones';
-import { ContractMonthCard, compactMoney, contractMoney, type ContractMonth } from './contract-month-card';
+import { ContractMonthCard, contractMoney, type ContractMonth } from './contract-month-card';
 import { CONTRACT_TYPE_TONE } from './contract-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -104,9 +104,9 @@ function OverviewTiles({ tiles }: { tiles: ContractOverviewBreakdown['tiles'] })
                 }
                 footer={
                     top ? (
-                        <span className="flex min-w-0 items-baseline gap-1.5" title={`${topName} ${contractMoney(top.yearly, lang)}`}>
+                        <span className="flex min-w-0 items-baseline gap-1.5" title={topName}>
                             <span className="truncate">{topName}</span>
-                            <b className="text-foreground shrink-0 font-semibold tabular-nums">{compactMoney(top.yearly)}</b>
+                            <b className="text-foreground shrink-0 font-semibold tabular-nums">{contractMoney(top.yearly, lang)}</b>
                         </span>
                     ) : (
                         t('rep_cov_k_top_vendor_none')
@@ -173,7 +173,7 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
             />
             <ul className="space-y-3 px-5 py-4">
                 {data.types.map((row) => (
-                    <li key={row.type} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_5.5rem] items-center gap-3 text-sm">
+                    <li key={row.type} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
                         <span className="min-w-0">
                             <span className="block truncate">{t(`contract_type_${row.type}`)}</span>
                             <small className="text-muted-foreground block text-xs">
@@ -194,9 +194,7 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
                         ) : (
                             <span className="text-muted-foreground">—</span>
                         )}
-                        <b className="text-right text-[13px] font-semibold tabular-nums" title={contractMoney(row.yearly, lang)}>
-                            {compactMoney(row.yearly)}
-                        </b>
+                        <b className="text-right text-[13px] font-semibold tabular-nums">{contractMoney(row.yearly, lang)}</b>
                     </li>
                 ))}
             </ul>
@@ -205,8 +203,8 @@ function TypeCard({ data }: { data: ContractOverviewBreakdown }) {
                 {data.cycles.map((row, i) => (
                     <li key={row.cycle} className={cn('flex min-w-0 flex-col gap-1', i > 0 && 'border-border/70 border-l pl-3.5', i < 2 && 'pr-3.5')}>
                         <span className="text-muted-foreground text-xs">{t(`contract_billing_${row.cycle}`)}</span>
-                        <b aria-hidden className="text-lg leading-tight font-semibold tabular-nums" title={contractMoney(row.yearly, lang)}>
-                            {row.yearly > 0 ? compactMoney(row.yearly) : '—'}
+                        <b aria-hidden className="text-base leading-tight font-semibold [overflow-wrap:anywhere] tabular-nums">
+                            {row.yearly > 0 ? contractMoney(row.yearly, lang) : '—'}
                         </b>
                         <span aria-hidden className={cn(TRACK, 'h-1')}>
                             <span className="block h-full rounded-full bg-blue-500" style={{ width: `${percent(row.yearly)}%` }} />

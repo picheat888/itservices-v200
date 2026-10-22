@@ -105,4 +105,16 @@ class StockFifoCostingTest extends TestCase
         $this->assertSame(4, $item->fresh()->current_stock);
         $this->assertSame(0.0, $item->fresh()->stockValue());
     }
+
+    public function test_unit_cost_rejects_more_than_two_decimals_or_an_oversized_amount(): void
+    {
+        $item = $this->item();
+        $this->actingAs($this->super());
+
+        foreach (['10.555', '10000000000'] as $cost) {
+            $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 1, 'unit_cost' => $cost])
+                ->assertStatus(422)->assertJsonValidationErrors('unit_cost');
+        }
+        $this->assertSame(0, $item->fresh()->current_stock);
+    }
 }

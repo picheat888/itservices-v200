@@ -158,7 +158,7 @@ class StockItemController extends Controller
         return response()->json([
             'skus' => $items->count(),
             'total_units' => $items->sum('current_stock'),
-            'total_value' => round($items->sum(fn (StockItem $i) => $i->stockValue())),
+            'total_value' => round($items->sum(fn (StockItem $i) => $i->stockValue()), 2),
             'out_count' => $out->count(),
             'low_count' => $low->count(),
             'over_count' => $over->count(),

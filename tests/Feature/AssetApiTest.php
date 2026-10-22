@@ -90,7 +90,7 @@ class AssetApiTest extends TestCase
         $this->postJson('/api/assets', $payload)
             ->assertCreated()
             ->assertJsonPath('data.model', 'Dell Latitude 5440')
-            ->assertJsonPath('data.value_display', '฿32,100')
+            ->assertJsonPath('data.value_display', '฿32,100.00')
             ->assertJsonPath('data.status', 'ready')
             // "Registered" reflects when the row was created in this system (created_at).
             ->assertJsonPath('data.registered_date', now()->toDateString());
@@ -141,7 +141,7 @@ class AssetApiTest extends TestCase
         $this->postJson('/api/assets', [
             'category_id' => $this->categoryId('network'), 'source' => 'rented', 'model_id' => $this->modelId('Cisco 9300'), 'contract_id' => $contract->id,
         ])->assertCreated()
-            ->assertJsonPath('data.value_display', '฿8,500/mo')
+            ->assertJsonPath('data.value_display', '฿8,500.00/mo')
             ->assertJsonPath('data.supplier', 'SVOA')
             ->assertJsonPath('data.lease_start', '2026-01-01')
             ->assertJsonPath('data.lease_end', '2027-12-31')
@@ -210,8 +210,8 @@ class AssetApiTest extends TestCase
         $yearly = Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease('yearly', 24000)->id, 'value' => 0, 'vendor_id' => null]);
         $quarterly = Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease('quarterly', 3000)->id, 'value' => 0, 'vendor_id' => null]);
 
-        $this->getJson("/api/assets/{$yearly->id}")->assertOk()->assertJsonPath('data.value_display', '฿24,000/yr');
-        $this->getJson("/api/assets/{$quarterly->id}")->assertOk()->assertJsonPath('data.value_display', '฿3,000/qtr');
+        $this->getJson("/api/assets/{$yearly->id}")->assertOk()->assertJsonPath('data.value_display', '฿24,000.00/yr');
+        $this->getJson("/api/assets/{$quarterly->id}")->assertOk()->assertJsonPath('data.value_display', '฿3,000.00/qtr');
         // 24,000 once a year + 3,000 four times a year.
         $this->getJson('/api/assets/summary')->assertOk()->assertJsonPath('total_value', 36000);
     }
@@ -278,7 +278,20 @@ class AssetApiTest extends TestCase
         $this->postJson('/api/assets', [
             'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('MacBook Pro'), 'vendor_id' => $this->vendorId(), 'value' => 32100,
         ])->assertCreated()
-            ->assertJsonPath('data.value_display', '$32,100');
+            ->assertJsonPath('data.value_display', '$32,100.00');
+    }
+
+    public function test_purchase_price_keeps_two_decimals_and_rejects_more(): void
+    {
+        $this->actingAs($this->super());
+        $payload = [
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('MacBook Pro'), 'vendor_id' => $this->vendorId(),
+        ];
+
+        $this->postJson('/api/assets', $payload + ['value' => 32100.5])->assertCreated()
+            ->assertJsonPath('data.value_display', '฿32,100.50');
+        $this->postJson('/api/assets', $payload + ['value' => '32100.555'])->assertStatus(422)->assertJsonValidationErrors('value');
+        $this->postJson('/api/assets', $payload + ['value' => '99999999999999'])->assertStatus(422)->assertJsonValidationErrors('value');
     }
 
     public function test_model_is_required(): void

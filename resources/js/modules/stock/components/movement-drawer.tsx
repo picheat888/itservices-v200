@@ -4,12 +4,13 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
+import { MoneyInput } from '@/shared/components/money-input';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { digitsOnly, formatNumber } from '@/shared/lib/number';
+import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
@@ -17,7 +18,6 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
 import {
     AlertTriangle,
     ArrowDownToLine,
@@ -41,16 +41,6 @@ import { stockRefusalText } from '../lib/refusal';
 
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
 
-/** Group a raw numeric string's integer part for the locale, keeping the decimal part being typed. */
-function formatThousands(raw: string, lang: string): string {
-    if (raw === '') {
-        return '';
-    }
-    const [intPart, decPart] = raw.split('.');
-    const intFmt = intPart ? formatNumber(Number(intPart), lang) : '';
-    return decPart !== undefined ? `${intFmt}.${decPart}` : intFmt;
-}
-
 /** The warehouse a SKU holds the most stock in — the default from/to for a movement. */
 function primaryWarehouse(item?: StockItem): string {
     const top = [...(item?.balances ?? [])].filter((b) => b.qty > 0).sort((a, b) => b.qty - a.qty)[0];
@@ -70,7 +60,6 @@ const KIND_ICON: Record<MovementKind, LucideIcon> = { receive: ArrowDownToLine, 
 export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; onClose: () => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
-    const lang = useUiStore((s) => s.lang);
     const open = kind !== null;
     // Last non-null kind keeps the body mounted through the close animation
     const [shownKind, setShownKind] = useState<MovementKind | null>(null);
@@ -728,29 +717,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     {/* Receive: per-lot unit cost (FIFO valuation) */}
                     {selected && isReceive && (
                         <Field label={t('stock_unit_cost')} required>
-                            <Input
-                                type="text"
-                                name="unit_cost"
-                                autoComplete="off"
-                                inputMode="decimal"
-                                value={formatThousands(unitCost, lang)}
-                                onChange={(e) => {
-                                    // Digits + a single dot (max 2 decimals); store raw, display grouped
-                                    let v = e.target.value.replace(/[^0-9.]/g, '');
-                                    const dot = v.indexOf('.');
-                                    if (dot !== -1) {
-                                        v =
-                                            v.slice(0, dot + 1) +
-                                            v
-                                                .slice(dot + 1)
-                                                .replace(/\./g, '')
-                                                .slice(0, 2);
-                                    }
-                                    setUnitCost(v);
-                                }}
-                                onBlur={() => unitCost !== '' && setUnitCost((Number(unitCost) || 0).toFixed(2))}
-                                placeholder="0.00"
-                            />
+                            <MoneyInput name="unit_cost" value={unitCost} onValueChange={setUnitCost} maxWholeDigits={10} />
                         </Field>
                     )}
 

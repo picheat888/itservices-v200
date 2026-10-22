@@ -275,7 +275,7 @@ export default function StockPage() {
         });
     };
 
-    const { format, formatCompact } = useCurrency();
+    const { format } = useCurrency();
     const fmt = useDateFormat();
 
     const statusBadge = (s: StockItemStatus) => (
@@ -441,7 +441,7 @@ export default function StockPage() {
             icon: Send,
             onClick: canViewRequests ? () => changeTab('requests') : undefined,
         },
-        { label: t('stock_kpi_value'), value: summary ? formatCompact(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
+        { label: t('stock_kpi_value'), value: summary ? format(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
     ];
 
     // One header alert for every item in a warning state: named by its kind when there is one kind, red when any is out or low

@@ -192,7 +192,7 @@ class AssetController extends Controller
             'pending_acceptance' => $assets->where('status', AssetStatus::PendingAcceptance)->count(),
             'pending_return' => $assets->where('status', AssetStatus::PendingReturn)->count(),
             'writeoff' => $assets->where('status', AssetStatus::Writeoff)->count(),
-            'total_value' => round($assets->sum(fn (Asset $a) => $a->annualValue())),
+            'total_value' => round($assets->sum(fn (Asset $a) => $a->annualValue()), 2),
             'by_type' => $byType,
             'top_value' => AssetResource::collection($topValue),
             'activity' => $this->activity(OverviewPeriod::fromRequest($request)),

@@ -2,13 +2,14 @@ import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
+import { MoneyInput } from '@/shared/components/money-input';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
-import { formatNumber } from '@/shared/lib/number';
+import { toMoneyText } from '@/shared/lib/money';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -120,7 +121,7 @@ export function AssetFormDrawer({
                   serial: editing.serial ?? '',
                   tag: editing.tag ?? '',
                   warehouse_id: editing.warehouse_id ? String(editing.warehouse_id) : '',
-                  value: String(editing.value ?? ''),
+                  value: toMoneyText(editing.value),
                   vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
                   purchase_date: editing.purchase_date ?? '',
                   warranty_end: editing.warranty_end ?? '',
@@ -421,13 +422,7 @@ export function AssetFormDrawer({
                                 <>
                                     <div className="grid grid-cols-2 gap-4">
                                         <Field label={`${t('asset_purchase_price')} (${symbol})`} required error={err.value} name="value">
-                                            <Input
-                                                inputMode="numeric"
-                                                value={form.value ? formatNumber(Number(form.value), lang) : ''}
-                                                onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
-                                                placeholder="0"
-                                                autoComplete="off"
-                                            />
+                                            <MoneyInput value={form.value} onValueChange={(v) => upd('value', v)} />
                                         </Field>
                                         <Field label={t('asset_supplier')} required error={err.supplier} name="supplier">
                                             <SearchableSelect

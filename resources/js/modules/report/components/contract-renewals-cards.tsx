@@ -22,7 +22,7 @@ import { CardTitle, CardEmpty as Empty, FoldToggle, InfoMark, rich, Swatch } fro
 import { FILL } from './chart-tones';
 import { ContractCode, ContractNameCell, TypePill } from './contract-cells';
 import { ContractLeftPill } from './contract-left-pill';
-import { compactMoney, contractMoney, ContractMonthCard } from './contract-month-card';
+import { contractMoney, ContractMonthCard } from './contract-month-card';
 import { CONTRACT_TYPE_TONE, CONTRACT_TYPES, type ContractTypeKey } from './contract-tones';
 import { KpiTile } from './kpi-tile';
 import { BarRowsSkeleton, CardHeadingSkeleton, ChartSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -201,7 +201,7 @@ function BandRowBody({ band, max }: { band: Band; max: number }) {
             <span className={cn('leading-snug', late && 'font-semibold text-red-700 dark:text-red-400')}>
                 {t(`rep_cren_band_${band.key}`)}
                 <small className="text-muted-foreground block text-[11px] font-normal">
-                    {band.total > 0 ? t('rep_cren_per_year').replace('{v}', compactMoney(band.yearly)) : t('rep_cren_band_none')}
+                    {band.total > 0 ? t('rep_cren_per_year').replace('{v}', contractMoney(band.yearly, lang)) : t('rep_cren_band_none')}
                 </small>
             </span>
             <span aria-hidden className="dark:bg-muted block h-2.5 overflow-hidden rounded-full bg-slate-200">

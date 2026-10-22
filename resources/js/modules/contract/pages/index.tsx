@@ -628,7 +628,7 @@ function OverviewTab({
     const t = useT();
     const fmtN = useNumberFormat();
     const fmt = useDateFormat();
-    const { formatCompact } = useCurrency();
+    const { format: formatMoney } = useCurrency();
     const lang = useUiStore((s) => s.lang);
 
     // Loading state mirrors the real layout with pulsing placeholders (same feel as the Stock dashboard).
@@ -846,7 +846,7 @@ function OverviewTab({
                             <div key={r.vendor} className="row-in" style={rowDelay(i)}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{localPair(r.vendor, r.vendor_th, lang)}</span>
-                                    <span className="text-muted-foreground text-xs">{formatCompact(r.amount)}</span>
+                                    <span className="text-muted-foreground text-xs">{formatMoney(r.amount)}</span>
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
                                     <span

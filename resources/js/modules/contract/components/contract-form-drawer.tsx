@@ -6,12 +6,13 @@ import { EmptyState } from '@/shared/components/empty-state';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { FileDropZone, formatFileSize } from '@/shared/components/file-drop-zone';
 import { InfoPopover } from '@/shared/components/info-popover';
+import { MoneyInput } from '@/shared/components/money-input';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localName } from '@/shared/lib/local-name';
-import { formatNumber } from '@/shared/lib/number';
+import { toMoneyText } from '@/shared/lib/money';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
@@ -64,29 +65,6 @@ const FIELD_STEP: Record<string, number> = {
     total_value: 2,
     notify: 3,
 };
-
-/** Keep digits + a single decimal point, capped at 2 decimal places (money input). */
-function sanitizeMoney(raw: string): string {
-    let s = raw.replace(/[^\d.]/g, '');
-    const dot = s.indexOf('.');
-    if (dot !== -1) {
-        s =
-            s.slice(0, dot + 1) +
-            s
-                .slice(dot + 1)
-                .replace(/\./g, '')
-                .slice(0, 2);
-    }
-    return s;
-}
-
-/** Group the integer part with commas while preserving a typed dot / decimals. */
-function displayMoney(s: string, lang: string): string {
-    if (!s) return '';
-    const [intPart, decPart] = s.split('.');
-    const intFmt = intPart ? formatNumber(Number(intPart), lang) : '';
-    return s.includes('.') ? `${intFmt}.${decPart ?? ''}` : intFmt;
-}
 
 interface FormState {
     code: string;
@@ -222,8 +200,8 @@ export function ContractFormDrawer({
                       name: editing.name,
                       start_date: editing.start,
                       end_date: editing.end,
-                      value: String(editing.value),
-                      total_value: editing.total_value != null ? String(editing.total_value) : '',
+                      value: toMoneyText(editing.value),
+                      total_value: toMoneyText(editing.total_value),
                       billing_cycle: editing.billing_cycle,
                       notify_150: editing.notify_150,
                       notify_120: editing.notify_120,
@@ -724,14 +702,7 @@ export function ContractFormDrawer({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label={`${t('contract_value_per_cycle')} (${symbol})`} required error={err.value} name="value">
-                                        <Input
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={displayMoney(form.value, lang)}
-                                            onChange={(e) => upd('value', sanitizeMoney(e.target.value))}
-                                            placeholder="0.00"
-                                            autoComplete="off"
-                                        />
+                                        <MoneyInput value={form.value} onValueChange={(v) => upd('value', v)} />
                                     </Field>
                                     <Field label={t('contract_billing')}>
                                         <SearchableSelect
@@ -757,19 +728,11 @@ export function ContractFormDrawer({
                                 >
                                     {(control) => (
                                         <>
-                                            <Input
-                                                {...control}
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={displayMoney(form.total_value, lang)}
-                                                onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
-                                                placeholder="0.00"
-                                                autoComplete="off"
-                                            />
+                                            <MoneyInput {...control} value={form.total_value} onValueChange={(v) => upd('total_value', v)} />
                                             {totalValueEstimate != null && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => upd('total_value', String(totalValueEstimate))}
+                                                    onClick={() => upd('total_value', toMoneyText(totalValueEstimate))}
                                                     className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
                                                 >
                                                     {t('contract_estimate')} ≈{' '}

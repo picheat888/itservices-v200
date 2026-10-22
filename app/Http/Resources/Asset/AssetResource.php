@@ -143,12 +143,12 @@ class AssetResource extends JsonResource
     }
 
     /**
-     * "฿38,500" for owned assets; for rented, the contract's fee per its own billing cycle —
-     * "฿8,500/mo", "฿25,500/qtr" or "฿102,000/yr" (symbol per Settings currency).
+     * "฿38,500.00" for owned assets; for rented, the contract's fee per its own billing cycle —
+     * "฿8,500.00/mo", "฿25,500.00/qtr" or "฿102,000.00/yr" (symbol per Settings currency).
      */
     private function valueDisplay(float $value): string
     {
-        $amount = AppSetting::currencySymbol().number_format($value);
+        $amount = AppSetting::currencySymbol().number_format($value, 2);
 
         return $this->source === AssetSource::Rented ? $amount.($this->contract?->cycleSuffix() ?? '/mo') : $amount;
     }

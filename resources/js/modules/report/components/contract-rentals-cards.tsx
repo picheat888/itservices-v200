@@ -17,7 +17,7 @@ import { CardTitle, CountBar, CardEmpty as Empty, FoldToggle, InfoMark, rich, Sw
 import { FILL } from './chart-tones';
 import { ContractCode, ContractNameCell } from './contract-cells';
 import { ContractLeftPill } from './contract-left-pill';
-import { compactMoney, contractMoney } from './contract-month-card';
+import { contractMoney } from './contract-month-card';
 import { CONTRACT_SOURCE_TONE } from './contract-tones';
 import { KpiTile } from './kpi-tile';
 import { CardHeadingSkeleton, KpiRowSkeleton, TableRowsSkeleton } from './report-skeletons';
@@ -366,6 +366,7 @@ function ContractsCard({ data }: { data: ContractRentalsBreakdown }) {
 /** The whole term's rent against the purchase price, two bars on the row's own scale. */
 function VersusBars({ row }: { row: ModelRow }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const scale = Math.max(row.rent_total, row.avg_buy ?? 0) || 1;
     const bars = [
         { key: 'rent', label: t('rep_src_rented'), value: row.rent_total, fill: FILL[CONTRACT_SOURCE_TONE.rent] },
@@ -376,8 +377,8 @@ function VersusBars({ row }: { row: ModelRow }) {
         <div className="grid min-w-[12rem] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
             <span className="sr-only">
                 {t('rep_crent_vs_aria')
-                    .replace('{rent}', compactMoney(row.rent_total))
-                    .replace('{buy}', row.avg_buy === null ? '—' : compactMoney(row.avg_buy))}
+                    .replace('{rent}', contractMoney(row.rent_total, lang))
+                    .replace('{buy}', row.avg_buy === null ? '—' : contractMoney(row.avg_buy, lang))}
             </span>
             {bars.map((b) => (
                 <Fragment key={b.key}>
@@ -388,7 +389,7 @@ function VersusBars({ row }: { row: ModelRow }) {
                         <span className={cn('block h-full rounded-full', b.fill)} style={{ width: `${(b.value / scale) * 100}%` }} />
                     </span>
                     <b aria-hidden className="text-right text-xs font-semibold tabular-nums">
-                        {compactMoney(b.value)}
+                        {contractMoney(b.value, lang)}
                     </b>
                 </Fragment>
             ))}

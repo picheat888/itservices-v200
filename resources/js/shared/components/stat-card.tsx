@@ -159,7 +159,13 @@ export function StatCard({
                 <>
                     {/* Figure */}
                     <div className={cn('flex items-end justify-between gap-3', !compact && 'mt-2')}>
-                        <div className={cn('font-bold tabular-nums', compact ? 'text-2xl' : 'text-3xl', tone && VALUE_INK[tone])}>
+                        <div
+                            className={cn(
+                                'min-w-0 font-bold [overflow-wrap:anywhere] tabular-nums',
+                                compact ? 'text-2xl' : 'text-3xl',
+                                tone && VALUE_INK[tone],
+                            )}
+                        >
                             {formatStatValue(value, lang)}
                             {unit && <span className="text-muted-foreground ml-1 text-sm font-medium">{unit}</span>}
                         </div>

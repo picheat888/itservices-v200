@@ -166,7 +166,7 @@ class StockMovementController extends Controller
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
             // qty is derived from serials (serialized receive) or serial_ids (serialized transfer / return).
             'qty' => ['required_without_all:serials,serial_ids', 'nullable', 'integer', 'min:1'],
-            'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'unit_cost' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'from_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('from_label')],
             'to_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('to_label')],
             'reference' => ['nullable', 'string', 'max:100'],
