@@ -53,6 +53,7 @@ const SITES: Site[] = [
     { file: 'modules/workflow/hooks/use-workflows.ts', freshView: 1 },
     { file: 'modules/workflow/pages/index.tsx', openRefetch: 1 },
     { file: 'modules/workflow/components/workflow-editor-dialog.tsx', freshList: 2, refresh: 3, openRefetch: 1, rebase: 1 },
+    { file: 'modules/dashboard/hooks/use-dashboard.ts', freshView: 1 },
     { file: 'modules/employee/hooks/use-departments.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-positions.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-sections.ts', freshList: 1, freshView: 1 },
