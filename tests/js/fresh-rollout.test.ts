@@ -346,3 +346,7 @@ test('a searchable list skips rows that cannot be chosen and closes when it is l
     assert.ok(src.includes('if (disabled) setOpen(false);'));
     assert.ok(src.includes('if (option.disabled || disabled)'));
 });
+
+test('the ticket summary loads only on the overview tab', () => {
+    assert.ok(read('modules/ticket/pages/index.tsx').includes("useTicketSummary(canOverview && tab === 'overview', range)"));
+});

@@ -288,7 +288,7 @@ export default function TicketsPage() {
         });
     };
 
-    const summaryQuery = useTicketSummary(canOverview, range);
+    const summaryQuery = useTicketSummary(canOverview && tab === 'overview', range);
     const { data: summary, isLoading: summaryLoading, isPlaceholderData: summaryStale } = summaryQuery;
     const summaryPeriod = useShownPeriod(range, summaryStale);
     const listQuery = useTickets({
