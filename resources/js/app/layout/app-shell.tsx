@@ -25,6 +25,7 @@ import { NotificationsDropdown, useOpenTrayFromUrl } from './notifications-dropd
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
+import { usePushOpen } from './use-push-open';
 import { useSidebarStyle } from './use-sidebar-style';
 
 const SHELL_DIALOGS = ['profile', 'password'] as const;
@@ -88,6 +89,7 @@ export function AppShell() {
     const openChangePassword = () => setShellDialog('password');
     // Inside the router: tapping a toast navigates
     useNotificationToasts(openChangePassword);
+    usePushOpen();
 
     return (
         <div

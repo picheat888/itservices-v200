@@ -4,6 +4,7 @@ import { translate } from '@/lang/translate';
 import type { Lang } from '@/lang/types';
 import type { AppNotification, NotificationData, Translate } from '@/modules/notification';
 import { notificationMessage, notificationTarget, notificationTitle } from '@/modules/notification/lib/notification-text';
+import { pushOpenMessage } from '@/modules/notification/lib/push-open';
 import { formatNumber } from '@/shared/lib/number';
 import { isApplePush, nextStack, serialQueue, stackBody, stackTarget, type StackState } from './stack';
 import { isWindowSource, sanitizeWording, type Wording } from './wording';
@@ -25,7 +26,7 @@ interface SwMessageEvent extends SwExtendableEvent {
 interface SwWindowClient {
     readonly visibilityState: DocumentVisibilityState;
     focus(): Promise<SwWindowClient>;
-    navigate(url: string): Promise<SwWindowClient | null>;
+    postMessage(message: unknown): void;
 }
 interface SwScope {
     readonly location: Location;
@@ -147,12 +148,13 @@ async function onClick(event: SwNotificationEvent): Promise<void> {
     const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const client = windows.find((w) => w.visibilityState === 'visible') ?? windows[0];
     if (client) {
+        // The tab routes in the app, so its unsaved-changes guard still asks
+        const focused = await client.focus().catch(() => client);
         try {
-            await client.focus();
-            await client.navigate(url);
+            focused.postMessage(pushOpenMessage(url));
             return;
         } catch {
-            // An uncontrolled tab cannot be navigated from here; open a new one instead
+            // The tab is gone: open a new one instead
         }
     }
     await sw.clients.openWindow(url);
