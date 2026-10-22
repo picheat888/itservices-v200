@@ -6,6 +6,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -14,7 +15,7 @@ import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { Warehouse } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
 
@@ -23,7 +24,9 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const t = useT();
     const fmtN = useNumberFormat();
     const { submit } = useStockRequestActions();
-    const { data: items = [] } = useStockItems({}, open);
+    const itemsQuery = useStockItems({}, open);
+    const refreshItems = useSelectRefresh(itemsQuery);
+    const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
     const [sku, setSku] = useState('');
     // Raw text so the field can be cleared/retyped freely; the number is derived
     const [qtyInput, setQtyInput] = useState('1');
@@ -74,6 +77,8 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                         <SearchableSelect
                             value={sku}
                             onChange={setSku}
+                            refresh={refreshItems}
+                            flagRemoved
                             placeholder={t('stock_select_sku')}
                             options={items.map((i) => ({
                                 value: String(i.id),

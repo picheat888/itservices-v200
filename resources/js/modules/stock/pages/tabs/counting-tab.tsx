@@ -13,6 +13,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { localPair } from '@/shared/lib/local-name';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
@@ -27,7 +28,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Check, ClipboardCheck, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
 
@@ -50,10 +51,13 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         data: sessionsPage,
         isLoading: sessionsLoading,
         isFetching: sessionsFetching,
+        isPlaceholderData: sessionsPlaceholder,
     } = useStockCounts({ page, per_page: perPage }, can('view_count'));
     const sessions = sessionsPage?.data ?? [];
     const { open, save, commit, cancel } = useStockCountMutations();
-    const { data: warehouses = [] } = useWarehouses();
+    const warehousesQuery = useWarehouses();
+    const refreshWarehouses = useSelectRefresh(warehousesQuery);
+    const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
     // The open count sheet is in the URL (?count=<id>) so a reload or a shared link reopens it
     const countId = toRecordId(list.get('count') || null);
     const sheetOpen = countId !== null;
@@ -71,7 +75,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     // Counts typed since the sheet opened; a refetch must not overwrite them
     const typedRef = useRef(false);
     const [creating, setCreating] = useState(false);
-    const { data: allItems = [] } = useStockItems({}, creating);
+    const allItemsQuery = useStockItems({}, creating);
+    // The category list is built from the items with stock, so it reloads with them
+    const refreshAllItems = useSelectRefresh(allItemsQuery);
+    const allItems = useMemo(() => allItemsQuery.data ?? [], [allItemsQuery.data]);
     const [wh, setWh] = useState('all');
     const [cat, setCat] = useState('all');
     const [selectedSkus, setSelectedSkus] = useState<number[]>([]);
@@ -389,7 +396,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 rows={sessions}
                 rowKey={(s) => s.id}
                 onRowClick={(s) => openSheet(s.id)}
-                loading={sessionsLoading || sessionsFetching}
+                loading={sessionsLoading || (sessionsFetching && sessionsPlaceholder)}
                 server={{ ...list.table.paging, total: sessionsPage?.meta.total ?? 0 }}
                 empty={{
                     title: t('stock_empty_audit'),
@@ -414,13 +421,19 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <label htmlFor={whFieldId} className="text-muted-foreground mb-1 block text-xs font-medium">
                                     {t('stock_warehouse')}
                                 </label>
-                                <SearchableSelect id={whFieldId} value={wh} onChange={onPickWarehouse} options={warehouseOptions} />
+                                <SearchableSelect
+                                    id={whFieldId}
+                                    value={wh}
+                                    onChange={onPickWarehouse}
+                                    options={warehouseOptions}
+                                    refresh={refreshWarehouses}
+                                />
                             </div>
                             <div>
                                 <label htmlFor={catFieldId} className="text-muted-foreground mb-1 block text-xs font-medium">
                                     {t('stock_category')}
                                 </label>
-                                <SearchableSelect id={catFieldId} value={cat} onChange={setCat} options={categoryOptions} />
+                                <SearchableSelect id={catFieldId} value={cat} onChange={setCat} options={categoryOptions} refresh={refreshAllItems} />
                             </div>
                         </div>
 

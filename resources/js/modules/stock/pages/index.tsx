@@ -18,6 +18,7 @@ import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-para
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
@@ -58,7 +59,7 @@ import { RequestDrawer } from '../components/request-drawer';
 import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
 import { STOCK_STATUS_TONE, StockLevelBar } from '../components/stock-level-bar';
-import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
+import { useStockCounts, useStockItem, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
 import { AuditTab } from './tabs/counting-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { OverviewTab } from './tabs/overview-tab';
@@ -211,6 +212,8 @@ export default function StockPage() {
         if (Object.values(saved).some(Boolean)) list.setParams(saved);
     }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
     const [editItem, setEditItem] = useState<StockItem | null>(null);
+    const editItemQuery = useStockItem(editItem?.id ?? null);
+    useRefetchOnOpen(editItem != null, editItemQuery);
     // Item detail is URL-driven (?view=<id>); only a real record id opens it.
     const viewId = toRecordId(searchParams.get('view'));
     // Opening pushes a history entry so Back closes it
@@ -784,6 +787,7 @@ export default function StockPage() {
             <StockItemModal
                 open={adding || !!editItem}
                 item={editItem}
+                fresh={editItemQuery.data ?? null}
                 onClose={() => {
                     closeAdd();
                     setEditItem(null);

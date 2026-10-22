@@ -3,7 +3,7 @@ import { nextBase, rebaseForm, sameValue } from '@/shared/lib/form-rebase';
 import { useEffect } from 'react';
 
 /** Keep `base` in state, seed `form` and `base` together once per open, and compute dirty as `!sameValue(form, base)`. */
-export function useFormRebase<T extends Record<string, unknown>>(o: {
+export function useFormRebase<T extends object>(o: {
     fresh: T | null;
     base: T;
     setBase: (next: T) => void;

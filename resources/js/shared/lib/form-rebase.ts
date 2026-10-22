@@ -9,7 +9,7 @@ export function sameValue(a: unknown, b: unknown): boolean {
 }
 
 /** Every field still equal to `base` takes `fresh`'s value; fields the user changed, and `skip` keys, keep the form's. */
-export function rebaseForm<T extends Record<string, unknown>>(base: T, form: T, fresh: T, skip: readonly (keyof T)[] = []): T {
+export function rebaseForm<T extends object>(base: T, form: T, fresh: T, skip: readonly (keyof T)[] = []): T {
     const next = { ...form };
     for (const key of Object.keys(form) as (keyof T)[]) {
         if (skip.includes(key) || !Object.prototype.hasOwnProperty.call(fresh, key)) {
@@ -23,7 +23,7 @@ export function rebaseForm<T extends Record<string, unknown>>(base: T, form: T, 
 }
 
 /** The base after a rebase: the fresh values, except skipped keys keep the value the form opened with (the form keeps them too). */
-export function nextBase<T extends Record<string, unknown>>(base: T, fresh: T, skip: readonly (keyof T)[] = []): T {
+export function nextBase<T extends object>(base: T, fresh: T, skip: readonly (keyof T)[] = []): T {
     const next = { ...fresh };
     for (const key of skip) {
         next[key] = base[key];

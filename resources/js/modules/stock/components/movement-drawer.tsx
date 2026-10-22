@@ -10,6 +10,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockMovementType } from '@/shared/types';
@@ -69,10 +70,16 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     const k = kind ?? shownKind;
     const isReceive = k === 'receive';
     const record = useRecordMovement();
-    const { data: items = [] } = useStockItems({}, kind !== null);
+    const itemsQuery = useStockItems({}, kind !== null);
+    const refreshItems = useSelectRefresh(itemsQuery);
+    const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
     const { data: existingSerials = [] } = useExistingSerials(kind !== null);
-    const { data: warehouses = [] } = useWarehouses();
-    const { data: vendors = [] } = useVendors();
+    const warehousesQuery = useWarehouses();
+    const vendorsQuery = useVendors();
+    const refreshWarehouses = useSelectRefresh(warehousesQuery);
+    const refreshVendors = useSelectRefresh(vendorsQuery);
+    const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
+    const vendors = useMemo(() => vendorsQuery.data ?? [], [vendorsQuery.data]);
 
     const [sku, setSku] = useState<string>('');
     const [qty, setQty] = useState(1);
@@ -192,6 +199,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder}
+                refresh={type === 'warehouse' ? refreshWarehouses : refreshVendors}
                 options={options.map((o) => ({ value: o.name, label: o.name, search: o.name }))}
             />
         );
@@ -493,7 +501,14 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                 />
                 <DialogBody className="space-y-3 overscroll-contain">
                     <Field label={t('stock_item')} required help={isTransfer ? t('stock_mv_doc_auto') : undefined}>
-                        <SearchableSelect value={sku} onChange={onSkuChange} placeholder={t('stock_select_sku')} options={skuOptions} />
+                        <SearchableSelect
+                            value={sku}
+                            onChange={onSkuChange}
+                            placeholder={t('stock_select_sku')}
+                            options={skuOptions}
+                            refresh={refreshItems}
+                            flagRemoved
+                        />
                     </Field>
 
                     {/* Transfer */}
@@ -510,6 +525,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                             setQty(1);
                                         }}
                                         placeholder={t('stock_warehouse')}
+                                        refresh={refreshWarehouses}
                                         options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
                                     />
                                 </Field>
@@ -523,6 +539,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                         value={to}
                                         onChange={setTo}
                                         placeholder={t('stock_warehouse')}
+                                        refresh={refreshWarehouses}
                                         options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
                                     />
                                 </Field>

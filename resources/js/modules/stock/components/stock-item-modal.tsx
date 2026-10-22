@@ -7,7 +7,10 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SerialToggle } from '@/shared/components/serial-toggle';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useLocalName } from '@/shared/hooks/use-local-name';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { nameSearch } from '@/shared/lib/local-name';
 import { digitsOnly } from '@/shared/lib/number';
 import type { StockItem } from '@/shared/types';
@@ -18,7 +21,7 @@ import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
 import { Package } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { StockItemPayload } from '../api/stockApi';
 import { useStockItemMutations } from '../hooks/use-stock';
 import { stockRefusalText } from '../lib/refusal';
@@ -58,29 +61,56 @@ function itemToForm(item: StockItem): StockItemPayload {
  * StockItemModal — add/edit a stock item. Dropdowns pull from the shared Master
  * Data lookups. The Save button shows a spinner then a checkmark on success.
  */
-export function StockItemModal({ open, item, onClose }: { open: boolean; item?: StockItem | null; onClose: () => void }) {
+export function StockItemModal({
+    open,
+    item,
+    fresh = null,
+    onClose,
+}: {
+    open: boolean;
+    item?: StockItem | null;
+    /** The live copy of `item`; fields the user has not touched follow it. */
+    fresh?: StockItem | null;
+    onClose: () => void;
+}) {
     const t = useT();
     const nameOf = useLocalName();
     const confirmEdit = useConfirmEdit();
     const { create, update } = useStockItemMutations();
-    const { data: categories = [] } = useCategories();
-    const { data: units = [] } = useUnits();
-    const { data: warranties = [] } = useWarrantyTypes();
-    const { data: brands = [] } = useBrands();
-    const { data: models = [] } = useAssetModels();
+    const categoriesQuery = useCategories();
+    const unitsQuery = useUnits();
+    const warrantiesQuery = useWarrantyTypes();
+    const brandsQuery = useBrands();
+    const modelsQuery = useAssetModels();
+    const refreshCategories = useSelectRefresh(categoriesQuery);
+    const refreshUnits = useSelectRefresh(unitsQuery);
+    const refreshWarranties = useSelectRefresh(warrantiesQuery);
+    const refreshBrands = useSelectRefresh(brandsQuery);
+    const refreshModels = useSelectRefresh(modelsQuery);
+    const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+    const units = useMemo(() => unitsQuery.data ?? [], [unitsQuery.data]);
+    const warranties = useMemo(() => warrantiesQuery.data ?? [], [warrantiesQuery.data]);
+    const brands = useMemo(() => brandsQuery.data ?? [], [brandsQuery.data]);
+    const models = useMemo(() => modelsQuery.data ?? [], [modelsQuery.data]);
     const [form, setForm] = useState<StockItemPayload>(empty);
+    const [base, setBase] = useState<StockItemPayload>(empty);
     // When on, the item name is generated from Brand + Model instead of typed
     const [autoName, setAutoName] = useState(false);
     const [saved, setSaved] = useState(false);
     const saving = create.isPending || update.isPending;
     const closeAfterSave = useCloseAfterSave(open, onClose);
 
-    useEffect(() => {
-        if (!open) return;
-        setForm(item ? itemToForm(item) : empty);
+    // Seed once per item the form opens on, from the live copy when it is already here
+    const live = item && fresh && fresh.id === item.id ? fresh : null;
+    useSeedOnce(open ? (item?.id ?? 'new') : null, () => {
+        const next = item ? itemToForm(live ?? item) : empty;
+        setForm(next);
+        setBase(next);
         setAutoName(false);
         setSaved(false);
-    }, [open, item]);
+    });
+    // While auto-name is on the name follows brand and model, never the server
+    useFormRebase({ fresh: live ? itemToForm(live) : null, base, setBase, setForm, skip: autoName ? ['name'] : [] });
 
     // Auto item name = "Brand Model", kept in sync while the switch is on
     const brandName = brands.find((b) => b.id === form.brand_id)?.name;
@@ -93,7 +123,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     }, [autoName, autoItemName]);
 
     // Save stays disabled until something changes; the same check guards closing
-    const isDirty = JSON.stringify(form) !== JSON.stringify(item ? itemToForm(item) : empty);
+    const isDirty = JSON.stringify(form) !== JSON.stringify(base);
     const guardClose = useDiscardGuard(open && isDirty && !saved);
     const minMaxInvalid = Number(form.max_stock) < Number(form.min_stock);
     // SKU is auto-generated on create; everything else below is required
@@ -161,6 +191,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         <Field label={t('stock_category')} required>
                             <SearchableSelect
                                 value={form.category_id != null ? String(form.category_id) : ''}
+                                refresh={refreshCategories}
+                                flagRemoved
                                 onChange={(v) => set('category_id', v ? Number(v) : null)}
                                 options={categories.map((c) => ({ value: String(c.id), label: nameOf(c), search: nameSearch(c) }))}
                             />
@@ -168,6 +200,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         <Field label={t('stock_unit')}>
                             <SearchableSelect
                                 value={form.unit_id != null ? String(form.unit_id) : ''}
+                                refresh={refreshUnits}
+                                flagRemoved
                                 onChange={(v) => set('unit_id', v ? Number(v) : null)}
                                 placeholder={t('stock_unit')}
                                 options={units.map((u) => ({ value: String(u.id), label: u.name, search: u.name }))}
@@ -179,6 +213,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         <Field label={t('stock_brand')} required>
                             <SearchableSelect
                                 value={form.brand_id != null ? String(form.brand_id) : ''}
+                                refresh={refreshBrands}
+                                flagRemoved
                                 onChange={(v) => setForm((f) => ({ ...f, brand_id: v ? Number(v) : null, model_id: null }))}
                                 options={brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name }))}
                             />
@@ -186,6 +222,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         <Field label={t('stock_model')} required>
                             <SearchableSelect
                                 value={form.model_id != null ? String(form.model_id) : ''}
+                                refresh={refreshModels}
                                 onChange={(v) => set('model_id', v ? Number(v) : null)}
                                 options={modelOptions.map((m) => ({ value: String(m.id), label: m.name, search: m.name }))}
                             />
@@ -214,6 +251,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     <Field label={t('stock_warranty')} required>
                         <SearchableSelect
                             value={form.warranty_type_id != null ? String(form.warranty_type_id) : ''}
+                            refresh={refreshWarranties}
+                            flagRemoved
                             onChange={(v) => set('warranty_type_id', v ? Number(v) : null)}
                             options={warranties.map((w) => ({ value: String(w.id), label: w.name, search: w.name }))}
                         />
