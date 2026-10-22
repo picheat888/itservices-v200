@@ -56,6 +56,8 @@ const SITES: Site[] = [
     { file: 'modules/access/pages/index.tsx', marks: 5 },
     { file: 'modules/access/components/resource-modal.tsx', refresh: 3, flagRemoved: 3, seedOnce: 1, rebase: 1 },
     { file: 'modules/access/components/members-drawer.tsx', openRefetch: 1, seedOnce: 1, rebase: 1 },
+    { file: 'modules/permission/hooks/use-permissions.ts', freshView: 6 },
+    { file: 'modules/permission/pages/index.tsx', marks: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
     { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
     { file: 'modules/ticket/pages/index.tsx', marks: 1, freshView: 2, openRefetch: 2 },
@@ -232,4 +234,9 @@ test('forms with a parent and child select take the child out with a note when t
 test('the access members drawer queries its members only while open', () => {
     assert.ok(read('modules/access/components/members-drawer.tsx').includes('useResourceMembers(kind, tgt?.id ?? null, target != null)'));
     assert.ok(read('modules/access/pages/index.tsx').includes('fresh={'));
+});
+
+test('the groups tab watches the group list only, not member or candidate pages', () => {
+    assert.ok(read('modules/permission/pages/index.tsx').includes("useKeyFreshness(['group-roles'], { exact: true })"));
+    assert.ok(read('shared/hooks/use-key-freshness.ts').includes('exact'));
 });

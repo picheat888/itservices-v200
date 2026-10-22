@@ -4,13 +4,14 @@ import { shouldRequest } from '@/shared/lib/freshness';
 import { keySourceState } from '@/shared/lib/refresh-mark';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 
-export function useKeyFreshness(queryKey: readonly unknown[]): TabQuery {
+/** `exact` watches that one query, not every query whose key starts with it. */
+export function useKeyFreshness(queryKey: readonly unknown[], { exact = false }: { exact?: boolean } = {}): TabQuery {
     const queryClient = useQueryClient();
     // Re-render whenever a watched query starts or stops fetching
-    useIsFetching({ queryKey });
+    useIsFetching({ queryKey, exact });
     const states = queryClient
         .getQueryCache()
-        .findAll({ queryKey, type: 'active' })
+        .findAll({ queryKey, type: 'active', exact })
         .map((q) => q.state);
     return {
         ...keySourceState(states),
@@ -20,6 +21,7 @@ export function useKeyFreshness(queryKey: readonly unknown[]): TabQuery {
                 {
                     queryKey,
                     type: 'active',
+                    exact,
                     predicate: (q) => shouldRequest(false, q.state.fetchStatus === 'fetching', q.state.dataUpdatedAt, Date.now()),
                 },
                 { cancelRefetch: false },

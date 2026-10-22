@@ -6,8 +6,10 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ListSkeleton } from '@/shared/components/skeletons';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useNavigationGuard } from '@/shared/hooks/use-navigation-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -78,7 +80,18 @@ export default function PermissionsPage() {
         logs: t('perm_audit'),
         logins: t('perm_logins'),
     };
-    const tabs = allowed.map((id) => ({ id, label: labels[id] }));
+    // Every tab owns its queries, so the page watches them by key (the Groups list alone, not its member pages)
+    const templatesFresh = useKeyFreshness(['permissions-matrix']);
+    const groupsFresh = useKeyFreshness(['group-roles'], { exact: true });
+    const logsFresh = useKeyFreshness(['audit-logs']);
+    const loginsFresh = useKeyFreshness(['login-events']);
+    const marks = useTabFreshness<Tab>(tab ?? 'templates', {
+        templates: [templatesFresh],
+        groups: [groupsFresh],
+        logs: [logsFresh],
+        logins: [loginsFresh],
+    });
+    const tabs = allowed.map((id) => ({ id, label: labels[id], refresh: marks[id] }));
 
     return (
         <div className="space-y-6">

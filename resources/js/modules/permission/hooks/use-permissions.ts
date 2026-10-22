@@ -1,3 +1,4 @@
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -18,7 +19,7 @@ const KEY = ['permissions-matrix'] as const;
 const GROUPS = ['group-roles'] as const;
 const NO_ROLES: GroupRoleOption[] = [];
 
-export const usePermissionMatrix = () => useQuery({ queryKey: KEY, queryFn: permissionApi.matrix });
+export const usePermissionMatrix = () => useQuery({ queryKey: KEY, queryFn: permissionApi.matrix, ...FRESH_VIEW });
 
 export function useUpdateRolePermissions() {
     const qc = useQueryClient();
@@ -56,7 +57,7 @@ export function useRoleMutations() {
     };
 }
 
-export const useGroupRoles = () => useQuery({ queryKey: GROUPS, queryFn: groupRoleApi.list });
+export const useGroupRoles = () => useQuery({ queryKey: GROUPS, queryFn: groupRoleApi.list, ...FRESH_VIEW });
 
 /** The roles a Role Group can be given, sent with the groups list. */
 export function useGroupRoleOptions(): GroupRoleOption[] {
@@ -76,6 +77,7 @@ export const useGroupMembers = (groupId: number | null, search: string, page: nu
         queryFn: () => groupRoleApi.members(groupId as number, search, page),
         enabled: groupId !== null,
         placeholderData: keepPreviousData,
+        ...FRESH_VIEW,
     });
 
 /** One page of the people who can join the group. */
@@ -85,6 +87,7 @@ export const useGroupCandidates = (params: GroupCandidateParams, enabled: boolea
         queryFn: () => groupRoleApi.candidates(params),
         enabled,
         placeholderData: keepPreviousData,
+        ...FRESH_VIEW,
     });
 
 export function useGroupRoleMutations() {
@@ -127,6 +130,7 @@ export const useAuditLogs = (page: number, perPage: number, filters: AuditFilter
         queryKey: ['audit-logs', page, perPage, filters],
         queryFn: () => permissionApi.auditLogs(page, perPage, filters),
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 export const useLoginEvents = (params: LoginEventParams) =>
@@ -134,4 +138,5 @@ export const useLoginEvents = (params: LoginEventParams) =>
         queryKey: ['login-events', params],
         queryFn: () => permissionApi.loginEvents(params),
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
