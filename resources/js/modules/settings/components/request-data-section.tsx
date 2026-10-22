@@ -10,7 +10,9 @@ import { ListSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { localLabel } from '@/shared/lib/local-name';
@@ -73,7 +75,7 @@ export function RequestDataSection() {
         return map;
     }, [data]);
 
-    const dialog = useListDialog(rows, !isLoading);
+    const dialog = useListDialog(rows, !isLoading, listsQuery);
     const editing = dialog.editing;
     const [announcement, setAnnouncement] = useState('');
 
@@ -346,16 +348,19 @@ function OptionModal({
     const [saved, setSaved] = useState(false);
     const closeAfterSave = useCloseAfterSave(open, onClose);
 
-    const initialForm = useMemo(() => optionSeed(option), [option]);
-    const isDirty = !saved && JSON.stringify(form) !== JSON.stringify(initialForm);
+    // What the form opened with, moved along by refreshes of the option
+    const [base, setBase] = useState<OptionForm>(() => optionSeed(null));
+    const isDirty = !saved && JSON.stringify(form) !== JSON.stringify(base);
     const guardClose = useDiscardGuard(open && isDirty);
 
-    useEffect(() => {
-        if (!open) return;
+    useSeedOnce(open ? (option?.id ?? 'new') : null, () => {
+        const values = optionSeed(option);
         setErr('');
         setSaved(false);
-        setForm(optionSeed(option));
-    }, [open, option]);
+        setForm(values);
+        setBase(values);
+    });
+    useFormRebase({ fresh: open && option ? optionSeed(option) : null, base, setBase, setForm });
 
     const submit = async () => {
         if (saving || saved) return;

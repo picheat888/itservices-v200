@@ -5,6 +5,8 @@ import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/mo
 import { EmptyState } from '@/shared/components/empty-state';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { REQUEST_TYPE_META, REQUEST_TYPES } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, TicketCategory, TicketPriority } from '@/shared/types';
@@ -54,6 +56,22 @@ const REQ_COLS = 'grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[minmax(0,1.1fr)
 const MINI_LABEL = 'text-muted-foreground mb-1 block text-xs font-semibold @2xl:hidden';
 
 type WorkRow = TicketSlaWorkClassTarget & { uid: number };
+type SlaForm = {
+    draft: TicketSlaTargets;
+    reqTargets: TicketSlaRequestTarget[];
+    workTargets: WorkRow[];
+    respTarget: number;
+    goal: number;
+    hours: TicketSlaHours;
+};
+const EMPTY_SLA: SlaForm = {
+    draft: {},
+    reqTargets: [],
+    workTargets: [],
+    respTarget: 120,
+    goal: 90,
+    hours: { days: [1, 2, 3, 4, 5], start: '08:00', end: '17:00', break_start: '12:00', break_end: '13:00' },
+};
 
 const minutesOf = (time: string | null) => (time ? Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) : null);
 const fill = (text: string, vars: Record<string, string | number>) =>
@@ -107,79 +125,61 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
         () => ({ resolve: stored?.medium?.resolve ?? 24, clock: stored?.medium?.clock ?? ('business' as TicketSlaClock) }),
         [stored?.medium?.resolve, stored?.medium?.clock],
     );
-    const nextUid = useRef(1);
+    // Stored work rows take ids by position; rows added here count up from far above them
+    const nextUid = useRef(10_000);
 
-    const [draft, setDraft] = useState<TicketSlaTargets>({});
-    const [reqTargets, setReqTargets] = useState<TicketSlaRequestTarget[]>([]);
-    const [workTargets, setWorkTargets] = useState<WorkRow[]>([]);
-    const [respTarget, setRespTarget] = useState(120);
-    const [goal, setGoal] = useState(90);
-    const [hours, setHours] = useState<TicketSlaHours>({
-        days: [1, 2, 3, 4, 5],
-        start: '08:00',
-        end: '17:00',
-        break_start: '12:00',
-        break_end: '13:00',
+    // Every piece in one state, so a refresh of the stored settings rebases them together
+    const [sla, setSla] = useState<SlaForm>(EMPTY_SLA);
+    const { draft, reqTargets, workTargets, respTarget, goal, hours } = sla;
+    const piece =
+        <K extends keyof SlaForm>(key: K) =>
+        (next: SlaForm[K] | ((prev: SlaForm[K]) => SlaForm[K])) =>
+            setSla((f) => ({ ...f, [key]: typeof next === 'function' ? (next as (prev: SlaForm[K]) => SlaForm[K])(f[key]) : next }));
+    const setDraft = piece('draft');
+    const setReqTargets = piece('reqTargets');
+    const setWorkTargets = piece('workTargets');
+    const setRespTarget = piece('respTarget');
+    const setGoal = piece('goal');
+    const setHours = piece('hours');
+    // What the form opened with, moved along by refreshes of the stored settings
+    const [base, setBase] = useState<SlaForm>(EMPTY_SLA);
+    const fresh: SlaForm | null = data
+        ? {
+              draft: stored ?? {},
+              reqTargets: storedRequest ? expandRequestRows(storedRequest, reqFallback) : [],
+              workTargets: (storedWork ?? []).map((row, i) => ({ ...row, uid: i + 1 })),
+              respTarget: storedResponse ?? EMPTY_SLA.respTarget,
+              goal: storedGoal ?? EMPTY_SLA.goal,
+              hours: storedHours ?? EMPTY_SLA.hours,
+          }
+        : null;
+    useSeedOnce(fresh ? 'sla' : null, () => {
+        if (!fresh) return;
+        setSla(fresh);
+        setBase(fresh);
     });
+    useFormRebase({ fresh, base, setBase, setForm: setSla });
     const [saved, setSaved] = useState(false);
     // Errors show once Save is refused, then follow every edit until a save goes through.
     const [submitted, setSubmitted] = useState(false);
     const [attempt, setAttempt] = useState(0);
 
-    useEffect(() => {
-        if (stored) setDraft(stored);
-    }, [stored]);
-    useEffect(() => {
-        if (storedRequest) setReqTargets(expandRequestRows(storedRequest, reqFallback));
-    }, [storedRequest, reqFallback]);
-    useEffect(() => {
-        if (storedWork) setWorkTargets(storedWork.map((row) => ({ ...row, uid: nextUid.current++ })));
-    }, [storedWork]);
-    useEffect(() => {
-        if (storedResponse != null) setRespTarget(storedResponse);
-    }, [storedResponse]);
-    useEffect(() => {
-        if (storedGoal != null) setGoal(storedGoal);
-    }, [storedGoal]);
-    useEffect(() => {
-        if (storedHours) setHours(storedHours);
-    }, [storedHours]);
-
     // Unsaved edits, counted per thing a person changed (the hours block, a field, a row).
     const changeCount = useMemo(() => {
         if (!data) return 0;
         let n = 0;
-        if (storedHours && JSON.stringify(hours) !== JSON.stringify(storedHours)) n++;
-        if (storedResponse != null && respTarget !== storedResponse) n++;
-        if (storedGoal != null && goal !== storedGoal) n++;
-        if (stored)
-            n += SLA_PRIORITIES.filter((p) => draft[p] && (draft[p].resolve !== stored[p]?.resolve || draft[p].clock !== stored[p]?.clock)).length;
-        if (storedRequest) {
-            const base = expandRequestRows(storedRequest, reqFallback);
-            n += reqTargets.filter((row, i) => !base[i] || requestKey(row) !== requestKey(base[i])).length;
-        }
-        if (storedWork) {
-            const before = storedWork.map(workSignature);
-            const after = workTargets.map(workSignature);
-            n += after.filter((sig, i) => sig !== before[i]).length + Math.max(0, before.length - after.length);
-        }
+        if (JSON.stringify(hours) !== JSON.stringify(base.hours)) n++;
+        if (respTarget !== base.respTarget) n++;
+        if (goal !== base.goal) n++;
+        n += SLA_PRIORITIES.filter(
+            (p) => draft[p] && (draft[p].resolve !== base.draft[p]?.resolve || draft[p].clock !== base.draft[p]?.clock),
+        ).length;
+        n += reqTargets.filter((row, i) => !base.reqTargets[i] || requestKey(row) !== requestKey(base.reqTargets[i])).length;
+        const before = base.workTargets.map(workSignature);
+        const after = workTargets.map(workSignature);
+        n += after.filter((sig, i) => sig !== before[i]).length + Math.max(0, before.length - after.length);
         return n;
-    }, [
-        data,
-        hours,
-        storedHours,
-        respTarget,
-        storedResponse,
-        goal,
-        storedGoal,
-        draft,
-        stored,
-        reqTargets,
-        storedRequest,
-        reqFallback,
-        workTargets,
-        storedWork,
-    ]);
+    }, [data, hours, respTarget, goal, draft, reqTargets, workTargets, base]);
 
     useEffect(() => {
         onDirtyChange(changeCount > 0);

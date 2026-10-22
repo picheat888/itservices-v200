@@ -8,8 +8,10 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { toastDeleteError } from '@/shared/lib/api-errors';
@@ -55,6 +57,7 @@ import {
     settingsApi,
     type BrandingPayload,
     type CompanyPayload,
+    type MailSettingsData,
     type MailSettingsPayload,
     type SecurityPolicyKey,
     type SecuritySettings,
@@ -436,9 +439,10 @@ function BrandsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: brands = [], isLoading } = useBrands({ refetchOnWindowFocus: true });
+    const brandsQuery = useBrands({ refetchOnWindowFocus: true });
+    const { data: brands = [], isLoading } = brandsQuery;
     const { remove } = useBrandMutations();
-    const dialog = useListDialog(brands, !isLoading);
+    const dialog = useListDialog(brands, !isLoading, brandsQuery);
 
     const columns: Column<Brand>[] = [
         {
@@ -501,9 +505,10 @@ function ModelsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: models = [], isLoading } = useAssetModels({ refetchOnWindowFocus: true });
+    const modelsQuery = useAssetModels({ refetchOnWindowFocus: true });
+    const { data: models = [], isLoading } = modelsQuery;
     const { remove } = useAssetModelMutations();
-    const dialog = useListDialog(models, !isLoading);
+    const dialog = useListDialog(models, !isLoading, modelsQuery);
 
     // Brand has its own column, so a leading "Brand " prefix is dropped
     const displayName = (m: AssetModel) => {
@@ -578,9 +583,10 @@ function CategoriesList() {
     const confirm = useConfirm();
     const list = useListParams();
     const lang = useUiStore((s) => s.lang);
-    const { data: categories = [], isLoading } = useCategories({ refetchOnWindowFocus: true });
+    const categoriesQuery = useCategories({ refetchOnWindowFocus: true });
+    const { data: categories = [], isLoading } = categoriesQuery;
     const { remove } = useCategoryMutations();
-    const dialog = useListDialog(categories, !isLoading);
+    const dialog = useListDialog(categories, !isLoading, categoriesQuery);
 
     // Display the category name in the active UI language (Thai falls back to the English name).
     const displayName = (c: Category) => localPair(c.name, c.name_th, lang) || '—';
@@ -655,9 +661,10 @@ function VendorsList() {
     const confirm = useConfirm();
     const list = useListParams();
     const lang = useUiStore((s) => s.lang);
-    const { data: vendors = [], isLoading } = useVendors({ refetchOnWindowFocus: true });
+    const vendorsQuery = useVendors({ refetchOnWindowFocus: true });
+    const { data: vendors = [], isLoading } = vendorsQuery;
     const { remove } = useVendorMutations();
-    const dialog = useListDialog(vendors, !isLoading);
+    const dialog = useListDialog(vendors, !isLoading, vendorsQuery);
 
     // Display the vendor name in the active UI language (Thai falls back to the English name).
     const displayName = (v: Vendor) => localPair(v.name, v.name_th, lang) || '—';
@@ -738,9 +745,10 @@ function WarehousesList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: warehouses = [], isLoading } = useWarehouses({ refetchOnWindowFocus: true });
+    const warehousesQuery = useWarehouses({ refetchOnWindowFocus: true });
+    const { data: warehouses = [], isLoading } = warehousesQuery;
     const { remove } = useWarehouseMutations();
-    const dialog = useListDialog(warehouses, !isLoading);
+    const dialog = useListDialog(warehouses, !isLoading, warehousesQuery);
 
     const columns: Column<Warehouse>[] = [
         {
@@ -804,9 +812,10 @@ function LocationsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: locations = [], isLoading } = useLocations({ refetchOnWindowFocus: true });
+    const locationsQuery = useLocations({ refetchOnWindowFocus: true });
+    const { data: locations = [], isLoading } = locationsQuery;
     const { remove } = useLocationMutations();
-    const dialog = useListDialog(locations, !isLoading);
+    const dialog = useListDialog(locations, !isLoading, locationsQuery);
 
     const columns: Column<LocationItem>[] = [
         {
@@ -867,12 +876,14 @@ function LocationsList() {
 /** Units lookup (Stock module master data). */
 function UnitsList() {
     const t = useT();
-    const { data: units = [], isLoading } = useUnits({ refetchOnWindowFocus: true });
+    const unitsQuery = useUnits({ refetchOnWindowFocus: true });
+    const { data: units = [], isLoading } = unitsQuery;
     const mutations = useUnitMutations();
     return (
         <LookupSection
             rows={units}
             loading={isLoading}
+            source={unitsQuery}
             mutations={mutations}
             addLabel={t('md_add_unit')}
             editLabel={t('md_edit_unit')}
@@ -888,12 +899,14 @@ function UnitsList() {
 /** Warranty types lookup (Stock module master data). */
 function WarrantyTypesList() {
     const t = useT();
-    const { data: warranties = [], isLoading } = useWarrantyTypes({ refetchOnWindowFocus: true });
+    const warrantiesQuery = useWarrantyTypes({ refetchOnWindowFocus: true });
+    const { data: warranties = [], isLoading } = warrantiesQuery;
     const mutations = useWarrantyTypeMutations();
     return (
         <LookupSection
             rows={warranties}
             loading={isLoading}
+            source={warrantiesQuery}
             mutations={mutations}
             addLabel={t('md_add_warranty_type')}
             editLabel={t('md_edit_warranty_type')}
@@ -907,6 +920,17 @@ function WarrantyTypesList() {
 }
 
 const MAIL_KEY = ['mail-settings'] as const;
+const EMPTY_MAIL: MailSettingsPayload = { host: '', port: 587, username: '', password: '', encryption: 'tls', from_address: '', from_name: '' };
+// The form's values for the stored mail settings (the password is never sent back)
+const mailForm = (d: MailSettingsData): MailSettingsPayload => ({
+    host: d.host ?? '',
+    port: d.port ?? 587,
+    username: d.username ?? '',
+    password: '',
+    encryption: d.encryption ?? null,
+    from_address: d.from_address ?? '',
+    from_name: d.from_name ?? '',
+});
 
 /** SMTP server settings (mail_settings) — host/port/credentials/from + test send. */
 function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
@@ -917,32 +941,22 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const formRef = useRef<HTMLDivElement>(null);
     const testHintId = useId();
 
-    const [form, setForm] = useState<MailSettingsPayload>({
-        host: '',
-        port: 587,
-        username: '',
-        password: '',
-        encryption: 'tls',
-        from_address: '',
-        from_name: '',
-    });
+    const [form, setForm] = useState<MailSettingsPayload>(EMPTY_MAIL);
+    // What the form opened with, moved along by refreshes of the stored settings
+    const [base, setBase] = useState<MailSettingsPayload>(EMPTY_MAIL);
     const [hasPassword, setHasPassword] = useState(false);
     const [saved, setSaved] = useState(false);
     type MailErrorKey = 'host' | 'port' | 'username' | 'password' | 'from_address' | 'from_name';
     const [errors, setErrors] = useState<Partial<Record<MailErrorKey, string>>>({});
 
-    useEffect(() => {
+    useSeedOnce(data ? 'mail' : null, () => {
         if (!data) return;
-        setForm({
-            host: data.host ?? '',
-            port: data.port ?? 587,
-            username: data.username ?? '',
-            password: '',
-            encryption: data.encryption ?? null,
-            from_address: data.from_address ?? '',
-            from_name: data.from_name ?? '',
-        });
-        setHasPassword(data.has_password);
+        setForm(mailForm(data));
+        setBase(mailForm(data));
+    });
+    useFormRebase({ fresh: data ? mailForm(data) : null, base, setBase, setForm });
+    useEffect(() => {
+        if (data) setHasPassword(data.has_password);
     }, [data]);
 
     const failed = useSaveFailed();
@@ -950,6 +964,8 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         mutationFn: (payload: MailSettingsPayload) => settingsApi.updateMail(payload),
         onSuccess: (d) => {
             qc.setQueryData(MAIL_KEY, d);
+            // The stored password stays hidden, so the typed one is cleared once saved
+            setForm((f) => ({ ...f, password: '' }));
             setSaved(true);
         },
         onError: failed,
@@ -1008,12 +1024,12 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     // A blank password keeps the stored one, so only a typed one counts as an edit
     const dirty =
         !!data &&
-        (form.host !== (data.host ?? '') ||
-            form.port !== (data.port ?? 587) ||
-            form.username !== (data.username ?? '') ||
-            (form.encryption ?? null) !== (data.encryption ?? null) ||
-            form.from_address !== (data.from_address ?? '') ||
-            form.from_name !== (data.from_name ?? '') ||
+        (form.host !== base.host ||
+            form.port !== base.port ||
+            form.username !== base.username ||
+            (form.encryption ?? null) !== (base.encryption ?? null) ||
+            form.from_address !== base.from_address ||
+            form.from_name !== base.from_name ||
             (form.password ?? '') !== '');
     // Report unsaved edits up so the page asks before switching section.
     useEffect(() => {
@@ -1195,12 +1211,17 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         device_limit: 0,
         geoip_updated_at: null,
     });
+    // What the form opened with, moved along by refreshes of the stored settings
+    const [base, setBase] = useState<SecuritySettings | null>(null);
     const [saved, setSaved] = useState(false);
     const [confirmingLimit, setConfirmingLimit] = useState(false);
 
-    useEffect(() => {
-        if (data) setForm(data);
-    }, [data]);
+    useSeedOnce(data ? 'security' : null, () => {
+        if (!data) return;
+        setForm(data);
+        setBase(data);
+    });
+    useFormRebase({ fresh: data && base ? data : null, base: base ?? form, setBase, setForm });
 
     const failed = useSaveFailed();
     const update = useMutation({
@@ -1218,7 +1239,7 @@ function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     };
 
     // Every loaded key is compared, so a policy added later is covered too
-    const dirty = !!data && (Object.keys(data) as (keyof SecuritySettings)[]).some((k) => form[k] !== data[k]);
+    const dirty = !!base && (Object.keys(base) as (keyof SecuritySettings)[]).some((k) => form[k] !== base[k]);
     // Report unsaved edits up so the page asks before switching section.
     useEffect(() => {
         onDirtyChange(dirty);

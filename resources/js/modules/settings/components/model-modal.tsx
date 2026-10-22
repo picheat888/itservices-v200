@@ -2,18 +2,21 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { AssetModel, Brand } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirmEdit } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Boxes } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssetModelMutations, useBrands } from '../hooks/use-master-data';
 
 // Radix Select rejects "" as an item value, so use a sentinel for "no brand".
@@ -30,9 +33,16 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
     const view = open ? (model ?? null) : shown;
     const confirmEdit = useConfirmEdit();
     const { create, update } = useAssetModelMutations();
-    const { data: brands = [] } = useBrands();
-    const [name, setName] = useState('');
-    const [brandId, setBrandId] = useState<string>(NO_BRAND);
+    const brandsQuery = useBrands();
+    const refreshBrands = useSelectRefresh(brandsQuery);
+    const brands = useMemo(() => brandsQuery.data ?? [], [brandsQuery.data]);
+    // Fields in one state, so a refresh of the row rebases them together
+    const [form, setForm] = useState({ name: '', brandId: NO_BRAND });
+    const { name, brandId } = form;
+    const setName = (next: string) => setForm((f) => ({ ...f, name: next }));
+    const setBrandId = (next: string) => setForm((f) => ({ ...f, brandId: next }));
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState({ name: '', brandId: NO_BRAND });
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
@@ -41,18 +51,19 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
-    useEffect(() => {
-        if (open) {
-            setName(model?.name ?? '');
-            setBrandId(model?.brand_id ? String(model.brand_id) : NO_BRAND);
-            setNameError(undefined);
-            setSaved(false);
-            clearFormError();
-        }
-    }, [open, model, clearFormError]);
+    const toValues = (m?: AssetModel | null) => ({ name: m?.name ?? '', brandId: m?.brand_id ? String(m.brand_id) : NO_BRAND });
+    useSeedOnce(open ? (model?.id ?? 'new') : null, () => {
+        const values = toValues(model);
+        setForm(values);
+        setBase(values);
+        setNameError(undefined);
+        setSaved(false);
+        clearFormError();
+    });
+    useFormRebase({ fresh: open && model ? toValues(model) : null, base, setBase, setForm });
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
-    const isDirty = !saved && (name !== (model?.name ?? '') || brandId !== (model?.brand_id ? String(model.brand_id) : NO_BRAND));
+    const isDirty = !saved && (name !== base.name || brandId !== base.brandId);
     const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {
@@ -99,25 +110,20 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                 <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                     <Field label={t('md_brand')} controlId="model-brand">
-                        <Select
+                        <SearchableSelect
+                            id="model-brand"
                             value={brandId}
-                            onValueChange={(value) => {
+                            onChange={(value) => {
                                 setBrandId(value);
                                 setNameError(undefined);
                             }}
-                        >
-                            <SelectTrigger id="model-brand">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={NO_BRAND}>{t('md_no_brand')}</SelectItem>
-                                {brands.map((b: Brand) => (
-                                    <SelectItem key={b.id} value={String(b.id)}>
-                                        {b.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            refresh={refreshBrands}
+                            flagRemoved
+                            options={[
+                                { value: NO_BRAND, label: t('md_no_brand'), search: t('md_no_brand') },
+                                ...brands.map((b: Brand) => ({ value: String(b.id), label: b.name, search: b.name })),
+                            ]}
+                        />
                     </Field>
                     <Field label={t('md_model_name')} required error={nameError}>
                         <Input

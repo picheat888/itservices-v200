@@ -5,6 +5,8 @@ import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -26,8 +28,13 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
     const view = open ? (warehouse ?? null) : shown;
     const confirmEdit = useConfirmEdit();
     const { create, update } = useWarehouseMutations();
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
+    // Fields in one state, so a refresh of the row rebases them together
+    const [form, setForm] = useState({ name: '', description: '' });
+    const { name, description } = form;
+    const setName = (next: string) => setForm((f) => ({ ...f, name: next }));
+    const setDescription = (next: string) => setForm((f) => ({ ...f, description: next }));
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState({ name: '', description: '' });
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
@@ -36,18 +43,19 @@ export function WarehouseModal({ open, warehouse, onClose }: { open: boolean; wa
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
-    useEffect(() => {
-        if (open) {
-            setName(warehouse?.name ?? '');
-            setDescription(warehouse?.description ?? '');
-            setNameError(undefined);
-            setSaved(false);
-            clearFormError();
-        }
-    }, [open, warehouse, clearFormError]);
+    const toValues = (r?: { name: string; description?: string | null } | null) => ({ name: r?.name ?? '', description: r?.description ?? '' });
+    useSeedOnce(open ? (warehouse?.id ?? 'new') : null, () => {
+        const values = toValues(warehouse);
+        setForm(values);
+        setBase(values);
+        setNameError(undefined);
+        setSaved(false);
+        clearFormError();
+    });
+    useFormRebase({ fresh: open && warehouse ? toValues(warehouse) : null, base, setBase, setForm });
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
-    const isDirty = !saved && (name !== (warehouse?.name ?? '') || description !== (warehouse?.description ?? ''));
+    const isDirty = !saved && (name !== base.name || description !== base.description);
     const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {

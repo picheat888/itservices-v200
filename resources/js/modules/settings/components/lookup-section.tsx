@@ -6,7 +6,9 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -41,6 +43,8 @@ interface LookupSectionProps {
     /** True while the rows are first loading (shows skeleton rows instead of "no data"). */
     loading?: boolean;
     mutations: LookupMutations;
+    /** The list's query, asked again when an edit opens. */
+    source?: Parameters<typeof useListDialog>[2];
     /** Dialog/title labels. */
     addLabel: string;
     editLabel: string;
@@ -67,6 +71,7 @@ export function LookupSection({
     rows,
     loading,
     mutations,
+    source,
     addLabel,
     editLabel,
     nameLabel,
@@ -79,7 +84,7 @@ export function LookupSection({
     const confirm = useConfirm();
     const list = useListParams();
     const { create, update, remove } = mutations;
-    const dialog = useListDialog(rows, !loading);
+    const dialog = useListDialog(rows, !loading, source);
 
     const columns: Column<LookupItem>[] = [
         { key: 'name', header: nameLabel, render: (r) => <span className="text-sm font-medium">{r.name}</span> },
@@ -189,25 +194,31 @@ function LookupModal({
         if (open) setShown(item);
     }, [open, item]);
     const view = open ? item : shown;
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
+    // Fields in one state, so a refresh of the row rebases them together
+    const [form, setForm] = useState({ name: '', description: '' });
+    const { name, description } = form;
+    const setName = (next: string) => setForm((f) => ({ ...f, name: next }));
+    const setDescription = (next: string) => setForm((f) => ({ ...f, description: next }));
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState({ name: '', description: '' });
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
     const nameRef = useRef<HTMLInputElement>(null);
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
-    useEffect(() => {
-        if (open) {
-            setName(item?.name ?? '');
-            setDescription(item?.description ?? '');
-            setNameError(undefined);
-            setSaved(false);
-        }
-    }, [open, item]);
+    const toValues = (r?: { name: string; description?: string | null } | null) => ({ name: r?.name ?? '', description: r?.description ?? '' });
+    useSeedOnce(open ? (item?.id ?? 'new') : null, () => {
+        const values = toValues(item);
+        setForm(values);
+        setBase(values);
+        setNameError(undefined);
+        setSaved(false);
+    });
+    useFormRebase({ fresh: open && item ? toValues(item) : null, base, setBase, setForm });
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
-    const isDirty = !saved && (name !== (item?.name ?? '') || description !== (item?.description ?? ''));
+    const isDirty = !saved && (name !== base.name || description !== base.description);
     const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {

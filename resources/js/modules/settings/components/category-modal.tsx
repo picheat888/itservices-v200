@@ -6,6 +6,8 @@ import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Category } from '@/shared/types';
@@ -19,6 +21,16 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useCategoryMutations } from '../hooks/use-master-data';
 
 /** CategoryModal — add or edit a category; Save shows a spinner, then a tick, then the dialog closes. */
+type CategoryForm = { name: string; nameTh: string; icon: string | null; description: string };
+const EMPTY_CATEGORY: CategoryForm = { name: '', nameTh: '', icon: null, description: '' };
+// The form's values for a category (blank for a new one)
+const categoryForm = (c?: Category | null): CategoryForm => ({
+    name: c?.name ?? '',
+    nameTh: c?.name_th ?? '',
+    icon: c?.icon ?? null,
+    description: c?.description ?? '',
+});
+
 export function CategoryModal({ open, category, onClose }: { open: boolean; category?: Category | null; onClose: () => void }) {
     const t = useT();
     // The header keeps the record being edited while the dialog closes
@@ -30,10 +42,15 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const lang = useUiStore((s) => s.lang);
     const confirmEdit = useConfirmEdit();
     const { create, update } = useCategoryMutations();
-    const [name, setName] = useState('');
-    const [nameTh, setNameTh] = useState('');
-    const [icon, setIcon] = useState<string | null>(null);
-    const [description, setDescription] = useState('');
+    // Fields in one state, so a refresh of the row rebases them together
+    const [form, setForm] = useState<CategoryForm>(EMPTY_CATEGORY);
+    const { name, nameTh, icon, description } = form;
+    const setName = (next: string) => setForm((f) => ({ ...f, name: next }));
+    const setNameTh = (next: string) => setForm((f) => ({ ...f, nameTh: next }));
+    const setIcon = (next: string | null) => setForm((f) => ({ ...f, icon: next }));
+    const setDescription = (next: string) => setForm((f) => ({ ...f, description: next }));
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState<CategoryForm>(EMPTY_CATEGORY);
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
@@ -42,25 +59,19 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
-    useEffect(() => {
-        if (open) {
-            setName(category?.name ?? '');
-            setNameTh(category?.name_th ?? '');
-            setIcon(category?.icon ?? null);
-            setDescription(category?.description ?? '');
-            setNameError(undefined);
-            setSaved(false);
-            clearFormError();
-        }
-    }, [open, category, clearFormError]);
+    useSeedOnce(open ? (category?.id ?? 'new') : null, () => {
+        const values = categoryForm(category);
+        setForm(values);
+        setBase(values);
+        setNameError(undefined);
+        setSaved(false);
+        clearFormError();
+    });
+    useFormRebase({ fresh: open && category ? categoryForm(category) : null, base, setBase, setForm });
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
     const isDirty =
-        !saved &&
-        (name !== (category?.name ?? '') ||
-            nameTh !== (category?.name_th ?? '') ||
-            (icon || null) !== (category?.icon || null) ||
-            description !== (category?.description ?? ''));
+        !saved && (name !== base.name || nameTh !== base.nameTh || (icon || null) !== (base.icon || null) || description !== base.description);
     const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {

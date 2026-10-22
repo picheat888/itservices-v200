@@ -6,6 +6,8 @@ import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import type { LocationItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -26,7 +28,12 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
     const view = open ? (location ?? null) : shown;
     const confirmEdit = useConfirmEdit();
     const { create, update } = useLocationMutations();
-    const [name, setName] = useState('');
+    // The field in a state object, so a refresh of the row rebases it
+    const [form, setForm] = useState({ name: '' });
+    const { name } = form;
+    const setName = (next: string) => setForm({ name: next });
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState({ name: '' });
     const [nameError, setNameError] = useState<string | undefined>();
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
@@ -35,17 +42,18 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
-    useEffect(() => {
-        if (open) {
-            setName(location?.name ?? '');
-            setNameError(undefined);
-            setSaved(false);
-            clearFormError();
-        }
-    }, [open, location, clearFormError]);
+    useSeedOnce(open ? (location?.id ?? 'new') : null, () => {
+        const values = { name: location?.name ?? '' };
+        setForm(values);
+        setBase(values);
+        setNameError(undefined);
+        setSaved(false);
+        clearFormError();
+    });
+    useFormRebase({ fresh: open && location ? { name: location.name } : null, base, setBase, setForm });
 
     // Dirty = differs from the values the dialog was seeded with (create = blank).
-    const isDirty = !saved && name !== (location?.name ?? '');
+    const isDirty = !saved && name !== base.name;
     const guardClose = useDiscardGuard(open && isDirty);
 
     const submit = async () => {

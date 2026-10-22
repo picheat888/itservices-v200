@@ -5,6 +5,8 @@ import { SaveButton } from '@/shared/components/save-button';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { hasFieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Vendor } from '@/shared/types';
@@ -14,7 +16,7 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { Boxes } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useVendorMutations } from '../hooks/use-master-data';
 
 const emptyForm = { name: '', name_th: '', contact: '', phone: '', email: '', address: '' };
@@ -57,18 +59,20 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const saving = create.isPending || update.isPending;
 
-    const initialForm = useMemo(() => fromVendor(vendor), [vendor]);
-    const isDirty = !saved && JSON.stringify(form) !== JSON.stringify(initialForm);
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState(emptyForm);
+    const isDirty = !saved && JSON.stringify(form) !== JSON.stringify(base);
     const guardClose = useDiscardGuard(open && isDirty);
 
-    useEffect(() => {
-        if (open) {
-            setForm(fromVendor(vendor));
-            setErrors({});
-            setSaved(false);
-            clearFormError();
-        }
-    }, [open, vendor, clearFormError]);
+    useSeedOnce(open ? (vendor?.id ?? 'new') : null, () => {
+        const values = fromVendor(vendor);
+        setForm(values);
+        setBase(values);
+        setErrors({});
+        setSaved(false);
+        clearFormError();
+    });
+    useFormRebase({ fresh: open && vendor ? fromVendor(vendor) : null, base, setBase, setForm });
 
     const set = (k: keyof typeof emptyForm, v: string) => {
         setForm((f) => ({ ...f, [k]: v }));
