@@ -22,3 +22,28 @@ export function barRefreshMark(marks: readonly (RefreshMark | undefined)[]): Ref
     }
     return marks.includes('done') ? 'done' : 'idle';
 }
+
+/** The query state a tab's mark reads. */
+export type TabSource = { isFetching: boolean; isLoading: boolean; isPlaceholderData: boolean; dataUpdatedAt: number };
+
+/** A refetch of data already on screen; a first load or a new filter shows its own skeleton instead. */
+export function isBackgroundFetch(s: TabSource): boolean {
+    return s.isFetching && !s.isLoading && !s.isPlaceholderData;
+}
+
+/** Moves whenever any of the tab's sources brings new data. */
+export function tabStamp(sources: readonly TabSource[]): number {
+    return sources.reduce((sum, s) => sum + s.dataUpdatedAt, 0);
+}
+
+export type TabMarkState<T extends string> = { tab: T; mark: RefreshMark; since: number };
+
+/** The active tab's next mark; switching tabs starts the new tab clean, so a check never lands on a tab that did not refetch. */
+export function nextTabMark<T extends string>(prev: TabMarkState<T>, active: T, fetching: boolean, stamp: number): TabMarkState<T> {
+    if (prev.tab !== active) {
+        return { tab: active, mark: fetching ? 'busy' : 'idle', since: stamp };
+    }
+    const mark = nextRefreshMark(prev.mark, fetching, stamp > prev.since);
+    const since = mark === 'busy' && prev.mark !== 'busy' ? stamp : prev.since;
+    return mark === prev.mark && since === prev.since ? prev : { tab: active, mark, since };
+}

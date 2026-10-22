@@ -1,7 +1,49 @@
 // Tab refresh mark: a spinner while a background refetch runs, then a check that a timer later clears.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { barRefreshMark, nextRefreshMark, REFRESH_DONE_MS } from '../../resources/js/shared/lib/refresh-mark.ts';
+import {
+    barRefreshMark,
+    isBackgroundFetch,
+    nextRefreshMark,
+    nextTabMark,
+    REFRESH_DONE_MS,
+    tabStamp,
+} from '../../resources/js/shared/lib/refresh-mark.ts';
+
+const src = (over: Partial<{ isFetching: boolean; isLoading: boolean; isPlaceholderData: boolean; dataUpdatedAt: number }>) => ({
+    isFetching: false,
+    isLoading: false,
+    isPlaceholderData: false,
+    dataUpdatedAt: 0,
+    ...over,
+});
+
+test('a background fetch is one that refreshes data already on screen', () => {
+    assert.equal(isBackgroundFetch(src({ isFetching: true, dataUpdatedAt: 1 })), true);
+    assert.equal(isBackgroundFetch(src({ isFetching: true, isLoading: true })), false);
+    assert.equal(isBackgroundFetch(src({ isFetching: true, isPlaceholderData: true })), false);
+});
+
+test('a tab stamp moves when any of its sources brings new data', () => {
+    assert.equal(tabStamp([src({ dataUpdatedAt: 10 }), src({ dataUpdatedAt: 5 })]), 15);
+});
+
+test('switching tabs mid-fetch starts the new tab clean', () => {
+    assert.deepEqual(nextTabMark({ tab: 'a', mark: 'busy', since: 10 }, 'b', false, 99), { tab: 'b', mark: 'idle', since: 99 });
+});
+
+test('a switch onto a tab that is already refetching shows its spinner', () => {
+    assert.equal(nextTabMark({ tab: 'a', mark: 'idle', since: 10 }, 'b', true, 50).mark, 'busy');
+});
+
+test('the active tab shows the check only when its data moved', () => {
+    assert.equal(nextTabMark({ tab: 'a', mark: 'busy', since: 10 }, 'a', false, 11).mark, 'done');
+    assert.equal(nextTabMark({ tab: 'a', mark: 'busy', since: 10 }, 'a', false, 10).mark, 'idle');
+});
+
+test('the spinner remembers the stamp it started from', () => {
+    assert.deepEqual(nextTabMark({ tab: 'a', mark: 'idle', since: 3 }, 'a', true, 10), { tab: 'a', mark: 'busy', since: 10 });
+});
 
 test('a refetch starting from rest shows the spinner', () => {
     assert.equal(nextRefreshMark('idle', true, false), 'busy');
