@@ -33,6 +33,7 @@ import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
+import { seedRowCopy } from '@/shared/lib/seed-row';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
@@ -198,10 +199,13 @@ export default function EmployeesPage() {
     const dialogs = usePageDialogs();
     // Only a real record id opens the drawer (never NaN)
     const openId = toRecordId(searchParams.get('view'));
-    const { data: viewEmp, isError: viewEmpMissing } = useEmployee(openId);
+    const viewQuery = useEmployee(openId);
+    const viewEmp = viewQuery.data;
+    const viewEmpMissing = isRecordMissing(viewQuery.error, viewEmp !== undefined);
+    useRefetchOnOpen(openId != null, viewQuery);
     const setView = (id: number | null) => (id == null ? dialogs.close(['view', 'edit']) : dialogs.open({ view: String(id) }));
     const openEmp = (emp: Employee) => {
-        qc.setQueryData(['employee', emp.id], emp);
+        seedRowCopy(qc, ['employee', emp.id], emp);
         setView(emp.id);
     };
     const closeEmp = () => setView(null);

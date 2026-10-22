@@ -6,11 +6,11 @@ import { POS } from './query-keys';
 export const usePositions = (opts: LookupOptions = {}) => useQuery({ queryKey: POS, queryFn: positionApi.list, ...FRESH_LIST, ...opts });
 
 /** Employees holding a position — loaded on demand for the "view members" dialog. */
-export function usePositionMembers(id: number | null) {
+export function usePositionMembers(id: number | null, enabled = true) {
     return useQuery({
         queryKey: ['positions', id, 'members'],
         queryFn: () => positionApi.members(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 }

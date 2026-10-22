@@ -3,6 +3,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Position } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
@@ -34,7 +35,9 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
         if (openId !== null) setQuery('');
     }, [openId]);
 
-    const { data: members = [], isLoading } = usePositionMembers(view?.id ?? null);
+    const membersQuery = usePositionMembers(view?.id ?? null, openId != null);
+    const { data: members = [], isLoading } = membersQuery;
+    useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.employees_count;
     const loadingMembers = isLoading && expected !== 0;

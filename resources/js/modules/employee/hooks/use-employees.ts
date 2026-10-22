@@ -20,63 +20,63 @@ export const useEmployeeSummary = (period: OverviewPeriod = 'all', enabled = tru
 // reaches the Directory tab through `summary.no_account`.
 
 /** Fetches a single employee by id (used to open a record from a notification link). */
-export const useEmployee = (id: number | null) =>
+export const useEmployee = (id: number | null, enabled = true) =>
     useQuery({
         queryKey: ['employee', id],
         queryFn: () => employeeApi.get(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 
 /** Assets the employee currently holds — powers the Employee detail's read-only Assets tab. */
-export const useEmployeeAssets = (id: number | null) =>
+export const useEmployeeAssets = (id: number | null, enabled = true) =>
     useQuery({
         queryKey: ['employee-assets', id],
         queryFn: () => employeeApi.assets(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 
 /** Tickets the employee has requested — powers the Employee detail's read-only Tickets tab. */
-export const useEmployeeTickets = (id: number | null) =>
+export const useEmployeeTickets = (id: number | null, enabled = true) =>
     useQuery({
         queryKey: ['employee-tickets', id],
         queryFn: () => employeeApi.tickets(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 
 /** Service requests the employee owns — powers the Employee detail's read-only Requests tab. */
-export const useEmployeeRequests = (id: number | null) =>
+export const useEmployeeRequests = (id: number | null, enabled = true) =>
     useQuery({
         queryKey: ['employee-requests', id],
         queryFn: () => employeeApi.requests(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 
 /** Access memberships the employee holds — powers the Employee detail's read-only Access tab. */
-export const useEmployeeAccess = (id: number | null) =>
+export const useEmployeeAccess = (id: number | null, enabled = true) =>
     useQuery({
         queryKey: ['employee-access', id],
         queryFn: () => employeeApi.access(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 
 /** The employee's approval chain (direct manager first, up to the root of the reporting tree). */
-export function useApprovalChain(id: number | null) {
+export function useApprovalChain(id: number | null, enabled = true) {
     return useQuery({
         queryKey: ['approval-chain', id],
         queryFn: () => employeeApi.approvalChain(id as number),
-        enabled: id !== null,
+        enabled: id !== null && enabled,
         ...FRESH_VIEW,
     });
 }
 
 /** Fetches the full org chart tree (all employees with manager relationships). */
-export function useOrgChart() {
-    return useQuery({ queryKey: ['org-chart'], queryFn: employeeApi.orgChart, ...FRESH_VIEW });
+export function useOrgChart(enabled = true) {
+    return useQuery({ queryKey: ['org-chart'], queryFn: employeeApi.orgChart, enabled, ...FRESH_VIEW });
 }
 
 /** Paginated directory query — search and department filter are server-side. */

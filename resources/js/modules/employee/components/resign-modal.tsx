@@ -5,6 +5,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
@@ -46,7 +47,9 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     }, [employee]);
 
     // Equipment still held; a failed load reads as "unknown", never as "nothing to return"
-    const { data: heldAssets = [], isLoading: assetsLoading, isError: assetsFailed } = useEmployeeAssets(shown?.id ?? null);
+    const assetsQuery = useEmployeeAssets(shown?.id ?? null, employee != null);
+    const { data: heldAssets = [], isLoading: assetsLoading, isError: assetsFailed } = assetsQuery;
+    useRefetchOnOpen(employee != null, assetsQuery);
 
     useEffect(() => {
         if (employee) {

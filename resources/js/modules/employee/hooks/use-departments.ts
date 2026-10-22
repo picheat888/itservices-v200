@@ -7,11 +7,11 @@ import { DEPT } from './query-keys';
 export const useDepartments = (opts: LookupOptions = {}) => useQuery({ queryKey: DEPT, queryFn: departmentApi.list, ...FRESH_LIST, ...opts });
 
 /** Employees in a department — loaded on demand for the "view members" dialog. */
-export function useDepartmentMembers(id: number | null) {
+export function useDepartmentMembers(id: number | null, enabled = true) {
     return useQuery({
         queryKey: ['departments', id, 'members'],
         queryFn: () => departmentApi.members(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 }

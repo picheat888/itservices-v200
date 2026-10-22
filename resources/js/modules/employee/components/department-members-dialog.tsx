@@ -3,6 +3,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Department, Employee } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
@@ -36,7 +37,9 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
         if (openId !== null) setQuery('');
     }, [openId]);
 
-    const { data: members = [], isLoading } = useDepartmentMembers(view?.id ?? null);
+    const membersQuery = useDepartmentMembers(view?.id ?? null, openId != null);
+    const { data: members = [], isLoading } = membersQuery;
+    useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.count;
     const loadingMembers = isLoading && expected !== 0;

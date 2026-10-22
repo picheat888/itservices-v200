@@ -38,13 +38,18 @@ const SITES: Site[] = [
     { file: 'modules/employee/hooks/use-positions.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-sections.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-employees.ts', freshView: 9 },
-    { file: 'modules/employee/pages/index.tsx', marks: 6, refresh: 1, focus: 2, openRefetch: 1 },
+    { file: 'modules/employee/pages/index.tsx', marks: 6, refresh: 1, focus: 2, openRefetch: 2 },
     { file: 'modules/employee/components/sections-tab.tsx', refresh: 1, focus: 1 },
     { file: 'modules/employee/components/edit-employee-dialog.tsx', refresh: 3, flagRemoved: 2, rebase: 1 },
     { file: 'modules/employee/components/add-employee-drawer.tsx', refresh: 4, flagRemoved: 2 },
     { file: 'modules/employee/components/section-modal.tsx', refresh: 1, flagRemoved: 1, seedOnce: 1, rebase: 1 },
     { file: 'modules/employee/components/position-modal.tsx', seedOnce: 1, rebase: 1 },
     { file: 'modules/employee/components/department-modal.tsx', seedOnce: 1, rebase: 1 },
+    { file: 'modules/employee/components/employee-view-drawer.tsx', marks: 6, openRefetch: 1 },
+    { file: 'modules/employee/components/department-members-dialog.tsx', openRefetch: 1 },
+    { file: 'modules/employee/components/position-members-dialog.tsx', openRefetch: 1 },
+    { file: 'modules/employee/components/section-members-dialog.tsx', openRefetch: 1 },
+    { file: 'modules/employee/components/resign-modal.tsx', openRefetch: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
     { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
     { file: 'modules/ticket/pages/index.tsx', marks: 1, freshView: 2, openRefetch: 2 },
@@ -150,4 +155,11 @@ test('dialogs that keep their last record for the exit animation query it only w
     assert.ok(read('modules/stock/pages/tabs/requests-tab.tsx').includes('useStockItem(fulfillReq?.stock_item_id ?? null, fulfillOpen)'));
     assert.ok(read('modules/stock/pages/tabs/movements-tab.tsx').includes('useMovementSerials(viewMove?.id ?? null, moveOpen)'));
     assert.ok(read('modules/asset/components/contract-peek-dialog.tsx').includes('useAssetContract(shownAssetId, open)'));
+});
+
+test('employee dialogs open rows through seedRowCopy and query only while open', () => {
+    assert.ok(read('modules/employee/pages/index.tsx').includes("seedRowCopy(qc, ['employee', emp.id], emp)"));
+    assert.ok(read('modules/employee/components/employee-view-drawer.tsx').includes('useApprovalChain(shown?.id ?? null, open)'));
+    assert.ok(read('modules/employee/components/department-members-dialog.tsx').includes('useDepartmentMembers(view?.id ?? null, openId != null)'));
+    assert.ok(read('modules/employee/components/resign-modal.tsx').includes('useEmployeeAssets(shown?.id ?? null, employee != null)'));
 });

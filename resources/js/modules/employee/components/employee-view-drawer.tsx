@@ -8,6 +8,8 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localName, localPair, otherName } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, OrgChartNode } from '@/shared/types';
@@ -124,14 +126,34 @@ export function EmployeeViewDrawer({
     }, [shown?.id]);
 
     // Keyed to the employee on screen; `isLoading` keeps "not loaded yet" apart from "has nothing"
-    const { data: approvalChain = [] } = useApprovalChain(shown?.id ?? null);
-    const { data: orgNodes = [] } = useOrgChart();
-    const { data: access, isLoading: accessLoading } = useEmployeeAccess(shown?.id ?? null);
-    const { data: heldAssets = [], isLoading: assetsLoading } = useEmployeeAssets(shown?.id ?? null);
-    const { data: requestedTickets = [], isLoading: ticketsLoading } = useEmployeeTickets(shown?.id ?? null);
-    const { data: ownedRequests = [], isLoading: requestsLoading } = useEmployeeRequests(shown?.id ?? null);
+    const open = !!employee;
+    const chainQuery = useApprovalChain(shown?.id ?? null, open);
+    const orgQuery = useOrgChart(open);
+    const accessQuery = useEmployeeAccess(shown?.id ?? null, open);
+    const assetsQuery = useEmployeeAssets(shown?.id ?? null, open);
+    const ticketsQuery = useEmployeeTickets(shown?.id ?? null, open);
+    const requestsQuery = useEmployeeRequests(shown?.id ?? null, open);
     // Live copy so mutations (e.g. set credentials) show without a reload
-    const { data: liveEmp } = useEmployee(shown?.id ?? null);
+    const liveQuery = useEmployee(shown?.id ?? null, open);
+    useRefetchOnOpen(open, liveQuery, chainQuery, orgQuery, accessQuery, assetsQuery, ticketsQuery, requestsQuery);
+    const marks = useTabFreshness(tab, {
+        overview: [liveQuery, chainQuery, orgQuery],
+        org: [orgQuery],
+        access: [accessQuery],
+        assets: [assetsQuery],
+        tickets: [ticketsQuery],
+        requests: [requestsQuery],
+    });
+    const approvalChain = useMemo(() => chainQuery.data ?? [], [chainQuery.data]);
+    const orgNodes = useMemo(() => orgQuery.data ?? [], [orgQuery.data]);
+    const { data: access, isLoading: accessLoading } = accessQuery;
+    const heldAssets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data]);
+    const assetsLoading = assetsQuery.isLoading;
+    const requestedTickets = useMemo(() => ticketsQuery.data ?? [], [ticketsQuery.data]);
+    const ticketsLoading = ticketsQuery.isLoading;
+    const ownedRequests = useMemo(() => requestsQuery.data ?? [], [requestsQuery.data]);
+    const requestsLoading = requestsQuery.isLoading;
+    const liveEmp = liveQuery.data;
 
     const nodeById = useMemo(() => new Map(orgNodes.map((n) => [n.id, n])), [orgNodes]);
     const directReports = useMemo(() => (shown ? orgNodes.filter((n) => n.manager_id === shown.id) : []), [orgNodes, shown]);
@@ -170,17 +192,24 @@ export function EmployeeViewDrawer({
     };
 
     const tabs: DialogTab<DrawerTab>[] = [
-        { id: 'overview', label: t('nav_overview'), icon: LayoutDashboard },
-        { id: 'org', label: t('emp_v_tab_org'), icon: Users },
+        { id: 'overview', label: t('nav_overview'), icon: LayoutDashboard, refresh: marks.overview },
+        { id: 'org', label: t('emp_v_tab_org'), icon: Users, refresh: marks.org },
         // No count until this person's own list is known
-        { id: 'assets', label: t('emp_v_tab_assets'), icon: Laptop, count: assetsLoading ? undefined : heldAssets.length },
-        { id: 'tickets', label: t('emp_v_tab_tickets'), icon: Ticket, count: ticketsLoading ? undefined : requestedTickets.length },
-        { id: 'requests', label: t('requests'), icon: Inbox, count: requestsLoading ? undefined : ownedRequests.length },
+        { id: 'assets', label: t('emp_v_tab_assets'), icon: Laptop, count: assetsLoading ? undefined : heldAssets.length, refresh: marks.assets },
+        {
+            id: 'tickets',
+            label: t('emp_v_tab_tickets'),
+            icon: Ticket,
+            count: ticketsLoading ? undefined : requestedTickets.length,
+            refresh: marks.tickets,
+        },
+        { id: 'requests', label: t('requests'), icon: Inbox, count: requestsLoading ? undefined : ownedRequests.length, refresh: marks.requests },
         {
             id: 'access',
             label: t('emp_v_tab_access'),
             icon: Shield,
             count: access ? access.email_groups.length + access.file_shares.length + access.social.length + access.software.length : undefined,
+            refresh: marks.access,
         },
     ];
     return (

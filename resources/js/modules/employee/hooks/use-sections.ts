@@ -13,11 +13,11 @@ export function useSections(departmentId?: number | null, opts: LookupOptions = 
 }
 
 /** Employees assigned to a section — loaded on demand for the "view members" dialog. */
-export function useSectionMembers(id: number | null) {
+export function useSectionMembers(id: number | null, enabled = true) {
     return useQuery({
         queryKey: ['sections', id, 'members'],
         queryFn: () => sectionApi.members(id as number),
-        enabled: id != null,
+        enabled: id != null && enabled,
         ...FRESH_VIEW,
     });
 }
