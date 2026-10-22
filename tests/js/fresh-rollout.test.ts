@@ -33,7 +33,10 @@ const NEEDLES: Record<Exclude<keyof Site, 'file'>, string> = {
 };
 
 const SITES: Site[] = [
-    { file: 'modules/settings/hooks/use-master-data.ts', freshList: 8 },
+    { file: 'modules/settings/hooks/use-master-data.ts', freshList: 8, freshView: 1 },
+    { file: 'modules/settings/pages/index.tsx', marks: 8, focus: 8, freshView: 2 },
+    { file: 'modules/settings/components/request-data-section.tsx', marks: 1 },
+    { file: 'modules/settings/hooks/use-network-names.ts', freshView: 1 },
     { file: 'modules/employee/hooks/use-departments.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-positions.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-sections.ts', freshList: 1, freshView: 1 },

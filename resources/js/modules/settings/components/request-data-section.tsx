@@ -11,6 +11,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { localLabel } from '@/shared/lib/local-name';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -40,7 +41,8 @@ export function RequestDataSection() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
-    const { data, isLoading } = useRequestOptionLists();
+    const listsQuery = useRequestOptionLists();
+    const { data, isLoading } = listsQuery;
     const { create, update, remove, reorder } = useRequestOptionMutations();
 
     const lists = useMemo(() => data?.lists ?? [], [data]);
@@ -50,6 +52,8 @@ export function RequestDataSection() {
     const params = useListParams();
     const requested = params.get('list');
     const listKey = keys.includes(requested) ? requested : (keys[0] ?? '');
+    // Every list tab shows the one query
+    const marks = useTabFreshness(listKey, Object.fromEntries([...keys, listKey].map((key) => [key, [listsQuery]])));
     const selectList = (next: string) => {
         if (next === listKey) return;
         params.setParams({ list: next === keys[0] ? null : next });
@@ -131,7 +135,7 @@ export function RequestDataSection() {
 
     const tabs = lists.map((l) => {
         const key = listKeyOf(l);
-        return { id: key, label: t(REQUEST_TYPE_META[l.request_type].labelKey), count: counts.get(key) ?? 0 };
+        return { id: key, label: t(REQUEST_TYPE_META[l.request_type].labelKey), count: counts.get(key) ?? 0, refresh: marks[key] ?? 'idle' };
     });
 
     return (

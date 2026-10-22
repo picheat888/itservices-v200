@@ -3,15 +3,18 @@ import { NoAccess, useAuth } from '@/modules/auth';
 import { useLocationMutations, useLocations } from '@/modules/employee';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
-import { PageTabs } from '@/shared/components/page-tabs';
+import { PageTabs, type PageTab } from '@/shared/components/page-tabs';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { localPair } from '@/shared/lib/local-name';
 import { countryOptions, currencyOptions } from '@/shared/lib/locale-data';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
@@ -351,15 +354,35 @@ function MasterDataTab() {
         list.setParams({ list: next === MD_TABS[0] ? null : next, search: null, page: null });
     };
 
-    const tabs: { id: MdTab; label: string }[] = [
-        { id: 'brands', label: t('md_brands') },
-        { id: 'models', label: t('md_models') },
-        { id: 'categories', label: t('md_categories') },
-        { id: 'vendors', label: t('md_vendors') },
-        { id: 'warehouses', label: t('md_warehouses') },
-        { id: 'locations', label: t('set_locations') },
-        { id: 'units', label: t('md_units') },
-        { id: 'warranty-types', label: t('md_warranty_types') },
+    // Each list owns its query, so the bar watches them by key
+    const brandsFresh = useKeyFreshness(['brands'], { exact: true });
+    const modelsFresh = useKeyFreshness(['asset-models'], { exact: true });
+    const categoriesFresh = useKeyFreshness(['categories'], { exact: true });
+    const vendorsFresh = useKeyFreshness(['vendors'], { exact: true });
+    const warehousesFresh = useKeyFreshness(['warehouses'], { exact: true });
+    const locationsFresh = useKeyFreshness(['locations'], { exact: true });
+    const unitsFresh = useKeyFreshness(['units'], { exact: true });
+    const warrantyFresh = useKeyFreshness(['warranty-types'], { exact: true });
+    const marks = useTabFreshness(tab, {
+        brands: [brandsFresh],
+        models: [modelsFresh],
+        categories: [categoriesFresh],
+        vendors: [vendorsFresh],
+        warehouses: [warehousesFresh],
+        locations: [locationsFresh],
+        units: [unitsFresh],
+        'warranty-types': [warrantyFresh],
+    });
+
+    const tabs: PageTab<MdTab>[] = [
+        { id: 'brands', label: t('md_brands'), refresh: marks.brands },
+        { id: 'models', label: t('md_models'), refresh: marks.models },
+        { id: 'categories', label: t('md_categories'), refresh: marks.categories },
+        { id: 'vendors', label: t('md_vendors'), refresh: marks.vendors },
+        { id: 'warehouses', label: t('md_warehouses'), refresh: marks.warehouses },
+        { id: 'locations', label: t('set_locations'), refresh: marks.locations },
+        { id: 'units', label: t('md_units'), refresh: marks.units },
+        { id: 'warranty-types', label: t('md_warranty_types'), refresh: marks['warranty-types'] },
     ];
 
     return (
@@ -413,7 +436,7 @@ function BrandsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: brands = [], isLoading } = useBrands();
+    const { data: brands = [], isLoading } = useBrands({ refetchOnWindowFocus: true });
     const { remove } = useBrandMutations();
     const dialog = useListDialog(brands, !isLoading);
 
@@ -478,7 +501,7 @@ function ModelsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: models = [], isLoading } = useAssetModels();
+    const { data: models = [], isLoading } = useAssetModels({ refetchOnWindowFocus: true });
     const { remove } = useAssetModelMutations();
     const dialog = useListDialog(models, !isLoading);
 
@@ -555,7 +578,7 @@ function CategoriesList() {
     const confirm = useConfirm();
     const list = useListParams();
     const lang = useUiStore((s) => s.lang);
-    const { data: categories = [], isLoading } = useCategories();
+    const { data: categories = [], isLoading } = useCategories({ refetchOnWindowFocus: true });
     const { remove } = useCategoryMutations();
     const dialog = useListDialog(categories, !isLoading);
 
@@ -632,7 +655,7 @@ function VendorsList() {
     const confirm = useConfirm();
     const list = useListParams();
     const lang = useUiStore((s) => s.lang);
-    const { data: vendors = [], isLoading } = useVendors();
+    const { data: vendors = [], isLoading } = useVendors({ refetchOnWindowFocus: true });
     const { remove } = useVendorMutations();
     const dialog = useListDialog(vendors, !isLoading);
 
@@ -715,7 +738,7 @@ function WarehousesList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: warehouses = [], isLoading } = useWarehouses();
+    const { data: warehouses = [], isLoading } = useWarehouses({ refetchOnWindowFocus: true });
     const { remove } = useWarehouseMutations();
     const dialog = useListDialog(warehouses, !isLoading);
 
@@ -781,7 +804,7 @@ function LocationsList() {
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: locations = [], isLoading } = useLocations();
+    const { data: locations = [], isLoading } = useLocations({ refetchOnWindowFocus: true });
     const { remove } = useLocationMutations();
     const dialog = useListDialog(locations, !isLoading);
 
@@ -844,7 +867,7 @@ function LocationsList() {
 /** Units lookup (Stock module master data). */
 function UnitsList() {
     const t = useT();
-    const { data: units = [], isLoading } = useUnits();
+    const { data: units = [], isLoading } = useUnits({ refetchOnWindowFocus: true });
     const mutations = useUnitMutations();
     return (
         <LookupSection
@@ -865,7 +888,7 @@ function UnitsList() {
 /** Warranty types lookup (Stock module master data). */
 function WarrantyTypesList() {
     const t = useT();
-    const { data: warranties = [], isLoading } = useWarrantyTypes();
+    const { data: warranties = [], isLoading } = useWarrantyTypes({ refetchOnWindowFocus: true });
     const mutations = useWarrantyTypeMutations();
     return (
         <LookupSection
@@ -890,7 +913,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const confirmEdit = useConfirmEdit();
     const qc = useQueryClient();
-    const { data, isLoading } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
+    const { data, isLoading } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail, ...FRESH_VIEW });
     const formRef = useRef<HTMLDivElement>(null);
     const testHintId = useId();
 
@@ -1156,7 +1179,8 @@ const DEVICE_LIMIT_CONTROL_ID = 'security-device-limit';
 function SecurityTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
     const t = useT();
     const qc = useQueryClient();
-    const { data, isLoading } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity });
+    // This observer refreshes on browser-tab return; the app shell's observer keeps its long cache
+    const { data, isLoading } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity, ...FRESH_VIEW });
 
     const [form, setForm] = useState<SecuritySettings>({
         session_timeout_minutes: 0,

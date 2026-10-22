@@ -1,4 +1,4 @@
-import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshness';
 import type { RequestOption, RequestOptionList } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -36,7 +36,7 @@ export const useWarrantyTypes = (opts: LookupOptions = {}) =>
     useQuery({ queryKey: WARRANTY_TYPES, queryFn: warrantyTypeApi.list, ...FRESH_LIST, ...opts });
 export const useWriteoffReasons = (opts: LookupOptions = {}) =>
     useQuery({ queryKey: WRITEOFF_REASONS, queryFn: writeoffReasonApi.list, ...FRESH_LIST, ...opts });
-export const useRequestOptionLists = () => useQuery({ queryKey: REQUEST_OPTION_MASTER, queryFn: requestOptionApi.list });
+export const useRequestOptionLists = () => useQuery({ queryKey: REQUEST_OPTION_MASTER, queryFn: requestOptionApi.list, ...FRESH_VIEW });
 
 type RequestOptionCache = { lists: RequestOptionList[]; options: RequestOption[] };
 

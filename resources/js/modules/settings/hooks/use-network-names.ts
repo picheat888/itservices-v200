@@ -1,10 +1,11 @@
 // React Query hooks for Settings → Security network names: the list and its create / update / delete writes.
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { settingsApi, type NetworkNamePayload } from '../api/settingsApi';
 
 const NETWORK_NAMES = ['network-names'] as const;
 
-export const useNetworkNames = () => useQuery({ queryKey: NETWORK_NAMES, queryFn: settingsApi.getNetworkNames });
+export const useNetworkNames = () => useQuery({ queryKey: NETWORK_NAMES, queryFn: settingsApi.getNetworkNames, ...FRESH_VIEW });
 
 export function useNetworkNameMutations() {
     const qc = useQueryClient();
