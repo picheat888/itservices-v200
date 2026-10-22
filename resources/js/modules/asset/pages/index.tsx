@@ -413,10 +413,10 @@ export default function AssetsPage() {
         status: statusFilter || undefined,
         warehouse: warehouseFilter || undefined,
     });
-    const { data: listData, isLoading, isFetching } = listQuery;
+    const { data: listData, isLoading, isFetching, isPlaceholderData } = listQuery;
     const { accept } = useAssetMutations();
     const transfersQuery = useAssetTransfers({ page: searchChanged ? 1 : page, per_page: perPage, search: sentSearch }, tab === 'transfers');
-    const { data: transferLog, isLoading: transfersLoading, isFetching: transfersFetching } = transfersQuery;
+    const { data: transferLog, isLoading: transfersLoading, isFetching: transfersFetching, isPlaceholderData: transfersPlaceholder } = transfersQuery;
     const marks = useTabFreshness(tab, { overview: [summaryQuery], inventory: [listQuery], transfers: [transfersQuery] });
     const transfers = transferLog?.data ?? [];
     // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
@@ -554,9 +554,8 @@ export default function AssetsPage() {
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
 
-    // Loading rows show while any fetch runs (a page, filter or search change keeps the previous
-    // page as placeholder data, which would otherwise sit there looking current).
-    const tableLoading = isLoading || isFetching;
+    // Skeleton rows on a first load or a page/filter change, never on a background refresh
+    const tableLoading = isLoading || (isFetching && isPlaceholderData);
     // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
     // header stick while the table fits its width.
     const tableBoxRef = useRef<HTMLDivElement>(null);
@@ -1470,7 +1469,7 @@ export default function AssetsPage() {
                             rows={transfers}
                             rowKey={(tr) => tr.id}
                             rowHeight={32}
-                            loading={transfersLoading || transfersFetching}
+                            loading={transfersLoading || (transfersFetching && transfersPlaceholder)}
                             search={list.table.search}
                             server={{ ...list.table.paging, total: transferLog?.meta.total ?? 0 }}
                             // The box only; the server matches asset, brand, either end (Thai or English) and who moved it

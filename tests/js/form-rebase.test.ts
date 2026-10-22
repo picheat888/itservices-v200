@@ -1,7 +1,7 @@
 // Edit forms and fresh server data: untouched fields take the new values, typed ones stay, and a form seeds once per record.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { needsSeed, rebaseForm, sameValue } from '../../resources/js/shared/lib/form-rebase.ts';
+import { needsSeed, nextBase, rebaseForm, sameValue } from '../../resources/js/shared/lib/form-rebase.ts';
 
 test('an untouched field takes the fresh server value', () => {
     const base = { a: '1', b: 'x' };
@@ -36,4 +36,9 @@ test('a form seeds once per record, not on every refresh of it', () => {
     assert.equal(needsSeed(7, 7), false);
     assert.equal(needsSeed(7, 8), true);
     assert.equal(needsSeed(7, null), false);
+});
+
+test('a skipped key keeps its opening value in the base, so an untouched form stays clean', () => {
+    assert.deepEqual(nextBase({ a: '1', ids: [1] }, { a: '2', ids: [1, 2] }, ['ids']), { a: '2', ids: [1] });
+    assert.deepEqual(nextBase({ a: '1' }, { a: '2' }), { a: '2' });
 });

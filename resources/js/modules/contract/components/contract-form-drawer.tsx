@@ -116,10 +116,7 @@ const EMPTY: FormState = {
     asset_ids: [],
 };
 
-/**
- * Multi-step focus dialog used for both creating a new contract and editing an existing one.
- * Walks the user through: type → details → term/value → reminders → linked assets → review.
- */
+// The form's values for a contract
 const toForm = (c: Contract): FormState => ({
     code: c.code,
     type: c.type,
@@ -142,6 +139,7 @@ const toForm = (c: Contract): FormState => ({
     asset_ids: c.linked_assets?.map((a) => a.id) ?? [],
 });
 
+/** Multi-step focus dialog that creates or edits a contract: type, details, term and value, reminders, linked assets, review. */
 export function ContractFormDrawer({
     open,
     editing,

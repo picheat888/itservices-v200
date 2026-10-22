@@ -102,3 +102,15 @@ test('an asset row opens the detail through seedRowCopy under the drawer key', (
     assert.ok(page.includes("seedRowCopy(qc, ['asset', a.id], a)"));
     assert.ok(!page.includes("'asset', 'view'"));
 });
+
+test('a background refetch never blanks a wired table into skeleton rows', () => {
+    for (const site of SITES) {
+        const text = read(site.file);
+        assert.ok(!/[A-Za-z]*[Ll]oading \|\| [A-Za-z]*[Ff]etching/.test(text), `${site.file} shows skeleton rows while it refreshes`);
+    }
+});
+
+test('the contract edit form decides it is refused from the copy it opened with', () => {
+    const page = read('modules/contract/pages/index.tsx');
+    assert.ok(page.includes('const editRefused = editing != null &&'));
+});

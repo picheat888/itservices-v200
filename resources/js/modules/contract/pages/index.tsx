@@ -177,7 +177,7 @@ export default function ContractsPage() {
         else if (editSource && !editFetching && editing?.id !== editSource.id) setEditing(editSource);
     }, [editId, editSource, editFetching, editing?.id]);
     // A link or reload cannot open a form the menus would not offer
-    const editRefused = editSource != null && (!canEdit || editSource.status === 'cancelled' || editSource.status === 'expired');
+    const editRefused = editing != null && (!canEdit || editing.status === 'cancelled' || editing.status === 'expired');
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;

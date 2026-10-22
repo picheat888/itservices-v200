@@ -22,6 +22,15 @@ export function rebaseForm<T extends Record<string, unknown>>(base: T, form: T, 
     return next;
 }
 
+/** The base after a rebase: the fresh values, except skipped keys keep the value the form opened with (the form keeps them too). */
+export function nextBase<T extends Record<string, unknown>>(base: T, fresh: T, skip: readonly (keyof T)[] = []): T {
+    const next = { ...fresh };
+    for (const key of skip) {
+        next[key] = base[key];
+    }
+    return next;
+}
+
 /** A form seeds when it opens on a record it has not seeded for; a refresh of the same record never re-seeds it. */
 export function needsSeed(seededFor: string | number | null, key: string | number | null): boolean {
     return key !== null && key !== seededFor;
