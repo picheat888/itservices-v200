@@ -573,6 +573,7 @@ class SettingsController extends Controller
         // AppSetting::brandName().
         $values['brand_name'] = AppSetting::brandName();
         $values['theme_radius'] = (int) $values['theme_radius'];
+        $values['vapid_public_key'] = (string) config('webpush.vapid.public_key');
 
         $logoPath = AppSetting::get('logo_path');
         $values['logo_url'] = $logoPath ? Storage::disk('public')->url($logoPath) : null;
