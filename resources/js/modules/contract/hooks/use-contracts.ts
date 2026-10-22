@@ -1,4 +1,5 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { contractApi, type ContractPayload } from '../api/contractApi';
 
@@ -19,13 +20,11 @@ export const useContracts = (params: { page: number; per_page: number; search: s
                 sort: params.sort || undefined,
             }),
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
         enabled,
     });
 
-export const useContractSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: contractApi.summary, enabled });
-
-// The Contracts sidebar badge (expiring + overdue) now comes from the combined
-// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
+export const useContractSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: contractApi.summary, enabled, ...FRESH_VIEW });
 
 /** Fetches one full contract by id — used when opening the detail drawer. */
 export const useContract = (id: number | null) =>
@@ -33,6 +32,7 @@ export const useContract = (id: number | null) =>
         queryKey: ['contract', id],
         queryFn: () => contractApi.get(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 export function useContractMutations() {

@@ -19,7 +19,10 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -133,16 +136,12 @@ export default function ContractsPage() {
     const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
     const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const { data: summary, isError: summaryFailed, refetch: refetchSummary } = useContractSummary();
+    const summaryQuery = useContractSummary();
+    const { data: summary, isError: summaryFailed, refetch: refetchSummary } = summaryQuery;
     // The list endpoint's `tab` param doubles as the status filter: '' → all contracts,
     // 'expiring'/'expired' → the matching backend filter.
     const listEnabledTab = statusFilter || 'all';
-    const {
-        data: listData,
-        isLoading,
-        isFetching,
-        isPlaceholderData,
-    } = useContracts(
+    const listQuery = useContracts(
         {
             page,
             per_page: perPage,
@@ -153,16 +152,24 @@ export default function ContractsPage() {
         },
         tab === 'all',
     );
+    const { data: listData, isLoading, isFetching, isPlaceholderData } = listQuery;
+    const marks = useTabFreshness(tab, { overview: [summaryQuery], all: [listQuery] });
     // The dialogs live in the URL (?view=<id>, ?edit=<id>, ?add=1): reloads and shared links reopen them, Back closes them
     const [searchParams] = useSearchParams();
     const dialogs = usePageDialogs();
     // Only a real record id opens the drawer (Number('abc') is NaN)
     const selectedId = toRecordId(searchParams.get('view'));
     const setSelectedId = (id: number | null) => (id == null ? dialogs.close(['view', 'edit']) : dialogs.open({ view: String(id) }));
-    const { data: selected, isError: selectedMissing } = useContract(selectedId);
+    const selectedQuery = useContract(selectedId);
+    const selected = selectedQuery.data;
+    const selectedMissing = isRecordMissing(selectedQuery.error, selected !== undefined);
+    useRefetchOnOpen(selectedId != null, selectedQuery);
     // The form edits a copy taken on open, so a refetch cannot reset it
     const editId = toRecordId(searchParams.get('edit'));
-    const { data: editSource, isError: editMissing, isFetching: editFetching } = useContract(editId);
+    const editQuery = useContract(editId);
+    const { data: editSource, isFetching: editFetching } = editQuery;
+    const editMissing = isRecordMissing(editQuery.error, editSource !== undefined);
+    useRefetchOnOpen(editId != null, editQuery);
     const [editing, setEditing] = useState<Contract | null>(null);
     useEffect(() => {
         if (editId == null) setEditing(null);
@@ -298,8 +305,8 @@ export default function ContractsPage() {
             <Card className="overflow-clip">
                 <PageTabs<Tab>
                     tabs={[
-                        { id: 'overview', label: t('sub_overview') },
-                        { id: 'all', label: t('all_contracts') },
+                        { id: 'overview', label: t('sub_overview'), refresh: marks.overview },
+                        { id: 'all', label: t('all_contracts'), refresh: marks.all },
                     ]}
                     active={tab}
                     onChange={changeTab}
@@ -476,6 +483,7 @@ export default function ContractsPage() {
             <RecordMissingDialog open={selectedMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <ContractDetailDrawer
                 contract={selected ?? null}
+                source={selectedQuery}
                 onClose={() => setSelectedId(null)}
                 onEdit={openEdit}
                 canEdit={canEdit}
@@ -488,6 +496,7 @@ export default function ContractsPage() {
             <ContractFormDrawer
                 open={adding || (editing != null && !editRefused)}
                 editing={adding ? null : editing}
+                fresh={adding ? null : (editSource ?? null)}
                 onClose={closeForm}
                 onCreated={handleCreated}
                 onSaved={showSaved}

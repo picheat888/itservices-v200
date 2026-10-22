@@ -1,18 +1,19 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useTabFreshness, type TabQuery } from '@/shared/hooks/use-tab-freshness';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Trash2, Wifi } from 'lucide-react';
+import { Archive, Ban, Clock, Cog, FileText, Laptop, Package, RotateCcw, SquarePen, Trash2, Wifi, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isContractDeletable, useContractActions } from '../hooks/use-contract-actions';
 import { ContractAssetsTab } from './contract-assets-tab';
@@ -45,6 +46,7 @@ function KV({ label, value }: { label: string; value: React.ReactNode }) {
  */
 export function ContractDetailDrawer({
     contract,
+    source,
     onClose,
     onEdit,
     canEdit,
@@ -54,6 +56,8 @@ export function ContractDetailDrawer({
     canDelete,
 }: {
     contract: Contract | null;
+    /** The query behind `contract`, so the tabs can show it refreshing. */
+    source?: TabQuery;
     onClose: () => void;
     onEdit: (c: Contract) => void;
     canEdit: boolean;
@@ -68,6 +72,7 @@ export function ContractDetailDrawer({
     const lang = useUiStore((s) => s.lang);
     const actions = useContractActions(onClose);
     const [tab, setTab] = useState<TabId>('overview');
+    const marks = useTabFreshness(tab, { overview: [source], notify: [source], assets: [source], attachments: [source] });
 
     // The last contract, so the content stays put while the dialog animates closed
     const [shown, setShown] = useState<Contract | null>(contract);
@@ -115,11 +120,11 @@ export function ContractDetailDrawer({
         </StatusBadge>
     );
 
-    const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: t('contract_tab_overview') },
-        { id: 'notify', label: t('contract_section_notify') },
-        { id: 'assets', label: t('contract_tab_assets'), count: c.linked_assets.length },
-        { id: 'attachments', label: t('contract_attachments'), count: c.attachments.length },
+    const tabs: DialogTab<TabId>[] = [
+        { id: 'overview', label: t('contract_tab_overview'), refresh: marks.overview },
+        { id: 'notify', label: t('contract_section_notify'), refresh: marks.notify },
+        { id: 'assets', label: t('contract_tab_assets'), count: c.linked_assets.length, refresh: marks.assets },
+        { id: 'attachments', label: t('contract_attachments'), count: c.attachments.length, refresh: marks.attachments },
     ];
 
     return (

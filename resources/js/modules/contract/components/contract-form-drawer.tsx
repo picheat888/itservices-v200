@@ -10,7 +10,12 @@ import { MoneyInput } from '@/shared/components/money-input';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { FRESH_LIST } from '@/shared/lib/freshness';
 import { localName } from '@/shared/lib/local-name';
 import { toMoneyText } from '@/shared/lib/money';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
@@ -66,7 +71,7 @@ const FIELD_STEP: Record<string, number> = {
     notify: 3,
 };
 
-interface FormState {
+type FormState = {
     code: string;
     type: ContractType;
     vendor_id: string;
@@ -87,7 +92,7 @@ interface FormState {
     notes: string;
     /** Asset links — only ever populated for hardware contracts (the only type that can hold assets). */
     asset_ids: number[];
-}
+};
 
 const EMPTY: FormState = {
     code: '',
@@ -115,15 +120,40 @@ const EMPTY: FormState = {
  * Multi-step focus dialog used for both creating a new contract and editing an existing one.
  * Walks the user through: type → details → term/value → reminders → linked assets → review.
  */
+const toForm = (c: Contract): FormState => ({
+    code: c.code,
+    type: c.type,
+    vendor_id: c.vendor_id ? String(c.vendor_id) : '',
+    details: c.details ?? '',
+    name: c.name,
+    start_date: c.start,
+    end_date: c.end,
+    value: toMoneyText(c.value),
+    total_value: toMoneyText(c.total_value),
+    billing_cycle: c.billing_cycle,
+    notify_150: c.notify_150,
+    notify_120: c.notify_120,
+    notify_90: c.notify_90,
+    notify_60: c.notify_60,
+    notify_45: c.notify_45,
+    notify_30: c.notify_30,
+    notify_7: c.notify_7,
+    notes: c.notes ?? '',
+    asset_ids: c.linked_assets?.map((a) => a.id) ?? [],
+});
+
 export function ContractFormDrawer({
     open,
     editing,
+    fresh = null,
     onClose,
     onCreated,
     onSaved,
 }: {
     open: boolean;
     editing: Contract | null;
+    /** The live copy of `editing`; fields the user has not touched follow it. */
+    fresh?: Contract | null;
     onClose: () => void;
     /** Called after a new contract is successfully saved — receives the created contract. */
     onCreated?: (contract: Contract) => void;
@@ -137,8 +167,11 @@ export function ContractFormDrawer({
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
-    const { data: vendors = [] } = useVendors();
+    const vendorsQuery = useVendors();
+    const refreshVendors = useSelectRefresh(vendorsQuery);
+    const vendors = useMemo(() => vendorsQuery.data ?? [], [vendorsQuery.data]);
     const [form, setForm] = useState<FormState>(EMPTY);
+    const [base, setBase] = useState<FormState>(EMPTY);
     // Kept through the exit animation so the header doesn't flip to "New contract" while closing
     const [lastEditing, setLastEditing] = useState<Contract | null>(editing);
     useEffect(() => {
@@ -188,38 +221,9 @@ export function ContractFormDrawer({
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
-    // Seed values: the contract being edited, or EMPTY for a new one (also the dirty-check baseline).
-    const seedForm = useMemo<FormState>(
-        () =>
-            editing
-                ? {
-                      code: editing.code,
-                      type: editing.type,
-                      vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
-                      details: editing.details ?? '',
-                      name: editing.name,
-                      start_date: editing.start,
-                      end_date: editing.end,
-                      value: toMoneyText(editing.value),
-                      total_value: toMoneyText(editing.total_value),
-                      billing_cycle: editing.billing_cycle,
-                      notify_150: editing.notify_150,
-                      notify_120: editing.notify_120,
-                      notify_90: editing.notify_90,
-                      notify_60: editing.notify_60,
-                      notify_45: editing.notify_45,
-                      notify_30: editing.notify_30,
-                      notify_7: editing.notify_7,
-                      notes: editing.notes ?? '',
-                      asset_ids: editing.linked_assets?.map((a) => a.id) ?? [],
-                  }
-                : EMPTY,
-        [editing],
-    );
-
-    // Hydrate the form when opening.
-    useEffect(() => {
-        if (!open) return;
+    // Hydrate the form once per contract it opens on, from the live copy when it is already here
+    const live = editing && fresh && fresh.id === editing.id ? fresh : null;
+    useSeedOnce(open ? (editing?.id ?? 'new') : null, () => {
         setErr({});
         setSaveState('idle');
         setStep(0);
@@ -231,8 +235,12 @@ export function ContractFormDrawer({
         setFormError('');
         setSavedId(null);
         removedDone.current = new Set();
-        setForm(seedForm);
-    }, [open, editing, seedForm]);
+        const next = editing ? toForm(live ?? editing) : EMPTY;
+        setForm(next);
+        setBase(next);
+    });
+    // Ticked assets stay the user's; the other fields follow the server while untouched
+    useFormRebase({ fresh: live ? toForm(live) : null, base, setBase, setForm, skip: ['asset_ids'] });
 
     /** Update one field and drop its validation error — editing counts as fixing it.
      *  Error keys match field names, except the notify_* checkboxes which share 'notify'. */
@@ -252,11 +260,14 @@ export function ContractFormDrawer({
 
     // Linked-assets picker: loaded only for hardware contracts (the only type that can link assets).
     const [assetSearch, setAssetSearch] = useState('');
-    const { data: linkableAssets = [], isLoading: assetsLoading } = useQuery({
+    const linkableQuery = useQuery({
         queryKey: ['assets-linkable', editing?.id ?? 'new'],
         queryFn: () => assetApi.linkable(editing?.id),
         enabled: open && isHardware,
+        ...FRESH_LIST,
     });
+    const { data: linkableAssets = [], isLoading: assetsLoading } = linkableQuery;
+    useRefetchOnOpen(open, linkableQuery);
     const filteredAssets = useMemo(() => {
         return linkableAssets.filter((a) => matchesAllWords(`${a.asset_code} ${a.name}`, assetSearch));
     }, [linkableAssets, assetSearch]);
@@ -433,7 +444,7 @@ export function ContractFormDrawer({
     const saving = create.isPending || update.isPending || uploadAttachments.isPending || deleteAttachment.isPending;
     // Asset links compare as a set — unticking then re-ticking only reorders them.
     const comparable = (f: FormState) => JSON.stringify({ ...f, asset_ids: [...f.asset_ids].sort((a, b) => a - b) });
-    const isDirty = comparable(form) !== comparable(seedForm) || removedIds.length > 0 || pending.length > 0;
+    const isDirty = comparable(form) !== comparable(base) || removedIds.length > 0 || pending.length > 0;
     const guardClose = useDiscardGuard(open && isDirty && saveState !== 'done');
     // Mirrors ContractService::assertKeepsRetiredAssets — the server refuses the switch too.
     const typeLocked = editing?.type === 'hardware' && (editing.linked_assets ?? []).some((a) => a.status === 'writeoff');
@@ -592,6 +603,8 @@ export function ContractFormDrawer({
                                                 value={form.vendor_id}
                                                 onChange={(v) => upd('vendor_id', v)}
                                                 options={vendorOptions}
+                                                refresh={refreshVendors}
+                                                flagRemoved
                                                 placeholder={t('contract_vendor_ph')}
                                             />
                                         </Field>
