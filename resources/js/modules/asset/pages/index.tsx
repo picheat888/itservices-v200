@@ -32,6 +32,7 @@ import { localName, localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
+import { seedRowCopy } from '@/shared/lib/seed-row';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
@@ -41,7 +42,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Box,
     Check,
@@ -69,7 +70,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetEventBadge } from '../components/asset-event-badge';
@@ -369,17 +369,16 @@ export default function AssetsPage() {
     // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
     // `!= null` guard and used to fetch /assets/NaN.
     const openId = toRecordId(searchParams.get('view'));
-    const { data: detail, isError: detailMissing } = useQuery({
-        queryKey: ['asset', 'view', openId],
-        queryFn: () => assetApi.get(openId as number),
-        enabled: openId != null,
-    });
+    const detailQuery = useAsset(openId);
+    const detail = detailQuery.data;
+    const detailMissing = isRecordMissing(detailQuery.error, detail !== undefined);
+    useRefetchOnOpen(openId != null, detailQuery);
     // Opening pushes a history entry so Back closes the drawer
     const dialogs = usePageDialogs();
     /** Open the drawer for an id alone — the transfer log knows the id, not the record. */
     const openAssetId = (id: number) => dialogs.open({ view: String(id) });
     const openAsset = (a: Asset) => {
-        qc.setQueryData(['asset', 'view', a.id], a);
+        seedRowCopy(qc, ['asset', a.id], a);
         dialogs.open({ view: String(a.id) });
     };
     const closeAsset = () => dialogs.close(['view']);

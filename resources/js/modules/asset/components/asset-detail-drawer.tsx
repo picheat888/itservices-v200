@@ -1,9 +1,10 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
@@ -118,7 +119,9 @@ export function AssetDetailDrawer({
     }, [asset?.id]);
 
     // Enriched asset (transfers + tickets) — Overview renders immediately from the list asset.
-    const { data: full } = useAsset(asset?.id);
+    const fullQuery = useAsset(asset?.id);
+    const full = fullQuery.data;
+    const marks = useTabFreshness(tab, { overview: [fullQuery], tickets: [fullQuery], history: [fullQuery] });
     // The recipient (matched by employee code) is the only one who can accept a hand-over.
     const { user } = useAuth();
     const { accept, cancelWriteoff, remove } = useAssetMutations();
@@ -176,7 +179,8 @@ export function AssetDetailDrawer({
     const TypeIcon = useAssetTypeIcon(a?.type ?? '');
     if (!a) return null;
 
-    const enriched = full && full.id === a.id ? full : null;
+    // A list row copy has no transfers yet; the tabs wait for the full read
+    const enriched = full && full.id === a.id && full.transfers !== undefined ? full : null;
     const transfers = enriched?.transfers ?? [];
     const tickets = enriched?.tickets ?? [];
 
@@ -185,10 +189,10 @@ export function AssetDetailDrawer({
     const myEmpCode = user?.employee_code ?? null;
     const isRecipient = a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode;
 
-    const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: t('asset_overview') },
-        { id: 'tickets', label: t('asset_tab_tickets'), count: enriched ? tickets.length : undefined },
-        { id: 'history', label: t('asset_history'), count: enriched ? transfers.length : undefined },
+    const tabs: DialogTab<TabId>[] = [
+        { id: 'overview', label: t('asset_overview'), refresh: marks.overview },
+        { id: 'tickets', label: t('asset_tab_tickets'), count: enriched ? tickets.length : undefined, refresh: marks.tickets },
+        { id: 'history', label: t('asset_history'), count: enriched ? transfers.length : undefined, refresh: marks.history },
     ];
 
     return (

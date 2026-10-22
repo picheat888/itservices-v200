@@ -51,6 +51,7 @@ export const useAssetContract = (assetId: number | null | undefined) =>
     useQuery({
         queryKey: ['asset-contract', assetId],
         queryFn: () => assetApi.getContract(assetId as number),
+        ...FRESH_VIEW,
         enabled: assetId != null,
     });
 

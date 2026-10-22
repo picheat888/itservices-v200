@@ -44,8 +44,10 @@ const SITES: Site[] = [
     { file: 'modules/ticket/components/edit-ticket-drawer.tsx', rebase: 1, seedOnce: 1 },
     { file: 'modules/ticket/components/assign-ticket-modal.tsx', refresh: 1 },
     { file: 'modules/ticket/components/forward-ticket-modal.tsx', refresh: 1 },
-    { file: 'modules/asset/hooks/use-assets.ts', freshView: 4, freshList: 2 },
-    { file: 'modules/asset/pages/index.tsx', marks: 1, refresh: 2, openRefetch: 1 },
+    { file: 'modules/asset/hooks/use-assets.ts', freshView: 5, freshList: 2 },
+    { file: 'modules/asset/pages/index.tsx', marks: 1, refresh: 2, openRefetch: 2 },
+    { file: 'modules/asset/components/asset-detail-drawer.tsx', marks: 3 },
+    { file: 'modules/asset/components/contract-peek-dialog.tsx', marks: 2, openRefetch: 1 },
     { file: 'modules/asset/components/asset-form-drawer.tsx', refresh: 6, flagRemoved: 4, seedOnce: 1, rebase: 1 },
     { file: 'modules/asset/components/asset-location-dialog.tsx', refresh: 1, seedOnce: 1, rebase: 1 },
     { file: 'modules/asset/components/asset-receive-modal.tsx', refresh: 1 },
@@ -81,4 +83,10 @@ test('ticket asset search waits five seconds', () => {
 
 test('the ticket edit drawer never rebases its attachments', () => {
     assert.ok(read('modules/ticket/components/edit-ticket-drawer.tsx').includes("skip: ['existing']"));
+});
+
+test('an asset row opens the detail through seedRowCopy under the drawer key', () => {
+    const page = read('modules/asset/pages/index.tsx');
+    assert.ok(page.includes("seedRowCopy(qc, ['asset', a.id], a)"));
+    assert.ok(!page.includes("'asset', 'view'"));
 });

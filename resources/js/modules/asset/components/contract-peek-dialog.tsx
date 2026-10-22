@@ -1,11 +1,13 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
@@ -91,9 +93,12 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         setAssetQuery('');
     }, [assetId, tab]);
 
-    const { data: c, isLoading } = useAssetContract(shownAssetId);
+    const contractQuery = useAssetContract(shownAssetId);
+    const { data: c, isLoading } = contractQuery;
 
     const open = assetId != null;
+    useRefetchOnOpen(open, contractQuery);
+    const marks = useTabFreshness(tab, { overview: [contractQuery], assets: [contractQuery] });
     const TypeIcon = c ? (TYPE_ICON[c.type] ?? FileText) : FileText;
 
     // Header status badge + days-remaining badge — same semantics as the full contract drawer.
@@ -153,9 +158,9 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         },
     ];
 
-    const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: t('asset_overview') },
-        { id: 'assets', label: t('assets'), count: c?.linked_assets.length },
+    const tabs: DialogTab<TabId>[] = [
+        { id: 'overview', label: t('asset_overview'), refresh: marks.overview },
+        { id: 'assets', label: t('assets'), count: c?.linked_assets.length, refresh: marks.assets },
     ];
 
     return (
