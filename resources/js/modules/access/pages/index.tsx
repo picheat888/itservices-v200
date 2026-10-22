@@ -4,13 +4,15 @@ import { AvatarStack } from '@/shared/components/avatar-stack';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import type { EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
-import { PageTabs } from '@/shared/components/page-tabs';
+import { PageTabs, type PageTab } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { TruncText } from '@/shared/components/trunc-text';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { readTabParam } from '@/shared/lib/tab-param';
@@ -215,6 +217,16 @@ export default function AccessControlPage() {
     const social = useSocialPlatforms(canView['social-platforms']);
     const software = useSoftware(canView.software);
 
+    // The overview owns its summary query, so the page watches it by key
+    const summaryFresh = useKeyFreshness(['access-summary']);
+    const marks = useTabFreshness(tab, {
+        overview: [summaryFresh],
+        'email-groups': [emailGroups],
+        'file-shares': [fileShares],
+        'social-platforms': [social],
+        software: [software],
+    });
+
     const egRows = useMemo(() => emailGroups.data ?? [], [emailGroups.data]);
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
     const spRows = useMemo(() => social.data ?? [], [social.data]);
@@ -332,12 +344,12 @@ export default function AccessControlPage() {
     );
 
     // Every tab is permission-gated — hide the tab itself (not just its content).
-    const tabs: { id: Tab; label: string }[] = [
-        ...(canOverview ? [{ id: 'overview' as Tab, label: t('access_tab_overview') }] : []),
-        ...(canView['email-groups'] ? [{ id: 'email-groups' as Tab, label: t('access_email_groups') }] : []),
-        ...(canView['file-shares'] ? [{ id: 'file-shares' as Tab, label: t('access_file_shares') }] : []),
-        ...(canView['social-platforms'] ? [{ id: 'social-platforms' as Tab, label: t('access_social') }] : []),
-        ...(canView.software ? [{ id: 'software' as Tab, label: t('access_software') }] : []),
+    const tabs: PageTab<Tab>[] = [
+        ...(canOverview ? [{ id: 'overview' as Tab, label: t('access_tab_overview'), refresh: marks.overview }] : []),
+        ...(canView['email-groups'] ? [{ id: 'email-groups' as Tab, label: t('access_email_groups'), refresh: marks['email-groups'] }] : []),
+        ...(canView['file-shares'] ? [{ id: 'file-shares' as Tab, label: t('access_file_shares'), refresh: marks['file-shares'] }] : []),
+        ...(canView['social-platforms'] ? [{ id: 'social-platforms' as Tab, label: t('access_social'), refresh: marks['social-platforms'] }] : []),
+        ...(canView.software ? [{ id: 'software' as Tab, label: t('access_software'), refresh: marks.software }] : []),
     ];
 
     const newLabel: Record<AccessKind, string> = {

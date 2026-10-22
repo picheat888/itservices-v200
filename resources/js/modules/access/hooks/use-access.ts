@@ -15,13 +15,15 @@ export const useAccessSummary = (period: OverviewPeriod = 'all', enabled = true)
         queryFn: () => accessApi.summary(period),
         enabled,
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 // `enabled` mirrors the per-registry view permission — a tab the user can't see never fetches (no 403 noise).
-export const useEmailGroups = (enabled = true) => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups, enabled });
-export const useFileShares = (enabled = true) => useQuery({ queryKey: ['file-shares'], queryFn: accessApi.fileShares, enabled });
-export const useSocialPlatforms = (enabled = true) => useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms, enabled });
-export const useSoftware = (enabled = true) => useQuery({ queryKey: ['software'], queryFn: accessApi.software, enabled });
+export const useEmailGroups = (enabled = true) => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups, enabled, ...FRESH_VIEW });
+export const useFileShares = (enabled = true) => useQuery({ queryKey: ['file-shares'], queryFn: accessApi.fileShares, enabled, ...FRESH_VIEW });
+export const useSocialPlatforms = (enabled = true) =>
+    useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms, enabled, ...FRESH_VIEW });
+export const useSoftware = (enabled = true) => useQuery({ queryKey: ['software'], queryFn: accessApi.software, enabled, ...FRESH_VIEW });
 
 /** Set/clear an email group's owner (workflow approver). Refreshes the group list + employee access. */
 export const useSetEmailGroupOwner = () => {
@@ -52,7 +54,7 @@ export const useSetFileShareOwner = () => {
 };
 
 export const useResourceMembers = (kind: AccessKind, id: number | null) =>
-    useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null });
+    useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null, ...FRESH_VIEW });
 
 /**
  * Revoke one grant from the governance queue. Routed through the registry's own endpoint so
