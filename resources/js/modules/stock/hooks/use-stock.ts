@@ -47,8 +47,8 @@ export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY,
 export const useExistingSerials = (enabled = true) => useQuery({ queryKey: [...ITEMS, 'serials'], queryFn: stockApi.existingSerials, enabled });
 
 /** A single stock item with its per-unit serials (for the detail view). */
-export const useStockItem = (id: number | null) =>
-    useQuery({ queryKey: [...ITEMS, 'detail', id], queryFn: () => stockApi.get(id as number), enabled: id !== null, ...FRESH_VIEW });
+export const useStockItem = (id: number | null, enabled = true) =>
+    useQuery({ queryKey: [...ITEMS, 'detail', id], queryFn: () => stockApi.get(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
 
 /** Full movement + serial-event history for one SKU (timeline / print view). */
 export const useStockItemHistory = (id: number | null) =>
@@ -84,8 +84,13 @@ export const useStockMovements = (params: { type?: string; search?: string; page
     });
 
 /** Serial codes tied to a single movement (for the movement detail dialog). */
-export const useMovementSerials = (id: number | null) =>
-    useQuery({ queryKey: [...MOVEMENTS, 'serials', id], queryFn: () => stockMovementApi.serials(id as number), enabled: id !== null, ...FRESH_VIEW });
+export const useMovementSerials = (id: number | null, enabled = true) =>
+    useQuery({
+        queryKey: [...MOVEMENTS, 'serials', id],
+        queryFn: () => stockMovementApi.serials(id as number),
+        enabled: id !== null && enabled,
+        ...FRESH_VIEW,
+    });
 
 /** Record a movement; refresh movements, items and summary (stock changed). */
 export function useRecordMovement() {
@@ -137,8 +142,8 @@ export const useStockCounts = (params: { page?: number; per_page?: number } = {}
     useQuery({ queryKey: [...COUNTS, params], queryFn: () => stockCountApi.list(params), enabled, placeholderData: (prev) => prev, ...FRESH_VIEW });
 
 /** A single count session with its lines (for the count sheet). */
-export const useStockCount = (id: number | null) =>
-    useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null, ...FRESH_VIEW });
+export const useStockCount = (id: number | null, enabled = true) =>
+    useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
 
 /** Count-session mutations (open / save / commit / cancel); refresh counts, items, movements, summary. */
 export function useStockCountMutations() {

@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
+import { type DialogTab, DialogTabs } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -93,10 +93,9 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         setAssetQuery('');
     }, [assetId, tab]);
 
-    const contractQuery = useAssetContract(shownAssetId);
-    const { data: c, isLoading } = contractQuery;
-
     const open = assetId != null;
+    const contractQuery = useAssetContract(shownAssetId, open);
+    const { data: c, isLoading } = contractQuery;
     useRefetchOnOpen(open, contractQuery);
     const marks = useTabFreshness(tab, { overview: [contractQuery], assets: [contractQuery] });
     const TypeIcon = c ? (TYPE_ICON[c.type] ?? FileText) : FileText;

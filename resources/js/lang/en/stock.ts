@@ -254,6 +254,8 @@ export const stock: Dict = {
     stock_available: 'Available',
     stock_issue_from: 'Issue from warehouses',
     stock_pick_fifo: 'Auto (FIFO)',
+    stock_fulfil_serials_gone: '{n} chosen serials are no longer in stock. Choose again.',
+    stock_fulfil_wh_gone: 'Nothing left in {names}. Its quantity was removed; choose another warehouse.',
     stock_from: 'From',
     stock_to: 'To',
     stock_to_warehouse: 'To warehouse',

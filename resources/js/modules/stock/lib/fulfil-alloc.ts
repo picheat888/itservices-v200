@@ -33,3 +33,22 @@ export function refillAlloc(alloc: Alloc, seed: Alloc, balances: readonly Balanc
     const next = greedyAlloc(balances, qty);
     return allocKey(next) === allocKey(seed) ? null : next;
 }
+
+/** Picks a refresh made impossible: chosen serials no longer in stock, and quantities drawn from a warehouse that is now empty. */
+export function prunePicks(
+    serialIds: readonly number[],
+    inStockIds: readonly number[],
+    alloc: Alloc,
+    balances: readonly Balance[],
+): { serialIds: number[]; goneSerials: number; alloc: Alloc; goneWarehouses: string[] } {
+    const keptSerials = serialIds.filter((id) => inStockIds.includes(id));
+    const stocked = new Set(balances.filter((b) => b.qty > 0).map((b) => b.warehouse));
+    const keptAlloc: Alloc = {};
+    const goneWarehouses: string[] = [];
+    for (const [warehouse, qty] of Object.entries(alloc)) {
+        if (qty <= 0) continue;
+        if (stocked.has(warehouse)) keptAlloc[warehouse] = qty;
+        else goneWarehouses.push(warehouse);
+    }
+    return { serialIds: keptSerials, goneSerials: serialIds.length - keptSerials.length, alloc: keptAlloc, goneWarehouses };
+}

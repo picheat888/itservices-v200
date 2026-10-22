@@ -67,7 +67,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         if (countId !== null) setLastId(countId);
     }, [countId]);
     const shownId = countId ?? lastId;
-    const { data: session, isError: sessionFailed, error: sessionError, refetch: refetchSession } = useStockCount(shownId);
+    const { data: session, isError: sessionFailed, error: sessionError, refetch: refetchSession } = useStockCount(shownId, sheetOpen);
     const sessionMissing = (sessionError as { response?: { status?: number } } | null)?.response?.status === 404;
     // Opening pushes a history entry so Back closes the sheet (and asks first while counts are typed)
     const dialogs = usePageDialogs();

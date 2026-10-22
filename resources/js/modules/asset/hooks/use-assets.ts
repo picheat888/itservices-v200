@@ -47,12 +47,12 @@ export const useAsset = (id: number | null | undefined) =>
     });
 
 /** The contract linked to an asset — powers the read-only Contract peek (gated by assets.view). */
-export const useAssetContract = (assetId: number | null | undefined) =>
+export const useAssetContract = (assetId: number | null | undefined, enabled = true) =>
     useQuery({
         queryKey: ['asset-contract', assetId],
         queryFn: () => assetApi.getContract(assetId as number),
         ...FRESH_VIEW,
-        enabled: assetId != null,
+        enabled: assetId != null && enabled,
     });
 
 /** Minimal contract list for the rented-asset form picker (gated by assets.register/edit,

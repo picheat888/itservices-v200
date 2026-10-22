@@ -56,7 +56,7 @@ export function MovementsTab() {
     // Open state is separate from the data so the detail stays mounted during the close animation.
     const [moveOpen, setMoveOpen] = useState(false);
     // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
-    const moveSerialsQuery = useMovementSerials(viewMove?.id ?? null);
+    const moveSerialsQuery = useMovementSerials(viewMove?.id ?? null, moveOpen);
     const moveSerials = useMemo(() => moveSerialsQuery.data ?? [], [moveSerialsQuery.data]);
     // The movement itself never changes once posted; its serials are asked again on open
     useRefetchOnOpen(moveOpen, moveSerialsQuery);

@@ -136,3 +136,10 @@ test('stock dialogs follow the kit rules', () => {
     assert.ok(read('modules/stock/components/stock-item-detail-modal.tsx').includes('isRecordMissing('));
     assert.ok(!read('modules/stock/hooks/use-stock.ts').includes('now comes'));
 });
+
+test('dialogs that keep their last record for the exit animation query it only while open', () => {
+    assert.ok(read('modules/stock/pages/tabs/counting-tab.tsx').includes('useStockCount(shownId, sheetOpen)'));
+    assert.ok(read('modules/stock/pages/tabs/requests-tab.tsx').includes('useStockItem(fulfillReq?.stock_item_id ?? null, fulfillOpen)'));
+    assert.ok(read('modules/stock/pages/tabs/movements-tab.tsx').includes('useMovementSerials(viewMove?.id ?? null, moveOpen)'));
+    assert.ok(read('modules/asset/components/contract-peek-dialog.tsx').includes('useAssetContract(shownAssetId, open)'));
+});

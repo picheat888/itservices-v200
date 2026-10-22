@@ -254,6 +254,8 @@ export const stock: Dict = {
     stock_available: 'เบิกได้',
     stock_issue_from: 'จ่ายจากคลัง',
     stock_pick_fifo: 'เลือกเก่าสุด (FIFO)',
+    stock_fulfil_serials_gone: 'Serial ที่เลือกไว้ {n} รายการไม่อยู่ในคลังแล้ว เลือกใหม่',
+    stock_fulfil_wh_gone: 'คลัง {names} ไม่มีของแล้ว เอาจำนวนที่ระบุไว้ออกแล้ว เลือกคลังอื่น',
     stock_from: 'จาก',
     stock_to: 'ไปยัง',
     stock_to_warehouse: 'คลังปลายทาง',

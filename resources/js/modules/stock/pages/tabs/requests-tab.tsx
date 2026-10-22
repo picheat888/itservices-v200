@@ -25,11 +25,11 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, X } from 'lucide-react';
+import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
-import { allocKey, greedyAlloc, refillAlloc } from '../../lib/fulfil-alloc';
+import { allocKey, greedyAlloc, prunePicks, refillAlloc } from '../../lib/fulfil-alloc';
 import { stockRefusalText } from '../../lib/refusal';
 
 // Fulfilling takes stock out: the issue colour of the movement list
@@ -86,7 +86,9 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const [alloc, setAlloc] = useState<Record<string, number>>({});
     const [seedAlloc, setSeedAlloc] = useState<Record<string, number>>({});
     // Live item detail (on-hand + per-unit serials + balances) for the request being fulfilled.
-    const fulfillItemQuery = useStockItem(fulfillReq?.stock_item_id ?? null);
+    const fulfillItemQuery = useStockItem(fulfillReq?.stock_item_id ?? null, fulfillOpen);
+    // Picks a refresh took away, said once above the picking area until the user picks again
+    const [gone, setGone] = useState<{ serials: number; warehouses: string[] } | null>(null);
     const fulfillItem = fulfillItemQuery.data;
     useRefetchOnOpen(fulfillOpen, fulfillItemQuery);
 
@@ -94,6 +96,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     useSeedOnce(fulfillOpen && fulfillReq && fulfillItem ? fulfillReq.id : null, () => {
         setIssueSerialIds([]);
         setSerialWh('all');
+        setGone(null);
         const next = greedyAlloc(fulfillItem?.balances ?? [], fulfillReq?.qty ?? 0);
         setAlloc(next);
         setSeedAlloc(next);
@@ -101,10 +104,19 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     // Fresh balances refill the allocation while it is still the seeded one; a changed allocation stays the user's
     useEffect(() => {
         if (!fulfillOpen || !fulfillItem || !fulfillReq) return;
-        const next = refillAlloc(alloc, seedAlloc, fulfillItem.balances ?? [], fulfillReq.qty);
-        if (next) {
-            setAlloc(next);
-            setSeedAlloc(next);
+        const balances = fulfillItem.balances ?? [];
+        const refill = refillAlloc(alloc, seedAlloc, balances, fulfillReq.qty);
+        if (refill) {
+            setAlloc(refill);
+            setSeedAlloc(refill);
+        }
+        // Serials or warehouses that left the stock drop out of the picks, so the user can choose again
+        const inStock = (fulfillItem.serials ?? []).filter((s) => s.status === 'in_stock').map((s) => s.id);
+        const pruned = prunePicks(issueSerialIds, inStock, refill ? {} : alloc, balances);
+        if (pruned.goneSerials > 0) setIssueSerialIds(pruned.serialIds);
+        if (pruned.goneWarehouses.length > 0) setAlloc(pruned.alloc);
+        if (pruned.goneSerials > 0 || pruned.goneWarehouses.length > 0) {
+            setGone({ serials: pruned.goneSerials, warehouses: pruned.goneWarehouses });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fulfillItem]);
@@ -290,7 +302,10 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     }, {});
     const visibleSerials = serialWh === 'all' ? fulfillInStock : fulfillInStock.filter((s) => (s.warehouse ?? '—') === serialWh);
     // Auto-pick the oldest `qty` serials (pure FIFO across all warehouses) in one click.
-    const pickFifo = () => setIssueSerialIds(fulfillInStock.slice(0, fulfillReq?.qty ?? 0).map((s) => s.id));
+    const pickFifo = () => {
+        setGone(null);
+        setIssueSerialIds(fulfillInStock.slice(0, fulfillReq?.qty ?? 0).map((s) => s.id));
+    };
     const allocTotal = Object.values(alloc).reduce((s, n) => s + n, 0);
     // Ready when the chosen units cover exactly the requested qty.
     const fulfillReady = fulfillSerialized ? !!fulfillReq && issueSerialIds.length === fulfillReq.qty : !!fulfillReq && allocTotal === fulfillReq.qty;
@@ -301,13 +316,18 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
               .filter(([, q]) => q > 0)
               .map(([warehouse]) => warehouse);
     const fulfillCountedBy = countLockFor(fulfillItem, fulfillFrom);
-    const toggleIssueSerial = (id: number) => setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    const toggleIssueSerial = (id: number) => {
+        setGone(null);
+        setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    };
     const fulfillDirty = issueSerialIds.length > 0 || allocKey(alloc) !== allocKey(seedAlloc);
     const guardFulfillClose = useDiscardGuard(fulfillOpen && fulfillDirty);
     const closeFulfill = () => setFulfillOpen(false);
 
-    const setAllocFor = (warehouse: string, max: number, raw: number) =>
+    const setAllocFor = (warehouse: string, max: number, raw: number) => {
+        setGone(null);
         setAlloc((a) => ({ ...a, [warehouse]: Math.max(0, Math.min(max, Math.trunc(raw) || 0)) }));
+    };
 
     return (
         <div className="space-y-3">
@@ -393,6 +413,19 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                     </div>
                                 </div>
 
+                                <div role="status" aria-live="polite">
+                                    {gone && (
+                                        <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                                            <span>
+                                                {gone.serials > 0 && t('stock_fulfil_serials_gone').replace('{n}', fmtN(gone.serials))}
+                                                {gone.serials > 0 && gone.warehouses.length > 0 && ' '}
+                                                {gone.warehouses.length > 0 &&
+                                                    t('stock_fulfil_wh_gone').replace('{names}', gone.warehouses.join(', '))}
+                                            </span>
+                                        </p>
+                                    )}
+                                </div>
                                 {/* Quantity-only: spread the issue across warehouses (greedy pre-fill, editable). */}
                                 {!fulfillSerialized && (
                                     <div className="border-border overflow-hidden rounded-lg border">
