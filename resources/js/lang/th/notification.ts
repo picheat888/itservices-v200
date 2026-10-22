@@ -306,7 +306,7 @@ export const notification: Dict = {
     notification_device_test: 'ทดสอบ',
     notification_device_test_text: 'ส่งแจ้งเตือนทดสอบมาที่เครื่องนี้ ลองฟังเสียงและดูว่าขึ้นบนจอไหม',
     notification_device_test_send: 'ส่งทดสอบ',
-    notification_device_test_sent: 'ส่งแจ้งเตือนทดสอบแล้ว รอสักครู่',
-    notification_device_test_failed: 'ส่งแจ้งเตือนทดสอบไม่สำเร็จ ลองใหม่อีกครั้ง',
-    notification_device_enable_failed: 'เปิดการแจ้งเตือนบนเครื่องนี้ไม่สำเร็จ ลองใหม่อีกครั้ง',
+    notification_device_test_sent: 'ส่งแล้ว แจ้งเตือนจะขึ้นบนจอในไม่กี่วินาที',
+    notification_device_test_failed: 'ส่งทดสอบไม่สำเร็จ ลองอีกครั้ง',
+    notification_device_enable_failed: 'เปิดการแจ้งเตือนไม่สำเร็จ ลองอีกครั้ง',
 };

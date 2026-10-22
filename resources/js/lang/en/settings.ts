@@ -365,7 +365,7 @@ export const settings: Dict = {
     // sound-section.tsx — Sound section
     set_sound: 'Sound',
     set_sound_title: 'Notification sound',
-    set_sound_desc: "The system's notification sound settings",
+    set_sound_desc: 'System notification sound settings',
     set_sound_switch: 'Notification sound on/off',
     set_sound_list: 'Sound list, scrollable',
     set_sound_play: 'Play {name}',

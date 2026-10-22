@@ -387,7 +387,7 @@ export const permission: Dict = {
     'perm_act_settings.system': 'ระบบ (แบรนด์ & การแสดงผล)',
     'perm_act_settings.masterdata': 'จัดการข้อมูลหลัก',
     'perm_act_settings.email': 'ตั้งค่าอีเมล (SMTP)',
-    'perm_act_settings.sound': 'เสียงแจ้งเตือน',
+    'perm_act_settings.sound': 'ตั้งค่าเสียงแจ้งเตือน',
     'perm_act_settings.sla': 'Ticket & SLA',
     'perm_act_settings.requestdata': 'จัดการข้อมูลคำขอ',
     'perm_act_settings.assets': 'ตั้งค่าทรัพย์สิน',

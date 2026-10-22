@@ -273,23 +273,23 @@ export const notification: Dict = {
     notification_empty_settings_none_hint: 'Notification types are created at install.',
 
     // sw/sw.ts — กล่องแจ้งเตือนบนจอ (Web Push)
-    notification_push_more: 'and {n} more new notifications',
+    notification_push_more: 'and {n} more',
     notification_push_test_title: 'Test notification',
     notification_push_test_body: 'Notifications on this device are working',
 
     // app/layout/use-notification-toasts.ts — toast สรุปแจ้งเตือนตอนกลับมาเปิดระบบ
-    notification_summary_new: '{n} new notifications',
-    notification_summary_total: '{total} unread in all, tap to open',
+    notification_summary_new: 'New notifications ({n})',
+    notification_summary_total: '{total} unread in total. Tap to open',
     notification_summary_open: 'Tap to open',
 
     // components/push-invite-row.tsx — แถวชวนเปิดการแจ้งเตือนในกระดิ่ง
-    notification_invite_title: 'Get notifications on this device, even when the system is not open',
+    notification_invite_title: 'Get notifications on this device, even when the system is closed',
     notification_invite_text: 'New items appear on screen with a sound.',
-    notification_invite_text_ask: 'The browser asks once more after you press the button, so choose "Allow".',
+    notification_invite_text_ask: 'Your browser will ask next. Choose "Allow".',
     notification_invite_enable: 'Turn on notifications',
-    notification_invite_later: 'Later',
+    notification_invite_later: 'Not now',
     notification_invite_home_title: 'Add the system icon to your Home Screen to get notifications',
-    notification_invite_home_text: 'Tap Share in Safari, choose "Add to Home Screen", then always open the system from that icon.',
+    notification_invite_home_text: 'Tap Share in Safari, choose "Add to Home Screen", and open the system from that icon from now on.',
 
     // components/device-notification-settings.tsx — แท็บการแจ้งเตือนในโปรไฟล์
     notification_device_sound: 'Notification sound',
@@ -297,17 +297,17 @@ export const notification: Dict = {
     notification_device_push: 'Notifications on this device',
     notification_device_push_text: 'Shown on screen even when the system is not open. This device only.',
     notification_device_state_on: 'On',
-    notification_device_state_off: 'Not turned on',
+    notification_device_state_off: 'Off',
     notification_device_state_blocked: 'Blocked by the browser',
-    notification_device_state_needs_home_screen: 'Open it from the Home Screen',
+    notification_device_state_needs_home_screen: 'Needs the Home Screen app',
     notification_device_state_unsupported: 'Not supported by this browser',
     notification_device_blocked_text:
-        'The system cannot ask again. Click the icon before the web address, choose "Notifications" and set it to "Allow".',
+        'Your browser blocked notifications, and the system can\'t ask again. Click the icon left of the address bar, open "Notifications" and choose "Allow".',
     notification_device_home_text: 'Add the system icon to the iPad Home Screen, then open the system from that icon.',
     notification_device_test: 'Test',
     notification_device_test_text: 'Send a test notification to this device to hear the sound and see that it shows on screen.',
     notification_device_test_send: 'Send test',
-    notification_device_test_sent: 'Test notification sent. It should arrive shortly.',
-    notification_device_test_failed: 'Could not send the test notification. Please try again.',
-    notification_device_enable_failed: 'Could not turn on notifications on this device. Please try again.',
+    notification_device_test_sent: 'Sent. It should appear on screen in a few seconds.',
+    notification_device_test_failed: "Couldn't send the test. Try again.",
+    notification_device_enable_failed: "Couldn't turn on notifications. Try again.",
 };
