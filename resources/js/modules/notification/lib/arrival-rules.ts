@@ -33,6 +33,19 @@ export function shouldRingInPage(tabVisible: boolean, pushOn: boolean): boolean 
     return tabVisible || !pushOn;
 }
 
+export interface HeldRound {
+    tabVisible: boolean;
+    pushOn: boolean;
+    away: boolean;
+    newestId: string | null;
+}
+
+/** A poll round held for the summary still rings once in a hidden tab with no push; the id lets two windows share it. */
+export function heldRoundRing(round: HeldRound): string | null {
+    if (!round.away || round.tabVisible || round.pushOn || round.newestId === null) return null;
+    return `round:${round.newestId}`;
+}
+
 /** True for the first window to claim this ring; also drops claims older than an hour. A storage that throws rings anyway. */
 export function claimRing(id: string, store: RingStore, now: number): boolean {
     try {

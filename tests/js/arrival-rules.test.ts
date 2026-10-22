@@ -7,6 +7,7 @@ import {
     claimRing,
     enteredBellIds,
     FIRST_OPEN_LOOKBACK_MS,
+    heldRoundRing,
     shouldRingInPage,
     summaryLines,
 } from '../../resources/js/modules/notification/lib/arrival-rules.ts';
@@ -62,6 +63,23 @@ test('a visible tab always rings', () => {
 test('a hidden tab stays quiet when this device has push on', () => assert.equal(shouldRingInPage(false, true), false));
 
 test('a hidden tab rings when this device has no push', () => assert.equal(shouldRingInPage(false, false), true));
+
+const round = { tabVisible: false, pushOn: false, away: true, newestId: 'n-20' };
+
+test('a hidden tab away 30+ minutes without push rings once for the round, keyed by its newest row', () =>
+    assert.equal(heldRoundRing(round), 'round:n-20'));
+
+test('two windows derive the same ring id for a round, so claimRing lets one ring', () =>
+    assert.equal(heldRoundRing(round), heldRoundRing({ ...round })));
+
+test('a held round stays quiet in the page when this device has push on', () => assert.equal(heldRoundRing({ ...round, pushOn: true }), null));
+
+test('a visible tab back after 30+ minutes gets the summary, not a per-round ring', () =>
+    assert.equal(heldRoundRing({ ...round, tabVisible: true }), null));
+
+test('a tab that was not away rings per toast, not per round', () => assert.equal(heldRoundRing({ ...round, away: false }), null));
+
+test('a round without rows does not ring', () => assert.equal(heldRoundRing({ ...round, newestId: null }), null));
 
 test('only the first tab claims a ring', () => {
     const store = fakeStorage();

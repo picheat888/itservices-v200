@@ -30,7 +30,7 @@ export type {
 export { moduleOf, notificationMessage, notificationTarget, notificationTitle, type Translate } from './lib/notification-text';
 
 // When the page rings and sums up missed bells, and the bell sound itself.
-export { AWAY_MS, catchUpSince, claimRing, enteredBellIds, shouldRingInPage, summaryLines } from './lib/arrival-rules';
+export { AWAY_MS, catchUpSince, claimRing, enteredBellIds, heldRoundRing, shouldRingInPage, summaryLines } from './lib/arrival-rules';
 export {
     DEFAULT_SOUND,
     SOUND_KEYS,

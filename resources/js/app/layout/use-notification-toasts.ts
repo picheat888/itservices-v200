@@ -5,6 +5,7 @@ import {
     catchUpSince,
     claimRing,
     enteredBellIds,
+    heldRoundRing,
     playNotificationSound,
     pushDeliveredHere,
     shouldRingInPage,
@@ -261,6 +262,10 @@ export function useNotificationToasts(openChangePassword: () => void): void {
             // Out of reach for 30+ minutes (hidden, or polls failing, or asleep): these wait for the summary
             if (lastSeenAt !== null && now - lastSeenAt >= AWAY_MS) {
                 if (tabVisible()) catchUpRef.current(now);
+                // A hidden tab with no push still rings once for this round
+                const pushOn = userId !== null && pushDeliveredHere(userId);
+                const roundRing = heldRoundRing({ tabVisible: tabVisible(), pushOn, away: true, newestId: fresh[0]?.id ?? null });
+                if (roundRing !== null) ring(roundRing, userId, soundRef.current);
                 return;
             }
             if (catchingUp.current) return;
