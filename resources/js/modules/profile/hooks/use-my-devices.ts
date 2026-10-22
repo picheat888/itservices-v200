@@ -1,4 +1,5 @@
 // React Query hooks for the My Profile sign-ins tab: devices, ending one, and the recent login events.
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { httpStatus } from '@/shared/lib/http-errors';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { devicesApi } from '../api/devicesApi';
@@ -12,7 +13,7 @@ const DEVICES_POLL_MS = 30_000;
 export const useMyDevices = (enabled = true) =>
     useQuery({ queryKey: DEVICES_KEY, queryFn: devicesApi.list, enabled, refetchInterval: DEVICES_POLL_MS });
 
-export const useMyLoginEvents = (enabled = true) => useQuery({ queryKey: EVENTS_KEY, queryFn: devicesApi.events, enabled });
+export const useMyLoginEvents = (enabled = true) => useQuery({ queryKey: EVENTS_KEY, queryFn: devicesApi.events, enabled, ...FRESH_VIEW });
 
 /** Signs one other device out, then refreshes the device list and the history. */
 export function useEndMyDevice() {

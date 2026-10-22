@@ -1,5 +1,6 @@
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accessApi } from '../api/accessApi';
@@ -11,7 +12,7 @@ import { accessApi } from '../api/accessApi';
  * Separate from useAccessSummary and the registry lists: those need the directory master,
  * this one needs only the right to look at yourself.
  */
-export const useMyAccess = (enabled = true) => useQuery({ queryKey: ['access-mine'], queryFn: accessApi.mine, enabled });
+export const useMyAccess = (enabled = true) => useQuery({ queryKey: ['access-mine'], queryFn: accessApi.mine, enabled, ...FRESH_VIEW });
 
 export const useAccessSummary = (period: OverviewPeriod = 'all', enabled = true) =>
     useQuery({

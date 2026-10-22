@@ -11,6 +11,9 @@ import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
@@ -95,7 +98,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const panelId = useId();
 
     // The full employee record: department, position, joined date…
-    const { data: emp, isLoading: empLoading } = useEmployee(open ? (user?.employee_id ?? null) : null);
+    const empQuery = useEmployee(open ? (user?.employee_id ?? null) : null);
+    const { data: emp, isLoading: empLoading } = empQuery;
 
     const canEdit = can('profile.edit');
     const linked = !!user?.employee_code;
@@ -117,11 +121,26 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     }, [open, urlTab]);
     const tab = open ? urlTab : lastTab.current;
 
-    const { data: myAssets = [], isLoading: assetsLoading } = useMyAssets(open && sees.assets);
-    const { data: myAccess, isLoading: accessLoading } = useMyAccess(open && sees.access);
-    const { data: myDevices } = useMyDevices(open && sees.devices);
-    const { data: myTickets, isLoading: ticketsLoading } = useTickets({ page: 1, per_page: TAB_ROWS, requested: true }, open && sees.tickets);
-    const { data: myRequests, isLoading: requestsLoading } = useRequests({ page: 1, per_page: TAB_ROWS, scope: 'mine' }, open && sees.requests);
+    const assetsQuery = useMyAssets(open && sees.assets);
+    const accessQuery = useMyAccess(open && sees.access);
+    const devicesQuery = useMyDevices(open && sees.devices);
+    const ticketsQuery = useTickets({ page: 1, per_page: TAB_ROWS, requested: true }, open && sees.tickets);
+    const requestsQuery = useRequests({ page: 1, per_page: TAB_ROWS, scope: 'mine' }, open && sees.requests);
+    const { data: myAssets = [], isLoading: assetsLoading } = assetsQuery;
+    const { data: myAccess, isLoading: accessLoading } = accessQuery;
+    const { data: myDevices } = devicesQuery;
+    const { data: myTickets, isLoading: ticketsLoading } = ticketsQuery;
+    const { data: myRequests, isLoading: requestsLoading } = requestsQuery;
+    // Assets and devices poll on their own; the rest ask again when the drawer opens
+    useRefetchOnOpen(open, empQuery, accessQuery, ticketsQuery, requestsQuery);
+    const marks = useTabFreshness(tab, {
+        profile: [empQuery],
+        assets: [assetsQuery],
+        tickets: [ticketsQuery],
+        requests: [requestsQuery],
+        access: [accessQuery],
+        devices: [devicesQuery],
+    });
 
     // Copy buttons in the rail, announced like the Employee viewer's
     const [copied, setCopied] = useState<string | null>(null);
@@ -143,8 +162,9 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const [formErrorCount, setFormErrorCount] = useState(0);
     const [saved, setSaved] = useState(false);
 
-    // Seeded once per opening, so a refreshed user (e.g. after Change password) never wipes unsaved edits
+    // Seeded once per opening, so a refreshed user (e.g. after Change password) never wipes unsaved edits; untouched fields follow it
     const seeded = useRef(false);
+    const [base, setBase] = useState<Record<ProfileFormKey, string>>({ firstName: '', lastName: '', firstNameTh: '', lastNameTh: '', phone: '' });
     useEffect(() => {
         if (!open) {
             seeded.current = false;
@@ -153,6 +173,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         if (!user || seeded.current) return;
         seeded.current = true;
         setFields(profileFields(user));
+        setBase(profileFields(user));
         setErrors({});
         setPhoto(null);
         setCropSrc(null);
@@ -165,7 +186,8 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
     useEffect(() => () => (photoUrl ? URL.revokeObjectURL(photoUrl) : undefined), [photoUrl]);
 
-    const isDirty = !!user && (JSON.stringify(fields) !== JSON.stringify(profileFields(user)) || photo !== null);
+    useFormRebase({ fresh: open && user && seeded.current ? profileFields(user) : null, base, setBase, setForm: setFields });
+    const isDirty = !!user && (JSON.stringify(fields) !== JSON.stringify(base) || photo !== null);
     const hasUnsaved = open && isDirty && !saved;
     const guardClose = useDiscardGuard(hasUnsaved);
     // A "see all" link waits for the discard answer; the new page drops ?dialog= and so closes the drawer.
@@ -263,7 +285,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         access: { label: t('emp_v_tab_access'), icon: Shield, count: accessCount },
         devices: { label: t('profile_tab_devices'), icon: MonitorSmartphone, count: myDevices?.devices.length },
     };
-    const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id] }));
+    const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id], refresh: marks[id] }));
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
