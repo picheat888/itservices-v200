@@ -43,4 +43,15 @@ return [
      */
     'automatic_padding' => env('WEBPUSH_AUTOMATIC_PADDING', true),
 
+    /**
+     * Push service hosts a subscription endpoint may point at (https only).
+     * An entry starting with "." matches any host ending in it.
+     */
+    'endpoint_hosts' => [
+        'fcm.googleapis.com',
+        'updates.push.services.mozilla.com',
+        '.push.apple.com',
+        '.notify.windows.com',
+    ],
+
 ];

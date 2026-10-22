@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class PushSubscriptionApiTest extends TestCase
@@ -14,7 +15,7 @@ class PushSubscriptionApiTest extends TestCase
     use RefreshDatabase;
 
     /** @return array<string, mixed> */
-    private function payload(string $endpoint = 'https://push.example.test/send/abc'): array
+    private function payload(string $endpoint = 'https://fcm.googleapis.com/fcm/send/abc'): array
     {
         return [
             'endpoint' => $endpoint,
@@ -32,7 +33,7 @@ class PushSubscriptionApiTest extends TestCase
             ->assertJsonPath('message', 'success');
 
         $this->assertDatabaseHas('push_subscriptions', [
-            'endpoint' => 'https://push.example.test/send/abc',
+            'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc',
             'subscribable_id' => $user->id,
         ]);
     }
@@ -57,18 +58,66 @@ class PushSubscriptionApiTest extends TestCase
             ->assertJsonValidationErrors('endpoint');
     }
 
+    /** @return array<string, array{string}> */
+    public static function pushServiceEndpoints(): array
+    {
+        return [
+            'chrome' => ['https://fcm.googleapis.com/fcm/send/abc'],
+            'firefox' => ['https://updates.push.services.mozilla.com/wpush/v2/abc'],
+            'safari' => ['https://web.push.apple.com/QGx-abc'],
+            'edge' => ['https://wns2-par02p.notify.windows.com/w/?token=abc'],
+        ];
+    }
+
+    #[DataProvider('pushServiceEndpoints')]
+    public function test_endpoints_on_the_browser_push_services_are_accepted(string $endpoint): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->postJson('/api/push-subscriptions', $this->payload($endpoint))
+            ->assertCreated();
+
+        $this->assertDatabaseHas('push_subscriptions', ['endpoint' => $endpoint]);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function foreignEndpoints(): array
+    {
+        return [
+            'intranet host' => ['https://intranet.local/x'],
+            'push host as a prefix' => ['https://fcm.googleapis.com.evil.test/x'],
+            'push host in the path' => ['https://evil.test/fcm.googleapis.com'],
+            'push host as userinfo' => ['https://fcm.googleapis.com@evil.test/x'],
+            'userinfo before a push host' => ['https://user:pass@fcm.googleapis.com/x'],
+            'odd port' => ['https://fcm.googleapis.com:8443/x'],
+            'bare suffix' => ['https://push.apple.com/x'],
+            'suffix without a dot' => ['https://evilpush.apple.com/x'],
+            'plain http' => ['http://fcm.googleapis.com/x'],
+        ];
+    }
+
+    #[DataProvider('foreignEndpoints')]
+    public function test_endpoints_off_the_push_services_are_refused(string $endpoint): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->postJson('/api/push-subscriptions', $this->payload($endpoint))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('endpoint');
+
+        $this->assertSame(0, DB::table('push_subscriptions')->count());
+    }
+
     public function test_delete_removes_only_the_callers_subscription(): void
     {
         $a = User::factory()->create(['role' => 'user']);
         $b = User::factory()->create(['role' => 'user']);
-        $this->actingAs($a)->postJson('/api/push-subscriptions', $this->payload('https://push.example.test/a'))->assertCreated();
-        $this->actingAs($b)->postJson('/api/push-subscriptions', $this->payload('https://push.example.test/b'))->assertCreated();
+        $this->actingAs($a)->postJson('/api/push-subscriptions', $this->payload('https://fcm.googleapis.com/fcm/send/a'))->assertCreated();
+        $this->actingAs($b)->postJson('/api/push-subscriptions', $this->payload('https://fcm.googleapis.com/fcm/send/b'))->assertCreated();
 
-        $this->actingAs($b)->deleteJson('/api/push-subscriptions', ['endpoint' => 'https://push.example.test/a'])->assertOk();
-        $this->assertDatabaseHas('push_subscriptions', ['endpoint' => 'https://push.example.test/a']);
+        $this->actingAs($b)->deleteJson('/api/push-subscriptions', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/a'])->assertOk();
+        $this->assertDatabaseHas('push_subscriptions', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/a']);
 
-        $this->actingAs($b)->deleteJson('/api/push-subscriptions', ['endpoint' => 'https://push.example.test/b'])->assertOk();
-        $this->assertDatabaseMissing('push_subscriptions', ['endpoint' => 'https://push.example.test/b']);
+        $this->actingAs($b)->deleteJson('/api/push-subscriptions', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/b'])->assertOk();
+        $this->assertDatabaseMissing('push_subscriptions', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/b']);
     }
 
     public function test_guests_cannot_subscribe(): void
