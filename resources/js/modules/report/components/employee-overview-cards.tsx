@@ -992,14 +992,14 @@ const BOTTOM_FOLDS = ['dept', 'holding'] as const;
 
 export function EmployeeOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useEmployeeOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useEmployeeOverviewBreakdown(filters);
     const row = useFoldRow(BOTTOM_FOLDS);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <HeadcountCard data={data} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             {/* Same height while both are folded; opening one keeps that height and the other stays in view. */}

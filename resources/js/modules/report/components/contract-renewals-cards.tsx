@@ -291,13 +291,13 @@ export function ContractRenewalsCards({ filters }: { filters: TabularFilters }) 
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
-    const { data, isLoading, isFetching, isError, error } = useContractRenewalsBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useContractRenewalsBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <Tiles data={data} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 xl:grid-cols-5">
@@ -574,7 +574,7 @@ function ClosedTable({ rows }: { rows: ContractClosedRow[] }) {
 export function ClosedContractsCard({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { data, isLoading, isFetching, isError, error } = useContractRenewalsBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useContractRenewalsBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) {
@@ -596,7 +596,7 @@ export function ClosedContractsCard({ filters, patch }: { filters: TabularFilter
               ];
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading}>
+        <CardsUpdating updating={isFetching && isPlaceholderData}>
             <Card className="flex flex-col overflow-hidden">
                 <CardTitle title={t('rep_cren_closed_title')} info={info} sub={<ClosedRangeSegments active={closed.range} patch={patch} />} />
                 {closed.rows.length === 0 ? (

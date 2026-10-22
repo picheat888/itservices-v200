@@ -485,13 +485,13 @@ function CardsSkeleton() {
 
 export function StockMovementsCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useStockMovementsBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useStockMovementsBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <MovementTiles tiles={data.tiles} months={data.months} />
             {/* Side by side from lg; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">

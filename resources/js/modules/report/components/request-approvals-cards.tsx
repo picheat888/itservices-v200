@@ -785,13 +785,13 @@ function CardsSkeleton() {
 
 export function RequestApprovalsCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useRequestApprovalsBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useRequestApprovalsBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <StuckCard stuck={data.stuck} />
             <ApproversCard approvers={data.approvers} filtered={Boolean(filters.approver)} />
             <EndingsCard endings={data.endings} />

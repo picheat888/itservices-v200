@@ -89,7 +89,7 @@ export function ItPendingAsOf({ filters }: { filters: TabularFilters }) {
 
 export function ItPendingCards({ filters, patch }: { filters: TabularFilters; patch: Patch }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useItPendingBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useItPendingBreakdown(filters);
     const [open, setOpen] = useState<Record<By, boolean>>({ owner: false, type: false });
     const [held, setHeld] = useState<Record<By, number | null>>({ owner: null, type: null });
     const ageRef = useRef<HTMLDivElement>(null);
@@ -105,7 +105,7 @@ export function ItPendingCards({ filters, patch }: { filters: TabularFilters; pa
     };
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <div className={cn(PAIR, open[by] && 'xl:items-start')}>
                 <AgeCard data={data} cardRef={ageRef} heldHeight={open[by] ? held[by] : null} />
                 <HoldersCard data={data} filters={filters} patch={patch} by={by} open={open} onToggle={toggle} />

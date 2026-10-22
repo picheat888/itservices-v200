@@ -746,7 +746,7 @@ export function AccessMembersCards({ filters, patch }: { filters: TabularFilters
     const showSpace = !filters.type || filters.type === 'file_share';
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             {showSpace && <StorageCards resources={data.resources} />}
             <ResourceTableCard resources={data.resources} filters={filters} patch={patch} />
         </CardsUpdating>

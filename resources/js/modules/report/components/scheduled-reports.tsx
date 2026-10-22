@@ -213,7 +213,7 @@ export function ScheduledReports() {
     const isTicket = shown?.report_key === 'tickets.overview';
     const definition = useTabularDefinition(shown && !isTicket ? shown.report_key : '', !!shown && !isTicket).data;
     const ticketFilters = { ...defaultTicketReportFilters(), ...(isTicket ? shown?.filters : {}) } as TicketReportFilters;
-    const ticketOptions = useTicketOverview(ticketFilters, !!shown && isTicket).data?.options;
+    const ticketOptions = useTicketOverview(ticketFilters, editing !== null && isTicket).data?.options;
     const filterChips = !shown
         ? undefined
         : isTicket

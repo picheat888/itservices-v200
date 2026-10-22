@@ -481,7 +481,7 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
 
 /** The board and its two cards, between the summary tiles and the table; a card row press filters the page. */
 export function BacklogBoardCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading, isFetching } = useBacklogBoard(filters);
+    const { data, isLoading, isFetching, isPlaceholderData } = useBacklogBoard(filters);
 
     if (isLoading || !data) {
         return (
@@ -498,7 +498,7 @@ export function BacklogBoardCards({ filters, patch }: { filters: TabularFilters;
     const tickets = narrowed(data, filters);
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <DueBoard tickets={tickets} />
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                 <Owners tickets={tickets} filters={filters} patch={patch} />

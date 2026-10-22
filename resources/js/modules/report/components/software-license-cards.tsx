@@ -507,7 +507,7 @@ export function SoftwareLicenseCards({ filters, patch }: { filters: TabularFilte
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <SeatTableCard softwares={data.softwares} filters={filters} patch={patch} />
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className={cn('grid gap-3 lg:grid-cols-2', pair.anyOpen && 'lg:items-start')}>

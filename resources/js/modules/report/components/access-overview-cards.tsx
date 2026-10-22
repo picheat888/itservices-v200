@@ -1003,7 +1003,7 @@ export const heldStyle = (height: number | null) => (height ? { minHeight: heigh
 
 export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useAccessOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useAccessOverviewBreakdown(filters);
     const top = useFoldRow(LEAVER_GROUPS);
     const bottom = useFoldRow(BOTTOM_FOLDS);
 
@@ -1011,7 +1011,7 @@ export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className={cn(ROW, top.anyOpen && 'lg:items-start')}>
                 <MonthFlowCard months={data.months} cardRef={top.left} heldHeight={top.heldLeft} />

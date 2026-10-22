@@ -392,7 +392,7 @@ function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
 
 /** The cards between the summary tiles and the table; a press on a group line filters the page. */
 export function ManualSlaCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading, isFetching } = useManualSlaBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData } = useManualSlaBreakdown(filters);
 
     if (isLoading || !data) {
         return (
@@ -412,7 +412,7 @@ export function ManualSlaCards({ filters, patch }: { filters: TabularFilters; pa
     }
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <GroupsCard data={data} filters={filters} patch={patch} />
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
                 <LateAndOpenCard data={data} />

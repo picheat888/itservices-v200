@@ -715,13 +715,13 @@ function CardsSkeleton() {
 
 export function WriteoffCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useAssetWriteoffBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useAssetWriteoffBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthCard months={data.months} to={typeof filters.to === 'string' ? filters.to : null} />

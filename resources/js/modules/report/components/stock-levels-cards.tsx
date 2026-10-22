@@ -110,12 +110,12 @@ function LevelTiles({ tiles }: { tiles: Tiles }) {
 
 export function StockLevelsTiles({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useStockLevelsBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useStockLevelsBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <KpiRowSkeleton count={5} className={summaryColumns(5)} />;
     return (
-        <CardsUpdating updating={isFetching && !isLoading}>
+        <CardsUpdating updating={isFetching && isPlaceholderData}>
             <LevelTiles tiles={data.tiles} />
         </CardsUpdating>
     );
@@ -221,7 +221,7 @@ function CategoryCard({ categories }: { categories: StockLevelsBreakdown['catego
 }
 
 export function StockLevelsCategoryCard({ filters }: { filters: TabularFilters }) {
-    const { data, isLoading, isFetching, isError } = useStockLevelsBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError } = useStockLevelsBreakdown(filters);
 
     // The tiles above already say when the breakdown failed.
     if (isError && !data) return null;
@@ -235,7 +235,7 @@ export function StockLevelsCategoryCard({ filters }: { filters: TabularFilters }
                     <BarRowsSkeleton rows={5} />
                 </Card>
             ) : (
-                <CardsUpdating updating={isFetching && !isLoading}>
+                <CardsUpdating updating={isFetching && isPlaceholderData}>
                     {/* A new category starts the card on page 1. */}
                     <CategoryCard key={String(filters.category_id ?? '')} categories={data.categories} />
                 </CardsUpdating>

@@ -322,3 +322,14 @@ test('a failed background refetch keeps report results on screen', () => {
     assert.ok(read('modules/report/components/tabular-report-view.tsx').includes('(isError && !data) || (headline.isError && !headline.data)'));
     assert.ok(read('modules/report/pages/tickets-overview.tsx').includes(': isError && !data'));
 });
+
+test('report cards refresh silently on browser-tab return; the bar shows only for a new filter', () => {
+    const dir = join(root, 'modules/report/components');
+    for (const name of readdirSync(dir).filter((f) => f.endsWith('.tsx'))) {
+        assert.ok(!read(`modules/report/components/${name}`).includes('updating={isFetching && !isLoading}'), name);
+    }
+});
+
+test('the report hub asks for the Ticket & SLA overview only while its schedule editor is open', () => {
+    assert.ok(read('modules/report/components/scheduled-reports.tsx').includes('useTicketOverview(ticketFilters, editing !== null && isTicket)'));
+});

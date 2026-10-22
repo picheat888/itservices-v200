@@ -431,13 +431,13 @@ function CardsSkeleton() {
 
 export function StockValuationCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useStockValuationBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useStockValuationBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <ValueTiles tiles={data.tiles} categories={data.categories} asOf={data.as_of} />
             {/* A new day or category starts both share cards on page 1. */}
             <ShareCards key={`${filters.as_of ?? ''}|${filters.category_id ?? ''}`} data={data} />

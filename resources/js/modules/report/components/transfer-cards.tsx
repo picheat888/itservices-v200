@@ -939,13 +939,13 @@ function CardsSkeleton() {
 
 export function TransferCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useAssetTransferBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useAssetTransferBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             {/* Side by side from lg; one column on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 <MonthFlowCard months={data.months} />

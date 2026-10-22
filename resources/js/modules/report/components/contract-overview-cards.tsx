@@ -386,13 +386,13 @@ function CardsSkeleton() {
 
 export function ContractOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useContractOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useContractOverviewBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <OverviewTiles tiles={data.tiles} />
             {/* Side by side from xl; stacked on a tablet (iPad mini 768px). */}
             <div className="grid gap-3 xl:grid-cols-5">

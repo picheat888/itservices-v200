@@ -491,13 +491,13 @@ function CardsSkeleton() {
 
 export function ContractRentalsCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useContractRentalsBreakdown(cardFilters(filters));
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useContractRentalsBreakdown(cardFilters(filters));
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <Tiles data={data} />
             <ContractsCard data={data} />
             <ModelsCard models={data.models} />

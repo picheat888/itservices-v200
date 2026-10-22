@@ -856,13 +856,13 @@ function CardsSkeleton() {
 
 export function RequestOverviewCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
-    const { data, isLoading, isFetching, isError, error } = useRequestOverviewBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useRequestOverviewBreakdown(filters);
 
     if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
-        <CardsUpdating updating={isFetching && !isLoading} className="space-y-4">
+        <CardsUpdating updating={isFetching && isPlaceholderData} className="space-y-4">
             <MonthFlowCard months={data.months} />
             <TypesCard types={data.types} />
             <DeliveryCard delivery={data.delivery} />
