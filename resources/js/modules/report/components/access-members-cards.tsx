@@ -741,7 +741,7 @@ export function AccessMembersCards({ filters, patch }: { filters: TabularFilters
         if (stalePick) patch({ resource: null });
     }, [stalePick, patch]);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
     const showSpace = !filters.type || filters.type === 'file_share';
 

@@ -493,7 +493,7 @@ export function ContractRentalsCards({ filters }: { filters: TabularFilters }) {
     const t = useT();
     const { data, isLoading, isFetching, isError, error } = useContractRentalsBreakdown(cardFilters(filters));
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (

@@ -433,7 +433,7 @@ export function StockValuationCards({ filters, patch }: { filters: TabularFilter
     const t = useT();
     const { data, isLoading, isFetching, isError, error } = useStockValuationBreakdown(filters);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (

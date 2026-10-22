@@ -293,7 +293,7 @@ export function ContractRenewalsCards({ filters }: { filters: TabularFilters }) 
     const fmt = useDateFormat();
     const { data, isLoading, isFetching, isError, error } = useContractRenewalsBreakdown(filters);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
@@ -576,7 +576,7 @@ export function ClosedContractsCard({ filters, patch }: { filters: TabularFilter
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading, isFetching, isError, error } = useContractRenewalsBreakdown(filters);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) {
         return (
             <Card className="overflow-hidden" aria-hidden>

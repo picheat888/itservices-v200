@@ -3,6 +3,7 @@
  * generic tabular report definition/rows/export, "ไฟล์ส่งออกของฉัน" (queued files: list, download, retry, remove) and
  * scheduled report emails.
  */
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { downloadBlob } from '@/shared/lib/utils';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
@@ -26,7 +27,7 @@ export const REPORT_EXPORTS_KEY = ['reports', 'exports'] as const;
 /** Scheduled report emails — also refreshed by the shell when a report_schedule bell arrives. */
 export const REPORT_SCHEDULES_KEY = ['reports', 'schedules'] as const;
 
-export const useReportCatalogue = () => useQuery({ queryKey: CATALOGUE_KEY, queryFn: reportApi.catalogue });
+export const useReportCatalogue = () => useQuery({ queryKey: CATALOGUE_KEY, queryFn: reportApi.catalogue, ...FRESH_VIEW });
 
 export const useReportSnapshot = (range: SnapshotRange) =>
     useQuery({
@@ -35,6 +36,7 @@ export const useReportSnapshot = (range: SnapshotRange) =>
         // Keep the last numbers on screen while another period loads.
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** Pin / unpin a report. The star flips at once; a failed call puts it back. */
@@ -69,6 +71,7 @@ export const useTicketOverview = (filters: TicketReportFilters, enabled = true) 
         // An invalid range (to before from) is caught client-side instead of being sent.
         enabled: enabled && filters.from <= filters.to,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 export const useTicketOverviewRows = (filters: TicketReportFilters, page: number, perPage: number) =>
@@ -78,6 +81,7 @@ export const useTicketOverviewRows = (filters: TicketReportFilters, page: number
         placeholderData: keepPreviousData,
         // Same guard as the summary — don't fetch the row table for an invalid range.
         enabled: filters.from <= filters.to,
+        ...FRESH_VIEW,
     });
 
 /** Queue the file; the exports list picks it up (and polls until it is built). */
@@ -99,6 +103,7 @@ export const useBacklogBoard = (filters: TabularFilters) => {
         queryFn: () => reportApi.backlogBoard(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -111,6 +116,7 @@ export const useRequestSlaBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.requestSlaBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -125,6 +131,7 @@ export const useAssetWriteoffBreakdown = (filters: TabularFilters) =>
         queryFn: () => reportApi.assetWriteoffBreakdown(filters),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** "ประวัติโอนย้ายและรับคืน" — the cards above the list, under the page's own filters. */
@@ -134,6 +141,7 @@ export const useAssetTransferBreakdown = (filters: TabularFilters) =>
         queryFn: () => reportApi.assetTransferBreakdown(filters),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** "ประกันใกล้หมดอายุ" — keyed without the soon / expired segment, which narrows only the list. */
@@ -145,6 +153,7 @@ export const useAssetWarrantyBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.assetWarrantyBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -155,6 +164,7 @@ export const useContractOverviewBreakdown = (filters: TabularFilters) =>
         queryFn: () => reportApi.contractOverviewBreakdown(filters),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** "ต่ออายุและสิ้นสุดสัญญา" — every filter of the page shapes its cards. */
@@ -164,6 +174,7 @@ export const useContractRenewalsBreakdown = (filters: TabularFilters) =>
         queryFn: () => reportApi.contractRenewalsBreakdown(filters),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** "สัญญาเช่าและทรัพย์สิน" — every filter of the page shapes its cards. */
@@ -173,6 +184,7 @@ export const useContractRentalsBreakdown = (filters: TabularFilters) =>
         queryFn: () => reportApi.contractRentalsBreakdown(filters),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** "รับเข้าและเบิกจ่าย" — keyed without the type and search filters, which narrow only the rows. */
@@ -183,6 +195,7 @@ export const useStockMovementsBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.stockMovementsBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -194,6 +207,7 @@ export const useStockValuationBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.stockValuationBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -205,6 +219,7 @@ export const useStockLevelsBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.stockLevelsBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -216,6 +231,7 @@ export const useRequestOverviewBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.requestOverviewBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -227,6 +243,7 @@ export const useAccessOverviewBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.accessOverviewBreakdown(scope),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -239,6 +256,7 @@ export const useEmployeeOverviewBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.employeeOverviewBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -251,6 +269,7 @@ export const useEmployeeOpenItemsBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.employeeOpenItemsBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -264,6 +283,7 @@ export const useAccessMembersBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.accessMembersBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -276,6 +296,7 @@ export const useSoftwareLicenseBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.softwareLicenseBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -288,6 +309,7 @@ export const useItPendingBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.itPendingBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -298,6 +320,7 @@ export const useRequestApprovalsBreakdown = (filters: TabularFilters) =>
         queryFn: () => reportApi.requestApprovalsBreakdown(filters),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** Download one resource's review sheet (PDF). */
@@ -315,6 +338,7 @@ export const useManualSlaBreakdown = (filters: TabularFilters) => {
         queryFn: () => reportApi.manualSlaBreakdown(rest),
         placeholderData: keepPreviousData,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 };
 
@@ -334,6 +358,7 @@ export const useTabularRows = (key: string, filters: TabularFilters, page: numbe
         placeholderData: keepPreviousData,
         enabled,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** The tiles and charts — keyed by the filters alone, so turning a page of rows does not ask again. */
@@ -344,6 +369,7 @@ export const useTabularSummary = (key: string, filters: TabularFilters, enabled:
         placeholderData: keepPreviousData,
         enabled,
         retry: noRetryOn4xx,
+        ...FRESH_VIEW,
     });
 
 /** Queue the file; the exports list picks it up (and polls until it is built). */
@@ -402,14 +428,14 @@ export function useDeleteAllExports() {
     });
 }
 
-export const useReportSchedules = () => useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules });
+export const useReportSchedules = () => useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules, ...FRESH_VIEW });
 
 /** Mirrors ReportSchedule::MAX_PER_REPORT. */
 export const MAX_SCHEDULES_PER_REPORT = 3;
 
 /** Whether the reader already keeps the most schedules one report takes. */
 export function useReportSchedulesFull(reportKey: string, enabled: boolean): boolean {
-    const { data: items = [] } = useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules, enabled });
+    const { data: items = [] } = useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules, enabled, ...FRESH_VIEW });
 
     return items.filter((s) => s.report_key === reportKey).length >= MAX_SCHEDULES_PER_REPORT;
 }

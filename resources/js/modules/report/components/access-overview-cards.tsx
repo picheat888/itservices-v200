@@ -1007,7 +1007,7 @@ export function AccessOverviewCards({ filters }: { filters: TabularFilters }) {
     const top = useFoldRow(LEAVER_GROUPS);
     const bottom = useFoldRow(BOTTOM_FOLDS);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (

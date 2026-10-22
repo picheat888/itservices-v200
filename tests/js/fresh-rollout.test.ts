@@ -1,6 +1,6 @@
 // Fresh-data rollout inventory: every wired dropdown, tab bar, dialog and edit form in scope uses the kit (source scan).
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
@@ -54,6 +54,7 @@ const SITES: Site[] = [
     { file: 'modules/workflow/pages/index.tsx', openRefetch: 1 },
     { file: 'modules/workflow/components/workflow-editor-dialog.tsx', freshList: 2, refresh: 3, openRefetch: 1, rebase: 1 },
     { file: 'modules/dashboard/hooks/use-dashboard.ts', freshView: 1 },
+    { file: 'modules/report/hooks/use-reports.ts', freshView: 28 },
     { file: 'modules/employee/hooks/use-departments.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-positions.ts', freshList: 1, freshView: 1 },
     { file: 'modules/employee/hooks/use-sections.ts', freshList: 1, freshView: 1 },
@@ -308,4 +309,13 @@ test('settings forms that stay open after a save reseed from the save response',
 test('plan 7 touched files carry no stale or long comments', () => {
     assert.ok(!read('modules/settings/components/model-modal.tsx').includes('Radix Select rejects'));
     assert.ok(!read('modules/notification/hooks/use-notifications.ts').includes('kept cheap and long-lived: an administrator'));
+});
+
+test('a failed background refetch keeps report results on screen', () => {
+    const dir = join(root, 'modules/report/components');
+    for (const name of readdirSync(dir).filter((f) => f.endsWith('.tsx'))) {
+        assert.ok(!read(`modules/report/components/${name}`).includes('if (isError) return'), name);
+    }
+    assert.ok(read('modules/report/components/tabular-report-view.tsx').includes('(isError && !data) || (headline.isError && !headline.data)'));
+    assert.ok(read('modules/report/pages/tickets-overview.tsx').includes(': isError && !data'));
 });

@@ -120,7 +120,7 @@ function TabularReportRows({
         if (data) onTotalChange(data.meta.total);
     }, [data, onTotalChange]);
 
-    if (isError || headline.isError) {
+    if ((isError && !data) || (headline.isError && !headline.data)) {
         return <ErrorCard message={errorMessageFor(t, error ?? headline.error)} />;
     }
 

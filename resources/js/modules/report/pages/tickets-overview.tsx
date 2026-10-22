@@ -156,7 +156,7 @@ export default function TicketOverviewReportPage() {
     const errorStatus = isAxiosError(error) ? error.response?.status : undefined;
     const errorMessage = rangeOrderInvalid
         ? t('rep_err_range_order')
-        : isError
+        : isError && !data
           ? errorStatus === 403
               ? t('rep_err_no_access')
               : errorStatus === 422

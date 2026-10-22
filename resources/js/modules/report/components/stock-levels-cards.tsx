@@ -112,7 +112,7 @@ export function StockLevelsTiles({ filters }: { filters: TabularFilters }) {
     const t = useT();
     const { data, isLoading, isFetching, isError, error } = useStockLevelsBreakdown(filters);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <KpiRowSkeleton count={5} className={summaryColumns(5)} />;
     return (
         <CardsUpdating updating={isFetching && !isLoading}>
@@ -224,7 +224,7 @@ export function StockLevelsCategoryCard({ filters }: { filters: TabularFilters }
     const { data, isLoading, isFetching, isError } = useStockLevelsBreakdown(filters);
 
     // The tiles above already say when the breakdown failed.
-    if (isError) return null;
+    if (isError && !data) return null;
 
     return (
         // Half width; full width on a tablet (iPad mini 768px).

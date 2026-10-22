@@ -94,7 +94,7 @@ export function ItPendingCards({ filters, patch }: { filters: TabularFilters; pa
     const [held, setHeld] = useState<Record<By, number | null>>({ owner: null, type: null });
     const ageRef = useRef<HTMLDivElement>(null);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     const by: By = filters.by === 'type' ? 'type' : 'owner';

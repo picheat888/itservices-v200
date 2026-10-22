@@ -995,7 +995,7 @@ export function EmployeeOverviewCards({ filters }: { filters: TabularFilters }) 
     const { data, isLoading, isFetching, isError, error } = useEmployeeOverviewBreakdown(filters);
     const row = useFoldRow(BOTTOM_FOLDS);
 
-    if (isError) return <ErrorCard message={errorMessageFor(t, error)} />;
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) return <CardsSkeleton />;
 
     return (
