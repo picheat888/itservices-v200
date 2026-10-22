@@ -1,6 +1,6 @@
 // How many times a live count has gone up since it first loaded: key a badge on it to pop on news, not on load.
+import { countRose } from '@/shared/lib/count-rise';
 import { useState } from 'react';
-import { countRose } from './count-rise';
 
 /** `count` is null while it is still loading. */
 export function useCountRises(count: number | null): number {

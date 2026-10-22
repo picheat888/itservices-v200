@@ -1,3 +1,4 @@
+import { TabCount } from '@/shared/components/tab-count';
 import { TabBarStatus, TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { RefreshMark } from '@/shared/lib/refresh-mark';
@@ -81,11 +82,14 @@ export function PageTabs<T extends string>({
                             )}
                         >
                             {tb.label}
-                            {tb.count != null && tb.count > 0 && (
-                                <span title={tb.countTitle} className={cn('rounded-full px-1.5 py-0.5 text-[11px]', TONES[tb.tone ?? 'muted'])}>
-                                    {fmtN(tb.count)}
-                                </span>
-                            )}
+                            <TabCount
+                                count={tb.count}
+                                visible={tb.count != null && tb.count > 0}
+                                title={tb.countTitle}
+                                className={cn('rounded-full px-1.5 py-0.5 text-[11px]', TONES[tb.tone ?? 'muted'])}
+                            >
+                                {fmtN(tb.count ?? 0)}
+                            </TabCount>
                             {/* bottom-0, not -bottom-px: the strip scrolls, so anything below its edge is clipped. */}
                             {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
                             {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}

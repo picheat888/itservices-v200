@@ -4,8 +4,10 @@ import { useAuth, useLogout } from '@/modules/auth';
 import type { ProfileSection } from '@/modules/profile';
 import { useSettings } from '@/modules/settings';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useCountRises } from '@/shared/hooks/use-count-rises';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSidebarBadges } from '@/shared/hooks/use-sidebar-badges';
+import { badgeMotion } from '@/shared/lib/count-rise';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { NavItem, Role } from '@/shared/types';
@@ -14,14 +16,8 @@ import { ChevronDown, Loader2, LogOut } from 'lucide-react';
 import { useEffect, useRef, type RefObject } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { nextFocusIndex } from './menu-focus';
-import { useCountRises } from './use-count-rises';
 import { useNavScroll } from './use-nav-scroll';
 import { useSidebarStyle } from './use-sidebar-style';
-
-/** A late count fades in quietly when it first lands, and pops each time it rises (keyed by its rises). */
-function badgeMotion(rises: number): string {
-    return rises > 0 ? 'badge-pop' : 'motion-pop-in';
-}
 
 /** Count of hand-overs waiting for the user's acceptance, pinned to the avatar; null while loading. */
 function PendingAssetsPill({ count }: { count: number | null }) {

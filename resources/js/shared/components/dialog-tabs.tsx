@@ -1,3 +1,4 @@
+import { TabCount } from '@/shared/components/tab-count';
 import { TabBarStatus, TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { RefreshMark } from '@/shared/lib/refresh-mark';
@@ -101,17 +102,17 @@ export function DialogTabs<T extends string>({
                             {/* Icons show from lg up */}
                             {tb.icon && <tb.icon className="hidden h-4 w-4 shrink-0 lg:block" aria-hidden="true" />}
                             {tb.label}
-                            {((tb.count != null && tb.count > 0) || tb.dot) && (
-                                <span
-                                    className={cn(
-                                        'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
-                                        selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
-                                    )}
-                                >
-                                    {tb.count != null && tb.count > 0 && fmtN(tb.count)}
-                                    {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                                </span>
-                            )}
+                            <TabCount
+                                count={tb.count}
+                                visible={(tb.count != null && tb.count > 0) || !!tb.dot}
+                                className={cn(
+                                    'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
+                                    selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
+                                )}
+                            >
+                                {tb.count != null && tb.count > 0 && fmtN(tb.count)}
+                                {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                            </TabCount>
                             {/* Underline inside the scrolling bar */}
                             {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
                             {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
