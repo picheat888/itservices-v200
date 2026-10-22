@@ -1,8 +1,9 @@
+import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { positionApi } from '../api/positionApi';
 import { POS } from './query-keys';
 
-export const usePositions = () => useQuery({ queryKey: POS, queryFn: positionApi.list });
+export const usePositions = (opts: LookupOptions = {}) => useQuery({ queryKey: POS, queryFn: positionApi.list, ...FRESH_LIST, ...opts });
 
 /** Employees holding a position — loaded on demand for the "view members" dialog. */
 export function usePositionMembers(id: number | null) {

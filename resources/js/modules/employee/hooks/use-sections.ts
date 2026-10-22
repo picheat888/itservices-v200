@@ -1,11 +1,14 @@
+import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { sectionApi } from '../api/sectionApi';
 import { EMP } from './query-keys';
 
-export function useSections(departmentId?: number | null) {
+export function useSections(departmentId?: number | null, opts: LookupOptions = {}) {
     return useQuery({
         queryKey: ['sections', departmentId ?? 'all'],
         queryFn: () => sectionApi.list(departmentId),
+        ...FRESH_LIST,
+        ...opts,
     });
 }
 

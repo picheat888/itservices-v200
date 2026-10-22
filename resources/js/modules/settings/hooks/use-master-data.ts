@@ -1,3 +1,4 @@
+import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
 import type { RequestOption, RequestOptionList } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,14 +27,16 @@ const WRITEOFF_REASONS = ['writeoff-reasons'] as const;
 // New Request form's whole options payload, this one the admin list.
 const REQUEST_OPTION_MASTER = ['request-option-master'] as const;
 
-export const useBrands = () => useQuery({ queryKey: BRANDS, queryFn: brandApi.list });
-export const useAssetModels = () => useQuery({ queryKey: MODELS, queryFn: assetModelApi.list });
-export const useCategories = () => useQuery({ queryKey: CATS, queryFn: categoryApi.list });
-export const useVendors = () => useQuery({ queryKey: VENDORS, queryFn: vendorApi.list });
-export const useWarehouses = () => useQuery({ queryKey: WAREHOUSES, queryFn: warehouseApi.list });
-export const useUnits = () => useQuery({ queryKey: UNITS, queryFn: unitApi.list });
-export const useWarrantyTypes = () => useQuery({ queryKey: WARRANTY_TYPES, queryFn: warrantyTypeApi.list });
-export const useWriteoffReasons = () => useQuery({ queryKey: WRITEOFF_REASONS, queryFn: writeoffReasonApi.list });
+export const useBrands = (opts: LookupOptions = {}) => useQuery({ queryKey: BRANDS, queryFn: brandApi.list, ...FRESH_LIST, ...opts });
+export const useAssetModels = (opts: LookupOptions = {}) => useQuery({ queryKey: MODELS, queryFn: assetModelApi.list, ...FRESH_LIST, ...opts });
+export const useCategories = (opts: LookupOptions = {}) => useQuery({ queryKey: CATS, queryFn: categoryApi.list, ...FRESH_LIST, ...opts });
+export const useVendors = (opts: LookupOptions = {}) => useQuery({ queryKey: VENDORS, queryFn: vendorApi.list, ...FRESH_LIST, ...opts });
+export const useWarehouses = (opts: LookupOptions = {}) => useQuery({ queryKey: WAREHOUSES, queryFn: warehouseApi.list, ...FRESH_LIST, ...opts });
+export const useUnits = (opts: LookupOptions = {}) => useQuery({ queryKey: UNITS, queryFn: unitApi.list, ...FRESH_LIST, ...opts });
+export const useWarrantyTypes = (opts: LookupOptions = {}) =>
+    useQuery({ queryKey: WARRANTY_TYPES, queryFn: warrantyTypeApi.list, ...FRESH_LIST, ...opts });
+export const useWriteoffReasons = (opts: LookupOptions = {}) =>
+    useQuery({ queryKey: WRITEOFF_REASONS, queryFn: writeoffReasonApi.list, ...FRESH_LIST, ...opts });
 export const useRequestOptionLists = () => useQuery({ queryKey: REQUEST_OPTION_MASTER, queryFn: requestOptionApi.list });
 
 type RequestOptionCache = { lists: RequestOptionList[]; options: RequestOption[] };

@@ -1,6 +1,7 @@
 // Search-as-you-type and by-id lookups behind every employee picker (no screen loads the whole directory).
 import { useT } from '@/lang';
 import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
+import { FRESH_MS } from '@/shared/lib/freshness';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { employeeApi, type EmployeeOptionsParams } from '../api/employeeApi';
@@ -21,7 +22,7 @@ export function useEmployeeSearch(term: string, options: SearchFilters & { enabl
         queryFn: () => employeeApi.options({ search, exclude: excludeIds, ...filters }),
         enabled,
         placeholderData: (prev) => prev,
-        staleTime: 30_000,
+        staleTime: FRESH_MS,
     });
     // True while the typed text has not reached the server yet or its answer is in flight.
     const pending = normalizeSearch(term) !== search || query.isFetching;

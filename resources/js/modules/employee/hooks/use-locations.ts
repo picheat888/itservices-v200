@@ -1,8 +1,9 @@
+import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { locationApi } from '../api/locationApi';
 import { LOC } from './query-keys';
 
-export const useLocations = () => useQuery({ queryKey: LOC, queryFn: locationApi.list });
+export const useLocations = (opts: LookupOptions = {}) => useQuery({ queryKey: LOC, queryFn: locationApi.list, ...FRESH_LIST, ...opts });
 
 export function useLocationMutations() {
     const qc = useQueryClient();

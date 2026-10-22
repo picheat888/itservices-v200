@@ -13,6 +13,9 @@ export const FRESH_VIEW = { staleTime: FRESH_MS, refetchOnWindowFocus: true } as
 /** Query options for a dropdown's source list: asked again when its dropdown opens (useSelectRefresh), not on browser-tab return. */
 export const FRESH_LIST = { staleTime: FRESH_MS } as const;
 
+/** A lookup list hook's options; a screen that shows the list as a table passes `refetchOnWindowFocus: true`. */
+export type LookupOptions = { refetchOnWindowFocus?: boolean };
+
 /** True only on the closed-to-open step of a dialog. */
 export function justOpened(wasOpen: boolean, open: boolean): boolean {
     return !wasOpen && open;
