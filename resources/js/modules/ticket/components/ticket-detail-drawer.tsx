@@ -8,6 +8,7 @@ import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useTabFreshness, type TabQuery } from '@/shared/hooks/use-tab-freshness';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -299,6 +300,7 @@ const PROGRESS_META: Record<ProgressKind, { Icon: typeof Check; dot: string; bod
 /** Read-only ticket view — centered focus dialog with a tabbed body (details / files) and a case-status rail. */
 export function TicketDetailDrawer({
     ticket,
+    source,
     onClose,
     canTake,
     canResolve,
@@ -315,6 +317,8 @@ export function TicketDetailDrawer({
     onUpdate,
 }: {
     ticket: Ticket | null;
+    /** The query behind `ticket`, so the tabs can show it refreshing. */
+    source?: TabQuery;
     onClose: () => void;
     /** tickets.resolve plus the case's Ticket Level */
     canTake: boolean;
@@ -350,6 +354,7 @@ export function TicketDetailDrawer({
     const view = ticket ?? shown;
 
     const [tab, setTab] = useState<'details' | 'progress' | 'files'>('details');
+    const marks = useTabFreshness(tab, { details: [source], progress: [source], files: [source] });
     // In-app preview (lightbox) for image and PDF attachments instead of opening a new tab.
     const [preview, setPreview] = useState<TicketAttachment | null>(null);
     useEffect(() => {
@@ -443,9 +448,15 @@ export function TicketDetailDrawer({
                                     // Three different kinds of thing — what was reported, what has
                                     // happened since, what came attached — so each gets a mark that
                                     // can be recognised before the word is read.
-                                    { id: 'details', label: t('ticket_tab_details'), icon: CircleAlert },
-                                    { id: 'progress', label: t('ticket_tab_progress'), count: progress.length, icon: History },
-                                    { id: 'files', label: t('ticket_attach'), count: files.length, icon: Paperclip },
+                                    { id: 'details', label: t('ticket_tab_details'), icon: CircleAlert, refresh: marks.details },
+                                    {
+                                        id: 'progress',
+                                        label: t('ticket_tab_progress'),
+                                        count: progress.length,
+                                        icon: History,
+                                        refresh: marks.progress,
+                                    },
+                                    { id: 'files', label: t('ticket_attach'), count: files.length, icon: Paperclip, refresh: marks.files },
                                 ]}
                             />
 

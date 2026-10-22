@@ -6,6 +6,8 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SectionLabel } from '@/shared/components/section-label';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
@@ -20,6 +22,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 
+// The fields a refresh of the ticket may update while the user has not touched them
+type EditForm = { category: TicketCategory; subject: string; description: string; phone: string; existing: TicketAttachment[] };
+const EMPTY_FORM: EditForm = { category: 'hardware', subject: '', description: '', phone: '', existing: [] };
+const toForm = (tk: Ticket): EditForm => ({
+    category: tk.category,
+    subject: tk.subject,
+    description: tk.description ?? '',
+    phone: tk.callback_phone ?? '',
+    existing: tk.attachments ?? [],
+});
+
 /** Hard cap enforced by the API (files.*|max:10) — mirrored here for the UI. */
 const MAX_FILES = 10;
 /** Allowed extensions — mirrors the API's mimes rule. */
@@ -33,10 +46,13 @@ const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'x
  */
 export function EditTicketDrawer({
     ticket,
+    fresh,
     onClose,
     onSaved,
 }: {
     ticket: Ticket | null;
+    /** The live copy of `ticket`; fields the user has not touched follow it. */
+    fresh: Ticket | null;
     onClose: () => void;
     /** Called instead of onClose once the edit is saved. */
     onSaved?: () => void;
@@ -45,10 +61,15 @@ export function EditTicketDrawer({
     const confirmEdit = useConfirmEdit();
     const { update, uploadAttachments, deleteAttachment } = useTicketMutations();
 
-    const [category, setCategory] = useState<TicketCategory>('hardware');
-    const [subject, setSubject] = useState('');
-    const [description, setDescription] = useState('');
-    const [phone, setPhone] = useState('');
+    // `base` is what the form opened with, moved along by refreshes of the ticket
+    const [form, setForm] = useState<EditForm>(EMPTY_FORM);
+    const [base, setBase] = useState<EditForm>(EMPTY_FORM);
+    const { category, subject, description, phone, existing } = form;
+    const setCategory = (value: TicketCategory) => setForm((f) => ({ ...f, category: value }));
+    const setSubject = (value: string) => setForm((f) => ({ ...f, subject: value }));
+    const setDescription = (value: string) => setForm((f) => ({ ...f, description: value }));
+    const setPhone = (value: string) => setForm((f) => ({ ...f, phone: value }));
+    const setExisting = (update: (prev: TicketAttachment[]) => TicketAttachment[]) => setForm((f) => ({ ...f, existing: update(f.existing) }));
     const [errors, setErrors] = useState<Record<string, string>>({});
     // Why the server refused, shown as the banner over the form.
     const formError = useFormError();
@@ -56,7 +77,6 @@ export function EditTicketDrawer({
 
     // Attachments: already-saved files (with pending removals) + newly picked files.
     // Both are applied on Save (upload new, delete removed).
-    const [existing, setExisting] = useState<TicketAttachment[]>([]);
     const [removedIds, setRemovedIds] = useState<number[]>([]);
     const [pending, setPending] = useState<File[]>([]);
     // How many of the new files (from the top) a failed save already put on the ticket —
@@ -78,23 +98,23 @@ export function EditTicketDrawer({
     // Opening focuses the picked type
     const cardRefs = useRef<Partial<Record<TicketCategory, HTMLButtonElement | null>>>({});
 
-    // Preload the form + attachments from the ticket each time it opens.
-    useEffect(() => {
+    // Preload the form once per ticket it opens on, from the live copy when it is already here
+    const live = ticket && fresh && fresh.id === ticket.id ? fresh : null;
+    useSeedOnce(ticket?.id ?? null, () => {
         if (!ticket) return;
-        setCategory(ticket.category);
-        setSubject(ticket.subject);
-        setDescription(ticket.description ?? '');
-        setPhone(ticket.callback_phone ?? '');
+        const opened = toForm(live ?? ticket);
+        setForm(opened);
+        setBase(opened);
         setErrors({});
         clearFormError();
-        setExisting(ticket.attachments ?? []);
         setRemovedIds([]);
         setPending([]);
         setSavedFiles(0);
         setProgress({});
         setDeleted(0);
         setSaving(false);
-    }, [ticket, clearFormError]);
+    });
+    useFormRebase({ fresh: live ? toForm(live) : null, base, setBase, setForm });
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
     const totalFiles = keptExisting.length + pending.length;
@@ -178,10 +198,10 @@ export function EditTicketDrawer({
     const overallPct = totalOps ? Math.round(((Object.values(progress).reduce((a, b) => a + b, 0) / 100 + deleted) / totalOps) * 100) : 0;
     const isDirty =
         !!ticket &&
-        (category !== ticket.category ||
-            subject !== ticket.subject ||
-            description !== (ticket.description ?? '') ||
-            phone !== (ticket.callback_phone ?? '') ||
+        (category !== base.category ||
+            subject !== base.subject ||
+            description !== base.description ||
+            phone !== base.phone ||
             removedIds.length > 0 ||
             pending.length > 0);
     const guardClose = useDiscardGuard(isDirty);

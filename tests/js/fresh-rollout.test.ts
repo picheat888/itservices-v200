@@ -38,8 +38,12 @@ const SITES: Site[] = [
     { file: 'modules/employee/hooks/use-positions.ts', freshList: 1 },
     { file: 'modules/employee/hooks/use-sections.ts', freshList: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
-    { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2 },
-    { file: 'modules/ticket/pages/index.tsx', marks: 1 },
+    { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
+    { file: 'modules/ticket/pages/index.tsx', marks: 1, freshView: 2, openRefetch: 2 },
+    { file: 'modules/ticket/components/ticket-detail-drawer.tsx', marks: 3 },
+    { file: 'modules/ticket/components/edit-ticket-drawer.tsx', rebase: 1, seedOnce: 1 },
+    { file: 'modules/ticket/components/assign-ticket-modal.tsx', refresh: 1 },
+    { file: 'modules/ticket/components/forward-ticket-modal.tsx', refresh: 1 },
 ];
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;
@@ -60,4 +64,10 @@ test('employee search waits five seconds', () => {
     const text = read('modules/employee/hooks/use-employee-pickers.ts');
     assert.ok(text.includes('staleTime: FRESH_MS'));
     assert.ok(!text.includes('30_000'));
+});
+
+test('ticket asset search waits five seconds', () => {
+    const text = read('modules/ticket/hooks/use-tickets.ts');
+    assert.ok(!text.includes('30_000'));
+    assert.ok(text.includes('staleTime: FRESH_MS'));
 });

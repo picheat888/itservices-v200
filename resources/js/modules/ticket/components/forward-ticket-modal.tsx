@@ -5,6 +5,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { refusalText } from '@/shared/lib/api-errors';
 import type { Ticket } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -24,7 +25,9 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
     }, [ticket]);
     const view = ticket ?? shown;
     // Only staff whose Ticket Level covers this case's category can receive it
-    const { data: staff = [] } = useTicketStaff(!!view, view?.category);
+    const staffQuery = useTicketStaff(!!view, view?.category);
+    const staffRefresh = useSelectRefresh(staffQuery);
+    const staff = useMemo(() => staffQuery.data ?? [], [staffQuery.data]);
     const [assigneeId, setAssigneeId] = useState('');
     const formError = useFormError();
     const clearFormError = formError.clear;
@@ -75,7 +78,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
 
                     <Field label={t('ticket_select_staff')} required>
-                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} preferDown />
+                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} refresh={staffRefresh} preferDown />
                     </Field>
 
                     <div className="flex items-start gap-2 rounded-md bg-blue-500/10 px-3 py-2.5 text-sm text-blue-600 dark:text-blue-400">

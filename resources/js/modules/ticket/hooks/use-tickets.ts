@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
-import { FRESH_VIEW } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_MS, FRESH_VIEW } from '@/shared/lib/freshness';
 import type { TicketPriority, TicketWorkClass } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -44,7 +44,7 @@ export const useTicketSummary = (enabled: boolean, range: OverviewPeriod) =>
 
 /** Staff able to receive a case (tickets.resolve), narrowed to the case's category Level. */
 export const useTicketStaff = (enabled = true, category?: string) =>
-    useQuery({ queryKey: ['tickets-staff', category ?? 'all'], queryFn: () => ticketApi.staff(category), enabled });
+    useQuery({ queryKey: ['tickets-staff', category ?? 'all'], queryFn: () => ticketApi.staff(category), enabled, ...FRESH_LIST });
 
 /** Assets the case's requester holds — one-click Related-asset picks in the Take Case dialog (tickets.resolve). */
 export const useTicketRequesterAssets = (ticketId?: number | null) =>
@@ -65,7 +65,7 @@ export function useTicketAssetPicker(enabled: boolean) {
         queryFn: () => ticketApi.assetOptions(search),
         enabled: enabled && open,
         placeholderData: (prev) => prev,
-        staleTime: 30_000,
+        staleTime: FRESH_MS,
     });
     const pending = normalizeSearch(term) !== search || query.isFetching;
     const searchPlaceholder = t('ticket_asset_search');

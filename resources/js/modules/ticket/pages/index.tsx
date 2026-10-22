@@ -16,8 +16,10 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -196,11 +198,14 @@ export default function TicketsPage() {
     // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
     // `!= null` guard and used to fetch /tickets/NaN.
     const openId = toRecordId(searchParams.get('view'));
-    const { data: detail, isError: detailMissing } = useQuery({
+    const detailQuery = useQuery({
         queryKey: ['ticket', 'view', openId],
         queryFn: () => ticketApi.get(openId as number),
         enabled: openId != null,
+        ...FRESH_VIEW,
     });
+    const { data: detail, isError: detailMissing } = detailQuery;
+    useRefetchOnOpen(openId != null, detailQuery);
     // Opening pushes a history entry so Back closes the dialog
     const dialogs = usePageDialogs();
     const closeDetail = () => dialogs.close(['view']);
@@ -239,15 +244,14 @@ export default function TicketsPage() {
 
     // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the detail ?view stays under it
     const editId = toRecordId(searchParams.get('edit'));
-    const {
-        data: editSource,
-        isError: editMissing,
-        isFetching: editFetching,
-    } = useQuery({
+    const editQuery = useQuery({
         queryKey: ['ticket', 'view', editId],
         queryFn: () => ticketApi.get(editId as number),
         enabled: editId != null,
+        ...FRESH_VIEW,
     });
+    const { data: editSource, isError: editMissing, isFetching: editFetching } = editQuery;
+    useRefetchOnOpen(editId != null, editQuery);
     // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
         if (editId != null && editSource && !editFetching && editTicket?.id !== editId) setEditTicket(editSource);
@@ -746,6 +750,7 @@ export default function TicketsPage() {
             <RecordMissingDialog open={detailMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <TicketDetailDrawer
                 ticket={detail ?? null}
+                source={detailQuery}
                 onClose={() => closeDetail()}
                 canTake={canTake && (shownTicket ? hasLevel(shownTicket.category) : false)}
                 canResolve={canTake}
@@ -761,7 +766,12 @@ export default function TicketsPage() {
                 onResolve={startResolve}
                 onUpdate={startUpdateFromList}
             />
-            <EditTicketDrawer ticket={editOpen ? editTicket : null} onClose={closeEditTicket} onSaved={showSavedTicket} />
+            <EditTicketDrawer
+                ticket={editOpen ? editTicket : null}
+                fresh={editOpen ? (editSource ?? null) : null}
+                onClose={closeEditTicket}
+                onSaved={showSavedTicket}
+            />
             <TakeCaseModal ticket={takeTicket} onClose={() => setTakeTicket(null)} />
             <AssignTicketModal ticket={assignTicket} onClose={() => setAssignTicket(null)} />
             <ForwardTicketModal ticket={forwardTicket} onClose={() => setForwardTicket(null)} />
