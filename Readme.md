@@ -58,9 +58,9 @@ php artisan db:seed            # ถามชื่อ อีเมล รหั
 php artisan storage:link       # ให้รูปพนักงานและโลโก้แสดงได้
 
 # 4. รันทุกอย่างพร้อมกัน (เว็บ + queue 2 ตัว + Vite + scheduler)
-composer run dev               # Vite แบบ HMR
+composer run dev               # Vite แบบ HMR (มีตัว watch service worker เพิ่มอีก 1 ตัว)
 # หรือ
-composer run demo              # vite build --watch ใช้ตอนเปิดจาก iPad หรือเครื่องอื่น
+composer run demo              # vite build --watch ใช้ตอนเปิดจาก iPad หรือเครื่องอื่น (มีตัว watch service worker ด้วย)
 ```
 
 เปิดเบราว์เซอร์ที่ http://localhost:8000
@@ -82,7 +82,13 @@ php artisan geoip:update                               # ฐานข้อม�
 - **`.env`** ค่าหลักคือ `APP_URL`, `DB_*`, `QUEUE_CONNECTION=database` และ `LOG_STACK=source` (log แยกโฟลเดอร์รายวันใน `storage/logs/`)
 - **อีเมล** ค่า SMTP จริงเก็บในตาราง `mail_settings` ผู้ดูแลตั้งได้ในหน้า Settings ส่วน `MAIL_*` ใน `.env` เป็นค่าสำรองเมื่อยังไม่ได้ตั้ง ระบบส่งอีเมลผ่าน Queue เสมอ
 - **Scheduler** ต้องรัน `php artisan schedule:work` (รวมอยู่ใน `composer run dev` แล้ว) สำหรับแจ้งเตือนสัญญาใกล้หมดอายุ แจ้งเตือนคลัง แจ้งเตือน SLA ของ Ticket สรุปรายสัปดาห์ รายงานตั้งเวลา และการล้าง log
-- **Queue** ใช้ 2 คิว คือคิวปกติ และคิว `reports` สำหรับ Export ขนาดใหญ่
+- **Queue** ใช้ 2 คิว คือคิวปกติ และคิว `reports` สำหรับ Export ขนาดใหญ่ ต้องรัน queue worker ด้วย ไม่งั้นไม่มี push ออก
+- **Web Push (แจ้งเตือนผ่านเบราว์เซอร์ตอนปิดหน้าเว็บ)** ใช้แพ็กเกจ `laravel-notification-channels/webpush` (ไม่ต้องใช้ gmp ใช้ bcmath openssl curl mbstring)
+  - สร้างคีย์ด้วย `php artisan webpush:vapid` แล้วตั้ง `VAPID_PUBLIC_KEY` `VAPID_PRIVATE_KEY` และ `VAPID_SUBJECT` (ต้องตั้ง เช่น `mailto:it@company.com`) ใน `.env`
+  - migration ใหม่ `push_subscriptions` (สร้างตาราง และขยายความยาว endpoint) ต้องรัน `php artisan migrate`
+  - ต้องใช้ HTTPS (Cloudflare) บน iPad ต้องเพิ่มเว็บลงหน้าจอโฮม (iPadOS 16.4 ขึ้นไป) ถึงจะเปิดรับ push ได้
+  - Service worker อยู่ที่ `/sw.js` (build จาก `vite.sw.config.js` ไป `public/build/sw.js`) Cloudflare ต้องไม่ cache `/sw.js` (ต้นทางส่ง no-cache แล้ว ถ้ามีกฎ cache ไฟล์ JS ให้เพิ่มกฎ bypass cache สำหรับ `/sw.js`)
+- **เสียงแจ้งเตือน** ผู้ดูแลเลือกเสียงและเปิดปิดได้ที่ Settings > เสียง ใช้สิทธิ์ `settings.sound` role ที่มีอยู่แล้วต้องติ๊กให้เองในหน้า Permission
 
 ---
 
@@ -96,7 +102,7 @@ npm run lint                   # eslint --fix
 npm run format                 # prettier
 vendor/bin/pint --dirty        # จัดรูปแบบไฟล์ PHP ที่แก้
 php artisan route:list         # ดู routes
-npm run build                  # build frontend สำหรับ production
+npm run build                  # build frontend สำหรับ production (รวม service worker ด้วย)
 ```
 
 > **ห้ามล้าง cache ช่วงเวลาทำงานบนเครื่องจริง** (`cache:clear`, `optimize:clear` หรือ deploy ที่ล้าง cache) นาฬิกาเวลาไม่ใช้งานของทุกคนเก็บใน cache นาฬิกาที่หายนับว่าหมดเวลา ทุกคนที่ไม่ได้ติ๊ก "จดจำฉันไว้" จะถูกออกจากระบบพร้อมกัน ให้ deploy นอกเวลาทำงาน หรือใช้ `config:cache` / `route:cache` / `view:cache` แทนการล้างทั้งหมด
