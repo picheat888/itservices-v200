@@ -358,4 +358,12 @@ export const settings: Dict = {
     net_geoip_updated: 'ฐานข้อมูล GeoIP อัปเดตล่าสุด {date} ระบบดาวน์โหลดใหม่เองทุกเดือน',
     net_geoip_none: 'ยังไม่มีฐานข้อมูล GeoIP ระบบจะดาวน์โหลดเองทุกเดือน',
     net_geoip_credit: 'IP Geolocation by DB-IP',
+    // sound-section.tsx — หมวดเสียง
+    set_sound: 'เสียง',
+    set_sound_title: 'เสียงแจ้งเตือน',
+    set_sound_desc: 'การตั้งค่าเสียงแจ้งเตือนของระบบ',
+    set_sound_switch: 'เปิด-ปิด เสียงแจ้งเตือน',
+    set_sound_list: 'รายการเสียง เลื่อนดูได้',
+    set_sound_play: 'ลองฟัง {name}',
+    set_sound_note: 'แจ้งเตือนที่ขึ้นบนจอตอนไม่ได้เปิดระบบ ใช้เสียงของ Windows หรือ iPad เลือกจากที่นี่ไม่ได้',
 };

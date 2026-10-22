@@ -126,6 +126,12 @@ export interface DisplayPayload {
 // Date and time display — system-wide, saved via PUT /settings/datetime.
 export type DateTimePayload = Pick<SettingsData, 'date_format' | 'date_era' | 'time_format'>;
 
+// Bell sound and its on/off switch — system-wide, saved via PUT /settings/sound.
+export interface SoundPayload {
+    sound: string;
+    enabled: boolean;
+}
+
 // Security policy — 0 disables the respective rule.
 export interface SecuritySettings {
     session_timeout_minutes: number;
@@ -215,6 +221,12 @@ export const settingsApi = {
     updateDateTime: async (payload: DateTimePayload) => {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/datetime', payload);
+        return data.data;
+    },
+
+    updateSound: async (payload: SoundPayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/sound', payload);
         return data.data;
     },
 

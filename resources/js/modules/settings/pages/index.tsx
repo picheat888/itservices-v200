@@ -50,6 +50,7 @@ import {
     Ticket,
     Trash2,
     Upload,
+    Volume2,
 } from 'lucide-react';
 import { Fragment, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -72,6 +73,7 @@ import { ModelModal } from '../components/model-modal';
 import { NetworkNamesSection } from '../components/network-names-section';
 import { RequestDataSection } from '../components/request-data-section';
 import { SEGMENT_LEGEND } from '../components/segmented-radio';
+import { SoundSection } from '../components/sound-section';
 import { TicketsSlaTab } from '../components/tickets-sla-tab';
 import { VendorModal } from '../components/vendor-modal';
 import { WarehouseModal } from '../components/warehouse-modal';
@@ -110,7 +112,7 @@ import { IDLE_SECTION, type SavedSectionProps, type SectionSaver, type SectionSt
 /** A section tells the page whether it holds unsaved local edits. */
 type OnDirtyChange = (dirty: boolean) => void;
 
-type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'request-data' | 'assets' | 'security';
+type Section = 'system' | 'company' | 'master-data' | 'email' | 'sound' | 'tickets' | 'request-data' | 'assets' | 'security';
 
 // Theme accent options — kept to Blue / Purple / Black per branding guidelines.
 // Theme colours that read at 4.5:1 as text on white and on their own buttons, stay apart in dark mode, and stay clear of the status reds, greens and ambers.
@@ -152,7 +154,7 @@ function fieldsOf<K extends keyof SettingsForm>(source: Pick<SettingsForm, K>, k
 /** True when any of the given fields differs from the loaded values. */
 const differs = (form: SettingsForm, loaded: SettingsForm, keys: readonly (keyof SettingsForm)[]) => keys.some((key) => form[key] !== loaded[key]);
 
-const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'request-data', 'assets', 'security'];
+const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'sound', 'tickets', 'request-data', 'assets', 'security'];
 
 /** A ?tab= value this page has — checked, never cast, so ?tab=garbage falls back instead of opening nothing. */
 const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v as Section);
@@ -240,6 +242,7 @@ export default function SettingsPage() {
         { id: 'system', label: t('set_system'), icon: SlidersHorizontal, perm: 'settings.system' },
         { id: 'master-data', label: t('set_master_data'), icon: Boxes, perm: 'settings.masterdata' },
         { id: 'email', label: t('set_email'), icon: Mail, perm: 'settings.email' },
+        { id: 'sound', label: t('set_sound'), icon: Volume2, perm: 'settings.sound' },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket, perm: 'settings.sla' },
         { id: 'request-data', label: t('set_request_data'), icon: Inbox, perm: 'settings.requestdata' },
         { id: 'assets', label: t('set_assets'), icon: Box, perm: 'settings.assets' },
@@ -309,6 +312,7 @@ export default function SettingsPage() {
                     )}
                     {activeSection === 'master-data' && <MasterDataTab />}
                     {activeSection === 'email' && <EmailTab onDirtyChange={setSectionDirty} />}
+                    {activeSection === 'sound' && <SoundSection onDirtyChange={setSectionDirty} />}
                     {activeSection === 'assets' && <AssetsTab onDirtyChange={setSectionDirty} onOpenSection={openSection} />}
                     {activeSection === 'tickets' && <TicketsSlaTab onDirtyChange={setSectionDirty} />}
                     {activeSection === 'request-data' && <RequestDataTab />}

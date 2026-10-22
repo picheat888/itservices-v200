@@ -13,6 +13,7 @@ import {
     type DateTimePayload,
     type DisplayPayload,
     type SettingsData,
+    type SoundPayload,
     type TicketSlaPayload,
 } from '../api/settingsApi';
 
@@ -137,6 +138,13 @@ export function useUpdateDateTime() {
     const sync = useSyncStore();
     const failed = useSaveFailed();
     return useMutation({ mutationFn: (payload: DateTimePayload) => settingsApi.updateDateTime(payload), onSuccess: sync, onError: failed });
+}
+
+/** Persists the system-wide bell sound and its on/off switch (Settings -> Sound). */
+export function useUpdateSound() {
+    const sync = useSyncStore();
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: SoundPayload) => settingsApi.updateSound(payload), onSuccess: sync, onError: failed });
 }
 
 /** Persists the system-wide asset status badge colors (Settings -> Assets). */

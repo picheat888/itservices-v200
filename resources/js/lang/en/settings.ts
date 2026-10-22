@@ -362,4 +362,12 @@ export const settings: Dict = {
     net_geoip_updated: 'GeoIP database last updated {date}. The system downloads a new one every month.',
     net_geoip_none: 'No GeoIP database yet. The system downloads one every month.',
     net_geoip_credit: 'IP Geolocation by DB-IP',
+    // sound-section.tsx — Sound section
+    set_sound: 'Sound',
+    set_sound_title: 'Notification sound',
+    set_sound_desc: "The system's notification sound settings",
+    set_sound_switch: 'Notification sound on/off',
+    set_sound_list: 'Sound list, scrollable',
+    set_sound_play: 'Play {name}',
+    set_sound_note: "Notifications that show on screen while the system isn't open use the Windows or iPad sound, which can't be chosen here.",
 };
