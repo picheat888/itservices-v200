@@ -1,9 +1,10 @@
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { emailTemplateApi, type EmailLogParams, type EmailTemplatePayload } from '../api/emailTemplateApi';
 
 const KEY = ['email-templates'] as const;
 
-export const useEmailTemplates = () => useQuery({ queryKey: KEY, queryFn: emailTemplateApi.list });
+export const useEmailTemplates = () => useQuery({ queryKey: KEY, queryFn: emailTemplateApi.list, ...FRESH_VIEW });
 
 /** One log entry, fetched only while its drawer is open. */
 export const useEmailLog = (id: number | null) =>
@@ -11,6 +12,7 @@ export const useEmailLog = (id: number | null) =>
         queryKey: ['email-log', id],
         queryFn: () => emailTemplateApi.log(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** The delivery log, paginated server-side; keeps the previous page on screen while the next loads. */
@@ -20,6 +22,7 @@ export const useEmailLogs = (params: EmailLogParams, enabled: boolean) =>
         queryFn: () => emailTemplateApi.logs(params),
         enabled,
         placeholderData: keepPreviousData,
+        ...FRESH_VIEW,
     });
 
 export function useEmailTemplateMutations() {

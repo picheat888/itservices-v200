@@ -5,6 +5,7 @@ import {
     type NotificationsResponse,
     type NotificationTemplatePayload,
 } from '@/modules/notification/api/notificationApi';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
@@ -120,7 +121,8 @@ const BELLS = ['notification-templates'] as const;
 const BELL_MESSAGES = ['notification-messages'] as const;
 
 /** Every bell with its catalogue description — the Settings page. Needs the admin gate. */
-export const useNotificationTemplates = (enabled = true) => useQuery({ queryKey: BELLS, queryFn: notificationTemplateApi.list, enabled });
+export const useNotificationTemplates = (enabled = true) =>
+    useQuery({ queryKey: BELLS, queryFn: notificationTemplateApi.list, enabled, ...FRESH_VIEW });
 
 /**
  * The wording overrides, for rendering the tray. Fetched by every signed-in user, so it is

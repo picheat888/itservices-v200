@@ -23,9 +23,13 @@ import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { bindDateFormat, relativeTime, type DateFormatter } from '@/shared/lib/datetime';
 import { formatNumber } from '@/shared/lib/number';
@@ -581,13 +585,18 @@ export default function EmailTemplatesPage() {
     const confirm = useConfirm();
     const navigate = useNavigate();
     const { can } = useAuth();
-    const { data, isLoading, isError, refetch } = useEmailTemplates();
+    const templatesQuery = useEmailTemplates();
+    const { data, isLoading, isError, refetch } = templatesQuery;
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
     const rights = useEmailRights();
     const canLogs = can('notifications.logs');
     const tabIds = TAB_IDS.filter((id) => id !== 'log' || canLogs);
     // Active tab in ?tab=; each tab's search, filter chip, page and rows-per-page in the URL.
     const [tab, changeTab] = useTabParam((v): v is EmailTab => isEmailTab(v) && (v !== 'log' || canLogs), 'email');
+    // The bell and log panes own their queries, so the bar watches them by key
+    const bellsFresh = useKeyFreshness(['notification-templates'], { exact: true });
+    const logsFresh = useKeyFreshness(['email-logs']);
+    const marks = useTabFreshness(tab, { email: [templatesQuery], notification: [bellsFresh], log: [logsFresh] });
     const list = useListParams();
     const search = list.get('search');
 
@@ -808,7 +817,7 @@ export default function EmailTemplatesPage() {
             )}
 
             <Card className="overflow-clip">
-                <PageTabs tabs={tabIds.map((id) => ({ id, label: t(TAB_LABEL_KEYS[id]) }))} active={tab} onChange={switchTab} />
+                <PageTabs tabs={tabIds.map((id) => ({ id, label: t(TAB_LABEL_KEYS[id]), refresh: marks[id] }))} active={tab} onChange={switchTab} />
 
                 {tab === 'notification' && <NotificationSettingsPane />}
                 {tab === 'log' && <DeliveryLogPane />}
@@ -1179,7 +1188,9 @@ function SentEmailFrame({ html, title, className }: { html: string; title: strin
 function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: () => void }) {
     const fmt = useDateFormat();
     const t = useT();
-    const { data, isError, refetch } = useEmailLog(logId);
+    const logQuery = useEmailLog(logId);
+    const { data, isError, refetch } = logQuery;
+    useRefetchOnOpen(logId != null, logQuery);
     const { record: log } = useRecordView(logId, data);
     const meta = log ? LOG_STATUS_META[log.status] : null;
 
@@ -1553,9 +1564,12 @@ function EditorDialog({
     const rights = useEmailRights();
     const { record: shown } = useRecordView(template?.id ?? null, template);
 
-    const [name, setName] = useState('');
-    const [subject, setSubject] = useState('');
-    const [body, setBody] = useState('');
+    // The wording in one state, so a refresh of the template rebases it together
+    const [wording, setWording] = useState({ name: '', subject: '', body: '' });
+    const { name, subject, body } = wording;
+    const setName = (next: string) => setWording((w) => ({ ...w, name: next }));
+    const setSubject = (next: string) => setWording((w) => ({ ...w, subject: next }));
+    const setBody = (next: string) => setWording((w) => ({ ...w, body: next }));
     // The switch saves at once, so it is not part of the unsaved draft.
     const [enabled, setEnabled] = useState(true);
     const [toggling, setToggling] = useState(false);
@@ -1595,6 +1609,13 @@ function EditorDialog({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
+
+    useFormRebase({
+        fresh: template ? { name: template.name, subject: template.subject, body: template.body_html } : null,
+        base,
+        setBase,
+        setForm: setWording,
+    });
 
     const dirty = name !== base.name || subject !== base.subject || body !== base.body;
     const hasErrors = WORDING_FIELDS.some((field) => errors[field]);

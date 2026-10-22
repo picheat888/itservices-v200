@@ -14,6 +14,7 @@ import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
@@ -135,24 +136,30 @@ function NotificationEditDialog({ open, bell, onClose }: { open: boolean; bell: 
     const closeAfterSave = useCloseAfterSave(open, onClose);
     const submitting = useRef(false);
 
-    const [en, setEn] = useState('');
-    const [th, setTh] = useState('');
-    const [enabled, setEnabled] = useState(true);
+    // Wording and switch in one state, so a refresh of the bell rebases them together
+    const [form, setForm] = useState({ en: '', th: '', enabled: true });
+    const { en, th, enabled } = form;
+    const setEn = (next: string) => setForm((f) => ({ ...f, en: next }));
+    const setTh = (next: string) => setForm((f) => ({ ...f, th: next }));
+    const setEnabled = (next: boolean) => setForm((f) => ({ ...f, enabled: next }));
+    // What the form opened with, moved along by refreshes of the bell
+    const [base, setBase] = useState({ en: '', th: '', enabled: true });
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
 
     // Re-seed on open or a different notification only, so a list refetch keeps what is typed
     useEffect(() => {
         if (!open || !bell) return;
-        setEn(bell.message_en);
-        setTh(bell.message_th);
-        setEnabled(bell.enabled);
+        const values = { en: bell.message_en, th: bell.message_th, enabled: bell.enabled };
+        setForm(values);
+        setBase(values);
         setSaved(false);
         formError.clear();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, bell?.key]);
 
-    const isDirty = open && !saved && !!bell && (en !== bell.message_en || th !== bell.message_th || enabled !== bell.enabled);
+    useFormRebase({ fresh: open && bell ? { en: bell.message_en, th: bell.message_th, enabled: bell.enabled } : null, base, setBase, setForm });
+    const isDirty = open && !saved && !!bell && (en !== base.en || th !== base.th || enabled !== base.enabled);
     const guardClose = useDiscardGuard(isDirty);
 
     const busy = update.isPending || reset.isPending || test.isPending;
