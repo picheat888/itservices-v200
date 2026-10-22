@@ -712,6 +712,7 @@ export const permission: Dict = {
     audit_ev_updated_asset_settings: 'Updated asset settings',
     audit_ev_updated_sla_settings: 'Updated SLA settings',
     audit_ev_updated_date_and_time_settings: 'Updated date and time settings',
+    audit_ev_updated_notification_sound: 'Updated notification sound',
     audit_ev_updated_security_settings: 'Updated security settings',
     audit_ev_updated_mail_settings: 'Updated mail settings',
     audit_ev_created_network_name: 'Created network name',

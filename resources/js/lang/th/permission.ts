@@ -703,6 +703,7 @@ export const permission: Dict = {
     audit_ev_updated_asset_settings: 'แก้ไขการตั้งค่าทรัพย์สิน',
     audit_ev_updated_sla_settings: 'แก้ไขการตั้งค่า SLA',
     audit_ev_updated_date_and_time_settings: 'แก้ไขรูปแบบวันที่และเวลา',
+    audit_ev_updated_notification_sound: 'แก้ไขเสียงแจ้งเตือน',
     audit_ev_updated_security_settings: 'แก้ไขการตั้งค่าความปลอดภัย',
     audit_ev_updated_mail_settings: 'แก้ไขการตั้งค่าอีเมล',
     audit_ev_created_network_name: 'เพิ่มชื่อเครือข่าย',
