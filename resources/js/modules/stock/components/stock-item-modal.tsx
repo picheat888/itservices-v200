@@ -11,6 +11,7 @@ import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { modelsForBrand } from '@/shared/lib/brand-models';
 import { nameSearch } from '@/shared/lib/local-name';
 import { digitsOnly } from '@/shared/lib/number';
 import type { StockItem } from '@/shared/types';
@@ -153,7 +154,8 @@ export function StockItemModal({
 
     // Models are scoped to the chosen brand; with no brand picked, show them all
     const selectedBrand = brands.find((b) => b.id === form.brand_id);
-    const modelOptions = selectedBrand ? models.filter((m) => m.brand_id === selectedBrand.id) : models;
+    // Models of the chosen brand only; the model select waits for a brand
+    const modelOptions = modelsForBrand(models, selectedBrand?.id ?? null, form.model_id ?? null);
 
     const submit = async () => {
         if (saving || saved || !form.name.trim() || (item && !form.sku.trim())) return;
@@ -252,6 +254,8 @@ export function StockItemModal({
                                     setModelGone(null);
                                 }}
                                 options={modelOptions.map((m) => ({ value: String(m.id), label: m.name, search: m.name }))}
+                                disabled={!selectedBrand}
+                                placeholder={selectedBrand ? undefined : t('stock_pick_brand_first')}
                             />
                         </Field>
                     </div>

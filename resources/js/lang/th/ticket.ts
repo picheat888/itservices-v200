@@ -95,7 +95,7 @@ export const ticket: Dict = {
     ticket_requester_assets: 'อุปกรณ์ประจำของ {name} (แตะเพื่อผูก)',
     ticket_asset_no: 'รหัสทรัพย์สิน',
     ticket_asset_tag: 'ชื่อ Tag',
-    ticket_asset_brand_model: 'แบรนด์ / รุ่น',
+    ticket_asset_brand_model: 'ยี่ห้อ / รุ่น',
     ticket_asset_serial: 'Serial',
     ticket_initial_notes: 'บันทึกเริ่มต้น (ไม่บังคับ)',
     ticket_activity: 'ไทม์ไลน์',

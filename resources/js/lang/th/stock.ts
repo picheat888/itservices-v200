@@ -111,6 +111,7 @@ export const stock: Dict = {
     stock_unit: 'หน่วย',
     stock_brand: 'ยี่ห้อ',
     stock_model: 'รุ่น',
+    stock_pick_brand_first: 'เลือกยี่ห้อก่อน',
     stock_model_gone: 'ยี่ห้อถูกเปลี่ยนเป็น {brand} จากที่อื่น เอารุ่น {model} ที่เลือกไว้ออกแล้ว เลือกรุ่นใหม่',
     stock_current: 'จำนวน (ปัจจุบัน)',
     stock_cost: 'ต้นทุน',

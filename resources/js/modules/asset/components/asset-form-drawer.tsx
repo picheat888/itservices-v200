@@ -11,6 +11,7 @@ import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
+import { modelsForBrand } from '@/shared/lib/brand-models';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { toMoneyText } from '@/shared/lib/money';
 import { cn } from '@/shared/lib/utils';
@@ -213,12 +214,17 @@ export function AssetFormDrawer({
             })),
         [categories, lang],
     );
-    // Models are scoped to the chosen brand; with no brand picked, show them all.
+    // Models of the chosen brand only; the model select waits for a brand
     const selectedBrand = brands.find((b) => b.id === Number(form.brand_id));
-    const modelOptions = useMemo(() => {
-        const list = selectedBrand ? models.filter((m) => m.brand_id === selectedBrand.id) : models;
-        return list.map((m) => ({ value: String(m.id), label: m.name, search: m.name }));
-    }, [models, selectedBrand]);
+    const modelOptions = useMemo(
+        () =>
+            modelsForBrand(models, selectedBrand?.id ?? null, form.model_id ? Number(form.model_id) : null).map((m) => ({
+                value: String(m.id),
+                label: m.name,
+                search: m.name,
+            })),
+        [models, selectedBrand, form.model_id],
+    );
 
     // Contracts to choose from when linking a rented asset to its vendor contract.
     // Uses the asset-scoped endpoint (gated by assets.register/edit), so an asset admin
@@ -408,7 +414,8 @@ export function AssetFormDrawer({
                                         }}
                                         options={modelOptions}
                                         refresh={refreshModels}
-                                        placeholder={t('asset_select_model')}
+                                        disabled={!selectedBrand}
+                                        placeholder={selectedBrand ? t('asset_select_model') : t('asset_pick_brand_first')}
                                     />
                                 </Field>
                                 <Field label={t('asset_serial')} required error={err.serial} name="serial">
