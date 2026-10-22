@@ -7,6 +7,8 @@ import { SearchableSelect, type SearchOption } from '@/shared/components/searcha
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { serverMessage } from '@/shared/lib/api-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
@@ -44,14 +46,18 @@ export function AssetTransferDialog({
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { transfer, bulkTransfer } = useAssetMutations();
-    const { data: locations = [] } = useLocations();
+    const locationsQuery = useLocations();
+    const refreshLocations = useSelectRefresh(locationsQuery);
+    const locations = useMemo(() => locationsQuery.data ?? [], [locationsQuery.data]);
     const { employees, pickerProps } = useEmployeePicker();
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
     const busy = isBulk ? bulkTransfer.isPending : transfer.isPending;
     // Asked for only while the dialog is open — a closed dialog picks nobody.
-    const { data: readiness } = useRecipientReadiness(isOpen);
+    const readinessQuery = useRecipientReadiness(isOpen);
+    const readiness = readinessQuery.data;
+    useRefetchOnOpen(isOpen, readinessQuery);
 
     const locationOptions = useMemo(() => locations.map((l) => ({ value: String(l.id), label: l.name, search: l.name })), [locations]);
 
@@ -202,6 +208,7 @@ export function AssetTransferDialog({
                     <Field label={t('asset_location')} required error={err.location}>
                         <SearchableSelect
                             value={location}
+                            refresh={refreshLocations}
                             onChange={setLocation}
                             options={locationOptions}
                             preferDown

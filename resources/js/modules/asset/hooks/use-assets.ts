@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
-import { FRESH_VIEW } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_VIEW } from '@/shared/lib/freshness';
 import { useToastStore } from '@/stores/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
@@ -43,6 +43,7 @@ export const useAsset = (id: number | null | undefined) =>
         queryKey: ['asset', id],
         queryFn: () => assetApi.get(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** The contract linked to an asset — powers the read-only Contract peek (gated by assets.view). */
@@ -56,11 +57,11 @@ export const useAssetContract = (assetId: number | null | undefined) =>
 /** Minimal contract list for the rented-asset form picker (gated by assets.register/edit,
  *  so an asset admin without contracts.view can still link a rented asset to its contract). */
 export const useAssetContractOptions = (enabled = true) =>
-    useQuery({ queryKey: ['asset-contract-options'], queryFn: assetApi.contractOptions, enabled });
+    useQuery({ queryKey: ['asset-contract-options'], queryFn: assetApi.contractOptions, enabled, ...FRESH_LIST });
 
 /** Who cannot accept a hand-over on their own — fetched only while the transfer dialog is open. */
 export const useRecipientReadiness = (enabled = true) =>
-    useQuery({ queryKey: ['asset-recipient-readiness'], queryFn: assetApi.recipientReadiness, enabled });
+    useQuery({ queryKey: ['asset-recipient-readiness'], queryFn: assetApi.recipientReadiness, enabled, ...FRESH_LIST });
 
 /** Assets assigned to the current user, for the profile drawer's Assets tab; polls in step with the bell. */
 export const useMyAssets = (enabled = true) =>

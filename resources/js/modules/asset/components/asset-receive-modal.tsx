@@ -6,12 +6,13 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Box, Check, RotateCcw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
 
 /** Put assets back into a warehouse: 'receive' a returned asset, or 'recall' a hand-over; single (`asset`) or bulk (`ids` + `open`). */
@@ -33,7 +34,9 @@ export function AssetReceiveModal({
     const t = useT();
     const fmtN = useNumberFormat();
     const { receive, recall, bulkRecall, bulkReceive } = useAssetMutations();
-    const { data: warehouses = [] } = useWarehouses();
+    const warehousesQuery = useWarehouses();
+    const refreshWarehouses = useSelectRefresh(warehousesQuery);
+    const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
     const [warehouse, setWarehouse] = useState('');
     const formError = useFormError();
     const clearFormError = formError.clear;
@@ -111,6 +114,7 @@ export function AssetReceiveModal({
                     <Field label={t('asset_warehouse')} required help={t(isRecall ? 'asset_recall_hint' : 'asset_receive_hint')}>
                         <SearchableSelect
                             value={warehouse}
+                            refresh={refreshWarehouses}
                             onChange={setWarehouse}
                             options={options}
                             preferDown

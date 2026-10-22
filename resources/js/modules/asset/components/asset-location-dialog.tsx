@@ -6,7 +6,10 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -41,7 +44,9 @@ export function AssetLocationDialog({
     const t = useT();
     const fmtN = useNumberFormat();
     const { updateLocation } = useAssetMutations();
-    const { data: locations = [] } = useLocations();
+    const locationsQuery = useLocations();
+    const refreshLocations = useSelectRefresh(locationsQuery);
+    const locations = useMemo(() => locationsQuery.data ?? [], [locationsQuery.data]);
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
@@ -61,17 +66,24 @@ export function AssetLocationDialog({
     const formError = useFormError();
     const clearFormError = formError.clear;
 
-    // Single asset starts on its current place; reset only while open so a closing dialog keeps its content.
-    const seedLocation = !isBulk && asset?.location_id ? String(asset.location_id) : '';
-    useEffect(() => {
-        if (!isOpen) return;
-        setLocation(seedLocation);
+    // Single asset starts on its current place, seeded once per opening; a refresh moves an untouched place only
+    const liveLocation = !isBulk && asset?.location_id ? String(asset.location_id) : '';
+    const [base, setBase] = useState({ location: '' });
+    useSeedOnce(isOpen ? (isBulk ? 'bulk' : (asset?.id ?? null)) : null, () => {
+        setLocation(liveLocation);
+        setBase({ location: liveLocation });
         setNote('');
         setErr(undefined);
         clearFormError();
-    }, [asset, open, isBulk, isOpen, seedLocation, clearFormError]);
+    });
+    useFormRebase({
+        fresh: isOpen && !isBulk ? { location: liveLocation } : null,
+        base,
+        setBase,
+        setForm: (update) => setLocation((prev) => update({ location: prev }).location),
+    });
 
-    const isDirty = location !== seedLocation || note !== '';
+    const isDirty = location !== base.location || note !== '';
     const guardClose = useDiscardGuard(isOpen && isDirty);
 
     const submit = async () => {
@@ -122,6 +134,7 @@ export function AssetLocationDialog({
                     <Field label={t('asset_location_new')} required error={err}>
                         <SearchableSelect
                             value={location}
+                            refresh={refreshLocations}
                             onChange={setLocation}
                             options={locationOptions}
                             preferDown

@@ -20,12 +20,14 @@ import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
+import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -82,7 +84,7 @@ import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnButton } from '../components/pending-return-button';
-import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
+import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -384,15 +386,10 @@ export default function AssetsPage() {
 
     // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the detail ?view stays under it
     const editId = toRecordId(searchParams.get('edit'));
-    const {
-        data: editSource,
-        isError: editMissing,
-        isFetching: editFetching,
-    } = useQuery({
-        queryKey: ['asset', 'view', editId],
-        queryFn: () => assetApi.get(editId as number),
-        enabled: editId != null,
-    });
+    const editQuery = useAsset(editId);
+    const { data: editSource, isFetching: editFetching } = editQuery;
+    const editMissing = isRecordMissing(editQuery.error, editSource !== undefined);
+    useRefetchOnOpen(editId != null, editQuery);
     const [editing, setEditing] = useState<Asset | null>(null);
     // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
@@ -1526,7 +1523,13 @@ export default function AssetsPage() {
                 canCancelWriteoff={canCancelWriteoff}
                 canDelete={canDelete}
             />
-            <AssetFormDrawer open={adding || editOpen} editing={adding ? null : editing} onClose={closeForm} onSaved={showSaved} />
+            <AssetFormDrawer
+                open={adding || editOpen}
+                editing={adding ? null : editing}
+                fresh={adding || !editOpen ? null : (editSource ?? null)}
+                onClose={closeForm}
+                onSaved={showSaved}
+            />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />

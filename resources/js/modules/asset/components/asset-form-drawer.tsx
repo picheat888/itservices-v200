@@ -7,6 +7,9 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { toMoneyText } from '@/shared/lib/money';
@@ -23,11 +26,11 @@ import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Check, FileText, Infinity as InfinityIcon, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
 
-interface FormState {
+type FormState = {
     category_id: string;
     source: AssetSource;
     model_id: string;
@@ -42,7 +45,7 @@ interface FormState {
     warranty_lifetime: boolean;
     contract_id: string;
     notes: string;
-}
+};
 
 const EMPTY: FormState = {
     category_id: '',
@@ -61,6 +64,23 @@ const EMPTY: FormState = {
     notes: '',
 };
 
+const toForm = (a: Asset): FormState => ({
+    category_id: a.category_id ? String(a.category_id) : '',
+    source: a.source,
+    model_id: a.model_id ? String(a.model_id) : '',
+    brand_id: a.brand_id ? String(a.brand_id) : '',
+    serial: a.serial ?? '',
+    tag: a.tag ?? '',
+    warehouse_id: a.warehouse_id ? String(a.warehouse_id) : '',
+    value: toMoneyText(a.value),
+    vendor_id: a.vendor_id ? String(a.vendor_id) : '',
+    purchase_date: a.purchase_date ?? '',
+    warranty_end: a.warranty_end ?? '',
+    warranty_lifetime: a.warranty_lifetime ?? false,
+    contract_id: a.contract_id ? String(a.contract_id) : '',
+    notes: a.notes ?? '',
+});
+
 /** Small uppercase section heading (mirrors the View Details dialog). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return <div className="text-muted-foreground mb-2 text-sm font-bold tracking-wide uppercase">{children}</div>;
@@ -75,11 +95,14 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function AssetFormDrawer({
     open,
     editing,
+    fresh = null,
     onClose,
     onSaved,
 }: {
     open: boolean;
     editing: Asset | null;
+    /** The live copy of `editing`; fields the user has not touched follow it. */
+    fresh?: Asset | null;
     onClose: () => void;
     /** Called instead of onClose once an edit is saved. */
     onSaved?: () => void;
@@ -89,11 +112,21 @@ export function AssetFormDrawer({
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
     const { create, update } = useAssetMutations();
-    const { data: warehouses = [] } = useWarehouses();
-    const { data: brands = [] } = useBrands();
-    const { data: models = [] } = useAssetModels();
-    const { data: categories = [] } = useCategories();
-    const { data: vendors = [] } = useVendors();
+    const warehousesQuery = useWarehouses();
+    const brandsQuery = useBrands();
+    const modelsQuery = useAssetModels();
+    const categoriesQuery = useCategories();
+    const vendorsQuery = useVendors();
+    const refreshWarehouses = useSelectRefresh(warehousesQuery);
+    const refreshBrands = useSelectRefresh(brandsQuery);
+    const refreshModels = useSelectRefresh(modelsQuery);
+    const refreshCategories = useSelectRefresh(categoriesQuery);
+    const refreshVendors = useSelectRefresh(vendorsQuery);
+    const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
+    const brands = useMemo(() => brandsQuery.data ?? [], [brandsQuery.data]);
+    const models = useMemo(() => modelsQuery.data ?? [], [modelsQuery.data]);
+    const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+    const vendors = useMemo(() => vendorsQuery.data ?? [], [vendorsQuery.data]);
     const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: String(w.id), label: w.name, search: w.name })), [warehouses]);
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
     const vendorOptions = useMemo(
@@ -107,33 +140,17 @@ export function AssetFormDrawer({
     const formError = useFormError();
     const clearFormError = formError.clear;
 
-    useEffect(() => {
-        if (!open) return;
+    // Seed once per asset the form opens on, from the live copy when it is already here
+    const live = editing && fresh && fresh.id === editing.id ? fresh : null;
+    useSeedOnce(open ? (editing?.id ?? 'new') : null, () => {
         setErr({});
         clearFormError();
         setSaveState('idle');
-        const next: FormState = editing
-            ? {
-                  category_id: editing.category_id ? String(editing.category_id) : '',
-                  source: editing.source,
-                  model_id: editing.model_id ? String(editing.model_id) : '',
-                  brand_id: editing.brand_id ? String(editing.brand_id) : '',
-                  serial: editing.serial ?? '',
-                  tag: editing.tag ?? '',
-                  warehouse_id: editing.warehouse_id ? String(editing.warehouse_id) : '',
-                  value: toMoneyText(editing.value),
-                  vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
-                  purchase_date: editing.purchase_date ?? '',
-                  warranty_end: editing.warranty_end ?? '',
-                  warranty_lifetime: editing.warranty_lifetime ?? false,
-                  contract_id: editing.contract_id ? String(editing.contract_id) : '',
-                  notes: editing.notes ?? '',
-              }
-            : EMPTY;
+        const next = editing ? toForm(live ?? editing) : EMPTY;
         setForm(next);
-        // Baseline for the dirty check (Save enable + discard guard).
         setInitial(next);
-    }, [open, editing, clearFormError]);
+    });
+    useFormRebase({ fresh: live ? toForm(live) : null, base: initial, setBase: setInitial, setForm });
 
     /** Form field → validation-error key (they don't always share a name). */
     const ERR_KEY: Partial<Record<keyof FormState, string>> = {
@@ -193,7 +210,9 @@ export function AssetFormDrawer({
     // Contracts to choose from when linking a rented asset to its vendor contract.
     // Uses the asset-scoped endpoint (gated by assets.register/edit), so an asset admin
     // without contracts.view still gets the picker. Fetched only while the drawer is open.
-    const { data: contracts = [] } = useAssetContractOptions(open);
+    const contractsQuery = useAssetContractOptions(open);
+    const refreshContracts = useSelectRefresh(contractsQuery);
+    const contracts = useMemo(() => contractsQuery.data ?? [], [contractsQuery.data]);
     const contractOptions = useMemo(
         () =>
             contracts.map((c) => ({
@@ -333,12 +352,16 @@ export function AssetFormDrawer({
                                         value={form.category_id}
                                         onChange={(v) => upd('category_id', v)}
                                         options={typeOptions}
+                                        refresh={refreshCategories}
+                                        flagRemoved
                                         placeholder={t('asset_select_type')}
                                     />
                                 </Field>
                                 <Field label={t('asset_brand')} required error={err.brand} name="brand">
                                     <SearchableSelect
                                         value={form.brand_id}
+                                        refresh={refreshBrands}
+                                        flagRemoved
                                         onChange={(v) => {
                                             // Picking a brand resets the model (models are brand-scoped).
                                             setForm((f) => ({ ...f, brand_id: v, model_id: '' }));
@@ -360,6 +383,7 @@ export function AssetFormDrawer({
                                         value={form.model_id}
                                         onChange={(v) => upd('model_id', v)}
                                         options={modelOptions}
+                                        refresh={refreshModels}
                                         placeholder={t('asset_select_model')}
                                     />
                                 </Field>
@@ -382,6 +406,8 @@ export function AssetFormDrawer({
                                             value={form.warehouse_id}
                                             onChange={(v) => upd('warehouse_id', v)}
                                             options={warehouseOptions}
+                                            refresh={refreshWarehouses}
+                                            flagRemoved
                                             placeholder={t('asset_select_warehouse')}
                                             clearable
                                         />
@@ -413,6 +439,7 @@ export function AssetFormDrawer({
                                             value={form.contract_id}
                                             onChange={(v) => upd('contract_id', v)}
                                             options={contractOptions}
+                                            refresh={refreshContracts}
                                             placeholder={t('asset_select_lease_contract')}
                                         />
                                     </Field>
@@ -429,6 +456,8 @@ export function AssetFormDrawer({
                                                 value={form.vendor_id}
                                                 onChange={(v) => upd('vendor_id', v)}
                                                 options={vendorOptions}
+                                                refresh={refreshVendors}
+                                                flagRemoved
                                                 placeholder={t('asset_select_supplier')}
                                             />
                                         </Field>

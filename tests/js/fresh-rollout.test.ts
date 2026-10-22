@@ -44,8 +44,13 @@ const SITES: Site[] = [
     { file: 'modules/ticket/components/edit-ticket-drawer.tsx', rebase: 1, seedOnce: 1 },
     { file: 'modules/ticket/components/assign-ticket-modal.tsx', refresh: 1 },
     { file: 'modules/ticket/components/forward-ticket-modal.tsx', refresh: 1 },
-    { file: 'modules/asset/hooks/use-assets.ts', freshView: 3 },
-    { file: 'modules/asset/pages/index.tsx', marks: 1, refresh: 2 },
+    { file: 'modules/asset/hooks/use-assets.ts', freshView: 4, freshList: 2 },
+    { file: 'modules/asset/pages/index.tsx', marks: 1, refresh: 2, openRefetch: 1 },
+    { file: 'modules/asset/components/asset-form-drawer.tsx', refresh: 6, flagRemoved: 4, seedOnce: 1, rebase: 1 },
+    { file: 'modules/asset/components/asset-location-dialog.tsx', refresh: 1, seedOnce: 1, rebase: 1 },
+    { file: 'modules/asset/components/asset-receive-modal.tsx', refresh: 1 },
+    { file: 'modules/asset/components/asset-writeoff-dialog.tsx', refresh: 1, flagRemoved: 1 },
+    { file: 'modules/asset/components/asset-transfer-dialog.tsx', refresh: 1, openRefetch: 1 },
 ];
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;

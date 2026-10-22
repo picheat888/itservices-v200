@@ -7,6 +7,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
@@ -26,7 +27,9 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
     const fmtN = useNumberFormat();
     const selectedCount = t('asset_bulk_count').replace('{count}', fmtN(ids.length));
     const { bulk } = useAssetMutations();
-    const { data: reasons = [] } = useWriteoffReasons();
+    const reasonsQuery = useWriteoffReasons();
+    const refreshReasons = useSelectRefresh(reasonsQuery);
+    const reasons = useMemo(() => reasonsQuery.data ?? [], [reasonsQuery.data]);
     const [reasonId, setReasonId] = useState('');
     const [note, setNote] = useState('');
     const [reasonErr, setReasonErr] = useState<string | undefined>();
@@ -87,6 +90,8 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
                     <Field label={t('asset_writeoff_reason')} required error={reasonErr}>
                         <SearchableSelect
                             value={reasonId}
+                            refresh={refreshReasons}
+                            flagRemoved
                             onChange={(v) => {
                                 setReasonId(v);
                                 setReasonErr(undefined);
