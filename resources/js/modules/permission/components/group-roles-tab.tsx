@@ -77,6 +77,8 @@ export function GroupRolesTab() {
     const adding = list.get('add') !== '';
     const viewing = viewId !== null ? (groups.find((g) => g.id === viewId) ?? null) : null;
     const dialogOpen = adding || viewing !== null;
+    // The group dialog reads the group from this list, so opening one asks for it again
+    useRefetchOnOpen(viewing !== null, groupsQuery);
     // Opening pushes a history entry so Back closes the dialog
     const dialogs = usePageDialogs();
     const openGroup = (g: GroupRole) => dialogs.open({ view: String(g.id) });

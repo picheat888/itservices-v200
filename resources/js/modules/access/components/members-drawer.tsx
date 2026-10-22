@@ -89,12 +89,7 @@ const KIND_META: Record<AccessKind, { icon: typeof Users; color: string; eyebrow
     software: { icon: Package, color: '#f59e0b', eyebrow: 'access_software' },
 };
 
-/**
- * Centered focus dialog for managing an access resource's people. Header, an Owner
- * (approver) tier for email groups, the member list rendered as a fill-height
- * DataTable (same treatment as the Contract detail's Assets tab — top search +
- * standard pager footer), and a footer to edit the group's own details.
- */
+/** Centered dialog for a resource's people: owner tier, member table and an edit/delete footer. */
 export function MembersDrawer({
     target,
     canEdit,
@@ -115,8 +110,7 @@ export function MembersDrawer({
     const fmtN = useNumberFormat();
     const nameOf = useLocalName();
     const confirm = useConfirm();
-    // Retain the last granted flags while the dialog animates closed (the parent passes
-    // false once target goes null; without this the footer/actions blink out mid-exit).
+    // Keep the last permission flags while the dialog animates closed
     const [heldPerms, setHeldPerms] = useState({ canEdit, canDelete });
     useEffect(() => {
         if (target) setHeldPerms({ canEdit, canDelete });
@@ -124,8 +118,7 @@ export function MembersDrawer({
     const mayEdit = target ? canEdit : heldPerms.canEdit;
     const mayDelete = target ? canDelete : heldPerms.canDelete;
     const toast = (msg: string, icon?: ToastIcon) => useToastStore.getState().push(msg, 'success', undefined, icon);
-    // Retain the last target so the dialog keeps rendering its content while it
-    // animates closed (target goes null on close; without this the body blanks mid-exit).
+    // Keep the last target so the body stays drawn during the close animation
     const [shown, setShown] = useState<MemberTarget | null>(target);
     useEffect(() => {
         if (target) setShown(target);
@@ -190,11 +183,7 @@ export function MembersDrawer({
             },
         });
 
-    // Deleting the whole resource is destructive + confirms with its name. The confirm
-    // dialog owns the in-flight/error state (a failed delete keeps it open with cd_error).
-    // Await it so the confirm dialog finishes closing BEFORE we close the drawer — closing
-    // both Radix dialogs at once races their portal teardown (removeChild) and corrupts the
-    // tree, which broke a second consecutive delete. On success: red trash toast, then close.
+    // Wait for the confirm to close before closing the drawer: closing both dialogs at once breaks the next delete
     const askDeleteResource = async () => {
         if (!tgt) return;
         const ok = await confirm({

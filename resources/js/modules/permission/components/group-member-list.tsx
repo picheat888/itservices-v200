@@ -11,7 +11,7 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 import type { GroupMember } from '../api/permissionApi';
 import { useGroupMembers } from '../hooks/use-permissions';
-import { countKey } from '../lib/group-rules';
+import { countKey, paneBusy } from '../lib/group-rules';
 import { LockHint, PaneHeader, PanePager, PaneRow, PaneSearch, PaneSkeleton } from './group-pane';
 
 export function GroupMemberList({
@@ -42,10 +42,11 @@ export function GroupMemberList({
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading, isFetching, isFetchedAfterMount, isError, isPlaceholderData, refetch } = useGroupMembers(groupId, debounced, page);
+    const membersQuery = useGroupMembers(groupId, debounced, page);
+    const { data, isError, refetch } = membersQuery;
     const failed = groupId !== null && isError && !data;
     // Rows cached from an earlier opening wait for the fresh fetch
-    const busy = groupId !== null && (isLoading || isPlaceholderData || !isFetchedAfterMount || (failed && isFetching));
+    const busy = groupId !== null && paneBusy(membersQuery, failed);
 
     const name = (p: GroupMember) => localName(p, lang) ?? p.name;
     const department = (p: GroupMember) => localName(p.department ? { name: p.department, name_th: p.department_th } : null, lang);

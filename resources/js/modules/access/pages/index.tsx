@@ -12,6 +12,7 @@ import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -143,9 +144,7 @@ export default function AccessControlPage() {
         'social-platforms': can('access.social_delete'),
         software: can('access.software_delete'),
     };
-    // Active tab lives in the URL (?tab=) so a reload / shared link stays put — the URL
-    // is the single source of truth (no separate state, no localStorage). Default = the
-    // Overview when permitted, otherwise the first registry.
+    // Active tab lives in ?tab= (the Overview when permitted, else the first registry)
     const [searchParams, setSearchParams] = useSearchParams();
     const [editing, setEditing] = useState<{ kind: AccessKind; row: AnyResource | null } | null>(null);
 
@@ -231,6 +230,8 @@ export default function AccessControlPage() {
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
     const spRows = useMemo(() => social.data ?? [], [social.data]);
     const swRows = useMemo(() => software.data ?? [], [software.data]);
+    // The drawer and the edit form read their row from the registry list, so opening one asks for that list again
+    const registryQuery = { 'email-groups': emailGroups, 'file-shares': fileShares, 'social-platforms': social, software } as const;
     // The loaded rows of one registry
     const rowsOf = (kind: AccessKind): AnyResource[] =>
         kind === 'email-groups' ? egRows : kind === 'file-shares' ? fsRows : kind === 'social-platforms' ? spRows : swRows;
@@ -458,9 +459,7 @@ export default function AccessControlPage() {
         };
     };
 
-    // The open drawer is derived from the URL (?view=<id> on a registry tab): find the row in
-    // the loaded list and build its target. Single source of truth — no separate state, so
-    // closing (dropping ?open) can never race a reopen. null = drawer closed.
+    // The open drawer comes from ?view= and its row in the loaded list; null = closed
     const members = useMemo<MemberTarget | null>(() => {
         if (!viewId || tab === 'overview') {
             return null;
@@ -475,11 +474,10 @@ export default function AccessControlPage() {
         return row ? buildTarget(tab, row) : null;
     }, [viewId, tab, egRows, fsRows, spRows, swRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // What the drawer is still showing on its way out. `members` is null the render after
-    // ?view= drops, and the two flags below are read from it — without this they turn false
-    // on the first frame of the exit animation and the footer's Edit/Delete buttons vanish
-    // before the panel does. Open/closed still follows `members` itself.
+    // What the drawer still shows on its way out, so its footer buttons stay through the exit animation
     const [shownMembers, setShownMembers] = useState<MemberTarget | null>(null);
+    useRefetchOnOpen(members !== null, members ? registryQuery[members.kind] : undefined);
+    useRefetchOnOpen(editing?.row != null, editing ? registryQuery[editing.kind] : undefined);
     useEffect(() => {
         if (members) setShownMembers(members);
     }, [members]);
@@ -720,8 +718,7 @@ export default function AccessControlPage() {
                 canDelete={shownMembers ? canDelete[shownMembers.kind] : false}
                 onClose={closeDrawer}
                 onEdit={(tg) => {
-                    // Open the edit modal OVER the drawer without dropping ?open, so closing/saving
-                    // the modal reveals the manage drawer again (bounce back) instead of nothing.
+                    // Edit opens over the drawer and keeps ?view, so closing it shows the drawer again
                     const rows: Record<AccessKind, AnyResource[]> = {
                         'email-groups': egRows,
                         'file-shares': fsRows,

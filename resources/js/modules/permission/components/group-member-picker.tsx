@@ -16,7 +16,7 @@ import { Lock } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { groupRoleApi, type GroupMember } from '../api/permissionApi';
 import { useGroupCandidates } from '../hooks/use-permissions';
-import { countKey, departmentLockKey } from '../lib/group-rules';
+import { countKey, departmentLockKey, paneBusy } from '../lib/group-rules';
 import { PaneHeader, PanePager, PaneRow, PaneSearch, PaneSkeleton } from './group-pane';
 
 const ALL = '__all__';
@@ -52,13 +52,11 @@ export function GroupMemberPicker({
     const [loadingAll, setLoadingAll] = useState(false);
     const [departmentFailed, setDepartmentFailed] = useState(false);
     const debounced = useDebouncedSearch(search);
-    const { data, isLoading, isFetching, isFetchedAfterMount, isError, isPlaceholderData, refetch } = useGroupCandidates(
-        { groupId, search: debounced, departmentId, page },
-        true,
-    );
+    const candidatesQuery = useGroupCandidates({ groupId, search: debounced, departmentId, page }, true);
+    const { data, isError, refetch } = candidatesQuery;
     const failed = isError && !data;
     // Rows cached from an earlier opening wait for the fresh fetch
-    const busy = isLoading || isPlaceholderData || !isFetchedAfterMount || (failed && isFetching);
+    const busy = paneBusy(candidatesQuery, failed);
 
     const rows = data?.data ?? [];
     const total = data?.meta.total ?? 0;

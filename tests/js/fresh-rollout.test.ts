@@ -53,13 +53,13 @@ const SITES: Site[] = [
     { file: 'modules/profile/components/profile-drawer.tsx', marks: 1, openRefetch: 1, rebase: 1 },
     { file: 'modules/profile/hooks/use-my-devices.ts', freshView: 1 },
     { file: 'modules/access/hooks/use-access.ts', freshView: 7 },
-    { file: 'modules/access/pages/index.tsx', marks: 5 },
+    { file: 'modules/access/pages/index.tsx', marks: 5, openRefetch: 2 },
     { file: 'modules/access/components/resource-modal.tsx', refresh: 3, flagRemoved: 3, seedOnce: 1, rebase: 1 },
     { file: 'modules/access/components/members-drawer.tsx', openRefetch: 1, seedOnce: 1, rebase: 1 },
     { file: 'modules/permission/hooks/use-permissions.ts', freshView: 6 },
     { file: 'modules/permission/pages/index.tsx', marks: 1 },
     { file: 'modules/permission/components/group-role-dialog.tsx', refresh: 1, flagRemoved: 1, rebase: 1 },
-    { file: 'modules/permission/components/group-roles-tab.tsx', refresh: 1, openRefetch: 1 },
+    { file: 'modules/permission/components/group-roles-tab.tsx', refresh: 1, openRefetch: 2 },
     { file: 'modules/permission/components/group-member-picker.tsx', refresh: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
     { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
@@ -251,4 +251,28 @@ test('the group dialog role list is a searchable list that keeps disabled roles 
     const dialog = read('modules/permission/components/group-role-dialog.tsx');
     assert.ok(!dialog.includes("from '@/shared/ui/select'"));
     assert.ok(dialog.includes('disabled={roleLocked}'));
+});
+
+test('a failed background refetch keeps the permission data on screen', () => {
+    assert.ok(!read('modules/permission/pages/index.tsx').includes('if (isError) return'));
+    const audit = read('modules/permission/components/audit-log-tab.tsx');
+    assert.ok(!/isError \?/.test(audit), 'audit log blanks loaded rows on a failed refetch');
+});
+
+test('the group dialog panes use the shared busy rule', () => {
+    for (const file of ['modules/permission/components/group-member-list.tsx', 'modules/permission/components/group-member-picker.tsx']) {
+        const src = read(file);
+        assert.ok(src.includes('paneBusy('), file);
+        assert.ok(!src.includes('!isFetchedAfterMount ||'), file);
+    }
+});
+
+test('plan 6 access files carry no long history comments', () => {
+    for (const file of [
+        'modules/access/components/members-drawer.tsx',
+        'modules/access/components/resource-modal.tsx',
+        'modules/access/pages/index.tsx',
+    ]) {
+        assert.ok(!/without this/i.test(read(file)), file);
+    }
 });

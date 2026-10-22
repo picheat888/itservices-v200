@@ -195,11 +195,7 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
     };
 }
 
-/**
- * Create/edit dialog for an access resource. Renders different fields per kind
- * (email group / file share / social platform / software) and persists via
- * useAccessMutations.
- */
+/** Create/edit dialog for an access resource; the fields depend on the kind. */
 export function ResourceModal({
     open,
     kind,
@@ -297,9 +293,7 @@ export function ResourceModal({
         setCropSrc(URL.createObjectURL(file));
     };
 
-    // Freeze the shown kind/row while the dialog animates closed, so the header and the
-    // field set don't flip to the default (email-group create) mid-exit — that flip reads
-    // as a collapse instead of a clean fade-out.
+    // Keep the shown kind and row while the dialog animates closed
     const [shownKind, setShownKind] = useState(kind);
     const [shownRow, setShownRow] = useState<AnyResource | null>(row);
     useEffect(() => {

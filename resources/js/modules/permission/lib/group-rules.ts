@@ -67,3 +67,11 @@ export function removeLine(t: Translate, n: number, formatted: string, defaultGr
         .replace('{n}', formatted)
         .replace('{where}', leaversWhere(t, defaultGroupName, baseRole));
 }
+
+/** A member pane shows its skeleton on a first load, a new page, a cached page still refetching on mount, or a retry after a failure. */
+export function paneBusy(
+    q: { isLoading: boolean; isPlaceholderData: boolean; isFetching: boolean; isFetchedAfterMount: boolean },
+    failed: boolean,
+): boolean {
+    return q.isLoading || q.isPlaceholderData || (q.isFetching && !q.isFetchedAfterMount) || (failed && q.isFetching);
+}

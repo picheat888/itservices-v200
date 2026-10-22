@@ -172,7 +172,8 @@ export function AuditLogTab() {
     const hasSearchOrFilter = search !== '' || category !== 'all' || user !== 'all';
 
     const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useAuditLogs(page, perPage, filters);
-    const logs = isError ? [] : (data?.data ?? []);
+    const failed = isError && !data;
+    const logs = data?.data ?? [];
     const meta = data?.meta;
 
     // Reference data to turn older raw foreign-key ids in diffs into entity names.
@@ -314,7 +315,7 @@ export function AuditLogTab() {
                 search={{ value: search, onChange: (value) => setFilter('search', value) }}
                 server={{
                     ...paging,
-                    total: isError ? 0 : (meta?.total ?? 0),
+                    total: meta?.total ?? 0,
                     onPageChange: (next) => {
                         paging.onPageChange(next);
                         setExpandedId(null);
@@ -358,7 +359,7 @@ export function AuditLogTab() {
                 rowClassName={(l) => (expandedId === l.id ? 'border-b-0' : undefined)}
                 expandedRowId={detailRowId}
                 renderExpanded={(l) => (expandedId === l.id && l.details ? <AuditDetailPanel entry={l} lang={lang} lookups={lookups} /> : null)}
-                emptyState={isError ? <LoadFailed onRetry={() => void refetch()} /> : undefined}
+                emptyState={failed ? <LoadFailed onRetry={() => void refetch()} /> : undefined}
                 empty={
                     hasSearchOrFilter
                         ? { kind: 'search', title: t('perm_empty_audit_search'), hint: t('perm_empty_audit_search_hint') }

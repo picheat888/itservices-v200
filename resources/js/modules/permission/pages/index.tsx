@@ -253,7 +253,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const roleHeading = useRef<HTMLHeadingElement>(null);
 
     // A refused or failed load says so
-    if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
+    if (isError && !data) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
 
     if (isLoading || !data || !role) return <RolesSkeleton />;
 

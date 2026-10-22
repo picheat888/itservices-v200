@@ -10,6 +10,7 @@ import {
     findRole,
     isOverCeiling,
     leaversWhere,
+    paneBusy,
     removeLine,
     roleLabel,
 } from '../../resources/js/modules/permission/lib/group-rules.ts';
@@ -121,4 +122,24 @@ test('"Everyone in" with nobody addable says why', () => {
     assert.equal(departmentLockKey(0, true, true), 'perm_refusal_grant_ceiling');
     assert.equal(departmentLockKey(0, false, true), 'gr_your_account');
     assert.equal(departmentLockKey(0, false, false), 'gr_admin_only');
+});
+
+const pane = { isLoading: false, isPlaceholderData: false, isFetching: false, isFetchedAfterMount: false };
+
+test('a member page cached under five seconds ago shows at once', () => {
+    assert.equal(paneBusy(pane, false), false);
+});
+
+test('a cached member page that is refetching on mount waits on the skeleton', () => {
+    assert.equal(paneBusy({ ...pane, isFetching: true }, false), true);
+});
+
+test('a background refetch after the first fetch keeps the rows', () => {
+    assert.equal(paneBusy({ ...pane, isFetching: true, isFetchedAfterMount: true }, false), false);
+});
+
+test('a first load, a new page or a retry after a failure shows the skeleton', () => {
+    assert.equal(paneBusy({ ...pane, isLoading: true }, false), true);
+    assert.equal(paneBusy({ ...pane, isPlaceholderData: true }, false), true);
+    assert.equal(paneBusy({ ...pane, isFetching: true, isFetchedAfterMount: true }, true), true);
 });
