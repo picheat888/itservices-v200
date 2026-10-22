@@ -87,7 +87,7 @@ php artisan geoip:update                               # ฐานข้อม�
   - สร้างคีย์ด้วย `php artisan webpush:vapid` แล้วตั้ง `VAPID_PUBLIC_KEY` `VAPID_PRIVATE_KEY` และ `VAPID_SUBJECT` (ต้องตั้ง เช่น `mailto:it@company.com`) ใน `.env`
   - migration ใหม่ `push_subscriptions` (สร้างตาราง และขยายความยาว endpoint) ต้องรัน `php artisan migrate`
   - ต้องใช้ HTTPS (Cloudflare) บน iPad ต้องเพิ่มเว็บลงหน้าจอโฮม (iPadOS 16.4 ขึ้นไป) ถึงจะเปิดรับ push ได้
-  - Service worker อยู่ที่ `/sw.js` (build จาก `vite.sw.config.js` ไป `public/build/sw.js`) Cloudflare ต้องไม่ cache `/sw.js` (ต้นทางส่ง no-cache แล้ว ถ้ามีกฎ cache ไฟล์ JS ให้เพิ่มกฎ bypass cache สำหรับ `/sw.js`)
+  - Service worker อยู่ที่ `/sw.js` (build จาก `vite.sw.config.js` ไป `storage/app/sw/sw.js` แล้ว Laravel ส่งไฟล์นี้ ตั้งที่อื่นได้ด้วย config `webpush.service_worker_path`) Cloudflare ต้องไม่ cache `/sw.js` (ต้นทางส่ง no-cache แล้ว ถ้ามีกฎ cache ไฟล์ JS ให้เพิ่มกฎ bypass cache สำหรับ `/sw.js`)
 - **เสียงแจ้งเตือน** ผู้ดูแลเลือกเสียงและเปิดปิดได้ที่ Settings > เสียง ใช้สิทธิ์ `settings.sound` role ที่มีอยู่แล้วต้องติ๊กให้เองในหน้า Permission
 
 ---

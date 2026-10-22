@@ -1,5 +1,5 @@
 // Service worker: shows each web push as one stacked OS notification, worded like the bell in the reader's language.
-// Built on its own by vite.sw.config.js into public/build/sw.js (served at /sw.js); must stay free of React.
+// Built on its own by vite.sw.config.js into storage/app/sw/sw.js (served at /sw.js); must stay free of React.
 import { translate } from '@/lang/translate';
 import type { Lang } from '@/lang/types';
 import type { AppNotification, NotificationData, Translate } from '@/modules/notification';

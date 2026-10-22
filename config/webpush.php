@@ -54,4 +54,9 @@ return [
         '.notify.windows.com',
     ],
 
+    /**
+     * The built service worker served at /sw.js (`npm run build` writes it here).
+     */
+    'service_worker_path' => storage_path('app/sw/sw.js'),
+
 ];

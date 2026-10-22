@@ -1,6 +1,6 @@
 <?php
 
-// Serves the built service worker (public/build/sw.js) from the site root so it may control every page.
+// Serves the built service worker (config webpush.service_worker_path) from the site root so it may control every page.
 
 namespace App\Http\Controllers;
 
@@ -10,7 +10,7 @@ class ServiceWorkerController extends Controller
 {
     public function __invoke(): BinaryFileResponse
     {
-        $path = public_path('build/sw.js');
+        $path = (string) config('webpush.service_worker_path');
 
         abort_unless(is_file($path), 404);
 

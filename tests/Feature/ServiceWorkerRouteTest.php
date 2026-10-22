@@ -14,25 +14,33 @@ class ServiceWorkerRouteTest extends TestCase
 
     public function test_service_worker_is_served_from_the_root_with_no_cache(): void
     {
-        $path = public_path('build/sw.js');
-        $created = ! file_exists($path);
-        if ($created) {
-            @mkdir(dirname($path), 0755, true);
-            file_put_contents($path, '// test service worker');
-        }
+        $path = tempnam(sys_get_temp_dir(), 'sw');
+        file_put_contents($path, '// test service worker');
+        config(['webpush.service_worker_path' => $path]);
 
         try {
             $response = $this->get('/sw.js');
 
             $response->assertOk();
+            $this->assertSame('// test service worker', $response->streamedContent());
             $response->assertHeader('Service-Worker-Allowed', '/');
             $this->assertStringContainsString('application/javascript', (string) $response->headers->get('Content-Type'));
             $this->assertStringContainsString('no-cache', (string) $response->headers->get('Cache-Control'));
         } finally {
-            if ($created) {
-                @unlink($path);
-            }
+            @unlink($path);
         }
+    }
+
+    public function test_service_worker_is_404_when_not_built(): void
+    {
+        config(['webpush.service_worker_path' => sys_get_temp_dir().'/itsd-missing-'.uniqid().'/sw.js']);
+
+        $this->get('/sw.js')->assertNotFound();
+    }
+
+    public function test_service_worker_is_read_from_storage_by_default(): void
+    {
+        $this->assertSame(storage_path('app/sw/sw.js'), config('webpush.service_worker_path'));
     }
 
     public function test_manifest_names_the_brand(): void

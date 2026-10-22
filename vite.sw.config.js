@@ -1,5 +1,5 @@
-// Second Vite build: the service worker (resources/js/sw/sw.ts) as one script, public/build/sw.js.
-// Writes beside the SPA build without emptying it; `npm run build` runs it after the SPA build.
+// Second Vite build: the service worker (resources/js/sw/sw.ts) as one script, storage/app/sw/sw.js.
+// Kept outside public/build so the SPA build's empty-out never deletes it; /sw.js streams it from there.
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, transformWithEsbuild } from 'vite';
@@ -31,26 +31,16 @@ const bellKeysOnly = {
     },
 };
 
-// In watch mode, rebuild whenever the SPA build rewrites public/build (its empty-out step deletes sw.js)
-const followSpaBuild = {
-    name: 'follow-spa-build',
-    buildStart() {
-        if (this.meta.watchMode) {
-            this.addWatchFile(resolve(__dirname, 'public/build/manifest.json'));
-        }
-    },
-};
-
 export default defineConfig({
     publicDir: false,
-    plugins: [bellKeysOnly, followSpaBuild],
+    plugins: [bellKeysOnly],
     resolve: {
         alias: {
             '@': resolve(__dirname, 'resources/js'),
         },
     },
     build: {
-        outDir: 'public/build',
+        outDir: 'storage/app/sw',
         emptyOutDir: false,
         copyPublicDir: false,
         lib: {
