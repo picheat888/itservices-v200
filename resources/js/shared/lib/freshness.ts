@@ -26,6 +26,11 @@ export function shouldRequest(force: boolean, fetching: boolean, dataUpdatedAt: 
     return !fetching && shouldRefetch(force, dataUpdatedAt, now);
 }
 
+/** A tab or dialog may ask a query again: never a switched-off one (React Query's refetch ignores `enabled`), else the five-second rule. */
+export function sourceMayRefetch(s: { isEnabled?: boolean; isFetching: boolean; dataUpdatedAt: number }, now: number): boolean {
+    return s.isEnabled !== false && shouldRequest(false, s.isFetching, s.dataUpdatedAt, now);
+}
+
 /** A dialog asks for its data again only on the step that opens it, and only when that data is five seconds old. */
 export function refetchOnOpenRule(wasOpen: boolean, open: boolean, fetching: boolean, dataUpdatedAt: number, now: number): boolean {
     return justOpened(wasOpen, open) && shouldRequest(false, fetching, dataUpdatedAt, now);

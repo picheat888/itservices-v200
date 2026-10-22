@@ -71,3 +71,7 @@ test('ticket asset search waits five seconds', () => {
     assert.ok(!text.includes('30_000'));
     assert.ok(text.includes('staleTime: FRESH_MS'));
 });
+
+test('the ticket edit drawer never rebases its attachments', () => {
+    assert.ok(read('modules/ticket/components/edit-ticket-drawer.tsx').includes("skip: ['existing']"));
+});

@@ -9,6 +9,7 @@ import {
     refetchOnOpenRule,
     shouldRefetch,
     shouldRequest,
+    sourceMayRefetch,
 } from '../../resources/js/shared/lib/freshness.ts';
 
 test('on-screen data waits five seconds and refetches on browser-tab return', () => {
@@ -67,4 +68,13 @@ test('a dialog opened five seconds after its last fetch asks once', () => {
 test('only the opening step asks, and never while a fetch runs', () => {
     assert.equal(refetchOnOpenRule(true, true, false, 0, 99_999), false);
     assert.equal(refetchOnOpenRule(false, true, true, 0, 99_999), false);
+});
+
+test('a switched-off query is never asked again by a tab or dialog', () => {
+    assert.equal(sourceMayRefetch({ isEnabled: false, isFetching: false, dataUpdatedAt: 0 }, 99_999), false);
+});
+
+test('an enabled query follows the five-second rule', () => {
+    assert.equal(sourceMayRefetch({ isEnabled: true, isFetching: false, dataUpdatedAt: 10_000 }, 14_000), false);
+    assert.equal(sourceMayRefetch({ isFetching: false, dataUpdatedAt: 10_000 }, 15_000), true);
 });

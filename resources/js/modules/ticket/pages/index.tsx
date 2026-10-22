@@ -20,10 +20,12 @@ import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
+import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
+import { seedRowCopy } from '@/shared/lib/seed-row';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority, TicketStatus } from '@/shared/types';
@@ -204,7 +206,8 @@ export default function TicketsPage() {
         enabled: openId != null,
         ...FRESH_VIEW,
     });
-    const { data: detail, isError: detailMissing } = detailQuery;
+    const detail = detailQuery.data;
+    const detailMissing = isRecordMissing(detailQuery.error, detail !== undefined);
     useRefetchOnOpen(openId != null, detailQuery);
     // Opening pushes a history entry so Back closes the dialog
     const dialogs = usePageDialogs();
@@ -250,7 +253,8 @@ export default function TicketsPage() {
         enabled: editId != null,
         ...FRESH_VIEW,
     });
-    const { data: editSource, isError: editMissing, isFetching: editFetching } = editQuery;
+    const { data: editSource, isFetching: editFetching } = editQuery;
+    const editMissing = isRecordMissing(editQuery.error, editSource !== undefined);
     useRefetchOnOpen(editId != null, editQuery);
     // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
@@ -333,7 +337,7 @@ export default function TicketsPage() {
     const totalCats = cats.reduce((sum, c) => sum + c.count, 0);
 
     const openDetail = (tk: Ticket) => {
-        qc.setQueryData(['ticket', 'view', tk.id], tk);
+        seedRowCopy(qc, ['ticket', 'view', tk.id], tk);
         dialogs.open({ view: String(tk.id) });
     };
     // Workflow modals stack over the still-open detail drawer (kept via ?view=) and bounce

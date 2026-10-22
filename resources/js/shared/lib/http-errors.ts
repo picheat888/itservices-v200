@@ -13,6 +13,11 @@ export function httpStatus(error: unknown): number | undefined {
     return (error as FailureShape | null)?.response?.status;
 }
 
+/** A record is missing when it never loaded or the server answers 404; a failed refresh of a record on screen is not. */
+export function isRecordMissing(error: unknown, hasData: boolean): boolean {
+    return error != null && (!hasData || httpStatus(error) === 404);
+}
+
 export function requestIdOf(error: unknown): string | null {
     const id = (error as FailureShape | null)?.response?.headers?.['x-request-id'];
     return typeof id === 'string' && id !== '' ? id : null;

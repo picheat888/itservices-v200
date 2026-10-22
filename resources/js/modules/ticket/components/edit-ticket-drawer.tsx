@@ -114,7 +114,7 @@ export function EditTicketDrawer({
         setDeleted(0);
         setSaving(false);
     });
-    useFormRebase({ fresh: live ? toForm(live) : null, base, setBase, setForm });
+    useFormRebase({ fresh: live ? toForm(live) : null, base, setBase, setForm, skip: ['existing'] });
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
     const totalFiles = keptExisting.length + pending.length;

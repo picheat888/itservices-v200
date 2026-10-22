@@ -1,5 +1,5 @@
 // One call per tab bar: refetch the opened tab's queries under the five-second rule, and a refresh mark for every tab.
-import { shouldRequest } from '@/shared/lib/freshness';
+import { sourceMayRefetch } from '@/shared/lib/freshness';
 import {
     isBackgroundFetch,
     nextTabMark,
@@ -11,7 +11,7 @@ import {
 } from '@/shared/lib/refresh-mark';
 import { useEffect, useRef, useState } from 'react';
 
-export type TabQuery = TabSource & { refetch: (options?: { cancelRefetch?: boolean }) => Promise<unknown> };
+export type TabQuery = TabSource & { isEnabled?: boolean; refetch: (options?: { cancelRefetch?: boolean }) => Promise<unknown> };
 
 /** `sources` maps every tab id to the queries its content shows; inactive tabs get 'idle' so the bar reserves room on all. */
 export function useTabFreshness<T extends string>(active: T, sources: Record<T, readonly (TabQuery | undefined)[]>): Record<T, RefreshMark> {
@@ -36,7 +36,7 @@ export function useTabFreshness<T extends string>(active: T, sources: Record<T, 
         lastActive.current = active;
         const now = Date.now();
         for (const s of activeSources) {
-            if (shouldRequest(false, s.isFetching, s.dataUpdatedAt, now)) void s.refetch({ cancelRefetch: false });
+            if (sourceMayRefetch(s, now)) void s.refetch({ cancelRefetch: false });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [active]);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     isNetworkFailure,
+    isRecordMissing,
     markShownInline,
     outranks,
     quietPathAfterMove,
@@ -102,4 +103,15 @@ test('a 429 from the sign-in form, its device dialog or the password form is lef
     assert.equal(showsOwnThrottle('/login-events'), false);
     assert.equal(showsOwnThrottle('/me/login-events'), false);
     assert.equal(showsOwnThrottle(undefined), false);
+});
+
+test('a record is missing when it never loaded or the server says 404', () => {
+    assert.equal(isRecordMissing({ response: { status: 500 } }, false), true);
+    assert.equal(isRecordMissing({ response: { status: 404 } }, true), true);
+});
+
+test('a failed background refresh of a record on screen is not missing', () => {
+    assert.equal(isRecordMissing({ response: { status: 500 } }, true), false);
+    assert.equal(isRecordMissing({ response: { status: 429 } }, true), false);
+    assert.equal(isRecordMissing(null, false), false);
 });

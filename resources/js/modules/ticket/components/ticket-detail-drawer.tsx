@@ -452,7 +452,7 @@ export function TicketDetailDrawer({
                                     {
                                         id: 'progress',
                                         label: t('ticket_tab_progress'),
-                                        count: progress.length,
+                                        count: view.updates !== undefined ? progress.length : null,
                                         icon: History,
                                         refresh: marks.progress,
                                     },
