@@ -11,10 +11,14 @@ use App\Notifications\ContractExpiryNotification;
 use App\Notifications\WebPushRelay;
 use App\Support\NotificationCatalogue;
 use App\Support\WebPushPayload;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class WebPushRelayTest extends TestCase
@@ -111,6 +115,22 @@ class WebPushRelayTest extends TestCase
         $this->assertTrue($payload['truncated']);
         $this->assertSame(['type' => 'ticket_assigned'], $payload['data']);
         $this->assertSame('big-1', $payload['id']);
+    }
+
+    public function test_a_failing_push_never_breaks_the_bell_or_the_caller(): void
+    {
+        Queue::fake();
+        Exceptions::fake();
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        Schema::drop('push_subscriptions');
+
+        Notification::send([$first, $second], new ContractExpiryNotification($this->makeContract(), 30));
+
+        $this->assertSame(1, $first->notifications()->count());
+        $this->assertSame(1, $second->notifications()->count());
+        $this->assertSame(0, $this->relayPushed());
+        Exceptions::assertReported(QueryException::class);
     }
 
     /** @param array<string, mixed> $payload */
