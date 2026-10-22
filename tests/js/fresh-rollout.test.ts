@@ -162,7 +162,46 @@ test('dialogs that keep their last record for the exit animation query it only w
 
 test('employee dialogs open rows through seedRowCopy and query only while open', () => {
     assert.ok(read('modules/employee/pages/index.tsx').includes("seedRowCopy(qc, ['employee', emp.id], emp)"));
-    assert.ok(read('modules/employee/components/employee-view-drawer.tsx').includes('useApprovalChain(shown?.id ?? null, open)'));
+    assert.ok(read('modules/employee/components/employee-view-drawer.tsx').includes('useApprovalChain(current?.id ?? null, open)'));
     assert.ok(read('modules/employee/components/department-members-dialog.tsx').includes('useDepartmentMembers(view?.id ?? null, openId != null)'));
-    assert.ok(read('modules/employee/components/resign-modal.tsx').includes('useEmployeeAssets(shown?.id ?? null, employee != null)'));
+    assert.ok(read('modules/employee/components/resign-modal.tsx').includes('useEmployeeAssets(current?.id ?? null, employee != null)'));
+});
+
+test('employee dialogs key their queries on the record being opened, not the one kept for the exit animation', () => {
+    for (const file of ['modules/employee/components/employee-view-drawer.tsx', 'modules/employee/components/resign-modal.tsx']) {
+        const src = read(file);
+        assert.ok(src.includes('const current = employee ?? shown;'), file);
+        assert.ok(!/use\w+\(shown\?\.id/.test(src), `${file} keys a query on the retained record`);
+    }
+});
+
+test('the position modal rebases one form state, never values from an earlier render', () => {
+    const src = read('modules/employee/components/position-modal.tsx');
+    assert.ok(src.includes('const [form, setForm] = useState('));
+    assert.ok(!src.includes('update({ title, allowSpecial })'));
+});
+
+test('the profile drawer marks no polling query', () => {
+    const src = read('modules/profile/components/profile-drawer.tsx');
+    assert.ok(!src.includes('[assetsQuery]'));
+    assert.ok(!src.includes('[devicesQuery]'));
+    assert.ok(src.includes("useKeyFreshness(['my-login-events'])"));
+});
+
+test('the sections tab watches only its own list', () => {
+    const page = read('modules/employee/pages/index.tsx');
+    assert.ok(page.includes("useKeyFreshness(['sections', 'all'])"));
+    assert.ok(!page.includes("useKeyFreshness(['sections'])"));
+});
+
+test('the department members dialog asks for its section count again on open', () => {
+    assert.ok(
+        read('modules/employee/components/department-members-dialog.tsx').includes('useRefetchOnOpen(openId != null, membersQuery, sectionsQuery)'),
+    );
+});
+
+test('plan 5 files carry no history comments', () => {
+    assert.ok(!read('modules/employee/hooks/use-employees.ts').includes('now comes'));
+    assert.ok(!read('modules/access/hooks/use-access.ts').includes('now comes'));
+    assert.ok(!read('modules/employee/components/edit-employee-dialog.tsx').includes('as it stood when the dialog opened'));
 });

@@ -277,7 +277,7 @@ export default function EmployeesPage() {
 
     // Directory, sections and the org chart own their queries inside their tab components
     const directoryFresh = useKeyFreshness(['employees-directory']);
-    const sectionsFresh = useKeyFreshness(['sections']);
+    const sectionsFresh = useKeyFreshness(['sections', 'all']);
     const orgFresh = useKeyFreshness(['org-chart']);
     const marks = useTabFreshness(tab, {
         overview: [summaryQuery, departmentsQuery, positionsQuery],

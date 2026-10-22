@@ -47,7 +47,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     }, [employee]);
 
     // Equipment still held; a failed load reads as "unknown", never as "nothing to return"
-    const assetsQuery = useEmployeeAssets(shown?.id ?? null, employee != null);
+    const current = employee ?? shown;
+    const assetsQuery = useEmployeeAssets(current?.id ?? null, employee != null);
     const { data: heldAssets = [], isLoading: assetsLoading, isError: assetsFailed } = assetsQuery;
     useRefetchOnOpen(employee != null, assetsQuery);
 

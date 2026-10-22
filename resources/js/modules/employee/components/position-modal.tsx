@@ -28,8 +28,8 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     const confirm = useConfirm();
     const confirmEdit = useConfirmEdit();
     const { create, update } = usePositionMutations();
-    const [title, setTitle] = useState('');
-    const [allowSpecial, setAllowSpecial] = useState(false);
+    const [form, setForm] = useState({ title: '', allowSpecial: false });
+    const { title, allowSpecial } = form;
     const [error, setError] = useState('');
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
@@ -43,23 +43,13 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
 
     useSeedOnce(open ? (position?.id ?? 'new') : null, () => {
         const values = position ? toValues(live ?? position) : { title: '', allowSpecial: false };
-        setTitle(values.title);
-        setAllowSpecial(values.allowSpecial);
+        setForm(values);
         setBase(values);
         setError('');
         clearFormError();
         setSaved(false);
     });
-    useFormRebase({
-        fresh: open && live ? toValues(live) : null,
-        base,
-        setBase,
-        setForm: (update) => {
-            const next = update({ title, allowSpecial });
-            setTitle(next.title);
-            setAllowSpecial(next.allowSpecial);
-        },
-    });
+    useFormRebase({ fresh: open && live ? toValues(live) : null, base, setBase, setForm });
 
     const isDirty = title.trim() !== base.title || allowSpecial !== base.allowSpecial;
     const guardClose = useDiscardGuard(open && isDirty && !saved);
@@ -72,7 +62,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
             variant: 'warn',
             title: t('pos_allow_special'),
             description: next ? t('pos_allow_special_confirm_on') : t('pos_allow_special_confirm_off'),
-            action: () => setAllowSpecial(next),
+            action: () => setForm((f) => ({ ...f, allowSpecial: next })),
         });
 
     const submit = async (e: FormEvent) => {
@@ -105,7 +95,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                         <Field label={t('pos_title')} required error={error || undefined}>
                             <Input
                                 value={title}
-                                onChange={(e) => setTitle(e.target.value)}
+                                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                                 autoFocus
                                 aria-required
                                 placeholder={t('pos_title_ph')}

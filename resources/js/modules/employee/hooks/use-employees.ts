@@ -15,10 +15,6 @@ export const useEmployeeSummary = (period: OverviewPeriod = 'all', enabled = tru
         ...FRESH_VIEW,
     });
 
-// The Employees badge (active staff without a login account) now comes from the combined
-// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges. The same number still
-// reaches the Directory tab through `summary.no_account`.
-
 /** Fetches a single employee by id (used to open a record from a notification link). */
 export const useEmployee = (id: number | null, enabled = true) =>
     useQuery({

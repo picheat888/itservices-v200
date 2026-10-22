@@ -12,6 +12,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localName, localPair } from '@/shared/lib/local-name';
@@ -133,13 +134,15 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const { data: myRequests, isLoading: requestsLoading } = requestsQuery;
     // Assets and devices poll on their own; the rest ask again when the drawer opens
     useRefetchOnOpen(open, empQuery, accessQuery, ticketsQuery, requestsQuery);
+    // The devices tab owns its login-events query; the polled lists carry no mark
+    const loginEventsFresh = useKeyFreshness(['my-login-events']);
     const marks = useTabFreshness(tab, {
         profile: [empQuery],
-        assets: [assetsQuery],
+        assets: [],
         tickets: [ticketsQuery],
         requests: [requestsQuery],
         access: [accessQuery],
-        devices: [devicesQuery],
+        devices: [loginEventsFresh],
     });
 
     // Copy buttons in the rail, announced like the Employee viewer's

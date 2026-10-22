@@ -127,14 +127,15 @@ export function EmployeeViewDrawer({
 
     // Keyed to the employee on screen; `isLoading` keeps "not loaded yet" apart from "has nothing"
     const open = !!employee;
-    const chainQuery = useApprovalChain(shown?.id ?? null, open);
+    const current = employee ?? shown;
+    const chainQuery = useApprovalChain(current?.id ?? null, open);
     const orgQuery = useOrgChart(open);
-    const accessQuery = useEmployeeAccess(shown?.id ?? null, open);
-    const assetsQuery = useEmployeeAssets(shown?.id ?? null, open);
-    const ticketsQuery = useEmployeeTickets(shown?.id ?? null, open);
-    const requestsQuery = useEmployeeRequests(shown?.id ?? null, open);
+    const accessQuery = useEmployeeAccess(current?.id ?? null, open);
+    const assetsQuery = useEmployeeAssets(current?.id ?? null, open);
+    const ticketsQuery = useEmployeeTickets(current?.id ?? null, open);
+    const requestsQuery = useEmployeeRequests(current?.id ?? null, open);
     // Live copy so mutations (e.g. set credentials) show without a reload
-    const liveQuery = useEmployee(shown?.id ?? null, open);
+    const liveQuery = useEmployee(current?.id ?? null, open);
     useRefetchOnOpen(open, liveQuery, chainQuery, orgQuery, accessQuery, assetsQuery, ticketsQuery, requestsQuery);
     const marks = useTabFreshness(tab, {
         overview: [liveQuery, chainQuery, orgQuery],

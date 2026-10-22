@@ -39,11 +39,12 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
 
     const membersQuery = useDepartmentMembers(view?.id ?? null, openId != null);
     const { data: members = [], isLoading } = membersQuery;
-    useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.count;
     const loadingMembers = isLoading && expected !== 0;
-    const { data: sections = [], isLoading: sectionsLoading } = useSections(view?.id ?? null);
+    const sectionsQuery = useSections(view?.id ?? null);
+    const { data: sections = [], isLoading: sectionsLoading } = sectionsQuery;
+    useRefetchOnOpen(openId != null, membersQuery, sectionsQuery);
 
     const deptName = view ? localName(view, lang) : '';
 

@@ -5,15 +5,10 @@ import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accessApi } from '../api/accessApi';
 
-/** Aggregate figures for the Access Directory overview tab. */
-/**
- * The signed-in person's own access — the lower half of My assets & access.
- *
- * Separate from useAccessSummary and the registry lists: those need the directory master,
- * this one needs only the right to look at yourself.
- */
+/** The signed-in person's own access; needs only the right to look at yourself, not the directory master. */
 export const useMyAccess = (enabled = true) => useQuery({ queryKey: ['access-mine'], queryFn: accessApi.mine, enabled, ...FRESH_VIEW });
 
+/** Aggregate figures for the Access Directory overview tab. */
 export const useAccessSummary = (period: OverviewPeriod = 'all', enabled = true) =>
     useQuery({
         queryKey: ['access-summary', overviewPeriodKey(period)],
@@ -21,9 +16,6 @@ export const useAccessSummary = (period: OverviewPeriod = 'all', enabled = true)
         enabled,
         placeholderData: (prev) => prev,
     });
-
-// The Access sidebar badge (governance anomalies) now comes from the combined
-// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
 // `enabled` mirrors the per-registry view permission — a tab the user can't see never fetches (no 403 noise).
 export const useEmailGroups = (enabled = true) => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups, enabled });

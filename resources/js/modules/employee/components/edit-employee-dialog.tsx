@@ -43,7 +43,6 @@ const empty = {
     joinedAt: '',
 };
 
-/** Centered "focus dialog" for editing an existing employee's profile and org assignment. */
 // The form's values for an employee
 const toForm = (e: Employee) => ({
     firstName: e.first_name ?? '',
@@ -60,6 +59,7 @@ const toForm = (e: Employee) => ({
     joinedAt: e.joined_at ?? '',
 });
 
+/** Centered "focus dialog" for editing an existing employee's profile and org assignment. */
 export function EditEmployeeDialog({
     open,
     onClose,
@@ -205,7 +205,7 @@ export function EditEmployeeDialog({
         return m ? localName(m, lang) : t('emp_org_change_none');
     };
 
-    // Org assignment as it stood when the dialog opened, used to diff against the form.
+    // Org assignment the form started from (moved along by refreshes), diffed against the form
     const origPositionId = base.positionId;
     const origDepartmentId = base.departmentId;
     const origManagerId = base.managerId;
