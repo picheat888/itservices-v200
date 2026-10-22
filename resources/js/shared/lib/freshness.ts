@@ -22,3 +22,8 @@ export function justOpened(wasOpen: boolean, open: boolean): boolean {
 export function shouldRequest(force: boolean, fetching: boolean, dataUpdatedAt: number, now: number): boolean {
     return !fetching && shouldRefetch(force, dataUpdatedAt, now);
 }
+
+/** A dialog asks for its data again only on the step that opens it, and only when that data is five seconds old. */
+export function refetchOnOpenRule(wasOpen: boolean, open: boolean, fetching: boolean, dataUpdatedAt: number, now: number): boolean {
+    return justOpened(wasOpen, open) && shouldRequest(false, fetching, dataUpdatedAt, now);
+}

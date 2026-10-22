@@ -1,7 +1,15 @@
 // The five-second rule: data the user opens again is refetched only when it is older than the window.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { FRESH_LIST, FRESH_MS, FRESH_VIEW, justOpened, shouldRefetch, shouldRequest } from '../../resources/js/shared/lib/freshness.ts';
+import {
+    FRESH_LIST,
+    FRESH_MS,
+    FRESH_VIEW,
+    justOpened,
+    refetchOnOpenRule,
+    shouldRefetch,
+    shouldRequest,
+} from '../../resources/js/shared/lib/freshness.ts';
 
 test('on-screen data waits five seconds and refetches on browser-tab return', () => {
     assert.deepEqual(FRESH_VIEW, { staleTime: 5000, refetchOnWindowFocus: true });
@@ -46,4 +54,17 @@ test('a user-pressed reload ignores the window', () => {
 
 test('the window is five seconds', () => {
     assert.equal(FRESH_MS, 5000);
+});
+
+test('a dialog reopened inside five seconds asks nothing', () => {
+    assert.equal(refetchOnOpenRule(false, true, false, 10_000, 14_000), false);
+});
+
+test('a dialog opened five seconds after its last fetch asks once', () => {
+    assert.equal(refetchOnOpenRule(false, true, false, 10_000, 15_000), true);
+});
+
+test('only the opening step asks, and never while a fetch runs', () => {
+    assert.equal(refetchOnOpenRule(true, true, false, 0, 99_999), false);
+    assert.equal(refetchOnOpenRule(false, true, true, 0, 99_999), false);
 });
