@@ -54,6 +54,8 @@ const SITES: Site[] = [
     { file: 'modules/profile/hooks/use-my-devices.ts', freshView: 1 },
     { file: 'modules/access/hooks/use-access.ts', freshView: 7 },
     { file: 'modules/access/pages/index.tsx', marks: 5 },
+    { file: 'modules/access/components/resource-modal.tsx', refresh: 3, flagRemoved: 3, seedOnce: 1, rebase: 1 },
+    { file: 'modules/access/components/members-drawer.tsx', openRefetch: 1, seedOnce: 1, rebase: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
     { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
     { file: 'modules/ticket/pages/index.tsx', marks: 1, freshView: 2, openRefetch: 2 },
@@ -225,4 +227,9 @@ test('forms with a parent and child select take the child out with a note when t
         assert.ok(read(`lang/${lang}/stock.ts`).includes('stock_model_gone:'), `${lang} stock`);
     }
     assert.ok(read('shared/components/searchable-select.tsx').includes('note?: string | null;'));
+});
+
+test('the access members drawer queries its members only while open', () => {
+    assert.ok(read('modules/access/components/members-drawer.tsx').includes('useResourceMembers(kind, tgt?.id ?? null, target != null)'));
+    assert.ok(read('modules/access/pages/index.tsx').includes('fresh={'));
 });

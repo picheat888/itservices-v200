@@ -8,6 +8,9 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { refusalReason, serverMessage } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -197,15 +200,34 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
  * (email group / file share / social platform / software) and persists via
  * useAccessMutations.
  */
-export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kind: AccessKind; row: AnyResource | null; onClose: () => void }) {
+export function ResourceModal({
+    open,
+    kind,
+    row,
+    fresh = null,
+    onClose,
+}: {
+    open: boolean;
+    kind: AccessKind;
+    row: AnyResource | null;
+    /** The live copy of `row` from its registry list; fields the user has not touched follow it. */
+    fresh?: AnyResource | null;
+    onClose: () => void;
+}) {
     const t = useT();
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useAccessMutations(kind);
     const { employees, pickerProps } = useEmployeePicker();
-    const { data: departments = [] } = useDepartments();
-    const { data: brands = [] } = useBrands();
+    const departmentsQuery = useDepartments();
+    const brandsQuery = useBrands();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const refreshBrands = useSelectRefresh(brandsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+    const brands = useMemo(() => brandsQuery.data ?? [], [brandsQuery.data]);
     const [form, setForm] = useState<FormState>(empty);
+    // What the form opened with, moved along by refreshes of the row
+    const [base, setBase] = useState<FormState>(empty);
     const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
     const formError = useFormError();
     const clearFormError = formError.clear;
@@ -218,33 +240,33 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
     // Employee's department resolved to its short tag (abbreviation) for the option chip.
     const deptTag = useMemo(() => new Map(departments.map((d) => [d.id, d.tag])), [departments]);
 
-    // On edit, Save stays disabled until something actually changes — compare the live
-    // form (plus the software-only logo / key controls that live outside FormState)
-    // against the values the dialog was hydrated with. Create always allows submit.
-    const initialForm = useMemo(() => fromRow(kind, row), [kind, row]);
+    // Save stays disabled until something changes: the form against its base, plus the logo and key controls
     const initialStoreKey = useMemo(() => {
         const sw = kind === 'software' ? (row as Software | null) : null;
         const licence = sw?.license_type ?? 'subscription';
         return sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false);
     }, [kind, row]);
-    const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm) || logo !== null || removeLogo || storeKey !== initialStoreKey;
+    const isDirty = JSON.stringify(form) !== JSON.stringify(base) || logo !== null || removeLogo || storeKey !== initialStoreKey;
     const guardClose = useDiscardGuard(open && isDirty);
 
-    useEffect(() => {
-        if (open) {
-            setForm(fromRow(kind, row));
-            setErrors({});
-            clearFormError();
-            setLogo(null);
-            setRemoveLogo(false);
-            setCropSrc(null);
-            setLogoError(null);
-            // Key switch: on when a key is already stored, else follow the licence's default.
-            const sw = kind === 'software' ? (row as Software | null) : null;
-            const licence = sw?.license_type ?? 'subscription';
-            setStoreKey(sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false));
-        }
-    }, [open, kind, row, clearFormError]);
+    // Seed once per opening, from the live row when it is already here
+    const live = row && fresh && fresh.id === row.id ? fresh : null;
+    useSeedOnce(open ? `${kind}:${row?.id ?? 'new'}` : null, () => {
+        const values = fromRow(kind, live ?? row);
+        setForm(values);
+        setBase(values);
+        setErrors({});
+        clearFormError();
+        setLogo(null);
+        setRemoveLogo(false);
+        setCropSrc(null);
+        setLogoError(null);
+        // Key switch: on when a key is already stored, else follow the licence's default.
+        const sw = kind === 'software' ? (row as Software | null) : null;
+        const licence = sw?.license_type ?? 'subscription';
+        setStoreKey(sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false));
+    });
+    useFormRebase({ fresh: open && live ? fromRow(kind, live) : null, base, setBase, setForm });
 
     // Kinds that carry an uploadable logo (software licences + social platforms).
     const hasLogo = kind === 'software' || kind === 'social-platforms';
@@ -363,7 +385,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         if (curKind === 'software' && !form.seats_unlimited) {
             if (!form.seats.trim()) e.seats = t('access_err_seats_required');
             else if (Number(form.seats) < 1) e.seats = t('access_err_seats_min');
-            else if (form.seats !== initialForm.seats && Number(form.seats) < seatsInUse) e.seats = seatsBelowUseMsg;
+            else if (form.seats !== base.seats && Number(form.seats) < seatsInUse) e.seats = seatsBelowUseMsg;
         }
         return e;
     };
@@ -476,7 +498,13 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                 />
                             </Field>
                             <Field label={t('access_department')} required name="department_id" error={errors.department_id}>
-                                <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={departmentOptions} />
+                                <SearchableSelect
+                                    value={form.department_id}
+                                    onChange={(v) => set('department_id', v)}
+                                    options={departmentOptions}
+                                    refresh={refreshDepartments}
+                                    flagRemoved
+                                />
                             </Field>
                             {!curRow && (
                                 <Field label={t('access_owner_approver')} required name="owner_employee_id" error={errors.owner_employee_id}>
@@ -510,7 +538,13 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                 />
                             </Field>
                             <Field label={t('access_department')} required name="department_id" error={errors.department_id}>
-                                <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={departmentOptions} />
+                                <SearchableSelect
+                                    value={form.department_id}
+                                    onChange={(v) => set('department_id', v)}
+                                    options={departmentOptions}
+                                    refresh={refreshDepartments}
+                                    flagRemoved
+                                />
                             </Field>
                             <Field
                                 label={t('access_size')}
@@ -661,6 +695,8 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                             value={form.brand_id}
                                             onChange={(v) => set('brand_id', v)}
                                             options={brandOptions}
+                                            refresh={refreshBrands}
+                                            flagRemoved
                                             placeholder={t('access_select_brand')}
                                             clearable
                                         />

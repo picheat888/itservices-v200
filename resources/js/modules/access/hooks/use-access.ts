@@ -53,8 +53,13 @@ export const useSetFileShareOwner = () => {
     });
 };
 
-export const useResourceMembers = (kind: AccessKind, id: number | null) =>
-    useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null, ...FRESH_VIEW });
+export const useResourceMembers = (kind: AccessKind, id: number | null, enabled = true) =>
+    useQuery({
+        queryKey: [kind, id, 'members'],
+        queryFn: () => accessApi.members(kind, id as number),
+        enabled: id != null && enabled,
+        ...FRESH_VIEW,
+    });
 
 /**
  * Revoke one grant from the governance queue. Routed through the registry's own endpoint so

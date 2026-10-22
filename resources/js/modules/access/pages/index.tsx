@@ -231,6 +231,9 @@ export default function AccessControlPage() {
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
     const spRows = useMemo(() => social.data ?? [], [social.data]);
     const swRows = useMemo(() => software.data ?? [], [software.data]);
+    // The loaded rows of one registry
+    const rowsOf = (kind: AccessKind): AnyResource[] =>
+        kind === 'email-groups' ? egRows : kind === 'file-shares' ? fsRows : kind === 'social-platforms' ? spRows : swRows;
 
     // Distinct department filter options (value = stored name, label = UI language, search = both).
     const deptOptions = (rows: Located[]) => {
@@ -708,6 +711,7 @@ export default function AccessControlPage() {
                 open={adding || !!editing}
                 kind={editing?.kind ?? (tab !== 'overview' ? tab : 'email-groups')}
                 row={editing?.row ?? null}
+                fresh={editing?.row ? (rowsOf(editing.kind).find((r) => r.id === editing.row?.id) ?? null) : null}
                 onClose={closeModal}
             />
             <MembersDrawer

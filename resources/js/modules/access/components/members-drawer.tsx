@@ -9,8 +9,11 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember, EmployeeOption } from '@/shared/types';
@@ -130,7 +133,9 @@ export function MembersDrawer({
     const tgt = target ?? shown;
 
     const kind = tgt?.kind ?? 'email-groups';
-    const { data: members = [], isLoading } = useResourceMembers(kind, tgt?.id ?? null);
+    const membersQuery = useResourceMembers(kind, tgt?.id ?? null, target != null);
+    const { data: members = [], isLoading } = membersQuery;
+    useRefetchOnOpen(target != null, membersQuery);
     const { data: departments = [] } = useDepartments();
     const { addMember, revokeMember, remove } = useAccessMutations(kind);
     // Owner tier exists for email groups (required approver) and file shares (required owner).
@@ -139,28 +144,26 @@ export function MembersDrawer({
     const setOwnerMut = kind === 'file-shares' ? setFileShareOwner : setEmailOwner;
     const [empId, setEmpId] = useState('');
     const [level, setLevel] = useState('');
-    const [ownerId, setOwnerId] = useState('');
+    const [owner, setOwner] = useState({ ownerId: '' });
+    const ownerId = owner.ownerId;
+    const setOwnerId = (id: string) => setOwner({ ownerId: id });
     const [editingOwner, setEditingOwner] = useState(false);
-
-    // Keep the owner picker in sync with whichever group is open (tgt, not target,
-    // so it doesn't reset while the dialog animates closed) and leave edit mode.
-    useEffect(() => {
-        setOwnerId(tgt?.ownerEmployeeId ? String(tgt.ownerEmployeeId) : '');
-        setEditingOwner(false);
-    }, [tgt?.id, tgt?.ownerEmployeeId]);
+    // The owner as the server last said; an owner edit in progress keeps the user's pick through refreshes
+    const [ownerBase, setOwnerBase] = useState({ ownerId: '' });
+    const liveOwner = target ? { ownerId: target.ownerEmployeeId ? String(target.ownerEmployeeId) : '' } : null;
 
     // Every opening starts with an empty add-member picker and the owner in display mode.
-    const openId = target?.id ?? null;
-    useEffect(() => {
-        if (openId === null) return;
+    useSeedOnce(target ? `${target.kind}:${target.id}` : null, () => {
         setMemberQuery('');
         setEmpId('');
         setLevel('');
         setEditingOwner(false);
-        setOwnerId(target?.ownerEmployeeId ? String(target.ownerEmployeeId) : '');
-    }, [openId]); // eslint-disable-line react-hooks/exhaustive-deps
+        setOwner(liveOwner ?? { ownerId: '' });
+        setOwnerBase(liveOwner ?? { ownerId: '' });
+    });
+    useFormRebase({ fresh: liveOwner, base: ownerBase, setBase: setOwnerBase, setForm: setOwner });
 
-    const savedOwnerId = tgt?.ownerEmployeeId ? String(tgt.ownerEmployeeId) : '';
+    const savedOwnerId = ownerBase.ownerId;
     const isDirty = empId !== '' || (editingOwner && ownerId !== savedOwnerId);
     const guardClose = useDiscardGuard(!!target && isDirty);
 
