@@ -284,7 +284,8 @@ export const notification: Dict = {
 
     // components/push-invite-row.tsx — แถวชวนเปิดการแจ้งเตือนในกระดิ่ง
     notification_invite_title: 'Get notifications on this device, even when the system is not open',
-    notification_invite_text: 'New items appear on screen with a sound. The browser asks once more after you press the button, so choose "Allow".',
+    notification_invite_text: 'New items appear on screen with a sound.',
+    notification_invite_text_ask: 'The browser asks once more after you press the button, so choose "Allow".',
     notification_invite_enable: 'Turn on notifications',
     notification_invite_later: 'Later',
     notification_invite_home_title: 'Add the system icon to your Home Screen to get notifications',

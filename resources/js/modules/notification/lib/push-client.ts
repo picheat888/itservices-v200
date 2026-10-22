@@ -40,6 +40,13 @@ export function setDeviceSound(userId: number, on: boolean): void {
     writeItem(soundKey(userId), on ? 'on' : 'off');
 }
 
+// This person's answer on this browser: '1' turned on, '0' turned off on purpose, null never answered
+export function pushAnswer(userId: number): '1' | '0' | null {
+    const value = readItem(wantedKey(userId));
+
+    return value === '1' || value === '0' ? value : null;
+}
+
 // Bell invite snooze
 export function inviteSnoozedUntil(userId: number): number | null {
     const raw = Number(readItem(snoozeKey(userId)));

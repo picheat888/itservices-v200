@@ -284,7 +284,8 @@ export const notification: Dict = {
 
     // components/push-invite-row.tsx — แถวชวนเปิดการแจ้งเตือนในกระดิ่ง
     notification_invite_title: 'รับแจ้งเตือนบนเครื่องนี้ แม้ไม่ได้เปิดระบบอยู่',
-    notification_invite_text: 'มีเรื่องใหม่จะขึ้นบนจอพร้อมเสียง กดปุ่มแล้วเบราว์เซอร์จะถามอีกครั้ง ให้เลือก "อนุญาต"',
+    notification_invite_text: 'มีเรื่องใหม่จะขึ้นบนจอพร้อมเสียง',
+    notification_invite_text_ask: 'กดปุ่มแล้วเบราว์เซอร์จะถามอีกครั้ง ให้เลือก "อนุญาต"',
     notification_invite_enable: 'เปิดการแจ้งเตือน',
     notification_invite_later: 'ไว้ทีหลัง',
     notification_invite_home_title: 'เพิ่มไอคอนระบบไว้ที่หน้าจอโฮม แล้วจะรับแจ้งเตือนได้',

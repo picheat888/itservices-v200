@@ -7,7 +7,7 @@ import { useToastStore } from '@/stores/toast';
 import { Bell, Loader2, Share } from 'lucide-react';
 import { useState } from 'react';
 import { usePushState } from '../hooks/use-push';
-import { enablePush, inviteSnoozedUntil, notificationPermission, snoozeInvite } from '../lib/push-client';
+import { enablePush, inviteSnoozedUntil, notificationPermission, pushAnswer, snoozeInvite } from '../lib/push-client';
 import { showInvite } from '../lib/push-rules';
 
 const ROW_BUTTON = 'h-9 px-3.5 text-[13px] [@media(pointer:coarse)]:h-11';
@@ -21,7 +21,8 @@ export function PushInviteRow() {
     const [now] = useState(() => Date.now());
     const [busy, setBusy] = useState(false);
 
-    if (userId === null || state === undefined || !showInvite(state, notificationPermission(), snoozedUntil, now)) return null;
+    const permission = notificationPermission();
+    if (userId === null || state === undefined || !showInvite(state, permission, snoozedUntil, now, pushAnswer(userId))) return null;
 
     const later = () => {
         snoozeInvite(userId, now);
@@ -50,7 +51,11 @@ export function PushInviteRow() {
             <div className="min-w-0">
                 <p className="text-[13px] font-semibold">{t(homeScreen ? 'notification_invite_home_title' : 'notification_invite_title')}</p>
                 <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs leading-relaxed">
-                    {t(homeScreen ? 'notification_invite_home_text' : 'notification_invite_text')}
+                    {homeScreen
+                        ? t('notification_invite_home_text')
+                        : permission === 'granted'
+                          ? t('notification_invite_text')
+                          : `${t('notification_invite_text')} ${t('notification_invite_text_ask')}`}
                 </p>
                 <div className="flex flex-wrap gap-2">
                     {!homeScreen && (

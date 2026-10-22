@@ -23,12 +23,19 @@ export function pushState(env: PushEnv): PushState {
     return 'off';
 }
 
-export function showInvite(state: PushState, permission: NotificationPermission, snoozedUntil: number | null, now: number): boolean {
+/** wantedByThisUser is this person's stored answer on this browser: '1' turned on, '0' turned off on purpose, null never answered. */
+export function showInvite(
+    state: PushState,
+    permission: NotificationPermission,
+    snoozedUntil: number | null,
+    now: number,
+    wantedByThisUser: '1' | '0' | null,
+): boolean {
     const snoozed = snoozedUntil !== null && now < snoozedUntil;
-    if (snoozed) return false;
+    if (snoozed || wantedByThisUser === '0') return false;
     if (state === 'needs_home_screen') return true;
 
-    return state === 'off' && permission === 'default';
+    return state === 'off' && (permission === 'default' || permission === 'granted');
 }
 
 export function shouldAutoResubscribe(wantedByThisUser: boolean, permission: NotificationPermission, subscribed: boolean): boolean {
