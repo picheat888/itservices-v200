@@ -54,3 +54,20 @@ export function claimRing(id: string, store: RingStore, now: number): boolean {
         return true;
     }
 }
+
+const BELL_TOAST_PREFIX = 'notification:';
+const SUMMARY_TOAST_KEY = 'notification:summary';
+
+interface ShownToast {
+    id: number;
+    key: string;
+    shownAt: number | null;
+}
+
+/** Notification ids whose toast entered the screen between two toast-queue states; each one rings then. */
+export function enteredBellIds(prev: readonly ShownToast[], next: readonly ShownToast[]): string[] {
+    const wasShown = new Set(prev.filter((t) => t.shownAt !== null).map((t) => t.id));
+    return next
+        .filter((t) => t.shownAt !== null && !wasShown.has(t.id) && t.key.startsWith(BELL_TOAST_PREFIX) && t.key !== SUMMARY_TOAST_KEY)
+        .map((t) => t.key.slice(BELL_TOAST_PREFIX.length));
+}

@@ -4,6 +4,7 @@ import {
     AWAY_MS,
     catchUpSince,
     claimRing,
+    enteredBellIds,
     playNotificationSound,
     shouldRingInPage,
     summaryLines,
@@ -95,15 +96,14 @@ function localDay(ms: number): string {
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-/** One sound for a batch of rings, from whichever open window claims them first. */
-function ringOnce(ringIds: string[], userId: number | null, sound: BellSound): void {
+/** Plays the bell sound once per ring id, in whichever open window claims it first. */
+function ring(ringId: string, userId: number | null, sound: BellSound): void {
     if (userId === null || !sound.enabled) return;
     if (readItem(`itsd.sound.${userId}`) === 'off') return;
     if (!shouldRingInPage(tabVisible(), pushOnHere(userId))) return;
     const store = deviceStorage();
-    // Every id is claimed, so the other window finds them all taken
-    const claimed = ringIds.map((id) => (store ? claimRing(id, store, Date.now()) : true));
-    if (claimed.some(Boolean)) playNotificationSound(sound.key);
+    if (store && !claimRing(ringId, store, Date.now())) return;
+    playNotificationSound(sound.key);
 }
 
 /** Pops a toast for each new unread notification this session, through the app's one toast queue. Call once in the app shell. */
@@ -194,13 +194,22 @@ export function useNotificationToasts(openChangePassword: () => void): void {
                             },
                         },
                     );
-                ringOnce([`summary:${lastSeenAt ?? localDay(now)}`], userId, soundRef.current);
+                ring(`summary:${lastSeenAt ?? localDay(now)}`, userId, soundRef.current);
             })
             .catch(() => undefined)
             .finally(() => {
                 catchingUp.current = false;
             });
     };
+
+    // Each bell rings as its toast enters the screen, so a burst rings once per toast as the queue lets them in
+    useEffect(
+        () =>
+            useToastStore.subscribe((state, previous) => {
+                enteredBellIds(previous.toasts, state.toasts).forEach((id) => ring(id, userIdRef.current, soundRef.current));
+            }),
+        [],
+    );
 
     useEffect(() => {
         unlockSoundOnFirstGesture();
@@ -253,9 +262,12 @@ export function useNotificationToasts(openChangePassword: () => void): void {
                 qc.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY });
             }
 
-            // Away from a hidden tab, or a summary on its way: these wait for the summary
-            const away = !tabVisible() && lastSeenAt !== null && now - lastSeenAt >= AWAY_MS;
-            if (away || catchingUp.current) return;
+            // Out of reach for 30+ minutes (hidden, or polls failing, or asleep): these wait for the summary
+            if (lastSeenAt !== null && now - lastSeenAt >= AWAY_MS) {
+                if (tabVisible()) catchUpRef.current(now);
+                return;
+            }
+            if (catchingUp.current) return;
 
             // Oldest first, so a burst enters in the order it happened
             [...fresh].reverse().forEach((n: AppNotification) => {
@@ -279,12 +291,6 @@ export function useNotificationToasts(openChangePassword: () => void): void {
                     },
                 });
             });
-
-            ringOnce(
-                fresh.map((n) => n.id),
-                userId,
-                soundRef.current,
-            );
         };
 
         handleArrivals();

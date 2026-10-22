@@ -5,6 +5,7 @@ import {
     AWAY_MS,
     catchUpSince,
     claimRing,
+    enteredBellIds,
     FIRST_OPEN_LOOKBACK_MS,
     shouldRingInPage,
     summaryLines,
@@ -95,3 +96,34 @@ test('a storage that throws still lets the tab ring', () => {
     };
     assert.equal(claimRing('n4', broken, NOW), true);
 });
+
+const toast = (id: number, key: string, shownAt: number | null) => ({ id, key, shownAt });
+
+test('a bell toast rings when it enters the screen, not when it is queued', () => {
+    const queued = [toast(1, 'notification:a', null)];
+    assert.deepEqual(enteredBellIds([], queued), []);
+    assert.deepEqual(enteredBellIds(queued, [toast(1, 'notification:a', NOW)]), ['a']);
+});
+
+test('a bell toast pushed straight onto the screen rings', () => assert.deepEqual(enteredBellIds([], [toast(1, 'notification:a', NOW)]), ['a']));
+
+test('twenty queued bells ring one by one as each enters', () => {
+    let toasts = Array.from({ length: 20 }, (_, i) => toast(i + 1, `notification:n${i + 1}`, null));
+    const rung: string[] = [];
+    for (let i = 0; i < 20; i++) {
+        const next = toasts.map((t, j) => (j === i ? { ...t, shownAt: NOW + i * 1500 } : t));
+        const entered = enteredBellIds(toasts, next);
+        assert.equal(entered.length, 1);
+        rung.push(...entered);
+        toasts = next;
+    }
+    assert.equal(rung.length, 20);
+});
+
+test('a toast already on screen does not ring again', () => {
+    const shown = [toast(1, 'notification:a', NOW)];
+    assert.deepEqual(enteredBellIds(shown, [toast(1, 'notification:a', NOW), toast(2, 'notification:b', null)]), []);
+});
+
+test('the summary and other toasts are not bells', () =>
+    assert.deepEqual(enteredBellIds([], [toast(1, 'notification:summary', NOW), toast(2, 'Saved', NOW)]), []));
