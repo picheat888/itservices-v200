@@ -333,3 +333,8 @@ test('report cards refresh silently on browser-tab return; the bar shows only fo
 test('the report hub asks for the Ticket & SLA overview only while its schedule editor is open', () => {
     assert.ok(read('modules/report/components/scheduled-reports.tsx').includes('useTicketOverview(ticketFilters, editing !== null && isTicket)'));
 });
+
+test('the asset list loads only on its own tab', () => {
+    assert.ok(read('modules/asset/hooks/use-assets.ts').includes('enabled = true'));
+    assert.ok(/useAssets\([\s\S]*?\},\s*tab === 'inventory',?\s*\)/.test(read('modules/asset/pages/index.tsx')));
+});

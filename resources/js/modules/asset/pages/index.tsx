@@ -403,16 +403,19 @@ export default function AssetsPage() {
     const periodWords = usePeriodWords();
     const summaryQuery = useAssetSummary(period, tab === 'overview' && canViewOverview);
     const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = summaryQuery;
-    const listQuery = useAssets({
-        // ?search and ?page belong to the Transfers log while that tab is open
-        page: tab === 'transfers' || searchChanged ? 1 : page,
-        per_page: perPage,
-        search: tab === 'transfers' ? '' : sentSearch,
-        type: typeFilter || undefined,
-        source: sourceFilter || undefined,
-        status: statusFilter || undefined,
-        warehouse: warehouseFilter || undefined,
-    });
+    const listQuery = useAssets(
+        {
+            // ?search and ?page belong to the Transfers log while that tab is open
+            page: tab === 'transfers' || searchChanged ? 1 : page,
+            per_page: perPage,
+            search: tab === 'transfers' ? '' : sentSearch,
+            type: typeFilter || undefined,
+            source: sourceFilter || undefined,
+            status: statusFilter || undefined,
+            warehouse: warehouseFilter || undefined,
+        },
+        tab === 'inventory',
+    );
     const { data: listData, isLoading, isFetching, isPlaceholderData } = listQuery;
     const { accept } = useAssetMutations();
     const transfersQuery = useAssetTransfers({ page: searchChanged ? 1 : page, per_page: perPage, search: sentSearch }, tab === 'transfers');

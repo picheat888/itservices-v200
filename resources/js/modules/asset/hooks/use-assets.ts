@@ -12,17 +12,21 @@ const SUMMARY = ['assets-summary'] as const;
 export const ACCEPT_KEY = ['asset-accept'] as const;
 
 /** Paginated asset list with search + type/source/status filters. */
-export const useAssets = (params: {
-    page: number;
-    per_page: number;
-    search: string;
-    type?: string;
-    source?: string;
-    status?: string;
-    warehouse?: string;
-}) =>
+export const useAssets = (
+    params: {
+        page: number;
+        per_page: number;
+        search: string;
+        type?: string;
+        source?: string;
+        status?: string;
+        warehouse?: string;
+    },
+    enabled = true,
+) =>
     useQuery({
         queryKey: ['assets-list', params],
+        enabled,
         queryFn: () =>
             assetApi.list({
                 page: params.page,
