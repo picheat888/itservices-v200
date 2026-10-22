@@ -10,6 +10,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -18,7 +19,7 @@ import { buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_HEX } from '../shared';
 
@@ -48,13 +49,17 @@ export function MovementsTab() {
         data: movementsPage,
         isLoading: movementsLoading,
         isFetching: movementsFetching,
+        isPlaceholderData: movementsPlaceholder,
     } = useStockMovements({ type: type === 'all' ? undefined : type, search: sentSearch || undefined, page, per_page: perPage });
     const movements = movementsPage?.data ?? [];
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
     // Open state is separate from the data so the detail stays mounted during the close animation.
     const [moveOpen, setMoveOpen] = useState(false);
     // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
-    const { data: moveSerials = [] } = useMovementSerials(viewMove?.id ?? null);
+    const moveSerialsQuery = useMovementSerials(viewMove?.id ?? null);
+    const moveSerials = useMemo(() => moveSerialsQuery.data ?? [], [moveSerialsQuery.data]);
+    // The movement itself never changes once posted; its serials are asked again on open
+    useRefetchOnOpen(viewMove != null, moveSerialsQuery);
 
     const columns: Column<(typeof movements)[number]>[] = [
         {
@@ -190,7 +195,7 @@ export function MovementsTab() {
                     setViewMove(m);
                     setMoveOpen(true);
                 }}
-                loading={movementsLoading || movementsFetching}
+                loading={movementsLoading || (movementsFetching && movementsPlaceholder)}
                 server={{ ...list.table.paging, total: movementsPage?.meta.total ?? 0 }}
                 empty={
                     type !== 'all' || search.trim() !== ''

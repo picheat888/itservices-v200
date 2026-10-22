@@ -13,6 +13,8 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { digitsOnly } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -24,7 +26,7 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, X } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
@@ -77,6 +79,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         data: requestsPage,
         isLoading: requestsLoading,
         isFetching: requestsFetching,
+        isPlaceholderData: requestsPlaceholder,
     } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status, search: sentSearch || undefined });
     const requests = requestsPage?.data ?? [];
     const { approve, reject, fulfill } = useStockRequestActions();
@@ -90,11 +93,12 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const [alloc, setAlloc] = useState<Record<string, number>>({});
     const [seedAlloc, setSeedAlloc] = useState<Record<string, number>>({});
     // Live item detail (on-hand + per-unit serials + balances) for the request being fulfilled.
-    const { data: fulfillItem } = useStockItem(fulfillReq?.stock_item_id ?? null);
+    const fulfillItemQuery = useStockItem(fulfillReq?.stock_item_id ?? null);
+    const fulfillItem = fulfillItemQuery.data;
+    useRefetchOnOpen(fulfillOpen, fulfillItemQuery);
 
-    // Reset selection and greedily pre-fill the allocation (largest warehouse first) on open / detail load.
-    useEffect(() => {
-        if (!fulfillOpen) return;
+    // Seed once per request, when its item first loads: greedy allocation (largest warehouse first); a refresh only updates what is shown
+    useSeedOnce(fulfillOpen && fulfillReq && fulfillItem ? fulfillReq.id : null, () => {
         setIssueSerialIds([]);
         setSerialWh('all');
         const bals = [...(fulfillItem?.balances ?? [])].filter((b) => b.qty > 0).sort((a, b) => b.qty - a.qty);
@@ -108,7 +112,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         }
         setAlloc(next);
         setSeedAlloc(next);
-    }, [fulfillOpen, fulfillReq?.id, fulfillItem]);
+    });
 
     const onError = (e: unknown) => {
         useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -361,7 +365,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 columns={columns}
                 rows={requests}
                 rowKey={(r) => r.id}
-                loading={requestsLoading || requestsFetching}
+                loading={requestsLoading || (requestsFetching && requestsPlaceholder)}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
                 empty={
                     status !== 'all' || search.trim() !== ''

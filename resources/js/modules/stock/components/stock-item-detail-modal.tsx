@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { RecordStamps } from '@/shared/components/record-stamps';
@@ -10,6 +10,8 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -142,10 +144,13 @@ export function StockItemDetailModal({
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     const lotDetailId = useId();
-    const { data, isError } = useStockItem(itemId);
+    const itemQuery = useStockItem(itemId);
+    const { data, isError } = itemQuery;
     // History is fetched here (same query key as the Movements tab) so the tab count is known up front
-    const { data: history } = useStockItemHistory(itemId);
+    const historyQuery = useStockItemHistory(itemId);
+    const history = historyQuery.data;
     const open = itemId !== null;
+    useRefetchOnOpen(open, itemQuery, historyQuery);
     // The id resolved to nothing: the record is gone, or the link was never valid
     const missing = isError && !data;
 
@@ -153,6 +158,7 @@ export function StockItemDetailModal({
     const { record: item } = useRecordView(itemId, data);
 
     const [tab, setTab] = useState<TabId>('overview');
+    const marks = useTabFreshness(tab, { overview: [itemQuery], movements: [historyQuery], lots: [itemQuery], serials: [itemQuery] });
     const [lotPage, setLotPage] = useState(0);
     const [serialPage, setSerialPage] = useState(0);
     const [expandedLot, setExpandedLot] = useState<number | null>(null);
@@ -171,12 +177,12 @@ export function StockItemDetailModal({
     const serialPageCount = Math.max(1, Math.ceil(serials.length / SERIALS_PER_PAGE));
     const pagedSerials = serials.slice(serialPage * SERIALS_PER_PAGE, serialPage * SERIALS_PER_PAGE + SERIALS_PER_PAGE);
 
-    const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: t('sub_overview') },
-        { id: 'movements', label: t('stock_tab_movements'), count: history?.movements.length },
-        { id: 'lots', label: t('stock_tab_lots'), count: lots.length },
+    const tabs: DialogTab<TabId>[] = [
+        { id: 'overview', label: t('sub_overview'), refresh: marks.overview },
+        { id: 'movements', label: t('stock_tab_movements'), count: history?.movements.length, refresh: marks.movements },
+        { id: 'lots', label: t('stock_tab_lots'), count: lots.length, refresh: marks.lots },
         // Serials tab only exists for serialized items
-        ...(item?.track_serial ? [{ id: 'serials' as TabId, label: t('stock_tab_serials'), count: serials.length }] : []),
+        ...(item?.track_serial ? [{ id: 'serials' as TabId, label: t('stock_tab_serials'), count: serials.length, refresh: marks.serials }] : []),
     ];
 
     return (
