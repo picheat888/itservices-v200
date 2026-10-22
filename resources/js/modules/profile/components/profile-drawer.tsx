@@ -1,9 +1,10 @@
-// My Profile drawer: cover, read-only rail, and tabs (details form, assets, tickets, requests, access, sign-ins) held in ?section=.
+// My Profile drawer: cover, read-only rail, and tabs (details form, assets, tickets, requests, access, sign-ins, notifications) held in ?section=.
 import { useT } from '@/lang';
 import { useMyAccess } from '@/modules/access';
 import { useMyAssets } from '@/modules/asset';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
 import { AccessPane, IdChip, PhotoCropDialog, RAIL_HEADING, RailRow, RequestsPane, TicketsPane, useEmployee } from '@/modules/employee';
+import { DeviceNotificationSettings } from '@/modules/notification';
 import { useRequests } from '@/modules/request';
 import { useTickets } from '@/modules/ticket';
 import { dialogTabId, DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
@@ -25,6 +26,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import {
     AtSign,
+    Bell,
     Box,
     Briefcase,
     Building2,
@@ -104,7 +106,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
 
     const canEdit = can('profile.edit');
     const linked = !!user?.employee_code;
-    // Assets and Access show for any linked employee; Tickets and Requests answer to their page's permission; Sign-ins is everyone's own
+    // Assets and Access show for any linked employee; Tickets and Requests answer to their page's permission; Sign-ins and Notifications are everyone's own
     const sees: Record<ProfileSection, boolean> = {
         profile: true,
         assets: linked,
@@ -112,6 +114,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         requests: can('requests.submit'),
         access: linked,
         devices: true,
+        notifications: true,
     };
     const allowed = PROFILE_SECTIONS.filter((s) => sees[s]);
     const [urlTab, setTab] = useProfileSection(allowed);
@@ -143,6 +146,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         requests: [requestsQuery],
         access: [accessQuery],
         devices: [loginEventsFresh],
+        notifications: [],
     });
 
     // Copy buttons in the rail, announced like the Employee viewer's
@@ -287,6 +291,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         requests: { label: t('requests'), icon: Inbox, count: requestsLoading ? undefined : myRequests?.meta?.total },
         access: { label: t('emp_v_tab_access'), icon: Shield, count: accessCount },
         devices: { label: t('profile_tab_devices'), icon: MonitorSmartphone, count: myDevices?.devices.length },
+        notifications: { label: t('profile_tab_notifications'), icon: Bell },
     };
     const tabs: DialogTab<ProfileSection>[] = allowed.map((id) => ({ id, ...tabMeta[id], refresh: marks[id] }));
 
@@ -470,6 +475,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                 />
                             )}
                             {tab === 'devices' && <MyDevicesTab />}
+                            {tab === 'notifications' && <DeviceNotificationSettings userId={user.id} />}
                         </div>
                     </div>
                 </div>

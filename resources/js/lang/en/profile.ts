@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 /**
- * My Profile drawer: details, assets, tickets, requests, access, sign-ins tabs
+ * My Profile drawer: details, assets, tickets, requests, access, sign-ins, notifications tabs
  */
 export const profile: Dict = {
     // profile-drawer.tsx — cover, rail, footer
@@ -15,6 +15,7 @@ export const profile: Dict = {
     profile_contact: 'Contact',
     profile_tab_details: 'Personal info',
     profile_tab_devices: 'Sign-ins',
+    profile_tab_notifications: 'Notifications',
     // my-assets-tab.tsx — แท็บทรัพย์สิน
     my_assets_new: 'New',
     my_assets_return_confirm: 'Send this asset back to IT? It will show as pending return until IT confirms receipt.',

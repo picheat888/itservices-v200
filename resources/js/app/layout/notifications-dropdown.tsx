@@ -1,6 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
 import {
     NOTIFICATION_GROUPS,
+    PushInviteRow,
     useDismissNotification,
     useMarkAllRead,
     useMarkRead,
@@ -11,6 +12,7 @@ import {
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { keepDialogState } from '@/shared/hooks/use-dialog-param';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
@@ -20,7 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shar
 import { useToastStore } from '@/stores/toast';
 import { Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTitle, openNotificationTarget } from './notification-display';
 
 // "All", then the catalogue's groups; a module tab shows once it has something in it.
@@ -39,6 +41,24 @@ function moveBetweenRows(e: React.KeyboardEvent<HTMLElement>, row: HTMLElement |
     if (next) next.focus();
     else if (e.key === 'ArrowDown') onReachEnd();
     return true;
+}
+
+/** Opens the tray when the address carries ?bell=1 (the summary toast, a stacked push click), then drops the param in place. */
+export function useOpenTrayFromUrl(setOpen: (open: boolean) => void): void {
+    const [params, setParams] = useSearchParams();
+    const wantsTray = params.get('bell') === '1';
+    useEffect(() => {
+        if (!wantsTray) return;
+        setOpen(true);
+        setParams(
+            (prev) => {
+                const next = new URLSearchParams(prev);
+                next.delete('bell');
+                return next;
+            },
+            { replace: true, state: keepDialogState() },
+        );
+    }, [wantsTray, setOpen, setParams]);
 }
 
 /** The kind the server counts and filters by: payload type, plus the imitated module on a test sample. */
@@ -276,6 +296,9 @@ export function NotificationsDropdown({
                         </Button>
                     </div>
                 </div>
+
+                {/* Push on this device: shown until this browser answers */}
+                <PushInviteRow />
 
                 {/* Module filter chips: one row, scrolls sideways; the figure is what is still unread */}
                 {showChips && (

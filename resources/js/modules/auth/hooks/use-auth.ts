@@ -1,4 +1,5 @@
 import { authApi, type LoginPayload } from '@/modules/auth/api/authApi';
+import { disablePush } from '@/modules/notification';
 import { httpStatus } from '@/shared/lib/http-errors';
 import { announceSignIn } from '@/shared/lib/login-redirect';
 import { ME_KEY } from '@/shared/lib/query-client';
@@ -48,10 +49,23 @@ export function useLogin() {
     });
 }
 
-/** Signing out leaves through a full page load, as the idle-timeout logout does, so the cache goes with the document. */
+// Sign-out waits at most this long for this browser's push to stop
+const PUSH_STOP_WAIT_MS = 2000;
+
+/** Signing out stops push on this browser first, then leaves through a full page load, so the cache goes with the document. */
 export function useLogout() {
+    const qc = useQueryClient();
     return useMutation({
-        mutationFn: () => authApi.logout(),
+        mutationFn: async () => {
+            const userId = qc.getQueryData<User | null>(ME_KEY)?.id;
+            if (userId !== undefined) {
+                await Promise.race([
+                    disablePush(userId, { keepWanted: true }),
+                    new Promise((resolve) => window.setTimeout(resolve, PUSH_STOP_WAIT_MS)),
+                ]);
+            }
+            return authApi.logout();
+        },
         // onSettled: a failed logout call still leaves; the login page sends them back if the session survived
         onSettled: () => {
             window.location.href = '/login';

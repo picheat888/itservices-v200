@@ -128,6 +128,35 @@ export const notificationApi = {
     dismiss: (id: string): Promise<void> => http.delete(`/notifications/${id}`).then(() => undefined),
 };
 
+/** This browser's push subscription as the server stores it. */
+export interface PushSubscriptionPayload {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    content_encoding?: 'aesgcm' | 'aes128gcm';
+}
+
+// Push on this device: callers show their own error, so a failure here never raises the full-screen one
+const QUIET = { quietServerError: true, quietUnauthenticated: true } as const;
+
+export const pushSubscriptionApi = {
+    subscribe: async (payload: PushSubscriptionPayload): Promise<void> => {
+        await ensureCsrf();
+        await http.post('/push-subscriptions', payload, QUIET);
+    },
+    unsubscribe: async (endpoint: string): Promise<void> => {
+        await ensureCsrf();
+        await http.delete('/push-subscriptions', { ...QUIET, data: { endpoint } });
+    },
+    // The VAPID public key rides on the signed-in settings payload.
+    publicKey: (): Promise<string | undefined> =>
+        http.get<{ data: { vapid_public_key?: string } }>('/settings', QUIET).then((r) => r.data.data.vapid_public_key),
+    // Queues a test push to this browser's subscription only.
+    test: async (endpoint: string): Promise<void> => {
+        await ensureCsrf();
+        await http.post('/push-subscriptions/test', { endpoint }, QUIET);
+    },
+};
+
 /* ------------------------------------------------------------------------------------
  * Bell CONFIGURATION — what each alert says and whether it fires.
  *

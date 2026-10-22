@@ -281,4 +281,31 @@ export const notification: Dict = {
     notification_summary_new: 'มีแจ้งเตือนใหม่ {n} รายการ',
     notification_summary_total: 'ยังไม่ได้อ่านทั้งหมด {total} รายการ แตะเพื่อเปิด',
     notification_summary_open: 'แตะเพื่อเปิด',
+
+    // components/push-invite-row.tsx — แถวชวนเปิดการแจ้งเตือนในกระดิ่ง
+    notification_invite_title: 'รับแจ้งเตือนบนเครื่องนี้ แม้ไม่ได้เปิดระบบอยู่',
+    notification_invite_text: 'มีเรื่องใหม่จะขึ้นบนจอพร้อมเสียง กดปุ่มแล้วเบราว์เซอร์จะถามอีกครั้ง ให้เลือก "อนุญาต"',
+    notification_invite_enable: 'เปิดการแจ้งเตือน',
+    notification_invite_later: 'ไว้ทีหลัง',
+    notification_invite_home_title: 'เพิ่มไอคอนระบบไว้ที่หน้าจอโฮม แล้วจะรับแจ้งเตือนได้',
+    notification_invite_home_text: 'แตะปุ่มแชร์ใน Safari เลือก "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดระบบจากไอคอนนั้นทุกครั้ง',
+
+    // components/device-notification-settings.tsx — แท็บการแจ้งเตือนในโปรไฟล์
+    notification_device_sound: 'เสียงแจ้งเตือน',
+    notification_device_sound_text: 'ดังเมื่อมีแจ้งเตือนใหม่ระหว่างเปิดระบบ มีผลเฉพาะเครื่องนี้',
+    notification_device_push: 'แจ้งเตือนบนเครื่องนี้',
+    notification_device_push_text: 'ขึ้นบนจอแม้ไม่ได้เปิดระบบอยู่ มีผลเฉพาะเครื่องนี้',
+    notification_device_state_on: 'เปิดอยู่',
+    notification_device_state_off: 'ยังไม่เปิด',
+    notification_device_state_blocked: 'เบราว์เซอร์บล็อกไว้',
+    notification_device_state_needs_home_screen: 'ต้องเปิดจากหน้าจอโฮม',
+    notification_device_state_unsupported: 'เบราว์เซอร์นี้ไม่รองรับ',
+    notification_device_blocked_text: 'ระบบขอซ้ำเองไม่ได้ กดไอคอนหน้าแถบที่อยู่เว็บ เลือก "การแจ้งเตือน" แล้วตั้งเป็น "อนุญาต"',
+    notification_device_home_text: 'เพิ่มไอคอนระบบไว้ที่หน้าจอโฮมของ iPad แล้วเปิดระบบจากไอคอนนั้น',
+    notification_device_test: 'ทดสอบ',
+    notification_device_test_text: 'ส่งแจ้งเตือนทดสอบมาที่เครื่องนี้ ลองฟังเสียงและดูว่าขึ้นบนจอไหม',
+    notification_device_test_send: 'ส่งทดสอบ',
+    notification_device_test_sent: 'ส่งแจ้งเตือนทดสอบแล้ว รอสักครู่',
+    notification_device_test_failed: 'ส่งแจ้งเตือนทดสอบไม่สำเร็จ ลองใหม่อีกครั้ง',
+    notification_device_enable_failed: 'เปิดการแจ้งเตือนบนเครื่องนี้ไม่สำเร็จ ลองใหม่อีกครั้ง',
 };

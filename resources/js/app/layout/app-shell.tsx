@@ -21,7 +21,7 @@ import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { NotificationsDropdown } from './notifications-dropdown';
+import { NotificationsDropdown, useOpenTrayFromUrl } from './notifications-dropdown';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
@@ -65,6 +65,7 @@ export function AppShell() {
         rearmAppError(pathname);
     }, [pathname, rearmAppError]);
     const [notifOpen, setNotifOpen] = useState(false);
+    useOpenTrayFromUrl(setNotifOpen);
     // The tray stays mounted for its 100ms close animation
     const [notifMounted, setNotifMounted] = useState(false);
     if (notifOpen && !notifMounted) setNotifMounted(true);

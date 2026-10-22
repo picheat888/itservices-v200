@@ -11,6 +11,7 @@ import { ContractsPage } from '@/modules/contract';
 import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
+import { useServiceWorkerBridge } from '@/modules/notification';
 import { PermissionsPage } from '@/modules/permission';
 import { ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
@@ -54,6 +55,8 @@ function OldReportRedirect() {
 function App() {
     useApplyTheme();
     useHydrateSettings();
+    // Registers /sw.js and keeps it in step with this page (bell wording, stacked push reset, push after sign-in)
+    useServiceWorkerBridge();
 
     return (
         <BrowserRouter>

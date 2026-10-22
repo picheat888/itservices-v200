@@ -1,9 +1,5 @@
-// Barrel for the notifications module — re-exports everything that the rest of the app consumes.
-//
-// The module has two halves, and they share one api file and one hooks file: the TRAY (the
-// alerts a person has received) and the CONFIGURATION (what each alert says, and whether it
-// fires at all). They are the same subject seen from two sides, and they share a cache —
-// rewording a notification has to invalidate the wording every open tray is holding.
+// Barrel for the notifications module: the tray (alerts received), their configuration (wording, on/off)
+// and push on this device. Tray and configuration share one api file, one hooks file and one cache.
 
 // Hooks — tray
 export {
@@ -44,6 +40,13 @@ export {
     unlockSoundOnFirstGesture,
     type SoundKey,
 } from './lib/sound-player';
+
+// Push on this device: the rules, the browser client, the service worker bridge and the two places a person turns it on.
+export { DeviceNotificationSettings } from './components/device-notification-settings';
+export { PushInviteRow } from './components/push-invite-row';
+export { usePushState, useServiceWorkerBridge } from './hooks/use-push';
+export { currentPushState, disablePush, enablePush, resubscribeIfWanted, sendTestPush } from './lib/push-client';
+export { SNOOZE_MS, pushState, shouldAutoResubscribe, showInvite, type PushState } from './lib/push-rules';
 
 // The groups a notification belongs to — shared by the tray's tabs and the Settings chips.
 export { NOTIFICATION_GROUPS, notificationGroupLabel } from './groups';

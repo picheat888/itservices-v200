@@ -124,11 +124,12 @@ export const useNotificationTemplates = (enabled = true) =>
     useQuery({ queryKey: BELLS, queryFn: notificationTemplateApi.list, enabled, ...FRESH_VIEW });
 
 /** The wording overrides the tray renders; every user loads it, so it keeps a long cache. */
-export const useNotificationMessages = () =>
+export const useNotificationMessages = (enabled = true) =>
     useQuery({
         queryKey: BELL_MESSAGES,
         queryFn: notificationTemplateApi.messages,
         staleTime: 5 * 60_000,
+        enabled,
     });
 
 /**

@@ -37,6 +37,8 @@ export interface SettingsData {
     notification_sound: string;
     /** '0' silences the in-page bell sound for everyone. */
     notification_sound_enabled: '1' | '0';
+    /** Public VAPID key a browser subscribes to push with (signed-in only). */
+    vapid_public_key?: string;
 }
 
 // Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
