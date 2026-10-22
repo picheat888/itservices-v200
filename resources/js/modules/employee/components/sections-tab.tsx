@@ -2,6 +2,8 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Section } from '@/shared/types';
@@ -15,7 +17,6 @@ import { useDepartments } from '../hooks/use-departments';
 import { useSectionMutations, useSections } from '../hooks/use-sections';
 import { SectionMembersDialog } from './section-members-dialog';
 import { SectionModal } from './section-modal';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 const SORT_KEYS = ['dept', 'name', 'members', 'code'] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -31,8 +32,11 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
-    const { data: sections = [], isLoading } = useSections();
-    const { data: departments = [] } = useDepartments();
+    // The sections table refreshes on browser-tab return; the department filter reloads when opened
+    const { data: sections = [], isLoading } = useSections(undefined, { refetchOnWindowFocus: true });
+    const departmentsQuery = useDepartments();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const mut = useSectionMutations();
     const [editSection, setEditSection] = useState<Section | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
@@ -176,7 +180,13 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                     <>
                         {/* Filter by department */}
                         <div className="w-44">
-                            <SearchableSelect value={deptFilter} onChange={setDeptFilter} options={deptOptions} placeholder={t('all_departments')} />
+                            <SearchableSelect
+                                value={deptFilter}
+                                onChange={setDeptFilter}
+                                options={deptOptions}
+                                placeholder={t('all_departments')}
+                                refresh={refreshDepartments}
+                            />
                         </div>
                         {/* Order by */}
                         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>

@@ -1,4 +1,4 @@
-import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { sectionApi } from '../api/sectionApi';
 import { EMP } from './query-keys';
@@ -18,6 +18,7 @@ export function useSectionMembers(id: number | null) {
         queryKey: ['sections', id, 'members'],
         queryFn: () => sectionApi.members(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 }
 

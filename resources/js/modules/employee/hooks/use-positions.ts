@@ -1,4 +1,4 @@
-import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshness';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { positionApi } from '../api/positionApi';
 import { POS } from './query-keys';
@@ -11,6 +11,7 @@ export function usePositionMembers(id: number | null) {
         queryKey: ['positions', id, 'members'],
         queryFn: () => positionApi.members(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 }
 

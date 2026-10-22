@@ -1,5 +1,6 @@
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from '../api/employeeApi';
@@ -11,6 +12,7 @@ export const useEmployeeSummary = (period: OverviewPeriod = 'all', enabled = tru
         queryFn: () => employeeApi.summary(period),
         enabled,
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 // The Employees badge (active staff without a login account) now comes from the combined
@@ -23,6 +25,7 @@ export const useEmployee = (id: number | null) =>
         queryKey: ['employee', id],
         queryFn: () => employeeApi.get(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** Assets the employee currently holds — powers the Employee detail's read-only Assets tab. */
@@ -31,6 +34,7 @@ export const useEmployeeAssets = (id: number | null) =>
         queryKey: ['employee-assets', id],
         queryFn: () => employeeApi.assets(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** Tickets the employee has requested — powers the Employee detail's read-only Tickets tab. */
@@ -39,6 +43,7 @@ export const useEmployeeTickets = (id: number | null) =>
         queryKey: ['employee-tickets', id],
         queryFn: () => employeeApi.tickets(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** Service requests the employee owns — powers the Employee detail's read-only Requests tab. */
@@ -47,6 +52,7 @@ export const useEmployeeRequests = (id: number | null) =>
         queryKey: ['employee-requests', id],
         queryFn: () => employeeApi.requests(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** Access memberships the employee holds — powers the Employee detail's read-only Access tab. */
@@ -55,6 +61,7 @@ export const useEmployeeAccess = (id: number | null) =>
         queryKey: ['employee-access', id],
         queryFn: () => employeeApi.access(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 
 /** The employee's approval chain (direct manager first, up to the root of the reporting tree). */
@@ -63,12 +70,13 @@ export function useApprovalChain(id: number | null) {
         queryKey: ['approval-chain', id],
         queryFn: () => employeeApi.approvalChain(id as number),
         enabled: id !== null,
+        ...FRESH_VIEW,
     });
 }
 
 /** Fetches the full org chart tree (all employees with manager relationships). */
 export function useOrgChart() {
-    return useQuery({ queryKey: ['org-chart'], queryFn: employeeApi.orgChart });
+    return useQuery({ queryKey: ['org-chart'], queryFn: employeeApi.orgChart, ...FRESH_VIEW });
 }
 
 /** Paginated directory query — search and department filter are server-side. */
@@ -84,6 +92,7 @@ export const useEmployeeDirectory = (params: { page: number; per_page: number; s
                 status: params.status !== 'all' ? params.status : undefined,
             }),
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 export function useEmployeeMutations() {
@@ -91,6 +100,8 @@ export function useEmployeeMutations() {
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: EMP });
         qc.invalidateQueries({ queryKey: DEPT });
+        qc.invalidateQueries({ queryKey: ['positions'] });
+        qc.invalidateQueries({ queryKey: ['sections'] });
         qc.invalidateQueries({ queryKey: ['employees-directory'] });
         qc.invalidateQueries({ queryKey: ['employees-summary'] });
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });

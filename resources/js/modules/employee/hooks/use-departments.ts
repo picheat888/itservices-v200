@@ -1,4 +1,4 @@
-import { FRESH_LIST, type LookupOptions } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshness';
 import type { Department } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { departmentApi } from '../api/departmentApi';
@@ -12,6 +12,7 @@ export function useDepartmentMembers(id: number | null) {
         queryKey: ['departments', id, 'members'],
         queryFn: () => departmentApi.members(id as number),
         enabled: id != null,
+        ...FRESH_VIEW,
     });
 }
 

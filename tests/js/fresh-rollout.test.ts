@@ -34,9 +34,12 @@ const NEEDLES: Record<Exclude<keyof Site, 'file'>, string> = {
 
 const SITES: Site[] = [
     { file: 'modules/settings/hooks/use-master-data.ts', freshList: 8 },
-    { file: 'modules/employee/hooks/use-departments.ts', freshList: 1 },
-    { file: 'modules/employee/hooks/use-positions.ts', freshList: 1 },
-    { file: 'modules/employee/hooks/use-sections.ts', freshList: 1 },
+    { file: 'modules/employee/hooks/use-departments.ts', freshList: 1, freshView: 1 },
+    { file: 'modules/employee/hooks/use-positions.ts', freshList: 1, freshView: 1 },
+    { file: 'modules/employee/hooks/use-sections.ts', freshList: 1, freshView: 1 },
+    { file: 'modules/employee/hooks/use-employees.ts', freshView: 9 },
+    { file: 'modules/employee/pages/index.tsx', marks: 6, refresh: 1, focus: 2 },
+    { file: 'modules/employee/components/sections-tab.tsx', refresh: 1, focus: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
     { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2, freshList: 1 },
     { file: 'modules/ticket/pages/index.tsx', marks: 1, freshView: 2, openRefetch: 2 },

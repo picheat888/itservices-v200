@@ -22,8 +22,11 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useSelectRefresh, type SelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
@@ -60,7 +63,7 @@ import {
     UserPlus,
     Users,
 } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AddEmployeeDrawer } from '../components/add-employee-drawer';
 import { DepartmentMembersDialog } from '../components/department-members-dialog';
@@ -134,16 +137,22 @@ export default function EmployeesPage() {
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isTab, 'overview');
     const [period, setPeriod] = useOverviewPeriod();
+    // The summary also feeds the Directory badge, so it stays on every tab for readers with the right
+    const summaryQuery = useEmployeeSummary(period, canViewOverview);
     const {
         data: summary,
         isLoading: summaryLoading,
         isError: summaryFailed,
         isPlaceholderData: summaryStale,
         refetch: refetchSummary,
-    } = useEmployeeSummary(period);
+    } = summaryQuery;
     const summaryPeriod = useShownPeriod(period, summaryStale);
-    const { data: departments = [] } = useDepartments();
-    const { data: positions = [] } = usePositions();
+    // Departments and positions show as tables on their tabs, so they also refresh on browser-tab return
+    const departmentsQuery = useDepartments({ refetchOnWindowFocus: true });
+    const positionsQuery = usePositions({ refetchOnWindowFocus: true });
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+    const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
 
     const [importOpen, setImportOpen] = useState(false);
     const [editEmp, setEditEmp] = useState<Employee | null>(null);
@@ -257,20 +266,34 @@ export default function EmployeesPage() {
     // Positions / Departments tables: search, page and rows-per-page in the URL (?search, page, per).
     const list = useListParams();
 
+    // Directory, sections and the org chart own their queries inside their tab components
+    const directoryFresh = useKeyFreshness(['employees-directory']);
+    const sectionsFresh = useKeyFreshness(['sections']);
+    const orgFresh = useKeyFreshness(['org-chart']);
+    const marks = useTabFreshness(tab, {
+        overview: [summaryQuery, departmentsQuery, positionsQuery],
+        directory: [directoryFresh],
+        sections: [sectionsFresh],
+        departments: [departmentsQuery],
+        positions: [positionsQuery],
+        orgchart: [orgFresh],
+    });
+
     // Directory badge: active staff still without a login account (amber, hidden at zero)
     const tabs: TabItem[] = [
-        canViewOverview && { id: 'overview' as Tab, label: t('sub_overview') },
+        canViewOverview && { id: 'overview' as Tab, label: t('sub_overview'), refresh: marks.overview },
         canViewDirectory && {
             id: 'directory' as Tab,
             label: t('sub_directory'),
             count: summary?.no_account || undefined,
             tone: 'warn' as const,
             countTitle: t('cred_no_account'),
+            refresh: marks.directory,
         },
-        canViewSections && { id: 'sections' as Tab, label: t('sub_sections') },
-        canViewDepartments && { id: 'departments' as Tab, label: t('sub_departments') },
-        canViewPositions && { id: 'positions' as Tab, label: t('sub_positions') },
-        canViewOrg && { id: 'orgchart' as Tab, label: t('sub_org_chart') },
+        canViewSections && { id: 'sections' as Tab, label: t('sub_sections'), refresh: marks.sections },
+        canViewDepartments && { id: 'departments' as Tab, label: t('sub_departments'), refresh: marks.departments },
+        canViewPositions && { id: 'positions' as Tab, label: t('sub_positions'), refresh: marks.positions },
+        canViewOrg && { id: 'orgchart' as Tab, label: t('sub_org_chart'), refresh: marks.orgchart },
     ].filter(Boolean) as TabItem[];
 
     // A landing tab the reader can't see falls back to the first visible one (replace)
@@ -536,6 +559,7 @@ export default function EmployeesPage() {
                     {tab === 'directory' && (
                         <DirectoryTab
                             departments={departments}
+                            departmentsRefresh={refreshDepartments}
                             canAdd={canAdd}
                             canImport={canImport}
                             canEdit={canEdit}
@@ -692,6 +716,7 @@ const isDirStatus = (v: string): v is (typeof DIR_STATUSES)[number] => (DIR_STAT
 
 interface DirectoryTabProps {
     departments: Department[];
+    departmentsRefresh: SelectRefresh;
     canAdd: boolean;
     canImport: boolean;
     canEdit: boolean;
@@ -710,6 +735,7 @@ interface DirectoryTabProps {
 
 function DirectoryTab({
     departments,
+    departmentsRefresh,
     canAdd,
     canImport,
     canEdit,
@@ -911,6 +937,7 @@ function DirectoryTab({
                                 </label>
                                 <SearchableSelect
                                     id={deptFieldId}
+                                    refresh={departmentsRefresh}
                                     active={deptFilter !== 'all'}
                                     value={deptFilter}
                                     onChange={handleDept}
