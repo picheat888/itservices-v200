@@ -47,3 +47,13 @@ export function nextTabMark<T extends string>(prev: TabMarkState<T>, active: T, 
     const since = mark === 'busy' && prev.mark !== 'busy' ? stamp : prev.since;
     return mark === prev.mark && since === prev.since ? prev : { tab: active, mark, since };
 }
+
+/** A tab source read from the cache by key, for a tab whose component owns its queries. */
+export function keySourceState(states: readonly { fetchStatus: string; status: string; dataUpdatedAt: number }[]): TabSource {
+    return {
+        isFetching: states.some((s) => s.fetchStatus === 'fetching' && s.status === 'success'),
+        isLoading: false,
+        isPlaceholderData: false,
+        dataUpdatedAt: states.reduce((max, s) => Math.max(max, s.dataUpdatedAt), 0),
+    };
+}

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
     barRefreshMark,
     isBackgroundFetch,
+    keySourceState,
     nextRefreshMark,
     nextTabMark,
     REFRESH_DONE_MS,
@@ -77,4 +78,18 @@ test('a tab bar announces updating while any tab updates, then updated', () => {
 
 test('the check lasts one and a half seconds', () => {
     assert.equal(REFRESH_DONE_MS, 1500);
+});
+
+test('a refresh of loaded data counts as background, a first load does not', () => {
+    assert.equal(keySourceState([{ fetchStatus: 'fetching', status: 'success', dataUpdatedAt: 5 }]).isFetching, true);
+    assert.equal(keySourceState([{ fetchStatus: 'fetching', status: 'pending', dataUpdatedAt: 0 }]).isFetching, false);
+});
+
+test('the newest of the watched queries stamps the tab', () => {
+    const states = [
+        { fetchStatus: 'idle', status: 'success', dataUpdatedAt: 3 },
+        { fetchStatus: 'idle', status: 'success', dataUpdatedAt: 9 },
+    ];
+    assert.equal(keySourceState(states).dataUpdatedAt, 9);
+    assert.equal(keySourceState([]).dataUpdatedAt, 0);
 });
