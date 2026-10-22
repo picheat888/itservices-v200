@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import type { TicketPriority, TicketWorkClass } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -28,6 +29,7 @@ export const useTickets = (params: TicketListParams, enabled = true) =>
                 requested: params.requested || undefined,
             }),
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 export const useTicketSummary = (enabled: boolean, range: OverviewPeriod) =>
@@ -37,6 +39,7 @@ export const useTicketSummary = (enabled: boolean, range: OverviewPeriod) =>
         enabled,
         // Keep the prior window's numbers on screen while a new range loads (no skeleton flash).
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 /** Staff able to receive a case (tickets.resolve), narrowed to the case's category Level. */

@@ -16,6 +16,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -294,14 +295,10 @@ export default function TicketsPage() {
         });
     };
 
-    const { data: summary, isLoading: summaryLoading, isPlaceholderData: summaryStale } = useTicketSummary(canOverview, range);
+    const summaryQuery = useTicketSummary(canOverview, range);
+    const { data: summary, isLoading: summaryLoading, isPlaceholderData: summaryStale } = summaryQuery;
     const summaryPeriod = useShownPeriod(range, summaryStale);
-    const {
-        data: listData,
-        isLoading,
-        isFetching,
-        isPlaceholderData,
-    } = useTickets({
+    const listQuery = useTickets({
         page,
         per_page: perPage,
         search: sentSearch,
@@ -313,13 +310,18 @@ export default function TicketsPage() {
         mine: tab === 'mine' || undefined,
         requested: tab === 'my' || undefined,
     });
+    const { data: listData, isLoading, isFetching, isPlaceholderData } = listQuery;
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
 
     // The dashboard's "Latest" card has its own fixed query — the tab list's
     // search / filters / sort / page must never leak into it.
-    const { data: latestData } = useTickets({ page: 1, per_page: 5 }, canOverview && tab === 'overview');
+    const latestQuery = useTickets({ page: 1, per_page: 5 }, canOverview && tab === 'overview');
+    const latestData = latestQuery.data;
+
+    // Tab marks and the refetch when a tab is opened again; the list feeds the counts on every tab
+    const marks = useTabFreshness(tab, { overview: [summaryQuery, latestQuery], all: [listQuery], mine: [listQuery], my: [listQuery] });
     const latestRows = latestData?.data ?? [];
 
     const cats = summary?.by_category ?? [];
@@ -500,6 +502,7 @@ export default function TicketsPage() {
                                     : t('ticket_tab_my'),
                         count: tb === 'all' ? meta?.open_count : tb === 'mine' ? meta?.my_jobs_count : tb === 'my' ? meta?.my_tickets_count : null,
                         tone: 'alert' as const,
+                        refresh: marks[tb],
                     }))}
                     active={tab}
                     onChange={(next) => changeTab(next)}

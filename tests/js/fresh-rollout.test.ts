@@ -24,7 +24,7 @@ const NEEDLES: Record<Exclude<keyof Site, 'file'>, string> = {
     freshList: '...FRESH_LIST',
     freshView: '...FRESH_VIEW',
     refresh: 'refresh={',
-    marks: 'refresh: marks.',
+    marks: 'refresh: marks',
     openRefetch: 'useRefetchOnOpen(',
     rebase: 'useFormRebase(',
     seedOnce: 'useSeedOnce(',
@@ -38,6 +38,8 @@ const SITES: Site[] = [
     { file: 'modules/employee/hooks/use-positions.ts', freshList: 1 },
     { file: 'modules/employee/hooks/use-sections.ts', freshList: 1 },
     { file: 'modules/employee/hooks/use-locations.ts', freshList: 1 },
+    { file: 'modules/ticket/hooks/use-tickets.ts', freshView: 2 },
+    { file: 'modules/ticket/pages/index.tsx', marks: 1 },
 ];
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;
