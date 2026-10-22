@@ -168,12 +168,12 @@ export default function WorkflowsPage() {
                             </div>
                         ))}
 
-                    {!isLoading && filtered.length === 0 && isError && (
+                    {!isLoading && filtered.length === 0 && isError && !data && (
                         <div className="py-10 text-center">
                             <LoadFailed onRetry={() => refetch()} />
                         </div>
                     )}
-                    {!isLoading && filtered.length === 0 && !isError && (
+                    {!isLoading && filtered.length === 0 && !(isError && !data) && (
                         <EmptyState
                             kind={search.trim() ? 'search' : 'empty'}
                             title={search.trim() ? t('wf_empty_list_search') : t('wf_empty_list')}

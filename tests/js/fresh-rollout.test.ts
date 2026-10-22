@@ -357,3 +357,12 @@ test('the access resource form reads seats in use, the key switch and the logo f
     assert.ok(!src.includes('(row as Software | SocialPlatform).logo_url'), 'logo from the click-time row');
     assert.ok(src.includes('const current = live ?? row;'));
 });
+
+test('a failed background refetch on an empty search still says no results', () => {
+    const page = read('modules/email-templates/pages/index.tsx');
+    assert.ok(!page.includes('emptyState={isError ?'), 'templates table');
+    assert.ok(!/\n\s+isError \? \(/.test(page), 'delivery log table');
+    assert.ok(!read('modules/notification/components/notification-settings-pane.tsx').includes('emptyState={isError ?'));
+    assert.ok(!read('modules/settings/components/network-names-section.tsx').includes('emptyState={isError ?'));
+    assert.ok(read('modules/workflow/pages/index.tsx').includes('filtered.length === 0 && isError && !data && ('));
+});

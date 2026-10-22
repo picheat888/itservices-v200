@@ -599,7 +599,7 @@ export function NotificationSettingsPane() {
                 rowHeight={58}
                 onRowClick={openEditor}
                 paging={list.table.paging}
-                emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
+                emptyState={isError && !data ? <LoadFailed onRetry={() => refetch()} /> : undefined}
                 empty={
                     isFiltered
                         ? { kind: 'search', title: t('notification_empty_settings_filtered'), hint: t('notification_empty_settings_filtered_hint') }

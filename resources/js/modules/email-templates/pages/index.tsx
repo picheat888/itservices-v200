@@ -873,7 +873,7 @@ export default function EmailTemplatesPage() {
                             onRowClick={setEditing}
                             paging={list.table.paging}
                             caption={t('email_templates')}
-                            emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
+                            emptyState={isError && !data ? <LoadFailed onRetry={() => refetch()} /> : undefined}
                             empty={
                                 search || module
                                     ? { kind: 'search', title: t('email_empty_templates_filtered'), hint: t('email_empty_templates_filtered_hint') }
@@ -1430,7 +1430,7 @@ function DeliveryLogPane() {
                     onPageSizeChange: list.table.paging.onPageSizeChange,
                 }}
                 emptyState={
-                    isError ? (
+                    isError && !data ? (
                         <div className="py-10 text-center">
                             <LoadFailed onRetry={() => refetch()} />
                         </div>

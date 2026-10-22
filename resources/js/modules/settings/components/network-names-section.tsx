@@ -22,7 +22,8 @@ export function NetworkNamesSection({ geoipUpdatedAt }: { geoipUpdatedAt: string
     const t = useT();
     const confirm = useConfirm();
     const list = useListParams();
-    const { data: networks = [], isLoading, isError, refetch } = useNetworkNames();
+    const networksQuery = useNetworkNames();
+    const { data: networks = [], isLoading, isError, refetch } = networksQuery;
     const { remove } = useNetworkNameMutations();
     const [addOpen, setAddOpen] = useState(false);
     const [editNetwork, setEditNetwork] = useState<NetworkName | null>(null);
@@ -83,7 +84,7 @@ export function NetworkNamesSection({ geoipUpdatedAt }: { geoipUpdatedAt: string
                 searchPlaceholder={t('net_search')}
                 searchable={(n) => `${n.cidr} ${n.name}`}
                 empty={masterDataEmpty(t, 'network_names', list.table.search.value.trim() !== '', t('net_add'))}
-                emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
+                emptyState={isError && !networksQuery.data ? <LoadFailed onRetry={() => refetch()} /> : undefined}
                 actions={
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
