@@ -419,6 +419,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::get('notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('api.push-subscriptions.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('api.push-subscriptions.destroy');
+    Route::post('push-subscriptions/test', [PushSubscriptionController::class, 'test'])->name('api.push-subscriptions.test');
     Route::put('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('api.notifications.read-all');
     Route::put('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('api.notifications.read');
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy'])->name('api.notifications.destroy');
