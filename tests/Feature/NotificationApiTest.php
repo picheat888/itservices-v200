@@ -230,6 +230,69 @@ class NotificationApiTest extends TestCase
         $this->actingAs($user)->getJson('/api/notifications?kinds=ticket')->assertUnprocessable()->assertJsonValidationErrors('kinds');
     }
 
+    public function test_since_counts_unread_rows_created_after_it(): void
+    {
+        $contract = $this->makeContract();
+        $user = User::factory()->create();
+        $since = now()->subHour();
+
+        $this->travelTo($since->copy()->subMinutes(10));
+        $this->notify($user, $contract);
+        $this->notify($user, $contract);
+        $this->travelTo($since->copy()->addMinutes(10));
+        foreach (range(1, 3) as $ignored) {
+            $this->notify($user, $contract);
+        }
+        $readId = $this->notify($user, $contract);
+        $user->notifications()->where('id', $readId)->first()->markAsRead();
+        $this->travelBack();
+        // Somebody else's unread rows never count
+        $this->notify(User::factory()->create(), $contract);
+
+        $body = $this->actingAs($user)
+            ->getJson('/api/notifications?since='.urlencode($since->toIso8601String()))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame(3, $body['unread_since']);
+        $this->assertSame(5, $body['unread']);
+    }
+
+    public function test_since_given_in_utc_is_compared_as_the_same_instant(): void
+    {
+        $contract = $this->makeContract();
+        $user = User::factory()->create();
+        $since = now()->subHour();
+
+        $this->travelTo($since->copy()->subMinutes(30));
+        $this->notify($user, $contract);
+        $this->travelTo($since->copy()->addMinutes(30));
+        $this->notify($user, $contract);
+        $this->travelBack();
+
+        $utc = $since->copy()->utc()->format('Y-m-d\TH:i:s.v\Z');
+
+        $this->actingAs($user)
+            ->getJson('/api/notifications?since='.urlencode($utc))
+            ->assertOk()
+            ->assertJsonPath('unread_since', 1);
+    }
+
+    public function test_without_since_there_is_no_unread_since(): void
+    {
+        $user = User::factory()->create();
+        $this->notify($user, $this->makeContract());
+
+        $this->actingAs($user)->getJson('/api/notifications')->assertOk()->assertJsonMissingPath('unread_since');
+    }
+
+    public function test_since_must_be_a_date(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson('/api/notifications?since=nope')->assertUnprocessable()->assertJsonValidationErrors('since');
+    }
+
     public function test_counts_are_grouped_per_type_so_the_front_end_can_map_them_to_modules(): void
     {
         $user = User::factory()->create();

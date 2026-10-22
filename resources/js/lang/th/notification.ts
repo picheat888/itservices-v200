@@ -276,4 +276,9 @@ export const notification: Dict = {
     notification_push_more: 'และแจ้งเตือนใหม่อีก {n} รายการ',
     notification_push_test_title: 'ทดสอบการแจ้งเตือน',
     notification_push_test_body: 'การแจ้งเตือนบนเครื่องนี้ใช้งานได้',
+
+    // app/layout/use-notification-toasts.ts — toast สรุปแจ้งเตือนตอนกลับมาเปิดระบบ
+    notification_summary_new: 'มีแจ้งเตือนใหม่ {n} รายการ',
+    notification_summary_total: 'ยังไม่ได้อ่านทั้งหมด {total} รายการ แตะเพื่อเปิด',
+    notification_summary_open: 'แตะเพื่อเปิด',
 };

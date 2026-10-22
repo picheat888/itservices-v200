@@ -6,7 +6,14 @@
 // rewording a notification has to invalidate the wording every open tray is holding.
 
 // Hooks — tray
-export { useDismissNotification, useMarkAllRead, useMarkRead, useNotificationFeed, useNotifications } from './hooks/use-notifications';
+export {
+    useDismissNotification,
+    useFetchNotificationsSince,
+    useMarkAllRead,
+    useMarkRead,
+    useNotificationFeed,
+    useNotifications,
+} from './hooks/use-notifications';
 
 // Hooks — notification configuration
 export { useNotificationMessages, useNotificationTemplateMutations, useNotificationTemplates, useNotificationText } from './hooks/use-notifications';
@@ -25,6 +32,18 @@ export type {
 
 // A bell's text and click target (pure; also built into the service worker).
 export { moduleOf, notificationMessage, notificationTarget, notificationTitle, type Translate } from './lib/notification-text';
+
+// When the page rings and sums up missed bells, and the bell sound itself.
+export { AWAY_MS, catchUpSince, claimRing, shouldRingInPage, summaryLines } from './lib/arrival-rules';
+export {
+    DEFAULT_SOUND,
+    SOUND_KEYS,
+    isSoundKey,
+    playNotificationSound,
+    soundName,
+    unlockSoundOnFirstGesture,
+    type SoundKey,
+} from './lib/sound-player';
 
 // The groups a notification belongs to — shared by the tray's tabs and the Settings chips.
 export { NOTIFICATION_GROUPS, notificationGroupLabel } from './groups';

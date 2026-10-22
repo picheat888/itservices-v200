@@ -30,6 +30,11 @@ export function useNotifications() {
     });
 }
 
+/** A one-off fetch of the tray that also counts unread bells created after `since` (ms), for the catch-up summary. */
+export function useFetchNotificationsSince(): (since: number) => Promise<NotificationsResponse> {
+    return useCallback((since: number) => notificationApi.list({ since: new Date(since).toISOString() }), []);
+}
+
 /** The tray's list for one tab, a page at a time: every kind when `kinds` is null, else only those. */
 export function useNotificationFeed(tab: string, kinds: string[] | null) {
     return useInfiniteQuery({

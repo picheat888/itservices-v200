@@ -105,12 +105,16 @@ export interface NotificationsResponse {
     has_more: boolean;
     /** Real totals per kind, so the chips do not count the page they were handed. */
     counts: NotificationTypeCount[];
+    /** Unread rows created after `since`; only when the request passed one. */
+    unread_since?: number;
 }
 
 /** A page of the tray: optionally only some kinds ("type|module"), starting at an offset. */
 export interface NotificationListParams {
     kinds?: string[];
     offset?: number;
+    /** ISO instant: the reply then counts unread rows created after it (`unread_since`). */
+    since?: string;
 }
 
 export const notificationApi = {

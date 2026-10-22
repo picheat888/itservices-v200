@@ -33,6 +33,10 @@ export interface SettingsData {
      * and SetCredentialsModal says so instead of letting an account be created without one.
      */
     default_employee_role_label: string | null;
+    /** System-wide bell sound key (signed-in only). */
+    notification_sound: string;
+    /** '0' silences the in-page bell sound for everyone. */
+    notification_sound_enabled: '1' | '0';
 }
 
 // Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).

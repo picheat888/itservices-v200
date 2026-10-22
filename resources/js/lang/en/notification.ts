@@ -276,4 +276,9 @@ export const notification: Dict = {
     notification_push_more: 'and {n} more new notifications',
     notification_push_test_title: 'Test notification',
     notification_push_test_body: 'Notifications on this device are working',
+
+    // app/layout/use-notification-toasts.ts — toast สรุปแจ้งเตือนตอนกลับมาเปิดระบบ
+    notification_summary_new: '{n} new notifications',
+    notification_summary_total: '{total} unread in all, tap to open',
+    notification_summary_open: 'Tap to open',
 };

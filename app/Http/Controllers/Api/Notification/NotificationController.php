@@ -8,6 +8,7 @@ use App\Support\NotificationKind;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Date;
 
 /**
  * Manages the current user's database notifications (in-app bell).
@@ -27,6 +28,7 @@ class NotificationController extends Controller
             'kinds' => ['sometimes', 'array', 'max:50'],
             'kinds.*' => ['string', 'max:100'],
             'offset' => ['sometimes', 'integer', 'min:0'],
+            'since' => ['sometimes', 'date'],
         ]);
 
         $user = $request->user();
@@ -40,7 +42,7 @@ class NotificationController extends Controller
         $page = (clone $matching)->reorder()->orderByDesc('created_at')->orderByDesc('id')
             ->offset($offset)->limit(self::PAGE_SIZE)->get();
 
-        return response()->json([
+        $body = [
             'data' => $page->map(fn (DatabaseNotification $n) => [
                 'id' => $n->id,
                 'data' => $n->data,
@@ -54,7 +56,15 @@ class NotificationController extends Controller
             'matching' => $matchingCount,
             'has_more' => $matchingCount > $offset + self::PAGE_SIZE,
             'counts' => $counts,
-        ]);
+        ];
+
+        // Unread rows that arrived after the reader last looked, for the catch-up summary toast
+        if (isset($validated['since'])) {
+            $since = Date::parse($validated['since'])->setTimezone(config('app.timezone'));
+            $body['unread_since'] = $user->unreadNotifications()->where('created_at', '>', $since)->count();
+        }
+
+        return response()->json($body);
     }
 
     /**
