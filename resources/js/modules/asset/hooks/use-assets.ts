@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { useToastStore } from '@/stores/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
@@ -33,6 +34,7 @@ export const useAssets = (params: {
                 warehouse: params.warehouse || undefined,
             }),
         placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
     });
 
 /** Full single asset (incl. transfer history + related tickets) — used by the detail dialog. */
@@ -71,17 +73,23 @@ export const useMyAssets = (enabled = true) =>
         refetchIntervalInBackground: true,
     });
 
-// The My Assets badge (assets awaiting my acceptance) now comes from the combined
-// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
-
-// The Assets badge (awaiting IT receipt) now comes from the combined
-// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
-
-export const useAssetSummary = (period: OverviewPeriod = 'all') =>
-    useQuery({ queryKey: [...SUMMARY, overviewPeriodKey(period)], queryFn: () => assetApi.summary(period), placeholderData: (prev) => prev });
+export const useAssetSummary = (period: OverviewPeriod = 'all', enabled = true) =>
+    useQuery({
+        queryKey: [...SUMMARY, overviewPeriodKey(period)],
+        queryFn: () => assetApi.summary(period),
+        enabled,
+        placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
+    });
 
 export const useAssetTransfers = (params: { page: number; per_page: number; search?: string }, enabled = true) =>
-    useQuery({ queryKey: ['asset-transfers', params], queryFn: () => assetApi.transfers(params), enabled, placeholderData: (prev) => prev });
+    useQuery({
+        queryKey: ['asset-transfers', params],
+        queryFn: () => assetApi.transfers(params),
+        enabled,
+        placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
+    });
 
 export function useAssetMutations() {
     const qc = useQueryClient();

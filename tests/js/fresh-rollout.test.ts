@@ -44,6 +44,8 @@ const SITES: Site[] = [
     { file: 'modules/ticket/components/edit-ticket-drawer.tsx', rebase: 1, seedOnce: 1 },
     { file: 'modules/ticket/components/assign-ticket-modal.tsx', refresh: 1 },
     { file: 'modules/ticket/components/forward-ticket-modal.tsx', refresh: 1 },
+    { file: 'modules/asset/hooks/use-assets.ts', freshView: 3 },
+    { file: 'modules/asset/pages/index.tsx', marks: 1, refresh: 2 },
 ];
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;

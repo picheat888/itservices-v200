@@ -20,7 +20,9 @@ import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { useSidebarBadge } from '@/shared/hooks/use-sidebar-badges';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
@@ -63,7 +65,7 @@ import {
     Warehouse,
     X,
 } from 'lucide-react';
-import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
@@ -351,8 +353,12 @@ export default function AssetsPage() {
     const [exitAsset, setExitAsset] = useState<{ id: number; kind: 'writeoff' | 'returnToVendor'; open: boolean } | null>(null);
     const closeExit = () => setExitAsset((e) => (e ? { ...e, open: false } : e));
 
-    const { data: warehouses = [] } = useWarehouses();
-    const { data: categories = [] } = useCategories();
+    const warehousesQuery = useWarehouses();
+    const categoriesQuery = useCategories();
+    const warehousesRefresh = useSelectRefresh(warehousesQuery);
+    const categoriesRefresh = useSelectRefresh(categoriesQuery);
+    const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
+    const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
     // The detail drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
     // drops the param. Opening seeds the query cache with the clicked row so the drawer shows
@@ -399,12 +405,9 @@ export default function AssetsPage() {
 
     const [period, setPeriod] = useOverviewPeriod();
     const periodWords = usePeriodWords();
-    const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = useAssetSummary(period);
-    const {
-        data: listData,
-        isLoading,
-        isFetching,
-    } = useAssets({
+    const summaryQuery = useAssetSummary(period, tab === 'overview' && canViewOverview);
+    const { data: summary, isLoading: summaryLoading, isError: summaryFailed, refetch: refetchSummary } = summaryQuery;
+    const listQuery = useAssets({
         // ?search and ?page belong to the Transfers log while that tab is open
         page: tab === 'transfers' || searchChanged ? 1 : page,
         per_page: perPage,
@@ -414,12 +417,11 @@ export default function AssetsPage() {
         status: statusFilter || undefined,
         warehouse: warehouseFilter || undefined,
     });
+    const { data: listData, isLoading, isFetching } = listQuery;
     const { accept } = useAssetMutations();
-    const {
-        data: transferLog,
-        isLoading: transfersLoading,
-        isFetching: transfersFetching,
-    } = useAssetTransfers({ page: searchChanged ? 1 : page, per_page: perPage, search: sentSearch }, tab === 'transfers');
+    const transfersQuery = useAssetTransfers({ page: searchChanged ? 1 : page, per_page: perPage, search: sentSearch }, tab === 'transfers');
+    const { data: transferLog, isLoading: transfersLoading, isFetching: transfersFetching } = transfersQuery;
+    const marks = useTabFreshness(tab, { overview: [summaryQuery], inventory: [listQuery], transfers: [transfersQuery] });
     const transfers = transferLog?.data ?? [];
     // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
     // by ProtectedRoute before any page draws).
@@ -654,6 +656,7 @@ export default function AssetsPage() {
                         .map((tb) => ({
                             id: tb,
                             label: tb === 'overview' ? t('asset_overview') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers'),
+                            refresh: marks[tb],
                         }))}
                     active={tab}
                     onChange={changeTab}
@@ -914,6 +917,7 @@ export default function AssetsPage() {
                                             </label>
                                             <SearchableSelect
                                                 id={filterIds.type}
+                                                refresh={categoriesRefresh}
                                                 active={!!typeFilter}
                                                 value={typeFilter || ALL}
                                                 onChange={(v) => {
@@ -1001,6 +1005,7 @@ export default function AssetsPage() {
                                             </label>
                                             <SearchableSelect
                                                 id={filterIds.warehouse}
+                                                refresh={warehousesRefresh}
                                                 active={!!warehouseFilter}
                                                 value={warehouseFilter || ALL}
                                                 onChange={(v) => {
