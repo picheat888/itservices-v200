@@ -230,6 +230,7 @@ export const asset: Dict = {
     asset_select_type: 'Select type',
     asset_select_brand: 'Select brand',
     asset_select_model: 'Select model',
+    asset_model_gone: 'Someone changed the brand to {brand}. {model} belonged to the old one and was removed; choose a model again.',
     asset_select_warehouse: 'Select warehouse',
     asset_nickname_ph: 'e.g. Lobby PC',
     asset_select_lease_contract: 'Select lease contract',

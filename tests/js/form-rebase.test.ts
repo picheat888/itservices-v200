@@ -1,7 +1,7 @@
 // Edit forms and fresh server data: untouched fields take the new values, typed ones stay, and a form seeds once per record.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { needsSeed, nextBase, rebaseForm, sameValue } from '../../resources/js/shared/lib/form-rebase.ts';
+import { needsSeed, nextBase, rebaseForm, rebaseLinked, sameValue } from '../../resources/js/shared/lib/form-rebase.ts';
 
 test('an untouched field takes the fresh server value', () => {
     const base = { a: '1', b: 'x' };
@@ -41,4 +41,56 @@ test('a form seeds once per record, not on every refresh of it', () => {
 test('a skipped key keeps its opening value in the base, so an untouched form stays clean', () => {
     assert.deepEqual(nextBase({ a: '1', ids: [1] }, { a: '2', ids: [1, 2] }, ['ids']), { a: '2', ids: [1] });
     assert.deepEqual(nextBase({ a: '1' }, { a: '2' }), { a: '2' });
+});
+
+const ORG = [{ child: 'section', parent: 'dept', empty: '' }] as const;
+
+test('a linked pair the user never touched follows the server together', () => {
+    const base = { dept: '1', section: '10', phone: '' };
+    const r = rebaseLinked(base, { ...base }, { dept: '3', section: '30', phone: '' }, [], ORG);
+    assert.deepEqual(r.form, { dept: '3', section: '30', phone: '' });
+    assert.deepEqual(r.drops, []);
+});
+
+test('a child stays with a parent the user changed, even when the server sends a new child', () => {
+    const base = { dept: '1', section: '' };
+    const r = rebaseLinked(base, { dept: '4', section: '' }, { dept: '1', section: '10' }, [], ORG);
+    assert.deepEqual(r.form, { dept: '4', section: '' });
+    assert.deepEqual(r.drops, []);
+});
+
+test('a chosen child is taken out and reported when the server moves its parent', () => {
+    const base = { dept: '1', section: '10' };
+    const r = rebaseLinked(base, { dept: '1', section: '11' }, { dept: '3', section: '30' }, [], ORG);
+    assert.deepEqual(r.form, { dept: '3', section: '' });
+    assert.deepEqual(r.drops, [{ child: 'section', value: '11', parentValue: '3' }]);
+});
+
+test('a child the user emptied is not reported when the server moves its parent', () => {
+    const base = { dept: '1', section: '10' };
+    const r = rebaseLinked(base, { dept: '1', section: '' }, { dept: '3', section: '30' }, [], ORG);
+    assert.deepEqual(r.form, { dept: '3', section: '' });
+    assert.deepEqual(r.drops, []);
+});
+
+test('a chosen child stays when the server leaves its parent alone', () => {
+    const base = { dept: '1', section: '10', phone: '1' };
+    const r = rebaseLinked(base, { dept: '1', section: '11', phone: '1' }, { dept: '1', section: '12', phone: '2' }, [], ORG);
+    assert.deepEqual(r.form, { dept: '1', section: '11', phone: '2' });
+    assert.deepEqual(r.drops, []);
+});
+
+test('a linked pair can use null as its empty value', () => {
+    const links = [{ child: 'model_id', parent: 'brand_id', empty: null }] as const;
+    const base = { brand_id: 1 as number | null, model_id: 5 as number | null };
+    const r = rebaseLinked(base, { brand_id: 1, model_id: 6 }, { brand_id: 2, model_id: 9 }, [], links);
+    assert.deepEqual(r.form, { brand_id: 2, model_id: null });
+    assert.deepEqual(r.drops, [{ child: 'model_id', value: 6, parentValue: 2 }]);
+});
+
+test('without links a linked rebase is a plain rebase', () => {
+    const base = { a: '1', b: 'x' };
+    const r = rebaseLinked(base, { a: '1', b: 'typed' }, { a: '2', b: 'y' });
+    assert.deepEqual(r.form, rebaseForm(base, { a: '1', b: 'typed' }, { a: '2', b: 'y' }));
+    assert.deepEqual(r.drops, []);
 });

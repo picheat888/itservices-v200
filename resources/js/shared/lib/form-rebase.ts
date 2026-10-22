@@ -22,6 +22,35 @@ export function rebaseForm<T extends object>(base: T, form: T, fresh: T, skip: r
     return next;
 }
 
+/** A child field whose options belong to a parent field (section in department, model in brand), and the child's empty value. */
+export type FormLink<T> = { readonly child: keyof T; readonly parent: keyof T; readonly empty: T[keyof T] };
+
+/** A chosen child a rebase took out because the server moved its parent. */
+export type FormDrop<T> = { child: keyof T; value: T[keyof T]; parentValue: T[keyof T] };
+
+/** rebaseForm for linked pairs: a child stays with a parent the user changed, and a child the user chose is emptied (and reported) when the server moves its parent. */
+export function rebaseLinked<T extends object>(
+    base: T,
+    form: T,
+    fresh: T,
+    skip: readonly (keyof T)[] = [],
+    links: readonly FormLink<T>[] = [],
+): { form: T; drops: FormDrop<T>[] } {
+    const next = rebaseForm(base, form, fresh, skip);
+    const drops: FormDrop<T>[] = [];
+    for (const { child, parent, empty } of links) {
+        const parentTouched = !sameValue(form[parent], base[parent]);
+        const childTouched = !sameValue(form[child], base[child]);
+        if (parentTouched) {
+            next[child] = form[child];
+        } else if (!sameValue(next[parent], form[parent]) && childTouched && !sameValue(form[child], empty)) {
+            next[child] = empty;
+            drops.push({ child, value: form[child], parentValue: next[parent] });
+        }
+    }
+    return { form: next, drops };
+}
+
 /** The base after a rebase: the fresh values, except skipped keys keep the value the form opened with (the form keeps them too). */
 export function nextBase<T extends object>(base: T, fresh: T, skip: readonly (keyof T)[] = []): T {
     const next = { ...fresh };

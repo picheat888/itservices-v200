@@ -94,6 +94,8 @@ export function StockItemModal({
     const models = useMemo(() => modelsQuery.data ?? [], [modelsQuery.data]);
     const [form, setForm] = useState<StockItemPayload>(empty);
     const [base, setBase] = useState<StockItemPayload>(empty);
+    // Id of a chosen model taken out because the brand moved elsewhere
+    const [modelGone, setModelGone] = useState<number | null>(null);
     // When on, the item name is generated from Brand + Model instead of typed
     const [autoName, setAutoName] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -108,9 +110,21 @@ export function StockItemModal({
         setBase(next);
         setAutoName(false);
         setSaved(false);
+        setModelGone(null);
     });
     // While auto-name is on the name follows brand and model, never the server
-    useFormRebase({ fresh: live ? itemToForm(live) : null, base, setBase, setForm, skip: autoName ? ['name'] : [] });
+    useFormRebase({
+        fresh: live ? itemToForm(live) : null,
+        base,
+        setBase,
+        setForm,
+        skip: autoName ? ['name'] : [],
+        links: [{ child: 'model_id', parent: 'brand_id', empty: null }],
+        onDrop: (drops) => {
+            const drop = drops.find((d) => d.child === 'model_id');
+            if (drop) setModelGone(Number(drop.value));
+        },
+    });
 
     // Auto item name = "Brand Model", kept in sync while the switch is on
     const brandName = brands.find((b) => b.id === form.brand_id)?.name;
@@ -215,7 +229,10 @@ export function StockItemModal({
                                 value={form.brand_id != null ? String(form.brand_id) : ''}
                                 refresh={refreshBrands}
                                 flagRemoved
-                                onChange={(v) => setForm((f) => ({ ...f, brand_id: v ? Number(v) : null, model_id: null }))}
+                                onChange={(v) => {
+                                    setForm((f) => ({ ...f, brand_id: v ? Number(v) : null, model_id: null }));
+                                    setModelGone(null);
+                                }}
                                 options={brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name }))}
                             />
                         </Field>
@@ -223,7 +240,17 @@ export function StockItemModal({
                             <SearchableSelect
                                 value={form.model_id != null ? String(form.model_id) : ''}
                                 refresh={refreshModels}
-                                onChange={(v) => set('model_id', v ? Number(v) : null)}
+                                note={
+                                    modelGone && form.model_id == null
+                                        ? t('stock_model_gone')
+                                              .replace('{brand}', brandName ?? '')
+                                              .replace('{model}', models.find((m) => m.id === modelGone)?.name ?? '')
+                                        : null
+                                }
+                                onChange={(v) => {
+                                    set('model_id', v ? Number(v) : null);
+                                    setModelGone(null);
+                                }}
                                 options={modelOptions.map((m) => ({ value: String(m.id), label: m.name, search: m.name }))}
                             />
                         </Field>

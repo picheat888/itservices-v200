@@ -242,6 +242,7 @@ export const employee: Dict = {
     emp_err_pos: 'กรุณาเลือกตำแหน่ง',
     emp_err_manager: 'กรุณาเลือกหัวหน้า',
     emp_err_section: 'กรุณาเลือกหน่วยงาน',
+    emp_section_gone: 'แผนกถูกเปลี่ยนเป็น {department} จากที่อื่น เอาหน่วยงาน {section} ที่เลือกไว้ออกแล้ว เลือกหน่วยงานใหม่',
     emp_err_start: 'กรุณาระบุวันที่',
     emp_err_start_after_last_day: 'กรุณาเลือกวันก่อนวันทำงานวันสุดท้าย ({date})',
     emp_err_required: 'จำเป็นต้องระบุ',

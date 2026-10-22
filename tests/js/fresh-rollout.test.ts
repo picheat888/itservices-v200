@@ -205,3 +205,23 @@ test('plan 5 files carry no history comments', () => {
     assert.ok(!read('modules/access/hooks/use-access.ts').includes('now comes'));
     assert.ok(!read('modules/employee/components/edit-employee-dialog.tsx').includes('as it stood when the dialog opened'));
 });
+
+test('forms with a parent and child select take the child out with a note when the server moves the parent', () => {
+    const forms: [string, string, string][] = [
+        ['modules/employee/components/edit-employee-dialog.tsx', "child: 'sectionId', parent: 'departmentId'", 'sectionGone&&!form.sectionId'],
+        ['modules/asset/components/asset-form-drawer.tsx', "child: 'model_id', parent: 'brand_id'", 'modelGone&&!form.model_id'],
+        ['modules/stock/components/stock-item-modal.tsx', "child: 'model_id', parent: 'brand_id'", 'modelGone&&form.model_id==null'],
+    ];
+    for (const [file, link, note] of forms) {
+        const src = read(file);
+        assert.ok(src.includes(link), `${file} links the pair`);
+        assert.ok(src.includes('onDrop:'), `${file} hears about a taken-out child`);
+        assert.ok(src.replace(/\s+/g, '').includes(`note={${note}`), `${file} shows the note on the child select`);
+    }
+    for (const lang of ['th', 'en']) {
+        assert.ok(read(`lang/${lang}/employee.ts`).includes('emp_section_gone:'), `${lang} employee`);
+        assert.ok(read(`lang/${lang}/asset.ts`).includes('asset_model_gone:'), `${lang} asset`);
+        assert.ok(read(`lang/${lang}/stock.ts`).includes('stock_model_gone:'), `${lang} stock`);
+    }
+    assert.ok(read('shared/components/searchable-select.tsx').includes('note?: string | null;'));
+});

@@ -146,11 +146,24 @@ export function AssetFormDrawer({
         setErr({});
         clearFormError();
         setSaveState('idle');
+        setModelGone(null);
         const next = editing ? toForm(live ?? editing) : EMPTY;
         setForm(next);
         setInitial(next);
     });
-    useFormRebase({ fresh: live ? toForm(live) : null, base: initial, setBase: setInitial, setForm });
+    // Id of a chosen model taken out because the brand moved elsewhere
+    const [modelGone, setModelGone] = useState<string | null>(null);
+    useFormRebase({
+        fresh: live ? toForm(live) : null,
+        base: initial,
+        setBase: setInitial,
+        setForm,
+        links: [{ child: 'model_id', parent: 'brand_id', empty: '' }],
+        onDrop: (drops) => {
+            const drop = drops.find((d) => d.child === 'model_id');
+            if (drop) setModelGone(String(drop.value));
+        },
+    });
 
     /** Form field → validation-error key (they don't always share a name). */
     const ERR_KEY: Partial<Record<keyof FormState, string>> = {
@@ -365,6 +378,7 @@ export function AssetFormDrawer({
                                         onChange={(v) => {
                                             // Picking a brand resets the model (models are brand-scoped).
                                             setForm((f) => ({ ...f, brand_id: v, model_id: '' }));
+                                            setModelGone(null);
                                             setErr((prev) => {
                                                 if (!('brand' in prev)) return prev;
                                                 const next = { ...prev };
@@ -381,7 +395,17 @@ export function AssetFormDrawer({
                                 <Field label={t('asset_model')} required error={err.model} name="model">
                                     <SearchableSelect
                                         value={form.model_id}
-                                        onChange={(v) => upd('model_id', v)}
+                                        note={
+                                            modelGone && !form.model_id
+                                                ? t('asset_model_gone')
+                                                      .replace('{brand}', selectedBrand?.name ?? '')
+                                                      .replace('{model}', models.find((m) => String(m.id) === modelGone)?.name ?? '')
+                                                : null
+                                        }
+                                        onChange={(v) => {
+                                            upd('model_id', v);
+                                            setModelGone(null);
+                                        }}
                                         options={modelOptions}
                                         refresh={refreshModels}
                                         placeholder={t('asset_select_model')}

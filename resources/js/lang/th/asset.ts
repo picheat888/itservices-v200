@@ -228,6 +228,7 @@ export const asset: Dict = {
     asset_select_type: 'เลือกประเภท',
     asset_select_brand: 'เลือกยี่ห้อ',
     asset_select_model: 'เลือกรุ่น',
+    asset_model_gone: 'ยี่ห้อถูกเปลี่ยนเป็น {brand} จากที่อื่น เอารุ่น {model} ที่เลือกไว้ออกแล้ว เลือกรุ่นใหม่',
     asset_select_warehouse: 'เลือกคลัง',
     asset_nickname_ph: 'เช่น พีซีบัญชี',
     asset_select_lease_contract: 'เลือกสัญญาเช่า',

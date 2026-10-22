@@ -53,6 +53,7 @@ export function SearchableSelect({
     refresh,
     emptyHint,
     flagRemoved = false,
+    note,
     id,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -87,6 +88,8 @@ export function SearchableSelect({
     emptyHint?: string;
     /** A chosen value the reloaded list no longer holds shows struck through with a note. */
     flagRemoved?: boolean;
+    /** An amber note under the trigger, e.g. a choice a refresh took out; pass null while there is none so its live region is in place. */
+    note?: string | null;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
     'aria-invalid'?: boolean;
@@ -142,6 +145,8 @@ export function SearchableSelect({
     const removedNoteId = useId();
     // Once the form flags the field, its red error says the same, so the amber note steps aside
     const showRemovedNote = removed && !ariaInvalid;
+    const noteId = useId();
+    const showNote = !!note && !removed;
     const body = menuBody({
         count: filtered.length,
         query: q,
@@ -514,7 +519,7 @@ export function SearchableSelect({
                         }
                     }}
                     aria-invalid={ariaInvalid}
-                    aria-describedby={cn(ariaDescribedBy, showRemovedNote && removedNoteId) || undefined}
+                    aria-describedby={cn(ariaDescribedBy, showRemovedNote && removedNoteId, showNote && noteId) || undefined}
                     aria-required={ariaRequired}
                     aria-haspopup="listbox"
                     aria-expanded={open}
@@ -522,7 +527,7 @@ export function SearchableSelect({
                     className={cn(
                         'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
                         active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
-                        showRemovedNote && 'border-amber-600 dark:border-amber-400',
+                        (showRemovedNote || (showNote && !ariaInvalid)) && 'border-amber-600 dark:border-amber-400',
                         // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).
                         open && 'border-brand ring-brand/15 ring-[3px]',
                     )}
@@ -556,6 +561,11 @@ export function SearchableSelect({
                 {flagRemoved && (
                     <span role="status" className="sr-only">
                         {removed ? t('cmn_item_removed') : ''}
+                    </span>
+                )}
+                {note !== undefined && (
+                    <span role="status" className="sr-only">
+                        {note ?? ''}
                     </span>
                 )}
                 {showClear && (
@@ -620,6 +630,12 @@ export function SearchableSelect({
                 <p id={removedNoteId} className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
                     <TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {t('cmn_item_removed')}
+                </p>
+            )}
+            {showNote && (
+                <p id={noteId} className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                    <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>{note}</span>
                 </p>
             )}
         </>

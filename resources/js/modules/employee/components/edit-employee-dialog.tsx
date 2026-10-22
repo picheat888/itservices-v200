@@ -94,7 +94,23 @@ export function EditEmployeeDialog({
     const sectionsQuery = useSections(form.departmentId ? Number(form.departmentId) : null);
     const refreshSections = useSelectRefresh(sectionsQuery);
     const sections = useMemo(() => sectionsQuery.data ?? [], [sectionsQuery.data]);
-    useFormRebase({ fresh: open && employee && fresh && fresh.id === employee.id ? toForm(fresh) : null, base, setBase, setForm });
+    // Name of a chosen section taken out because the department moved elsewhere, kept from the list it was picked from
+    const [sectionGone, setSectionGone] = useState<string | null>(null);
+    const sectionNames = useRef(new Map<string, string>());
+    useEffect(() => {
+        for (const s of sections) sectionNames.current.set(String(s.id), localName(s, lang));
+    }, [sections, lang]);
+    useFormRebase({
+        fresh: open && employee && fresh && fresh.id === employee.id ? toForm(fresh) : null,
+        base,
+        setBase,
+        setForm,
+        links: [{ child: 'sectionId', parent: 'departmentId', empty: '' }],
+        onDrop: (drops) => {
+            const drop = drops.find((d) => d.child === 'sectionId');
+            if (drop) setSectionGone(sectionNames.current.get(String(drop.value)) ?? null);
+        },
+    });
     const [photo, setPhoto] = useState<File | null>(null);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
@@ -136,6 +152,7 @@ export function EditEmployeeDialog({
         setManagerLoop(false);
         setOrgConfirm(false);
         setSaved(false);
+        setSectionGone(null);
         if (employee) {
             const next = toForm(fresh && fresh.id === employee.id ? fresh : employee);
             setForm(next);
@@ -170,6 +187,7 @@ export function EditEmployeeDialog({
     /** When department changes, clear the section so stale options don't persist. */
     const setDepartment = (v: string) => {
         setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
+        setSectionGone(null);
         setErrors((prev) => {
             if (!('departmentId' in prev)) return prev;
             const next = { ...prev };
@@ -475,7 +493,15 @@ export function EditEmployeeDialog({
             <SearchableSelect
                 value={form.sectionId}
                 refresh={refreshSections}
-                onChange={(v) => set('sectionId', v)}
+                note={
+                    sectionGone && !form.sectionId
+                        ? t('emp_section_gone').replace('{department}', departmentLabel(form.departmentId)).replace('{section}', sectionGone)
+                        : null
+                }
+                onChange={(v) => {
+                    set('sectionId', v);
+                    setSectionGone(null);
+                }}
                 placeholder={t('emp_section_ph')}
                 options={
                     form.departmentId

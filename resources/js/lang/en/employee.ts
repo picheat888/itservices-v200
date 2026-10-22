@@ -243,6 +243,7 @@ export const employee: Dict = {
     emp_err_pos: 'Required',
     emp_err_manager: 'Required',
     emp_err_section: 'Required',
+    emp_section_gone: 'Someone changed the department to {department}. {section} belonged to the old one and was removed; choose a section again.',
     emp_err_start: 'Required',
     emp_err_start_after_last_day: 'Pick a date before the last working day ({date})',
     emp_err_required: 'Required',
