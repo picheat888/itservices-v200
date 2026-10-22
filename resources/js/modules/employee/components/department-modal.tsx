@@ -4,6 +4,8 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Department } from '@/shared/types';
@@ -13,8 +15,8 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useDepartmentMutations } from '../hooks/use-departments';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useDepartmentMutations, useDepartments } from '../hooks/use-departments';
 
 const empty = { name: '', name_th: '', tag: '' };
 
@@ -36,23 +38,23 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
     const [saved, setSaved] = useState(false);
     const formError = useFormError();
     const clearFormError = formError.clear;
-    const initial = useRef(empty);
+    // What the form opened with, moved along by refreshes of the department
+    const [base, setBase] = useState(empty);
+    const { data: allDepartments } = useDepartments();
+    const toValues = (d: Department) => ({ name: d.name, name_th: d.name_th ?? '', tag: d.tag ?? '' });
+    const live = department ? allDepartments?.find((d) => d.id === department.id) : undefined;
 
-    useEffect(() => {
-        if (open) {
-            setFieldErrors({});
-            clearFormError();
-            setSaved(false);
-            const values = department ? { name: department.name, name_th: department.name_th ?? '', tag: department.tag ?? '' } : empty;
-            setForm(values);
-            initial.current = values;
-        }
-    }, [open, department, clearFormError]);
+    useSeedOnce(open ? (department?.id ?? 'new') : null, () => {
+        setFieldErrors({});
+        clearFormError();
+        setSaved(false);
+        const values = department ? toValues(live ?? department) : empty;
+        setForm(values);
+        setBase(values);
+    });
+    useFormRebase({ fresh: open && live ? toValues(live) : null, base, setBase, setForm });
 
-    const isDirty =
-        form.name.trim() !== initial.current.name.trim() ||
-        form.name_th.trim() !== initial.current.name_th.trim() ||
-        form.tag.trim() !== initial.current.tag.trim();
+    const isDirty = form.name.trim() !== base.name.trim() || form.name_th.trim() !== base.name_th.trim() || form.tag.trim() !== base.tag.trim();
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));

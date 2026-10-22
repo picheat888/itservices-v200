@@ -8,6 +8,8 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { localName } from '@/shared/lib/local-name';
 import { focusFirstError } from '@/shared/lib/utils';
 import type { Employee, EmployeeOption } from '@/shared/types';
@@ -42,29 +44,57 @@ const empty = {
 };
 
 /** Centered "focus dialog" for editing an existing employee's profile and org assignment. */
+// The form's values for an employee
+const toForm = (e: Employee) => ({
+    firstName: e.first_name ?? '',
+    lastName: e.last_name ?? '',
+    firstNameTh: e.first_name_th ?? '',
+    lastNameTh: e.last_name_th ?? '',
+    email: e.email ?? '',
+    phone: e.phone ?? '',
+    code: e.code ?? '',
+    departmentId: e.department_id ? String(e.department_id) : '',
+    sectionId: e.section_id ? String(e.section_id) : '',
+    positionId: e.position_id ? String(e.position_id) : '',
+    managerId: e.manager_id ? String(e.manager_id) : '',
+    joinedAt: e.joined_at ?? '',
+});
+
 export function EditEmployeeDialog({
     open,
     onClose,
     onSaved,
     employee,
+    fresh = null,
 }: {
     open: boolean;
     onClose: () => void;
     /** Called instead of onClose once the edit is saved. */
     onSaved?: () => void;
     employee: Employee | null;
+    /** The live copy of `employee`; fields the user has not touched follow it. */
+    fresh?: Employee | null;
 }) {
     const fmt = useDateFormat();
     const t = useT();
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
-    const { data: departments = [] } = useDepartments();
-    const { data: positions = [] } = usePositions();
+    const departmentsQuery = useDepartments();
+    const positionsQuery = usePositions();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const refreshPositions = useSelectRefresh(positionsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+    const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
     const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position', exclude: employee ? [employee.id] : undefined });
     const { update } = useEmployeeMutations();
 
     const [form, setForm] = useState(empty);
-    const { data: sections = [] } = useSections(form.departmentId ? Number(form.departmentId) : null);
+    // What the form opened with, moved along by refreshes of the employee; the dirty check and the org-change list read it
+    const [base, setBase] = useState(empty);
+    const sectionsQuery = useSections(form.departmentId ? Number(form.departmentId) : null);
+    const refreshSections = useSelectRefresh(sectionsQuery);
+    const sections = useMemo(() => sectionsQuery.data ?? [], [sectionsQuery.data]);
+    useFormRebase({ fresh: open && employee && fresh && fresh.id === employee.id ? toForm(fresh) : null, base, setBase, setForm });
     const [photo, setPhoto] = useState<File | null>(null);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
@@ -107,22 +137,12 @@ export function EditEmployeeDialog({
         setOrgConfirm(false);
         setSaved(false);
         if (employee) {
-            setForm({
-                firstName: employee.first_name ?? '',
-                lastName: employee.last_name ?? '',
-                firstNameTh: employee.first_name_th ?? '',
-                lastNameTh: employee.last_name_th ?? '',
-                email: employee.email ?? '',
-                phone: employee.phone ?? '',
-                code: employee.code ?? '',
-                departmentId: employee.department_id ? String(employee.department_id) : '',
-                sectionId: employee.section_id ? String(employee.section_id) : '',
-                positionId: employee.position_id ? String(employee.position_id) : '',
-                managerId: employee.manager_id ? String(employee.manager_id) : '',
-                joinedAt: employee.joined_at ?? '',
-            });
+            const next = toForm(fresh && fresh.id === employee.id ? fresh : employee);
+            setForm(next);
+            setBase(next);
         } else {
             setForm(empty);
+            setBase(empty);
         }
         // Keyed on employee?.id so incidental re-renders keep transient state
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,9 +206,9 @@ export function EditEmployeeDialog({
     };
 
     // Org assignment as it stood when the dialog opened, used to diff against the form.
-    const origPositionId = employee?.position_id ? String(employee.position_id) : '';
-    const origDepartmentId = employee?.department_id ? String(employee.department_id) : '';
-    const origManagerId = employee?.manager_id ? String(employee.manager_id) : '';
+    const origPositionId = base.positionId;
+    const origDepartmentId = base.departmentId;
+    const origManagerId = base.managerId;
 
     // The position/department/manager moves to confirm — computed each render.
     const orgChanges = employee
@@ -211,29 +231,8 @@ export function EditEmployeeDialog({
           ].filter(Boolean as unknown as <T>(x: T | false) => x is T)
         : [];
 
-    // Snapshot as opened (same key order as the init effect) for the dirty check
-    const initialForm = useMemo(
-        () =>
-            employee
-                ? {
-                      firstName: employee.first_name ?? '',
-                      lastName: employee.last_name ?? '',
-                      firstNameTh: employee.first_name_th ?? '',
-                      lastNameTh: employee.last_name_th ?? '',
-                      email: employee.email ?? '',
-                      phone: employee.phone ?? '',
-                      code: employee.code ?? '',
-                      departmentId: employee.department_id ? String(employee.department_id) : '',
-                      sectionId: employee.section_id ? String(employee.section_id) : '',
-                      positionId: employee.position_id ? String(employee.position_id) : '',
-                      managerId: employee.manager_id ? String(employee.manager_id) : '',
-                      joinedAt: employee.joined_at ?? '',
-                  }
-                : empty,
-        [employee],
-    );
     // Dirty when any field differs from the snapshot, or a new photo was picked.
-    const isDirty = useMemo(() => photo != null || JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm, photo]);
+    const isDirty = useMemo(() => photo != null || JSON.stringify(form) !== JSON.stringify(base), [form, base, photo]);
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     // A "special position" skips both the Department and Report-to requirements.
@@ -458,6 +457,8 @@ export function EditEmployeeDialog({
         <Field label={t('department')} required={!posIsSpecial} name="departmentId" error={errors.departmentId}>
             <SearchableSelect
                 value={form.departmentId}
+                refresh={refreshDepartments}
+                flagRemoved
                 onChange={setDepartment}
                 placeholder={t('department_ph')}
                 options={departments.map((d) => ({
@@ -473,6 +474,7 @@ export function EditEmployeeDialog({
         <Field label={t('emp_section')} required={!posIsSpecial} name="sectionId" error={errors.sectionId}>
             <SearchableSelect
                 value={form.sectionId}
+                refresh={refreshSections}
                 onChange={(v) => set('sectionId', v)}
                 placeholder={t('emp_section_ph')}
                 options={
@@ -493,6 +495,8 @@ export function EditEmployeeDialog({
         <Field label={t('position')} required name="positionId" error={errors.positionId}>
             <SearchableSelect
                 value={form.positionId}
+                refresh={refreshPositions}
+                flagRemoved
                 onChange={(v) => set('positionId', v)}
                 placeholder={t('position_ph')}
                 options={positions.map((p) => ({

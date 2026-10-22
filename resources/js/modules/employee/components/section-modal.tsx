@@ -5,6 +5,9 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { refusalReason, refusalText } from '@/shared/lib/api-errors';
 import { localName } from '@/shared/lib/local-name';
 import type { Section } from '@/shared/types';
@@ -14,9 +17,9 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useDepartments } from '../hooks/use-departments';
-import { useSectionMutations } from '../hooks/use-sections';
+import { useSectionMutations, useSections } from '../hooks/use-sections';
 
 const empty = { department_id: '', name: '', name_th: '' };
 
@@ -30,32 +33,34 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     const view = open ? section : shown;
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
-    const { data: departments = [] } = useDepartments();
+    const departmentsQuery = useDepartments();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+    const { data: allSections } = useSections();
     const { create, update } = useSectionMutations();
     const [form, setForm] = useState(empty);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
     const formError = useFormError();
     const clearFormError = formError.clear;
-    const initial = useRef(empty);
+    // What the form opened with, moved along by refreshes of the section
+    const [base, setBase] = useState(empty);
+    const toValues = (s: Section) => ({ department_id: String(s.department_id), name: s.name, name_th: s.name_th ?? '' });
+    const live = section ? allSections?.find((s) => s.id === section.id) : undefined;
 
-    useEffect(() => {
-        if (open) {
-            setSaved(false);
-            setError('');
-            clearFormError();
-            const values = section ? { department_id: String(section.department_id), name: section.name, name_th: section.name_th ?? '' } : empty;
-            setForm(values);
-            initial.current = values;
-        }
-    }, [open, section, clearFormError]);
+    useSeedOnce(open ? (section?.id ?? 'new') : null, () => {
+        setSaved(false);
+        setError('');
+        clearFormError();
+        const values = section ? toValues(live ?? section) : empty;
+        setForm(values);
+        setBase(values);
+    });
+    useFormRebase({ fresh: open && live ? toValues(live) : null, base, setBase, setForm });
 
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-    const isDirty =
-        form.department_id !== initial.current.department_id ||
-        form.name.trim() !== initial.current.name.trim() ||
-        form.name_th.trim() !== initial.current.name_th.trim();
+    const isDirty = form.department_id !== base.department_id || form.name.trim() !== base.name.trim() || form.name_th.trim() !== base.name_th.trim();
     const guardClose = useDiscardGuard(open && isDirty && !saved);
 
     const deptOptions = useMemo(
@@ -105,7 +110,13 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                     <DialogBody>
                         <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />
                         <Field label={t('department')} required error={error || undefined}>
-                            <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={deptOptions} />
+                            <SearchableSelect
+                                value={form.department_id}
+                                onChange={(v) => set('department_id', v)}
+                                options={deptOptions}
+                                refresh={refreshDepartments}
+                                flagRemoved
+                            />
                         </Field>
                         <div className="grid grid-cols-2 gap-3">
                             <Field label={t('section_name_en')} required>

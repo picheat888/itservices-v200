@@ -25,9 +25,11 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSelectRefresh, type SelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
@@ -208,7 +210,10 @@ export default function EmployeesPage() {
 
     // Edit lives in ?edit=<id>: from the row menu the form opens alone, from the view ?view stays under it
     const editId = toRecordId(searchParams.get('edit'));
-    const { data: editSource, isError: editMissing, isFetching: editFetching } = useEmployee(editId);
+    const editQuery = useEmployee(editId);
+    const { data: editSource, isFetching: editFetching } = editQuery;
+    const editMissing = isRecordMissing(editQuery.error, editSource !== undefined);
+    useRefetchOnOpen(editId != null, editQuery);
     // Not cleared when ?edit goes: the copy stays for the closing animation, and the row's copy survives the URL lagging a render
     useEffect(() => {
         if (editId != null && editSource && !editFetching && editEmp?.id !== editId) setEditEmp(editSource);
@@ -660,7 +665,13 @@ export default function EmployeesPage() {
             </Card>
 
             <AddEmployeeDrawer open={adding} onClose={closeAdd} />
-            <EditEmployeeDialog open={editOpen} onClose={closeEditEmp} onSaved={showSavedEmp} employee={editEmp} />
+            <EditEmployeeDialog
+                open={editOpen}
+                onClose={closeEditEmp}
+                onSaved={showSavedEmp}
+                employee={editEmp}
+                fresh={editOpen ? (editSource ?? null) : null}
+            />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
             {/* A dead ?view= link says so */}
             <RecordMissingDialog open={viewEmpMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />

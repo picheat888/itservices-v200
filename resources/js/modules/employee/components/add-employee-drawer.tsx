@@ -5,6 +5,7 @@ import { SearchableSelect, type SearchOption } from '@/shared/components/searcha
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { useSelectRefresh, type SelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { localLabel, localName } from '@/shared/lib/local-name';
 import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import type { EmployeeOption } from '@/shared/types';
@@ -111,8 +112,12 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const t = useT();
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
-    const { data: departments = [] } = useDepartments();
-    const { data: positions = [] } = usePositions();
+    const departmentsQuery = useDepartments();
+    const positionsQuery = usePositions();
+    const refreshDepartments = useSelectRefresh(departmentsQuery);
+    const refreshPositions = useSelectRefresh(positionsQuery);
+    const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+    const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
     const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position' });
     const { create } = useEmployeeMutations();
     const pushToast = useToastStore((s) => s.push);
@@ -122,7 +127,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(empty);
-    const { data: sections = [] } = useSections(form.departmentId ? Number(form.departmentId) : null);
+    const sectionsQuery = useSections(form.departmentId ? Number(form.departmentId) : null);
+    const refreshSections = useSelectRefresh(sectionsQuery);
+    const sections = useMemo(() => sectionsQuery.data ?? [], [sectionsQuery.data]);
     const [photo, setPhoto] = useState<File | null>(null);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
@@ -134,7 +141,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     // Can the onboarding requests be routed for this person? Asked only on the last step
     const precheck = useOnboardingPrecheck(form.managerId, form.positionId, open && step === LAST_STEP);
     // What each service asks for. Same trigger: nothing below reads it earlier.
-    const { data: serviceSchemas = [] } = useOnboardingServices(open && step === LAST_STEP);
+    const servicesQuery = useOnboardingServices(open && step === LAST_STEP);
+    const refreshServices = useSelectRefresh(servicesQuery);
+    const serviceSchemas = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
     const fieldsOf = (service: string) => serviceSchemas.find((s) => s.service === service)?.fields ?? [];
     // A definite no about the reporting line itself (in flight is not a no); only this holds Save shut
     const chainBlocked = precheck.data ? LINE_BLOCK_REASONS.includes(precheck.data.reason ?? '') : false;
@@ -628,6 +637,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <SearchableSelect
                                             value={form.departmentId}
                                             onChange={setDepartment}
+                                            refresh={refreshDepartments}
+                                            flagRemoved
                                             placeholder={t('department_ph')}
                                             options={departments.map((d) => ({
                                                 value: String(d.id),
@@ -640,6 +651,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <SearchableSelect
                                             value={form.sectionId}
                                             onChange={(v) => set('sectionId', v)}
+                                            refresh={refreshSections}
                                             placeholder={t('emp_section_ph')}
                                             options={
                                                 form.departmentId
@@ -657,6 +669,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <SearchableSelect
                                             value={form.positionId}
                                             onChange={(v) => set('positionId', v)}
+                                            refresh={refreshPositions}
+                                            flagRemoved
                                             placeholder={t('position_ph')}
                                             options={positions.map((p) => ({
                                                 value: String(p.id),
@@ -807,6 +821,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                                                 {fields.map((field) => (
                                                                     <ServiceField
                                                                         key={field.key}
+                                                                        servicesRefresh={refreshServices}
                                                                         service={v}
                                                                         field={field}
                                                                         lang={lang}
@@ -889,6 +904,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 /** One field a day-one service asks for, rendered from the Request module's schema. */
 function ServiceField({
     service,
+    servicesRefresh,
     field,
     lang,
     value,
@@ -896,6 +912,8 @@ function ServiceField({
     onChange,
 }: {
     service: string;
+    /** The services list the select's options come from, reloaded when it opens. */
+    servicesRefresh: SelectRefresh;
     field: OnboardingServiceField;
     lang: 'th' | 'en';
     value: string;
@@ -910,6 +928,7 @@ function ServiceField({
                 <SearchableSelect
                     value={value}
                     onChange={onChange}
+                    refresh={servicesRefresh}
                     options={(field.options ?? []).map((option) => ({
                         value: option.value,
                         label: localLabel(option, lang),

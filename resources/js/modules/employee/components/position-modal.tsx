@@ -4,6 +4,8 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { fieldError, refusalText } from '@/shared/lib/api-errors';
 import type { Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -13,7 +15,7 @@ import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { Users } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { usePositionMutations } from '../hooks/use-positions';
+import { usePositionMutations, usePositions } from '../hooks/use-positions';
 
 export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {
     const t = useT();
@@ -33,17 +35,33 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     const formError = useFormError();
     const clearFormError = formError.clear;
 
-    useEffect(() => {
-        if (open) {
-            setTitle(position?.title ?? '');
-            setAllowSpecial(position?.allow_special_position ?? false);
-            setError('');
-            clearFormError();
-            setSaved(false);
-        }
-    }, [open, position, clearFormError]);
+    // What the form opened with, moved along by refreshes of the position
+    const [base, setBase] = useState({ title: '', allowSpecial: false });
+    const { data: allPositions } = usePositions();
+    const toValues = (p: Position) => ({ title: p.title, allowSpecial: p.allow_special_position ?? false });
+    const live = position ? allPositions?.find((p) => p.id === position.id) : undefined;
 
-    const isDirty = title.trim() !== (position?.title ?? '') || allowSpecial !== (position?.allow_special_position ?? false);
+    useSeedOnce(open ? (position?.id ?? 'new') : null, () => {
+        const values = position ? toValues(live ?? position) : { title: '', allowSpecial: false };
+        setTitle(values.title);
+        setAllowSpecial(values.allowSpecial);
+        setBase(values);
+        setError('');
+        clearFormError();
+        setSaved(false);
+    });
+    useFormRebase({
+        fresh: open && live ? toValues(live) : null,
+        base,
+        setBase,
+        setForm: (update) => {
+            const next = update({ title, allowSpecial });
+            setTitle(next.title);
+            setAllowSpecial(next.allowSpecial);
+        },
+    });
+
+    const isDirty = title.trim() !== base.title || allowSpecial !== base.allowSpecial;
     const guardClose = useDiscardGuard(open && isDirty && !saved);
     const saving = create.isPending || update.isPending;
     const canSave = !!title.trim() && isDirty && !saving && !saved;
