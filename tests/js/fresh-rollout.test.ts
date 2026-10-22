@@ -130,3 +130,9 @@ test('tab bars keep no room for the mark on idle tabs', () => {
     }
     assert.ok(!read('shared/components/tab-refresh-mark.tsx').includes('absolute'));
 });
+
+test('stock dialogs follow the kit rules', () => {
+    assert.ok(read('modules/stock/pages/tabs/movements-tab.tsx').includes('useRefetchOnOpen(moveOpen,'));
+    assert.ok(read('modules/stock/components/stock-item-detail-modal.tsx').includes('isRecordMissing('));
+    assert.ok(!read('modules/stock/hooks/use-stock.ts').includes('now comes'));
+});

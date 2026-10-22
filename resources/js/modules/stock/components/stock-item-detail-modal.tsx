@@ -12,6 +12,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
+import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { TABLE_HEAD } from '@/shared/lib/surface';
@@ -145,14 +146,14 @@ export function StockItemDetailModal({
     const { symbol, format } = useCurrency();
     const lotDetailId = useId();
     const itemQuery = useStockItem(itemId);
-    const { data, isError } = itemQuery;
+    const { data } = itemQuery;
     // History is fetched here (same query key as the Movements tab) so the tab count is known up front
     const historyQuery = useStockItemHistory(itemId);
     const history = historyQuery.data;
     const open = itemId !== null;
     useRefetchOnOpen(open, itemQuery, historyQuery);
     // The id resolved to nothing: the record is gone, or the link was never valid
-    const missing = isError && !data;
+    const missing = isRecordMissing(itemQuery.error, data !== undefined);
 
     // Last item retained for the exit animation, never rendered under another item's id
     const { record: item } = useRecordView(itemId, data);

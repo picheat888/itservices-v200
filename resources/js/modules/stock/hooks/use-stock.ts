@@ -110,9 +110,6 @@ export const useStockRequests = (params: { page?: number; per_page?: number; sta
         ...FRESH_VIEW,
     });
 
-// The Stock sidebar badge (min/max alerts + outstanding requests + draft counts) now comes
-// from the combined /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
-
 /** Request workflow mutations (submit / approve / reject / fulfill). */
 export function useStockRequestActions() {
     const qc = useQueryClient();

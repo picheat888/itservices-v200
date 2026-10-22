@@ -20,11 +20,8 @@ export function TabRefreshMark({ mark }: { mark: RefreshMark }) {
             )}
         >
             <span className="inline-flex shrink-0 pl-1.5">
-                {view.icon === 'spin' ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                )}
+                {view.icon === 'spin' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {view.icon === 'check' && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
             </span>
         </span>
     );

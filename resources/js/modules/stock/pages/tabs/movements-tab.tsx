@@ -59,7 +59,7 @@ export function MovementsTab() {
     const moveSerialsQuery = useMovementSerials(viewMove?.id ?? null);
     const moveSerials = useMemo(() => moveSerialsQuery.data ?? [], [moveSerialsQuery.data]);
     // The movement itself never changes once posted; its serials are asked again on open
-    useRefetchOnOpen(viewMove != null, moveSerialsQuery);
+    useRefetchOnOpen(moveOpen, moveSerialsQuery);
 
     const columns: Column<(typeof movements)[number]>[] = [
         {

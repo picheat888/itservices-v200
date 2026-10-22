@@ -95,8 +95,8 @@ test('the newest of the watched queries stamps the tab', () => {
     assert.equal(keySourceState([]).dataUpdatedAt, 0);
 });
 
-test('an idle tab keeps no room for the mark', () => {
-    assert.deepEqual(slotView('idle', 'busy'), { open: false, icon: 'spin' });
+test('an idle tab keeps no room for the mark and runs no hidden spinner', () => {
+    assert.deepEqual(slotView('idle', 'busy'), { open: false, icon: null });
 });
 
 test('the slot opens with the spinner while the tab refreshes, then shows the check', () => {

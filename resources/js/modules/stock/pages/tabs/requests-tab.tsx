@@ -26,9 +26,10 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, X } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
+import { allocKey, greedyAlloc, refillAlloc } from '../../lib/fulfil-alloc';
 import { stockRefusalText } from '../../lib/refusal';
 
 // Fulfilling takes stock out: the issue colour of the movement list
@@ -48,14 +49,6 @@ const REQUEST_STATUS_FILTERS: StockRequestStatus[] = ['pending', 'approved', 'fu
 
 // Small section heading inside the fulfill dialog.
 const EYEBROW = 'text-muted-foreground text-xs font-semibold';
-
-// Order-independent key of the drawn quantities (zero rows ignored).
-const allocKey = (a: Record<string, number>) =>
-    JSON.stringify(
-        Object.entries(a)
-            .filter(([, n]) => n > 0)
-            .sort(),
-    );
 
 export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const fmt = useDateFormat();
@@ -101,18 +94,20 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     useSeedOnce(fulfillOpen && fulfillReq && fulfillItem ? fulfillReq.id : null, () => {
         setIssueSerialIds([]);
         setSerialWh('all');
-        const bals = [...(fulfillItem?.balances ?? [])].filter((b) => b.qty > 0).sort((a, b) => b.qty - a.qty);
-        let remaining = fulfillReq?.qty ?? 0;
-        const next: Record<string, number> = {};
-        for (const b of bals) {
-            if (remaining <= 0) break;
-            const take = Math.min(b.qty, remaining);
-            next[b.warehouse] = take;
-            remaining -= take;
-        }
+        const next = greedyAlloc(fulfillItem?.balances ?? [], fulfillReq?.qty ?? 0);
         setAlloc(next);
         setSeedAlloc(next);
     });
+    // Fresh balances refill the allocation while it is still the seeded one; a changed allocation stays the user's
+    useEffect(() => {
+        if (!fulfillOpen || !fulfillItem || !fulfillReq) return;
+        const next = refillAlloc(alloc, seedAlloc, fulfillItem.balances ?? [], fulfillReq.qty);
+        if (next) {
+            setAlloc(next);
+            setSeedAlloc(next);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fulfillItem]);
 
     const onError = (e: unknown) => {
         useToastStore.getState().push(stockRefusalText(e, t), 'error');

@@ -59,7 +59,9 @@ export function keySourceState(states: readonly { fetchStatus: string; status: s
 }
 
 /** The tab mark's slot: open while busy or done, closed at rest; it closes still showing the icon it last showed. */
-export function slotView(mark: RefreshMark, lastShown: 'busy' | 'done'): { open: boolean; icon: 'spin' | 'check' } {
-    const shown = mark === 'idle' ? lastShown : mark;
-    return { open: mark !== 'idle', icon: shown === 'done' ? 'check' : 'spin' };
+export function slotView(mark: RefreshMark, lastShown: 'busy' | 'done'): { open: boolean; icon: 'spin' | 'check' | null } {
+    if (mark === 'busy') return { open: true, icon: 'spin' };
+    if (mark === 'done') return { open: true, icon: 'check' };
+    // At rest no spinner runs hidden in the closed slot; a check fades out with it
+    return { open: false, icon: lastShown === 'done' ? 'check' : null };
 }
