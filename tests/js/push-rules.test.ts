@@ -1,7 +1,14 @@
 // Push on this device: the state a browser is in, when the bell invites, and who is resubscribed after signing in.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isIosDevice, pushState, shouldAutoResubscribe, showInvite, SNOOZE_MS } from '../../resources/js/modules/notification/lib/push-rules.ts';
+import {
+    isIosDevice,
+    pushDeliversHere,
+    pushState,
+    pushSyncStep,
+    showInvite,
+    SNOOZE_MS,
+} from '../../resources/js/modules/notification/lib/push-rules.ts';
 
 const NOW = new Date(2026, 9, 22, 12, 0).getTime();
 const base = { hasPushManager: true, isIos: false, standalone: false, permission: 'default' as NotificationPermission, subscribed: false };
@@ -37,13 +44,28 @@ test('the home screen invite shows on iPad Safari unless snoozed', () => {
 });
 test('an unsupported browser is never invited', () => assert.equal(showInvite('unsupported', 'default', null, NOW, null), false));
 
-test('the same person signing back in is resubscribed', () => assert.equal(shouldAutoResubscribe(true, 'granted', false), true));
-test('a different person on the same browser is not', () => assert.equal(shouldAutoResubscribe(false, 'granted', false), false));
-test('nobody is resubscribed without the permission', () => {
-    assert.equal(shouldAutoResubscribe(true, 'default', false), false);
-    assert.equal(shouldAutoResubscribe(true, 'denied', false), false);
+test('the same person signing back in is resubscribed', () => assert.equal(pushSyncStep(true, 'granted', false), 'subscribe'));
+test('a different person on the same browser is not', () => {
+    assert.equal(pushSyncStep(false, 'granted', false), 'none');
+    assert.equal(pushSyncStep(false, 'granted', true), 'none');
 });
-test('a browser already subscribed is left alone', () => assert.equal(shouldAutoResubscribe(true, 'granted', true), false));
+test('nobody is resubscribed without the permission', () => {
+    assert.equal(pushSyncStep(true, 'default', false), 'none');
+    assert.equal(pushSyncStep(true, 'denied', false), 'none');
+    assert.equal(pushSyncStep(true, 'denied', true), 'none');
+});
+test('a browser already subscribed for this person is confirmed with the server on each load', () =>
+    assert.equal(pushSyncStep(true, 'granted', true), 'confirm'));
+
+test('push counts as delivering here once the server confirmed it this session', () => assert.equal(pushDeliversHere('1', 'granted', true), true));
+test('a subscription the server has not confirmed does not count, so hidden tabs keep ringing', () =>
+    assert.equal(pushDeliversHere('1', 'granted', false), false));
+test('push never counts without this person turning it on or without the permission', () => {
+    assert.equal(pushDeliversHere(null, 'granted', true), false);
+    assert.equal(pushDeliversHere('0', 'granted', true), false);
+    assert.equal(pushDeliversHere('1', 'default', true), false);
+    assert.equal(pushDeliversHere('1', 'denied', true), false);
+});
 
 test('iPhone and iPad user agents are iOS', () => {
     assert.equal(isIosDevice('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', 5), true);

@@ -45,8 +45,8 @@ export {
 export { DeviceNotificationSettings } from './components/device-notification-settings';
 export { PushInviteRow } from './components/push-invite-row';
 export { usePushState, useServiceWorkerBridge } from './hooks/use-push';
-export { currentPushState, disablePush, enablePush, pushAnswer, resubscribeIfWanted, sendTestPush } from './lib/push-client';
-export { SNOOZE_MS, pushState, shouldAutoResubscribe, showInvite, type PushState } from './lib/push-rules';
+export { currentPushState, disablePush, enablePush, pushAnswer, pushDeliveredHere, resubscribeIfWanted, sendTestPush } from './lib/push-client';
+export { SNOOZE_MS, pushDeliversHere, pushState, pushSyncStep, showInvite, type PushState } from './lib/push-rules';
 
 // The groups a notification belongs to — shared by the tray's tabs and the Settings chips.
 export { NOTIFICATION_GROUPS, notificationGroupLabel } from './groups';

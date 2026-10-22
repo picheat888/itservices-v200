@@ -2,7 +2,7 @@
 // Every browser API is feature-checked and wrapped, so nothing here throws on a browser without push.
 import { queryClient } from '@/shared/lib/query-client';
 import { pushSubscriptionApi, type PushSubscriptionPayload } from '../api/notificationApi';
-import { isIosDevice, pushState, shouldAutoResubscribe, SNOOZE_MS, type PushState } from './push-rules';
+import { isIosDevice, pushDeliversHere, pushState, pushSyncStep, SNOOZE_MS, type PushState } from './push-rules';
 
 const SW_URL = '/sw.js';
 const READY_TIMEOUT_MS = 10_000;
@@ -13,6 +13,8 @@ const snoozeKey = (userId: number) => `itsd.pushInvite.snoozedUntil.${userId}`;
 const soundKey = (userId: number) => `itsd.sound.${userId}`;
 // Which person this browser's subscription was saved for
 const OWNER_KEY = 'itsd.push.owner';
+// The server took this browser's subscription for this person during this tab's session
+const confirmedKey = (userId: number) => `itsd.push.confirmed.${userId}`;
 
 function readItem(key: string): string | null {
     try {
@@ -29,6 +31,28 @@ function writeItem(key: string, value: string | null): void {
     } catch {
         // Storage blocked: the switch lasts for this page only
     }
+}
+
+function writeSessionItem(key: string, value: string | null): void {
+    try {
+        if (value === null) window.sessionStorage.removeItem(key);
+        else window.sessionStorage.setItem(key, value);
+    } catch {
+        // Storage blocked: push never counts as confirmed here, so hidden tabs keep ringing
+    }
+}
+
+function readSessionItem(key: string): string | null {
+    try {
+        return window.sessionStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+/** Push reaches this person on this browser: turned on, allowed, and saved on the server in this session. */
+export function pushDeliveredHere(userId: number): boolean {
+    return pushDeliversHere(pushAnswer(userId), notificationPermission(), readSessionItem(confirmedKey(userId)) === '1');
 }
 
 // Device sound switch
@@ -230,11 +254,13 @@ async function subscribeAndSave(userId: number): Promise<void> {
     try {
         await pushSubscriptionApi.subscribe(payloadOf(subscription));
     } catch (error) {
+        writeSessionItem(confirmedKey(userId), null);
         if (isNew) await subscription.unsubscribe().catch(() => false);
         throw error;
     }
     writeItem(OWNER_KEY, String(userId));
     writeItem(wantedKey(userId), '1');
+    writeSessionItem(confirmedKey(userId), '1');
 }
 
 async function askPermission(): Promise<NotificationPermission> {
@@ -261,6 +287,7 @@ export async function enablePush(userId: number): Promise<PushState> {
 
 /** Stops push on this browser; keepWanted lets the same person's next sign-in subscribe again. Never throws. */
 export async function disablePush(userId: number, opts: { keepWanted: boolean }): Promise<void> {
+    writeSessionItem(confirmedKey(userId), null);
     if (!opts.keepWanted) writeItem(wantedKey(userId), '0');
     const subscription = await currentSubscription();
     if (!subscription || !(await subscribedFor(userId))) return;
@@ -268,12 +295,12 @@ export async function disablePush(userId: number, opts: { keepWanted: boolean })
     writeItem(OWNER_KEY, null);
 }
 
-/** After sign-in: the person who had push on here gets it back without being asked again. Never throws. */
+/** On each load: the person who had push on here gets it back without being asked, and the server is re-sent the subscription. Never throws. */
 export async function resubscribeIfWanted(userId: number): Promise<void> {
     try {
         if (!hasPushManager()) return;
         const wanted = readItem(wantedKey(userId)) === '1';
-        if (!shouldAutoResubscribe(wanted, notificationPermission(), await subscribedFor(userId))) return;
+        if (pushSyncStep(wanted, notificationPermission(), await subscribedFor(userId)) === 'none') return;
         await subscribeAndSave(userId);
     } catch {
         // Tried again at the next sign-in or page load

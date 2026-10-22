@@ -6,6 +6,7 @@ import {
     claimRing,
     enteredBellIds,
     playNotificationSound,
+    pushDeliveredHere,
     shouldRingInPage,
     summaryLines,
     unlockSoundOnFirstGesture,
@@ -82,11 +83,6 @@ function readLastSeen(userId: number): number | null {
     return Number.isFinite(at) ? at : null;
 }
 
-function pushOnHere(userId: number): boolean {
-    if (typeof Notification === 'undefined') return false;
-    return readItem(`itsd.push.wanted.${userId}`) === '1' && Notification.permission === 'granted';
-}
-
 function tabVisible(): boolean {
     return document.visibilityState === 'visible';
 }
@@ -100,7 +96,7 @@ function localDay(ms: number): string {
 function ring(ringId: string, userId: number | null, sound: BellSound): void {
     if (userId === null || !sound.enabled) return;
     if (readItem(`itsd.sound.${userId}`) === 'off') return;
-    if (!shouldRingInPage(tabVisible(), pushOnHere(userId))) return;
+    if (!shouldRingInPage(tabVisible(), pushDeliveredHere(userId))) return;
     const store = deviceStorage();
     if (store && !claimRing(ringId, store, Date.now())) return;
     playNotificationSound(sound.key);

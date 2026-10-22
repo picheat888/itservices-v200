@@ -1,4 +1,4 @@
-// Push on this device: which state the browser is in, when the bell invites, and who is resubscribed on sign-in.
+// Push on this device: which state the browser is in, when the bell invites, who is resubscribed on load, and whether push reaches this tab.
 // Pure (no imports) so node tests can load it.
 
 export type PushState = 'on' | 'off' | 'blocked' | 'needs_home_screen' | 'unsupported';
@@ -38,8 +38,18 @@ export function showInvite(
     return state === 'off' && (permission === 'default' || permission === 'granted');
 }
 
-export function shouldAutoResubscribe(wantedByThisUser: boolean, permission: NotificationPermission, subscribed: boolean): boolean {
-    return wantedByThisUser && permission === 'granted' && !subscribed;
+export type PushSyncStep = 'subscribe' | 'confirm' | 'none';
+
+/** On each load: subscribe again, re-send the subscription this person already holds so the server keeps it, or leave it. */
+export function pushSyncStep(wantedByThisUser: boolean, permission: NotificationPermission, subscribed: boolean): PushSyncStep {
+    if (!wantedByThisUser || permission !== 'granted') return 'none';
+
+    return subscribed ? 'confirm' : 'subscribe';
+}
+
+/** Push reaches this person here only once the server confirmed this browser's subscription in this session. */
+export function pushDeliversHere(wantedByThisUser: '1' | '0' | null, permission: NotificationPermission, serverConfirmed: boolean): boolean {
+    return wantedByThisUser === '1' && permission === 'granted' && serverConfirmed;
 }
 
 /** iPhone and iPad; iPadOS Safari reports a Mac user agent, told apart by its touch points. */
