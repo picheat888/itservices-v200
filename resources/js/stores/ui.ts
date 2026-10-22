@@ -61,6 +61,8 @@ interface UiState {
     crumbTail: string | null;
     // Transient (not persisted): the catch-all page is showing, so no menu entry or crumb claims the address.
     pageMissing: boolean;
+    // Transient (not persisted): unread bells shown in the tab title; the signed-in shell sets it, 0 elsewhere
+    titleUnread: number;
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
@@ -78,6 +80,7 @@ interface UiState {
     setNarrowSidebarOpen: (open: boolean) => void;
     setCrumbTail: (label: string | null) => void;
     setPageMissing: (missing: boolean) => void;
+    setTitleUnread: (unread: number) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -98,6 +101,7 @@ export const useUiStore = create<UiState>()(
             narrowSidebarOpen: false,
             crumbTail: null,
             pageMissing: false,
+            titleUnread: 0,
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),
@@ -119,6 +123,7 @@ export const useUiStore = create<UiState>()(
             setNarrowSidebarOpen: (narrowSidebarOpen) => set({ narrowSidebarOpen }),
             setCrumbTail: (crumbTail) => set({ crumbTail }),
             setPageMissing: (pageMissing) => set({ pageMissing }),
+            setTitleUnread: (titleUnread) => set({ titleUnread }),
         }),
         {
             name: 'itservices-ui',

@@ -27,6 +27,7 @@ import { Topbar } from './topbar';
 import { useNotificationToasts } from './use-notification-toasts';
 import { usePushOpen } from './use-push-open';
 import { useSidebarStyle } from './use-sidebar-style';
+import { useUnreadInTitle } from './use-unread-in-title';
 
 const SHELL_DIALOGS = ['profile', 'password'] as const;
 const SHELL_DIALOG_COMPANIONS = [PROFILE_SECTION_PARAM];
@@ -90,6 +91,7 @@ export function AppShell() {
     // Inside the router: tapping a toast navigates
     useNotificationToasts(openChangePassword);
     usePushOpen();
+    useUnreadInTitle();
 
     return (
         <div
