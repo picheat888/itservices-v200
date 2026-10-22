@@ -1,7 +1,7 @@
 // requestTitle names the person a request is for in the reader's language.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { requestTitle } from '../../resources/js/shared/lib/request-meta.ts';
+import { requestTitle } from '../../resources/js/shared/lib/request-title.ts';
 
 const t = (key: string) => ({ req_auto_title_for: '{service} for {name}', req_computer: 'Computer' })[key] ?? key;
 

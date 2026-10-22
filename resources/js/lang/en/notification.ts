@@ -271,4 +271,9 @@ export const notification: Dict = {
     notification_empty_settings_filtered_hint: 'Try other words or pick all modules.',
     notification_empty_settings_none: 'No notifications yet',
     notification_empty_settings_none_hint: 'Notification types are created at install.',
+
+    // sw/sw.ts — กล่องแจ้งเตือนบนจอ (Web Push)
+    notification_push_more: 'and {n} more new notifications',
+    notification_push_test_title: 'Test notification',
+    notification_push_test_body: 'Notifications on this device are working',
 };

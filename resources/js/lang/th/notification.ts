@@ -271,4 +271,9 @@ export const notification: Dict = {
     notification_empty_settings_filtered_hint: 'ลองค้นด้วยคำอื่น หรือเลือกโมดูลทั้งหมด',
     notification_empty_settings_none: 'ยังไม่มีการแจ้งเตือน',
     notification_empty_settings_none_hint: 'ชนิดการแจ้งเตือนสร้างตอนติดตั้งระบบ',
+
+    // sw/sw.ts — กล่องแจ้งเตือนบนจอ (Web Push)
+    notification_push_more: 'และแจ้งเตือนใหม่อีก {n} รายการ',
+    notification_push_test_title: 'ทดสอบการแจ้งเตือน',
+    notification_push_test_body: 'การแจ้งเตือนบนเครื่องนี้ใช้งานได้',
 };

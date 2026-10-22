@@ -4,6 +4,9 @@
 /** The query params a page holds its own modal in (useListParams `view` / `add` / `edit`). */
 export const PAGE_DIALOG_PARAMS = ['view', 'add', 'edit'] as const;
 
+/** The My Profile drawer opened on its Assets section. */
+export const PROFILE_ASSETS_SEARCH = '?dialog=profile&section=assets';
+
 /** The current query with `params` set over it (other keys kept, in order), as a `?…` string or `''`. */
 export function mergeDialogSearch(currentSearch: string, params: Record<string, string>): string {
     const next = new URLSearchParams(currentSearch);

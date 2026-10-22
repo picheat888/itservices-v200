@@ -1,11 +1,9 @@
-import type { AppNotification } from '@/modules/notification';
-import { PROFILE_ASSETS_SEARCH } from '@/modules/profile';
+// Notification icons and tones, plus the bell text in the current UI language, for the bell dropdown and the toasts.
+import type { AppNotification, Translate } from '@/modules/notification';
+import { notificationMessage as notificationMessageIn, notificationTarget, notificationTitle as notificationTitleIn } from '@/modules/notification';
 import { dialogPushedState } from '@/shared/hooks/use-dialog-param';
 import { guardNavigation } from '@/shared/hooks/use-navigation-guard';
 import { resolveNotificationTarget } from '@/shared/lib/dialog-search';
-import { formatNumber } from '@/shared/lib/number';
-import { requestTitle } from '@/shared/lib/request-meta';
-import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import {
     ArrowRightLeft,
@@ -35,37 +33,8 @@ import {
 } from 'lucide-react';
 import type { NavigateFunction } from 'react-router-dom';
 
-/**
- * Shared presentation helpers for notifications, used by both the bell dropdown
- * and the pop-up toaster so the two always render the same icon, colour, title,
- * message, and navigation target for a given notification.
- */
+export { moduleOf, notificationTarget } from '@/modules/notification';
 
-const fmtN = (value: number): string => formatNumber(value, useUiStore.getState().lang);
-
-/** Translator signature (matches the function returned by useT). */
-type Translate = (key: string) => string;
-
-/** Maps a notification's data.type to the owning module tab id. */
-export function moduleOf(type: string, module?: string): string {
-    // A test row is a sample of some other notification; it belongs in that one's tab.
-    if (type === 'test') return module ?? 'employees';
-    if (type.startsWith('ticket')) return 'tickets';
-    if (type.startsWith('stock')) return 'stock';
-    if (type.startsWith('request')) return 'requests';
-    if (type.startsWith('asset')) return 'assets';
-    if (type.startsWith('contract')) return 'contracts';
-    if (type.startsWith('access')) return 'access';
-    // Notices about the account itself rather than about any business module.
-    if (type === 'password_expiring' || type === 'report_export' || type === 'report_schedule') return 'system';
-    return 'employees'; // new_employee + employee.*
-}
-
-/**
- * Icon + a distinct colour per notification kind so alerts are scannable at a
- * glance: contract expiry = amber (red once overdue), offboarding = red,
- * new-account = emerald, stock alerts and requests coloured by severity/status.
- */
 /** Each notification tone: the icon ink and its tinted circle (vivid on purpose; one place for the bell and the toasts). */
 export type NotificationTone = 'amber' | 'blue' | 'emerald' | 'red' | 'slate' | 'violet';
 
@@ -79,8 +48,7 @@ const TONE: Record<NotificationTone, { tone: NotificationTone; color: string; bg
 };
 
 export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone: NotificationTone; color: string; bg: string } {
-    // A sample sent from Settings. Violet is the one tone no real alert uses, so a test can
-    // never be mistaken for the thing it is imitating.
+    // A sample sent from Settings: violet, the one tone no real alert uses
     if (n.data.type === 'test') {
         return { Icon: FlaskConical, ...TONE.violet };
     }
@@ -106,13 +74,11 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone
         return { Icon: UserPlus, ...TONE.emerald };
     }
     if (n.data.type === 'ticket_owner') {
-        // Owner-facing case updates: closed = green check, cancelled = red cross,
-        // responsibility changes (taken / forwarded) = who has it now.
+        // Owner-facing case updates: closed, cancelled, or who has it now
         if (n.data.event === 'resolved') return { Icon: CheckCircle2, ...TONE.emerald };
         if (n.data.event === 'cancelled') return { Icon: XCircle, ...TONE.red };
         if (n.data.event === 'forwarded') return { Icon: ArrowRightLeft, ...TONE.violet };
-        // A progress note is news about the work, not about who holds it — amber, the tone
-        // the rest of the app uses for "still running".
+        // A progress note: amber, the app's "still running" tone
         if (n.data.event === 'updated') return { Icon: MessageSquare, ...TONE.amber };
         return { Icon: UserCheck, ...TONE.blue };
     }
@@ -130,24 +96,20 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone
         return { Icon: ClipboardList, ...TONE.blue };
     }
     if (n.data.type === 'request') {
-        // Service requests: action needed = amber, progress = blue, terminal good = green, bad = red.
-        // A request stuck for want of an account is an account job, not an approval one.
+        // Service requests: action needed = amber, progress = blue, good end = green, bad end = red
         if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, ...TONE.amber };
         if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled') return { Icon: XCircle, ...TONE.red };
         if (n.data.subtype === 'approved_final' || n.data.subtype === 'completed') return { Icon: CheckCircle2, ...TONE.emerald };
         if (n.data.subtype === 'waiting') return { Icon: Inbox, ...TONE.amber };
         // A step nobody has touched for days — the clock, not the inbox tray.
         if (n.data.subtype === 'stalled') return { Icon: Clock, ...TONE.amber };
-        // The queue bell is amber only while somebody there still has to press Complete. Once
-        // a case carries the delivery it is news, not a task — the case has its own bell.
+        // Amber only while somebody still has to press Complete; with a case it is news
         if (n.data.subtype === 'ready_to_complete') {
             return n.data.ticket_no ? { Icon: PackageCheck, ...TONE.blue } : { Icon: Inbox, ...TONE.amber };
         }
         return { Icon: Inbox, ...TONE.blue };
     }
-    // A deadline the reader still has time to beat — amber, like every other "act before
-    // this runs out" bell. Marked with the key, because it is about the password itself.
-    // A file the reader asked for: ready = emerald download, failed = red.
+    // A file the reader asked for: ready = emerald download, failed = red
     if (n.data.type === 'report_export') {
         return n.data.subtype === 'failed' ? { Icon: FileX, ...TONE.red } : { Icon: FileDown, ...TONE.emerald };
     }
@@ -164,195 +126,36 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone
     if (n.data.type === 'asset_return_requested') {
         return { Icon: Undo2, ...TONE.amber };
     }
-    // A leaver's whole kit in one bell — a job to do, so amber like the return request it
-    // replaces, but PackageMinus for "these are leaving your floor" rather than one send-back.
+    // A leaver's whole kit in one bell: a job to do
     if (n.data.type === 'asset_offboarding') {
         return { Icon: PackageMinus, ...TONE.amber };
     }
-    // A recall is news, never a task: the reader has nothing to press either way, so it
-    // wears slate rather than joining the amber "you owe someone something" bells.
+    // A recall is news, never a task: slate
     if (n.data.type === 'asset_recalled') {
         return { Icon: PackageX, ...TONE.slate };
     }
-    // Access left behind reads with the same urgency as the offboarding bell it arrives
-    // beside, but wears the shield the Access Directory uses for its governance rows.
+    // Access left behind: as urgent as the offboarding bell, with the Access Directory shield
     if (n.data.type === 'access_offboarding') {
         return { Icon: ShieldAlert, ...TONE.red };
     }
     if (n.data.subtype === 'offboarding') {
         return { Icon: UserMinus, ...TONE.red };
     }
-    // The same departure, read by someone who cannot act on it: still the leaving icon, but
-    // slate rather than red — nothing here is waiting on the reader.
+    // The same departure for someone who cannot act on it: slate
     if (n.data.subtype === 'departure') {
         return { Icon: UserMinus, ...TONE.slate };
     }
     return { Icon: UserPlus, ...TONE.emerald };
 }
 
-/** Headline line for a notification: tickets and requests lead with their number, the rest read "name (code)". */
+/** Headline line for a notification, in the current UI language. */
 export function notificationTitle(n: AppNotification, t: Translate): string {
-    // Named by the notification it samples, in the reader's own language.
-    if (n.data.type === 'test') {
-        return `${t('notif_test_prefix')} ${t(`notification_name_${(n.data.source_key ?? '').replace(/^notif_/, '')}`)}`;
-    }
-    if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
-    // Number first: long titles truncate, and the number is what people refer to.
-    if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} ${n.data.subject}`;
-    if (n.data.type === 'stock_alert') return `${n.data.name} (${n.data.sku})`;
-    if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
-    if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
-    if (n.data.type === 'request') {
-        const written = n.data.request_type
-            ? requestTitle(
-                  {
-                      type: n.data.request_type as ServiceRequestType,
-                      origin: (n.data.origin ?? 'direct') as ServiceRequest['origin'],
-                      requester: n.data.requester_name ? { name: n.data.requester_name, name_th: n.data.requester_name_th ?? null } : undefined,
-                  },
-                  t,
-                  useUiStore.getState().lang,
-              )
-            : // Older bells without a type: the stored title is all there is.
-              (n.data.title ?? '');
-
-        return `${n.data.reference} ${written}`;
-    }
-    if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested' || n.data.type === 'asset_recalled')
-        return `${n.data.asset_model} (${n.data.asset_tag})`;
-    // Nothing to name but the subject itself — the notice is about the reader's own account.
-    if (n.data.type === 'password_expiring') return t('notif_password_title');
-    // Named by the report, in the reader's language (rep_<stem>_title, as the Report Center lists it).
-    if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return t(`rep_${(n.data.report_key ?? '').replace('.', '_')}_title`);
-    return `${n.data.employee_name} (${n.data.employee_code})`;
+    return notificationTitleIn(n, t, useUiStore.getState().lang);
 }
 
-/**
- * Message key per service-request subtype (mirrors the subtypes
- * RequestNotificationService sends). Spelled out rather than composed from the
- * subtype so the keys stay greppable and an unrecognised subtype falls through
- * to nothing instead of printing its own key on screen.
- */
-const REQUEST_MESSAGE_KEY: Record<string, string> = {
-    submitted: 'notif_request_submitted',
-    waiting: 'notif_request_waiting',
-    // The morning reminder for a step nobody has acted on. Says how long, because
-    // "still waiting" repeated daily reads as the same bell arriving twice.
-    stalled: 'notif_request_stalled',
-    // The IT queue, which delivers rather than decides. Two readings of the same
-    // subtype: with a case open the work lives in the case and this bell only names
-    // it; without one, somebody here still has to press Complete.
-    ready_to_complete: 'notif_request_ready_manual',
-    approved_step: 'notif_request_approved_step',
-    approved_final: 'notif_request_approved_final',
-    rejected: 'notif_request_rejected',
-    completed: 'notif_request_completed',
-    not_delivered: 'notif_request_not_delivered',
-    cancelled: 'notif_request_cancelled',
-    cancelled_for_owner: 'notif_request_cancelled_for_owner',
-    // Goes to whoever can provision a login, not to a participant.
-    blocked_no_account: 'notif_request_blocked_no_account',
-};
-
-/** Secondary descriptive line for a notification, already localised. */
+/** Secondary descriptive line for a notification, in the current UI language. */
 export function notificationMessage(n: AppNotification, t: Translate): string {
-    // Rendered through the same translate the real one uses, so an administrator's override is
-    // what gets tested. Placeholders keep their braces: there is no request behind a sample to
-    // fill them from, and inventing values would test wording nobody will ever receive.
-    if (n.data.type === 'test') return t(n.data.source_key ?? '');
-    if (n.data.type === 'contract_expiring') {
-        return (n.data.days_remaining ?? 0) <= 0
-            ? t('notif_contract_expired').replaceAll('{days}', () => fmtN(Math.abs(n.data.days_remaining ?? 0)))
-            : t('notif_contract_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
-    }
-    if (n.data.type === 'password_expiring') return t('notif_password_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
-    if (n.data.type === 'report_schedule') return t('notif_report_schedule_failed');
-    if (n.data.type === 'report_export')
-        return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replaceAll('{format}', () =>
-            (n.data.format ?? '').toUpperCase(),
-        );
-    if (n.data.type === 'ticket_sla') return t(`notif_ticket_sla_${n.data.subtype}` as Parameters<Translate>[0]);
-    if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replaceAll('{from}', () => n.data.from ?? '—');
-    if (n.data.type === 'ticket_forwarded_away') return t('notif_ticket_forwarded_away').replaceAll('{to}', () => n.data.to ?? '—');
-    if (n.data.type === 'ticket_new') return t('notif_ticket_new');
-    if (n.data.type === 'ticket_assigned') return t('notif_ticket_assigned');
-    if (n.data.type === 'ticket_owner')
-        return t(`notif_ticket_owner_${n.data.event}` as Parameters<Translate>[0]).replaceAll('{name}', () => n.data.by ?? '—');
-    if (n.data.type === 'stock_alert') return t(`notif_stock_${n.data.subtype}` as Parameters<Translate>[0]);
-    if (n.data.type === 'stock_request') return t(`notif_stock_req_${n.data.subtype}` as Parameters<Translate>[0]);
-    if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
-    if (n.data.type === 'request') {
-        const key =
-            n.data.subtype === 'ready_to_complete' && n.data.ticket_no ? 'notif_request_ready_case' : REQUEST_MESSAGE_KEY[n.data.subtype ?? ''];
-        if (!key) return '';
-
-        // Say it is a new hire's request up front — an approver acting from the bell
-        // never sees the violet marking on the list.
-        const prefix = n.data.origin === 'onboarding' ? `${t('req_origin_onboarding')}: ` : '';
-
-        return (
-            prefix +
-            t(key)
-                .replaceAll('{step}', () => n.data.step_label ?? '—')
-                .replaceAll('{actor}', () => n.data.actor_name ?? '—')
-                .replaceAll('{remark}', () => n.data.remark ?? '')
-                .replaceAll('{ticket}', () => n.data.ticket_no ?? '—')
-                .replaceAll('{days}', () => fmtN(n.data.stalled_days ?? 0))
-        );
-    }
-    if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
-    if (n.data.type === 'asset_return_requested') return t('notif_asset_return_requested');
-    // Two different pieces of news wearing one type: a hand-over called off before it was
-    // accepted, or a device actually taken back out of someone's hands.
-    if (n.data.type === 'asset_recalled') {
-        return t(n.data.subtype === 'taken_back' ? 'notif_asset_recalled_taken_back' : 'notif_asset_recalled_cancelled');
-    }
-    // Names the count: "has assets to hand back" alone does not say whether this is one
-    // machine to collect or a trolley's worth.
-    if (n.data.type === 'asset_offboarding') {
-        return t('notif_asset_offboarding').replaceAll('{count}', () => fmtN(n.data.count ?? 0));
-    }
-    // Says how much is waiting and which kind, because "still holds access" alone does not
-    // tell the reader whether this is one revoke or an afternoon's work.
-    if (n.data.type === 'access_offboarding') {
-        return t('notif_access_offboarding')
-            .replaceAll('{grants}', () => fmtN(n.data.grants ?? 0))
-            .replaceAll('{owned}', () => fmtN(n.data.owned ?? 0))
-            .replaceAll('{total}', () => fmtN(n.data.total ?? 0));
-    }
-    if (n.data.subtype === 'offboarding') return t('notif_resigned');
-    if (n.data.subtype === 'departure') return t('notif_departure');
-
-    return t('notif_cred_required');
-}
-
-/** SPA route, or a `?…` query opened over the current page, a notification should open when clicked. */
-export function notificationTarget(n: AppNotification): string {
-    // Every ticket notification opens the case's detail drawer directly.
-    // Straight back to the tab it was sent from.
-    if (n.data.type === 'test') return '/email-notifications?tab=notification';
-    if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
-    // Asset hand-overs open the profile drawer's Assets tab; return requests go to the IT module.
-    if (n.data.type === 'asset_assigned') return PROFILE_ASSETS_SEARCH;
-    if (n.data.type === 'asset_return_requested') return '/assets';
-    // The reader's own asset list changed — open the profile drawer's Assets tab.
-    if (n.data.type === 'asset_recalled') return PROFILE_ASSETS_SEARCH;
-    if (n.data.type === 'asset_offboarding') return '/assets';
-    if (n.data.type === 'access_offboarding') return '/access';
-    // The file waits in "ไฟล์ส่งออกของฉัน" on the Report Center.
-    if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return '/reports';
-    const mod = moduleOf(n.data.type, n.data.module);
-    // The stuck-request bell asks for an account, so it opens the person who needs one
-    // rather than the request nobody can act on yet.
-    if (n.data.subtype === 'blocked_no_account' && n.data.employee_id) return `/employees?highlight=${n.data.employee_id}`;
-    if (mod === 'requests') return `/requests?view=${n.data.service_request_id}`;
-    if (mod === 'contracts') return `/contracts?view=${n.data.contract_id}`;
-    if (mod === 'stock') {
-        if (n.data.type === 'stock_request') return '/stock?tab=requests';
-        if (n.data.type === 'stock_count') return n.data.stock_count_id ? `/stock?tab=audit&count=${n.data.stock_count_id}` : '/stock?tab=audit';
-        return '/stock?tab=items';
-    }
-    return `/employees?highlight=${n.data.employee_id}`;
+    return notificationMessageIn(n, t, useUiStore.getState().lang);
 }
 
 /** Opens a notification's target: a path navigates, a `?…` target opens its dialog over the current page. */

@@ -14,6 +14,11 @@
             <link rel="icon" type="image/svg+xml" href="{{ asset('logo.svg') }}">
         @endif
 
+        {{-- Add to Home Screen (web push on iPad needs the installed app) --}}
+        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="apple-touch-icon" href="{{ $brand['logo_url'] ?: asset('logo.png') }}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+
         {{-- What the SPA's UI store starts from. JSON_HEX_TAG matters: a brand name is
              typed by an administrator, and inside a <script> block the usual HTML
              escaping does not apply — without it, a name containing </script> ends the

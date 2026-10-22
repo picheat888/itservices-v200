@@ -23,6 +23,9 @@ export type {
     NotificationsResponse,
 } from './api/notificationApi';
 
+// A bell's text and click target (pure; also built into the service worker).
+export { moduleOf, notificationMessage, notificationTarget, notificationTitle, type Translate } from './lib/notification-text';
+
 // The groups a notification belongs to — shared by the tray's tabs and the Settings chips.
 export { NOTIFICATION_GROUPS, notificationGroupLabel } from './groups';
 
