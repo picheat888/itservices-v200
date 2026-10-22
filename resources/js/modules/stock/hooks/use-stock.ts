@@ -1,4 +1,5 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
+import { FRESH_LIST, FRESH_VIEW } from '@/shared/lib/freshness';
 import type { StockCountAdjustMode } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,25 +28,31 @@ interface StockItemFilters {
 
 /** Full (filtered) item list for pickers/drawers — returns every matching item, not a page. */
 export const useStockItems = (filters: StockItemFilters, enabled = true) =>
-    useQuery({ queryKey: [...ITEMS, 'all', filters], queryFn: () => stockApi.list(filters), enabled });
+    useQuery({ queryKey: [...ITEMS, 'all', filters], queryFn: () => stockApi.list(filters), enabled, ...FRESH_LIST });
 
 /** Server-paginated item list for the Stock items table (page/sort/filters handled by the API). */
 export const useStockItemsPage = (params: StockItemPageParams, enabled = true) =>
-    useQuery({ queryKey: [...ITEMS, 'page', params], queryFn: () => stockApi.listPage(params), enabled, placeholderData: (prev) => prev });
+    useQuery({
+        queryKey: [...ITEMS, 'page', params],
+        queryFn: () => stockApi.listPage(params),
+        enabled,
+        placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
+    });
 
 /** Dashboard aggregates (KPIs, min/max alerts, breakdowns). */
-export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary, enabled });
+export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary, enabled, ...FRESH_VIEW });
 
 /** Every serial known to the system — used to flag duplicates while receiving. */
 export const useExistingSerials = (enabled = true) => useQuery({ queryKey: [...ITEMS, 'serials'], queryFn: stockApi.existingSerials, enabled });
 
 /** A single stock item with its per-unit serials (for the detail view). */
 export const useStockItem = (id: number | null) =>
-    useQuery({ queryKey: [...ITEMS, 'detail', id], queryFn: () => stockApi.get(id as number), enabled: id !== null });
+    useQuery({ queryKey: [...ITEMS, 'detail', id], queryFn: () => stockApi.get(id as number), enabled: id !== null, ...FRESH_VIEW });
 
 /** Full movement + serial-event history for one SKU (timeline / print view). */
 export const useStockItemHistory = (id: number | null) =>
-    useQuery({ queryKey: ['stock-item-history', id], queryFn: () => stockApi.history(id as number), enabled: id !== null });
+    useQuery({ queryKey: ['stock-item-history', id], queryFn: () => stockApi.history(id as number), enabled: id !== null, ...FRESH_VIEW });
 
 /** Create/update/delete mutations; invalidate both list and summary. */
 export function useStockItemMutations() {
@@ -68,11 +75,17 @@ export function useStockItemMutations() {
  * Pass enabled=false to skip the fetch (e.g. when the caller lacks view_events permission).
  */
 export const useStockMovements = (params: { type?: string; search?: string; page?: number; per_page?: number } = {}, enabled = true) =>
-    useQuery({ queryKey: [...MOVEMENTS, params], queryFn: () => stockMovementApi.list(params), enabled, placeholderData: (prev) => prev });
+    useQuery({
+        queryKey: [...MOVEMENTS, params],
+        queryFn: () => stockMovementApi.list(params),
+        enabled,
+        placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
+    });
 
 /** Serial codes tied to a single movement (for the movement detail dialog). */
 export const useMovementSerials = (id: number | null) =>
-    useQuery({ queryKey: [...MOVEMENTS, 'serials', id], queryFn: () => stockMovementApi.serials(id as number), enabled: id !== null });
+    useQuery({ queryKey: [...MOVEMENTS, 'serials', id], queryFn: () => stockMovementApi.serials(id as number), enabled: id !== null, ...FRESH_VIEW });
 
 /** Record a movement; refresh movements, items and summary (stock changed). */
 export function useRecordMovement() {
@@ -94,8 +107,7 @@ export const useStockRequests = (params: { page?: number; per_page?: number; sta
         queryFn: () => stockRequestApi.list(params),
         enabled,
         placeholderData: (prev) => prev,
-        // Keep results fresh for 30s so re-opening the tab shows the cached page without a refetch flash.
-        staleTime: 30_000,
+        ...FRESH_VIEW,
     });
 
 // The Stock sidebar badge (min/max alerts + outstanding requests + draft counts) now comes
@@ -125,11 +137,11 @@ export function useStockRequestActions() {
 
 /** Server-paginated stock-count sessions (newest first). meta carries the draft total. */
 export const useStockCounts = (params: { page?: number; per_page?: number } = {}, enabled = true) =>
-    useQuery({ queryKey: [...COUNTS, params], queryFn: () => stockCountApi.list(params), enabled, placeholderData: (prev) => prev });
+    useQuery({ queryKey: [...COUNTS, params], queryFn: () => stockCountApi.list(params), enabled, placeholderData: (prev) => prev, ...FRESH_VIEW });
 
 /** A single count session with its lines (for the count sheet). */
 export const useStockCount = (id: number | null) =>
-    useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null });
+    useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null, ...FRESH_VIEW });
 
 /** Count-session mutations (open / save / commit / cancel); refresh counts, items, movements, summary. */
 export function useStockCountMutations() {

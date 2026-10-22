@@ -65,6 +65,8 @@ const SITES: Site[] = [
     { file: 'modules/asset/components/asset-receive-modal.tsx', refresh: 1 },
     { file: 'modules/asset/components/asset-writeoff-dialog.tsx', refresh: 1, flagRemoved: 1 },
     { file: 'modules/asset/components/asset-transfer-dialog.tsx', refresh: 1, openRefetch: 1 },
+    { file: 'modules/stock/hooks/use-stock.ts', freshView: 9, freshList: 1 },
+    { file: 'modules/stock/pages/index.tsx', marks: 1, refresh: 2 },
 ];
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;

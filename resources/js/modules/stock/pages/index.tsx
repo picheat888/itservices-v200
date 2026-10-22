@@ -13,10 +13,13 @@ import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
+import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalName } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { refusalReason } from '@/shared/lib/api-errors';
 import { localPair, nameSearch } from '@/shared/lib/local-name';
@@ -48,7 +51,7 @@ import {
     Warehouse,
     X,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MovementDrawer, type MovementKind } from '../components/movement-drawer';
 import { RequestDrawer } from '../components/request-drawer';
@@ -220,17 +223,18 @@ export default function StockPage() {
     const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
 
-    const { data: summary, isError: summaryFailed, refetch: refetchSummary } = useStockSummary();
-    const { data: categories = [] } = useCategories();
-    const { data: warehouses = [] } = useWarehouses();
+    const summaryQuery = useStockSummary();
+    const { data: summary, isError: summaryFailed, refetch: refetchSummary } = summaryQuery;
+    const categoriesQuery = useCategories();
+    const warehousesQuery = useWarehouses();
+    const refreshCategories = useSelectRefresh(categoriesQuery);
+    const refreshWarehouses = useSelectRefresh(warehousesQuery);
+    const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+    const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
     // Server-side pagination for the Items table.
     const { page: itemsPage, perPage: itemsPerPage } = list;
 
-    const {
-        data: itemsPageData,
-        isLoading: itemsLoading,
-        isFetching: itemsFetching,
-    } = useStockItemsPage(
+    const itemsPageQuery = useStockItemsPage(
         {
             search: sentSearch || undefined,
             category: cat === 'all' ? undefined : cat,
@@ -242,6 +246,7 @@ export default function StockPage() {
         },
         tab === 'items',
     );
+    const { data: itemsPageData, isLoading: itemsLoading, isFetching: itemsFetching, isPlaceholderData: itemsPlaceholder } = itemsPageQuery;
     const items = itemsPageData?.data ?? [];
     const itemsTotal = itemsPageData?.meta.total ?? 0;
 
@@ -254,6 +259,18 @@ export default function StockPage() {
     // Outstanding counting work = draft (not-yet-committed) count sessions.
     const { data: countsPage } = useStockCounts({}, can('view_count'));
     const draftCounts = countsPage?.meta.draft ?? 0;
+
+    // Requests, audit and movements own their queries inside their tab components
+    const requestsFresh = useKeyFreshness(['stock-requests']);
+    const countsFresh = useKeyFreshness(['stock-counts']);
+    const movementsFresh = useKeyFreshness(['stock-movements']);
+    const marks = useTabFreshness(tab, {
+        overview: [summaryQuery],
+        items: [itemsPageQuery, summaryQuery],
+        requests: [requestsFresh],
+        audit: [countsFresh],
+        movements: [movementsFresh],
+    });
 
     const { remove } = useStockItemMutations();
 
@@ -518,7 +535,7 @@ export default function StockPage() {
 
             <Card className="overflow-clip">
                 {/* Outstanding work and stock alerts: red pills. */}
-                <PageTabs tabs={tabs.map((tb) => ({ ...tb, tone: 'alert' as const }))} active={tab} onChange={changeTab} />
+                <PageTabs tabs={tabs.map((tb) => ({ ...tb, tone: 'alert' as const, refresh: marks[tb.id] }))} active={tab} onChange={changeTab} />
 
                 <div className="p-5">
                     {tab === 'overview' && !summary && summaryFailed && <LoadFailedPanel onRetry={() => refetchSummary()} />}
@@ -566,6 +583,7 @@ export default function StockPage() {
                                                 </label>
                                                 <SearchableSelect
                                                     id={filterIds.cat}
+                                                    refresh={refreshCategories}
                                                     active={cat !== 'all'}
                                                     value={cat}
                                                     onChange={setCat}
@@ -590,6 +608,7 @@ export default function StockPage() {
                                                 </label>
                                                 <SearchableSelect
                                                     id={filterIds.wh}
+                                                    refresh={refreshWarehouses}
                                                     active={wh !== 'all'}
                                                     value={wh}
                                                     onChange={setWh}
@@ -740,7 +759,7 @@ export default function StockPage() {
                                 rows={items}
                                 rowKey={(i) => i.id}
                                 onRowClick={(i) => setViewId(i.id)}
-                                loading={itemsLoading || itemsFetching}
+                                loading={itemsLoading || (itemsFetching && itemsPlaceholder)}
                                 caption={t('stock_items_tab')}
                                 server={{ ...list.table.paging, total: itemsTotal }}
                                 empty={
