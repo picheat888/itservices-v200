@@ -4,7 +4,7 @@ import { UserAvatar } from '@/shared/components/user-avatar';
 import { usePresence } from '@/shared/hooks/use-presence';
 import type { SelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
-import { menuMinWidth, searchGetsFocus } from '@/shared/lib/select-menu';
+import { firstEnabled, menuMinWidth, searchGetsFocus, stepActive } from '@/shared/lib/select-menu';
 import { isRemovedValue, menuBody, nextActiveIndex, tabLeavesMenu } from '@/shared/lib/select-refresh';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -104,6 +104,10 @@ export function SearchableSelect({
     const t = useT();
     const listId = useId();
     const [open, setOpen] = useState(false);
+    // A control locked while its menu is open closes the menu
+    useEffect(() => {
+        if (disabled) setOpen(false);
+    }, [disabled]);
     const { mounted, closing } = usePresence(open);
     const [q, setQ] = useState('');
     // Keyboard-highlighted option; shown only after an arrow key so mouse use looks unchanged
@@ -127,6 +131,8 @@ export function SearchableSelect({
     const isAsync = onSearch !== undefined;
     const selected = options.find((o) => o.value === value) ?? (selectedOption?.value === value ? selectedOption : undefined);
     const filtered = q && !isAsync ? options.filter((o) => matchesAllWords(o.search, q)) : options;
+    // Rows that cannot be chosen, which the highlight and the arrow keys pass over
+    const offFlags = filtered.map((o) => !!o.disabled);
     // Reserve the leading icon slot on every row when at least one option supplies one,
     // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
     const hasIcons = options.some((o) => o.icon !== undefined);
@@ -326,7 +332,7 @@ export function SearchableSelect({
     }, [open, dialogEl]);
 
     const choose = (option: SearchOption) => {
-        if (option.disabled) {
+        if (option.disabled || disabled) {
             return;
         }
         onChange(option.value);
@@ -343,14 +349,17 @@ export function SearchableSelect({
                 return;
             }
             const step = e.key === 'ArrowDown' ? 1 : -1;
-            setActiveIndex((i) => (Math.min(i, filtered.length - 1) + step + filtered.length) % filtered.length);
+            setActiveIndex((i) => {
+                const next = stepActive(offFlags, Math.min(i, filtered.length - 1), step);
+                return next < 0 ? i : next;
+            });
             return;
         }
         if (e.key === 'Enter') {
             // Keep Enter inside the menu so dialogs that submit on Enter don't save mid-filter
             e.stopPropagation();
             e.preventDefault();
-            const option = filtered[Math.min(activeIndex, filtered.length - 1)];
+            const option = activeOption >= 0 ? filtered[activeOption] : undefined;
             if (option && !(isAsync && loading) && (keyboardNav || q)) {
                 choose(option);
             }
@@ -371,7 +380,7 @@ export function SearchableSelect({
         }
     };
 
-    const activeOption = keyboardNav || q ? Math.min(activeIndex, filtered.length - 1) : -1;
+    const activeOption = keyboardNav || q ? firstEnabled(offFlags, Math.min(activeIndex, filtered.length - 1)) : -1;
 
     // The menu body — shared between the inline and portaled wrappers.
     const menu = (

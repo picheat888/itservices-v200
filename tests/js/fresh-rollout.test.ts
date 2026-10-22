@@ -271,7 +271,7 @@ test('the groups tab watches the group list only, not member or candidate pages'
 test('the group dialog role list is a searchable list that keeps disabled roles and the locked state', () => {
     const select = read('shared/components/searchable-select.tsx');
     assert.equal(count(select, 'disabled?: boolean;'), 2);
-    assert.ok(select.includes('if (option.disabled)'));
+    assert.ok(select.includes('if (option.disabled || disabled)'));
     const dialog = read('modules/permission/components/group-role-dialog.tsx');
     assert.ok(!dialog.includes("from '@/shared/ui/select'"));
     assert.ok(dialog.includes('disabled={roleLocked}'));
@@ -337,4 +337,12 @@ test('the report hub asks for the Ticket & SLA overview only while its schedule 
 test('the asset list loads only on its own tab', () => {
     assert.ok(read('modules/asset/hooks/use-assets.ts').includes('enabled = true'));
     assert.ok(/useAssets\([\s\S]*?\},\s*tab === 'inventory',?\s*\)/.test(read('modules/asset/pages/index.tsx')));
+});
+
+test('a searchable list skips rows that cannot be chosen and closes when it is locked', () => {
+    const src = read('shared/components/searchable-select.tsx');
+    assert.ok(src.includes('stepActive(offFlags'));
+    assert.ok(src.includes('firstEnabled(offFlags'));
+    assert.ok(src.includes('if (disabled) setOpen(false);'));
+    assert.ok(src.includes('if (option.disabled || disabled)'));
 });
