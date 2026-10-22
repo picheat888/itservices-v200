@@ -366,3 +366,7 @@ test('a failed background refetch on an empty search still says no results', () 
     assert.ok(!read('modules/settings/components/network-names-section.tsx').includes('emptyState={isError ?'));
     assert.ok(read('modules/workflow/pages/index.tsx').includes('filtered.length === 0 && isError && !data && ('));
 });
+
+test('the tabular report names the part that actually failed', () => {
+    assert.ok(read('modules/report/components/tabular-report-view.tsx').includes('errorMessageFor(t, isError && !data ? error : headline.error)'));
+});

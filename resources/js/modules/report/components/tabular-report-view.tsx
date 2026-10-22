@@ -121,7 +121,7 @@ function TabularReportRows({
     }, [data, onTotalChange]);
 
     if ((isError && !data) || (headline.isError && !headline.data)) {
-        return <ErrorCard message={errorMessageFor(t, error ?? headline.error)} />;
+        return <ErrorCard message={errorMessageFor(t, isError && !data ? error : headline.error)} />;
     }
 
     const columns: Column<Record<string, unknown> & { id: number; _links?: Record<string, string> }>[] = visibleColumns.map((column) => ({
