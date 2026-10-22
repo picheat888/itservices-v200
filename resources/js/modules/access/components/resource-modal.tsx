@@ -25,7 +25,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Folder, Globe, Package, Users, type LucideIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAccessMutations } from '../hooks/use-access';
 import { LogoPicker } from './logo-picker';
 import { isFreeLicense, LICENSE_CARDS, LicenseTypePicker, ProductKeySection, SeatsField } from './software-form-sections';
@@ -236,17 +236,19 @@ export function ResourceModal({
     // Employee's department resolved to its short tag (abbreviation) for the option chip.
     const deptTag = useMemo(() => new Map(departments.map((d) => [d.id, d.tag])), [departments]);
 
+    // The row as the server last sent it, once the registry list has it
+    const live = row && fresh && fresh.id === row.id ? fresh : null;
+    const current = live ?? row;
     // Save stays disabled until something changes: the form against its base, plus the logo and key controls
     const initialStoreKey = useMemo(() => {
-        const sw = kind === 'software' ? (row as Software | null) : null;
+        const sw = kind === 'software' ? (current as Software | null) : null;
         const licence = sw?.license_type ?? 'subscription';
         return sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false);
-    }, [kind, row]);
+    }, [kind, current]);
     const isDirty = JSON.stringify(form) !== JSON.stringify(base) || logo !== null || removeLogo || storeKey !== initialStoreKey;
     const guardClose = useDiscardGuard(open && isDirty);
 
     // Seed once per opening, from the live row when it is already here
-    const live = row && fresh && fresh.id === row.id ? fresh : null;
     useSeedOnce(open ? `${kind}:${row?.id ?? 'new'}` : null, () => {
         const values = fromRow(kind, live ?? row);
         setForm(values);
@@ -258,20 +260,25 @@ export function ResourceModal({
         setCropSrc(null);
         setLogoError(null);
         // Key switch: on when a key is already stored, else follow the licence's default.
-        const sw = kind === 'software' ? (row as Software | null) : null;
-        const licence = sw?.license_type ?? 'subscription';
-        setStoreKey(sw ? !!sw.product_key : (LICENSE_CARDS.find((c) => c.value === licence)?.expectsKey ?? false));
+        setStoreKey(initialStoreKey);
     });
     useFormRebase({ fresh: open && live ? fromRow(kind, live) : null, base, setBase, setForm });
+    // An untouched key switch follows the stored key, like the other fields
+    const lastInitialStoreKey = useRef(initialStoreKey);
+    useEffect(() => {
+        const previous = lastInitialStoreKey.current;
+        lastInitialStoreKey.current = initialStoreKey;
+        setStoreKey((on) => (on === previous ? initialStoreKey : on));
+    }, [initialStoreKey]);
 
     // Kinds that carry an uploadable logo (software licences + social platforms).
     const hasLogo = kind === 'software' || kind === 'social-platforms';
     // Live preview: a freshly cropped file wins; otherwise the saved logo (unless removed).
     const logoPreview = useMemo(() => {
         if (logo) return URL.createObjectURL(logo);
-        if (!removeLogo && row && hasLogo) return (row as Software | SocialPlatform).logo_url ?? null;
+        if (!removeLogo && current && hasLogo) return (current as Software | SocialPlatform).logo_url ?? null;
         return null;
-    }, [logo, removeLogo, row, hasLogo]);
+    }, [logo, removeLogo, current, hasLogo]);
     useEffect(() => {
         return () => {
             if (logo && logoPreview) URL.revokeObjectURL(logoPreview);
@@ -352,7 +359,8 @@ export function ResourceModal({
     );
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
     // Licences already granted; an edited seat count may not go below this.
-    const seatsInUse = curKind === 'software' && curRow ? ((curRow as Software).seats_used ?? 0) : 0;
+    const seatsRow = open ? current : curRow;
+    const seatsInUse = curKind === 'software' && seatsRow ? ((seatsRow as Software).seats_used ?? 0) : 0;
     const seatsBelowUseMsg = t('access_err_seats_below_used').replaceAll('{n}', String(seatsInUse));
 
     // Basic email shape check for instant feedback (backend re-validates with the full rule).

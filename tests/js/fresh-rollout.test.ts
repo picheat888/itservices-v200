@@ -350,3 +350,10 @@ test('a searchable list skips rows that cannot be chosen and closes when it is l
 test('the ticket summary loads only on the overview tab', () => {
     assert.ok(read('modules/ticket/pages/index.tsx').includes("useTicketSummary(canOverview && tab === 'overview', range)"));
 });
+
+test('the access resource form reads seats in use, the key switch and the logo from the live row', () => {
+    const src = read('modules/access/components/resource-modal.tsx');
+    assert.ok(!src.includes('(curRow as Software).seats_used'), 'seats in use from the click-time row');
+    assert.ok(!src.includes('(row as Software | SocialPlatform).logo_url'), 'logo from the click-time row');
+    assert.ok(src.includes('const current = live ?? row;'));
+});
