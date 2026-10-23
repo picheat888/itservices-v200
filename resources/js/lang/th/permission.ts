@@ -355,7 +355,7 @@ export const permission: Dict = {
     'perm_desc_notifications.email_test': 'ส่งอีเมลทดสอบจริงเข้าที่อยู่ของตัวเอง',
     'perm_desc_notifications.inapp_edit': 'แก้ข้อความการแจ้งเตือนในระบบได้ทั้งสองภาษา หรือคืนค่ามาตรฐาน',
     'perm_desc_notifications.inapp_toggle': 'เปิด/ปิดการแจ้งเตือนในระบบ บางเหตุการณ์ไม่มีอีเมลรองรับ ปิดแล้วจะไม่มีใครรู้เลย',
-    'perm_desc_notifications.inapp_test': 'ส่งตัวอย่างการแจ้งเตือนเข้าถาดของตัวเอง',
+    'perm_desc_notifications.inapp_test': 'ส่งตัวอย่างการแจ้งเตือนเข้าถาดของตัวเอง และส่งแจ้งเตือนทดสอบมาที่เครื่องนี้จากโปรไฟล์',
     'perm_desc_notifications.logs': 'อ่านประวัติการส่งทุกฉบับและเหตุที่ข้ามไป รวมถึงผู้รับและเนื้อความ',
     'perm_act_system.view_audit': 'ดูบันทึกการตรวจสอบ',
     'perm_desc_system.view_audit':

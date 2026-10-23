@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Contract\Contract;
 use App\Models\Notification\NotificationTemplate;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Notifications\WebPushRelay;
@@ -163,7 +164,7 @@ class WebPushRelayTest extends TestCase
     public function test_the_test_button_pushes_only_to_the_callers_given_endpoint(): void
     {
         Queue::fake();
-        $user = User::factory()->create(['preferences' => ['lang' => 'th']]);
+        $user = $this->userAllowedTo(['notifications.module', 'notifications.inapp_test']);
         $other = User::factory()->create();
         $this->subscribe($user, 'https://push.example/mine');
         $this->subscribe($user, 'https://push.example/mine-too');
@@ -186,5 +187,28 @@ class WebPushRelayTest extends TestCase
             ->postJson('/api/push-subscriptions/test', ['endpoint' => 'https://push.example/theirs'])
             ->assertNotFound();
         $this->assertSame(1, $this->relayPushed());
+    }
+
+    public function test_the_test_button_needs_the_send_test_right(): void
+    {
+        Queue::fake();
+        $user = $this->userAllowedTo(['notifications.module']);
+        $this->subscribe($user, 'https://push.example/mine');
+
+        $this->actingAs($user)
+            ->postJson('/api/push-subscriptions/test', ['endpoint' => 'https://push.example/mine'])
+            ->assertForbidden();
+        $this->assertSame(0, $this->relayPushed());
+    }
+
+    /** @param  list<string>  $permissions */
+    private function userAllowedTo(array $permissions): User
+    {
+        $user = User::factory()->create(['role' => 'admin', 'preferences' => ['lang' => 'th']]);
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $user->role_id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return $user;
     }
 }

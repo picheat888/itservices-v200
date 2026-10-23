@@ -362,7 +362,7 @@ export const permission: Dict = {
     'perm_desc_notifications.inapp_edit': 'Reword an in-app notification in either language, or put it back to the standard wording.',
     'perm_desc_notifications.inapp_toggle':
         'Switch an in-app notification on or off. Some events have no email behind them, so switching one off can leave nobody told at all.',
-    'perm_desc_notifications.inapp_test': 'Send a sample notification to your own tray.',
+    'perm_desc_notifications.inapp_test': 'Send a sample notification to your own tray, and a test notification to this device from the profile.',
     'perm_desc_notifications.logs': 'Read every send and the reason one was skipped, including the recipient and the message body.',
     'perm_act_system.view_audit': 'View audit log',
     'perm_desc_system.view_audit':

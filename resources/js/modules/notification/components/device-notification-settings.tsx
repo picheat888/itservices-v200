@@ -1,5 +1,6 @@
-// My Profile, Notifications tab: this device's bell sound switch, its push switch with status, and a test push.
+// My Profile, Notifications tab: this device's bell sound switch, its push switch with status, and a test push for those allowed to send tests.
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -53,6 +54,7 @@ export function DeviceNotificationSettings({ userId }: { userId: number }) {
     const [soundOn, setSoundOn] = useState(() => deviceSoundOn(userId));
     const { state, setState } = usePushState(userId);
     const [switching, setSwitching] = useState(false);
+    const { can } = useAuth();
     const [testing, setTesting] = useState(false);
 
     const toggleSound = (next: boolean) => {
@@ -116,7 +118,7 @@ export function DeviceNotificationSettings({ userId }: { userId: number }) {
                 </DisabledReason>
             </SettingRow>
 
-            {state === 'on' && (
+            {state === 'on' && can('notifications.inapp_test') && (
                 <SettingRow title={t('notification_device_test')} text={t('notification_device_test_text')}>
                     <Button type="button" size="sm" variant="outline" className="h-9 px-3.5 text-[13px]" onClick={sendTest} disabled={testing}>
                         {testing && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />}
