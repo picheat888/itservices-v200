@@ -2,9 +2,10 @@ import { TabCount } from '@/shared/components/tab-count';
 import { TabBarStatus, TabRefreshMark } from '@/shared/components/tab-refresh-mark';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { RefreshMark } from '@/shared/lib/refresh-mark';
+import { revealTab, sideEdges, tabPage, type SideEdges } from '@/shared/lib/tab-scroll';
 import { cn } from '@/shared/lib/utils';
-import type { LucideIcon } from 'lucide-react';
-import { useId, useRef, type KeyboardEvent } from 'react';
+import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 
 export interface DialogTab<T extends string> {
     id: T;
@@ -22,7 +23,68 @@ export interface DialogTab<T extends string> {
 /** The DOM id DialogTabs gives a tab, for a panel's `aria-labelledby`. */
 export const dialogTabId = (panelId: string, id: string) => `${panelId}-tab-${id}`;
 
-/** Underline tab bar of the focus dialogs; a real tablist (arrows, Home, End) that scrolls sideways on a tablet. */
+const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+// Scrolls the bar itself only, never the dialog
+function revealActiveTab(list: HTMLElement, smooth: boolean) {
+    const tab = list.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!tab) return;
+    const box = list.getBoundingClientRect();
+    const rect = tab.getBoundingClientRect();
+    const now = sideEdges(list.scrollLeft, list.clientWidth, list.scrollWidth);
+    const delta = revealTab({ left: rect.left, right: rect.right }, { left: box.left, right: box.right }, now);
+    if (delta !== 0) list.scrollBy({ left: delta, behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto' });
+}
+
+/** Which ends of a sideways tab bar hide tabs; keeps the active tab in view when it changes or the bar narrows. */
+function useTabBarEdges(listRef: RefObject<HTMLDivElement | null>, activeKey: string) {
+    const [edges, setEdges] = useState<SideEdges>({ before: false, after: false });
+    const moved = useRef(false);
+
+    useEffect(() => {
+        const list = listRef.current;
+        if (!list) return;
+        let width = list.clientWidth;
+        const measure = () => {
+            const next = sideEdges(list.scrollLeft, list.clientWidth, list.scrollWidth);
+            setEdges((prev) => (prev.before === next.before && prev.after === next.after ? prev : next));
+        };
+        // A rotated iPad or a narrower dialog can push the active tab out of view
+        const resized = () => {
+            if (list.clientWidth !== width) {
+                width = list.clientWidth;
+                revealActiveTab(list, false);
+            }
+            measure();
+        };
+        measure();
+        list.addEventListener('scroll', measure, { passive: true });
+        // Counts arriving later widen the tabs
+        const observer = new ResizeObserver(resized);
+        observer.observe(list);
+        for (const tab of Array.from(list.children)) observer.observe(tab);
+        return () => {
+            list.removeEventListener('scroll', measure);
+            observer.disconnect();
+        };
+    }, [listRef]);
+
+    useEffect(() => {
+        const list = listRef.current;
+        if (!list) return;
+        revealActiveTab(list, moved.current);
+        moved.current = true;
+    }, [listRef, activeKey]);
+
+    const page = (direction: 1 | -1) => {
+        const list = listRef.current;
+        if (list) list.scrollBy({ left: direction * tabPage(list.clientWidth), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    };
+
+    return { edges, page };
+}
+
+/** Underline tab bar of the focus dialogs; a real tablist (arrows, Home, End) that scrolls sideways with end fades and ‹ › page buttons when it does not fit. */
 export function DialogTabs<T extends string>({
     tabs,
     active,
@@ -46,6 +108,7 @@ export function DialogTabs<T extends string>({
     const fallbackId = useId();
     const base = panelId ?? fallbackId;
     const listRef = useRef<HTMLDivElement>(null);
+    const { edges, page } = useTabBarEdges(listRef, `${active}|${tabs.length}`);
 
     // Arrow / Home / End move between tabs (WAI-ARIA tabs pattern)
     const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
@@ -67,51 +130,88 @@ export function DialogTabs<T extends string>({
     return (
         <>
             {hasMarks && <TabBarStatus marks={tabs.map((tb) => tb.refresh)} />}
-            <div
-                ref={listRef}
-                role="tablist"
-                aria-label={label}
-                className={cn('border-border/60 flex shrink-0 gap-1 overflow-x-auto border-b [scrollbar-width:thin]', className)}
-            >
-                {tabs.map((tb) => {
-                    const selected = active === tb.id;
-                    return (
-                        <button
-                            key={tb.id}
-                            id={dialogTabId(base, tb.id)}
-                            type="button"
-                            role="tab"
-                            aria-selected={selected}
-                            aria-controls={panelId}
-                            tabIndex={selected ? 0 : -1}
-                            onClick={() => onChange(tb.id)}
-                            onKeyDown={onKeyDown}
-                            className={cn(
-                                'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
-                                selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                            )}
-                        >
-                            {/* Icons show from lg up */}
-                            {tb.icon && <tb.icon className="hidden h-4 w-4 shrink-0 lg:block" aria-hidden="true" />}
-                            {tb.label}
-                            <TabCount
-                                count={tb.count}
-                                visible={(tb.count != null && tb.count > 0) || !!tb.dot}
+            <div className="relative shrink-0">
+                <div
+                    ref={listRef}
+                    role="tablist"
+                    aria-label={label}
+                    className={cn(
+                        'border-border/60 flex shrink-0 gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                        className,
+                    )}
+                >
+                    {tabs.map((tb) => {
+                        const selected = active === tb.id;
+                        return (
+                            <button
+                                key={tb.id}
+                                id={dialogTabId(base, tb.id)}
+                                type="button"
+                                role="tab"
+                                aria-selected={selected}
+                                aria-controls={panelId}
+                                tabIndex={selected ? 0 : -1}
+                                onClick={() => onChange(tb.id)}
+                                onKeyDown={onKeyDown}
                                 className={cn(
-                                    'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
-                                    selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
+                                    'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset lg:px-4',
+                                    selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                                 )}
                             >
-                                {tb.count != null && tb.count > 0 && fmtN(tb.count)}
-                                {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                            </TabCount>
-                            {/* Underline inside the scrolling bar */}
-                            {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
-                            {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
-                        </button>
-                    );
-                })}
+                                {/* Icons show from lg up */}
+                                {tb.icon && <tb.icon className="hidden h-4 w-4 shrink-0 lg:block" aria-hidden="true" />}
+                                {tb.label}
+                                <TabCount
+                                    count={tb.count}
+                                    visible={(tb.count != null && tb.count > 0) || !!tb.dot}
+                                    className={cn(
+                                        'bg-accent inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px]',
+                                        selected ? 'text-brand-ink' : 'text-foreground/65 dark:text-muted-foreground',
+                                    )}
+                                >
+                                    {tb.count != null && tb.count > 0 && fmtN(tb.count)}
+                                    {tb.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                                </TabCount>
+                                {/* Underline inside the scrolling bar */}
+                                {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
+                                {tb.refresh !== undefined && <TabRefreshMark mark={tb.refresh} />}
+                            </button>
+                        );
+                    })}
+                </div>
+                <TabBarEdge side="before" shown={edges.before} onPage={() => page(-1)} />
+                <TabBarEdge side="after" shown={edges.after} onPage={() => page(1)} />
             </div>
+        </>
+    );
+}
+
+/** End fade with a ‹ or › page button, shown while that end hides tabs; the keyboard already scrolls the bar, so the button takes no focus. */
+function TabBarEdge({ side, shown, onPage }: { side: 'before' | 'after'; shown: boolean; onPage: () => void }) {
+    const Icon = side === 'before' ? ChevronLeft : ChevronRight;
+    return (
+        <>
+            <span
+                aria-hidden="true"
+                className={cn(
+                    'from-background to-background/0 pointer-events-none absolute top-0 bottom-px w-14 from-45% transition-opacity duration-150 motion-reduce:transition-none',
+                    side === 'before' ? 'left-0 bg-linear-to-r' : 'right-0 bg-linear-to-l',
+                    shown ? 'opacity-100' : 'opacity-0',
+                )}
+            />
+            <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={onPage}
+                className={cn(
+                    'text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-opacity duration-150 motion-reduce:transition-none',
+                    side === 'before' ? 'left-1' : 'right-1',
+                    shown ? 'opacity-100' : 'pointer-events-none opacity-0',
+                )}
+            >
+                <Icon className="h-4 w-4" />
+            </button>
         </>
     );
 }
