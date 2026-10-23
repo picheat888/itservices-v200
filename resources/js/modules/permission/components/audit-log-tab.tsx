@@ -268,7 +268,7 @@ export function AuditLogTab() {
             width: '132px',
             render: (l) => (
                 <span className="text-muted-foreground block truncate text-xs whitespace-nowrap" title={fmt.dateTime(l.created_at)}>
-                    {auditAgo(l.created_at, lang, fmt.dateTime(l.created_at))}
+                    {l.created_at_iso ? auditAgo(l.created_at_iso, lang, fmt.dateTime(l.created_at)) : fmt.dateTime(l.created_at)}
                 </span>
             ),
         },

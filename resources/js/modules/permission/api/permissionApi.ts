@@ -66,7 +66,10 @@ export interface AuditEntry {
     /** Morph alias or class name of the record the entry is about. */
     subject_type: string | null;
     details: AuditDetails | null;
+    /** Wall-clock "YYYY-MM-DD HH:mm" to show. */
     created_at: string;
+    /** The same moment as an ISO instant, for "x minutes ago". */
+    created_at_iso: string | null;
 }
 
 export interface RoleMember {

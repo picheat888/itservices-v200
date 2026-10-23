@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Support\SearchTerms;
+use App\Support\SystemTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,8 +72,15 @@ class AuditLogController extends Controller
 
         $paginator = $query->paginate($perPage, ['id', 'user_name', 'action', 'target', 'subject_type', 'details', 'created_at']);
 
+        // Wall-clock time to show, and the instant for "x minutes ago"
+        $rows = $paginator->getCollection()->map(fn (AuditLog $log) => [
+            ...$log->toArray(),
+            'created_at' => SystemTime::dateTime($log->created_at),
+            'created_at_iso' => $log->created_at?->toIso8601String(),
+        ]);
+
         return response()->json([
-            'data' => $paginator->items(),
+            'data' => $rows,
             'meta' => [
                 'total' => $paginator->total(),
                 'per_page' => $paginator->perPage(),
