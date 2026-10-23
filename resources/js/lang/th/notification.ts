@@ -296,8 +296,6 @@ export const notification: Dict = {
     notification_device_sound_text: 'ดังเมื่อมีแจ้งเตือนใหม่ระหว่างเปิดระบบ มีผลเฉพาะเครื่องนี้',
     notification_device_push: 'แจ้งเตือนบนเครื่องนี้',
     notification_device_push_text: 'ขึ้นบนจอแม้ไม่ได้เปิดระบบอยู่ มีผลเฉพาะเครื่องนี้',
-    notification_device_state_on: 'เปิดอยู่',
-    notification_device_state_off: 'ยังไม่เปิด',
     notification_device_state_blocked: 'เบราว์เซอร์บล็อกไว้',
     notification_device_state_needs_home_screen: 'ต้องเปิดจากหน้าจอโฮม',
     notification_device_state_unsupported: 'เบราว์เซอร์นี้ไม่รองรับ',

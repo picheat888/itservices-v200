@@ -296,8 +296,6 @@ export const notification: Dict = {
     notification_device_sound_text: 'Plays when a new notification arrives while the system is open. This device only.',
     notification_device_push: 'Notifications on this device',
     notification_device_push_text: 'Shown on screen even when the system is not open. This device only.',
-    notification_device_state_on: 'On',
-    notification_device_state_off: 'Off',
     notification_device_state_blocked: 'Blocked by the browser',
     notification_device_state_needs_home_screen: 'Needs the Home Screen app',
     notification_device_state_unsupported: 'Not supported by this browser',

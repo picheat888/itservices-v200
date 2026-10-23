@@ -2,7 +2,6 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { DisabledReason } from '@/shared/components/disabled-reason';
-import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
@@ -12,19 +11,21 @@ import { usePushState } from '../hooks/use-push';
 import { deviceSoundOn, disablePush, enablePush, sendTestPush, setDeviceSound } from '../lib/push-client';
 import type { PushState } from '../lib/push-rules';
 
-const STATE_TONE: Record<PushState, string> = {
-    on: 'text-emerald-700 dark:text-emerald-400',
-    off: 'text-amber-700 dark:text-amber-400',
+// States where the switch cannot be used: the row text leads with the state in its colour
+type ProblemState = Exclude<PushState, 'on' | 'off'>;
+
+const PROBLEM_TONE: Record<ProblemState, string> = {
     blocked: 'text-red-700 dark:text-red-400',
     needs_home_screen: 'text-amber-700 dark:text-amber-400',
     unsupported: 'text-muted-foreground',
 };
 
-// The row text when the switch cannot be used here
-const STATE_TEXT: Partial<Record<PushState, string>> = {
+const PROBLEM_TEXT: Partial<Record<ProblemState, string>> = {
     blocked: 'notification_device_blocked_text',
     needs_home_screen: 'notification_device_home_text',
 };
+
+const isProblem = (state: PushState | null | undefined): state is ProblemState => state != null && state !== 'on' && state !== 'off';
 
 function SettingRow({ title, text, children }: { title: string; text: React.ReactNode; children: React.ReactNode }) {
     return (
@@ -38,13 +39,16 @@ function SettingRow({ title, text, children }: { title: string; text: React.Reac
     );
 }
 
-function PushStatus({ state }: { state: PushState }) {
+// On and off need no words: the switch shows them
+function PushText({ state }: { state: PushState | null | undefined }) {
     const t = useT();
+    if (!isProblem(state)) return <p>{t('notification_device_push_text')}</p>;
+    const explanation = PROBLEM_TEXT[state];
 
     return (
-        <p className={cn('mt-1.5 flex items-center gap-1.5 text-xs', STATE_TONE[state])}>
-            <span className="h-[7px] w-[7px] rounded-full bg-current" aria-hidden />
+        <p className={PROBLEM_TONE[state]}>
             {t(`notification_device_state_${state}`)}
+            {explanation && ` ${t(explanation)}`}
         </p>
     );
 }
@@ -91,7 +95,6 @@ export function DeviceNotificationSettings({ userId }: { userId: number }) {
     };
 
     const usable = state === 'on' || state === 'off';
-    const pushText = state ? STATE_TEXT[state] : undefined;
 
     return (
         <div className="bg-card border-border divide-border/60 divide-y rounded-xl border">
@@ -99,16 +102,8 @@ export function DeviceNotificationSettings({ userId }: { userId: number }) {
                 <Switch checked={soundOn} onChange={toggleSound} aria-label={t('notification_device_sound')} />
             </SettingRow>
 
-            <SettingRow
-                title={t('notification_device_push')}
-                text={
-                    <>
-                        <p>{t(pushText ?? 'notification_device_push_text')}</p>
-                        {state && <PushStatus state={state} />}
-                    </>
-                }
-            >
-                <DisabledReason reason={state && !usable ? t(`notification_device_state_${state}`) : null} label={t('notification_device_push')}>
+            <SettingRow title={t('notification_device_push')} text={<PushText state={state} />}>
+                <DisabledReason reason={isProblem(state) ? t(`notification_device_state_${state}`) : null} label={t('notification_device_push')}>
                     <Switch
                         checked={state === 'on'}
                         onChange={togglePush}
