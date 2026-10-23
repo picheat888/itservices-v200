@@ -27,6 +27,32 @@ const holds = (keys: string[]) => (key: string) => keys.includes(key);
 // Every card's count spec, frozen as literals (today's counting and cascade)
 const SPECS: Record<string, CountSpec> = {
     dashboard: { free: ['dashboard.view_it', 'dashboard.view_requests', 'dashboard.view_contracts', 'dashboard.view_hr', 'dashboard.view_activity'] },
+    employees: {
+        master: 'employees.module',
+        groups: [
+            { view: 'employees.view_dashboard', children: [] },
+            { view: 'employees.view_org', children: [] },
+            {
+                view: 'employees.view',
+                children: [
+                    'employees.add',
+                    'employees.import',
+                    'employees.edit',
+                    'employees.reset_password',
+                    'employees.resign',
+                    'employees.cancel_resign',
+                    'employees.set_credentials',
+                    'employees.delete',
+                ],
+            },
+            { view: 'employees.view_section', children: ['employees.section_add', 'employees.section_edit', 'employees.section_delete'] },
+            { view: 'employees.view_department', children: ['employees.department_add', 'employees.department_edit', 'employees.department_delete'] },
+            {
+                view: 'employees.view_position',
+                children: ['employees.position_add', 'employees.position_edit', 'employees.position_delete', 'employees.position_special'],
+            },
+        ],
+    },
     tickets: {
         master: 'tickets.module',
         groups: [
@@ -72,6 +98,16 @@ const SPECS: Record<string, CountSpec> = {
         ],
         gated: ['requests.notify_approved', 'requests.notify_stalled'],
     },
+    access: {
+        master: 'access.module',
+        groups: [
+            { view: 'access.overview', children: [] },
+            { view: 'access.email_view', children: ['access.email_add', 'access.email_edit', 'access.email_delete'] },
+            { view: 'access.file_view', children: ['access.file_add', 'access.file_edit', 'access.file_delete'] },
+            { view: 'access.social_view', children: ['access.social_add', 'access.social_edit', 'access.social_delete'] },
+            { view: 'access.software_view', children: ['access.software_add', 'access.software_edit', 'access.software_delete'] },
+        ],
+    },
     assets: {
         master: 'assets.module',
         groups: [
@@ -98,42 +134,6 @@ const SPECS: Record<string, CountSpec> = {
             { view: 'stock.view_events', children: [] },
             { view: 'stock.view', children: ['stock.manage_items', 'stock.delete', 'stock.receive', 'stock.return', 'stock.transfer'] },
             { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-        ],
-    },
-    employees: {
-        master: 'employees.module',
-        groups: [
-            { view: 'employees.view_dashboard', children: [] },
-            { view: 'employees.view_org', children: [] },
-            {
-                view: 'employees.view',
-                children: [
-                    'employees.add',
-                    'employees.import',
-                    'employees.edit',
-                    'employees.reset_password',
-                    'employees.resign',
-                    'employees.cancel_resign',
-                    'employees.set_credentials',
-                    'employees.delete',
-                ],
-            },
-            { view: 'employees.view_section', children: ['employees.section_add', 'employees.section_edit', 'employees.section_delete'] },
-            { view: 'employees.view_department', children: ['employees.department_add', 'employees.department_edit', 'employees.department_delete'] },
-            {
-                view: 'employees.view_position',
-                children: ['employees.position_add', 'employees.position_edit', 'employees.position_delete', 'employees.position_special'],
-            },
-        ],
-    },
-    access: {
-        master: 'access.module',
-        groups: [
-            { view: 'access.overview', children: [] },
-            { view: 'access.email_view', children: ['access.email_add', 'access.email_edit', 'access.email_delete'] },
-            { view: 'access.file_view', children: ['access.file_add', 'access.file_edit', 'access.file_delete'] },
-            { view: 'access.social_view', children: ['access.social_add', 'access.social_edit', 'access.social_delete'] },
-            { view: 'access.software_view', children: ['access.software_add', 'access.software_edit', 'access.software_delete'] },
         ],
     },
     profile: { free: ['profile.edit', 'profile.return_assets'] },
@@ -252,7 +252,7 @@ test('an unknown catalogue module becomes a plain Other card', () => {
     const sections = cardSections(cards).map((s) => [s.label, s.cards.map((c) => c.module)]);
     assert.deepEqual(sections, [
         ['nav_overview', ['dashboard']],
-        ['nav_workspace', ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access', 'profile']],
+        ['nav_workspace', ['employees', 'tickets', 'requests', 'access', 'assets', 'contracts', 'stock', 'profile']],
         ['nav_admin', ['reports', 'workflows', 'permissions', 'notifications', 'settings']],
         ['perm_other', ['backup']],
     ]);

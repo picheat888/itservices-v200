@@ -33,6 +33,7 @@ class PermissionLayout
 
         return [
             self::card('dashboard', null, [self::plain(self::moduleKeys('dashboard'), true)]),
+            self::treeCard('employees', Permissions::employeeHierarchy()),
             self::card('tickets', ['tickets.module', null], [
                 self::general($ticketGeneral),
                 self::group('tickets.view_all', $ticketGroups['tickets.view_all']),
@@ -54,11 +55,10 @@ class PermissionLayout
                 self::group('requests.view_all', $requests['requests.view_all'], ['chip' => false]),
                 self::set('perm_ui_notifications', 'perm_ui_request_notify_hint', ['requests.notify_approved', 'requests.notify_stalled']),
             ]),
+            self::treeCard('access', Permissions::accessHierarchy()),
             self::treeCard('assets', Permissions::assetHierarchy(), ['assets.manage', 'assets.special']),
             self::treeCard('contracts', Permissions::contractHierarchy(), ['contracts.view_lifecycle']),
             self::treeCard('stock', Permissions::stockHierarchy()),
-            self::treeCard('employees', Permissions::employeeHierarchy()),
-            self::treeCard('access', Permissions::accessHierarchy()),
             self::card('profile', null, [self::plain(self::moduleKeys('profile'), false)], 'perm_ui_self_service_all'),
             self::card('reports', ['reports.module', null], [
                 self::set('perm_ui_group_report_domains', null, $reportDomains),

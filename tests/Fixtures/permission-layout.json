@@ -18,6 +18,89 @@
         ]
     },
     {
+        "module": "employees",
+        "master": {
+            "key": "employees.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "employees.view_dashboard",
+                    "employees.view_org"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "employees.view",
+                "children": [
+                    "employees.add",
+                    "employees.import",
+                    "employees.edit",
+                    "employees.reset_password",
+                    "employees.resign",
+                    "employees.cancel_resign",
+                    "employees.set_credentials",
+                    "employees.delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "employees.view_section",
+                "children": [
+                    "employees.section_add",
+                    "employees.section_edit",
+                    "employees.section_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "employees.view_department",
+                "children": [
+                    "employees.department_add",
+                    "employees.department_edit",
+                    "employees.department_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "employees.view_position",
+                "children": [
+                    "employees.position_add",
+                    "employees.position_edit",
+                    "employees.position_delete",
+                    "employees.position_special"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            }
+        ]
+    },
+    {
         "module": "tickets",
         "master": {
             "key": "tickets.module",
@@ -141,6 +224,82 @@
                     "requests.notify_approved",
                     "requests.notify_stalled"
                 ]
+            }
+        ]
+    },
+    {
+        "module": "access",
+        "master": {
+            "key": "access.module",
+            "sub": null
+        },
+        "note": null,
+        "cells": [
+            {
+                "kind": "general",
+                "keys": [
+                    "access.overview"
+                ]
+            },
+            {
+                "kind": "group",
+                "view": "access.email_view",
+                "children": [
+                    "access.email_add",
+                    "access.email_edit",
+                    "access.email_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "access.file_view",
+                "children": [
+                    "access.file_add",
+                    "access.file_edit",
+                    "access.file_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "access.social_view",
+                "children": [
+                    "access.social_add",
+                    "access.social_edit",
+                    "access.social_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
+            },
+            {
+                "kind": "group",
+                "view": "access.software_view",
+                "children": [
+                    "access.software_add",
+                    "access.software_edit",
+                    "access.software_delete"
+                ],
+                "chip": true,
+                "outside_master": false,
+                "cluster": null,
+                "fill_on_grant": false,
+                "note": null,
+                "solo": []
             }
         ]
     },
@@ -291,165 +450,6 @@
                     "stock.request",
                     "stock.approve",
                     "stock.fulfill"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            }
-        ]
-    },
-    {
-        "module": "employees",
-        "master": {
-            "key": "employees.module",
-            "sub": null
-        },
-        "note": null,
-        "cells": [
-            {
-                "kind": "general",
-                "keys": [
-                    "employees.view_dashboard",
-                    "employees.view_org"
-                ]
-            },
-            {
-                "kind": "group",
-                "view": "employees.view",
-                "children": [
-                    "employees.add",
-                    "employees.import",
-                    "employees.edit",
-                    "employees.reset_password",
-                    "employees.resign",
-                    "employees.cancel_resign",
-                    "employees.set_credentials",
-                    "employees.delete"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            },
-            {
-                "kind": "group",
-                "view": "employees.view_section",
-                "children": [
-                    "employees.section_add",
-                    "employees.section_edit",
-                    "employees.section_delete"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            },
-            {
-                "kind": "group",
-                "view": "employees.view_department",
-                "children": [
-                    "employees.department_add",
-                    "employees.department_edit",
-                    "employees.department_delete"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            },
-            {
-                "kind": "group",
-                "view": "employees.view_position",
-                "children": [
-                    "employees.position_add",
-                    "employees.position_edit",
-                    "employees.position_delete",
-                    "employees.position_special"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            }
-        ]
-    },
-    {
-        "module": "access",
-        "master": {
-            "key": "access.module",
-            "sub": null
-        },
-        "note": null,
-        "cells": [
-            {
-                "kind": "general",
-                "keys": [
-                    "access.overview"
-                ]
-            },
-            {
-                "kind": "group",
-                "view": "access.email_view",
-                "children": [
-                    "access.email_add",
-                    "access.email_edit",
-                    "access.email_delete"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            },
-            {
-                "kind": "group",
-                "view": "access.file_view",
-                "children": [
-                    "access.file_add",
-                    "access.file_edit",
-                    "access.file_delete"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            },
-            {
-                "kind": "group",
-                "view": "access.social_view",
-                "children": [
-                    "access.social_add",
-                    "access.social_edit",
-                    "access.social_delete"
-                ],
-                "chip": true,
-                "outside_master": false,
-                "cluster": null,
-                "fill_on_grant": false,
-                "note": null,
-                "solo": []
-            },
-            {
-                "kind": "group",
-                "view": "access.software_view",
-                "children": [
-                    "access.software_add",
-                    "access.software_edit",
-                    "access.software_delete"
                 ],
                 "chip": true,
                 "outside_master": false,
