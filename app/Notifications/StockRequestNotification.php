@@ -13,7 +13,7 @@ class StockRequestNotification extends Notification
 
     public function __construct(
         private readonly StockRequest $request,
-        private readonly string $subtype, // created | waiting | approved | rejected | fulfilled
+        private readonly string $subtype, // created | waiting | approved | rejected | fulfilled | cancelled
     ) {}
 
     protected function notificationKey(): string

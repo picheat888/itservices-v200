@@ -11,6 +11,7 @@ class StockRequest extends Model
     protected $fillable = [
         'reference', 'stock_item_id', 'user_id', 'requester_name', 'qty', 'reason',
         'status', 'approver_name', 'approved_at', 'fulfilled_at', 'fulfilled_by', 'rejected_at',
+        'cancelled_by', 'cancelled_at',
     ];
 
     /**
@@ -39,7 +40,22 @@ class StockRequest extends Model
             'approved_at' => 'datetime',
             'fulfilled_at' => 'datetime',
             'rejected_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
+    }
+
+    /** Pending: its requester or an approver. Approved: an approver or a fulfiller. Nothing later. */
+    public function canBeCancelledBy(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return match ($this->status) {
+            'pending' => (int) $this->user_id === (int) $user->id || $user->hasPermission('stock.approve'),
+            'approved' => $user->hasPermission('stock.approve') || $user->hasPermission('stock.fulfill'),
+            default => false,
+        };
     }
 
     /** @return BelongsTo<StockItem, $this> */

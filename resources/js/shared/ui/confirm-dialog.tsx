@@ -209,6 +209,9 @@ export interface ConfirmOptions {
     entity?: { name: React.ReactNode; sub?: React.ReactNode };
     confirmText?: React.ReactNode;
     cancelText?: React.ReactNode;
+    /** Button words while `action` runs and once it succeeds, when the variant's own words do not fit. */
+    busyText?: React.ReactNode;
+    doneText?: React.ReactNode;
     /** Hide the Cancel button — turns the dialog into a single-button acknowledgement/notice. */
     hideCancel?: boolean;
     /** Override the medallion icon. */
@@ -369,12 +372,12 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                             {loading ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    {defaults.busy}
+                                    {opts?.busyText ?? defaults.busy}
                                 </>
                             ) : done ? (
                                 <>
                                     <Check className="animate-in zoom-in-50 fade-in h-4 w-4 duration-300" />
-                                    {defaults.done}
+                                    {opts?.doneText ?? defaults.done}
                                 </>
                             ) : (
                                 (opts?.confirmText ?? defaults.confirm)

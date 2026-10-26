@@ -856,7 +856,7 @@ export interface StockMovement {
     moved_at: string | null;
 }
 
-export type StockRequestStatus = 'pending' | 'approved' | 'fulfilled' | 'rejected';
+export type StockRequestStatus = 'pending' | 'approved' | 'fulfilled' | 'rejected' | 'cancelled';
 
 export interface StockRequest {
     id: number;
@@ -877,9 +877,15 @@ export interface StockRequest {
     fulfilled_by: string | null;
     fulfilled_by_th?: string | null;
     rejected_at: string | null;
+    cancelled_by: string | null;
+    cancelled_at: string | null;
     created_at: string | null;
     /** Approve / Reject offered to this reader: pending, holds stock.approve, not their own. */
     can_decide: boolean;
+    /** Cancel offered to this reader: their own pending request, or an approver / fulfiller. */
+    can_cancel: boolean;
+    /** The reader filed it. */
+    is_own: boolean;
 }
 
 /** Slim item row the summary sends for the Overview reorder list. */

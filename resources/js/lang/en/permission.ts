@@ -666,6 +666,7 @@ export const permission: Dict = {
     audit_ev_submitted_stock_request: 'Submitted stock request',
     audit_ev_approved_stock_request: 'Approved stock request',
     audit_ev_rejected_stock_request: 'Rejected stock request',
+    audit_ev_cancelled_stock_request: 'Cancelled stock request',
     audit_ev_fulfilled_stock_request: 'Fulfilled stock request',
     audit_ev_opened_stock_count: 'Opened stock count',
     audit_ev_committed_stock_count: 'Committed stock count',

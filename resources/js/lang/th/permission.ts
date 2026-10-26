@@ -657,6 +657,7 @@ export const permission: Dict = {
     audit_ev_submitted_stock_request: 'สร้างคำขอเบิก',
     audit_ev_approved_stock_request: 'อนุมัติคำขอเบิก',
     audit_ev_rejected_stock_request: 'ไม่อนุมัติคำขอเบิก',
+    audit_ev_cancelled_stock_request: 'ยกเลิกคำขอเบิก',
     audit_ev_fulfilled_stock_request: 'จ่ายของตามคำขอเบิก',
     audit_ev_opened_stock_count: 'เริ่มนับสต็อก',
     audit_ev_committed_stock_count: 'ยืนยันการนับสต็อก',

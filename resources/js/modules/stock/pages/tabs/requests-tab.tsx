@@ -25,8 +25,9 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
-import { ArrowUpFromLine, Check, FilePlus2, Filter, Search, TriangleAlert, X } from 'lucide-react';
+import { ArrowUpFromLine, Ban, Check, FilePlus2, Filter, Search, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
+import { RequestRowMenu } from '../../components/request-row-menu';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { allocKey, greedyAlloc, prunePicks, refillAlloc } from '../../lib/fulfil-alloc';
@@ -37,15 +38,16 @@ const FULFIL_ACCENT = '#7c3aed';
 
 const requestNo = (r: StockRequest) => r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`;
 
-const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
+const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red' | 'gray'> = {
     pending: 'amber',
     approved: 'blue',
     fulfilled: 'green',
     rejected: 'red',
+    cancelled: 'gray',
 };
 
 // Statuses offered by the filter (and accepted from ?status=).
-const REQUEST_STATUS_FILTERS: StockRequestStatus[] = ['pending', 'approved', 'fulfilled', 'rejected'];
+const REQUEST_STATUS_FILTERS: StockRequestStatus[] = ['pending', 'approved', 'fulfilled', 'rejected', 'cancelled'];
 
 // Small section heading inside the fulfill dialog.
 const EYEBROW = 'text-muted-foreground text-xs font-semibold';
@@ -75,7 +77,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         isPlaceholderData: requestsPlaceholder,
     } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status, search: sentSearch || undefined });
     const requests = requestsPage?.data ?? [];
-    const { approve, reject, fulfill } = useStockRequestActions();
+    const { approve, reject, cancel, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     // Open state is separate from the data so the dialog content stays mounted during the close animation.
     const [fulfillOpen, setFulfillOpen] = useState(false);
@@ -153,6 +155,31 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         });
     };
 
+    const confirmCancel = async (r: (typeof requests)[number]) => {
+        const note =
+            r.status === 'approved'
+                ? t('stock_cancel_note_approved')
+                      .replace('{qty}', fmtN(r.qty))
+                      .replace('{unit}', r.unit ?? '')
+                : t('stock_cancel_note_pending');
+        await confirm({
+            variant: 'danger',
+            icon: Ban,
+            title: t('stock_cancel_confirm'),
+            entity: reqEntity(r),
+            description: r.is_own ? note : `${note} ${t('stock_cancel_notify')}`,
+            confirmText: t('stock_cancel_request'),
+            cancelText: t('close'),
+            busyText: t('stock_cancel_busy'),
+            doneText: t('stock_cancel_done'),
+            action: () => cancel.mutateAsync(r.id),
+            errorMessage: (e) => stockRefusalText(e, t),
+        });
+    };
+
+    const hasRowButtons = requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'));
+    const hasRowMenu = requests.some((r) => r.can_cancel);
+
     const columns: Column<(typeof requests)[number]>[] = [
         {
             key: 'id',
@@ -205,12 +232,22 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('status'),
             width: '104px',
             className: 'whitespace-nowrap',
-            render: (r) => <StatusBadge tone={REQ_TONE[r.status]}>{t(`stock_rq_${r.status}` as Parameters<typeof t>[0])}</StatusBadge>,
+            render: (r) => (
+                <div className="min-w-0">
+                    <StatusBadge tone={REQ_TONE[r.status]}>{t(`stock_rq_${r.status}` as Parameters<typeof t>[0])}</StatusBadge>
+                    {r.status === 'cancelled' && r.cancelled_by && (
+                        <TruncText
+                            text={t('stock_cancelled_by').replace('{name}', r.cancelled_by)}
+                            className="text-muted-foreground mt-0.5 text-xs"
+                        />
+                    )}
+                </div>
+            ),
         },
         {
             key: 'decided',
             header: t('stock_approver'),
-            width: '170px',
+            width: '150px',
             render: (r) => {
                 const decidedAt = r.approved_at ?? r.rejected_at;
                 return (
@@ -224,7 +261,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         {
             key: 'fulfilled',
             header: t('stock_fulfilled_by'),
-            width: '170px',
+            width: '150px',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={pairOf(r.fulfilled_by, r.fulfilled_by_th)} className="text-sm" />
@@ -236,9 +273,11 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            // Room for the buttons only when this page has a request the reader can approve or fulfill
-            width: requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'))
-                ? 'clamp(110px, calc(110px + (100vw - 1100px) * 0.5), 176px)'
+            // Room for the buttons only when this page has a request the reader can approve or fulfill, plus the menu when one can be cancelled
+            width: hasRowButtons
+                ? hasRowMenu
+                    ? 'clamp(146px, calc(146px + (100vw - 1100px) * 0.5), 216px)'
+                    : 'clamp(110px, calc(110px + (100vw - 1100px) * 0.5), 176px)'
                 : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
@@ -279,7 +318,10 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             <span className="hidden xl:inline">{t('stock_fulfill')}</span>
                         </Button>
                     )}
-                    {(r.status === 'fulfilled' || r.status === 'rejected') && <span className="text-muted-foreground text-xs">—</span>}
+                    {r.can_cancel && <RequestRowMenu request={r} requestNo={requestNo(r)} onCancel={confirmCancel} />}
+                    {!r.can_decide && !r.can_cancel && !(can('fulfill') && r.status === 'approved') && (
+                        <span className="text-muted-foreground text-xs">—</span>
+                    )}
                 </div>
             ),
         },

@@ -165,6 +165,15 @@ class StockNotificationService
         ], $this->stockUrl('requests'), 'View my request', $owner->name);
     }
 
+    /** Bell the request owner that someone else cancelled it (no email template for this one). */
+    public function requestCancelled(StockRequest $request): void
+    {
+        $owner = $request->user;
+        if ($owner) {
+            Notification::send($owner, new StockRequestNotification($request, 'cancelled'));
+        }
+    }
+
     /**
      * Shared template variables for a request.
      *

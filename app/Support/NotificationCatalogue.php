@@ -163,6 +163,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_stock_req_cancelled',
+                'module' => 'stock',
+                'name' => 'Stock request cancelled',
+                'trigger' => 'Someone else cancels a stock request',
+                'audience' => 'The person who filed it',
+                'message_en' => 'Your stock request was cancelled',
+                'message_th' => 'คำขอเบิกของคุณถูกยกเลิก',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_stock_req_fulfilled',
                 'module' => 'stock',
                 'name' => 'Stock request fulfilled',

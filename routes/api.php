@@ -372,6 +372,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::post('stock-requests/{stockRequest}/approve', [StockRequestController::class, 'approve'])->name('api.stock-requests.approve');
     Route::post('stock-requests/{stockRequest}/reject', [StockRequestController::class, 'reject'])->name('api.stock-requests.reject');
     Route::post('stock-requests/{stockRequest}/fulfill', [StockRequestController::class, 'fulfill'])->name('api.stock-requests.fulfill');
+    Route::post('stock-requests/{stockRequest}/cancel', [StockRequestController::class, 'cancel'])->name('api.stock-requests.cancel');
 
     // Request module (IT service requests) — options + transitions before the
     // resource so `{serviceRequest}` cannot swallow them.

@@ -56,7 +56,7 @@ class StockRequestController extends Controller
 
         // The status filter narrows the list only; the totals above stay across every status.
         $status = $request->query('status');
-        if (in_array($status, ['pending', 'approved', 'fulfilled', 'rejected'], true)) {
+        if (in_array($status, ['pending', 'approved', 'fulfilled', 'rejected', 'cancelled'], true)) {
             $query->where('status', $status);
         }
 
@@ -160,6 +160,35 @@ class StockRequestController extends Controller
         });
         AuditLog::record('Rejected stock request', "#{$stockRequest->id}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'rejected');
+
+        return (new StockRequestResource($stockRequest->load('item')))->response();
+    }
+
+    /** Cancel a pending or approved request; an approved one's reserved stock is free again once it leaves "approved". */
+    public function cancel(Request $request, StockRequest $stockRequest): JsonResponse
+    {
+        $user = $request->user();
+        $this->assertCancellable($stockRequest);
+        abort_unless($stockRequest->canBeCancelledBy($user), 403);
+
+        DB::transaction(function () use ($user, $stockRequest) {
+            $stockRequest->setRawAttributes(StockRequest::lockForUpdate()->findOrFail($stockRequest->id)->getAttributes(), true);
+            $this->assertCancellable($stockRequest);
+            // Approved meanwhile: the requester may no longer cancel
+            if (! $stockRequest->canBeCancelledBy($user)) {
+                Refusal::fail('request_not_cancellable', ['current' => $stockRequest->status], 'status');
+            }
+
+            $stockRequest->update([
+                'status' => 'cancelled',
+                'cancelled_by' => $user->name,
+                'cancelled_at' => now(),
+            ]);
+        });
+        AuditLog::record('Cancelled stock request', "#{$stockRequest->id}", subject: $stockRequest);
+        if ((int) $stockRequest->user_id !== (int) $user->id) {
+            app(StockNotificationService::class)->requestCancelled($stockRequest->load('item'));
+        }
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
@@ -288,6 +317,14 @@ class StockRequestController extends Controller
     {
         $stockRequest->setRawAttributes(StockRequest::lockForUpdate()->findOrFail($stockRequest->id)->getAttributes(), true);
         $this->assertStatus($stockRequest, $expected);
+    }
+
+    /** Only a pending or approved request can still be cancelled. */
+    private function assertCancellable(StockRequest $stockRequest): void
+    {
+        if (! in_array($stockRequest->status, ['pending', 'approved'], true)) {
+            Refusal::fail('request_not_cancellable', ['current' => $stockRequest->status], 'status');
+        }
     }
 
     /** Guard a workflow transition, returning 422 when the request isn't in the expected state. */
