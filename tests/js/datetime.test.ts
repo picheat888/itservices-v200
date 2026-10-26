@@ -93,3 +93,14 @@ test('relativeTime counts through the caller number format', () => {
     assert.equal(relativeTime(ago(1200 * 86_400_000), relT, 'never', grouped), '1,200 days ago');
     assert.equal(relativeTime(ago(5 * 60_000), relT, 'never', grouped), '5 min ago');
 });
+
+test('dateWidthSamples one line pairs every date with every time', async () => {
+    const { dateWidthSamples } = (await import('../../resources/js/shared/lib/datetime.ts')) as Record<
+        string,
+        (c: unknown, l: string, oneLine?: boolean) => { dates: string[]; times: string[] }
+    >;
+    const th = dateWidthSamples({ format: 'd_month_y', era: 'be', time: '12' }, 'th', true);
+    assert.equal(th.dates.length, 36);
+    assert.ok(th.dates.includes('28 พฤศจิกายน 2569 11:59 PM'));
+    assert.deepEqual(th.times, []);
+});

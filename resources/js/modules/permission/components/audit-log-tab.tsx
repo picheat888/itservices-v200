@@ -6,11 +6,11 @@ import { LoadFailed } from '@/shared/components/load-failed';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { TruncText } from '@/shared/components/trunc-text';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localName } from '@/shared/lib/local-name';
-import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -44,16 +44,6 @@ function auditIcon(action: string): typeof Plus {
     if (/^(signed|changed own|updated own)/.test(a)) return LogIn;
     if (/^stock /.test(a)) return ArrowLeftRight;
     return Pencil;
-}
-
-/** Relative time within a day, then the exact system-timezone time passed in. */
-function auditAgo(iso: string, lang: Lang, absolute: string): string {
-    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-    if (m < 1) return translate(lang, 'perm_ui_just_now');
-    if (m < 60) return translate(lang, 'perm_ui_minutes_short').replace('{n}', formatNumber(m, lang));
-    const h = Math.floor(m / 60);
-    if (h < 24) return translate(lang, 'perm_ui_hours_short').replace('{n}', formatNumber(h, lang));
-    return absolute;
 }
 
 /** A word heading over a plain comma list (added, removed, records). */
@@ -159,6 +149,7 @@ export function AuditLogTab() {
     const fmt = useDateFormat();
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const timeWidth = useDateColumnWidth('text-xs', { oneLine: true });
     const [expandedId, setExpandedId] = useState<number | null>(null);
     // Search, filters, page and rows-per-page live in the URL (?search, category, user, page, per).
     const list = useListParams();
@@ -221,9 +212,15 @@ export function AuditLogTab() {
 
     const columns: Column<AuditEntry>[] = [
         {
+            key: 'time',
+            header: t('audit_time'),
+            width: timeWidth,
+            render: (l) => <span className="text-muted-foreground block text-xs whitespace-nowrap tabular-nums">{fmt.dateTime(l.created_at)}</span>,
+        },
+        {
             key: 'action',
             header: t('audit_action'),
-            minWidth: '10rem',
+            width: 'var(--audit-action-w)',
             render: (l) => {
                 const Icon = auditIcon(l.action);
                 const summary = auditDiffSummary(l.details, {
@@ -259,26 +256,16 @@ export function AuditLogTab() {
         {
             key: 'target',
             header: t('audit_target'),
-            width: 'var(--audit-target-w)',
+            minWidth: '7rem',
             render: (l) => <TruncText text={l.target} className="text-muted-foreground" />,
-        },
-        {
-            key: 'time',
-            header: t('audit_time'),
-            width: '132px',
-            render: (l) => (
-                <span className="text-muted-foreground block truncate text-xs whitespace-nowrap" title={fmt.dateTime(l.created_at)}>
-                    {l.created_at_iso ? auditAgo(l.created_at_iso, lang, fmt.dateTime(l.created_at)) : fmt.dateTime(l.created_at)}
-                </span>
-            ),
         },
         {
             key: 'open',
             sticky: 'right',
-            header: <span className="sr-only">{t('audit_details')}</span>,
-            width: '44px',
+            header: <span className="sr-only xl:not-sr-only">{t('audit_details')}</span>,
+            width: 'var(--audit-more-w)',
             align: 'center',
-            className: 'px-1',
+            className: 'px-1 xl:px-2',
             render: (l) =>
                 hasAuditDetails(l.details) && (
                     // The Tab stop of the row; a click anywhere on the row toggles too
@@ -290,21 +277,21 @@ export function AuditLogTab() {
                         }}
                         aria-expanded={expandedId === l.id}
                         aria-controls={expandedId === l.id ? detailRowId(l) : undefined}
-                        aria-label={t('asset_open_detail')}
                         className={cn(
-                            'mx-auto flex h-7 w-7 items-center justify-center rounded-md transition-colors [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9',
-                            expandedId === l.id ? 'text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                            'border-border mx-auto inline-flex h-8 w-8 items-center justify-center gap-1.5 rounded-md border text-xs font-medium whitespace-nowrap transition-colors xl:w-auto xl:px-2.5 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9 xl:[@media(pointer:coarse)]:w-auto',
+                            expandedId === l.id ? 'bg-accent text-foreground' : 'text-foreground hover:bg-accent',
                         )}
                     >
-                        <Eye aria-hidden className="h-4 w-4" />
+                        <Eye aria-hidden className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                        <span className="sr-only xl:not-sr-only">{t(expandedId === l.id ? 'audit_show_less' : 'audit_show_more')}</span>
                     </button>
                 ),
         },
     ];
 
-    // User and target widths: narrower below xl so a tablet fits without scrolling
+    // Column widths: narrower below xl, with an icon-only details button, so a tablet fits without scrolling
     return (
-        <div className="p-5 [--audit-target-w:120px] [--audit-user-w:128px] xl:[--audit-target-w:200px] xl:[--audit-user-w:170px]">
+        <div className="p-5 [--audit-action-w:176px] [--audit-more-w:44px] [--audit-user-w:120px] xl:[--audit-action-w:300px] xl:[--audit-more-w:112px] xl:[--audit-user-w:220px]">
             <DataTable
                 columns={columns}
                 rows={logs}

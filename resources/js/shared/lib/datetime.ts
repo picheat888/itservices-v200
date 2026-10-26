@@ -173,13 +173,12 @@ export function bindDateFormat(config: LooseConfig, lang: string): DateFormatter
     return { date, dateTime, time, monthYear, monthYearLong, month, dayMonth, range, year };
 }
 
-/** Every month on a two-digit day plus the widest clock readings: what a date column must fit, whatever the rows hold. */
-export function dateWidthSamples(config: LooseConfig, lang: string): { dates: string[]; times: string[] } {
+/** Every month on a two-digit day plus the widest clock readings: what a date column must fit, whatever the rows hold. One line pairs each date with each time. */
+export function dateWidthSamples(config: LooseConfig, lang: string, oneLine = false): { dates: string[]; times: string[] } {
     const fmt = bindDateFormat(config, lang);
-    return {
-        dates: Array.from({ length: 12 }, (_, i) => fmt.date(`2026-${pad(i + 1)}-28`)),
-        times: ['12:59', '10:58', '23:59'].map((t) => fmt.time(`2026-01-01 ${t}`)),
-    };
+    const dates = Array.from({ length: 12 }, (_, i) => fmt.date(`2026-${pad(i + 1)}-28`));
+    const times = ['12:59', '10:58', '23:59'].map((t) => fmt.time(`2026-01-01 ${t}`));
+    return oneLine ? { dates: dates.flatMap((d) => times.map((t) => `${d} ${t}`)), times: [] } : { dates, times };
 }
 
 /** "5 hours ago" for lists that answer "is this in use", not "exactly when". `t` and `count` are the caller's translator and number format. */

@@ -2,11 +2,11 @@
 import { useT } from '@/lang';
 import { deviceLine, loginEventWords, type LoginEventRow } from '@/modules/auth';
 import { DataTable, type Column } from '@/shared/components/data-table';
-import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localName } from '@/shared/lib/local-name';
@@ -60,7 +60,8 @@ function LoginEventCell({ row }: { row: LoginEventRow }) {
 
 export function LoginLogTab() {
     const t = useT();
-    const dateWidth = useDateColumnWidth();
+    const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth('text-xs', { oneLine: true });
     // Search, filters, page and rows-per-page live in the URL (?search, event, from, to, page, per).
     const list = useListParams();
     const { page, perPage } = list;
@@ -99,44 +100,45 @@ export function LoginLogTab() {
             header: t('audit_time'),
             width: dateWidth,
             className: 'text-muted-foreground whitespace-nowrap',
-            render: (row) => <DateTimeCell value={row.created_at} className="tabular-nums" />,
+            render: (row) => <span className="block text-xs tabular-nums">{fmt.dateTime(row.created_at)}</span>,
         },
         {
             key: 'user',
             header: t('audit_user'),
-            minWidth: '11rem',
+            width: 'var(--login-user-w)',
             render: (row) => <LoginUserCell row={row} />,
         },
         {
             key: 'event',
             header: t('perm_login_col_event'),
-            width: '200px',
+            width: 'var(--login-event-w)',
             render: (row) => <LoginEventCell row={row} />,
         },
         {
             key: 'ip',
             header: t('perm_login_col_ip'),
-            width: '136px',
+            width: 'var(--login-ip-w)',
             render: (row) => <TruncText text={row.ip} className="tabular-nums" />,
         },
         {
             key: 'place',
             header: t('perm_login_col_place'),
-            width: '176px',
+            minWidth: '10rem',
             render: (row) => <TruncText text={row.location} />,
         },
         {
             key: 'device',
             header: t('perm_login_col_device'),
-            width: '160px',
+            width: 'var(--login-device-w)',
             render: (row) => (
                 <TruncText text={row.os !== null && row.browser !== null ? deviceLine({ os: row.os, browser: row.browser }, t) : null} />
             ),
         },
     ];
 
+    // Column widths: narrower below xl, where the table scrolls sideways with the time pinned
     return (
-        <div className="p-5">
+        <div className="p-5 [--login-device-w:160px] [--login-event-w:180px] [--login-ip-w:136px] [--login-user-w:176px] xl:[--login-device-w:200px] xl:[--login-event-w:220px] xl:[--login-ip-w:240px] xl:[--login-user-w:240px]">
             <DataTable
                 columns={columns}
                 rows={rows}
