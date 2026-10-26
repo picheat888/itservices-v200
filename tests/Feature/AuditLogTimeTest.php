@@ -1,6 +1,6 @@
 <?php
 
-// Audit Logs list sends its time as system wall-clock time, plus an ISO instant for "x minutes ago".
+// Audit Logs list sends its time as system wall-clock time.
 
 namespace Tests\Feature;
 
@@ -23,6 +23,6 @@ class AuditLogTimeTest extends TestCase
         $row = $this->getJson('/api/audit-logs')->assertOk()->json('data.0');
 
         $this->assertSame('2026-10-23 10:11', $row['created_at']);
-        $this->assertSame('2026-10-23T10:11:52+07:00', $row['created_at_iso']);
+        $this->assertArrayNotHasKey('created_at_iso', $row);
     }
 }

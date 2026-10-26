@@ -7306,3 +7306,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ความกว้างคอลัมน์เวลาวัดจากรูปแบบวันที่ที่ตั้งไว้ (`useDateColumnWidth` เพิ่ม `oneLine` และ `dateWidthSamples` จับคู่วันที่กับเวลา) รูปแบบชื่อเดือนยาวจึงไม่ถูกตัด
 - ลบคีย์ `perm_ui_just_now` `perm_ui_minutes_short` `perm_ui_hours_short` ที่ไม่ได้ใช้แล้ว เพิ่ม `audit_show_more` `audit_show_less`
 - ตรวจ เทสต์ใหม่ `log-table-columns.test.ts` และข้อใหม่ใน `datetime.test.ts` ล้มก่อนแก้ เทสต์ JS ผ่าน 831 tsc eslint `vite build` ผ่าน ดูใน Chrome ที่ 1920 ทั้งสองแท็บกว้างตามแบบ ที่ iPad 768 Audit log พอดีจอ (597px) ทั้งโหมดสว่างและมืด ปุ่มดูเพิ่มเปิดปิดรายละเอียดได้
+- เก็บกวาดต่อ (2026-10-26) ผู้ใช้สั่งลบ `created_at_iso` ออกจาก API ของ Audit log เพราะไม่มีหน้าไหนใช้แล้ว (เคยใช้นับ "x น.") `AuditLogTimeTest` เช็กว่าไม่ส่งช่องนี้แล้ว ช่องชื่อเดียวกันของการแจ้งเตือนกับ Web Push ยังใช้อยู่ ไม่ได้แตะ ตรวจ PHPUnit กลุ่ม Audit ผ่าน 38 tsc pint ผ่าน
