@@ -30,6 +30,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Check, ClipboardCheck, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
+import { countOverlapFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
 
 // Small section heading inside the count dialogs.
@@ -169,8 +170,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             resetPicker();
             openSheet(created.id);
         } catch (e) {
-            // A refused start keeps the picker and its selection
+            // A refused start keeps the picker and its selection; fresh rows show which items another count took
             onError(e);
+            void allItemsQuery.refetch();
         }
     };
 
@@ -211,12 +213,22 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter((i) =>
         matchesAllWords(`${i.sku} ${i.name} ${i.brand ?? ''} ${i.model ?? ''}`, skuSearch),
     );
-    const allVisibleSelected = skuList.length > 0 && skuList.every((i) => selectedSkus.includes(i.id));
+    // Items another draft count holds on an overlapping warehouse cannot join this one
+    const heldBy = (i: StockItem) => countOverlapFor(i, wh === 'all' ? null : wh);
+    const pickable = skuList.filter((i) => heldBy(i) === null);
+    const heldCount = skuList.length - pickable.length;
+    const allVisibleSelected = pickable.length > 0 && pickable.every((i) => selectedSkus.includes(i.id));
     const toggleSku = (id: number) => setSelectedSkus((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     const toggleAllVisible = () => {
-        const ids = skuList.map((i) => i.id);
+        const ids = pickable.map((i) => i.id);
         setSelectedSkus((prev) => (allVisibleSelected ? prev.filter((x) => !ids.includes(x)) : [...new Set([...prev, ...ids])]));
     };
+    // A refresh showing a picked item now held by another count drops it, since its row cannot be unticked
+    useEffect(() => {
+        const scope = wh === 'all' ? null : wh;
+        const held = new Set(allItems.filter((i) => countOverlapFor(i, scope) !== null).map((i) => i.id));
+        setSelectedSkus((prev) => (prev.some((id) => held.has(id)) ? prev.filter((id) => !held.has(id)) : prev));
+    }, [allItems, wh]);
     // Switching warehouse resets the category + selection (a SKU lives in one warehouse).
     const onPickWarehouse = (v: string) => {
         setWh(v);
@@ -443,13 +455,13 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <label
                                     className={cn(
                                         'flex items-center gap-2 text-sm font-medium',
-                                        skuList.length === 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+                                        pickable.length === 0 ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
                                     )}
                                 >
                                     <Checkbox
                                         className="size-4"
                                         checked={allVisibleSelected}
-                                        disabled={skuList.length === 0}
+                                        disabled={pickable.length === 0}
                                         onCheckedChange={toggleAllVisible}
                                     />
                                     {t('stock_select_all')}
@@ -457,6 +469,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 <span className="text-muted-foreground text-xs tabular-nums">
                                     {fmtN(selectedSkus.length)} {t('stock_count_selected')}
                                 </span>
+                                {heldCount > 0 && (
+                                    <span className="text-xs text-amber-800 dark:text-amber-300">
+                                        {t('stock_count_held_more').replace('{n}', fmtN(heldCount))}
+                                    </span>
+                                )}
                                 <div className="relative ml-auto w-44">
                                     <Search
                                         className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
@@ -494,6 +511,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 ) : (
                                     skuList.map((i) => {
                                         const checked = selectedSkus.includes(i.id);
+                                        const held = heldBy(i);
+                                        if (held !== null) return <HeldSkuRow key={i.id} item={i} reference={held} />;
                                         return (
                                             <label
                                                 key={i.id}
@@ -519,6 +538,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 )}
                             </div>
                         </div>
+                        {heldCount > 0 && <p className="text-muted-foreground -mt-1.5 text-xs leading-relaxed">{t('stock_count_held_hint')}</p>}
                     </DialogBody>
                     <DialogFooterBar>
                         <Button variant="outline" onClick={() => guardPickerClose(resetPicker)}>
@@ -964,6 +984,27 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                     </DialogFooterBar>
                 </FormDialogContent>
             </Dialog>
+        </div>
+    );
+}
+
+/** A picker row another draft count holds: shown so the list stays whole, never selectable. */
+function HeldSkuRow({ item, reference }: { item: StockItem; reference: string }) {
+    const t = useT();
+    const fmtN = useNumberFormat();
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <div className="border-border/60 bg-muted/30 flex w-full items-center gap-3 border-b px-3 py-2 last:border-0">
+            <Checkbox className="size-4" checked={false} disabled aria-label={item.sku} />
+            <div className="text-muted-foreground min-w-0 flex-1">
+                <div className="text-xs">{item.sku}</div>
+                <div className="truncate text-xs">{item.name}</div>
+                <div className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                    {t('stock_count_held_by').replace('{reference}', reference)}
+                </div>
+            </div>
+            <span className="text-muted-foreground shrink-0 text-xs">{localPair(item.category, item.category_th, lang) ?? '—'}</span>
+            <span className="text-muted-foreground w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{fmtN(item.current_stock)}</span>
         </div>
     );
 }

@@ -98,6 +98,14 @@ class StockItem extends Model
         return $this->hasMany(StockItemSerial::class);
     }
 
+    /** Stock on hand, a movement or a serial on record: switching serial tracking would strand them. Uses withExists as has_movements / has_serials when loaded. */
+    public function hasStockOrHistory(): bool
+    {
+        return $this->current_stock !== 0
+            || (bool) ($this->attributes['has_movements'] ?? $this->movements()->exists())
+            || (bool) ($this->attributes['has_serials'] ?? $this->serials()->exists());
+    }
+
     /** @return HasMany<StockLot, $this> */
     public function lots(): HasMany
     {

@@ -20,6 +20,7 @@ class StockCountService
     public function __construct(
         private readonly StockLotService $lotService,
         private readonly StockBalanceService $balanceService,
+        private readonly StockCountLock $countLock,
     ) {}
 
     /**
@@ -47,11 +48,13 @@ class StockCountService
                 $query->when($filters['warehouse'] ?? null, fn ($q, $w) => $q->whereHas('balances', fn ($b) => $b->whereHas('warehouse', fn ($wh) => $wh->where('name', $w))))
                     ->when($filters['category'] ?? null, fn ($q, $c) => $q->whereHas('category', fn ($cat) => $cat->where('name', $c)));
             }
-            $items = $query->orderBy('sku')->get(['id', 'current_stock', 'track_serial']);
+            // Rows locked so two counts opened at once cannot both pass the overlap check
+            $items = $query->orderBy('sku')->lockForUpdate()->get(['id', 'current_stock', 'track_serial']);
             // A count of one warehouse is a count of that shelf, so it snapshots that shelf.
             $warehouseId = filled($filters['warehouse'] ?? null)
                 ? Warehouse::query()->where('name', $filters['warehouse'])->value('id')
                 : null;
+            $this->countLock->assertNoOverlap($items->modelKeys(), $warehouseId);
 
             foreach ($items as $item) {
                 // Serialized: in-stock serials; else current_stock, or that warehouse's balance in a one-warehouse count.
@@ -116,6 +119,12 @@ class StockCountService
             }
 
             if ($mode === StockCountAdjustMode::Auto) {
+                // Drafts that overlapped before opening was guarded: confirming both would book the difference twice
+                $other = $this->countLock->overlap($lines->pluck('stock_item_id')->all(), $count->warehouse_id, $count->id);
+                if ($other !== null) {
+                    Refusal::fail('count_overlap_commit', ['reference' => $other['reference']]);
+                }
+
                 foreach ($lines as $line) {
                     $variance = $line->variance();
                     if ($variance === null || $variance === 0) {

@@ -1,7 +1,7 @@
 // An item in a draft stock count takes no movement on the counted shelf; the form names the count that holds it.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { countLockFor } from '../../resources/js/modules/stock/lib/count-lock.ts';
+import { countLockFor, countOverlapFor } from '../../resources/js/modules/stock/lib/count-lock.ts';
 
 const item = (counting: { reference: string; warehouse: string | null }[]) => ({ counting });
 
@@ -20,4 +20,13 @@ test('no count, or no item yet, locks nothing', () => {
     assert.equal(countLockFor(item([]), ['Main']), null);
     assert.equal(countLockFor(undefined, ['Main']), null);
     assert.equal(countLockFor({}, ['Main']), null);
+});
+
+test('a new count overlaps a draft on its own warehouse, and an all-warehouse count overlaps every one', () => {
+    const main = item([{ reference: 'SC-2026-011', warehouse: 'Main' }]);
+    assert.equal(countOverlapFor(main, 'Main'), 'SC-2026-011');
+    assert.equal(countOverlapFor(main, 'Branch'), null);
+    assert.equal(countOverlapFor(main, null), 'SC-2026-011');
+    assert.equal(countOverlapFor(item([{ reference: 'SC-2026-012', warehouse: null }]), 'Branch'), 'SC-2026-012');
+    assert.equal(countOverlapFor(item([]), null), null);
 });

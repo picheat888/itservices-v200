@@ -23,6 +23,11 @@ class StockItemResource extends JsonResource
             'name' => $this->name,
             'serial' => $this->serial,
             'track_serial' => (bool) $this->track_serial,
+            // Serial tracking can no longer switch (stock, a movement or a serial on record); sent where the item endpoints load the checks
+            'serial_locked' => $this->when(
+                array_key_exists('has_movements', $this->resource->getAttributes()),
+                fn () => $this->resource->hasStockOrHistory(),
+            ),
             'category' => $this->category?->name,
             'category_th' => $this->category?->name_th,
             'category_id' => $this->category_id,

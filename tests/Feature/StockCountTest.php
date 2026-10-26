@@ -282,8 +282,11 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $year = now()->year;
 
-        $first = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data.reference');
+        $first = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data');
+        // Two drafts may not hold the same item, so the first closes before the second opens
+        $this->deleteJson("/api/stock-counts/{$first['id']}")->assertOk();
         $second = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data.reference');
+        $first = $first['reference'];
 
         $this->assertSame("SC-{$year}-001", $first);
         $this->assertSame("SC-{$year}-002", $second);

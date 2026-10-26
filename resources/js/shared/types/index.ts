@@ -728,6 +728,8 @@ export interface StockItem {
     name: string;
     serial: string | null;
     track_serial: boolean;
+    /** Serial tracking can no longer switch: the item has stock, a movement or a serial on record. */
+    serial_locked?: boolean;
     category: string | null;
     category_th?: string | null;
     category_id: number | null;

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Stock;
 
+use App\Models\Stock\StockItem;
+use App\Support\Refusal;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -44,5 +46,19 @@ class StoreStockItemRequest extends FormRequest
             'max_stock' => ['required', 'integer', 'min:0', 'gte:min_stock'],
             'warranty_type_id' => ['required', 'integer', 'exists:warranty_types,id'],
         ];
+    }
+
+    /** @return list<callable> */
+    public function after(): array
+    {
+        return [function (): void {
+            /** @var StockItem|null $item */
+            $item = $this->route('stock_item');
+            $switching = $item !== null && $this->has('track_serial') && $this->boolean('track_serial') !== (bool) $item->track_serial;
+
+            if ($switching && $item->hasStockOrHistory()) {
+                Refusal::fail('track_serial_locked', ['sku' => $item->sku], 'track_serial');
+            }
+        }];
     }
 }

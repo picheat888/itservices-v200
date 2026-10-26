@@ -224,7 +224,12 @@ export function StockItemModal({
                             />
                         </Field>
                     </div>
-                    <SerialToggle value={form.track_serial ?? false} onChange={(v) => set('track_serial', v)} confirmOnEnable />
+                    <SerialToggle
+                        value={form.track_serial ?? false}
+                        onChange={(v) => set('track_serial', v)}
+                        confirmOnEnable
+                        lockedReason={item?.serial_locked ? t('stock_track_serial_locked') : undefined}
+                    />
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_brand')} required>
                             <SearchableSelect

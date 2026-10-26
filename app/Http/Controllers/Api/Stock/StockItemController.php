@@ -46,6 +46,7 @@ class StockItemController extends Controller
         $query = StockItem::query()
             ->select('stock_items.*')
             ->with(['balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category', 'draftCountLines.count:id,reference,warehouse'])
+            ->withExists(['movements as has_movements', 'serials as has_serials'])
             // Reserved = qty held by approved-but-unfulfilled requests.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
             // FIFO stock value as a sortable subquery column.
@@ -220,7 +221,8 @@ class StockItemController extends Controller
      */
     private function withReserved(StockItem $stockItem): StockItem
     {
-        return $stockItem->loadSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty');
+        return $stockItem->loadSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
+            ->loadExists(['movements as has_movements', 'serials as has_serials']);
     }
 
     /** Full audit history for one SKU: movement timeline + lots + per-serial event timelines. */
