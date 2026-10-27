@@ -29,6 +29,7 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Check, ClipboardCheck, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { LinePatch } from '../../api/stockApi';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { countOverlapFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
@@ -117,8 +118,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         if (!session) return;
         setCommitting(true);
         try {
-            await save.mutateAsync({ id: session.id, counts: countsPayload() });
-            await commit.mutateAsync({ id: session.id, mode, missingSerials: missing });
+            await save.mutateAsync({ id: session.id, lines: linesPayload(missing) });
+            await commit.mutateAsync(session.id);
             setCommittedFlash(true);
             window.setTimeout(() => setCommittedFlash(false), 1200);
         } catch (e) {
@@ -162,11 +163,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const start = async () => {
         if (selectedSkus.length === 0) return;
         try {
-            const created = await open.mutateAsync({
-                warehouse: wh === 'all' ? null : wh,
-                category: cat === 'all' ? null : cat,
-                stock_item_ids: selectedSkus,
-            });
+            if (warehouseId === null) return;
+            const created = await open.mutateAsync({ warehouse_id: warehouseId, stock_item_ids: selectedSkus });
             resetPicker();
             openSheet(created.id);
         } catch (e) {
@@ -183,6 +181,21 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         });
         return out;
     };
+
+    // Save payload per line; ticked-missing serials (keyed by item) go on that item's line
+    const linesPayload = (missing: Record<number, number[]> = {}): Record<number, LinePatch> => {
+        const out: Record<number, LinePatch> = {};
+        Object.entries(countsPayload()).forEach(([id, qty]) => {
+            out[Number(id)] = { counted_qty: qty };
+        });
+        (session?.lines ?? []).forEach((l) => {
+            if (missing[l.stock_item_id]) out[l.id] = { ...out[l.id], missing_serial_ids: missing[l.stock_item_id] };
+        });
+        return out;
+    };
+
+    // The server opens a count on one warehouse id; "all warehouses" has none
+    const warehouseId = warehouses.find((w) => w.name === wh)?.id ?? null;
 
     const statusTone = (s: string) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
@@ -544,7 +557,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         <Button variant="outline" onClick={() => guardPickerClose(resetPicker)}>
                             {t('cancel')}
                         </Button>
-                        <Button onClick={start} disabled={open.isPending || selectedSkus.length === 0}>
+                        <Button onClick={start} disabled={open.isPending || selectedSkus.length === 0 || warehouseId === null}>
                             {t('stock_count_start')}
                             {selectedSkus.length > 0 && ` (${fmtN(selectedSkus.length)})`}
                         </Button>
@@ -806,7 +819,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                             onClick={async () => {
                                                 setSavingDraft(true);
                                                 try {
-                                                    await save.mutateAsync({ id: session.id, counts: countsPayload() });
+                                                    await save.mutateAsync({ id: session.id, lines: linesPayload() });
                                                 } catch (e) {
                                                     onError(e);
                                                 } finally {
@@ -857,8 +870,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                 cancelText: t('stock_count_back'),
                                                 errorMessage: (e) => stockRefusalText(e, t),
                                                 action: async () => {
-                                                    await save.mutateAsync({ id: session.id, counts: countsPayload() });
-                                                    await commit.mutateAsync({ id: session.id, mode, missingSerials: {} });
+                                                    await save.mutateAsync({ id: session.id, lines: linesPayload() });
+                                                    await commit.mutateAsync(session.id);
                                                     setCommittedFlash(true);
                                                     window.setTimeout(() => setCommittedFlash(false), 1200);
                                                 },

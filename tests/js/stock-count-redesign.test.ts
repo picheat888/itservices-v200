@@ -75,3 +75,54 @@ test('refusal words use only placeholders the server sends', () => {
         assert.ok(!dict.stock_refusal_count_serial_missing_mismatch.includes('{need}'));
     }
 });
+
+// Sheet logic (count-sheet.ts)
+import { filterLines, lineNeedsReason, OVER_REASONS, reasonAfterQtyChange, SHORT_REASONS, sheetSummary } from '../../resources/js/modules/stock/lib/count-sheet.ts';
+
+const sheetLine = (sku: string, system_qty: number, counted_qty: number | null, reason: never = null as never, reason_note: string | null = null) => ({
+    sku,
+    name: `Item ${sku}`,
+    system_qty,
+    counted_qty,
+    reason,
+    reason_note,
+});
+
+test('a reason is kept only while it still fits the variance', () => {
+    assert.equal(reasonAfterQtyChange('lost', 2), null);
+    assert.equal(reasonAfterQtyChange('miscount', 2), 'miscount');
+    assert.equal(reasonAfterQtyChange('custom', -1), 'custom');
+    assert.equal(reasonAfterQtyChange('used', 0), null);
+    assert.equal(reasonAfterQtyChange('used', null), null);
+    assert.equal(reasonAfterQtyChange('inbound', -1), null);
+    assert.equal(reasonAfterQtyChange('used', -1), 'used');
+    assert.deepEqual(SHORT_REASONS, ['lost', 'broken', 'used', 'miscount', 'custom']);
+    assert.deepEqual(OVER_REASONS, ['inbound', 'returned', 'miscount', 'custom']);
+});
+
+test('a differing line needs a reason, a custom one needs a note too', () => {
+    assert.equal(lineNeedsReason(sheetLine('A', 5, 3)), true);
+    assert.equal(lineNeedsReason(sheetLine('A', 5, 3, 'lost' as never)), false);
+    assert.equal(lineNeedsReason(sheetLine('A', 5, 3, 'custom' as never, '   ')), true);
+    assert.equal(lineNeedsReason(sheetLine('A', 5, 3, 'custom' as never, 'dropped')), false);
+    assert.equal(lineNeedsReason(sheetLine('A', 5, 5)), false);
+    assert.equal(lineNeedsReason(sheetLine('A', 5, null)), false);
+});
+
+test('the sheet summary counts matches, shorts, overs and the missing reasons', () => {
+    const lines = [sheetLine('A', 3, 3), sheetLine('B', 5, 3), sheetLine('C', 1, 2), sheetLine('D', 4, null)];
+    const s = sheetSummary(lines);
+    assert.deepEqual({ ...s, noReason: undefined }, { total: 4, counted: 3, same: 1, short: 1, over: 1, shortQty: 2, overQty: 1, noReason: undefined });
+    assert.equal(s.noReason, 2);
+});
+
+test('chips and search narrow the lines', () => {
+    const lines = [sheetLine('A', 3, 3), sheetLine('B', 5, 3, 'lost' as never), sheetLine('C', 1, 2), sheetLine('D', 4, null)];
+    assert.deepEqual(filterLines(lines, 'no_reason', '').map((l) => l.sku), ['C']);
+    assert.deepEqual(filterLines(lines, 'pending', '').map((l) => l.sku), ['D']);
+    assert.deepEqual(filterLines(lines, 'short', '').map((l) => l.sku), ['B']);
+    assert.deepEqual(filterLines(lines, 'over', '').map((l) => l.sku), ['C']);
+    assert.deepEqual(filterLines(lines, 'same', '').map((l) => l.sku), ['A']);
+    assert.equal(filterLines(lines, 'all', '').length, 4);
+    assert.deepEqual(filterLines(lines, 'all', 'item b').map((l) => l.sku), ['B']);
+});

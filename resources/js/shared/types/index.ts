@@ -824,6 +824,12 @@ export interface StockCountLine {
     counted_qty: number | null;
     variance: number | null;
     track_serial: boolean;
+    reason: CountReason | null;
+    reason_note: string | null;
+    missing_serial_ids: number[];
+    found_serial_ids: number[];
+    /** Serials the original count wrote off, open to tick back on a recount. */
+    lost_serials?: { id: number; serial: string }[];
     serials?: { id: number; serial: string }[];
 }
 
@@ -831,12 +837,15 @@ export interface StockCount {
     id: number;
     reference: string;
     warehouse: string | null;
+    warehouse_id: number | null;
     category: string | null;
     category_th?: string | null;
     status: StockCountStatus;
     adjust_mode: StockCountAdjustMode | null;
     note: string | null;
     counted_by?: string | null;
+    committed_by?: string | null;
+    recount_of?: { id: number; reference: string } | null;
     committed_at: string | null;
     created_at: string | null;
     lines?: StockCountLine[];

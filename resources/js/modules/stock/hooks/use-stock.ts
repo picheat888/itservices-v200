@@ -1,7 +1,6 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_LIST, FRESH_VIEW } from '@/shared/lib/freshness';
 import type { RowId } from '@/shared/lib/new-rows';
-import type { StockCountAdjustMode } from '@/shared/types';
 import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +9,7 @@ import {
     stockMovementApi,
     stockRequestApi,
     type StockItemPageParams,
+    type LinePatch,
     type StockItemPayload,
     type StockMovementPayload,
     type StockRequestPayload,
@@ -172,7 +172,7 @@ export const useStockCounts = (params: { page?: number; per_page?: number } = {}
 export const useStockCount = (id: number | null, enabled = true) =>
     useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
 
-/** Count-session mutations (open / save / commit / cancel); refresh counts, items, movements, summary. */
+/** Count-session mutations (open / save / commit / recount / cancel); refresh counts, items, movements, summary. */
 export function useStockCountMutations() {
     const qc = useQueryClient();
     const inv = () => {
@@ -184,19 +184,15 @@ export function useStockCountMutations() {
     };
     return {
         open: useMutation({
-            mutationFn: (b: { warehouse?: string | null; category?: string | null; note?: string | null; stock_item_ids?: number[] }) =>
-                stockCountApi.open(b),
+            mutationFn: (b: { warehouse_id: number; stock_item_ids: number[] }) => stockCountApi.open(b),
             onSuccess: inv,
         }),
         save: useMutation({
-            mutationFn: (v: { id: number; counts: Record<number, number | null> }) => stockCountApi.saveCounts(v.id, v.counts),
+            mutationFn: (v: { id: number; lines: Record<number, LinePatch> }) => stockCountApi.saveLines(v.id, v.lines),
             onSuccess: inv,
         }),
-        commit: useMutation({
-            mutationFn: (v: { id: number; mode: StockCountAdjustMode; missingSerials?: Record<number, number[]> }) =>
-                stockCountApi.commit(v.id, v.mode, v.missingSerials),
-            onSuccess: inv,
-        }),
+        commit: useMutation({ mutationFn: (id: number) => stockCountApi.commit(id), onSuccess: inv }),
+        recount: useMutation({ mutationFn: (id: number) => stockCountApi.recount(id), onSuccess: inv }),
         cancel: useMutation({ mutationFn: (id: number) => stockCountApi.cancel(id), onSuccess: inv }),
     };
 }

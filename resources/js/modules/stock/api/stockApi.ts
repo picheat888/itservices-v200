@@ -1,8 +1,8 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type {
     ApiEnvelope,
+    CountReason,
     StockCount,
-    StockCountAdjustMode,
     StockItem,
     StockItemHistory,
     StockMovement,
@@ -118,14 +118,23 @@ export const stockRequestApi = {
         mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`, body),
 };
 
+/** One line's changes in a count save; only the keys present are touched. */
+export interface LinePatch {
+    counted_qty?: number | null;
+    reason?: CountReason | null;
+    reason_note?: string | null;
+    missing_serial_ids?: number[];
+    found_serial_ids?: number[];
+}
+
 export const stockCountApi = {
     list: (params?: { page?: number; per_page?: number }) =>
         http.get<Paginated<StockCount, StockCountPageMeta>>('/stock-counts', { params }).then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<StockCount>>(`/stock-counts/${id}`).then((r) => r.data.data),
-    open: (body: { warehouse?: string | null; category?: string | null; note?: string | null; stock_item_ids?: number[] }) =>
-        mutate<StockCount>('post', '/stock-counts', body),
-    saveCounts: (id: number, counts: Record<number, number | null>) => mutate<StockCount>('put', `/stock-counts/${id}`, { counts }),
-    commit: (id: number, mode: StockCountAdjustMode = 'auto', missingSerials?: Record<number, number[]>) =>
-        mutate<StockCount>('post', `/stock-counts/${id}/commit`, { mode, missing_serials: missingSerials ?? {} }),
+    open: (body: { warehouse_id: number; stock_item_ids: number[] }) => mutate<StockCount>('post', '/stock-counts', body),
+    saveLines: (id: number, lines: Record<number, LinePatch>) => mutate<StockCount>('put', `/stock-counts/${id}`, { lines }),
+    commit: (id: number) => mutate<StockCount>('post', `/stock-counts/${id}/commit`),
+    recount: (id: number) => mutate<StockCount>('post', `/stock-counts/${id}/recount`),
     cancel: (id: number) => mutate<void>('delete', `/stock-counts/${id}`),
+    pdfUrl: (id: number) => `/pdf/stock-counts/${id}`,
 };
