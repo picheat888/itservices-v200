@@ -357,6 +357,7 @@ export function StockItemDetailModal({
                                                     {pagedLots.map((l) => {
                                                         const expanded = expandedLot === l.id;
                                                         const detailId = `${lotDetailId}-${l.id}`;
+                                                        const lotNote = movementNote(l, t);
                                                         return (
                                                             <Fragment key={l.id}>
                                                                 <tr
@@ -416,9 +417,9 @@ export function StockItemDetailModal({
                                                                                     </span>
                                                                                 </Meta>
                                                                             </div>
-                                                                            {movementNote(l, t) && (
+                                                                            {lotNote && (
                                                                                 <div className="text-muted-foreground mt-2.5 text-xs">
-                                                                                    <span>{t('stock_notes')}:</span> {movementNote(l, t)}
+                                                                                    <span>{t('stock_notes')}:</span> {lotNote}
                                                                                 </div>
                                                                             )}
                                                                         </td>

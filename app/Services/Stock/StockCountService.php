@@ -310,7 +310,7 @@ class StockCountService
             'current_stock' => $total,
             'last_move_at' => now()->toDateString(),
         ]);
-        $this->lotService->reconcile($item, $total);
+        $this->lotService->reconcile($item, $total, $movement?->id);
 
         return true;
     }

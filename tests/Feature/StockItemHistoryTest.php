@@ -129,18 +129,21 @@ class StockItemHistoryTest extends TestCase
         $res->assertJsonPath('data.serials.0.events.0.event', 'received');
     }
 
-    public function test_a_count_adjust_up_lot_carries_its_reason_in_the_item_detail(): void
+    public function test_a_lot_opened_by_a_real_count_carries_its_reason_in_the_item_detail(): void
     {
-        $item = $this->serialItem('CNT-2');
-        $movement = StockMovement::create([
-            'type' => 'adjust_up', 'stock_item_id' => $item->id, 'qty' => 2, 'moved_at' => now(), 'reason' => 'inbound',
-        ]);
-        StockLot::create([
-            'stock_item_id' => $item->id, 'stock_movement_id' => $movement->id, 'unit_cost' => 1,
-            'qty_received' => 2, 'qty_remaining' => 2, 'received_at' => now(),
-        ]);
+        $warehouse = Warehouse::firstOrCreate(['name' => 'Main']);
+        $item = StockItem::create(['sku' => 'CNT-2', 'name' => 'CNT-2', 'unit' => 'pcs', 'current_stock' => 10, 'min_stock' => 1, 'max_stock' => 100]);
+        $item->balances()->create(['warehouse_id' => $warehouse->id, 'qty' => 10]);
+        $this->actingAs($this->super());
 
-        $this->actingAs($this->super())->getJson("/api/stock-items/{$item->id}")->assertOk()
+        $count = $this->postJson('/api/stock-counts', ['warehouse_id' => $warehouse->id, 'stock_item_ids' => [$item->id]])
+            ->assertCreated()->json('data');
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 12, 'reason' => 'inbound']]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+
+        $movement = StockMovement::where('stock_item_id', $item->id)->where('type', 'adjust_up')->firstOrFail();
+        $this->assertSame($movement->id, StockLot::where('stock_item_id', $item->id)->firstOrFail()->stock_movement_id);
+        $this->getJson("/api/stock-items/{$item->id}")->assertOk()
             ->assertJsonPath('data.lots.0.reason', 'inbound')
             ->assertJsonPath('data.lots.0.notes', null);
     }

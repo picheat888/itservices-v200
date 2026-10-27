@@ -59,14 +59,14 @@ class StockLotService
 
     /**
      * Align open lots with a target on-hand quantity (used after a stock count
-     * commit): open a fallback-cost lot when short, consume FIFO when over.
+     * commit): open a fallback-cost lot (tied to the adjusting movement) when short, consume FIFO when over.
      */
-    public function reconcile(StockItem $item, int $targetQty): void
+    public function reconcile(StockItem $item, int $targetQty, ?int $movementId = null): void
     {
         $current = (int) StockLot::where('stock_item_id', $item->id)->sum('qty_remaining');
 
         if ($targetQty > $current) {
-            $this->addLot($item, $targetQty - $current, null, null);
+            $this->addLot($item, $targetQty - $current, null, $movementId);
         } elseif ($targetQty < $current) {
             $this->consume($item, $current - $targetQty);
         }
