@@ -119,6 +119,7 @@ const SITES: Site[] = [
     { file: 'modules/stock/components/request-drawer.tsx', refresh: 1, flagRemoved: 1 },
     { file: 'modules/stock/components/movement-drawer.tsx', refresh: 4, flagRemoved: 1 },
     { file: 'modules/stock/pages/tabs/counting-tab.tsx', refresh: 2 },
+    { file: 'modules/stock/components/count/count-open-dialog.tsx', refresh: 2, openRefetch: 1 },
     { file: 'modules/stock/components/stock-item-detail-modal.tsx', marks: 4, openRefetch: 1 },
     { file: 'modules/stock/pages/tabs/requests-tab.tsx', seedOnce: 1, openRefetch: 1 },
     { file: 'modules/stock/pages/tabs/movements-tab.tsx', openRefetch: 1 },

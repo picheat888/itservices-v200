@@ -30,6 +30,7 @@ import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Check, ClipboardCheck, ClipboardList, ClipboardX, FileText, Loader2, Lock, Search, Zap } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { LinePatch } from '../../api/stockApi';
+import { HeldSkuRow } from '../../components/count/held-sku-row';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { countOverlapFor } from '../../lib/count-lock';
 import { stockRefusalText } from '../../lib/refusal';
@@ -997,27 +998,6 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                     </DialogFooterBar>
                 </FormDialogContent>
             </Dialog>
-        </div>
-    );
-}
-
-/** A picker row another draft count holds: shown so the list stays whole, never selectable. */
-function HeldSkuRow({ item, reference }: { item: StockItem; reference: string }) {
-    const t = useT();
-    const fmtN = useNumberFormat();
-    const lang = useUiStore((s) => s.lang);
-    return (
-        <div className="border-border/60 bg-muted/30 flex w-full items-center gap-3 border-b px-3 py-2 last:border-0">
-            <Checkbox className="size-4" checked={false} disabled aria-label={item.sku} />
-            <div className="text-muted-foreground min-w-0 flex-1">
-                <div className="text-xs">{item.sku}</div>
-                <div className="truncate text-xs">{item.name}</div>
-                <div className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                    {t('stock_count_held_by').replace('{reference}', reference)}
-                </div>
-            </div>
-            <span className="text-muted-foreground shrink-0 text-xs">{localPair(item.category, item.category_th, lang) ?? '—'}</span>
-            <span className="text-muted-foreground w-12 shrink-0 text-right text-sm font-semibold tabular-nums">{fmtN(item.current_stock)}</span>
         </div>
     );
 }
