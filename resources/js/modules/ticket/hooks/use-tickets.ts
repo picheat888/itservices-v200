@@ -4,6 +4,7 @@ import { normalizeSearch, useDebouncedSearch } from '@/shared/hooks/use-debounce
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_LIST, FRESH_MS, FRESH_VIEW } from '@/shared/lib/freshness';
 import type { TicketPriority, TicketWorkClass } from '@/shared/types';
+import { markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { ticketApi, type CreateTicketPayload, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
@@ -89,7 +90,13 @@ export function useTicketMutations() {
         return qc.invalidateQueries({ queryKey: ['ticket', 'view'] });
     };
     return {
-        create: useMutation({ mutationFn: (p: CreateTicketPayload) => ticketApi.create(p), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: CreateTicketPayload) => ticketApi.create(p),
+            onSuccess: (ticket) => {
+                markNew('tickets', ticket.id);
+                return invalidate();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: UpdateTicketPayload }) => ticketApi.update(v.id, v.payload),
             onSettled: invalidate,

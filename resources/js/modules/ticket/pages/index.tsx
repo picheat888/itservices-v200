@@ -4,6 +4,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { OverviewHeader, useOverviewPeriod, useShownPeriod, type PeriodOptions } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -15,6 +16,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
@@ -306,6 +308,14 @@ export default function TicketsPage() {
     const { data: listData, isLoading, isFetching, isPlaceholderData } = listQuery;
 
     const rows = listData?.data ?? [];
+    // A ticket the user just opened stays on top for a minute
+    const newTickets = useNewRows({
+        scope: 'tickets',
+        rows,
+        rowKey: (tk) => tk.id,
+        detail: { key: (id) => ['ticket', 'view', id], fetch: (id) => ticketApi.get(Number(id)) },
+        active: tab === 'all' || tab === 'mine' || tab === 'my',
+    });
     const meta = listData?.meta;
 
     // The "Latest" card has its own fixed query; the tab list's search / filters / sort / page must never leak into it
@@ -363,7 +373,12 @@ export default function TicketsPage() {
             header: t('ticket_request_at'),
             className: 'text-muted-foreground whitespace-nowrap',
             width: dateWidth,
-            render: (tk) => <DateTimeCell value={tk.created_at} />,
+            render: (tk) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <DateTimeCell value={tk.created_at} />
+                    {newTickets.isNew(tk) && <NewBadge />}
+                </div>
+            ),
         },
         {
             // Flexible column
@@ -718,7 +733,9 @@ export default function TicketsPage() {
                         <DataTable
                             columns={columns}
                             rows={rows}
+                            pinned={newTickets.pinned}
                             rowKey={(tk) => tk.id}
+                            rowClassName={(tk) => (newTickets.isNew(tk) ? NEW_ROW_CLASS : undefined)}
                             onRowClick={openDetail}
                             loading={isLoading || (isFetching && isPlaceholderData)}
                             empty={listEmpty}

@@ -1,6 +1,7 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_MS } from '@/shared/lib/freshness';
 import type { RequestSourceOption } from '@/shared/types';
+import { markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { requestApi, type RequestListParams, type RequestManagedChoice, type SubmitRequestPayload } from '../api/requestApi';
 
@@ -67,7 +68,10 @@ export function useRequestMutations() {
     return {
         submit: useMutation({
             mutationFn: (v: { payload: SubmitRequestPayload; onProgress?: (percent: number) => void }) => requestApi.submit(v.payload, v.onProgress),
-            onSuccess: invalidate,
+            onSuccess: (request) => {
+                markNew('requests', request.id);
+                invalidate();
+            },
         }),
         approve: useMutation({ mutationFn: (v: { id: number; note?: string }) => requestApi.approve(v.id, v.note), onSuccess: invalidate }),
         reject: useMutation({ mutationFn: (v: { id: number; note: string }) => requestApi.reject(v.id, v.note), onSuccess: invalidate }),

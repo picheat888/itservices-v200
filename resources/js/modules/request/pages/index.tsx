@@ -5,6 +5,7 @@ import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { OverviewHeader, overviewPeriodParams, useOverviewPeriod, usePeriodWords, useShownPeriod } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -13,6 +14,7 @@ import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefreshMark } from '@/shared/hooks/use-refresh-mark';
@@ -44,6 +46,7 @@ import { useUiStore } from '@/stores/ui';
 import { CalendarDays, Check, ChevronRight, CircleDot, Clock, Eye, History, Inbox, Layers, Plus, Search, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { requestApi } from '../api/requestApi';
 import { DecisionDialog, type DecisionAction } from '../components/decision-dialog';
 import { FiledDateFilter, type FiledPatch } from '../components/filed-date-filter';
 import { RequestCreateDialog } from '../components/request-create-dialog';
@@ -169,6 +172,14 @@ export default function RequestsPage() {
                 : { page: 1, per_page: 6, sort: 'activity' as const, ...overviewPeriodParams(period) };
     const { data: pageData, isLoading, isFetching, isPlaceholderData, isError, refetch, dataUpdatedAt } = useRequests(listParams);
     const rows = pageData?.data ?? [];
+    // A request the user just submitted stays on top for a minute
+    const newRequests = useNewRows({
+        scope: 'requests',
+        rows,
+        rowKey: (r) => r.id,
+        detail: { key: (id) => ['request', id], fetch: (id) => requestApi.get(Number(id)) },
+        active: tab !== 'overview',
+    });
     const meta = pageData?.meta;
     const metaPeriod = useShownPeriod(period, isPlaceholderData);
     const periodWords = usePeriodWords();
@@ -226,7 +237,12 @@ export default function RequestsPage() {
             header: t('dash_col_request'),
             width: '100px',
             className: 'whitespace-nowrap',
-            render: (r) => <span className="text-xs font-semibold">{r.reference}</span>,
+            render: (r) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-xs font-semibold">{r.reference}</span>
+                    {newRequests.isNew(r) && <NewBadge />}
+                </div>
+            ),
         },
         {
             key: 'title',
@@ -704,10 +720,11 @@ export default function RequestsPage() {
                         <DataTable
                             columns={columns}
                             rows={rows}
+                            pinned={newRequests.pinned}
                             rowKey={(r) => r.id}
                             loading={isLoading || (isFetching && isPlaceholderData)}
                             onRowClick={openDetail}
-                            rowClassName={onboardingRowClass}
+                            rowClassName={(r) => (newRequests.isNew(r) ? NEW_ROW_CLASS : onboardingRowClass(r))}
                             server={{ ...list.table.paging, total: meta?.total ?? 0 }}
                             emptyState={isError ? <LoadFailed onRetry={() => refetch()} /> : undefined}
                             empty={listEmpty}
