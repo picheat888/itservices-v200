@@ -5,11 +5,13 @@ import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoHint } from '@/shared/components/info-hint';
 import { LoadFailed } from '@/shared/components/load-failed';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -85,6 +87,8 @@ export function GroupRolesTab() {
     const openNew = () => dialogs.open({ add: '1' });
     const closeDialog = () => dialogs.close(['view', 'add']);
 
+    // A group the user just added stays on top for a minute, whatever the role filter
+    const newGroups = useNewRows({ scope: 'group-roles', rows: groups, rowKey: (g) => g.id });
     const rows = useMemo(() => {
         const byName = (a: GroupRole, b: GroupRole) => a.name.localeCompare(b.name, 'th', { sensitivity: 'base' });
         return groups
@@ -108,6 +112,7 @@ export function GroupRolesTab() {
             render: (g) => (
                 <div className="flex min-w-0 items-center gap-2.5">
                     <TruncText text={g.name} className="font-medium" />
+                    {newGroups.isNew(g) && <NewBadge />}
                     {g.id === defaultGroupId && (
                         <StatusBadge tone="blue" dot={false}>
                             {t('gr_default_badge')}
@@ -301,7 +306,9 @@ export function GroupRolesTab() {
             <DataTable
                 columns={columns}
                 rows={rows}
+                pinned={newGroups.pinned}
                 rowKey={(g) => g.id}
+                rowClassName={(g) => (newGroups.isNew(g) ? NEW_ROW_CLASS : undefined)}
                 searchPlaceholder={t('gr_search_ph')}
                 searchable={(g) => `${g.name} ${g.role_label ?? ''}`}
                 onRowClick={openGroup}

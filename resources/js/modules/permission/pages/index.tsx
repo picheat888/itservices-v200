@@ -1,6 +1,7 @@
 import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { EmptyState } from '@/shared/components/empty-state';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -8,9 +9,11 @@ import { ListSkeleton } from '@/shared/components/skeletons';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useNavigationGuard } from '@/shared/hooks/use-navigation-guard';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { splitPinned } from '@/shared/lib/new-rows';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -141,6 +144,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     const [saved, setSaved] = useState<{ label: string; members: number } | null>(null);
 
     const roles = data?.roles ?? [];
+    // A role the user just added or duplicated sits on top of the list and picker for a minute; roles[0] stays the default
+    const newRoles = useNewRows({ scope: 'roles', rows: roles, rowKey: (r) => r.value });
+    const listedRoles = [...newRoles.pinned, ...splitPinned(roles, newRoles.pinned, (r) => r.value)];
     // Selected role in ?role= (the first role is the bare URL); an unknown key falls back to the first
     const role: RoleRow | undefined = roles.find((r) => r.value === searchParams.get('role')) ?? roles[0];
     const selectRole = (key: string) =>
@@ -288,7 +294,13 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
     };
     const editRole = (r: RoleRow) => setRoleModal({ open: true, mode: { kind: 'edit', role: r } });
     const duplicateRole = (r: RoleRow) => setRoleModal({ open: true, mode: { kind: 'duplicate', source: r, savedCount: heldKeys(r).size } });
-    const roleOptions = roles.map((r) => ({ value: r.value, label: r.label, search: r.label, icon: <RoleBar color={r.color} className="h-4" /> }));
+    const roleOptions = listedRoles.map((r) => ({
+        value: r.value,
+        label: r.label,
+        search: r.label,
+        hint: newRoles.isNew(r) ? t('badge_new') : undefined,
+        icon: <RoleBar color={r.color} className="h-4" />,
+    }));
 
     const openSave = () => {
         setPending(changedKeys.size);
@@ -356,12 +368,12 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
             <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
                 {/* Role list; below lg the sticky header's picker stands in for it */}
                 <div className="border-border hidden border-r lg:block">
-                    {roles.map((r) => (
+                    {listedRoles.map((r) => (
                         <div
                             key={r.value}
                             className={cn(
                                 'group border-border hover:bg-accent/50 flex items-center justify-between border-b transition-colors',
-                                r.value === role.value && 'bg-brand/10',
+                                r.value === role.value ? 'bg-brand/10' : newRoles.isNew(r) && NEW_ROW_CLASS,
                             )}
                         >
                             <button
@@ -371,7 +383,10 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
                                 className="flex min-w-0 flex-1 items-center gap-2 py-3.5 pl-4 text-left"
                             >
                                 <RoleBar color={r.color} className="h-6" />
-                                <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand-ink')}>{r.label}</span>
+                                <span className="flex min-w-0 flex-col items-start gap-0.5">
+                                    <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand-ink')}>{r.label}</span>
+                                    {newRoles.isNew(r) && <NewBadge />}
+                                </span>
                             </button>
                             <RoleRowMenu
                                 role={r}

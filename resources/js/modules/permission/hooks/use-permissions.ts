@@ -1,5 +1,6 @@
 import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { ME_KEY } from '@/shared/lib/query-client';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     groupRoleApi,
@@ -44,15 +45,30 @@ export function useRoleMutations() {
             qc.invalidateQueries({ queryKey: GROUPS, exact: true }),
         ]);
     return {
-        create: useMutation({ mutationFn: (p: { name: string; color: string }) => roleApi.create(p), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: { name: string; color: string }) => roleApi.create(p),
+            onSuccess: (role) => {
+                markNew('roles', role.key);
+                return invalidate();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { key: string; name: string; color: string }) => roleApi.update(v.key, { name: v.name, color: v.color }),
             onSuccess: invalidate,
         }),
-        remove: useMutation({ mutationFn: (key: string) => roleApi.remove(key), onSuccess: invalidate }),
+        remove: useMutation({
+            mutationFn: (key: string) => roleApi.remove(key),
+            onSuccess: (_, key) => {
+                dropNew('roles', key);
+                return invalidate();
+            },
+        }),
         duplicate: useMutation({
             mutationFn: (v: { key: string; name: string; color: string }) => roleApi.duplicate(v.key, { name: v.name, color: v.color }),
-            onSuccess: invalidate,
+            onSuccess: (role) => {
+                markNew('roles', role.key);
+                return invalidate();
+            },
         }),
     };
 }
@@ -107,12 +123,24 @@ export function useGroupRoleMutations() {
         invalidateAround();
     };
     return {
-        create: useMutation({ mutationFn: (p: GroupRoleCreatePayload) => groupRoleApi.create(p), onSuccess: markStale }),
+        create: useMutation({
+            mutationFn: (p: GroupRoleCreatePayload) => groupRoleApi.create(p),
+            onSuccess: (group) => {
+                markNew('group-roles', group.id);
+                markStale();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: GroupRoleUpdatePayload }) => groupRoleApi.update(v.id, v.payload),
             onSuccess: markStale,
         }),
-        remove: useMutation({ mutationFn: (id: number) => groupRoleApi.remove(id), onSuccess: invalidate }),
+        remove: useMutation({
+            mutationFn: (id: number) => groupRoleApi.remove(id),
+            onSuccess: (_, id) => {
+                dropNew('group-roles', id);
+                invalidate();
+            },
+        }),
         refreshList: () => qc.refetchQueries({ queryKey: GROUPS, exact: true }),
     };
 }
