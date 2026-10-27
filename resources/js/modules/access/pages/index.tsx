@@ -4,12 +4,14 @@ import { AvatarStack } from '@/shared/components/avatar-stack';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import type { EmptyStateProps } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { PageTabs, type PageTab } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { TruncText } from '@/shared/components/trunc-text';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -230,6 +232,11 @@ export default function AccessControlPage() {
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
     const spRows = useMemo(() => social.data ?? [], [social.data]);
     const swRows = useMemo(() => software.data ?? [], [software.data]);
+    // A resource the user just added stays on top of its own tab for a minute
+    const newEg = useNewRows({ scope: 'access:email-groups', rows: egRows, rowKey: (g) => g.id });
+    const newFs = useNewRows({ scope: 'access:file-shares', rows: fsRows, rowKey: (s) => s.id });
+    const newSp = useNewRows({ scope: 'access:social-platforms', rows: spRows, rowKey: (p) => p.id });
+    const newSw = useNewRows({ scope: 'access:software', rows: swRows, rowKey: (s) => s.id });
     // The drawer and the edit form read their row from the registry list, so opening one asks for that list again
     const registryQuery = { 'email-groups': emailGroups, 'file-shares': fileShares, 'social-platforms': social, software } as const;
     // The loaded rows of one registry
@@ -519,7 +526,16 @@ export default function AccessControlPage() {
             key: 'name',
             header: t('access_name'),
             minWidth: '14rem',
-            render: (g) => <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} />,
+            render: (g) => (
+                <div className="flex min-w-0 flex-col gap-0.5">
+                    <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} />
+                    {newEg.isNew(g) && (
+                        <div className="flex">
+                            <NewBadge />
+                        </div>
+                    )}
+                </div>
+            ),
         },
         { key: 'owner', header: t('access_owner'), width: '200px', render: (g) => <OwnerCell owner={ownerLabel(g)} photoUrl={g.owner_photo_url} /> },
         {
@@ -537,7 +553,16 @@ export default function AccessControlPage() {
             key: 'name',
             header: t('access_name'),
             minWidth: '14rem',
-            render: (s) => <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} />,
+            render: (s) => (
+                <div className="flex min-w-0 flex-col gap-0.5">
+                    <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} />
+                    {newFs.isNew(s) && (
+                        <div className="flex">
+                            <NewBadge />
+                        </div>
+                    )}
+                </div>
+            ),
         },
         {
             key: 'size',
@@ -562,7 +587,16 @@ export default function AccessControlPage() {
             key: 'name',
             header: t('access_name'),
             minWidth: '14rem',
-            render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} />,
+            render: (p) => (
+                <div className="flex min-w-0 flex-col gap-0.5">
+                    <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} />
+                    {newSp.isNew(p) && (
+                        <div className="flex">
+                            <NewBadge />
+                        </div>
+                    )}
+                </div>
+            ),
         },
         { key: 'policy', header: t('access_policy'), width: '200px', render: (p) => <TruncText text={p.policy} /> },
         { key: 'members', header: t('access_members'), width: '164px', render: (p) => <AvatarStack members={p.members ?? []} /> },
@@ -574,7 +608,16 @@ export default function AccessControlPage() {
             key: 'name',
             header: t('access_name'),
             minWidth: '16rem',
-            render: (s) => <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} />,
+            render: (s) => (
+                <div className="flex min-w-0 flex-col gap-0.5">
+                    <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} />
+                    {newSw.isNew(s) && (
+                        <div className="flex">
+                            <NewBadge />
+                        </div>
+                    )}
+                </div>
+            ),
         },
         { key: 'publisher', header: t('access_publisher'), width: '160px', render: (s) => <TruncText text={s.publisher} /> },
         {
@@ -639,7 +682,9 @@ export default function AccessControlPage() {
                         <DataTable
                             columns={egColumns}
                             rows={egFiltered}
+                            pinned={newEg.pinned}
                             rowKey={(g) => g.id}
+                            rowClassName={(g) => (newEg.isNew(g) ? NEW_ROW_CLASS : undefined)}
                             searchPlaceholder={t('access_email_search')}
                             searchable={(g) =>
                                 `${g.name} ${g.email} ${g.department ?? ''} ${g.department_th ?? ''} ${g.owner ?? ''} ${g.owner_th ?? ''} ${g.owner_code ?? ''}`
@@ -657,7 +702,9 @@ export default function AccessControlPage() {
                         <DataTable
                             columns={fsColumns}
                             rows={fsFiltered}
+                            pinned={newFs.pinned}
                             rowKey={(s) => s.id}
+                            rowClassName={(s) => (newFs.isNew(s) ? NEW_ROW_CLASS : undefined)}
                             searchPlaceholder={t('access_share_search')}
                             searchable={(s) =>
                                 `${s.name} ${s.path} ${s.department ?? ''} ${s.department_th ?? ''} ${s.owner ?? ''} ${s.owner_th ?? ''} ${s.owner_code ?? ''}`
@@ -675,7 +722,9 @@ export default function AccessControlPage() {
                         <DataTable
                             columns={spColumns}
                             rows={spRows}
+                            pinned={newSp.pinned}
                             rowKey={(p) => p.id}
+                            rowClassName={(p) => (newSp.isNew(p) ? NEW_ROW_CLASS : undefined)}
                             searchPlaceholder={t('access_social_search')}
                             searchable={(p) => `${p.name} ${p.url ?? ''} ${p.policy ?? ''}`}
                             onRowClick={openSocial}
@@ -690,7 +739,9 @@ export default function AccessControlPage() {
                         <DataTable
                             columns={swColumns}
                             rows={swFiltered}
+                            pinned={newSw.pinned}
                             rowKey={(s) => s.id}
+                            rowClassName={(s) => (newSw.isNew(s) ? NEW_ROW_CLASS : undefined)}
                             searchPlaceholder={t('access_software_search')}
                             searchable={(s) => `${s.name} ${s.publisher ?? ''}`}
                             onRowClick={openSoftware}

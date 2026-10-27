@@ -2,6 +2,7 @@ import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/over
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
 import type { AccessKind } from '@/shared/types';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accessApi } from '../api/accessApi';
 
@@ -88,12 +89,24 @@ export function useAccessMutations(kind: AccessKind) {
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
-        create: useMutation({ mutationFn: (p: Record<string, unknown>) => accessApi.createResource(kind, p), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: Record<string, unknown>) => accessApi.createResource(kind, p),
+            onSuccess: (resource) => {
+                markNew(`access:${kind}`, resource.id);
+                invalidate();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: Record<string, unknown> }) => accessApi.updateResource(kind, v.id, v.payload),
             onSuccess: invalidate,
         }),
-        remove: useMutation({ mutationFn: (id: number) => accessApi.removeResource(kind, id), onSuccess: invalidate }),
+        remove: useMutation({
+            mutationFn: (id: number) => accessApi.removeResource(kind, id),
+            onSuccess: (_, id) => {
+                dropNew(`access:${kind}`, id);
+                invalidate();
+            },
+        }),
         addMember: useMutation({
             mutationFn: (v: { id: number; payload: { employee_id: number; access_level?: string | null; purpose?: string | null } }) =>
                 accessApi.addMember(kind, v.id, v.payload),
