@@ -89,9 +89,9 @@ class ContractResource extends JsonResource
         ];
     }
 
-    /** Builds the "฿2,140,000/yr" style display string from raw value + cycle (symbol per Settings currency). */
+    /** The amount of one billing cycle, "฿2,140,000.00" (symbol per Settings currency); the page adds the cycle. */
     private function valueDisplay(): string
     {
-        return AppSetting::currencySymbol().number_format((float) $this->value, 2).$this->resource->cycleSuffix();
+        return AppSetting::currencySymbol().number_format((float) $this->value, 2);
     }
 }

@@ -3,6 +3,7 @@ import { ImportDialog } from '@/shared/components/import-dialog';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { employeeApi, type ImportPreviewRow } from '../api/employeeApi';
 import { useEmployeeMutations } from '../hooks/use-employees';
+import { importIssueText } from '../lib/import-issue';
 import { ImportAccountNotice, ImportEmployeeGuide } from './import-guide';
 import { ImportPreviewTable } from './import-preview-table';
 
@@ -38,6 +39,7 @@ export function ImportEmployeeDialog({ open, onClose }: { open: boolean; onClose
             ]}
             notice={<ImportAccountNotice />}
             guide={<ImportEmployeeGuide />}
+            issueText={(issue) => importIssueText(issue, t)}
             runImport={(file) => importMut.mutateAsync(file)}
             importPending={importMut.isPending}
             successMessage={(n) => t('import_success_count').replace('{n}', fmtN(n))}

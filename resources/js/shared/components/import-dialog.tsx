@@ -9,10 +9,18 @@ import { Dialog, DialogContent, DialogFooterBar, mediumDialogContentClass } from
 import { AlertCircle, CheckCircle2, Download, Loader2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-/** One row of a bulk import the server refused, as every import endpoint reports them. */
+/** One problem on a row as a code plus the column, value and figures it quotes; the module words it. */
+export interface ImportIssue {
+    code: string;
+    column: string;
+    [figure: string]: string | number | undefined;
+}
+
+/** One row of a bulk import the server refused: issue codes, or a message for an import that sends text. */
 export interface ImportRowError {
     row: number;
-    message: string;
+    message?: string;
+    issues?: ImportIssue[];
 }
 
 /** The counts a dry-run reports over the WHOLE file, however few rows it lists. */
@@ -59,6 +67,7 @@ export function ImportDialog<Row>({
     extraDownloads,
     notice,
     guide,
+    issueText,
 }: {
     open: boolean;
     onClose: () => void;
@@ -81,6 +90,8 @@ export function ImportDialog<Row>({
     notice?: ReactNode;
     /** Shown under the drop zone: how to fill the file in. The module's own content. */
     guide?: ReactNode;
+    /** Words one issue code of a refused row in the reader's language. */
+    issueText?: (issue: ImportIssue) => string;
 }) {
     const t = useT();
     const fmtN = useNumberFormat();
@@ -293,7 +304,9 @@ export function ImportDialog<Row>({
                                             <span className="text-destructive font-semibold">
                                                 {t('import_row')} {rowError.row}:
                                             </span>{' '}
-                                            <span className="text-muted-foreground">{rowError.message}</span>
+                                            <span className="text-muted-foreground">
+                                                {rowError.issues && issueText ? rowError.issues.map(issueText).join(', ') : rowError.message}
+                                            </span>
                                         </div>
                                     ))}
                                 </div>

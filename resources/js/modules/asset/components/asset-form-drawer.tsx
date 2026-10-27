@@ -303,7 +303,7 @@ export function AssetFormDrawer({
                 if (message && !fieldErrors[errKey]) fieldErrors[errKey] = message;
             }
             if (Object.keys(fieldErrors).length) setErr(fieldErrors);
-            else formError.show(serverMessage(error) ?? t('asset_could_not_save'));
+            else formError.show(serverMessage(error, t, 'asset_refusal_') ?? t('asset_could_not_save'));
         }
     };
 

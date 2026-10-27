@@ -319,6 +319,8 @@ export interface Asset {
     warehouse_id: number | null;
     value: number;
     value_display: string;
+    /** A rented asset's billing cycle (the fee is per cycle); null for an owned one. */
+    value_cycle?: 'monthly' | 'quarterly' | 'yearly' | null;
     supplier: string | null;
     supplier_th?: string | null;
     vendor_id: number | null;

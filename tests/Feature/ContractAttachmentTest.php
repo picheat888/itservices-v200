@@ -85,7 +85,10 @@ class ContractAttachmentTest extends TestCase
 
         $this->postJson("/api/contracts/{$contract->id}/attachments", [
             'files' => [UploadedFile::fake()->create('one-more.pdf', 100, 'application/pdf')],
-        ])->assertStatus(422);
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'too_many_files')
+            ->assertJsonPath('max', 5)
+            ->assertJsonPath('remaining', 0);
 
         $this->assertSame(5, $contract->attachments()->count());
     }

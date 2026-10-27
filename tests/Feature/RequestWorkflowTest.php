@@ -301,7 +301,7 @@ class RequestWorkflowTest extends TestCase
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
             'fields' => ['device_id' => $this->deviceOptionId()],
-        ])->assertUnprocessable()->assertJsonValidationErrors('requester');
+        ])->assertUnprocessable()->assertJsonPath('errors.requester.0', 'no_employee');
     }
 
     public function test_submit_blocked_when_workflow_inactive_and_validates_type_fields(): void
@@ -312,7 +312,7 @@ class RequestWorkflowTest extends TestCase
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
             'fields' => ['device_id' => $this->deviceOptionId()],
-        ])->assertUnprocessable()->assertJsonValidationErrors('type');
+        ])->assertUnprocessable()->assertJsonPath('errors.type.0', 'type_closed');
 
         // Missing the required device select for the computer schema.
         Workflow::where('request_type', 'computer')->firstOrFail()->update(['active' => true]);
@@ -395,7 +395,7 @@ class RequestWorkflowTest extends TestCase
 
         // The requester, the NEXT approver, and even a super admin all get 403.
         $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden()->assertJsonPath('message', 'not_your_turn');
         $super = User::factory()->create(['role' => 'super']);
         $this->actingAs($super)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
 
@@ -451,7 +451,7 @@ class RequestWorkflowTest extends TestCase
 
         $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
         // Fully approved: no further decision is possible for anyone.
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable()->assertJsonPath('message', 'wrong_status');
     }
 
     public function test_complete_requires_permission_and_approved_status(): void
@@ -463,7 +463,7 @@ class RequestWorkflowTest extends TestCase
         $request = $this->submitComputer();
         $it = $this->makeUser('it', ['requests.complete']);
 
-        $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/complete")->assertUnprocessable();
+        $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/complete")->assertUnprocessable()->assertJsonPath('message', 'wrong_status');
 
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve");
         $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve");

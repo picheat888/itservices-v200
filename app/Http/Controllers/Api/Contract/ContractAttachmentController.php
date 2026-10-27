@@ -41,9 +41,8 @@ class ContractAttachmentController extends Controller
 
         $remaining = self::MAX_FILES - $contract->attachments()->count();
         if (count($files) > $remaining) {
-            return response()->json([
-                'message' => 'แนบไฟล์ได้สูงสุด '.self::MAX_FILES." ไฟล์ต่อสัญญา (เหลือ {$remaining} ไฟล์)",
-            ], 422);
+            // A reason and its figures; the page words it in the reader's language
+            return response()->json(['message' => 'too_many_files', 'max' => self::MAX_FILES, 'remaining' => $remaining], 422);
         }
 
         foreach ($files as $file) {

@@ -80,6 +80,18 @@ class ContractExpiryAlertTest extends TestCase
             ->whereDate('bell_date', now()->toDateString())->count());
     }
 
+    public function test_the_bell_carries_the_vendor_name_in_both_languages(): void
+    {
+        $vendor = Vendor::create(['name' => 'Microsoft', 'name_th' => 'ไมโครซอฟท์']);
+        $contract = $this->contractExpiringIn(30, [30]);
+        $contract->update(['vendor_id' => $vendor->id]);
+
+        $data = (new ContractExpiryNotification($contract->fresh(), 30))->toDatabase($this->alertedUser());
+
+        $this->assertSame('Microsoft', $data['contract_vendor']);
+        $this->assertSame('ไมโครซอฟท์', $data['contract_vendor_th']);
+    }
+
     public function test_bell_does_not_fire_twice_on_the_same_day(): void
     {
         Notification::fake();

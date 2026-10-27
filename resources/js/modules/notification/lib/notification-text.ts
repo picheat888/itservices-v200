@@ -2,6 +2,7 @@
 // Pure (no React, no stores): the language comes in as a parameter.
 import type { Lang } from '@/lang/types';
 import { PROFILE_ASSETS_SEARCH } from '@/shared/lib/dialog-search';
+import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import { requestTitle } from '@/shared/lib/request-title';
 import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
@@ -31,7 +32,7 @@ export function notificationTitle(n: AppNotification, t: Translate, lang: Lang):
     if (n.data.type === 'test') {
         return `${t('notif_test_prefix')} ${t(`notification_name_${(n.data.source_key ?? '').replace(/^notif_/, '')}`)}`;
     }
-    if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
+    if (n.data.type === 'contract_expiring') return `${localPair(n.data.contract_vendor, n.data.contract_vendor_th, lang)} (${n.data.contract_code})`;
     // Number first: long titles truncate, and the number is what people refer to
     if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} ${n.data.subject}`;
     if (n.data.type === 'stock_alert') return `${n.data.name} (${n.data.sku})`;

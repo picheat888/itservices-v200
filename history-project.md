@@ -7385,6 +7385,20 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - migration `2026_10_27_120000_stock_count_redesign` ผู้ใช้รันกับ itservices_perf แล้ว เติม "ยืนยันโดย" ให้ใบเก่าจาก audit log ได้ 39 จาก 42 ใบ ใบเก่าทั้ง 42 ใบเปิดหน้าจอใหม่และพิมพ์ PDF ได้ ความเคลื่อนไหวปรับยอดเดิม 348 แถวยังไม่มีเลข ADJ (ไม่ได้ย้อนเติม)
 - เทสต์ PHP ชุดนับสต็อก 157 ผ่าน JS 880 ผ่าน tsc 0 ดูด้วยตาใน Chrome ที่ 1280 และ iPad 768 สว่างและมืด โดยกันการเขียนข้อมูลจริงไว้ ผ่าน
 
+## ข้อความจาก server แปลตามภาษาผู้ใช้ REQ-2, AST-12, EMP-9, SET-9, CON-12, CON-13, TKT-12, AUTH-6 (2026-10-27)
+
+ผู้ใช้วางกติกา ภาษาหลักของระบบคืออังกฤษ ข้อความที่ผู้ใช้เห็นบนหน้าจอให้ server ส่งเป็นรหัสแล้วหน้าเว็บแปล ส่วน log ประวัติที่ admin หรือ IT ดู และข้อมูลที่เก็บในฐานแล้ว คงเป็นอังกฤษ ไม่แปล ไม่แปลงย้อนหลัง คำทุกคำผ่านการรีวิวกับผู้ใช้ก่อนแก้
+- ส่วนกลาง `shared/lib/reason-words.ts` `reasonWords()` แปลรหัสใน `message` หรือในช่อง error แรกของแต่ละฟิลด์ เป็นคีย์ `<prefix><code>` เติม {ตัวเลข} จาก response `serverMessage(e, t, prefix)` กับ `refusalText()` ใช้ตัวนี้ ถ้าไม่มีคำก็ถอยไปแสดงแบบเดิม
+- REQ-2 คำขอ `req_refusal_*` (no_employee, type_closed, ticket_still_open, wrong_status, no_step_waiting, not_your_turn) และหน้าแก้ Workflow `wf_err_*` 6 รหัส
+- AST-12 ทรัพย์สิน `asset_refusal_*` 17 รหัส ส่วนที่มีเลขทรัพย์สินหรือสัญญาส่ง `code`, `codes`, `contract` มาด้วย ประวัติการโอน "Returned to pool" คงเป็นอังกฤษ (log)
+- EMP-9 นำเข้าพนักงาน แต่ละแถวส่ง `issues` เป็นรหัสพร้อม `column`, `value`, `closest` และตัวเลขอื่น หน้าเว็บแปลด้วย `importIssueText()` คีย์ `import_err_*` เพิ่มรหัส `report_to_loop` ที่ไม่อยู่ในตารางที่ตกลงไว้ (คำเดิมของระบบ) `ImportDialog` รับ `issueText`
+- SET-9 ทดสอบส่งเมล `set_email_test_err_smtp_not_configured`, `_no_email`
+- CON-12 มูลค่าสัญญาและทรัพย์สินเช่า server ส่งตัวเลขไม่มีตัวต่อท้าย พร้อม `billing_cycle` / `value_cycle` หน้าเว็บต่อท้ายด้วย `perCycle()` (/เดือน /ไตรมาส /ปี, /mo /qtr /yr) ลบ `Contract::cycleSuffix()`
+- CON-13 แนบไฟล์สัญญาเกิน `too_many_files` + `max` + `remaining` กระดิ่งสัญญาใกล้หมดอายุส่ง `contract_vendor_th` เพิ่ม (กระดิ่งใหม่เท่านั้น)
+- TKT-12 บรรทัดเปลี่ยนลักษณะงานคงเป็นอังกฤษ แต่ใช้คำเดียวกับหน้าจอ (In-house technician, External technician) แทน Repair (in-house) / Repair (vendor)
+- AUTH-6 ฟอร์มเปลี่ยนรหัสผ่านและโปรไฟล์ เมื่อ server ล่มแสดงคำของฟอร์มเอง และไม่ขึ้น toast ซ้ำ (`formFailureText()`)
+- เทสต์ assertion รหัสใหม่ในเทสต์เดิมของคำขอ Workflow ทรัพย์สิน สัญญา นำเข้า และ Ticket เทสต์ใหม่ `MailTestRefusalTest`, JS `reason-words`, `import-issue`, `billing-cycle`, `formFailureText` ล้มก่อนแก้ทุกข้อ
+
 ## ใบนับสต็อก เลื่อนไปที่แถวที่ server ปฏิเสธ (2026-10-27)
 
 ข้อเล็กที่เลื่อนไว้จากงานนับสต็อกใหม่ ผู้ใช้ให้ทำต่อ

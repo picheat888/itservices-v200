@@ -52,7 +52,8 @@ class ContractApiTest extends TestCase
         $this->postJson('/api/contracts', $payload)
             ->assertCreated()
             ->assertJsonPath('data.vendor', 'Microsoft Thailand')
-            ->assertJsonPath('data.value_display', '฿2,140,000.00/yr')
+            ->assertJsonPath('data.value_display', '฿2,140,000.00')
+            ->assertJsonPath('data.billing_cycle', 'yearly')
             ->assertJsonPath('data.duration_months', 24)
             ->assertJsonPath('data.duration_days', 0)
             ->assertJsonPath('data.status', 'active')
@@ -662,7 +663,7 @@ class ContractApiTest extends TestCase
             'code' => 'CT-DEC-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 1234.56, 'total_value' => 14814.72, 'billing_cycle' => 'monthly',
         ])->assertCreated()
-            ->assertJsonPath('data.value_display', '฿1,234.56/mo')
+            ->assertJsonPath('data.value_display', '฿1,234.56')
             ->assertJsonPath('data.total_value_display', '฿14,814.72');
         $this->assertDatabaseHas('contracts', ['code' => 'CT-DEC-1', 'value' => 1234.56, 'total_value' => 14814.72]);
     }

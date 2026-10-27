@@ -73,7 +73,7 @@ class WorkflowAdminTest extends TestCase
         // No approval step at all.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
             'steps' => [['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'completion']],
-        ])->assertUnprocessable()->assertJsonValidationErrors('steps');
+        ])->assertUnprocessable()->assertJsonPath('errors.steps.0', 'need_approval_step');
 
         // Completion not last.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
@@ -81,12 +81,12 @@ class WorkflowAdminTest extends TestCase
                 ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'completion'],
                 ['actor_type' => 'chain', 'label' => 'Boss', 'kind' => 'approval'],
             ],
-        ])->assertUnprocessable()->assertJsonValidationErrors('steps');
+        ])->assertUnprocessable()->assertJsonPath('errors.steps.0', 'completion_last');
 
         // Owner step on a type whose resources carry no owner.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
             'steps' => [['actor_type' => 'owner', 'label' => 'Owner', 'kind' => 'approval']],
-        ])->assertUnprocessable()->assertJsonValidationErrors('steps');
+        ])->assertUnprocessable()->assertJsonPath('errors.steps.0', 'no_resource_owner');
 
         // A valid replacement persists in order with renumbered positions.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
@@ -208,7 +208,7 @@ class WorkflowAdminTest extends TestCase
                 ],
                 ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
-        ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.approver_employee_ids');
+        ])->assertUnprocessable()->assertJson(['errors' => ['steps.0.approver_employee_ids' => ['approver_outside_department']]]);
     }
 
     /** A department step that says neither who nor where can never resolve, so it is refused. */

@@ -91,6 +91,7 @@ class AssetApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.model', 'Dell Latitude 5440')
             ->assertJsonPath('data.value_display', '฿32,100.00')
+            ->assertJsonPath('data.value_cycle', null)
             ->assertJsonPath('data.status', 'ready')
             // "Registered" reflects when the row was created in this system (created_at).
             ->assertJsonPath('data.registered_date', now()->toDateString());
@@ -141,7 +142,8 @@ class AssetApiTest extends TestCase
         $this->postJson('/api/assets', [
             'category_id' => $this->categoryId('network'), 'source' => 'rented', 'model_id' => $this->modelId('Cisco 9300'), 'contract_id' => $contract->id,
         ])->assertCreated()
-            ->assertJsonPath('data.value_display', '฿8,500.00/mo')
+            ->assertJsonPath('data.value_display', '฿8,500.00')
+            ->assertJsonPath('data.value_cycle', 'monthly')
             ->assertJsonPath('data.supplier', 'SVOA')
             ->assertJsonPath('data.lease_start', '2026-01-01')
             ->assertJsonPath('data.lease_end', '2027-12-31')
@@ -210,8 +212,8 @@ class AssetApiTest extends TestCase
         $yearly = Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease('yearly', 24000)->id, 'value' => 0, 'vendor_id' => null]);
         $quarterly = Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease('quarterly', 3000)->id, 'value' => 0, 'vendor_id' => null]);
 
-        $this->getJson("/api/assets/{$yearly->id}")->assertOk()->assertJsonPath('data.value_display', '฿24,000.00/yr');
-        $this->getJson("/api/assets/{$quarterly->id}")->assertOk()->assertJsonPath('data.value_display', '฿3,000.00/qtr');
+        $this->getJson("/api/assets/{$yearly->id}")->assertOk()->assertJsonPath('data.value_display', '฿24,000.00')->assertJsonPath('data.value_cycle', 'yearly');
+        $this->getJson("/api/assets/{$quarterly->id}")->assertOk()->assertJsonPath('data.value_display', '฿3,000.00')->assertJsonPath('data.value_cycle', 'quarterly');
         // 24,000 once a year + 3,000 four times a year.
         $this->getJson('/api/assets/summary')->assertOk()->assertJsonPath('total_value', 36000);
     }
@@ -643,7 +645,7 @@ class AssetApiTest extends TestCase
         // Returning it is under way — the holder cannot flip it back to in use.
         $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => null, 'owner_employee_id' => $employee->id]);
 
-        $this->actingAs($holder)->postJson("/api/assets/{$asset->id}/accept")->assertUnprocessable();
+        $this->actingAs($holder)->postJson("/api/assets/{$asset->id}/accept")->assertUnprocessable()->assertJsonPath('message', 'accept_not_pending');
 
         $this->assertSame('pending_return', $asset->fresh()->status->value);
     }
@@ -915,7 +917,7 @@ class AssetApiTest extends TestCase
         $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-5002', 'owner_employee_id' => $employee->id]);
 
         $this->postJson('/api/assets/bulk', ['ids' => [$held->id], 'op' => 'writeoff', 'writeoff_reason_id' => $this->writeoffReasonId(), 'reason' => 'EOL'])
-            ->assertStatus(422);
+            ->assertStatus(422)->assertJsonPath('message', 'writeoff_not_ready')->assertJsonPath('codes', $held->asset_code);
 
         $this->assertSame('deployed', $held->fresh()->status->value);
     }
@@ -1272,7 +1274,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
-        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertStatus(422);
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertStatus(422)->assertJsonPath('message', 'recall_already_ready');
     }
 
     /** A shared / common-use asset (deployed, no employee holder) can be recalled back into the pool. */
@@ -1301,7 +1303,7 @@ class AssetApiTest extends TestCase
         $employee = Employee::create(['code' => 'EMP-RCL-3', 'first_name' => 'Holder', 'last_name' => 'Person']);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => null, 'owner_employee_id' => $employee->id]);
 
-        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertStatus(422);
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertStatus(422)->assertJsonPath('message', 'recall_not_allowed');
     }
 
     /**
@@ -1496,7 +1498,7 @@ class AssetApiTest extends TestCase
         $u1 = User::factory()->create(['role' => 'user']);
         RolePermission::create(['role_id' => $u1->role_id, 'permission' => 'assets.transfer', 'allowed' => true]);
         $a = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-BR1', 'owner_employee_id' => $employee->id]);
-        $this->actingAs($u1)->postJson('/api/assets/bulk-recall', ['ids' => [$a->id], 'warehouse' => 'Central IT'])->assertStatus(422);
+        $this->actingAs($u1)->postJson('/api/assets/bulk-recall', ['ids' => [$a->id], 'warehouse' => 'Central IT'])->assertStatus(422)->assertJsonPath('message', 'recall_some_blocked');
 
         // assets.force_recall unlocks it.
         $u2 = User::factory()->create(['role' => 'user']);
@@ -1523,7 +1525,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         Warehouse::firstOrCreate(['name' => 'Central IT']);
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
-        $this->postJson('/api/assets/bulk-receive', ['ids' => [$ready->id], 'warehouse' => 'Central IT'])->assertStatus(422);
+        $this->postJson('/api/assets/bulk-receive', ['ids' => [$ready->id], 'warehouse' => 'Central IT'])->assertStatus(422)->assertJsonPath('message', 'receive_not_pending');
     }
 
     public function test_written_off_asset_cannot_be_edited(): void
@@ -1594,7 +1596,7 @@ class AssetApiTest extends TestCase
         $employee = Employee::create(['code' => 'EMP-DEL-1', 'first_name' => 'De', 'last_name' => 'Ployed']);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-DEL-1', 'owner_employee_id' => $employee->id, 'contract_id' => null]);
 
-        $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422);
+        $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422)->assertJsonPath('message', 'delete_not_ready');
         $this->assertDatabaseHas('assets', ['id' => $asset->id]);
     }
 
@@ -1608,7 +1610,7 @@ class AssetApiTest extends TestCase
         ]);
         $asset = Asset::factory()->create(['status' => 'ready', 'source' => 'rented', 'contract_id' => $contract->id]);
 
-        $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422);
+        $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422)->assertJsonPath('message', 'delete_on_contract');
         $this->assertDatabaseHas('assets', ['id' => $asset->id]);
     }
 

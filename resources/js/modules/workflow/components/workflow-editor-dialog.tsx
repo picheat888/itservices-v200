@@ -11,6 +11,7 @@ import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { serverMessage } from '@/shared/lib/api-errors';
 import { FRESH_LIST } from '@/shared/lib/freshness';
 import { localName, localPair, nameSearch } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -250,8 +251,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 onClose();
             }, 700);
         } catch (e) {
-            const resp = (e as { response?: { data?: { message?: string } } })?.response?.data;
-            setServerError(resp?.message || t('wf_save_error_steps'));
+            setServerError(serverMessage(e, t, 'wf_err_') || t('wf_save_error_steps'));
         }
     };
 

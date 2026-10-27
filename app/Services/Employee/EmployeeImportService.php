@@ -147,18 +147,18 @@ class EmployeeImportService
             $rowErrors = [];
 
             if ($firstName === '') {
-                $rowErrors[] = 'first_name ว่าง';
+                $rowErrors[] = self::issue('required', 'first_name');
             }
             if ($lastName === '') {
-                $rowErrors[] = 'last_name ว่าง';
+                $rowErrors[] = self::issue('required', 'last_name');
             }
 
             if ($code !== '') {
                 if (isset($existingIdByCode[strtoupper($code)])) {
-                    $rowErrors[] = "employee_code '{$code}' ซ้ำกับที่มีอยู่";
+                    $rowErrors[] = self::issue('exists', 'employee_code', $code);
                 }
                 if (isset($seenCodes[strtoupper($code)])) {
-                    $rowErrors[] = "employee_code '{$code}' ซ้ำในไฟล์";
+                    $rowErrors[] = self::issue('dup_in_file', 'employee_code', $code);
                 }
                 $seenCodes[strtoupper($code)] = true;
             }
@@ -166,16 +166,16 @@ class EmployeeImportService
             if ($email !== '') {
                 $lower = strtolower($email);
                 if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $rowErrors[] = "email '{$email}' ไม่ถูกต้อง";
+                    $rowErrors[] = self::issue('email_invalid', 'email', $email);
                 }
                 if (isset($existingEmails[$lower])) {
-                    $rowErrors[] = "email '{$email}' ซ้ำกับที่มีอยู่";
+                    $rowErrors[] = self::issue('exists', 'email', $email);
                 }
                 if (isset($existingUserEmails[$lower])) {
-                    $rowErrors[] = "email '{$email}' ซ้ำกับบัญชีผู้ใช้ในระบบ";
+                    $rowErrors[] = self::issue('email_taken_by_account', 'email', $email);
                 }
                 if (isset($seenEmails[$lower])) {
-                    $rowErrors[] = "email '{$email}' ซ้ำในไฟล์";
+                    $rowErrors[] = self::issue('dup_in_file', 'email', $email);
                 }
                 $seenEmails[$lower] = true;
             }
@@ -184,10 +184,9 @@ class EmployeeImportService
             if ($departmentText !== '') {
                 $matches = $departmentIndex[$this->normalize($departmentText)] ?? [];
                 if (count($matches) === 0) {
-                    $closest = $this->didYouMean($departmentText, $departments->pluck('name')->all());
-                    $rowErrors[] = "department '{$departmentText}' ไม่พบในระบบ{$closest}";
+                    $rowErrors[] = self::issue('not_found', 'department', $departmentText, ['closest' => $this->didYouMean($departmentText, $departments->pluck('name')->all())]);
                 } elseif (count($matches) > 1) {
-                    $rowErrors[] = "department '{$departmentText}' ไม่ชัดเจน (ตรงกับหลายแผนก)";
+                    $rowErrors[] = self::issue('ambiguous', 'department', $departmentText);
                 } else {
                     $departmentId = $matches[0];
                 }
@@ -196,7 +195,7 @@ class EmployeeImportService
             $sectionId = null;
             if ($sectionText !== '') {
                 if ($departmentId === null) {
-                    $rowErrors[] = "section '{$sectionText}' ต้องระบุ department ที่ถูกต้องก่อน";
+                    $rowErrors[] = self::issue('section_needs_department', 'section', $sectionText);
                 } else {
                     $matches = $sectionIndex[$departmentId.'|'.$this->normalize($sectionText)] ?? [];
                     if (count($matches) === 0) {
@@ -207,9 +206,9 @@ class EmployeeImportService
                             $sectionText,
                             $sections->where('department_id', $departmentId)->pluck('name')->all(),
                         );
-                        $rowErrors[] = "section '{$sectionText}' ไม่อยู่ในแผนก {$departmentName}{$closest}";
+                        $rowErrors[] = self::issue('section_not_in_department', 'section', $sectionText, ['department' => $departmentName, 'closest' => $closest]);
                     } elseif (count($matches) > 1) {
-                        $rowErrors[] = "section '{$sectionText}' ไม่ชัดเจน (ตรงกับหลายหน่วยงานในแผนกเดียวกัน)";
+                        $rowErrors[] = self::issue('ambiguous', 'section', $sectionText);
                     } else {
                         $sectionId = $matches[0];
                     }
@@ -220,10 +219,9 @@ class EmployeeImportService
             if ($positionText !== '') {
                 $matches = $positionIndex[$this->normalize($positionText)] ?? [];
                 if (count($matches) === 0) {
-                    $closest = $this->didYouMean($positionText, $positions->pluck('title')->all());
-                    $rowErrors[] = "position '{$positionText}' ไม่พบในระบบ{$closest}";
+                    $rowErrors[] = self::issue('not_found', 'position', $positionText, ['closest' => $this->didYouMean($positionText, $positions->pluck('title')->all())]);
                 } elseif (count($matches) > 1) {
-                    $rowErrors[] = "position '{$positionText}' ไม่ชัดเจน (ตรงกับหลายตำแหน่ง)";
+                    $rowErrors[] = self::issue('ambiguous', 'position', $positionText);
                 } else {
                     $positionId = $matches[0];
                 }
@@ -232,9 +230,9 @@ class EmployeeImportService
             if ($reportTo !== '') {
                 $key = strtoupper($reportTo);
                 if ($code !== '' && $key === strtoupper($code)) {
-                    $rowErrors[] = "report_to_employee_code '{$reportTo}' เป็นรหัสของแถวนี้เอง";
+                    $rowErrors[] = self::issue('report_to_self', 'report_to_employee_code', $reportTo);
                 } elseif (! isset($existingIdByCode[$key]) && ! isset($codesInFile[$key])) {
-                    $rowErrors[] = "report_to_employee_code '{$reportTo}' ไม่พบ (ต้องเป็น employee_code ที่มีอยู่ หรือที่อยู่ในไฟล์นี้)";
+                    $rowErrors[] = self::issue('report_to_not_found', 'report_to_employee_code', $reportTo);
                 }
             }
 
@@ -253,14 +251,14 @@ class EmployeeImportService
                     $missing[] = 'report_to_employee_code';
                 }
                 if ($missing) {
-                    $rowErrors[] = "ตำแหน่ง '{$position->title}' ต้องระบุ ".implode(', ', $missing);
+                    $rowErrors[] = self::issue('position_needs', 'position', null, ['position' => $position->title, 'fields' => implode(', ', $missing)]);
                 }
             }
 
             if ($joined !== '') {
                 $date = \DateTime::createFromFormat('Y-m-d', $joined);
                 if (! $date || $date->format('Y-m-d') !== $joined) {
-                    $rowErrors[] = "joined_at '{$joined}' ต้องเป็นรูปแบบ YYYY-MM-DD";
+                    $rowErrors[] = self::issue('date_format', 'joined_at', $joined);
                 }
             }
 
@@ -269,12 +267,12 @@ class EmployeeImportService
             foreach ($limits as $column => $max) {
                 $text = $column === 'employee_code' ? $code : $this->value($row, $column);
                 if (mb_strlen($text) > $max) {
-                    $rowErrors[] = "{$column} ยาวเกิน {$max} ตัวอักษร";
+                    $rowErrors[] = self::issue('too_long', $column, null, ['max' => $max]);
                 }
             }
             $phone = $this->value($row, 'phone');
             if ($phone !== '' && ! preg_match('/(\D*\d){3,}/', $phone)) {
-                $rowErrors[] = "phone '{$phone}' ต้องมีตัวเลขอย่างน้อย 3 หลัก";
+                $rowErrors[] = self::issue('phone_digits', 'phone', $phone);
             }
 
             $preview[$line] = [
@@ -318,19 +316,19 @@ class EmployeeImportService
         }
 
         foreach ($this->reportingLoops($prepared) as $loop) {
-            $preview[$loop['row']]['errors'][] = $loop['message'];
+            $preview[$loop['row']]['errors'][] = $loop['issue'];
         }
 
         foreach ($preview as $line => $entry) {
-            foreach ($entry['errors'] as $message) {
-                $errors[] = ['row' => $line, 'message' => $message];
+            foreach ($entry['errors'] as $issue) {
+                $errors[] = ['row' => $line, 'issue' => $issue];
             }
         }
 
-        // One message per row, in file order — the dialog lists them line by line.
+        // One entry per row, in file order — the dialog words each issue in the reader's language.
         $errors = collect($errors)
             ->groupBy('row')
-            ->map(fn ($group, $row) => ['row' => (int) $row, 'message' => $group->pluck('message')->implode(', ')])
+            ->map(fn ($group, $row) => ['row' => (int) $row, 'issues' => $group->pluck('issue')->all()])
             ->sortBy('row')
             ->values()
             ->all();
@@ -429,7 +427,7 @@ class EmployeeImportService
                 if ($cursor === $start) {
                     $loops[] = [
                         'row' => $entry['line'],
-                        'message' => "report_to_employee_code '{$entry['report_to']}' ทำให้สายบังคับบัญชาวนกลับมาที่ตัวเอง",
+                        'issue' => self::issue('report_to_loop', 'report_to_employee_code', $entry['report_to']),
                     ];
                     break;
                 }
@@ -487,8 +485,18 @@ class EmployeeImportService
     }
 
     /**
-     * " — ใกล้เคียงที่สุด: 'X'" for a value that almost matches something real, and an
-     * empty string for one that does not.
+     * One problem on a row as a code the dialog words: the CSV column, the value typed, and any figures it quotes.
+     *
+     * @param  array<string, string|int|null>  $extra
+     * @return array<string, string|int>
+     */
+    private static function issue(string $code, string $column, ?string $value = null, array $extra = []): array
+    {
+        return array_filter(['code' => $code, 'column' => $column, 'value' => $value, ...$extra], fn ($v) => $v !== null);
+    }
+
+    /**
+     * The real name a value almost matches, and null for one that matches nothing closely.
      *
      * Compared against the DISPLAY names only, never against every alias the index
      * accepts: a two-letter department tag is a few edits away from half the org
@@ -496,7 +504,7 @@ class EmployeeImportService
      *
      * @param  list<string>  $candidates
      */
-    private function didYouMean(string $typed, array $candidates): string
+    private function didYouMean(string $typed, array $candidates): ?string
     {
         $best = null;
         $bestScore = 0.0;
@@ -513,6 +521,6 @@ class EmployeeImportService
             }
         }
 
-        return $bestScore >= self::SUGGEST_MIN_SIMILARITY ? " — ใกล้เคียงที่สุด: '{$best}'" : '';
+        return $bestScore >= self::SUGGEST_MIN_SIMILARITY ? $best : null;
     }
 }

@@ -181,7 +181,7 @@ function RequestDetailBody({
             entity: { name: `${request.reference} - ${shownTitle}` },
             confirmText: t('req_complete'),
             action: () => complete.mutateAsync(request.id),
-            errorMessage: serverMessage,
+            errorMessage: (e) => serverMessage(e, t, 'req_refusal_'),
         });
 
     return (

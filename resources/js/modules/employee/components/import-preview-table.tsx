@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import { AlertCircle } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ImportPreviewRow } from '../api/employeeApi';
+import { importIssueText } from '../lib/import-issue';
 
 /** Dry-run of an employee CSV import in file order: what each column resolved to, and why a row cannot be saved. */
 export function ImportPreviewTable({ rows }: { rows: ImportPreviewRow[] }) {
@@ -46,7 +47,7 @@ export function ImportPreviewTable({ rows }: { rows: ImportPreviewRow[] }) {
                                         <td colSpan={6} className="text-destructive px-2 pb-1.5">
                                             <span className="flex items-start gap-1">
                                                 <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
-                                                <span>{row.errors.join(', ')}</span>
+                                                <span>{row.errors.map((issue) => importIssueText(issue, t)).join(', ')}</span>
                                             </span>
                                         </td>
                                     </tr>

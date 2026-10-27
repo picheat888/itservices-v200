@@ -228,10 +228,12 @@ export function RequestCreateDialog({
             const onScreen = new Set(['type', 'reason', 'files', ...schema.map((f) => `field_${f.key}`)]);
             const serverErrs: Record<string, string> = {};
             const offScreen: string[] = [];
+            // A refusal code (type_closed, no_employee) is worded; a validation sentence shows as sent
+            const worded = (message: string) => (t(`req_refusal_${message}`) !== `req_refusal_${message}` ? t(`req_refusal_${message}`) : message);
             for (const [key, msgs] of Object.entries(resp?.errors ?? {})) {
                 const local = key.startsWith('fields.') ? `field_${key.slice(7)}` : key.startsWith('files') ? 'files' : key;
-                if (onScreen.has(local)) serverErrs[local] = msgs[0] ?? '';
-                else if (msgs[0]) offScreen.push(msgs[0]);
+                if (onScreen.has(local)) serverErrs[local] = worded(msgs[0] ?? '');
+                else if (msgs[0]) offScreen.push(worded(msgs[0]));
             }
             if (Object.keys(serverErrs).length) {
                 showErrors(serverErrs);
@@ -241,7 +243,7 @@ export function RequestCreateDialog({
             const blockKey = REQUEST_BLOCK_REASON_LABEL[resp?.errors?.requester?.[0] ?? ''];
             if (blockKey) formError.show(`${t('req_block_title')}: ${t(blockKey)}`);
             else if (offScreen.length) formError.show(offScreen[0]);
-            else if (!Object.keys(serverErrs).length) formError.show(serverMessage(e) ?? t('cd_error'));
+            else if (!Object.keys(serverErrs).length) formError.show(serverMessage(e, t, 'req_refusal_') ?? t('cd_error'));
         }
     };
 

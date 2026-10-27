@@ -94,6 +94,12 @@ export const workflow: Dict = {
     wf_owner_preview: 'Known once the requester picks a resource',
     wf_queue_preview: 'Goes to the IT queue, which opens a ticket automatically',
     wf_save_error_steps: 'Could not save. Check the steps.',
+    wf_err_need_approval_step: 'A workflow needs at least one approval step.',
+    wf_err_one_completion: 'Only one completion step is allowed.',
+    wf_err_completion_last: 'The completion step must be the last step.',
+    wf_err_completion_it_staff: 'The completion step must be done by IT staff.',
+    wf_err_approver_outside_department: "Every approver must be in this step's department.",
+    wf_err_no_resource_owner: "This request type has no resource owner, so it can't have an Owner step.",
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     wf_empty_list: 'No workflows yet',

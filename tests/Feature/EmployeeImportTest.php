@@ -26,6 +26,17 @@ class EmployeeImportTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * A row's issues as "code:column" (plus ":value" when one is quoted), for compact asserts.
+     *
+     * @param  list<array<string, mixed>>  $issues
+     * @return list<string>
+     */
+    private function issues(array $issues): array
+    {
+        return array_map(fn (array $i) => implode(':', array_filter([$i['code'], $i['column'] ?? null, $i['value'] ?? null], fn ($v) => $v !== null)), $issues);
+    }
+
     private EmployeeImportService $service;
 
     private Department $it;
@@ -136,7 +147,8 @@ class EmployeeImportTest extends TestCase
 
         $this->assertSame(0, $result['imported']);
         $this->assertCount(1, $result['errors']);
-        $this->assertStringContainsString('section', $result['errors'][0]['message']);
+        $this->assertSame(['section_not_in_department:section:Quality Control'], $this->issues($result['errors'][0]['issues']));
+        $this->assertSame('Information Technology', $result['errors'][0]['issues'][0]['department']);
         $this->assertSame(2, $result['errors'][0]['row']);
         $this->assertSame(0, Employee::where('first_name', 'Somchai')->count());
     }
@@ -149,9 +161,10 @@ class EmployeeImportTest extends TestCase
         ]);
 
         $this->assertSame(0, $result['imported']);
-        $this->assertStringContainsString('first_name ยาวเกิน 255', $result['errors'][0]['message']);
-        $this->assertStringContainsString('employee_code ยาวเกิน 50', $result['errors'][0]['message']);
-        $this->assertStringContainsString("phone 'n/a'", $result['errors'][1]['message']);
+        $this->assertContains('too_long:first_name', $this->issues($result['errors'][0]['issues']));
+        $this->assertContains('too_long:employee_code', $this->issues($result['errors'][0]['issues']));
+        $this->assertSame(255, collect($result['errors'][0]['issues'])->firstWhere('column', 'first_name')['max']);
+        $this->assertSame(['phone_digits:phone:n/a'], $this->issues($result['errors'][1]['issues']));
     }
 
     public function test_unknown_position_text_is_reported(): void
@@ -161,7 +174,7 @@ class EmployeeImportTest extends TestCase
         ]);
 
         $this->assertSame(0, $result['imported']);
-        $this->assertStringContainsString('position', $result['errors'][0]['message']);
+        $this->assertSame(['not_found:position:Chief Happiness Officer'], $this->issues($result['errors'][0]['issues']));
     }
 
     public function test_department_text_matching_two_departments_is_reported_as_ambiguous(): void
@@ -175,7 +188,7 @@ class EmployeeImportTest extends TestCase
         ]);
 
         $this->assertSame(0, $result['imported']);
-        $this->assertStringContainsString('department', $result['errors'][0]['message']);
+        $this->assertContains('ambiguous:department:Sales', $this->issues($result['errors'][0]['issues']));
     }
 
     public function test_a_normal_position_requires_department_section_and_report_to(): void
@@ -185,10 +198,9 @@ class EmployeeImportTest extends TestCase
         ]);
 
         $this->assertSame(0, $result['imported']);
-        $message = $result['errors'][0]['message'];
-        $this->assertStringContainsString('department', $message);
-        $this->assertStringContainsString('section', $message);
-        $this->assertStringContainsString('report_to_employee_code', $message);
+        $issue = $result['errors'][0]['issues'][0];
+        $this->assertSame('position_needs', $issue['code']);
+        $this->assertSame('department, section, report_to_employee_code', $issue['fields']);
     }
 
     public function test_a_special_position_may_omit_department_section_and_report_to(): void
@@ -256,7 +268,7 @@ class EmployeeImportTest extends TestCase
         ]);
 
         $this->assertSame(0, $result['imported']);
-        $this->assertStringContainsString('EMP-9999', $result['errors'][0]['message']);
+        $this->assertSame(['report_to_not_found:report_to_employee_code:EMP-9999'], $this->issues($result['errors'][0]['issues']));
     }
 
     public function test_a_reporting_loop_inside_the_file_is_reported(): void
@@ -469,9 +481,9 @@ class EmployeeImportTest extends TestCase
             $this->row(['department' => 'Information Technolgy']),
         ], dryRun: true);
 
-        $message = implode(' ', $result['rows'][0]['errors']);
-        $this->assertStringContainsString('Information Technolgy', $message);
-        $this->assertStringContainsString('Information Technology', $message, 'the closest spelling is offered');
+        $issue = $result['rows'][0]['errors'][0];
+        $this->assertSame('Information Technolgy', $issue['value']);
+        $this->assertSame('Information Technology', $issue['closest'], 'the closest spelling is offered');
     }
 
     public function test_a_position_near_miss_is_told_the_closest_title(): void
@@ -480,7 +492,7 @@ class EmployeeImportTest extends TestCase
             $this->row(['position' => 'Staff / Oficer']),
         ], dryRun: true);
 
-        $this->assertStringContainsString('Staff/Officer', implode(' ', $result['rows'][0]['errors']));
+        $this->assertSame('Staff/Officer', $result['rows'][0]['errors'][0]['closest']);
     }
 
     /** Nothing close enough is no suggestion at all — a wrong guess is worse than none. */
@@ -490,9 +502,9 @@ class EmployeeImportTest extends TestCase
             $this->row(['department' => 'zzzzzzzzzz']),
         ], dryRun: true);
 
-        $message = implode(' ', $result['rows'][0]['errors']);
-        $this->assertStringContainsString('zzzzzzzzzz', $message);
-        $this->assertStringNotContainsString('ใกล้เคียง', $message);
+        $issue = $result['rows'][0]['errors'][0];
+        $this->assertSame('zzzzzzzzzz', $issue['value']);
+        $this->assertArrayNotHasKey('closest', $issue);
     }
 
     public function test_the_preview_endpoint_counts_valid_rows_and_names_ignored_columns(): void

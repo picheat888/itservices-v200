@@ -11,6 +11,7 @@ export interface NotificationData {
     contract_id?: number;
     contract_code?: string;
     contract_vendor?: string;
+    contract_vendor_th?: string | null;
     contract_name?: string;
     days_remaining?: number;
     // Stock alert notifications (stock_alert)

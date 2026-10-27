@@ -444,7 +444,8 @@ class RequestAutoTicketTest extends TestCase
         [$request] = $this->approveAndAssignTicket();
         $lead = $this->completer();
 
-        $this->actingAs($lead)->postJson("/api/service-requests/{$request->id}/complete")->assertStatus(422);
+        $this->actingAs($lead)->postJson("/api/service-requests/{$request->id}/complete")->assertStatus(422)
+            ->assertJsonPath('message', 'ticket_still_open')->assertJsonPath('ticket', $request->fresh()->ticket->ticket_no);
 
         // Refused, and still in the queue the closing case will settle: the technician
         // is mid-delivery, so finishing the request here would close it behind their

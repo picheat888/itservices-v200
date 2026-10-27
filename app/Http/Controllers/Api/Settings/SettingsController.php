@@ -544,12 +544,12 @@ class SettingsController extends Controller
     public function testMail(Request $request, EmailNotificationService $service): JsonResponse
     {
         if (! MailSetting::current()->isConfigured()) {
-            return response()->json(['message' => 'SMTP is not configured. Please fill in Host and From Address first.', 'sent' => false], 422);
+            return response()->json(['message' => 'smtp_not_configured', 'sent' => false], 422);
         }
 
         $to = $request->user()->email;
         if (! $to) {
-            return response()->json(['message' => 'Your account has no email address.'], 422);
+            return response()->json(['message' => 'no_email'], 422);
         }
 
         $ok = $service->sendTest($to);

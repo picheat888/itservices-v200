@@ -200,6 +200,14 @@ export const requests: Dict = {
     req_cancel_reason_required: 'กรุณาระบุเหตุผลที่ยกเลิก',
     req_cancel_keep: 'ไม่ยกเลิก',
 
+    // decision-dialog.tsx, request-create-dialog.tsx — ข้อความปฏิเสธจาก server
+    req_refusal_no_employee: 'บัญชีของคุณยังไม่ได้ผูกกับข้อมูลพนักงาน ติดต่อ HR ให้ผูกก่อน แล้วจึงยื่นคำขอได้',
+    req_refusal_type_closed: 'ตอนนี้ยังยื่นคำขอประเภทนี้ไม่ได้',
+    req_refusal_ticket_still_open: 'ยังปิดคำขอนี้ไม่ได้ เพราะ Ticket {ticket} ยังไม่ปิด คำขอจะเสร็จเองเมื่อปิดเคสนั้น',
+    req_refusal_wrong_status: 'คำขอนี้เปลี่ยนสถานะไปแล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง',
+    req_refusal_no_step_waiting: 'คำขอนี้ไม่มีขั้นที่รออนุมัติแล้ว',
+    req_refusal_not_your_turn: 'ยังไม่ถึงคิวคุณอนุมัติคำขอนี้',
+
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     req_empty_overview_queue: 'ตอนนี้ไม่มีคำขอรอคุณพิจารณา',
     req_empty_overview_queue_hint: 'คุณพิจารณาคำขอที่ส่งถึงคุณครบแล้ว',

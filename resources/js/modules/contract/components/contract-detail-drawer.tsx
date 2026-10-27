@@ -7,6 +7,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabFreshness, type TabQuery } from '@/shared/hooks/use-tab-freshness';
+import { perCycle } from '@/shared/lib/currency';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
@@ -207,7 +208,7 @@ export function ContractDetailDrawer({
                                             })()}
                                         />
                                         <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
-                                        <KV label={t('contract_value_per_cycle')} value={c.value_display} />
+                                        <KV label={t('contract_value_per_cycle')} value={perCycle(c.value_display, c.billing_cycle, t)} />
                                         <KV label={t('contract_total_value')} value={c.total_value_display || '—'} />
                                     </div>
                                 </div>

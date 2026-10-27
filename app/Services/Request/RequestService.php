@@ -57,7 +57,7 @@ class RequestService
         $employee = $user->employee;
         if ($employee === null) {
             throw ValidationException::withMessages([
-                'requester' => 'Your account is not linked to an employee record, so a request cannot be routed.',
+                'requester' => 'no_employee',
             ]);
         }
 
@@ -116,7 +116,7 @@ class RequestService
         $workflow = Workflow::where('request_type', $type->value)->first();
         if ($workflow === null || ! $workflow->active) {
             throw ValidationException::withMessages([
-                'type' => 'This request type is not accepting submissions right now.',
+                'type' => 'type_closed',
             ]);
         }
 
@@ -296,8 +296,7 @@ class RequestService
             // Refused while its case is still live: closing the case is what completes the request
             abort_if(
                 in_array($fresh->ticket?->status, TicketStatus::live(), true),
-                422,
-                "Ticket {$fresh->ticket?->ticket_no} is still open - closing that case completes this request.",
+                response()->json(['message' => 'ticket_still_open', 'ticket' => $fresh->ticket?->ticket_no], 422),
             );
 
             $fresh->approvals()
@@ -703,7 +702,7 @@ class RequestService
     {
         if ($request->status !== $expected) {
             throw ValidationException::withMessages([
-                'status' => "Request must be {$expected->value} (currently {$request->status->value}).",
+                'status' => 'wrong_status',
             ]);
         }
     }
@@ -714,7 +713,7 @@ class RequestService
         $row = $request->currentApproval();
         if ($row === null || $row->kind !== WorkflowStepKind::Approval) {
             throw ValidationException::withMessages([
-                'status' => 'No approval step is waiting on a decision.',
+                'status' => 'no_step_waiting',
             ]);
         }
 
@@ -737,7 +736,7 @@ class RequestService
         abort_unless(
             $row->acceptsEmployee($actor->employee),
             403,
-            'It is not your turn to act on this request.',
+            'not_your_turn',
         );
     }
 

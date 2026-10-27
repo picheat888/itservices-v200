@@ -244,6 +244,25 @@ export const asset: Dict = {
     asset_peek_owner: 'เจ้าของ',
     asset_contract: 'สัญญา',
 
+    // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
+    asset_refusal_writeoff_locked: 'ทรัพย์สินที่ตัดจำหน่ายแล้วแก้ไขไม่ได้ ยกเลิกการตัดจำหน่ายก่อน',
+    asset_refusal_not_writeoff: 'ทรัพย์สินนี้ยังไม่ได้ตัดจำหน่าย',
+    asset_refusal_delete_not_ready: 'ลบได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ',
+    asset_refusal_delete_on_contract: 'ทรัพย์สินนี้ผูกกับสัญญาอยู่ เอาออกจากสัญญาก่อนลบ',
+    asset_refusal_in_use_return_first: 'ทรัพย์สินนี้ใช้งานอยู่ ต้องรับคืนก่อน',
+    asset_refusal_handover_not_ready: 'ส่งมอบได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ',
+    asset_refusal_accept_not_pending: 'รับมอบได้เฉพาะรายการที่รอรับมอบ',
+    asset_refusal_receive_not_pending: 'รับคืนได้เฉพาะทรัพย์สินที่รอรับคืน',
+    asset_refusal_recall_writeoff: 'ทรัพย์สินที่ตัดจำหน่ายแล้วเรียกคืนไม่ได้',
+    asset_refusal_recall_already_ready: 'ทรัพย์สินนี้พร้อมส่งมอบอยู่แล้ว',
+    asset_refusal_recall_not_allowed: 'เรียกคืนได้เฉพาะรายการที่รอรับมอบ หรือทรัพย์สินใช้ร่วมที่ใช้งานอยู่',
+    asset_refusal_recall_some_blocked: 'บางรายการที่เลือกเรียกคืนไม่ได้',
+    asset_refusal_writeoff_held: 'รับ {code} คืนจากพนักงานก่อนตัดจำหน่าย',
+    asset_refusal_contract_closed: 'สัญญา {contract} ปิดแล้ว เปิดสัญญาใหม่ก่อนรับ {code} กลับ',
+    asset_refusal_lessor_not_rented: 'คืนผู้ให้เช่าได้เฉพาะทรัพย์สินเช่า ให้ตัดจำหน่ายรายการเหล่านี้แทน {codes}',
+    asset_refusal_lessor_not_ready: 'คืนผู้ให้เช่าได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ เรียกคืนหรือรับคืนรายการเหล่านี้ก่อน {codes}',
+    asset_refusal_writeoff_not_ready: 'ตัดจำหน่ายได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ เรียกคืนหรือรับคืนรายการเหล่านี้ก่อน {codes}',
+
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     asset_empty_overview_by_type: 'ยังไม่มีทรัพย์สิน',
     asset_empty_overview_by_type_hint: 'ลงทะเบียนทรัพย์สินได้ที่แท็บคลังทรัพย์สิน',

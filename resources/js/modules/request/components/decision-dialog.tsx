@@ -81,7 +81,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
             else await approve.mutateAsync({ id: ctx.request.id, note: note.trim() || undefined });
             onClose();
         } catch (e) {
-            formError.show(serverMessage(e) ?? t('cd_error'));
+            formError.show(serverMessage(e, t, 'req_refusal_') ?? t('cd_error'));
         }
     };
 

@@ -29,6 +29,7 @@ import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
+import { perCycle } from '@/shared/lib/currency';
 import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { splitPinned } from '@/shared/lib/new-rows';
@@ -886,7 +887,9 @@ export default function AssetsPage() {
                                                 <td className="px-3 py-2">
                                                     <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{a.value_display}</td>
+                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">
+                                                    {perCycle(a.value_display, a.value_cycle, t)}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

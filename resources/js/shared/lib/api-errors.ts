@@ -4,6 +4,7 @@
 import { translate } from '@/lang';
 import { isServerFailure, markShownInline, requestIdOf } from '@/shared/lib/http-errors';
 import { formatNumber } from '@/shared/lib/number';
+import { reasonWords } from '@/shared/lib/reason-words';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 
@@ -37,12 +38,17 @@ export function serverFailureText(error: unknown): string {
     return reference ? `${text} ${translate(lang, 'err_reference').replace('{id}', reference)}` : text;
 }
 
-/** The server's own `message` on a failed request, if it sent one; a 5xx gets the standard words and no toast repeats it. */
-export function serverMessage(error: unknown): string | undefined {
+/**
+ * The server's own `message` on a failed request, if it sent one; a 5xx gets the standard words and no toast repeats it.
+ * With `t` and a `prefix`, a refusal code is worded by the lang key `<prefix><code>` first.
+ */
+export function serverMessage(error: unknown, t?: (key: string) => string, prefix?: string): string | undefined {
     if (isServerFailure(error)) {
         markShownInline(error);
         return serverFailureText(error);
     }
+    const worded = t && prefix ? reasonWords(error, t, prefix) : undefined;
+    if (worded !== undefined) return worded;
     const message = (error as ApiErrorShape)?.response?.data?.message;
     return typeof message === 'string' && message !== '' ? message : undefined;
 }
@@ -94,13 +100,9 @@ export function refusalText(
     prefix: string,
     format: (name: string, value: unknown) => string = (_name, value) => String(value ?? ''),
 ): string {
-    const res = (error as { response?: { status?: number; data?: Record<string, unknown> } })?.response;
-    const body = res?.data ?? {};
-    const reason = typeof body.message === 'string' && /^[a-z0-9_]+$/.test(body.message) ? body.message : '';
-    const key = `${prefix}${reason}`;
-    if (reason && t(key) !== key) {
-        return t(key).replace(/\{(\w+)\}/g, (whole, name: string) => (name in body ? format(name, body[name]) : whole));
-    }
+    const worded = reasonWords(error, t, prefix, format);
+    if (worded !== undefined) return worded;
+    const res = (error as { response?: { status?: number } })?.response;
     const fallback = res?.status === 403 ? 'forbidden' : res?.status === 422 ? 'invalid' : 'failed';
     return t(`${prefix}${fallback}`);
 }

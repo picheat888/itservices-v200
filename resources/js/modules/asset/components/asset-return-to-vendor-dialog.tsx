@@ -51,7 +51,7 @@ export function AssetReturnToVendorDialog({ ids, open, onClose, onDone }: { ids:
             // The server names the assets it refused (not rented, or not back in the pool).
             const noteErr = fieldError(e, 'reason');
             setError(noteErr);
-            if (!noteErr) formError.show(serverMessage(e) ?? t('asset_return_vendor_failed'));
+            if (!noteErr) formError.show(serverMessage(e, t, 'asset_refusal_') ?? t('asset_return_vendor_failed'));
         }
     };
 

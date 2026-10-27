@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    formFailureText,
     isNetworkFailure,
     isRecordMissing,
     markShownInline,
@@ -124,4 +125,18 @@ test('a failed read takes the screen only with nothing shown and no quiet mark',
     assert.equal(queryFailureTakesScreen(err500, false, true), false);
     assert.equal(queryFailureTakesScreen({ config: {}, response: { status: 404, data: {}, headers: {} } }, false, false), false);
     assert.equal(queryFailureTakesScreen({ config: {}, response: { status: 503, data: {}, headers: {} } }, false, false), false);
+});
+
+test('a form shows its own words for a 5xx, and the toast does not repeat it', () => {
+    const crashed = { response: { status: 500, data: { message: 'SQLSTATE[42S22]: Column not found' } } };
+    assert.equal(formFailureText(crashed, 'Could not change the password.'), 'Could not change the password.');
+    assert.equal(wasShownInline(crashed), true);
+});
+
+test('a refusal the server worded still shows its message, else the form words', () => {
+    assert.equal(
+        formFailureText({ response: { status: 422, data: { message: 'The password is too short.' } } }, 'Failed.'),
+        'The password is too short.',
+    );
+    assert.equal(formFailureText({ response: { status: 422, data: {} } }, 'Failed.'), 'Failed.');
 });

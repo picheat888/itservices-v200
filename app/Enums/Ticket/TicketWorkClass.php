@@ -24,8 +24,8 @@ enum TicketWorkClass: string
     {
         return match ($this) {
             self::Standard => 'Standard work',
-            self::RepairInternal => 'Repair (in-house)',
-            self::RepairVendor => 'Repair (vendor)',
+            self::RepairInternal => 'In-house technician',
+            self::RepairVendor => 'External technician',
         };
     }
 

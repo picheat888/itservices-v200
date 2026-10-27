@@ -70,7 +70,7 @@ export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: numbe
             const noteFieldErr = fieldError(error, 'reason');
             setReasonErr(reasonFieldErr);
             setNoteErr(noteFieldErr);
-            if (!reasonFieldErr && !noteFieldErr) formError.show(serverMessage(error) ?? t('asset_writeoff_failed'));
+            if (!reasonFieldErr && !noteFieldErr) formError.show(serverMessage(error, t, 'asset_refusal_') ?? t('asset_writeoff_failed'));
         }
     };
 

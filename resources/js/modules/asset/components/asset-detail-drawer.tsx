@@ -5,7 +5,8 @@ import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
-import { refusalReason } from '@/shared/lib/api-errors';
+import { refusalReason, serverMessage } from '@/shared/lib/api-errors';
+import { perCycle } from '@/shared/lib/currency';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
@@ -140,6 +141,7 @@ export function AssetDetailDrawer({
                 await cancelWriteoff.mutateAsync(target.id);
                 onClose();
             },
+            errorMessage: (e) => serverMessage(e, t, 'asset_refusal_'),
         });
     };
 
@@ -160,7 +162,7 @@ export function AssetDetailDrawer({
             },
             errorMessage: (e) => {
                 const refusal = refusalReason(e);
-                if (refusal?.reason !== 'has_history') return undefined;
+                if (refusal?.reason !== 'has_history') return serverMessage(e, t, 'asset_refusal_');
                 return t('asset_delete_has_history').replace('{count}', fmtN(Number(refusal.body.transfers_count ?? 0)));
             },
         });
@@ -343,7 +345,7 @@ export function AssetDetailDrawer({
                                             <>
                                                 <KV label={t('asset_purchase_date')} value={fmt.date(a.purchase_date)} />
                                                 <KV label={t('asset_supplier')} value={localPair(a.supplier, a.supplier_th, lang)} />
-                                                <KV label={t('asset_value')} value={a.value_display} />
+                                                <KV label={t('asset_value')} value={perCycle(a.value_display, a.value_cycle, t)} />
                                                 <KV
                                                     label={t('asset_warranty_end')}
                                                     value={

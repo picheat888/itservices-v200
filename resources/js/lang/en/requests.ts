@@ -203,6 +203,15 @@ export const requests: Dict = {
     req_cancel_reason_required: 'Enter why you are cancelling',
     req_cancel_keep: 'Keep request',
 
+    // decision-dialog.tsx, request-create-dialog.tsx — ข้อความปฏิเสธจาก server
+    req_refusal_no_employee: "Your account isn't linked to an employee record yet. Ask HR to link it, then file the request.",
+    req_refusal_type_closed: 'This request type is closed for now.',
+    req_refusal_ticket_still_open:
+        "You can't close this request yet. Ticket {ticket} is still open, and the request completes when that case is closed.",
+    req_refusal_wrong_status: 'This request has changed. Reload and try again.',
+    req_refusal_no_step_waiting: 'No step on this request is waiting for approval.',
+    req_refusal_not_your_turn: 'It is not your turn to act on this request.',
+
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     req_empty_overview_queue: 'Nothing waiting for you',
     req_empty_overview_queue_hint: "You've decided every request sent to you.",

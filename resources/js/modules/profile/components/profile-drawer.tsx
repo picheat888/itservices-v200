@@ -16,6 +16,7 @@ import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
+import { formFailureText } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { User } from '@/shared/types';
@@ -273,7 +274,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                 setErrors(server);
                 focusFirstError(server as Record<string, string>);
             } else {
-                showFormError(data?.message ?? t('profile_save_failed'));
+                showFormError(formFailureText(e, t('profile_save_failed')));
             }
         }
     };

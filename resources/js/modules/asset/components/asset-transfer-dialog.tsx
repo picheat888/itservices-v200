@@ -130,7 +130,7 @@ export function AssetTransferDialog({
             }
             (onDone ?? onClose)();
         } catch (error) {
-            formError.show(serverMessage(error) ?? t('asset_transfer_failed'));
+            formError.show(serverMessage(error, t, 'asset_refusal_') ?? t('asset_transfer_failed'));
         }
     };
 

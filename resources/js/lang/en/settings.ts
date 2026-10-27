@@ -107,6 +107,8 @@ export const settings: Dict = {
     set_email_enc_auto: 'Auto',
     set_email_test_sending: 'Sending…',
     set_email_test_save_first: 'Save first to test these settings',
+    set_email_test_err_smtp_not_configured: 'SMTP is not set up yet. Fill in Host and From Address first.',
+    set_email_test_err_no_email: 'Your account has no email address to send the test to.',
     set_email_from_address: 'From address',
     set_email_from_name: 'From name',
     set_tickets: 'Tickets & SLA',

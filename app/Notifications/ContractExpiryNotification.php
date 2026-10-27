@@ -36,6 +36,7 @@ class ContractExpiryNotification extends Notification
             'contract_id' => $this->contract->id,
             'contract_code' => $this->contract->code,
             'contract_vendor' => $this->contract->vendor?->name,
+            'contract_vendor_th' => $this->contract->vendor?->name_th,
             'contract_name' => $this->contract->name,
             'days_remaining' => $this->daysRemaining,
         ];

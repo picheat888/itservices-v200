@@ -99,7 +99,7 @@ export function AssetLocationDialog({
             await updateLocation.mutateAsync({ ids: targetIds, location_id: Number(location), note: note.trim() || undefined });
             (onDone ?? onClose)();
         } catch (error) {
-            formError.show(serverMessage(error) ?? t('asset_location_failed'));
+            formError.show(serverMessage(error, t, 'asset_refusal_') ?? t('asset_location_failed'));
         }
     };
 

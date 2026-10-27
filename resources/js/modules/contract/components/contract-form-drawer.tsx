@@ -18,6 +18,7 @@ import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { FRESH_LIST } from '@/shared/lib/freshness';
 import { localName } from '@/shared/lib/local-name';
 import { toMoneyText } from '@/shared/lib/money';
+import { reasonWords } from '@/shared/lib/reason-words';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
@@ -430,7 +431,7 @@ export function ContractFormDrawer({
             }
             if (fileError || savingFiles) {
                 // Attachments live on the contract-info step
-                setFileErr(fileError || data?.message || t('attachment_upload_failed'));
+                setFileErr(fileError || reasonWords(e, t, 'contract_refusal_') || data?.message || t('attachment_upload_failed'));
                 setStep(1);
                 return;
             }

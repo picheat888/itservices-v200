@@ -348,7 +348,7 @@ class AssetController extends Controller
     public function update(StoreAssetRequest $request, Asset $asset): JsonResponse
     {
         // A written-off asset is retired — its record is frozen until the write-off is cancelled.
-        abort_if($asset->status === AssetStatus::Writeoff, 422, 'A written-off asset cannot be edited. Cancel the write-off first.');
+        abort_if($asset->status === AssetStatus::Writeoff, 422, 'writeoff_locked');
 
         $before = $asset->getOriginal();
         $asset = $this->service->update($asset, $request->validated());
@@ -365,7 +365,7 @@ class AssetController extends Controller
     public function cancelWriteoff(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.cancel_writeoff'), 403);
-        abort_unless($asset->status === AssetStatus::Writeoff, 422, 'This asset is not written off.');
+        abort_unless($asset->status === AssetStatus::Writeoff, 422, 'not_writeoff');
 
         $wasReturned = $asset->returnedToVendor();
         $asset = $this->service->cancelWriteoff($asset);
@@ -387,8 +387,8 @@ class AssetController extends Controller
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.delete'), 403);
-        abort_unless($asset->status === AssetStatus::Ready, 422, 'Only an asset that is Ready to deploy can be deleted.');
-        abort_if($asset->contract_id !== null, 422, 'This asset is linked to a contract - unlink it before deleting.');
+        abort_unless($asset->status === AssetStatus::Ready, 422, 'delete_not_ready');
+        abort_if($asset->contract_id !== null, 422, 'delete_on_contract');
 
         // An asset that has been handed out even once owns a custody trail. The FK is
         // restrictOnDelete, so the database would refuse the delete anyway; refusing here
@@ -418,11 +418,11 @@ class AssetController extends Controller
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         // Already out of the pool (employee-deployed or shared/common) — recall or return it first.
-        abort_if($asset->isDeployed() || $asset->status === AssetStatus::Common, 422, 'Asset is deployed - mark it returned first.');
+        abort_if($asset->isDeployed() || $asset->status === AssetStatus::Common, 422, 'in_use_return_first');
         // Anything else that is not in the pool is mid-move or retired: a hand-over waiting
         // on its recipient, a return waiting on IT, a write-off. The screen only offers
         // Transfer on a Ready asset; the API now agrees.
-        abort_unless($asset->status === AssetStatus::Ready, 422, 'Only a Ready asset can be handed over.');
+        abort_unless($asset->status === AssetStatus::Ready, 422, 'handover_not_ready');
 
         $asset = $this->service->transfer($asset, $data, $request->user());
         AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
@@ -438,7 +438,7 @@ class AssetController extends Controller
         abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id, 403);
         // Accepting confirms a hand-over; on anything else (a return under way above all) it
         // would flip the asset back to in use behind IT's back.
-        abort_unless($asset->status === AssetStatus::PendingAcceptance, 422, 'Only a pending hand-over can be accepted.');
+        abort_unless($asset->status === AssetStatus::PendingAcceptance, 422, 'accept_not_pending');
         $asset = $this->service->accept($asset);
         AuditLog::record('Accepted asset', $asset->asset_code, subject: $asset);
 
@@ -471,7 +471,7 @@ class AssetController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('assets.receive'), 403);
         // Same rule as bulk receive. Receiving anything else would pull a held asset out of
         // someone's hands (force recall's job) or quietly undo a write-off.
-        abort_unless($asset->status === AssetStatus::PendingReturn, 422, 'Only assets pending return can be received.');
+        abort_unless($asset->status === AssetStatus::PendingReturn, 422, 'receive_not_pending');
         $data = $request->validate([
             'warehouse' => ['required', 'string', 'max:120'],
         ]);
@@ -506,10 +506,10 @@ class AssetController extends Controller
             || $asset->status === AssetStatus::Common;
 
         if ($canForce) {
-            abort_if($asset->status === AssetStatus::Writeoff, 422, 'A written-off asset cannot be recalled.');
-            abort_if($asset->status === AssetStatus::Ready, 422, 'This asset is already in the pool.');
+            abort_if($asset->status === AssetStatus::Writeoff, 422, 'recall_writeoff');
+            abort_if($asset->status === AssetStatus::Ready, 422, 'recall_already_ready');
         } else {
-            abort_unless($normallyRecallable, 422, 'Only a pending hand-over or a shared deployed asset can be recalled.');
+            abort_unless($normallyRecallable, 422, 'recall_not_allowed');
         }
 
         $data = $request->validate([
@@ -679,7 +679,7 @@ class AssetController extends Controller
         foreach ($assets as $asset) {
             $normal = in_array($asset->status, $normalStatuses, true);
             $forceable = $canForce && ! in_array($asset->status, [AssetStatus::Ready, AssetStatus::Writeoff], true);
-            abort_unless($normal || $forceable, 422, 'Some selected assets cannot be recalled.');
+            abort_unless($normal || $forceable, 422, 'recall_some_blocked');
             if (! $normal) {
                 $forcedIds[] = $asset->id;
             }
@@ -704,7 +704,7 @@ class AssetController extends Controller
         ]);
 
         $assets = Asset::whereIn('id', $data['ids'])->get();
-        abort_if($assets->contains(fn (Asset $a) => $a->status !== AssetStatus::PendingReturn), 422, 'Only assets pending return can be received.');
+        abort_if($assets->contains(fn (Asset $a) => $a->status !== AssetStatus::PendingReturn), 422, 'receive_not_pending');
 
         foreach ($assets as $asset) {
             $this->service->markReceived($asset, $request->user(), $data['warehouse']);

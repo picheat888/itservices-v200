@@ -87,7 +87,8 @@ class AssetReturnToVendorTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'super']))
             ->postJson('/api/assets/bulk-return-to-vendor', ['ids' => [$rented->id, $bought->id]])
             ->assertStatus(422)
-            ->assertJsonPath('message', fn (string $message) => str_contains($message, $bought->asset_code));
+            ->assertJsonPath('message', 'lessor_not_rented')
+            ->assertJsonPath('codes', $bought->asset_code);
 
         // Nothing moves when any of them is refused.
         $this->assertSame('ready', $rented->fresh()->status->value);
@@ -162,7 +163,9 @@ class AssetReturnToVendorTest extends TestCase
         foreach ([$returned, $lost] as $asset) {
             $this->postJson("/api/assets/{$asset->id}/cancel-writeoff")
                 ->assertStatus(422)
-                ->assertJsonPath('message', fn (string $message) => str_contains($message, (string) $contract->code));
+                ->assertJsonPath('message', 'contract_closed')
+                ->assertJsonPath('contract', $contract->code)
+                ->assertJsonPath('code', $asset->asset_code);
             $this->assertSame('writeoff', $asset->fresh()->status->value);
         }
 

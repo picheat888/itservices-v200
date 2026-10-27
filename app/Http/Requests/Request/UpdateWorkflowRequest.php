@@ -55,19 +55,19 @@ class UpdateWorkflowRequest extends FormRequest
             $steps = collect($this->input('steps', []));
 
             if ($steps->where('kind', WorkflowStepKind::Approval->value)->isEmpty()) {
-                $v->errors()->add('steps', 'A workflow needs at least one approval step.');
+                $v->errors()->add('steps', 'need_approval_step');
             }
 
             $completions = $steps->values()->filter(fn ($s) => ($s['kind'] ?? null) === WorkflowStepKind::Completion->value);
             if ($completions->count() > 1) {
-                $v->errors()->add('steps', 'Only one completion step is allowed.');
+                $v->errors()->add('steps', 'one_completion');
             }
             if ($completions->isNotEmpty()) {
                 if ($completions->keys()->first() !== $steps->count() - 1) {
-                    $v->errors()->add('steps', 'The completion step must be the last step.');
+                    $v->errors()->add('steps', 'completion_last');
                 }
                 if ($completions->first()['actor_type'] !== StepActorType::ItStaff->value) {
-                    $v->errors()->add('steps', 'Completion is performed by IT Staff.');
+                    $v->errors()->add('steps', 'completion_it_staff');
                 }
             }
 
@@ -92,7 +92,7 @@ class UpdateWorkflowRequest extends FormRequest
                         ->where(fn ($q) => $q->whereNull('department_id')->orWhere('department_id', '!=', $step['department_id']))
                         ->exists();
                     if ($outsiders) {
-                        $v->errors()->add("steps.{$index}.approver_employee_ids", 'Everybody named must belong to the department this step asks.');
+                        $v->errors()->add("steps.{$index}.approver_employee_ids", 'approver_outside_department');
                     }
                 }
             }
@@ -101,7 +101,7 @@ class UpdateWorkflowRequest extends FormRequest
             $workflow = $this->route('workflow');
             $hasOwnerStep = $steps->contains(fn ($s) => ($s['actor_type'] ?? null) === StepActorType::Owner->value);
             if ($hasOwnerStep && $workflow !== null && $workflow->request_type->ownerSource() === null) {
-                $v->errors()->add('steps', 'This request type has no resource owner - an Owner step can never resolve.');
+                $v->errors()->add('steps', 'no_resource_owner');
             }
         });
     }

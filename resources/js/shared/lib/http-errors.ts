@@ -96,3 +96,13 @@ export function markShownInline(error: unknown): void {
 export function wasShownInline(error: unknown): boolean {
     return !!error && typeof error === 'object' && shownInline.has(error);
 }
+
+/** A form's banner text: its own words for a 5xx (no toast repeats it), else the server's message, else the same words. */
+export function formFailureText(error: unknown, fallback: string): string {
+    if (isServerFailure(error)) {
+        markShownInline(error);
+        return fallback;
+    }
+    const message = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+    return typeof message === 'string' && message !== '' ? message : fallback;
+}

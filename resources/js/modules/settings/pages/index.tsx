@@ -14,7 +14,7 @@ import { useListParams } from '@/shared/hooks/use-list-params';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { toastDeleteError } from '@/shared/lib/api-errors';
+import { serverMessage, toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { localPair } from '@/shared/lib/local-name';
@@ -988,8 +988,9 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                 );
         },
         onError: (e: unknown) => {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
+            useToastStore
+                .getState()
+                .push(serverMessage(e, t, 'set_email_test_err_') ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
         },
     });
 

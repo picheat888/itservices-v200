@@ -62,7 +62,7 @@ export function CancelRequestDialog({
             await cancel.mutateAsync({ id: ctx.id, reason: reason.trim() });
             onCancelled();
         } catch (e) {
-            formError.show(serverMessage(e) ?? t('cd_error'));
+            formError.show(serverMessage(e, t, 'req_refusal_') ?? t('cd_error'));
         }
     };
 

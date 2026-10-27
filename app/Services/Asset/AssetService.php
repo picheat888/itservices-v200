@@ -482,7 +482,7 @@ class AssetService
     /** Retire / write off a single asset — blocked while an employee still holds it. */
     public function retire(Asset $asset, ?string $reason = null): Asset
     {
-        abort_if($asset->heldByEmployee(), 422, "Return {$asset->asset_code} from the employee before writing it off.");
+        abort_if($asset->heldByEmployee(), response()->json(['message' => 'writeoff_held', 'code' => $asset->asset_code], 422));
 
         $asset->update([
             'status' => AssetStatus::Writeoff,
@@ -503,8 +503,7 @@ class AssetService
         $contract = $asset->contract;
         abort_if(
             $contract !== null && ($contract->cancelled_at !== null || $contract->expired_at !== null),
-            422,
-            "Contract {$contract?->code} is closed - reopen it before bringing {$asset->asset_code} back.",
+            response()->json(['message' => 'contract_closed', 'contract' => $contract?->code, 'code' => $asset->asset_code], 422),
         );
 
         $asset->update(['status' => AssetStatus::Ready]);
@@ -531,18 +530,10 @@ class AssetService
         $assets = Asset::whereIn('id', $ids)->get(['id', 'asset_code', 'source', 'status']);
 
         $notRented = $assets->filter(fn (Asset $asset) => $asset->source !== AssetSource::Rented)->pluck('asset_code');
-        abort_if(
-            $notRented->isNotEmpty(),
-            422,
-            'Only rented assets can be returned to the lessor - write these off instead: '.$notRented->implode(', ').'.'
-        );
+        abort_if($notRented->isNotEmpty(), response()->json(['message' => 'lessor_not_rented', 'codes' => $notRented->implode(', ')], 422));
 
         $notReady = $assets->filter(fn (Asset $asset) => $asset->status !== AssetStatus::Ready)->pluck('asset_code');
-        abort_if(
-            $notReady->isNotEmpty(),
-            422,
-            'Only Ready assets can be returned to the lessor - recall or return these first: '.$notReady->implode(', ').'.'
-        );
+        abort_if($notReady->isNotEmpty(), response()->json(['message' => 'lessor_not_ready', 'codes' => $notReady->implode(', ')], 422));
 
         // A query update skips the model's hooks, so the write-off and the return are stamped here.
         $now = now();
@@ -573,11 +564,7 @@ class AssetService
     {
         if ($status === AssetStatus::Writeoff) {
             $notReady = Asset::whereIn('id', $ids)->where('status', '!=', AssetStatus::Ready->value)->pluck('asset_code');
-            abort_if(
-                $notReady->isNotEmpty(),
-                422,
-                'Only Ready assets can be written off - recall or return these first: '.$notReady->implode(', ').'.'
-            );
+            abort_if($notReady->isNotEmpty(), response()->json(['message' => 'writeoff_not_ready', 'codes' => $notReady->implode(', ')], 422));
         }
 
         return Asset::whereIn('id', $ids)->update([

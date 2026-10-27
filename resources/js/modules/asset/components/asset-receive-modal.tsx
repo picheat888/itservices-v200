@@ -81,7 +81,7 @@ export function AssetReceiveModal({
             if (isRecall && !isBulk && status === 422) {
                 formError.show(t('asset_recall_stale'));
             } else {
-                formError.show(serverMessage(err) ?? t('asset_action_failed'));
+                formError.show(serverMessage(err, t, 'asset_refusal_') ?? t('asset_action_failed'));
             }
         }
     };

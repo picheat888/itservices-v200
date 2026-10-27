@@ -1,3 +1,4 @@
+import type { ImportIssue, ImportRowError } from '@/shared/components/import-dialog';
 import type { BarUnit, MonthBar } from '@/shared/components/month-bar-chart';
 import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/overview-period';
 import { ensureCsrf, http } from '@/shared/lib/http';
@@ -86,13 +87,13 @@ export interface ImportPreviewRow {
     position: string | null;
     joined_at: string | null;
     report_to: string | null;
-    errors: string[];
+    errors: ImportIssue[];
 }
 
 /** POST /employees/import/preview — the whole file checked, nothing written. */
 export interface ImportPreview {
     data: ImportPreviewRow[];
-    errors: { row: number; message: string }[];
+    errors: ImportRowError[];
     meta: {
         total: number;
         valid: number;

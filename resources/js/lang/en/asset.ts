@@ -246,6 +246,25 @@ export const asset: Dict = {
     asset_peek_owner: 'Owner',
     asset_contract: 'Contract',
 
+    // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
+    asset_refusal_writeoff_locked: 'A written-off asset cannot be edited. Cancel the write-off first.',
+    asset_refusal_not_writeoff: 'This asset is not written off.',
+    asset_refusal_delete_not_ready: 'Only assets that are Ready to deploy can be deleted.',
+    asset_refusal_delete_on_contract: 'This asset is on a contract. Remove it from the contract before deleting.',
+    asset_refusal_in_use_return_first: 'This asset is in use. Return it first.',
+    asset_refusal_handover_not_ready: 'Only assets that are Ready to deploy can be handed over.',
+    asset_refusal_accept_not_pending: 'Only a pending hand-over can be accepted.',
+    asset_refusal_receive_not_pending: 'Only assets pending return can be received.',
+    asset_refusal_recall_writeoff: 'A written-off asset cannot be recalled.',
+    asset_refusal_recall_already_ready: 'This asset is already Ready to deploy.',
+    asset_refusal_recall_not_allowed: 'Only pending hand-overs or shared assets in use can be recalled.',
+    asset_refusal_recall_some_blocked: 'Some selected assets cannot be recalled.',
+    asset_refusal_writeoff_held: 'Return {code} from the employee before writing it off.',
+    asset_refusal_contract_closed: 'Contract {contract} is closed. Reopen it before bringing {code} back.',
+    asset_refusal_lessor_not_rented: 'Only rented assets can go back to the lessor. Write these off instead: {codes}',
+    asset_refusal_lessor_not_ready: 'Only assets that are Ready to deploy can go back to the lessor. Recall or return these first: {codes}',
+    asset_refusal_writeoff_not_ready: 'Only assets that are Ready to deploy can be written off. Recall or return these first: {codes}',
+
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     asset_empty_overview_by_type: 'No assets yet',
     asset_empty_overview_by_type_hint: 'Register assets on the inventory tab.',

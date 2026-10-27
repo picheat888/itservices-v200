@@ -9,6 +9,7 @@ import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
 import { SaveButton } from '@/shared/components/save-button';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { formFailureText } from '@/shared/lib/http-errors';
 import { isValidPassword } from '@/shared/lib/password-policy';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { focusFirstError } from '@/shared/lib/utils';
@@ -116,7 +117,7 @@ export function PasswordForm({
                 } else {
                     // Locked after too many wrong passwords: the sign-in wording with the wait, in place of the last field error
                     if (response?.status === 429) setErrors({});
-                    setFormError(response?.status === 429 ? loginErrorText(e, t, fmtN) : (data?.message ?? t('pwd_change_failed')));
+                    setFormError(response?.status === 429 ? loginErrorText(e, t, fmtN) : formFailureText(e, t('pwd_change_failed')));
                     setFormErrorCount((n) => n + 1);
                 }
             },

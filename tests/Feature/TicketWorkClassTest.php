@@ -237,6 +237,8 @@ class TicketWorkClassTest extends TestCase
 
         $this->assertSame(1, $ticket->updates()->count());
         $this->assertStringContainsString('ต้องรื้อฝ้า', (string) $ticket->updates()->first()->body);
+        // The same words as the page's work-type picker
+        $this->assertStringContainsString('Standard work → In-house technician', (string) $ticket->updates()->first()->body);
     }
 
     public function test_a_reason_is_required(): void

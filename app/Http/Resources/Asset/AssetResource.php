@@ -62,7 +62,9 @@ class AssetResource extends JsonResource
             'warehouse' => $this->warehouse?->name,
             'warehouse_id' => $this->warehouse_id,
             'value' => $value,
-            'value_display' => $this->valueDisplay($value),
+            'value_display' => AppSetting::currencySymbol().number_format($value, 2),
+            // A rented asset's fee is per its contract's billing cycle; the page words it (/mo, /qtr, /yr)
+            'value_cycle' => $this->source === AssetSource::Rented ? ($this->contract?->billing_cycle ?? 'monthly') : null,
             'supplier' => $vendor?->name,
             'supplier_th' => $vendor?->name_th,
             'vendor_id' => $rented ? $contract?->vendor_id : $this->vendor_id,
@@ -140,16 +142,5 @@ class AssetResource extends JsonResource
                 'resolved_at' => SystemTime::date($tk->resolved_at),
             ])),
         ];
-    }
-
-    /**
-     * "฿38,500.00" for owned assets; for rented, the contract's fee per its own billing cycle —
-     * "฿8,500.00/mo", "฿25,500.00/qtr" or "฿102,000.00/yr" (symbol per Settings currency).
-     */
-    private function valueDisplay(float $value): string
-    {
-        $amount = AppSetting::currencySymbol().number_format($value, 2);
-
-        return $this->source === AssetSource::Rented ? $amount.($this->contract?->cycleSuffix() ?? '/mo') : $amount;
     }
 }

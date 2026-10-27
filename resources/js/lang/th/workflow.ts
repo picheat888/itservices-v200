@@ -97,6 +97,12 @@ export const workflow: Dict = {
     wf_owner_preview: 'รู้ว่าเป็นใครเมื่อผู้ขอเลือก Resource',
     wf_queue_preview: 'เข้าคิวทีม IT และเปิด Ticket อัตโนมัติ',
     wf_save_error_steps: 'บันทึกไม่สำเร็จ ตรวจรายการขั้นตอนอีกครั้ง',
+    wf_err_need_approval_step: 'ต้องมีขั้นอนุมัติอย่างน้อย 1 ขั้น',
+    wf_err_one_completion: 'มีขั้นปิดงานได้ขั้นเดียว',
+    wf_err_completion_last: 'ขั้นปิดงานต้องอยู่ท้ายสุด',
+    wf_err_completion_it_staff: 'ขั้นปิดงานต้องเป็นของ IT',
+    wf_err_approver_outside_department: 'ผู้อนุมัติทุกคนต้องอยู่ในแผนกที่ขั้นนี้กำหนด',
+    wf_err_no_resource_owner: 'คำขอประเภทนี้ไม่มีเจ้าของ Resource จึงใส่ขั้นเจ้าของ Resource ไม่ได้',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     wf_empty_list: 'ยังไม่มี Workflow',

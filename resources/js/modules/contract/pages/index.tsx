@@ -24,6 +24,7 @@ import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { perCycle } from '@/shared/lib/currency';
 import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -586,7 +587,13 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
             className: 'whitespace-nowrap',
             render: (c) => <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />,
         },
-        { key: 'value', header: t('contract_value'), width: '130px', className: 'whitespace-nowrap text-xs', render: (c) => c.value_display },
+        {
+            key: 'value',
+            header: t('contract_value'),
+            width: '130px',
+            className: 'whitespace-nowrap text-xs',
+            render: (c) => perCycle(c.value_display, c.billing_cycle, t),
+        },
         {
             key: 'total',
             header: t('contract_total_value'),
