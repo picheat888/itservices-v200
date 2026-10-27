@@ -162,7 +162,6 @@ export const contract: Dict = {
 
     // pages/index.tsx — contract table and pagination
     contract_days_overdue_short: 'เกินกำหนด {n} วัน',
-    contract_badge_new: 'ใหม่',
 
     // pages/index.tsx — Overview tab
     contract_hint_in_reminder: 'อยู่ในช่วงแจ้งเตือนแล้ว',

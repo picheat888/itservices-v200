@@ -1,5 +1,6 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { contractApi, type ContractPayload } from '../api/contractApi';
 
@@ -49,7 +50,13 @@ export function useContractMutations() {
         }
     };
     return {
-        create: useMutation({ mutationFn: (p: ContractPayload) => contractApi.create(p), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: ContractPayload) => contractApi.create(p),
+            onSuccess: (c) => {
+                markNew('contracts', c.id);
+                invalidate();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: ContractPayload }) => contractApi.update(v.id, v.payload),
             onSuccess: invalidate,
@@ -57,7 +64,13 @@ export function useContractMutations() {
         cancel: useMutation({ mutationFn: (v: { id: number; reason: string }) => contractApi.cancel(v.id, v.reason), onSuccess: invalidate }),
         expire: useMutation({ mutationFn: (id: number) => contractApi.expire(id), onSuccess: invalidate }),
         reactivate: useMutation({ mutationFn: (id: number) => contractApi.reactivate(id), onSuccess: invalidate }),
-        remove: useMutation({ mutationFn: (id: number) => contractApi.remove(id), onSuccess: invalidate }),
+        remove: useMutation({
+            mutationFn: (id: number) => contractApi.remove(id),
+            onSuccess: (_, id) => {
+                dropNew('contracts', id);
+                invalidate();
+            },
+        }),
         uploadAttachments: useMutation({
             mutationFn: (v: { id: number; files: File[] }) => contractApi.uploadAttachments(v.id, v.files),
             onSuccess: invalidate,

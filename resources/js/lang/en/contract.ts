@@ -163,7 +163,6 @@ export const contract: Dict = {
 
     // pages/index.tsx — contract table and pagination
     contract_days_overdue_short: '{n}d overdue',
-    contract_badge_new: 'New',
 
     // pages/index.tsx — Overview tab
     contract_hint_in_reminder: 'In the reminder window',

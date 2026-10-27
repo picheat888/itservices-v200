@@ -7,6 +7,7 @@ import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { OverviewHeader } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -17,6 +18,7 @@ import { TruncText } from '@/shared/components/trunc-text';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -52,6 +54,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { contractApi } from '../api/contractApi';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { ContractRowMenu } from '../components/contract-row-menu';
@@ -132,9 +135,6 @@ export default function ContractsPage() {
     const setTypeFilter = (value: ContractType | '') => list.setFilter('type', value);
     const setStatusFilter = (value: StatusFilter) => list.setFilter('status', value);
     const setSort = (value: string) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
-    // Newly created contract — pinned at the top with a "New" badge for 8 seconds.
-    const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
-    const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const summaryQuery = useContractSummary();
     const { data: summary, isError: summaryFailed, refetch: refetchSummary } = summaryQuery;
@@ -183,10 +183,17 @@ export default function ContractsPage() {
     const meta = listData?.meta;
     const totalRows = meta?.total ?? 0;
     usePageInRange(list, meta?.last_page);
-    // Lifecycle actions from the row menu; a pinned new row that was just removed or closed stops being pinned
-    const rowActions = useContractActions(() => setNewlyCreated(null));
+    // Lifecycle actions from the row menu
+    const rowActions = useContractActions(() => undefined);
+    // A contract the user just added stays on top for a minute
+    const newRows = useNewRows({
+        scope: 'contracts',
+        rows,
+        rowKey: (c) => c.id,
+        detail: { key: (id) => ['contract', id], fetch: (id) => contractApi.get(Number(id)) },
+    });
     const rowPermissions = { canEdit, canCancel, canExpire, canReactivate, canDelete };
-    const columns = useContractColumns(newlyCreated?.id ?? null, (c) => (
+    const columns = useContractColumns(newRows.isNew, (c) => (
         <ContractRowMenu
             contract={c}
             can={rowPermissions}
@@ -198,7 +205,6 @@ export default function ContractsPage() {
             onDelete={() => rowActions.startDelete(c)}
         />
     ));
-    const tableRows = newlyCreated ? [newlyCreated, ...rows.filter((r) => r.id !== newlyCreated.id)] : rows;
 
     // Switch tab and mirror it in the URL (?tab=); the All tab's list keys are cleared in the same write.
     const changeTab = (next: Tab) => {
@@ -228,10 +234,6 @@ export default function ContractsPage() {
         if (!justCreated || searchParams.get('add') != null) return;
         setJustCreated(null);
         showAllWithStatus('');
-        // Pin the new row at the top for 8 seconds
-        if (newlyCreatedTimer.current) clearTimeout(newlyCreatedTimer.current);
-        setNewlyCreated(justCreated);
-        newlyCreatedTimer.current = setTimeout(() => setNewlyCreated(null), 8000);
     }, [justCreated, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
     // From the row menu the form opens alone; from the detail dialog ?view stays, so cancelling returns there
     const openEdit = (c: Contract) => dialogs.open({ edit: String(c.id) });
@@ -456,10 +458,11 @@ export default function ContractsPage() {
 
                         <DataTable
                             columns={columns}
-                            rows={tableRows}
+                            rows={rows}
+                            pinned={newRows.pinned}
                             rowKey={(c) => c.id}
                             onRowClick={(c) => setSelectedId(c.id)}
-                            rowClassName={(c) => (c.id === newlyCreated?.id ? NEW_ROW : undefined)}
+                            rowClassName={(c) => (newRows.isNew(c) ? NEW_ROW_CLASS : undefined)}
                             loading={isLoading || (isFetching && isPlaceholderData)}
                             loadingRows={rows.length || 8}
                             caption={t('contracts_title')}
@@ -529,10 +532,8 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
     );
 }
 
-const NEW_ROW = 'animate-in fade-in bg-(--row-tint) duration-500 [--row-tint:color-mix(in_oklab,var(--color-emerald-500)_8%,transparent)]';
-
-/** Columns of the All-tab table; the pinned new contract carries a "New" badge. */
-function useContractColumns(newId: number | null, rowMenu: (c: Contract) => React.ReactNode): Column<Contract>[] {
+/** Columns of the All-tab table; a just-added contract carries the new badge. */
+function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contract) => React.ReactNode): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
     const lang = useUiStore((s) => s.lang);
@@ -546,7 +547,7 @@ function useContractColumns(newId: number | null, rowMenu: (c: Contract) => Reac
             render: (c) => (
                 <div className="flex flex-col items-start gap-0.5">
                     <span className="text-muted-foreground text-xs">{c.code}</span>
-                    {c.id === newId && <StatusBadge tone="green">{t('contract_badge_new')}</StatusBadge>}
+                    {isNew(c) && <NewBadge />}
                 </div>
             ),
         },
