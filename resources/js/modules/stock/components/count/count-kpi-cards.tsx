@@ -4,6 +4,9 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import type { SheetSummary } from '../../lib/count-sheet';
 
+// Keeps the foot line's height when there is nothing to sum
+const NO_FOOT = ' ';
+
 function KpiCard({ label, value, foot, valueClassName }: { label: string; value: string; foot: string; valueClassName?: string }) {
     return (
         <div className="border-border rounded-lg border px-3 py-2.5 text-center">
@@ -28,13 +31,13 @@ export function CountKpiCards({ summary }: { summary: SheetSummary }) {
             <KpiCard
                 label={t('stock_count_kpi_short')}
                 value={fmtN(summary.short)}
-                foot={t('stock_count_kpi_sum_short').replace('{n}', fmtN(summary.shortQty))}
+                foot={summary.shortQty > 0 ? t('stock_count_kpi_sum_short').replace('{n}', fmtN(summary.shortQty)) : NO_FOOT}
                 valueClassName="text-red-700 dark:text-red-400"
             />
             <KpiCard
                 label={t('stock_count_kpi_over')}
                 value={fmtN(summary.over)}
-                foot={t('stock_count_kpi_sum_over').replace('{n}', fmtN(summary.overQty))}
+                foot={summary.overQty > 0 ? t('stock_count_kpi_sum_over').replace('{n}', fmtN(summary.overQty)) : NO_FOOT}
                 valueClassName="text-emerald-700 dark:text-emerald-400"
             />
         </div>

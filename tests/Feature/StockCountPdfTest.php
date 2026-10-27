@@ -85,6 +85,21 @@ class StockCountPdfTest extends TestCase
         $this->get("/pdf/stock-counts/{$count->id}")->assertOk();
     }
 
+    public function test_zero_short_and_over_tiles_show_no_quantity(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $wh = Warehouse::create(['name' => 'Main']);
+        $item = $this->item('A-SAME', 3, $wh);
+        $count = $this->makeCount($wh, [$item], ['A-SAME' => ['counted_qty' => 3]], true);
+        $seen = new \ArrayObject;
+        View::composer('pdf.stock-count', fn ($v) => $seen->append($v->getData()));
+
+        $this->get("/pdf/stock-counts/{$count->id}")->assertOk();
+        $html = view('pdf.stock-count', $seen[0])->render();
+
+        $this->assertStringNotContainsString("Q'ty", $html);
+    }
+
     public function test_draft_count_is_not_found(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));

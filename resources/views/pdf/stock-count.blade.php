@@ -82,8 +82,8 @@
                         <td style="width: 128px;"><span class="tile-label">นับแล้ว</span><span class="tile-value">{{ $number($totals['counted']) }} <span class="tile-unit">จาก {{ $number($totals['lines']) }} รายการ</span></span></td>
                         <td class="gap"></td>
                         <td class="same"><span class="tile-label">ยอดตรง</span><span class="tile-value">{{ $number($totals['same_lines']) }} <span class="tile-unit">รายการ</span></span></td>
-                        <td class="bad"><span class="tile-label">ยอดขาด</span><span class="tile-value short-t">{{ $number($totals['short_lines']) }} <span class="tile-unit">รายการ (−{{ $number($totals['short_qty']) }} Q'ty)</span></span></td>
-                        <td class="good"><span class="tile-label">ยอดเกิน</span><span class="tile-value over-t">{{ $number($totals['over_lines']) }} <span class="tile-unit">รายการ (+{{ $number($totals['over_qty']) }} Q'ty)</span></span></td>
+                        <td class="bad"><span class="tile-label">ยอดขาด</span><span class="tile-value short-t">{{ $number($totals['short_lines']) }} <span class="tile-unit">รายการ@if ($totals['short_qty'] > 0) (−{{ $number($totals['short_qty']) }} Q'ty)@endif</span></span></td>
+                        <td class="good"><span class="tile-label">ยอดเกิน</span><span class="tile-value over-t">{{ $number($totals['over_lines']) }} <span class="tile-unit">รายการ@if ($totals['over_qty'] > 0) (+{{ $number($totals['over_qty']) }} Q'ty)@endif</span></span></td>
                     </tr>
                 </table>
             </td>

@@ -1874,7 +1874,7 @@ export const report: Dict = {
     rep_smv_cnt_col_up: 'ปรับเพิ่ม',
     rep_smv_cnt_col_down: 'ปรับลด',
     rep_smv_cnt_col_net: 'มูลค่าสุทธิ',
-    rep_smv_cnt_total: 'รวม {n} รอบ',
+    rep_smv_cnt_total: 'รวม {n} ใบ',
     rep_smv_rows_title: 'รายการรับเข้าและเบิกออก',
     // pages/stock-valuation.tsx, components/stock-valuation-cards.tsx — มูลค่าคงคลัง
     rep_sva_unit: 'ชิ้น',
