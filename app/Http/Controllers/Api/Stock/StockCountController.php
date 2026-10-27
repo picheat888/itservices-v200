@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Stock;
 
+use App\Enums\Stock\StockCountAdjustMode;
 use App\Enums\Stock\StockCountReason;
 use App\Enums\Stock\StockCountStatus;
 use App\Http\Controllers\Controller;
@@ -83,11 +84,11 @@ class StockCountController extends Controller
         ])))->response();
     }
 
-    /** Stream the A4 landscape PDF of a confirmed count; drafts and canceled sheets are 404. */
+    /** Stream the A4 landscape PDF of a confirmed count; drafts, canceled and manual (adjust later) sheets are 404. */
     public function pdf(Request $request, StockCount $stockCount, StockCountPdf $sheets): StreamedResponse
     {
         $this->gateView($request);
-        abort_unless($stockCount->status === StockCountStatus::Committed, 404);
+        abort_unless($stockCount->status === StockCountStatus::Committed && $stockCount->adjust_mode !== StockCountAdjustMode::Manual, 404);
 
         $file = $sheets->render($stockCount, $request->user());
 

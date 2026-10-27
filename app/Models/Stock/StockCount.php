@@ -67,8 +67,7 @@ class StockCount extends Model
     }
 
     /**
-     * Serials of the item the original count wrote off in this warehouse and nothing has touched since;
-     * null when this is not a recount.
+     * Serials of the item the original count wrote off here and nothing has touched since; null when not a recount.
      *
      * @return Builder<StockItemSerial>|null
      */

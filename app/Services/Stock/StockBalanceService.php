@@ -7,15 +7,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
 use App\Support\Refusal;
 
-/**
- * Owns per-warehouse on-hand quantities (stock_balances). Callers run these inside
- * the movement transaction; current_stock (the cached total) is maintained by the
- * caller. Removals are guarded so a warehouse balance can never go negative.
- *
- * The public API still speaks warehouse *names* (the movement flows pass names,
- * including the 'Unassigned' sentinel); each name is resolved to warehouse_id here.
- * 'Unassigned' / blank → null (no fake master row).
- */
+/** Per-warehouse on-hand quantities (stock_balances) by warehouse name or row; removals never go below zero. */
 class StockBalanceService
 {
     /** Increment (or create) the balance for a warehouse. */

@@ -76,7 +76,7 @@ class StockCountPdf
                 'system_qty' => $line->system_qty,
                 'counted_qty' => $line->counted_qty,
                 'variance' => $variance,
-                'reason' => $reason,
+                'reason' => $reason ?? (($variance ?? 0) !== 0 ? '—' : null),
                 'missing_serials' => collect($line->missing_serial_ids ?? [])->map(fn ($id) => $serials[$id] ?? null)->filter()->values()->all(),
             ];
         })->all();

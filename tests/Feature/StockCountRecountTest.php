@@ -94,6 +94,7 @@ class StockCountRecountTest extends TestCase
         $draft = $this->postJson('/api/stock-counts', ['warehouse_id' => $wh->id, 'stock_item_ids' => [$item->id]])->json('data');
         $this->postJson("/api/stock-counts/{$draft['id']}/recount")->assertStatus(422)->assertJsonPath('message', 'count_recount_not_committed');
         StockCount::whereKey($draft['id'])->update(['status' => 'canceled']);
+        $this->postJson("/api/stock-counts/{$draft['id']}/recount")->assertStatus(422)->assertJsonPath('message', 'count_recount_not_committed');
 
         $manual = $this->confirmedCount($wh, [$item], ['A' => ['counted_qty' => 4, 'reason' => 'lost']]);
         StockCount::whereKey($manual['id'])->update(['adjust_mode' => StockCountAdjustMode::Manual]);

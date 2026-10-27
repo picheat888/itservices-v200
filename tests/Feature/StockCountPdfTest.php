@@ -4,6 +4,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Stock\StockCountAdjustMode;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
@@ -92,6 +93,36 @@ class StockCountPdfTest extends TestCase
         $count = $this->makeCount($wh, [$item], ['A-SAME' => ['counted_qty' => 3]], false);
 
         $this->get("/pdf/stock-counts/{$count->id}")->assertNotFound();
+    }
+
+    public function test_manual_count_is_not_found(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $wh = Warehouse::create(['name' => 'Main']);
+        $item = $this->item('A-SHORT', 3, $wh);
+        $count = $this->makeCount($wh, [$item], ['A-SHORT' => ['counted_qty' => 2, 'reason' => 'lost']], true);
+        $count->update(['adjust_mode' => StockCountAdjustMode::Manual]);
+
+        $this->get("/pdf/stock-counts/{$count->id}")->assertNotFound();
+    }
+
+    public function test_differing_row_without_reason_prints_a_dash(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $wh = Warehouse::create(['name' => 'Main']);
+        $short = $this->item('A-SHORT', 3, $wh);
+        $same = $this->item('B-SAME', 3, $wh);
+        $count = $this->makeCount($wh, [$short, $same], [
+            'A-SHORT' => ['counted_qty' => 2, 'reason' => 'lost'],
+            'B-SAME' => ['counted_qty' => 3],
+        ], true);
+        $count->lines()->update(['reason' => null]);
+        $seen = new \ArrayObject;
+        View::composer('pdf.stock-count', fn ($v) => $seen->append($v->getData()));
+
+        $this->get("/pdf/stock-counts/{$count->id}")->assertOk();
+
+        $this->assertSame(['—', null], array_column($seen[0]['rows'], 'reason'));
     }
 
     public function test_requires_view_count_permission(): void

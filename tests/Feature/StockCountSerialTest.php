@@ -172,7 +172,7 @@ class StockCountSerialTest extends TestCase
         StockCountLine::whereKey($lineId)->update(['counted_qty' => 1]);
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
-            ->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('need', 2)->assertJsonPath('sku', 'UPS-1');
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonMissingPath('need')->assertJsonPath('sku', 'UPS-1');
         $this->assertSame(3, $item->fresh()->current_stock);
         $this->assertSame(0, StockMovement::count());
     }

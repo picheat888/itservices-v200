@@ -167,8 +167,7 @@ class StockCountService
     }
 
     /**
-     * Ticked-missing ids must be this warehouse's in-stock serials of the item; found ids must be the
-     * adjusted serials the original count wrote off here (recounts only).
+     * Missing ids must be in stock here; found ids must be serials the original count wrote off here.
      *
      * @param  list<int>  $missing
      * @param  list<int>  $found
@@ -200,10 +199,7 @@ class StockCountService
         return array_values(array_unique(array_map('intval', $ids)));
     }
 
-    /**
-     * Confirm a draft: every counted line that differs books an ADJ movement on the count's own
-     * warehouse, moves that balance and the total, realigns FIFO lots and settles the ticked serials.
-     */
+    /** Confirm a draft: book every differing line on the count's warehouse and settle its ticked serials. */
     public function commit(StockCount $count, User $user): StockCount
     {
         $adjusted = DB::transaction(function () use ($count, $user): int {
@@ -222,6 +218,10 @@ class StockCountService
             if ($other !== null) {
                 Refusal::fail('count_overlap_commit', ['reference' => $other['reference']]);
             }
+
+            // Items locked in id order up front so two commits cannot deadlock
+            $itemIds = $lines->filter(fn (StockCountLine $line) => $this->needsBooking($line))->pluck('stock_item_id')->all();
+            StockItem::whereIn('id', $itemIds)->orderBy('id')->lockForUpdate()->get();
 
             $adjusted = 0;
             foreach ($lines as $line) {
@@ -275,15 +275,23 @@ class StockCountService
         }
     }
 
+    /** A counted line that differs, or one whose ticked serials cancel out. */
+    private function needsBooking(StockCountLine $line): bool
+    {
+        $variance = $line->variance();
+
+        return $variance !== null && ($variance !== 0 || ($line->missing_serial_ids ?? []) !== [] || ($line->found_serial_ids ?? []) !== []);
+    }
+
     /** Book one line's difference and settle its ticked serials; true when the stock changed. */
     private function bookLine(StockCount $count, StockCountLine $line, Warehouse $warehouse, User $user): bool
     {
-        $variance = $line->variance();
-        $missing = $this->uniqueIds($line->missing_serial_ids ?? []);
-        $found = $this->uniqueIds($line->found_serial_ids ?? []);
-        if ($variance === null || ($variance === 0 && $missing === [] && $found === [])) {
+        if (! $this->needsBooking($line)) {
             return false;
         }
+        $variance = (int) $line->variance();
+        $missing = $this->uniqueIds($line->missing_serial_ids ?? []);
+        $found = $this->uniqueIds($line->found_serial_ids ?? []);
 
         /** @var StockItem|null $item */
         $item = StockItem::whereKey($line->stock_item_id)->lockForUpdate()->first();
@@ -338,8 +346,7 @@ class StockCountService
     }
 
     /**
-     * Re-read the draft's ticked serials under lock: missing ones must still be in stock here, found ones
-     * still written off here by the original count, and together they must explain the line's variance.
+     * Re-read the ticked serials under lock; they must still be where they were and explain the variance.
      *
      * @param  list<int>  $missing
      * @param  list<int>  $found
@@ -361,7 +368,7 @@ class StockCountService
         $foundRows = $lost === null ? new EloquentCollection : $lost->lockForUpdate()->whereIn('id', $found)->get();
 
         if ($variance !== count($found) - count($missing) || $missingRows->count() !== count($missing) || $foundRows->count() !== count($found)) {
-            Refusal::fail('count_serial_missing_mismatch', ['need' => max(0, count($found) - $variance), 'sku' => $item->sku]);
+            Refusal::fail('count_serial_missing_mismatch', ['sku' => $item->sku]);
         }
 
         return ['missing' => $missingRows, 'found' => $foundRows];
