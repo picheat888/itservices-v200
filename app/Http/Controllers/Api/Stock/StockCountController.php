@@ -8,11 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Stock\StockCountResource;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\Warehouse;
+use App\Services\Stock\StockCountPdf;
 use App\Services\Stock\StockCountService;
 use App\Services\Stock\StockNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\HeaderUtils;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockCountController extends Controller
 {
@@ -78,6 +81,22 @@ class StockCountController extends Controller
             'recountOf',
             'lines.item.serials' => fn ($q) => $q->where('status', 'in_stock'),
         ])))->response();
+    }
+
+    /** Stream the A4 landscape PDF of a confirmed count; drafts and canceled sheets are 404. */
+    public function pdf(Request $request, StockCount $stockCount, StockCountPdf $sheets): StreamedResponse
+    {
+        $this->gateView($request);
+        abort_unless($stockCount->status === StockCountStatus::Committed, 404);
+
+        $file = $sheets->render($stockCount, $request->user());
+
+        return new StreamedResponse(function () use ($file) {
+            echo $file['bytes'];
+        }, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $file['filename'], 'stock-count.pdf'),
+        ]);
     }
 
     public function update(Request $request, StockCount $stockCount): JsonResponse
