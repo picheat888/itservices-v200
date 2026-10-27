@@ -96,6 +96,7 @@ class StockItemResource extends JsonResource
                 'supplier' => $l->movement?->from_label,
                 'recorded_by' => $l->movement?->recorded_by,
                 'recorded_by_th' => $l->movement?->relationLoaded('user') ? $l->movement->user?->name_th : null,
+                'reason' => $l->movement?->reason,
                 'notes' => $l->movement?->notes,
             ])),
         ];

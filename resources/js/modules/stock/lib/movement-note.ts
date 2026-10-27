@@ -4,9 +4,9 @@ import type { CountReason } from '@/shared/types';
 
 type Translate = ReturnType<typeof useT>;
 
-export function movementNote(m: { reason?: CountReason | null; notes: string | null }, t: Translate): string | null {
+export function movementNote(m: { reason?: CountReason | null; notes?: string | null }, t: Translate): string | null {
     if (m.reason && m.reason !== 'custom') {
         return t(`stock_count_reason_${m.reason}` as Parameters<Translate>[0]);
     }
-    return m.notes;
+    return m.notes ?? null;
 }

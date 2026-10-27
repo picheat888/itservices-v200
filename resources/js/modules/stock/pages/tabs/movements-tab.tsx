@@ -229,6 +229,7 @@ export function MovementsTab() {
                         (() => {
                             const meta = MV_META[viewMove.type];
                             const inbound = ['receive', 'return', 'adjust_up'].includes(viewMove.type);
+                            const viewNote = movementNote(viewMove, t);
                             return (
                                 <>
                                     <FocusDialogHeader
@@ -356,10 +357,10 @@ export function MovementsTab() {
                                         )}
 
                                         {/* Notes */}
-                                        {movementNote(viewMove, t) && (
+                                        {viewNote && (
                                             <div>
                                                 <div className={cn(EYEBROW, 'mb-1')}>{t('stock_notes')}</div>
-                                                <div className="bg-muted/40 rounded-lg p-3 text-sm">{movementNote(viewMove, t)}</div>
+                                                <div className="bg-muted/40 rounded-lg p-3 text-sm">{viewNote}</div>
                                             </div>
                                         )}
 

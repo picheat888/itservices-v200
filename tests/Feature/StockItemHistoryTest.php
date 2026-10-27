@@ -6,6 +6,7 @@ use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -126,6 +127,22 @@ class StockItemHistoryTest extends TestCase
         $res->assertJsonCount(1, 'data.movements');
         $res->assertJsonCount(2, 'data.serials');
         $res->assertJsonPath('data.serials.0.events.0.event', 'received');
+    }
+
+    public function test_a_count_adjust_up_lot_carries_its_reason_in_the_item_detail(): void
+    {
+        $item = $this->serialItem('CNT-2');
+        $movement = StockMovement::create([
+            'type' => 'adjust_up', 'stock_item_id' => $item->id, 'qty' => 2, 'moved_at' => now(), 'reason' => 'inbound',
+        ]);
+        StockLot::create([
+            'stock_item_id' => $item->id, 'stock_movement_id' => $movement->id, 'unit_cost' => 1,
+            'qty_received' => 2, 'qty_remaining' => 2, 'received_at' => now(),
+        ]);
+
+        $this->actingAs($this->super())->getJson("/api/stock-items/{$item->id}")->assertOk()
+            ->assertJsonPath('data.lots.0.reason', 'inbound')
+            ->assertJsonPath('data.lots.0.notes', null);
     }
 
     public function test_history_requires_stock_view_permission(): void

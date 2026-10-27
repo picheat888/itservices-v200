@@ -719,6 +719,7 @@ export interface StockLot {
     supplier?: string | null;
     recorded_by?: string | null;
     recorded_by_th?: string | null;
+    reason?: CountReason | null;
     notes?: string | null;
 }
 

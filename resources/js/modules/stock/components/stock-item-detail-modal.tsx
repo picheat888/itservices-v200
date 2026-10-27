@@ -21,6 +21,7 @@ import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/typ
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooterBar, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
+import { movementNote } from '../lib/movement-note';
 import { Box, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
 import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
@@ -415,9 +416,9 @@ export function StockItemDetailModal({
                                                                                     </span>
                                                                                 </Meta>
                                                                             </div>
-                                                                            {l.notes && (
+                                                                            {movementNote(l, t) && (
                                                                                 <div className="text-muted-foreground mt-2.5 text-xs">
-                                                                                    <span>{t('stock_notes')}:</span> {l.notes}
+                                                                                    <span>{t('stock_notes')}:</span> {movementNote(l, t)}
                                                                                 </div>
                                                                             )}
                                                                         </td>
