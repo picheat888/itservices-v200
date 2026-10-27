@@ -297,3 +297,37 @@ test('the serial count button says its count', () => {
     for (const dict of [th, en]) assert.ok(dict.stock_count_tick_serials.includes('{n}'));
     assert.ok(src(`${COUNT_DIR}count-sheet-row.tsx`).includes(".replace('{n}', countedText)"));
 });
+
+// A server refusal that names a sku points at that row
+import { refusedLine } from '../../resources/js/modules/stock/lib/count-sheet.ts';
+
+const refusal = (data: Record<string, unknown>) => ({ response: { status: 422, data } });
+const refusedRows = [
+    { id: 7, sku: 'NB-001' },
+    { id: 8, sku: 'MS-002' },
+];
+
+test('a refusal about a reason points at that row reason', () => {
+    assert.deepEqual(refusedLine(refusal({ message: 'count_reason_missing', sku: 'MS-002' }), refusedRows), { id: 8, field: 'reason' });
+    assert.deepEqual(refusedLine(refusal({ message: 'count_reason_note_missing', sku: 'NB-001' }), refusedRows), { id: 7, field: 'reason' });
+    assert.deepEqual(refusedLine(refusal({ message: 'count_reason_wrong_side', sku: 'NB-001' }), refusedRows), { id: 7, field: 'reason' });
+});
+
+test('a refusal about serials points at that row count', () => {
+    assert.deepEqual(refusedLine(refusal({ message: 'count_serial_missing_mismatch', sku: 'NB-001' }), refusedRows), { id: 7, field: 'count' });
+    assert.deepEqual(refusedLine(refusal({ message: 'count_serial_not_here', sku: 'MS-002' }), refusedRows), { id: 8, field: 'count' });
+});
+
+test('a refusal with no sku, an unknown sku, or no response points at no row', () => {
+    assert.equal(refusedLine(refusal({ message: 'count_needs_warehouse', sku: '' }), refusedRows), null);
+    assert.equal(refusedLine(refusal({ message: 'count_overlap_commit', reference: 'SC-2026-001' }), refusedRows), null);
+    assert.equal(refusedLine(refusal({ message: 'count_serial_over', sku: 'XX-999' }), refusedRows), null);
+    assert.equal(refusedLine(new Error('Network Error'), refusedRows), null);
+    assert.equal(refusedLine(undefined, refusedRows), null);
+});
+
+test('the sheet puts a refused row in view after a save or the commit', () => {
+    const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`);
+    assert.ok(sheet.includes('showRefusedLine(e)'));
+    assert.ok(sheet.includes('refusedLine(e, lines)'));
+});

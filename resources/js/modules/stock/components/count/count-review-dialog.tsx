@@ -46,6 +46,7 @@ export function CountReviewDialog({
     lines,
     confirming,
     onConfirm,
+    onCloseAutoFocus,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -55,6 +56,7 @@ export function CountReviewDialog({
     lines: StockCountLine[];
     confirming: boolean;
     onConfirm: () => void;
+    onCloseAutoFocus?: (event: Event) => void;
 }) {
     const t = useT();
 
@@ -64,7 +66,7 @@ export function CountReviewDialog({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !confirming && onOpenChange(o)}>
-            <FormDialogContent>
+            <FormDialogContent onCloseAutoFocus={onCloseAutoFocus}>
                 <FocusDialogHeader
                     icon={SquareCheckBig}
                     eyebrow={reference}

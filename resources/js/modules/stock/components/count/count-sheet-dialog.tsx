@@ -17,16 +17,33 @@ import { Dialog, DialogBody, DialogContent, DialogFooterBar, focusDialogContentC
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { ClipboardCheck, Loader2, Lock, Search } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LinePatch } from '../../api/stockApi';
 import { useStockCountMutations } from '../../hooks/use-stock';
-import { draftLine, filterIds, lineNeedsReason, linePatch, linesByIds, sheetSummary, type LineEdit, type SheetChip } from '../../lib/count-sheet';
+import {
+    draftLine,
+    filterIds,
+    lineNeedsReason,
+    linePatch,
+    linesByIds,
+    refusedLine,
+    sheetSummary,
+    type LineEdit,
+    type SheetChip,
+} from '../../lib/count-sheet';
 import { stockRefusalText } from '../../lib/refusal';
 import { CountChip } from './count-chip';
 import { CountDialogPending, CountFacts, pendingFrameClass } from './count-dialog-parts';
 import { CountReviewDialog } from './count-review-dialog';
 import { CountSerialDialog } from './count-serial-dialog';
 import { CountReadRow, CountSheetRow } from './count-sheet-row';
+
+// Scrolls a line's row into the middle of the table and focuses its first matching control
+function scrollToRow(table: HTMLElement | null, lineId: number, focus: string) {
+    const row = table?.querySelector<HTMLElement>(`[data-line-id="${lineId}"]`);
+    row?.scrollIntoView({ block: 'center' });
+    row?.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
+}
 
 const statusTone = (s: StockCount['status']) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
@@ -116,6 +133,35 @@ export function CountSheetDialog({
 
     const toastError = (e: unknown) => useToastStore.getState().push(stockRefusalText(e, t), 'error');
 
+    // A row to scroll to and focus once the table is live again, or once the review hands focus back
+    const [jump, setJump] = useState<{ id: number; focus: string; afterReview: boolean } | null>(null);
+    useEffect(() => {
+        if (!jump || jump.afterReview || busy !== null) return;
+        setJump(null);
+        scrollToRow(tableRef.current, jump.id, jump.focus);
+    }, [jump, busy]);
+    const jumpOnReviewClose = (e: Event) => {
+        if (!jump?.afterReview) return;
+        e.preventDefault();
+        setJump(null);
+        scrollToRow(tableRef.current, jump.id, jump.focus);
+    };
+
+    const putRowInView = (lineId: number, chipToShow: SheetChip, focus: string, afterReview = false) => {
+        pickChip(chipToShow);
+        setQuery('');
+        setJump({ id: lineId, focus, afterReview });
+    };
+
+    // A refusal that names a sku puts that row in view under the toast
+    const showRefusedLine = (e: unknown) => {
+        const refused = refusedLine(e, lines);
+        if (!refused) return;
+        const fromReview = review.open;
+        setReview((r) => ({ ...r, open: false }));
+        putRowInView(refused.id, 'all', refused.field === 'reason' ? 'select, textarea' : 'button, input', fromReview);
+    };
+
     const edit = (line: StockCountLine, change: LineEdit) => {
         setSaved(false);
         setEdits((prev) => ({ ...prev, [line.id]: { ...prev[line.id], ...change } }));
@@ -142,6 +188,7 @@ export function CountSheetDialog({
             return true;
         } catch (e) {
             toastError(e);
+            showRefusedLine(e);
             return false;
         }
     };
@@ -157,13 +204,7 @@ export function CountSheetDialog({
     const startReview = async () => {
         const first = lines.find(lineNeedsReason);
         if (first) {
-            pickChip('no_reason');
-            setQuery('');
-            window.requestAnimationFrame(() => {
-                const row = tableRef.current?.querySelector<HTMLElement>(`[data-line-id="${first.id}"]`);
-                row?.scrollIntoView({ block: 'center' });
-                row?.querySelector<HTMLElement>('select, textarea')?.focus({ preventScroll: true });
-            });
+            putRowInView(first.id, 'no_reason', 'select, textarea');
             return;
         }
         setBusy('review');
@@ -182,6 +223,7 @@ export function CountSheetDialog({
             setReview((r) => ({ ...r, open: false }));
         } catch (e) {
             toastError(e);
+            showRefusedLine(e);
         } finally {
             setBusy(null);
         }
@@ -396,6 +438,7 @@ export function CountSheetDialog({
                             lines={review.lines}
                             confirming={busy === 'commit'}
                             onConfirm={confirmCommit}
+                            onCloseAutoFocus={jumpOnReviewClose}
                         />
                     </>
                 )}

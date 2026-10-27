@@ -1,4 +1,4 @@
-// Count sheet maths: reason lists, reason clearing on a qty change, summary, chip/search filtering and draft edits over saved lines.
+// Count sheet maths: reason lists, reason clearing on a qty change, summary, chip/search filtering, draft edits over saved lines and the row a refusal names.
 // Pure (no React or browser imports) so node tests can load it.
 import type { CountReason } from '@/shared/types';
 import { matchesAllWords } from '../../../shared/lib/search-words.ts';
@@ -158,4 +158,18 @@ export function linePatch(saved: SavedLine, shown: SavedLine): LinePatch | null 
         patch.reason_note = noteOf(shown);
     }
     return Object.keys(patch).length === 0 ? null : patch;
+}
+
+const REASON_REFUSALS = ['count_reason_missing', 'count_reason_wrong_side', 'count_reason_note_missing'];
+
+/** The row a server refusal names by sku, and whether its reason or its count needs fixing. */
+export function refusedLine<T extends { id: number; sku: string | null }>(
+    error: unknown,
+    lines: T[],
+): { id: number; field: 'reason' | 'count' } | null {
+    const data = (error as { response?: { data?: { message?: unknown; sku?: unknown } } } | undefined)?.response?.data;
+    if (typeof data?.sku !== 'string' || data.sku === '') return null;
+    const line = lines.find((l) => l.sku === data.sku);
+    if (!line) return null;
+    return { id: line.id, field: REASON_REFUSALS.includes(String(data.message)) ? 'reason' : 'count' };
 }
