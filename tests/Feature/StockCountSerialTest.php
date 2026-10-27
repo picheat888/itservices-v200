@@ -33,11 +33,18 @@ class StockCountSerialTest extends TestCase
         return $item;
     }
 
+    /** Open a count of one warehouse; returns the created count payload. */
+    private function open(Warehouse $warehouse, array $itemIds): array
+    {
+        return $this->postJson('/api/stock-counts', ['warehouse_id' => $warehouse->id, 'stock_item_ids' => $itemIds])
+            ->assertCreated()->json('data');
+    }
+
     public function test_show_returns_track_serial_and_in_stock_serials(): void
     {
         $item = $this->serialItem('UPS-1', 3);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
 
         $this->getJson("/api/stock-counts/{$count['id']}")
             ->assertOk()
@@ -53,7 +60,7 @@ class StockCountSerialTest extends TestCase
         $item->update(['current_stock' => 99]);
         $this->actingAs($this->super());
 
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
 
         // System reflects the 3 in-stock serials, not current_stock (99).
         $this->assertSame(3, $count['lines'][0]['system_qty']);
@@ -65,7 +72,7 @@ class StockCountSerialTest extends TestCase
         $serials = $item->serials()->orderBy('id')->get();
         $this->actingAs($this->super());
 
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         // Counted 1 → short by 2; tick 2 serials as missing.
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
@@ -87,7 +94,7 @@ class StockCountSerialTest extends TestCase
     {
         $item = $this->serialItem('UPS-1', 3);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
 
@@ -102,7 +109,7 @@ class StockCountSerialTest extends TestCase
         $item = $this->serialItem('UPS-1', 3);
         $serials = $item->serials()->orderBy('id')->get();
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
 
@@ -120,7 +127,7 @@ class StockCountSerialTest extends TestCase
         $other = $this->serialItem('UPS-2', 2);
         $otherSerial = $other->serials()->first();
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
 
@@ -134,7 +141,7 @@ class StockCountSerialTest extends TestCase
     {
         $item = $this->serialItem('UPS-1', 2);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         // Counted 5 > system 2.
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 5]])->assertOk();
@@ -143,5 +150,17 @@ class StockCountSerialTest extends TestCase
             'mode' => 'auto',
             'missing_serials' => [(string) $item->id => []],
         ])->assertStatus(422)->assertJsonPath('message', 'count_serial_over')->assertJsonPath('sku', 'UPS-1');
+    }
+
+    public function test_serial_system_qty_counts_this_warehouse_serials(): void
+    {
+        $item = $this->serialItem('UPS-1', 2, 'Main');
+        $otherId = Warehouse::firstOrCreate(['name' => 'Other'])->id;
+        $item->serials()->create(['serial' => 'UPS-1-SN9', 'status' => 'in_stock', 'warehouse_id' => $otherId]);
+        $this->actingAs($this->super());
+
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+
+        $this->assertSame(2, $count['lines'][0]['system_qty']);
     }
 }

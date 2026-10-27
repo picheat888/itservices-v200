@@ -103,7 +103,7 @@ class StockItemHistoryTest extends TestCase
             'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-A', 'SN-B'], 'to_label' => 'Main',
         ])->assertCreated();
 
-        $count = $this->actingAs($super)->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])->json('data');
+        $count = $this->actingAs($super)->postJson('/api/stock-counts', ['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Main'])->id, 'stock_item_ids' => [$item->id]])->assertCreated()->json('data');
         $lineId = $count['lines'][0]['id'];
         $this->actingAs($super)->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
         $missingId = $item->serials()->where('status', 'in_stock')->orderBy('id')->value('id');

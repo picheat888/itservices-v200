@@ -24,46 +24,31 @@ class StockCountService
     ) {}
 
     /**
-     * Open a draft session, snapshotting current_stock for the items to count.
-     * When explicit `stock_item_ids` are given those exact SKUs are used;
-     * otherwise every item matching the optional warehouse / category filter.
+     * Open a draft sheet for one warehouse, snapshotting that warehouse's quantity of each item.
      *
-     * @param  array{warehouse?:?string, category?:?string, note?:?string, stock_item_ids?:array<int>}  $filters
+     * @param  list<int>  $stockItemIds
      */
-    public function open(array $filters, User $user): StockCount
+    public function open(Warehouse $warehouse, array $stockItemIds, User $user, ?StockCount $recountOf = null): StockCount
     {
-        return DB::transaction(function () use ($filters, $user) {
+        return DB::transaction(function () use ($warehouse, $stockItemIds, $user, $recountOf) {
             $count = StockCount::create([
-                'warehouse' => $filters['warehouse'] ?? null,
-                'category' => $filters['category'] ?? null,
-                'note' => $filters['note'] ?? null,
+                'warehouse_id' => $warehouse->id,
+                'warehouse' => $warehouse->name,
+                'recount_of_id' => $recountOf?->id,
                 'status' => StockCountStatus::Draft,
                 'counted_by' => $user->id,
             ]);
 
-            $query = StockItem::query();
-            if (! empty($filters['stock_item_ids'])) {
-                $query->whereIn('id', $filters['stock_item_ids']);
-            } else {
-                $query->when($filters['warehouse'] ?? null, fn ($q, $w) => $q->whereHas('balances', fn ($b) => $b->whereHas('warehouse', fn ($wh) => $wh->where('name', $w))))
-                    ->when($filters['category'] ?? null, fn ($q, $c) => $q->whereHas('category', fn ($cat) => $cat->where('name', $c)));
-            }
             // Rows locked so two counts opened at once cannot both pass the overlap check
-            $items = $query->orderBy('sku')->lockForUpdate()->get(['id', 'current_stock', 'track_serial']);
-            // A count of one warehouse is a count of that shelf, so it snapshots that shelf.
-            $warehouseId = filled($filters['warehouse'] ?? null)
-                ? Warehouse::query()->where('name', $filters['warehouse'])->value('id')
-                : null;
-            $this->countLock->assertNoOverlap($items->modelKeys(), $warehouseId);
+            $items = StockItem::query()->whereIn('id', $stockItemIds)->orderBy('sku')
+                ->lockForUpdate()->get(['id', 'current_stock', 'track_serial']);
+            $this->countLock->assertNoOverlap($items->modelKeys(), $warehouse->id);
 
             foreach ($items as $item) {
-                // Serialized: in-stock serials; else current_stock, or that warehouse's balance in a one-warehouse count.
-                $systemQty = match (true) {
-                    (bool) $item->track_serial => (int) $item->serials()->where('status', 'in_stock')
-                        ->when($warehouseId, fn ($q, $id) => $q->where('warehouse_id', $id))->count(),
-                    $warehouseId !== null => (int) $item->balances()->where('warehouse_id', $warehouseId)->value('qty'),
-                    default => $item->current_stock,
-                };
+                // Serialized: in-stock serials of this warehouse; else this warehouse's balance (no row = 0)
+                $systemQty = $item->track_serial
+                    ? $item->serials()->where('status', 'in_stock')->where('warehouse_id', $warehouse->id)->count()
+                    : (int) $item->balances()->where('warehouse_id', $warehouse->id)->value('qty');
 
                 $count->lines()->create([
                     'stock_item_id' => $item->id,

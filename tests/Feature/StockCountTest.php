@@ -31,24 +31,37 @@ class StockCountTest extends TestCase
         return $item;
     }
 
+    private function warehouse(string $name = 'Main'): Warehouse
+    {
+        return Warehouse::firstOrCreate(['name' => $name]);
+    }
+
+    /** Open a count of one warehouse; returns the created count payload. */
+    private function open(Warehouse $warehouse, array $itemIds): array
+    {
+        return $this->postJson('/api/stock-counts', ['warehouse_id' => $warehouse->id, 'stock_item_ids' => $itemIds])
+            ->assertCreated()->json('data');
+    }
+
     public function test_open_snapshots_a_line_per_matching_item(): void
     {
-        $this->item('A-1', 10, 'Main');
-        $this->item('B-1', 5, 'Other');
+        $a = $this->item('A-1', 10, 'Main');
+        $b = $this->item('B-1', 5, 'Other');
         $this->actingAs($this->super());
 
-        $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])
+        $this->postJson('/api/stock-counts', ['warehouse_id' => $this->warehouse('Main')->id, 'stock_item_ids' => [$a->id, $b->id]])
             ->assertCreated()
             ->assertJsonPath('data.status', 'draft')
-            ->assertJsonCount(1, 'data.lines')
-            ->assertJsonPath('data.lines.0.system_qty', 10);
+            ->assertJsonCount(2, 'data.lines')
+            ->assertJsonPath('data.lines.0.system_qty', 10)
+            ->assertJsonPath('data.lines.1.system_qty', 0);
     }
 
     public function test_show_carries_the_new_line_and_count_fields(): void
     {
-        $this->item('A-1', 10, 'Main');
+        $a = $this->item('A-1', 10, 'Main');
         $this->actingAs($this->super());
-        $id = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data.id');
+        $id = $this->open($this->warehouse(), [$a->id])['id'];
 
         $response = $this->getJson("/api/stock-counts/{$id}")->assertOk();
 
@@ -61,10 +74,10 @@ class StockCountTest extends TestCase
 
     public function test_list_reports_line_totals_without_the_lines(): void
     {
-        $this->item('A-1', 10);
-        $this->item('A-2', 5);
+        $a = $this->item('A-1', 10);
+        $b = $this->item('A-2', 5);
         $this->actingAs($this->super());
-        $id = $this->postJson('/api/stock-counts', [])->json('data.id');
+        $id = $this->open($this->warehouse(), [$a->id, $b->id])['id'];
         $lineId = $this->getJson("/api/stock-counts/{$id}")->json('data.lines.0.id');
         $this->putJson("/api/stock-counts/{$id}", ['counts' => [$lineId => 3]])->assertOk();
 
@@ -75,12 +88,7 @@ class StockCountTest extends TestCase
         $this->getJson("/api/stock-counts/{$id}")->assertJsonCount(2, 'data.lines');
     }
 
-    /**
-     * A count of one warehouse is a count of that shelf: it snapshots that warehouse's
-     * balance, and committing it moves that balance and the total by the difference. It
-     * used to snapshot the item's total and overwrite the total with one shelf's count,
-     * leaving every warehouse balance untouched.
-     */
+    // One-warehouse count: snapshots and adjusts that warehouse's balance, and the total by the difference
     public function test_a_one_warehouse_count_adjusts_that_warehouse_and_the_total_by_the_difference(): void
     {
         $item = $this->item('A-1', 10, 'Main');
@@ -88,7 +96,7 @@ class StockCountTest extends TestCase
         $item->update(['current_stock' => 15]);
         $this->actingAs($this->super());
 
-        $count = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $this->assertSame(10, $count['lines'][0]['system_qty']);
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
@@ -99,12 +107,12 @@ class StockCountTest extends TestCase
         $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_down', 'qty' => 3, 'from_label' => 'Main']);
     }
 
-    public function test_an_all_warehouse_count_adjusts_the_only_warehouse_an_item_sits_in(): void
+    public function test_a_count_of_a_warehouse_adjusts_an_item_that_sits_only_there(): void
     {
         $item = $this->item('A-1', 10, 'Main');
         $this->actingAs($this->super());
 
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 12]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
@@ -113,25 +121,74 @@ class StockCountTest extends TestCase
         $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_up', 'qty' => 2, 'to_label' => 'Main']);
     }
 
-    /** Across several warehouses the difference has no one place to go — count it per warehouse. */
-    public function test_an_all_warehouse_count_refuses_an_item_spread_over_warehouses(): void
+    // An item spread over warehouses: counting one leaves the other balance alone
+    public function test_a_count_of_one_warehouse_leaves_the_other_warehouse_balance_alone(): void
     {
         $item = $this->item('A-1', 10, 'Main');
-        $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch'])->id, 'qty' => 5]);
+        $item->balances()->create(['warehouse_id' => $this->warehouse('Branch')->id, 'qty' => 5]);
         $item->update(['current_stock' => 15]);
         $this->actingAs($this->super());
 
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 14]])->assertOk();
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
-            ->assertUnprocessable()
-            ->assertJsonPath('message', 'count_needs_warehouse')
-            ->assertJsonPath('sku', 'A-1');
+        $count = $this->open($this->warehouse('Branch'), [$item->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 4]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
-        // Nothing moved, and the draft stays open to be redone per warehouse.
-        $this->assertSame(15, $item->fresh()->current_stock);
-        $this->assertSame(0, StockMovement::where('stock_item_id', $item->id)->count());
-        $this->getJson("/api/stock-counts/{$count['id']}")->assertJsonPath('data.status', 'draft');
+        $this->assertSame(14, $item->fresh()->current_stock);
+        $this->assertSame(10, (int) $item->fresh()->balances()->where('warehouse_id', $this->warehouse('Main')->id)->value('qty'));
+        $this->assertSame(4, (int) $item->fresh()->balances()->where('warehouse_id', $this->warehouse('Branch')->id)->value('qty'));
+    }
+
+    public function test_open_requires_a_warehouse_id(): void
+    {
+        $item = $this->item('A-1', 10, 'Main');
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/stock-counts', ['stock_item_ids' => [$item->id]])
+            ->assertUnprocessable()->assertJsonValidationErrors(['warehouse_id']);
+        $this->postJson('/api/stock-counts', ['warehouse' => 'Main', 'stock_item_ids' => [$item->id]])
+            ->assertUnprocessable()->assertJsonValidationErrors(['warehouse_id']);
+        $this->assertDatabaseCount('stock_counts', 0);
+    }
+
+    public function test_open_requires_at_least_one_item(): void
+    {
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/stock-counts', ['warehouse_id' => $this->warehouse()->id])
+            ->assertUnprocessable()->assertJsonValidationErrors(['stock_item_ids']);
+        $this->postJson('/api/stock-counts', ['warehouse_id' => $this->warehouse()->id, 'stock_item_ids' => []])
+            ->assertUnprocessable()->assertJsonValidationErrors(['stock_item_ids']);
+    }
+
+    // STK-21: the app models no Unassigned row, so a non-existent id and a row named Unassigned are both refused
+    public function test_open_refuses_unassigned(): void
+    {
+        $item = $this->item('A-1', 10, 'Main');
+        $this->actingAs($this->super());
+        $unassigned = Warehouse::create(['name' => 'Unassigned']);
+
+        foreach ([999999, $unassigned->id] as $id) {
+            $this->postJson('/api/stock-counts', ['warehouse_id' => $id, 'stock_item_ids' => [$item->id]])
+                ->assertUnprocessable()->assertJsonValidationErrors(['warehouse_id']);
+        }
+        $this->assertDatabaseCount('stock_counts', 0);
+    }
+
+    public function test_system_qty_is_this_warehouse_only(): void
+    {
+        $both = $this->item('A-1', 10, 'Main');
+        $both->balances()->create(['warehouse_id' => $this->warehouse('Other')->id, 'qty' => 5]);
+        $both->update(['current_stock' => 15]);
+        $elsewhere = $this->item('B-1', 7, 'Other');
+        $this->actingAs($this->super());
+
+        $count = $this->open($this->warehouse('Main'), [$both->id, $elsewhere->id]);
+
+        $bySku = collect($count['lines'])->mapWithKeys(fn ($l) => [$l['stock_item_id'] => $l['system_qty']]);
+        $this->assertSame(10, $bySku[$both->id]);
+        $this->assertSame(0, $bySku[$elsewhere->id]);
+        $this->assertSame($this->warehouse('Main')->id, $count['warehouse_id']);
+        $this->assertSame('Main', $count['warehouse']);
     }
 
     public function test_open_with_explicit_sku_ids_snapshots_only_those_items(): void
@@ -142,7 +199,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
 
         // Pick only A-1 and C-1 โ€” warehouse has 3 items but we count 2.
-        $this->postJson('/api/stock-counts', ['warehouse' => 'Main', 'stock_item_ids' => [$a->id, $c->id]])
+        $this->postJson('/api/stock-counts', ['warehouse_id' => $this->warehouse()->id, 'stock_item_ids' => [$a->id, $c->id]])
             ->assertCreated()
             ->assertJsonCount(2, 'data.lines');
     }
@@ -152,7 +209,7 @@ class StockCountTest extends TestCase
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
 
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
 
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 7]])
@@ -171,7 +228,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 4);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 9]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
@@ -184,7 +241,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
         $this->assertSame(10, $item->fresh()->current_stock);
@@ -197,7 +254,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
@@ -211,7 +268,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
 
         // A concurrent commit closes the count the moment this commit's transaction begins.
@@ -229,14 +286,14 @@ class StockCountTest extends TestCase
         $this->assertSame(0, StockMovement::count());
     }
 
-    public function test_open_refuses_an_unknown_warehouse_and_creates_none(): void
+    public function test_open_refuses_a_warehouse_name_and_creates_none(): void
     {
-        $this->item('A-1', 10, 'Main');
+        $item = $this->item('A-1', 10, 'Main');
         $this->actingAs($this->super());
 
-        $this->postJson('/api/stock-counts', ['warehouse' => 'Nowhere'])
+        $this->postJson('/api/stock-counts', ['warehouse' => 'Nowhere', 'stock_item_ids' => [$item->id]])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['warehouse']);
+            ->assertJsonValidationErrors(['warehouse_id']);
 
         $this->assertDatabaseMissing('warehouses', ['name' => 'Nowhere']);
         $this->assertDatabaseCount('stock_counts', 0);
@@ -246,7 +303,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 4]])->assertOk();
 
@@ -264,7 +321,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 7]])->assertOk();
 
@@ -280,7 +337,7 @@ class StockCountTest extends TestCase
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
-        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 8]])->assertOk();
 
@@ -293,14 +350,14 @@ class StockCountTest extends TestCase
 
     public function test_reference_auto_numbers_per_year(): void
     {
-        $this->item('A-1', 5);
+        $item = $this->item('A-1', 5);
         $this->actingAs($this->super());
         $year = now()->year;
 
-        $first = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data');
+        $first = $this->open($this->warehouse(), [$item->id]);
         // Two drafts may not hold the same item, so the first closes before the second opens
         $this->deleteJson("/api/stock-counts/{$first['id']}")->assertOk();
-        $second = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data.reference');
+        $second = $this->open($this->warehouse(), [$item->id])['reference'];
         $first = $first['reference'];
 
         $this->assertSame("SC-{$year}-001", $first);
@@ -309,13 +366,14 @@ class StockCountTest extends TestCase
 
     public function test_requires_stock_count_permission(): void
     {
-        $this->item('A-1', 10);
+        $item = $this->item('A-1', 10);
+        $body = ['warehouse_id' => $this->warehouse()->id, 'stock_item_ids' => [$item->id]];
         $user = User::factory()->create(['role' => 'admin']); // no seeded perms
-        $this->actingAs($user)->postJson('/api/stock-counts', [])->assertForbidden();
+        $this->actingAs($user)->postJson('/api/stock-counts', $body)->assertForbidden();
 
         foreach (['stock.module', 'stock.view_count'] as $p) {
             RolePermission::create(['role_id' => $user->role_id, 'permission' => $p, 'allowed' => true]);
         }
-        $this->actingAs($user)->postJson('/api/stock-counts', [])->assertCreated();
+        $this->actingAs($user)->postJson('/api/stock-counts', $body)->assertCreated();
     }
 }

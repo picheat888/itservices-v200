@@ -37,9 +37,9 @@ class StockCountOverlapTest extends TestCase
     }
 
     /** @param  list<int>  $itemIds */
-    private function open(array $itemIds, ?string $warehouse = null): TestResponse
+    private function open(array $itemIds, string $warehouse): TestResponse
     {
-        return $this->postJson('/api/stock-counts', ['warehouse' => $warehouse, 'stock_item_ids' => $itemIds]);
+        return $this->postJson('/api/stock-counts', ['warehouse_id' => Warehouse::firstOrCreate(['name' => $warehouse])->id, 'stock_item_ids' => $itemIds]);
     }
 
     public function test_a_second_count_of_the_same_item_on_the_same_shelf_is_refused_and_names_the_first(): void
@@ -78,15 +78,17 @@ class StockCountOverlapTest extends TestCase
         $this->open([$item->id], 'Branch')->assertCreated();
     }
 
-    public function test_an_all_warehouse_count_overlaps_every_shelf_both_ways(): void
+    // A pre-existing draft with no warehouse still blocks every shelf of its items, both ways
+    public function test_a_draft_without_a_warehouse_overlaps_every_shelf(): void
     {
         $item = $this->item('A-1', ['Main' => 10, 'Branch' => 5]);
-        $all = $this->open([$item->id])->assertCreated()->json('data');
-        $this->open([$item->id], 'Branch')->assertUnprocessable()->assertJsonPath('reference', $all['reference']);
+        $old = StockCount::create(['status' => StockCountStatus::Draft, 'counted_by' => $this->user->id]);
+        $old->lines()->create(['stock_item_id' => $item->id, 'system_qty' => 15, 'counted_qty' => null]);
 
-        $this->deleteJson("/api/stock-counts/{$all['id']}")->assertOk();
+        $this->open([$item->id], 'Branch')->assertUnprocessable()->assertJsonPath('reference', $old->reference);
+
+        $this->deleteJson("/api/stock-counts/{$old->id}")->assertOk();
         $this->open([$item->id], 'Branch')->assertCreated();
-        $this->open([$item->id])->assertUnprocessable()->assertJsonPath('message', 'count_overlap');
     }
 
     public function test_a_closed_count_frees_its_items_for_a_new_one(): void

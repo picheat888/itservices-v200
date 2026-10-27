@@ -6,6 +6,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -136,7 +137,10 @@ class StockPermissionGatingTest extends TestCase
 
         $this->actingAs($blocked)->getJson('/api/stock-counts')->assertForbidden();
         $this->actingAs($allowed)->getJson('/api/stock-counts')->assertOk();           // list
-        $this->actingAs($allowed)->postJson('/api/stock-counts', [])->assertCreated(); // open โ€” same key
+        $item = StockItem::create(['sku' => 'GATE-1', 'name' => 'Gate', 'unit' => 'pcs', 'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 10]);
+        $body = ['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Main'])->id, 'stock_item_ids' => [$item->id]];
+        $this->actingAs($blocked)->postJson('/api/stock-counts', $body)->assertForbidden();
+        $this->actingAs($allowed)->postJson('/api/stock-counts', $body)->assertCreated(); // open โ€” same key
     }
 
     /**

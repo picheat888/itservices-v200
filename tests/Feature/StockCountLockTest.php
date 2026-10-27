@@ -24,6 +24,13 @@ class StockCountLockTest extends TestCase
         return $item;
     }
 
+    /** Open a count of one warehouse; returns the created count payload. */
+    private function open(string $warehouse, array $itemIds): array
+    {
+        return $this->postJson('/api/stock-counts', ['warehouse_id' => Warehouse::firstOrCreate(['name' => $warehouse])->id, 'stock_item_ids' => $itemIds])
+            ->assertCreated()->json('data');
+    }
+
     private function approvedRequest(StockItem $item, int $qty): StockRequest
     {
         $requester = User::factory()->create(['role' => 'super']);
@@ -37,7 +44,7 @@ class StockCountLockTest extends TestCase
     {
         $item = $this->item('A-1', ['Main' => 10, 'Branch' => 5]);
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $count = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data');
+        $count = $this->open('Main', [$item->id]);
 
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'Main'])
             ->assertUnprocessable()
@@ -50,15 +57,15 @@ class StockCountLockTest extends TestCase
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'Branch'])->assertCreated();
     }
 
-    public function test_an_all_warehouse_count_refuses_every_shelf_of_its_items_only(): void
+    public function test_a_count_refuses_movements_of_its_items_on_its_shelf_only(): void
     {
         $counted = $this->item('A-1', ['Main' => 10]);
         Warehouse::create(['name' => 'Branch']);
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $this->postJson('/api/stock-counts', ['stock_item_ids' => [$counted->id]])->assertCreated();
+        $this->open('Main', [$counted->id]);
         $other = $this->item('B-1', ['Main' => 4]);
 
-        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $counted->id, 'qty' => 1, 'to_label' => 'Branch'])
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $counted->id, 'qty' => 1, 'to_label' => 'Main'])
             ->assertUnprocessable()->assertJsonPath('message', 'count_in_progress');
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $other->id, 'qty' => 1, 'to_label' => 'Main'])->assertCreated();
     }
@@ -68,7 +75,7 @@ class StockCountLockTest extends TestCase
         $item = $this->item('A-1', ['Main' => 10]);
         $free = $this->item('B-1', ['Branch' => 2]);
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $count = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data');
+        $count = $this->open('Main', [$item->id]);
 
         $rows = collect($this->getJson('/api/stock-items')->assertOk()->json('data'))->keyBy('sku');
         $this->assertSame([['reference' => $count['reference'], 'warehouse' => 'Main']], $rows['A-1']['counting']);
@@ -82,7 +89,7 @@ class StockCountLockTest extends TestCase
         $item = $this->item('A-1', ['Main' => 10]);
         $request = $this->approvedRequest($item, 3);
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $count = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data');
+        $count = $this->open('Main', [$item->id]);
 
         $this->postJson("/api/stock-requests/{$request->id}/fulfill", ['from_warehouse' => 'Main'])
             ->assertUnprocessable()->assertJsonPath('message', 'count_in_progress');

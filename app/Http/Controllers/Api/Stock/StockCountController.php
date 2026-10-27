@@ -7,6 +7,7 @@ use App\Enums\Stock\StockCountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Stock\StockCountResource;
 use App\Models\Stock\StockCount;
+use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockCountService;
 use App\Services\Stock\StockNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -55,20 +56,15 @@ class StockCountController extends Controller
     {
         $this->gateManage($request);
         $data = $request->validate([
-            // An existing warehouse or the 'Unassigned' sentinel; null counts every warehouse.
-            'warehouse' => ['nullable', 'string', 'max:120', Rule::when(
-                fn ($input) => $input->warehouse !== 'Unassigned',
-                Rule::exists('warehouses', 'name'),
-            )],
-            'category' => ['nullable', 'string', 'max:120'],
-            'note' => ['nullable', 'string', 'max:2000'],
-            'stock_item_ids' => ['array'],
+            // A real warehouse row; the 'Unassigned' sentinel is never countable
+            'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where(fn ($q) => $q->where('name', '!=', 'Unassigned'))],
+            'stock_item_ids' => ['required', 'array', 'min:1'],
             'stock_item_ids.*' => ['integer', 'exists:stock_items,id'],
         ]);
 
-        $count = $this->service->open($data, $request->user());
+        $count = $this->service->open(Warehouse::findOrFail($data['warehouse_id']), $data['stock_item_ids'], $request->user());
 
-        return (new StockCountResource($count->load(['countedBy', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
