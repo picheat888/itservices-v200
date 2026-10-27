@@ -366,9 +366,11 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::apiResource('stock-items', StockItemController::class);
     Route::get('stock-movements', [StockMovementController::class, 'index'])->name('api.stock-movements.index');
     Route::get('stock-movements/{movement}/serials', [StockMovementController::class, 'serials'])->name('api.stock-movements.serials');
+    Route::get('stock-movements/{movement}', [StockMovementController::class, 'show'])->whereNumber('movement')->name('api.stock-movements.show');
     Route::post('stock-movements', [StockMovementController::class, 'store'])->name('api.stock-movements.store');
     Route::get('stock-requests', [StockRequestController::class, 'index'])->name('api.stock-requests.index');
     Route::post('stock-requests', [StockRequestController::class, 'store'])->name('api.stock-requests.store');
+    Route::get('stock-requests/{stockRequest}', [StockRequestController::class, 'show'])->whereNumber('stockRequest')->name('api.stock-requests.show');
     Route::post('stock-requests/{stockRequest}/approve', [StockRequestController::class, 'approve'])->name('api.stock-requests.approve');
     Route::post('stock-requests/{stockRequest}/reject', [StockRequestController::class, 'reject'])->name('api.stock-requests.reject');
     Route::post('stock-requests/{stockRequest}/fulfill', [StockRequestController::class, 'fulfill'])->name('api.stock-requests.fulfill');

@@ -82,6 +82,18 @@ class StockRequestController extends Controller
         ]);
     }
 
+    /** One request, behind the request list's gate: someone who only sees their own requests gets 404 for the rest. */
+    public function show(Request $request, StockRequest $stockRequest): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
+
+        $seesAll = $user->isSuper() || $user->hasPermission('stock.approve') || $user->hasPermission('stock.fulfill');
+        abort_unless($seesAll || $stockRequest->user_id === $user->id, 404);
+
+        return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee'])))->response();
+    }
+
     /** Submit a new stock request (status: pending). */
     public function store(Request $request): JsonResponse
     {

@@ -80,6 +80,14 @@ class StockMovementController extends Controller
         ]);
     }
 
+    /** One movement, behind the movement log's gate (a just-recorded row pinned on top of the log). */
+    public function show(Request $request, StockMovement $movement): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
+
+        return (new StockMovementResource($movement->load(['item', 'user.employee'])))->response();
+    }
+
     /** Serial codes tied to a movement (for the detail dialog), sourced from the serial-event log. */
     public function serials(Request $request, StockMovement $movement): JsonResponse
     {
