@@ -43,7 +43,7 @@
                                 <table class="line">
                                     <tr>
                                         <td class="sku"><span class="lbl">SKU:</span> {{ $item->sku ?? '' }}</td>
-                                        <td class="cat">{{ $item->category ?? '' }}</td>
+                                        <td class="cat">{{ $item?->category?->name ?? '' }}</td>
                                     </tr>
                                 </table>
                                 <div class="name"><span class="lbl">Name:</span> {{ $name }}</div>

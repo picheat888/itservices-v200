@@ -131,7 +131,7 @@ class StockMovementController extends Controller
             || $user?->hasPermission('stock.transfer')
         ), 403);
 
-        $movement->loadMissing('item');
+        $movement->loadMissing('item.category');
         $serials = $this->serialCodesFor($movement);
 
         // One Code 128 barcode per serial as HTML, at a fixed width (~47 mm ≈ 177 px) to fill the sticker.

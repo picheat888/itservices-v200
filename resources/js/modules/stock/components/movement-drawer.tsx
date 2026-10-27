@@ -713,6 +713,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                 <Input
                                     name="reference"
                                     autoComplete="off"
+                                    maxLength={100}
                                     value={reference}
                                     onChange={(e) => setReference(e.target.value)}
                                     placeholder={t('stock_reference_ph')}

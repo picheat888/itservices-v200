@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\Category;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -85,6 +87,36 @@ class StockSerialLabelsPdfTest extends TestCase
         });
 
         return $seen;
+    }
+
+    public function test_labels_print_the_category_name_not_the_record(): void
+    {
+        $item = $this->receivedItem();
+        $item->update(['category_id' => Category::create(['name' => 'Toner / Cartridge'])->id]);
+        $movementId = StockMovement::where('type', 'receive')->value('id');
+        $seen = $this->capturePdfView('pdf.serial-labels');
+
+        $this->get("/pdf/stock-movements/{$movementId}/labels")->assertOk();
+
+        $html = view('pdf.serial-labels', $seen[0])->render();
+        $this->assertStringContainsString('Toner / Cartridge', $html);
+        $this->assertStringNotContainsString('&quot;id&quot;', $html);
+    }
+
+    public function test_a_serial_receive_keeps_a_reference_of_100_characters(): void
+    {
+        $this->actingAs($this->super());
+        $item = StockItem::create([
+            'sku' => 'UPS-2', 'name' => 'UPS', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
+        ]);
+        $reference = str_repeat('PO', 50);
+
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-LONG'], 'to_label' => 'Main', 'reference' => $reference,
+        ])->assertCreated();
+
+        $this->assertSame($reference, StockItemSerialEvent::where('stock_item_id', $item->id)->value('reference'));
     }
 
     public function test_labels_print_the_date_in_the_date_setting(): void
