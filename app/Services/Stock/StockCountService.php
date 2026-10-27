@@ -72,9 +72,11 @@ class StockCountService
      */
     public function saveLines(StockCount $count, array $lines): StockCount
     {
-        abort_unless($count->status === StockCountStatus::Draft, 422, 'count_not_editable');
-
         DB::transaction(function () use ($count, $lines) {
+            // Re-read under lock so a commit landing in between cannot be overwritten
+            $count->setRawAttributes(StockCount::lockForUpdate()->findOrFail($count->id)->getAttributes(), true);
+            abort_unless($count->status === StockCountStatus::Draft, 422, 'count_not_editable');
+
             foreach ($count->lines()->with('item')->get() as $line) {
                 if (array_key_exists($line->id, $lines)) {
                     $this->saveLine($count, $line, $lines[$line->id]);

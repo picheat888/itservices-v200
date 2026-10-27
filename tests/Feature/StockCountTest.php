@@ -286,6 +286,27 @@ class StockCountTest extends TestCase
         $this->assertSame(0, StockMovement::count());
     }
 
+    public function test_save_rechecks_draft_status_under_lock(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7])->assertOk();
+
+        // A concurrent commit closes the count the moment this save's transaction begins.
+        $fired = false;
+        Event::listen(TransactionBeginning::class, function () use (&$fired, $countId) {
+            if (! $fired) {
+                $fired = true;
+                DB::table('stock_counts')->where('id', $countId)->update(['status' => 'committed']);
+            }
+        });
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 3, 'reason' => 'lost'])->assertStatus(422);
+
+        $line = DB::table('stock_count_lines')->where('id', $lineId)->first();
+        $this->assertSame(7, (int) $line->counted_qty);
+        $this->assertNull($line->reason);
+    }
+
     public function test_open_refuses_a_warehouse_name_and_creates_none(): void
     {
         $item = $this->item('A-1', 10, 'Main');
