@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/overview-period';
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_LIST, FRESH_VIEW } from '@/shared/lib/freshness';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { useToastStore } from '@/stores/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
@@ -119,12 +120,24 @@ export function useAssetMutations() {
             qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY }),
         ]);
     return {
-        create: useMutation({ mutationFn: (p: AssetPayload) => assetApi.create(p), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: AssetPayload) => assetApi.create(p),
+            onSuccess: (asset) => {
+                markNew('assets', asset.id);
+                return invalidate();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: AssetPayload }) => assetApi.update(v.id, v.payload),
             onSuccess: invalidate,
         }),
-        remove: useMutation({ mutationFn: (id: number) => assetApi.remove(id), onSuccess: invalidate }),
+        remove: useMutation({
+            mutationFn: (id: number) => assetApi.remove(id),
+            onSuccess: (_, id) => {
+                dropNew('assets', id);
+                return invalidate();
+            },
+        }),
         transfer: useMutation({
             mutationFn: (v: { id: number; payload: AssetTransferPayload }) => assetApi.transfer(v.id, v.payload),
             onSuccess: invalidate,

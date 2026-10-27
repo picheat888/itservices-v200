@@ -7,6 +7,7 @@ import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover, NoteRow } from '@/shared/components/info-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { OverviewHeader, periodReachesToday, useOverviewPeriod, usePeriodWords } from '@/shared/components/overview-period';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -18,6 +19,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -29,6 +31,7 @@ import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
 import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
+import { splitPinned } from '@/shared/lib/new-rows';
 import { formatNumber } from '@/shared/lib/number';
 import { rowDelay } from '@/shared/lib/row-in';
 import { searchLabel } from '@/shared/lib/search-words';
@@ -70,6 +73,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetEventBadge } from '../components/asset-event-badge';
@@ -461,6 +465,15 @@ export default function AssetsPage() {
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
+    // An asset the user just registered stays on top for a minute; select-all still reads only `rows`
+    const newAssets = useNewRows({
+        scope: 'assets',
+        rows,
+        rowKey: (a) => a.id,
+        detail: { key: (id) => ['asset', id], fetch: (id) => assetApi.get(Number(id)) },
+        active: tab === 'inventory',
+    });
+    const tableRows = [...newAssets.pinned, ...splitPinned(rows, newAssets.pinned, (a) => a.id)];
 
     // Pagination footer values with fallbacks so the footer (incl. "Rows per page") renders
     // even during the initial load on a fresh reload, when `meta` is not yet available —
@@ -1213,7 +1226,7 @@ export default function AssetsPage() {
                                                     ))}
                                                 </tr>
                                             ))
-                                        ) : rows.length === 0 ? (
+                                        ) : tableRows.length === 0 ? (
                                             <tr>
                                                 <td colSpan={14} className="px-4">
                                                     {hasActiveFilters ? (
@@ -1241,7 +1254,7 @@ export default function AssetsPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            rows.map((a) => (
+                                            tableRows.map((a) => (
                                                 <tr
                                                     key={a.id}
                                                     onClick={() => openAsset(a)}
@@ -1250,6 +1263,7 @@ export default function AssetsPage() {
                                                     className={cn(
                                                         'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
                                                         selectedIds.includes(a.id) ? ROW_SELECTED : 'row-hover',
+                                                        !selectedIds.includes(a.id) && newAssets.isNew(a) && NEW_ROW_CLASS,
                                                         rowLockedOut(a) && ROW_LOCKED,
                                                     )}
                                                 >
@@ -1302,6 +1316,11 @@ export default function AssetsPage() {
                                                             {a.asset_code}
                                                         </button>
                                                         {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-28" />}
+                                                        {newAssets.isNew(a) && (
+                                                            <div className="mt-1">
+                                                                <NewBadge />
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     {/* Brand over model: "Latitude 5440" alone does not say Dell. */}
                                                     <td className="max-w-[10rem] px-3 py-2.5">
