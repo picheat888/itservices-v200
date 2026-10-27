@@ -23,6 +23,7 @@ import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { NEW_MOVEMENT_DETAIL, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
+import { movementNote } from '../../lib/movement-note';
 import { MV_META, MV_TONE_HEX } from '../shared';
 
 // Types offered by the filter (and accepted from ?type=).
@@ -160,7 +161,7 @@ export function MovementsTab() {
             key: 'notes',
             header: t('stock_notes'),
             minWidth: '10rem',
-            render: (m) => <TruncText text={m.notes} className="text-muted-foreground text-xs" />,
+            render: (m) => <TruncText text={movementNote(m, t)} className="text-muted-foreground text-xs" />,
         },
     ];
 
@@ -355,10 +356,10 @@ export function MovementsTab() {
                                         )}
 
                                         {/* Notes */}
-                                        {viewMove.notes && (
+                                        {movementNote(viewMove, t) && (
                                             <div>
                                                 <div className={cn(EYEBROW, 'mb-1')}>{t('stock_notes')}</div>
-                                                <div className="bg-muted/40 rounded-lg p-3 text-sm">{viewMove.notes}</div>
+                                                <div className="bg-muted/40 rounded-lg p-3 text-sm">{movementNote(viewMove, t)}</div>
                                             </div>
                                         )}
 

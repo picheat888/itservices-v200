@@ -6,8 +6,10 @@ use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Stock\StockHistoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -147,5 +149,39 @@ class StockItemHistoryTest extends TestCase
         $this->assertSame('สมชาย คลัง', $history['movements'][0]['recorded_by_th']);
         $this->assertSame('สมชาย คลัง', $history['serials'][0]['events'][0]['recorded_by_th']);
         $this->actingAs($super)->getJson("/api/stock-items/{$item->id}")->assertJsonPath('data.lots.0.recorded_by_th', 'สมชาย คลัง');
+    }
+
+    /**
+     * @param  array<string, mixed>  $movement
+     * @return array<int, array<string, mixed>>
+     */
+    private function historyRowsFor(array $movement): array
+    {
+        $item = $this->serialItem('CNT-1');
+        StockMovement::create($movement + [
+            'type' => 'adjust_down', 'stock_item_id' => $item->id, 'qty' => 1, 'moved_at' => now(),
+        ]);
+
+        return app(StockHistoryService::class)->build($item)['movements']->all();
+    }
+
+    public function test_history_note_shows_the_count_reason(): void
+    {
+        $rows = $this->historyRowsFor(['reason' => 'used', 'notes' => null]);
+        $this->assertSame('Issued but not recorded', $rows[0]['notes']);
+        $this->assertSame('used', $rows[0]['reason']);
+    }
+
+    public function test_history_note_keeps_the_typed_text_for_a_custom_reason(): void
+    {
+        $rows = $this->historyRowsFor(['reason' => 'custom', 'notes' => 'Box dropped']);
+        $this->assertSame('Box dropped', $rows[0]['notes']);
+    }
+
+    public function test_history_note_of_an_old_movement_is_unchanged(): void
+    {
+        $rows = $this->historyRowsFor(['notes' => 'Stock count adjustment']);
+        $this->assertSame('Stock count adjustment', $rows[0]['notes']);
+        $this->assertNull($rows[0]['reason']);
     }
 }

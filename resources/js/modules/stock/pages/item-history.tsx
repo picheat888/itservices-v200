@@ -15,6 +15,7 @@ import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StockSummary, SummaryFacts } from '../components/history-summary';
 import { useStockItemHistory } from '../hooks/use-stock';
+import { movementNote } from '../lib/movement-note';
 
 type View = 'issue' | 'receive' | 'return' | 'adjust' | 'transfer';
 type Movement = StockItemHistory['movements'][number];
@@ -59,12 +60,12 @@ const VIEW_META: Record<View, { titleKey: string; icon: typeof ArrowDownToLine; 
 };
 
 /** Which movement types + serial-event name belong to each view. */
-const VIEW_FILTER: Record<View, { types: string[]; event: SerialEvent['event'] }> = {
-    issue: { types: ['issue'], event: 'issued' },
-    receive: { types: ['receive'], event: 'received' },
-    return: { types: ['return'], event: 'returned' },
-    adjust: { types: ['adjust_up', 'adjust_down'], event: 'adjusted' },
-    transfer: { types: ['transfer'], event: 'transferred' },
+const VIEW_FILTER: Record<View, { types: string[]; events: SerialEvent['event'][] }> = {
+    issue: { types: ['issue'], events: ['issued'] },
+    receive: { types: ['receive'], events: ['received'] },
+    return: { types: ['return'], events: ['returned'] },
+    adjust: { types: ['adjust_up', 'adjust_down'], events: ['adjusted', 'found'] },
+    transfer: { types: ['transfer'], events: ['transferred'] },
 };
 
 export default function ItemHistoryPage() {
@@ -107,10 +108,10 @@ export default function ItemHistoryPage() {
     }
 
     /** Serial codes touched by a movement, matched via the serial-event doc_no / reference. */
-    const serialsOf = (m: Movement, event: SerialEvent['event']): string[] =>
+    const serialsOf = (m: Movement, events: SerialEvent['event'][]): string[] =>
         data.serials
             .filter((s) =>
-                s.events.some((e) => e.event === event && ((m.doc_no && e.doc_no === m.doc_no) || (m.reference && e.reference === m.reference))),
+                s.events.some((e) => events.includes(e.event) && ((m.doc_no && e.doc_no === m.doc_no) || (m.reference && e.reference === m.reference))),
             )
             .map((s) => s.serial);
 
@@ -247,7 +248,7 @@ function CategoryView({
 }: {
     view: View;
     movements: Movement[];
-    serialsOf: (m: Movement, e: SerialEvent['event']) => string[];
+    serialsOf: (m: Movement, e: SerialEvent['event'][]) => string[];
     t: Translate;
     fmt: FormatDateTime;
     formatMoney: (value: number) => string;
@@ -255,7 +256,7 @@ function CategoryView({
     const fmtN = useNumberFormat();
     const pairOf = useLocalPair();
     const meta = VIEW_META[view];
-    const ev = VIEW_FILTER[view].event;
+    const ev = VIEW_FILTER[view].events;
     const action = (m: Movement) => t(`stock_mv_${m.type}` as Parameters<typeof t>[0]);
     const serialCell = (m: Movement) => {
         const list = serialsOf(m, ev);
@@ -316,7 +317,7 @@ function CategoryView({
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             serialCell(m),
             qtyCell(m),
-            m.notes ?? '—',
+            movementNote(m, t) ?? '—',
         ]);
     } else if (view === 'receive') {
         headers = [
@@ -344,7 +345,7 @@ function CategoryView({
             m.unit_cost != null ? <span className="tabular-nums">{formatMoney(m.unit_cost)}</span> : '—',
             serialCell(m),
             qtyCell(m),
-            m.notes ?? '—',
+            movementNote(m, t) ?? '—',
         ]);
     } else if (view === 'adjust') {
         headers = [
@@ -368,7 +369,7 @@ function CategoryView({
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             serialCell(m),
             qtyCell(m),
-            m.notes ?? '—',
+            movementNote(m, t) ?? '—',
         ]);
     } else {
         headers = [
@@ -394,7 +395,7 @@ function CategoryView({
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
             serialCell(m),
             qtyCell(m),
-            m.notes ?? '—',
+            movementNote(m, t) ?? '—',
         ]);
     }
 

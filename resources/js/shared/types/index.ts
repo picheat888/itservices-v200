@@ -770,8 +770,10 @@ export interface StockItem {
 
 export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer' | 'adjust_up' | 'adjust_down';
 
+export type CountReason = 'lost' | 'broken' | 'used' | 'inbound' | 'returned' | 'miscount' | 'custom';
+
 export interface SerialEvent {
-    event: 'received' | 'issued' | 'adjusted' | 'transferred' | 'returned';
+    event: 'received' | 'issued' | 'adjusted' | 'found' | 'transferred' | 'returned';
     occurred_at: string | null;
     doc_no: string | null;
     reference: string | null;
@@ -801,6 +803,7 @@ export interface StockItemHistory {
         reference: string | null;
         recorded_by: string | null;
         recorded_by_th?: string | null;
+        reason?: CountReason | null;
         notes: string | null;
         moved_at: string | null;
     }[];
@@ -854,6 +857,7 @@ export interface StockMovement {
     reference: string | null;
     recorded_by: string | null;
     recorded_by_th?: string | null;
+    reason?: CountReason | null;
     notes: string | null;
     moved_at: string | null;
 }

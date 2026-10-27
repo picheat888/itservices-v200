@@ -4,7 +4,9 @@
 
 namespace App\Services\Stock;
 
+use App\Enums\Stock\StockCountReason;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockMovement;
 use App\Models\User;
 use App\Support\CompanyProfile;
 use App\Support\DateDisplay;
@@ -68,7 +70,8 @@ class StockHistoryService
                 'reference' => $m->reference,
                 'recorded_by' => $m->recorded_by,
                 'recorded_by_th' => $m->user?->name_th,
-                'notes' => $m->notes,
+                'reason' => $m->reason,
+                'notes' => $this->note($m),
                 'moved_at' => $m->moved_at?->toIso8601String(),
             ])->values(),
             'lots' => $stockItem->lots->map(fn ($l) => [
@@ -95,6 +98,14 @@ class StockHistoryService
                 ])->values(),
             ])->values(),
         ];
+    }
+
+    /** A count reason's English words (the history PDF is English); a custom reason or none keeps the typed notes. */
+    private function note(StockMovement $m): ?string
+    {
+        $reason = $m->reason !== null ? StockCountReason::tryFrom($m->reason) : null;
+
+        return $reason !== null && $reason !== StockCountReason::Custom ? $reason->label('en') : $m->notes;
     }
 
     /**

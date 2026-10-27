@@ -8,11 +8,11 @@
     $n = fn ($v) => number_format((float) $v);
     $money = fn ($v) => number_format((float) $v, 2);
     $movesOf = fn (array $types) => array_values(array_filter($history['movements'], fn ($m) => in_array($m['type'], $types, true)));
-    $serialsOf = function (array $m, string $event) use ($history) {
+    $serialsOf = function (array $m, array $events) use ($history) {
         $out = [];
         foreach ($history['serials'] as $s) {
             foreach ($s['events'] as $e) {
-                if ($e['event'] === $event
+                if (in_array($e['event'], $events, true)
                     && ((!empty($m['doc_no']) && $e['doc_no'] === $m['doc_no']) || (!empty($m['reference']) && $e['reference'] === $m['reference']))) {
                     $out[] = $s['serial'];
                     break;
@@ -154,7 +154,7 @@
     @else
         @php
             $types = ['issue' => ['issue'], 'receive' => ['receive'], 'return' => ['return'], 'adjust' => ['adjust_up', 'adjust_down'], 'transfer' => ['transfer']][$view];
-            $event = ['issue' => 'issued', 'receive' => 'received', 'return' => 'returned', 'adjust' => 'adjusted', 'transfer' => 'transferred'][$view];
+            $event = ['issue' => ['issued'], 'receive' => ['received'], 'return' => ['returned'], 'adjust' => ['adjusted', 'found'], 'transfer' => ['transferred']][$view];
             $moves = $movesOf($types);
             $signed = fn (array $m) => $m['type'] === 'adjust_down' ? -$m['qty'] : $m['qty'];
             $total = array_sum(array_map($signed, $moves));
