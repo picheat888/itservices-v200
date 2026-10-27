@@ -126,3 +126,110 @@ test('chips and search narrow the lines', () => {
     assert.equal(filterLines(lines, 'all', '').length, 4);
     assert.deepEqual(filterLines(lines, 'all', 'item b').map((l) => l.sku), ['B']);
 });
+
+// Sheet draft (edits laid over the saved lines)
+import { draftLine, linePatch, parseQty } from '../../resources/js/modules/stock/lib/count-sheet.ts';
+
+const savedLine = (over: Partial<Parameters<typeof draftLine>[0]> = {}) => ({
+    sku: 'A',
+    name: 'Item A',
+    system_qty: 5,
+    counted_qty: null as number | null,
+    reason: null,
+    reason_note: null as string | null,
+    track_serial: false,
+    missing_serial_ids: [] as number[],
+    found_serial_ids: [] as number[],
+    ...over,
+});
+
+test('typed quantities parse to a capped whole number or nothing', () => {
+    assert.equal(parseQty(''), null);
+    assert.equal(parseQty('  '), null);
+    assert.equal(parseQty('007'), 7);
+    assert.equal(parseQty('99999999'), 1_000_000);
+});
+
+test('a draft line lays the edits over the saved line', () => {
+    const line = savedLine({ counted_qty: 5 });
+    assert.equal(draftLine(line, undefined), line);
+    const typed = draftLine(line, { qty: '3', reason: 'custom', note: 'dropped' });
+    assert.deepEqual([typed.counted_qty, typed.reason, typed.reason_note], [3, 'custom', 'dropped']);
+    const serial = draftLine(savedLine({ track_serial: true }), { missing: [1, 2], found: [9] });
+    assert.equal(serial.counted_qty, 4);
+});
+
+test('the save patch carries only what differs from the saved line', () => {
+    const line = savedLine({ counted_qty: 4, reason: 'lost' as never });
+    assert.equal(linePatch(line, draftLine(line, { qty: '4' })), null);
+    assert.deepEqual(linePatch(line, draftLine(line, { qty: '6', reason: null })), { counted_qty: 6, reason: null, reason_note: null });
+    assert.deepEqual(linePatch(line, draftLine(line, { qty: '' })), { counted_qty: null });
+    assert.deepEqual(linePatch(line, draftLine(line, { reason: 'custom', note: 'x' })), { reason: 'custom', reason_note: 'x' });
+    const serial = savedLine({ track_serial: true, counted_qty: 5 });
+    assert.deepEqual(linePatch(serial, draftLine(serial, { missing: [3], found: [] })), { missing_serial_ids: [3], found_serial_ids: [] });
+    assert.equal(linePatch(serial, draftLine(serial, { missing: [], found: [] })), null);
+});
+
+// Sheet, review and confirmed dialogs (source checks)
+const src = (rel: string) => readFileSync(new URL(`../../resources/js/${rel}`, import.meta.url), 'utf8');
+const COUNT_DIR = 'modules/stock/components/count/';
+
+test('the counting tab is the list and its wiring only', () => {
+    const tab = src('modules/stock/pages/tabs/counting-tab.tsx');
+    assert.ok(!tab.includes('stock_count_mode_label'));
+    assert.ok(!tab.includes("key: 'adjust_mode'"));
+    assert.ok(tab.includes('stock_count_mode_badge_manual'));
+    for (const part of ['<CountOpenDialog', '<CountSheetDialog', '<CountDoneDialog']) assert.ok(tab.includes(part), part);
+});
+
+test('each count dialog keeps its standard size', () => {
+    assert.ok(src(`${COUNT_DIR}count-sheet-dialog.tsx`).includes('focusDialogContentClass'));
+    assert.ok(src(`${COUNT_DIR}count-review-dialog.tsx`).includes('<FormDialogContent'));
+    assert.ok(src(`${COUNT_DIR}count-done-dialog.tsx`).includes('largeDialogContentClass'));
+});
+
+test('the sheet asks for reasons the agreed way', () => {
+    const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`) + src(`${COUNT_DIR}count-sheet-row.tsx`);
+    for (const part of [
+        'SHORT_REASONS',
+        'OVER_REASONS',
+        'reasonAfterQtyChange',
+        'lineNeedsReason',
+        '<select',
+        'rows={2}',
+        'useDiscardGuard(',
+        'useConfirm(',
+        "'no_reason'",
+    ]) {
+        assert.ok(sheet.includes(part), part);
+    }
+});
+
+test('the confirmed sheet prints through the PDF link and the KPI cards keep the approved figure style', () => {
+    const done = src(`${COUNT_DIR}count-done-dialog.tsx`);
+    assert.ok(done.includes('stockCountApi.pdfUrl('));
+    assert.ok(done.includes('target="_blank"'));
+    assert.ok(src(`${COUNT_DIR}count-kpi-cards.tsx`).includes('text-xl font-bold tabular-nums'));
+});
+
+test('no stock module file says รอบนับ', () => {
+    const walk = (dir: URL): string[] =>
+        readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+            e.isDirectory() ? walk(new URL(`${e.name}/`, dir)) : [new URL(e.name, dir).pathname],
+        );
+    for (const file of walk(new URL('../../resources/js/modules/stock/', import.meta.url))) {
+        assert.ok(!readFileSync(decodeURIComponent(file.replace(/^\/([A-Za-z]:)/, '$1')), 'utf8').includes('รอบนับ'), file);
+    }
+});
+
+test('the retired mode words are gone from both languages', () => {
+    for (const dict of [th, en]) {
+        const left = Object.keys(dict).filter(
+            (k) =>
+                (k.startsWith('stock_count_mode_') && k !== 'stock_count_mode_badge_manual') ||
+                k === 'stock_count_all_wh' ||
+                k === 'stock_refusal_count_serial_needs_auto',
+        );
+        assert.deepEqual(left, []);
+    }
+});

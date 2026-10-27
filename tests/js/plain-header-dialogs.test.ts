@@ -15,7 +15,9 @@ const WITH_FOOTER = [
     'modules/employee/components/resign-modal.tsx',
     'modules/stock/components/movement-drawer.tsx',
     'modules/stock/components/stock-item-modal.tsx',
-    'modules/stock/pages/tabs/counting-tab.tsx',
+    'modules/stock/components/count/count-sheet-dialog.tsx',
+    'modules/stock/components/count/count-review-dialog.tsx',
+    'modules/stock/components/count/count-done-dialog.tsx',
     'modules/stock/pages/tabs/requests-tab.tsx',
     'shared/components/import-dialog.tsx',
 ];

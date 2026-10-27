@@ -2,7 +2,22 @@
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 
-export function CountChip({ label, count, selected, onClick }: { label: string; count: number; selected: boolean; onClick: () => void }) {
+const COUNT_TONE = { red: 'text-red-700 dark:text-red-400', green: 'text-emerald-700 dark:text-emerald-400' } as const;
+
+export function CountChip({
+    label,
+    count,
+    selected,
+    onClick,
+    tone,
+}: {
+    label: string;
+    count: number;
+    selected: boolean;
+    onClick: () => void;
+    /** Colours the count while the chip is not selected (short red, over green). */
+    tone?: keyof typeof COUNT_TONE;
+}) {
     const fmtN = useNumberFormat();
     return (
         <button
@@ -15,7 +30,7 @@ export function CountChip({ label, count, selected, onClick }: { label: string; 
             )}
         >
             {label}
-            <span className="font-semibold tabular-nums">{fmtN(count)}</span>
+            <span className={cn('font-semibold tabular-nums', !selected && tone && COUNT_TONE[tone])}>{fmtN(count)}</span>
         </button>
     );
 }

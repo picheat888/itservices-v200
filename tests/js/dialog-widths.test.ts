@@ -98,10 +98,10 @@ test('768 dialogs use the shared medium class instead of their own width', () =>
         );
         for (const tag of tags) assert.doesNotMatch(tag, /max-w-3xl|max-w-2xl|max-w-lg/, `${rel}: own width`);
     }
-    const counting = openTags(read('modules/stock/pages/tabs/counting-tab.tsx'), ['DialogContent']).filter((tag) =>
+    const counting = openTags(read('modules/stock/components/count/count-open-dialog.tsx'), ['DialogContent']).filter((tag) =>
         tag.includes('mediumDialogContentClass'),
     );
-    assert.equal(counting.length, 2, 'new count and the count sheet are 768');
+    assert.equal(counting.length, 1, 'new count is 768');
 });
 
 test('the import dialog keeps one width through every step', () => {

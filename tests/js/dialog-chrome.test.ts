@@ -126,7 +126,7 @@ test('scroll areas inside dialogs leave room for the 4px focus ring', () => {
     // Checkbox list in a new stock count: keyboard focus scrolls an item in with room for its ring
     const requestBody = classesWith('modules/request/components/request-detail-dialog.tsx', 'content-start gap-8 overflow-y-auto');
     assert.ok(requestBody.includes('scroll-py-2'), 'request detail body: scroll-py-2');
-    const skus = classesWith('modules/stock/pages/tabs/counting-tab.tsx', 'max-h-72');
+    const skus = classesWith('modules/stock/components/count/count-open-dialog.tsx', 'h-64');
     assert.ok(skus.includes('scroll-py-2'), 'stock count list: scroll-py-2');
 });
 

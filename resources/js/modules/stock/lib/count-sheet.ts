@@ -1,7 +1,8 @@
-// Count sheet maths: reason lists, reason clearing on a qty change, summary and chip/search filtering.
+// Count sheet maths: reason lists, reason clearing on a qty change, summary, chip/search filtering and draft edits over saved lines.
 // Pure (no React or browser imports) so node tests can load it.
 import type { CountReason } from '@/shared/types';
 import { matchesAllWords } from '../../../shared/lib/search-words.ts';
+import type { LinePatch } from '../api/stockApi';
 
 export const SHORT_REASONS: CountReason[] = ['lost', 'broken', 'used', 'miscount', 'custom'];
 export const OVER_REASONS: CountReason[] = ['inbound', 'returned', 'miscount', 'custom'];
@@ -63,4 +64,76 @@ export function filterLines<T extends DraftLine & { sku: string | null; name: st
             (chip === 'no_reason' && lineNeedsReason(l));
         return chipOk && matchesAllWords(`${l.sku ?? ''} ${l.name ?? ''}`, query);
     });
+}
+
+export type SheetSummary = ReturnType<typeof sheetSummary>;
+
+// Draft edits laid over the saved lines
+const MAX_QTY = 1_000_000;
+
+/** One line's unsaved edits; a missing key keeps the saved value. */
+export interface LineEdit {
+    qty?: string;
+    reason?: CountReason | null;
+    note?: string;
+    missing?: number[];
+    found?: number[];
+}
+
+export interface SavedLine extends DraftLine {
+    track_serial: boolean;
+    missing_serial_ids: number[];
+    found_serial_ids: number[];
+}
+
+/** A typed count: blank is not counted, digits cap at the server's limit. */
+export function parseQty(raw: string): number | null {
+    const digits = raw.replace(/\D/g, '');
+    return digits === '' ? null : Math.min(MAX_QTY, parseInt(digits, 10));
+}
+
+/** The line as the sheet shows it; a serial line's count follows its ticks. */
+export function draftLine<T extends SavedLine>(line: T, edit: LineEdit | undefined): T {
+    if (!edit) return line;
+    const missing = edit.missing ?? line.missing_serial_ids;
+    const found = edit.found ?? line.found_serial_ids;
+    const ticked = edit.missing !== undefined || edit.found !== undefined;
+    const counted = line.track_serial
+        ? ticked
+            ? line.system_qty - missing.length + found.length
+            : line.counted_qty
+        : edit.qty !== undefined
+          ? parseQty(edit.qty)
+          : line.counted_qty;
+    return {
+        ...line,
+        counted_qty: counted,
+        reason: edit.reason !== undefined ? edit.reason : line.reason,
+        reason_note: edit.note !== undefined ? edit.note : line.reason_note,
+        missing_serial_ids: missing,
+        found_serial_ids: found,
+    };
+}
+
+const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id) => b.includes(id));
+const noteOf = (l: DraftLine) => (l.reason === 'custom' ? (l.reason_note ?? '') : null);
+
+/** The save payload for one line: only what differs from the saved copy, or null when nothing does. */
+export function linePatch(saved: SavedLine, shown: SavedLine): LinePatch | null {
+    if (shown.counted_qty === null) return saved.counted_qty === null ? null : { counted_qty: null };
+    const patch: LinePatch = {};
+    if (saved.track_serial) {
+        const ticksChanged = !sameIds(saved.missing_serial_ids, shown.missing_serial_ids) || !sameIds(saved.found_serial_ids, shown.found_serial_ids);
+        if (ticksChanged || saved.counted_qty === null) {
+            patch.missing_serial_ids = shown.missing_serial_ids;
+            patch.found_serial_ids = shown.found_serial_ids;
+        }
+    } else if (shown.counted_qty !== saved.counted_qty) {
+        patch.counted_qty = shown.counted_qty;
+    }
+    if (shown.reason !== saved.reason || noteOf(shown) !== noteOf(saved)) {
+        patch.reason = shown.reason;
+        patch.reason_note = noteOf(shown);
+    }
+    return Object.keys(patch).length === 0 ? null : patch;
 }

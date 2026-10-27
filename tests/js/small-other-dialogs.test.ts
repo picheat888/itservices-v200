@@ -45,8 +45,8 @@ test('every dialog that shows the record-missing panel as its body switches to t
 });
 
 test('the stock count sheet shows record missing alone, without its own loading title above it', () => {
-    const src = read('modules/stock/pages/tabs/counting-tab.tsx');
-    assert.match(src, /\) : sessionMissing \? \(\s*<RecordMissing onClose=\{closeSheet\} \/>\s*\) : \(/);
+    const src = read('modules/stock/components/count/count-dialog-parts.tsx');
+    assert.match(src, /if \(missing\) return <RecordMissing onClose=\{onClose\} \/>;/);
 });
 
 test('photo crop keeps its 384 frame without a cross, and takes the 4ข header and footer bar', () => {
