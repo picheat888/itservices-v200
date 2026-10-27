@@ -3,14 +3,18 @@
 namespace App\Http\Resources\Stock;
 
 use App\Models\Stock\StockCount;
+use App\Models\Stock\StockItemSerial;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 
 /** @mixin StockCount */
 class StockCountResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $missingSerials = $this->missingSerialNames();
+
         return [
             'id' => $this->id,
             'reference' => $this->reference,
@@ -40,6 +44,10 @@ class StockCountResource extends JsonResource
                 'reason_note' => $l->reason_note,
                 'missing_serial_ids' => $l->missing_serial_ids ?? [],
                 'found_serial_ids' => $l->found_serial_ids ?? [],
+                'missing_serials' => collect($l->missing_serial_ids ?? [])
+                    ->filter(fn ($id) => $missingSerials->has($id))
+                    ->map(fn ($id) => ['id' => $id, 'serial' => $missingSerials[$id]])
+                    ->values(),
                 'track_serial' => (bool) $l->item?->track_serial,
                 // Serials the original count wrote off, open to tick back on a recount
                 'lost_serials' => $l->item?->track_serial
@@ -54,5 +62,20 @@ class StockCountResource extends JsonResource
             'line_count' => $this->lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->count()),
             'counted_lines' => $this->counted_lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->whereNotNull('counted_qty')->count()),
         ];
+    }
+
+    /**
+     * Serial numbers of every line's missing ids, read in one query (they are no longer in stock once committed).
+     *
+     * @return Collection<int, string>
+     */
+    private function missingSerialNames(): Collection
+    {
+        if (! $this->relationLoaded('lines')) {
+            return collect();
+        }
+        $ids = $this->lines->flatMap(fn ($l) => $l->missing_serial_ids ?? [])->unique()->values()->all();
+
+        return $ids === [] ? collect() : StockItemSerial::whereIn('id', $ids)->pluck('serial', 'id');
     }
 }

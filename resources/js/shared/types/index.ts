@@ -830,6 +830,8 @@ export interface StockCountLine {
     found_serial_ids: number[];
     /** Serials the original count wrote off, open to tick back on a recount. */
     lost_serials?: { id: number; serial: string }[];
+    /** Numbers of the serials recorded missing, readable after they leave stock. */
+    missing_serials?: { id: number; serial: string }[];
     serials?: { id: number; serial: string }[];
 }
 

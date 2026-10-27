@@ -11,6 +11,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Stock\StockCountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class StockCountSerialTest extends TestCase
@@ -56,6 +57,55 @@ class StockCountSerialTest extends TestCase
             ->assertJsonPath('data.lines.0.track_serial', true)
             ->assertJsonCount(3, 'data.lines.0.serials')
             ->assertJsonPath('data.lines.0.serials.0.serial', 'UPS-1-SN1');
+    }
+
+    public function test_show_lists_only_the_serials_of_the_counts_warehouse(): void
+    {
+        $item = $this->serialItem('UPS-1', 2, 'Main');
+        $item->serials()->create(['serial' => 'UPS-1-SN9', 'status' => 'in_stock', 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Other'])->id]);
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+
+        $serials = $this->getJson("/api/stock-counts/{$count['id']}")->assertOk()->json('data.lines.0.serials');
+
+        $this->assertSame(['UPS-1-SN1', 'UPS-1-SN2'], array_column($serials, 'serial'));
+    }
+
+    public function test_a_committed_count_names_its_missing_serials(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        $other = $this->serialItem('UPS-2', 2);
+        $missing = $item->serials()->orderBy('id')->first();
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id, $other->id]);
+        $lineOf = fn (StockItem $i) => collect($count['lines'])->firstWhere('stock_item_id', $i->id)['id'];
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [
+            $lineOf($item) => ['missing_serial_ids' => [$missing->id], 'reason' => 'lost'],
+            $lineOf($other) => ['missing_serial_ids' => []],
+        ]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+
+        $lines = collect($this->getJson("/api/stock-counts/{$count['id']}")->assertOk()->json('data.lines'))->keyBy('stock_item_id');
+
+        $this->assertSame([['id' => $missing->id, 'serial' => 'UPS-1-SN1']], $lines[$item->id]['missing_serials']);
+        $this->assertSame([], $lines[$other->id]['missing_serials']);
+    }
+
+    public function test_missing_serial_numbers_load_in_one_query_for_the_whole_count(): void
+    {
+        $items = collect([1, 2, 3])->map(fn (int $n) => $this->serialItem("UPS-{$n}", 2));
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), $items->pluck('id')->all());
+        $patch = collect($count['lines'])->mapWithKeys(fn (array $l) => [
+            $l['id'] => ['missing_serial_ids' => [StockItem::find($l['stock_item_id'])->serials()->value('id')], 'reason' => 'lost'],
+        ])->all();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => $patch])->assertOk();
+
+        DB::enableQueryLog();
+        $this->getJson("/api/stock-counts/{$count['id']}")->assertOk();
+        $serialNameQueries = collect(DB::getQueryLog())->filter(fn (array $q) => str_contains($q['query'], 'stock_item_serials') && str_contains($q['query'], '"id" in'));
+
+        $this->assertCount(1, $serialNameQueries);
     }
 
     public function test_open_snapshots_in_stock_serial_count_for_serialized_items(): void

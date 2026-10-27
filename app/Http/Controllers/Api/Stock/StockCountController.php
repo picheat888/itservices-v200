@@ -79,7 +79,7 @@ class StockCountController extends Controller
             'countedBy',
             'committedBy',
             'recountOf',
-            'lines.item.serials' => fn ($q) => $q->where('status', 'in_stock'),
+            'lines.item.serials' => fn ($q) => $q->where('status', 'in_stock')->where('warehouse_id', $stockCount->warehouse_id),
         ])))->response();
     }
 
