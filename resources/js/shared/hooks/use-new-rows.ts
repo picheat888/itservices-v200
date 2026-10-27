@@ -1,6 +1,6 @@
 // Rows the user just created on one list: drawn first for a minute, from the list itself or, when the page lacks them, the record's own detail query.
 import { httpStatus } from '@/shared/lib/http-errors';
-import { dropOnMissing, liveIds, nextExpiry, pinOrder, type RowId } from '@/shared/lib/new-rows';
+import { dropOnMissing, heldIds, liveIds, nextExpiry, pinOrder, type RowId } from '@/shared/lib/new-rows';
 import { currentUserId, dropNew, useNewRowsStore } from '@/stores/new-rows';
 import { useQueries, type QueryKey } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -17,6 +17,8 @@ interface NewRowsOptions<T> {
     active?: boolean;
     /** The list is still loading: hold the detail fetches until it answers (the record is often on the page). */
     waiting?: boolean;
+    /** For a list that holds every row: its search, filters and page, so a pin that ran out returns to its place when they change. */
+    view?: string;
 }
 
 export interface NewRows<T> {
@@ -26,17 +28,16 @@ export interface NewRows<T> {
     isNew: (row: T) => boolean;
 }
 
-export function useNewRows<T>({ scope, rows, rowKey, detail, active = true, waiting = false }: NewRowsOptions<T>): NewRows<T> {
+export function useNewRows<T>({ scope, rows, rowKey, detail, active = true, waiting = false, view }: NewRowsOptions<T>): NewRows<T> {
     const entries = useNewRowsStore((s) => s.entries);
     const user = currentUserId();
     const [now, setNow] = useState(() => Date.now());
     const live = useMemo(() => (user === null ? [] : liveIds(entries, user, scope, now)), [entries, user, scope, now]);
 
-    // A pin that runs out keeps its place (without tint or badge) until the list itself changes, so nothing jumps under a tap
-    const [held, setHeld] = useState<{ rows: T[]; ids: RowId[] }>({ rows, ids: [] });
-    const heldIds = held.rows === rows ? held.ids : [];
+    // A pin that runs out keeps its place (without tint or badge) until the list or its view changes, so nothing jumps under a tap
+    const [held, setHeld] = useState<{ rows: T[]; view: string | undefined; ids: RowId[] }>({ rows, view, ids: [] });
     const shown = useRef<RowId[]>([]);
-    const ids = pinOrder(live, heldIds);
+    const ids = pinOrder(live, heldIds(held, rows, view));
     useEffect(() => {
         shown.current = ids;
     });
@@ -48,11 +49,11 @@ export function useNewRows<T>({ scope, rows, rowKey, detail, active = true, wait
         const timer = window.setTimeout(() => {
             const at = Date.now();
             const stillLive = user === null ? [] : liveIds(entries, user, scope, at);
-            setHeld({ rows, ids: shown.current.filter((id) => !stillLive.includes(id)) });
+            setHeld({ rows, view, ids: shown.current.filter((id) => !stillLive.includes(id)) });
             setNow(at);
         }, wait + 50);
         return () => window.clearTimeout(timer);
-    }, [entries, now, rows, user, scope]);
+    }, [entries, now, rows, view, user, scope]);
 
     const onPage = useMemo(() => new Map(rows.map((r) => [rowKey(r), r] as const)), [rows, rowKey]);
     const missing = detail && active ? ids.filter((id) => !onPage.has(id)) : [];

@@ -237,10 +237,11 @@ export default function AccessControlPage() {
     const spRows = useMemo(() => social.data ?? [], [social.data]);
     const swRows = useMemo(() => software.data ?? [], [software.data]);
     // A resource the user just added stays on top of its own tab for a minute
-    const newEg = useNewRows({ scope: 'access:email-groups', rows: egRows, rowKey: (g) => g.id });
-    const newFs = useNewRows({ scope: 'access:file-shares', rows: fsRows, rowKey: (s) => s.id });
-    const newSp = useNewRows({ scope: 'access:social-platforms', rows: spRows, rowKey: (p) => p.id });
-    const newSw = useNewRows({ scope: 'access:software', rows: swRows, rowKey: (s) => s.id });
+    const accessView = list.view('dept', 'license', 'brand');
+    const newEg = useNewRows({ scope: 'access:email-groups', rows: egRows, rowKey: (g) => g.id, view: accessView });
+    const newFs = useNewRows({ scope: 'access:file-shares', rows: fsRows, rowKey: (s) => s.id, view: accessView });
+    const newSp = useNewRows({ scope: 'access:social-platforms', rows: spRows, rowKey: (p) => p.id, view: accessView });
+    const newSw = useNewRows({ scope: 'access:software', rows: swRows, rowKey: (s) => s.id, view: accessView });
     // The drawer and the edit form read their row from the registry list, so opening one asks for that list again
     const registryQuery = { 'email-groups': emailGroups, 'file-shares': fileShares, 'social-platforms': social, software } as const;
     // The loaded rows of one registry

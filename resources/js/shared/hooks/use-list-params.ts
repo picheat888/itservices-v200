@@ -53,7 +53,10 @@ export function useListParams() {
         },
     };
 
-    return { searchParams, get, setParams, setFilter, page, perPage, table };
+    /** The search, page, rows-per-page and the given filters as one string, to tell when the shown list changes. */
+    const view = (...filters: string[]) => ['search', 'page', 'per', ...filters].map(get).join('|');
+
+    return { searchParams, get, setParams, setFilter, page, perPage, table, view };
 }
 
 /** For a list with its own pager: a ?page past the last one (an old link, a shrunk list) moves to the last page. */

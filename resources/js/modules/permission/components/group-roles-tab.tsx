@@ -88,7 +88,7 @@ export function GroupRolesTab() {
     const closeDialog = () => dialogs.close(['view', 'add']);
 
     // A group the user just added stays on top for a minute, whatever the role filter
-    const newGroups = useNewRows({ scope: 'group-roles', rows: groups, rowKey: (g) => g.id });
+    const newGroups = useNewRows({ scope: 'group-roles', rows: groups, rowKey: (g) => g.id, view: list.view('role', 'sort') });
     const rows = useMemo(() => {
         const byName = (a: GroupRole, b: GroupRole) => a.name.localeCompare(b.name, 'th', { sensitivity: 'base' });
         return groups

@@ -159,9 +159,11 @@ export default function EmployeesPage() {
     const refreshDepartments = useSelectRefresh(departmentsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
+    // Positions / Departments tables: search, page and rows-per-page in the URL (?search, page, per).
+    const list = useListParams();
     // A department or position the user just added stays on top for a minute
-    const newDepts = useNewRows({ scope: 'departments', rows: departments, rowKey: (d) => d.id });
-    const newPositions = useNewRows({ scope: 'positions', rows: positions, rowKey: (p) => p.id });
+    const newDepts = useNewRows({ scope: 'departments', rows: departments, rowKey: (d) => d.id, view: list.view() });
+    const newPositions = useNewRows({ scope: 'positions', rows: positions, rowKey: (p) => p.id, view: list.view() });
 
     const [importOpen, setImportOpen] = useState(false);
     const [editEmp, setEditEmp] = useState<Employee | null>(null);
@@ -278,8 +280,6 @@ export default function EmployeesPage() {
         if (next === tab) return;
         setTab(next, { extra: clearListKeys });
     };
-    // Positions / Departments tables: search, page and rows-per-page in the URL (?search, page, per).
-    const list = useListParams();
 
     // Directory, sections and the org chart own their queries inside their tab components
     const directoryFresh = useKeyFreshness(['employees-directory']);

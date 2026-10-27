@@ -5,6 +5,7 @@ import {
     addEntries,
     dropEntry,
     dropOnMissing,
+    heldIds,
     liveIds,
     NEW_ROW_MS,
     type NewRowEntry,
@@ -99,6 +100,15 @@ test('a pin that ran out keeps its place below the live ones until the list chan
     assert.deepEqual(pinOrder([3], [1, 2]), [3, 1, 2]);
     assert.deepEqual(pinOrder([1], [1, 2]), [1, 2]);
     assert.deepEqual(pinOrder([], []), []);
+});
+
+test('a pin that ran out keeps its place only while the list and its view stay the same', () => {
+    const rows = [{ id: 1 }];
+    const held = { rows, view: 'search=a', ids: [1] };
+    assert.deepEqual(heldIds(held, rows, 'search=a'), [1]);
+    assert.deepEqual(heldIds(held, rows, 'search=a&page=2'), []);
+    assert.deepEqual(heldIds(held, [{ id: 1 }], 'search=a'), []);
+    assert.deepEqual(heldIds({ rows, view: undefined, ids: [1] }, rows, undefined), [1]);
 });
 
 test('a reload keeps only live, well-formed pins', () => {

@@ -40,8 +40,6 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const refreshDepartments = useSelectRefresh(departmentsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const mut = useSectionMutations();
-    // A section the user just added stays on top for a minute, whatever the department filter
-    const newSections = useNewRows({ scope: 'sections', rows: sections, rowKey: (s) => s.id });
     const [editSection, setEditSection] = useState<Section | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     // Search, department, order, page and rows-per-page live in the URL (?search, dept, sort, page, per).
@@ -52,6 +50,8 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const sort: SortKey = isSortKey(sortParam) ? sortParam : DEFAULT_SORT;
     const setDeptFilter = (value: string) => list.setFilter('dept', value);
     const setSort = (value: SortKey) => list.setFilter('sort', value === DEFAULT_SORT ? '' : value);
+    // A section the user just added stays on top for a minute, whatever the department filter
+    const newSections = useNewRows({ scope: 'sections', rows: sections, rowKey: (s) => s.id, view: list.view('dept', 'sort') });
     const [membersOf, setMembersOf] = useState<Section | null>(null);
 
     const sectionLabel = (s: Section) => localName(s, lang);

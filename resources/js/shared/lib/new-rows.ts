@@ -62,7 +62,12 @@ export function pinOrder(live: RowId[], held: RowId[]): RowId[] {
     return [...live, ...held.filter((id) => !live.includes(id))];
 }
 
-const isEntry = (e: unknown): e is NewRowEntry => {
+/** Ids of pins that ran out, kept in place while the list holds the same rows and shows the same view (search, filters, page). */
+export function heldIds<T>(held: { rows: T[]; view: unknown; ids: RowId[] }, rows: T[], view: unknown): RowId[] {
+    return held.rows === rows && Object.is(held.view, view) ? held.ids : [];
+}
+
+const isEntry =(e: unknown): e is NewRowEntry => {
     const x = e as Partial<NewRowEntry> | null;
     return !!x && typeof x.user === 'number' && typeof x.scope === 'string' && typeof x.at === 'number' && (typeof x.id === 'number' || typeof x.id === 'string');
 };
