@@ -192,6 +192,7 @@ export const ticket: Dict = {
     ticket_refusal_requester_cannot_route: 'You filed this case, so somebody else decides who works it.',
     ticket_refusal_target_cannot_work: 'The chosen staff member cannot work cases.',
     ticket_refusal_target_level_not_covered: "The chosen staff member's Ticket Level does not cover this case's category.",
+    ticket_refusal_target_has_left: 'The chosen staff member has left the company.',
     ticket_refusal_not_in_progress: 'This case is no longer in progress.',
     ticket_refusal_not_assignee: 'Only the assignee of this case can do this.',
     ticket_refusal_case_moved: 'This case has already changed hands. Close it and open it again to see who has it now.',

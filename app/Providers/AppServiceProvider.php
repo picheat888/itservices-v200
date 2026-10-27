@@ -17,10 +17,12 @@ use App\Support\ErrorPage;
 use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
@@ -48,6 +50,9 @@ class AppServiceProvider extends ServiceProvider
         AppSetting::flushCache();
         // A long-lived queue worker boots once; each job reads settings fresh.
         Event::listen(JobProcessing::class, fn () => AppSetting::flushCache());
+        // Permission keys are read once per user while a request is handled, never after it
+        Event::listen(RouteMatched::class, fn (RouteMatched $e) => $e->request->attributes->set(User::PERMISSION_MEMO, []));
+        Event::listen(RequestHandled::class, fn (RequestHandled $e) => $e->request->attributes->remove(User::PERMISSION_MEMO));
 
         $this->configureRateLimiting();
 

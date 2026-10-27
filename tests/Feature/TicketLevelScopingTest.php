@@ -8,6 +8,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TicketLevelScopingTest extends TestCase
@@ -32,6 +33,52 @@ class TicketLevelScopingTest extends TestCase
     }
 
     private const BASE = ['tickets.module', 'tickets.view_all', 'tickets.resolve'];
+
+    public function test_the_overview_counts_only_categories_the_level_grants(): void
+    {
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'open']);
+        Ticket::factory()->count(2)->create(['category' => 'network', 'status' => 'open']);
+        Ticket::factory()->create([
+            'category' => 'network', 'status' => 'open', 'sla_response_due_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($this->staffWith([...self::BASE, 'tickets.view_dashboard', 'tickets.level_hardware']));
+        $summary = $this->getJson('/api/tickets/summary?days=7')->assertOk()->json();
+
+        $this->assertSame(1, $summary['created']);
+        $this->assertSame(1, $summary['backlog']);
+        $this->assertSame(0, $summary['over_sla_now']);
+        $byCategory = array_column($summary['by_category'], 'count', 'category');
+        $this->assertSame(1, $byCategory['hardware']);
+        $this->assertSame(0, $byCategory['network']);
+    }
+
+    /** Queries one list read costs with $rows hardware tickets, each tied to an asset. */
+    private function listQueries(User $viewer, int $rows): int
+    {
+        Ticket::query()->delete();
+        Ticket::factory()->count($rows)->create([
+            'category' => 'hardware',
+            'related_asset_id' => fn () => Asset::factory()->create()->id,
+        ]);
+        $this->actingAs($viewer);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->getJson('/api/tickets?per_page=50')->assertOk()->assertJsonCount($rows, 'data');
+        DB::disableQueryLog();
+
+        return count(DB::getQueryLog());
+    }
+
+    public function test_the_ticket_list_costs_the_same_queries_for_few_or_many_rows(): void
+    {
+        $viewer = $this->staffWith([...self::BASE, 'tickets.level_hardware']);
+        // The first read also loads the viewer's role and the SLA targets once
+        $this->listQueries($viewer, 1);
+
+        $this->assertSame($this->listQueries($viewer, 3), $this->listQueries($viewer, 12));
+    }
 
     public function test_requester_assets_peek_requires_the_resolve_gate(): void
     {

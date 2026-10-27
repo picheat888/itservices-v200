@@ -15,15 +15,28 @@ use Illuminate\Database\Query\Builder;
 
 class TicketSummaryService
 {
+    /** @var list<string> */
+    private array $categories = [];
+
+    /** Tickets the viewer's Ticket Levels cover. */
+    private function tickets(): Builder
+    {
+        return Ticket::query()->toBase()->whereIn('category', $this->categories);
+    }
+
     /**
      * Counts, backlog and SLA percentages for the current window [curStart, curEnd] and the one before
      * it [prevStart, curStart]. Stored times are whole seconds, so a window edge with microseconds is
      * rounded inward (up for a start, down for an end) and every comparison matches Carbon's.
+     * Only tickets in $categories count, the viewer's Ticket Levels, as the list they link to.
      *
+     * @param  list<string>  $categories
      * @return array<string, mixed>
      */
-    public function figures(CarbonInterface $curStart, CarbonInterface $curEnd, CarbonInterface $prevStart): array
+    public function figures(CarbonInterface $curStart, CarbonInterface $curEnd, CarbonInterface $prevStart, array $categories): array
     {
+        $this->categories = $categories;
+
         $w = [
             'cs' => $this->ceilSecond($curStart), 'ce' => $this->floorSecond($curEnd),
             'ps' => $this->ceilSecond($prevStart), 'csEnd' => $this->floorSecond($curStart),
@@ -54,7 +67,7 @@ class TicketSummaryService
         $over = "status in ({$liveMarks}) and {$overDue} is not null and {$overDue} < ?";
         $overBindings = [...$live, $this->at($w['now'])];
 
-        $query = Ticket::query()->toBase()
+        $query = $this->tickets()
             ->where(fn (Builder $q) => $q
                 ->where('created_at', '>=', $this->at($w['ps']))
                 ->orWhere('resolved_at', '>=', $this->at($w['ps']))
@@ -104,7 +117,7 @@ class TicketSummaryService
     private function byCategory(array $w): array
     {
         $counts = array_fill_keys(array_map(fn (TicketCategory $c) => $c->value, TicketCategory::cases()), 0);
-        $rows = Ticket::query()->toBase()
+        $rows = $this->tickets()
             ->whereBetween('created_at', [$this->at($w['cs']), $this->at($w['ce'])])
             ->whereNotNull('category')
             ->groupBy('category')
@@ -189,7 +202,7 @@ class TicketSummaryService
         $to = $this->at($w['ce']);
         $requestType = '(select r.type from service_requests r where r.ticket_id = tickets.id order by r.id limit 1)';
 
-        return Ticket::query()->toBase()
+        return $this->tickets()
             ->selectRaw("status, created_at, responded_at, resolved_at, category, priority, work_class, {$requestType} as request_type")
             ->where(fn (Builder $q) => $q
                 ->where(fn (Builder $r) => $r->where('status', TicketStatus::Completed->value)->whereBetween('resolved_at', [$from, $to]))

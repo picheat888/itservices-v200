@@ -113,7 +113,7 @@ class TicketController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Ticket::query()->with(['requester', 'assignee.employee', 'relatedAsset', 'attachments', 'serviceRequest']);
+        $query = Ticket::query()->with(['requester', 'assignee.employee', 'relatedAsset.category', 'relatedAsset.brand', 'relatedAsset.model', 'attachments', 'serviceRequest']);
 
         if ($request->boolean('requested')) {
             // My Tickets: only what the user filed themselves, behind its own gate
@@ -271,7 +271,7 @@ class TicketController extends Controller
         $prevStart = $curStart->copy()->subSeconds($windowSeconds);
 
         // Counts and backlog come from SQL, the SLA verdicts from lean rows; see TicketSummaryService
-        $f = $summary->figures($curStart, $curEnd, $prevStart);
+        $f = $summary->figures($curStart, $curEnd, $prevStart, self::levelsFor($request->user()));
 
         // 30/45 วันเป็น KPI คนละตัวกับ SLA อยู่แล้วในความเป็นจริงขององค์กร การเอาเป้าหมาย
         // 4 ชั่วโมงกับ 360 ชั่วโมงมาเฉลี่ยเป็นเปอร์เซ็นต์เดียวทำให้ตัวเลขอ่านยากขึ้น ไม่ใช่ง่ายขึ้น
@@ -556,11 +556,12 @@ class TicketController extends Controller
     }
 
     /**
-     * A case can only land with someone able to work it: the target must hold
+     * A case can only land with someone able to work it: still working here, holding
      * tickets.resolve AND the Level matching the case's category.
      */
     private function assertCanReceive(User $staff, Ticket $ticket): void
     {
+        abort_if($staff->employee?->hasLeft() === true, 422, 'target_has_left');
         abort_unless($staff->hasPermission('tickets.resolve'), 422, 'target_cannot_work');
         abort_unless(
             $staff->hasPermission("tickets.level_{$ticket->category?->value}"),

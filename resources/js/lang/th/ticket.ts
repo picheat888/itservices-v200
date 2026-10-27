@@ -192,6 +192,7 @@ export const ticket: Dict = {
     ticket_refusal_requester_cannot_route: 'คุณเป็นคนแจ้งเคสนี้ จึงเลือกผู้รับผิดชอบเองไม่ได้',
     ticket_refusal_target_cannot_work: 'เจ้าหน้าที่ที่เลือกไม่มีสิทธิ์รับเคส',
     ticket_refusal_target_level_not_covered: 'ระดับงานของเจ้าหน้าที่ที่เลือกไม่ครอบคลุมประเภทของเคสนี้',
+    ticket_refusal_target_has_left: 'เจ้าหน้าที่ที่เลือกลาออกแล้ว',
     ticket_refusal_not_in_progress: 'เคสนี้ไม่ได้อยู่ในสถานะกำลังดำเนินการแล้ว',
     ticket_refusal_not_assignee: 'เฉพาะผู้รับผิดชอบเคสนี้เท่านั้นที่ทำรายการนี้ได้',
     ticket_refusal_case_moved: 'เคสนี้เปลี่ยนผู้รับผิดชอบไปแล้ว กรุณาปิดแล้วเปิดดูใหม่',

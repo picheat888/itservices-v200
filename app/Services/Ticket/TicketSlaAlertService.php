@@ -92,11 +92,11 @@ class TicketSlaAlertService
         }
 
         $assignee = User::find($ticket->assignee_id);
-        $recipients = collect($assignee ? [$assignee] : []);
+        $recipients = collect($assignee && $assignee->employee?->hasLeft() !== true ? [$assignee] : []);
 
         if ($state === 'over_sla') {
             // A blown resolution target escalates to everyone who can re-assign.
-            $recipients = $recipients->merge(User::holdingPermission('tickets.assign')->orderBy('id')->get());
+            $recipients = $recipients->merge(User::holdingPermission('tickets.assign')->stillWorking()->orderBy('id')->get());
         }
 
         return $recipients->unique('id')->values();

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Auth\DeviceEndReason;
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\UserRole;
 use App\Models\Auth\UserDevice;
 use App\Models\Employee\Employee;
@@ -168,8 +169,11 @@ class User extends Authenticatable
         return $this->role?->name ?? (string) ($this->role?->key ?? '');
     }
 
+    /** Request attribute holding each user's permission keys while one HTTP request is handled (AppServiceProvider opens and clears it). */
+    public const PERMISSION_MEMO = 'user_permissions';
+
     /**
-     * Resolved permission keys for this user (super = all).
+     * Resolved permission keys for this user (super = all), read once per HTTP request; a command or queued job asks every time.
      *
      * @return list<string>
      */
@@ -179,6 +183,24 @@ class User extends Authenticatable
             return Permissions::all();
         }
 
+        $request = request();
+        if (! $request->attributes->has(self::PERMISSION_MEMO)) {
+            return $this->loadPermissions();
+        }
+
+        $memo = $request->attributes->get(self::PERMISSION_MEMO, []);
+        $key = "{$this->id}:{$this->role_id}";
+        if (! array_key_exists($key, $memo)) {
+            $memo[$key] = $this->loadPermissions();
+            $request->attributes->set(self::PERMISSION_MEMO, $memo);
+        }
+
+        return $memo[$key];
+    }
+
+    /** @return list<string> */
+    private function loadPermissions(): array
+    {
         return RolePermission::query()
             ->where('role_id', $this->role_id)
             ->where('allowed', true)
@@ -217,6 +239,21 @@ class User extends Authenticatable
                 ->select('role_id')
                 ->whereIn('permission', $permissions)
                 ->where('allowed', true)));
+    }
+
+    /**
+     * Accounts that still work here: no employee record, or one not past its last day (Employee::hasLeft()).
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeStillWorking(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->whereNull('employee_id')
+            ->orWhereHas('employee', fn (Builder $e) => $e
+                ->where('status', '!=', EmployeeStatus::Resigned->value)
+                ->orWhere(fn (Builder $notice) => $notice->whereNotNull('last_day')->where('last_day', '>=', today()->toDateString()))));
     }
 
     /** How long before the expiry the account starts being warned at sign-in. */

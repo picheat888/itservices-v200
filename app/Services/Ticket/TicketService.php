@@ -405,14 +405,15 @@ class TicketService
     }
 
     /**
-     * Staff who can work cases (tickets.resolve), narrowed to one category's Level when
-     * given; feeds the Assign and Forward pickers.
+     * Staff who can work cases (tickets.resolve) and have not left, narrowed to one category's
+     * Level when given; feeds the Assign and Forward pickers, new-case mail and SLA alerts.
      *
      * @return Collection<int, User>
      */
     public function staff(?string $category = null): Collection
     {
         return User::holdingPermission('tickets.resolve')
+            ->stillWorking()
             ->when($category !== null && $category !== '', fn ($q) => $q->holdingPermission("tickets.level_{$category}"))
             ->get()
             ->sortBy('name')

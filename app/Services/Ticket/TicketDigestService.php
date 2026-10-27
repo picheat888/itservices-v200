@@ -55,7 +55,7 @@ class TicketDigestService
 
         $sent = ['recipients' => 0, 'tickets' => 0];
 
-        foreach (User::holdingPermission('tickets.resolve')->with('role')->orderBy('id')->get() as $user) {
+        foreach (User::holdingPermission('tickets.resolve')->stillWorking()->with('role')->orderBy('id')->get() as $user) {
             $permissions = $user->permissions();
             $mine = $live->filter(fn (Ticket $t) => in_array("tickets.level_{$t->category?->value}", $permissions, true));
             if ($mine->isEmpty()) {
