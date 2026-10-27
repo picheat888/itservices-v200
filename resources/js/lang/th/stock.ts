@@ -450,7 +450,7 @@ export const stock: Dict = {
     stock_count_progress_of: 'นับแล้ว {n} จาก {total} รายการ',
     stock_count_reason_note: 'ระบุเหตุผล',
     stock_count_reason_note_ph: 'พิมพ์เหตุผล',
-    stock_count_tick_serials: 'นับได้ {sku} แตะเพื่อติ๊ก Serial',
+    stock_count_tick_serials: 'นับได้ {sku} {n} แตะเพื่อติ๊ก Serial',
     stock_refusal_count_reason_missing: '{sku} ยอดไม่ตรงแต่ยังไม่ได้เลือกเหตุผล',
     stock_refusal_count_reason_wrong_side: 'เหตุผลของ {sku} ไม่ตรงกับยอดที่นับ เลือกเหตุผลใหม่',
     stock_refusal_count_reason_note_missing: '{sku} เลือก "ระบุเอง" แล้ว ต้องพิมพ์เหตุผล',

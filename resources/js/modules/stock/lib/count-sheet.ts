@@ -66,6 +66,21 @@ export function filterLines<T extends DraftLine & { sku: string | null; name: st
     });
 }
 
+/** The ids a chip and search pick, in sheet order; the sheet keeps this list until the filter changes. */
+export function filterIds<T extends DraftLine & { id: number; sku: string | null; name: string | null }>(
+    lines: T[],
+    chip: SheetChip,
+    query: string,
+): number[] {
+    return filterLines(lines, chip, query).map((l) => l.id);
+}
+
+/** The current lines for a kept id list, in sheet order. */
+export function linesByIds<T extends { id: number }>(lines: T[], ids: number[]): T[] {
+    const keep = new Set(ids);
+    return lines.filter((l) => keep.has(l.id));
+}
+
 export type SheetSummary = ReturnType<typeof sheetSummary>;
 
 // Draft edits laid over the saved lines
@@ -92,7 +107,13 @@ export function parseQty(raw: string): number | null {
     return digits === '' ? null : Math.min(MAX_QTY, parseInt(digits, 10));
 }
 
-/** The line as the sheet shows it; a serial line's count follows its ticks. */
+/** Typed digits as the count box shows them, never above the cap. */
+export function clampQtyText(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    return digits !== '' && parseInt(digits, 10) > MAX_QTY ? String(MAX_QTY) : digits;
+}
+
+/** The line as the sheet shows it; a serial line's count follows its ticks, and a picked reason shows only while it fits. */
 export function draftLine<T extends SavedLine>(line: T, edit: LineEdit | undefined): T {
     if (!edit) return line;
     const missing = edit.missing ?? line.missing_serial_ids;
@@ -105,10 +126,11 @@ export function draftLine<T extends SavedLine>(line: T, edit: LineEdit | undefin
         : edit.qty !== undefined
           ? parseQty(edit.qty)
           : line.counted_qty;
+    const picked = edit.reason !== undefined ? edit.reason : line.reason;
     return {
         ...line,
         counted_qty: counted,
-        reason: edit.reason !== undefined ? edit.reason : line.reason,
+        reason: reasonAfterQtyChange(picked, counted === null ? null : counted - line.system_qty),
         reason_note: edit.note !== undefined ? edit.note : line.reason_note,
         missing_serial_ids: missing,
         found_serial_ids: found,

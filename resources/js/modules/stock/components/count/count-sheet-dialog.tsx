@@ -20,17 +20,7 @@ import { ClipboardCheck, Loader2, Lock, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import type { LinePatch } from '../../api/stockApi';
 import { useStockCountMutations } from '../../hooks/use-stock';
-import {
-    draftLine,
-    filterLines,
-    lineNeedsReason,
-    linePatch,
-    parseQty,
-    reasonAfterQtyChange,
-    sheetSummary,
-    type LineEdit,
-    type SheetChip,
-} from '../../lib/count-sheet';
+import { draftLine, filterIds, lineNeedsReason, linePatch, linesByIds, sheetSummary, type LineEdit, type SheetChip } from '../../lib/count-sheet';
 import { stockRefusalText } from '../../lib/refusal';
 import { CountChip } from './count-chip';
 import { CountDialogPending, CountFacts, pendingFrameClass } from './count-dialog-parts';
@@ -58,7 +48,7 @@ export function CountSheetDialog({
     canEdit: boolean;
     onClose: () => void;
     /** Resolves once the open count has been read again (after a save or the commit). */
-    onRefetch: () => Promise<unknown>;
+    onRefetch: () => Promise<{ isError: boolean; error: unknown }>;
 }) {
     const t = useT();
     const fmt = useDateFormat();
@@ -75,6 +65,7 @@ export function CountSheetDialog({
     const [edits, setEdits] = useState<Record<number, LineEdit>>({});
     const [chip, setChip] = useState<SheetChip>('all');
     const [query, setQuery] = useState('');
+    const [filterRun, setFilterRun] = useState(0);
     const [serial, setSerial] = useState<{ lineId: number; open: boolean } | null>(null);
     const [review, setReview] = useState<{ open: boolean; lines: StockCountLine[] }>({ open: false, lines: [] });
     const [busy, setBusy] = useState<'save' | 'review' | 'commit' | null>(null);
@@ -107,7 +98,20 @@ export function CountSheetDialog({
     const dirty = editable && Object.keys(patches).length > 0;
     const guardClose = useDiscardGuard(open && dirty);
     const summary = sheetSummary(lines);
-    const visible = filterLines(lines, chip, query);
+
+    // The rows a filter picks stay in view while they are edited, until the filter is set again
+    const filterKey = `${openKey}|${savedLines.length}|${chip}|${query}|${filterRun}`;
+    const [picked, setPicked] = useState<{ key: string; ids: number[] } | null>(null);
+    let shownIds = picked?.key === filterKey ? picked.ids : null;
+    if (shownIds === null) {
+        shownIds = filterIds(lines, chip, query);
+        setPicked({ key: filterKey, ids: shownIds });
+    }
+    const visible = linesByIds(lines, shownIds);
+    const pickChip = (next: SheetChip) => {
+        setChip(next);
+        setFilterRun((n) => n + 1);
+    };
     const warehouse = shown?.warehouse ?? '—';
 
     const toastError = (e: unknown) => useToastStore.getState().push(stockRefusalText(e, t), 'error');
@@ -116,15 +120,10 @@ export function CountSheetDialog({
         setSaved(false);
         setEdits((prev) => ({ ...prev, [line.id]: { ...prev[line.id], ...change } }));
     };
-    const onQty = (line: StockCountLine, raw: string) => {
-        const qty = parseQty(raw);
-        edit(line, { qty: raw, reason: reasonAfterQtyChange(line.reason, qty === null ? null : qty - line.system_qty) });
-    };
     const serialLine = serial ? (lines.find((l) => l.id === serial.lineId) ?? null) : null;
     const applySerials = (missingIds: number[], foundIds: number[]) => {
         if (!serialLine) return;
-        const variance = foundIds.length - missingIds.length;
-        edit(serialLine, { missing: missingIds, found: foundIds, reason: reasonAfterQtyChange(serialLine.reason, variance) });
+        edit(serialLine, { missing: missingIds, found: foundIds });
     };
 
     // Sends every edited line, reads the count again, then drops the edits that went out
@@ -133,7 +132,12 @@ export function CountSheetDialog({
         const sent = edits;
         try {
             await save.mutateAsync({ id: shown.id, lines: patches });
-            await onRefetch();
+            const read = await onRefetch();
+            // Saved, but the fresh copy did not arrive: keep the edits so the old values never show
+            if (read.isError) {
+                toastError(read.error);
+                return false;
+            }
             setEdits((cur) => Object.fromEntries(Object.entries(cur).filter(([id, e]) => sent[Number(id)] !== e)));
             return true;
         } catch (e) {
@@ -153,7 +157,7 @@ export function CountSheetDialog({
     const startReview = async () => {
         const first = lines.find(lineNeedsReason);
         if (first) {
-            setChip('no_reason');
+            pickChip('no_reason');
             setQuery('');
             window.requestAnimationFrame(() => {
                 const row = tableRef.current?.querySelector<HTMLElement>(`[data-line-id="${first.id}"]`);
@@ -173,7 +177,8 @@ export function CountSheetDialog({
         setBusy('commit');
         try {
             await commit.mutateAsync(shown.id);
-            await onRefetch();
+            const read = await onRefetch();
+            if (read.isError) toastError(read.error);
             setReview((r) => ({ ...r, open: false }));
         } catch (e) {
             toastError(e);
@@ -271,7 +276,7 @@ export function CountSheetDialog({
                                             count={c.n}
                                             tone={c.tone}
                                             selected={chip === c.id}
-                                            onClick={() => setChip(c.id)}
+                                            onClick={() => pickChip(c.id)}
                                         />
                                     ))}
                                 </div>
@@ -309,14 +314,14 @@ export function CountSheetDialog({
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody inert={busy !== null} className={cn(busy !== null && 'opacity-60')}>
                                         {visible.map((l) =>
                                             editable ? (
                                                 <CountSheetRow
                                                     key={l.id}
                                                     line={l}
                                                     qtyText={edits[l.id]?.qty ?? (l.counted_qty === null ? '' : String(l.counted_qty))}
-                                                    onQty={(raw) => onQty(l, raw)}
+                                                    onQty={(qty) => edit(l, { qty })}
                                                     onReason={(reason: CountReason | null) => edit(l, { reason })}
                                                     onNote={(note) => edit(l, { note })}
                                                     onOpenSerials={() => setSerial({ lineId: l.id, open: true })}

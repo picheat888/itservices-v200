@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { ScanBarcode } from 'lucide-react';
 import { useId } from 'react';
-import { lineNeedsReason, OVER_REASONS, SHORT_REASONS } from '../../lib/count-sheet';
+import { clampQtyText, lineNeedsReason, OVER_REASONS, SHORT_REASONS } from '../../lib/count-sheet';
 import { DiffBadge, ItemCell, ReasonCell, varianceOf } from './count-line-parts';
 
 const CELL = 'border-border/60 border-b px-3 py-2 align-middle';
@@ -62,6 +62,7 @@ export function CountSheetRow({
     const custom = line.reason === 'custom';
     const noteMissing = needs && custom;
     const reasonMissing = needs && !custom;
+    const countedText = line.counted_qty === null ? '—' : fmtN(line.counted_qty);
 
     return (
         <tr data-line-id={line.id} className={rowTint(variance)}>
@@ -74,13 +75,13 @@ export function CountSheetRow({
                     <button
                         type="button"
                         onClick={onOpenSerials}
-                        aria-label={t('stock_count_tick_serials').replace('{sku}', line.sku ?? '')}
+                        aria-label={t('stock_count_tick_serials')
+                            .replace('{sku}', line.sku ?? '')
+                            .replace('{n}', countedText)}
                         className="hover:border-brand/50 focus-visible:border-brand focus-visible:ring-brand/15 bg-background ml-auto flex h-9 w-20 items-center justify-between rounded-md border border-violet-300 px-2.5 text-sm tabular-nums transition-[border-color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-hidden dark:border-violet-500/50"
                     >
                         <ScanBarcode className="h-3.5 w-3.5 text-violet-700 dark:text-violet-300" aria-hidden />
-                        <span className={cn(line.counted_qty === null && 'text-muted-foreground')}>
-                            {line.counted_qty === null ? '—' : fmtN(line.counted_qty)}
-                        </span>
+                        <span className={cn(line.counted_qty === null && 'text-muted-foreground')}>{countedText}</span>
                     </button>
                 ) : (
                     <Input
@@ -91,7 +92,7 @@ export function CountSheetRow({
                         aria-label={`${t('stock_count_col_counted')} ${line.sku ?? ''}`}
                         value={qtyText}
                         placeholder="—"
-                        onChange={(e) => onQty(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => onQty(clampQtyText(e.target.value))}
                         className="ml-auto h-9 w-20 text-right tabular-nums"
                     />
                 )}

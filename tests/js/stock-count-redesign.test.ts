@@ -189,7 +189,7 @@ test('each count dialog keeps its standard size', () => {
 });
 
 test('the sheet asks for reasons the agreed way', () => {
-    const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`) + src(`${COUNT_DIR}count-sheet-row.tsx`);
+    const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`) + src(`${COUNT_DIR}count-sheet-row.tsx`) + src('modules/stock/lib/count-sheet.ts');
     for (const part of [
         'SHORT_REASONS',
         'OVER_REASONS',
@@ -208,6 +208,7 @@ test('the sheet asks for reasons the agreed way', () => {
 test('the confirmed sheet prints through the PDF link and the KPI cards keep the approved figure style', () => {
     const done = src(`${COUNT_DIR}count-done-dialog.tsx`);
     assert.ok(done.includes('stockCountApi.pdfUrl('));
+    assert.ok(done.includes('{!manual && ('), 'a manual sheet has no print button');
     assert.ok(done.includes('target="_blank"'));
     assert.ok(src(`${COUNT_DIR}count-kpi-cards.tsx`).includes('text-xl font-bold tabular-nums'));
 });
@@ -232,4 +233,67 @@ test('the retired mode words are gone from both languages', () => {
         );
         assert.deepEqual(left, []);
     }
+});
+
+// Final fix wave: filter snapshot, picked reasons and the qty cap
+import { clampQtyText, filterIds, linesByIds } from '../../resources/js/modules/stock/lib/count-sheet.ts';
+
+test('the filter snapshot keeps a row in view while it is being edited', () => {
+    const lines = [savedLine({ sku: 'A', system_qty: 5 }), savedLine({ sku: 'B', system_qty: 3, counted_qty: 3 }), savedLine({ sku: 'C', system_qty: 2 })].map(
+        (l, i) => ({ ...l, id: i + 1 }),
+    );
+    const ids = filterIds(lines, 'pending', '');
+    assert.deepEqual(ids, [1, 3]);
+    // Typing the first digit on a pending row no longer matches the chip, but the snapshot still shows it with the new value
+    const edited = lines.map((l) => (l.id === 1 ? draftLine(l, { qty: '1' }) : l));
+    assert.deepEqual(filterIds(edited, 'pending', ''), [3]);
+    const shown = linesByIds(edited, ids);
+    assert.deepEqual(
+        shown.map((l) => [l.id, l.counted_qty]),
+        [
+            [1, 1],
+            [3, null],
+        ],
+    );
+    assert.deepEqual(filterIds(lines, 'all', 'item c'), [3]);
+});
+
+test('a picked reason survives the qty being retyped', () => {
+    const line = savedLine({ system_qty: 10 });
+    let edit = { qty: '8', reason: 'lost' as const } as Parameters<typeof draftLine>[1] & object;
+    for (const raw of ['', '7']) edit = { ...edit, qty: raw };
+    const shown = draftLine(line, edit);
+    assert.equal(shown.counted_qty, 7);
+    assert.equal(shown.reason, 'lost');
+    assert.deepEqual(linePatch(line, shown), { counted_qty: 7, reason: 'lost', reason_note: null });
+});
+
+test('a picked reason that no longer fits is sent as null', () => {
+    const line = savedLine({ system_qty: 10 });
+    const shown = draftLine(line, { qty: '12', reason: 'lost' });
+    assert.equal(shown.reason, null);
+    assert.deepEqual(linePatch(line, shown), { counted_qty: 12 });
+    const saved = savedLine({ system_qty: 10, counted_qty: 8, reason: 'lost' as never });
+    assert.deepEqual(linePatch(saved, draftLine(saved, { qty: '12' })), { counted_qty: 12, reason: null, reason_note: null });
+    assert.equal(draftLine(saved, { qty: '9' }).reason, 'lost');
+});
+
+test('a typed count shows no more than the cap', () => {
+    assert.equal(clampQtyText('9999999'), '1000000');
+    assert.equal(clampQtyText('1000000'), '1000000');
+    assert.equal(clampQtyText('12a'), '12');
+    assert.equal(clampQtyText(''), '');
+    assert.equal(clampQtyText('007'), '007');
+});
+
+test('the sheet stays read only while it saves, and a recount replaces the confirmed sheet', () => {
+    const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`);
+    assert.ok(sheet.includes('<tbody inert={busy !== null}'));
+    assert.ok(sheet.includes('read.isError'));
+    assert.ok(src('modules/stock/pages/tabs/counting-tab.tsx').includes('onOpenCount={swapSheet}'));
+});
+
+test('the serial count button says its count', () => {
+    for (const dict of [th, en]) assert.ok(dict.stock_count_tick_serials.includes('{n}'));
+    assert.ok(src(`${COUNT_DIR}count-sheet-row.tsx`).includes(".replace('{n}', countedText)"));
 });

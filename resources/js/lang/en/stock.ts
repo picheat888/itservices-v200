@@ -450,7 +450,7 @@ export const stock: Dict = {
     stock_count_progress_of: 'Counted {n} of {total} items',
     stock_count_reason_note: 'Reason details',
     stock_count_reason_note_ph: 'Type the reason',
-    stock_count_tick_serials: 'Counted {sku}, tap to tick serials',
+    stock_count_tick_serials: 'Counted {sku} {n}, tap to tick serials',
     stock_refusal_count_reason_missing: '{sku} differs but has no reason yet',
     stock_refusal_count_reason_wrong_side: 'The reason for {sku} does not fit the counted amount. Pick another reason.',
     stock_refusal_count_reason_note_missing: '{sku} is set to "Other", so a reason must be typed',

@@ -57,6 +57,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const dialogs = usePageDialogs();
     const openSheet = (id: number) => dialogs.open({ count: String(id) });
     const closeSheet = () => dialogs.close(['count']);
+    // A recount takes this entry's place, so closing it lands on the list
+    const swapSheet = (id: number) => dialogs.replace((p) => p.set('count', String(id)));
 
     // A confirmed sheet opens in its own dialog; before the record arrives the list row says which one
     const status = session?.id === shownId ? session.status : sessions.find((s) => s.id === shownId)?.status;
@@ -209,7 +211,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 {...pending}
                 canRecount={can('view_count')}
                 onClose={closeSheet}
-                onOpenCount={openSheet}
+                onOpenCount={swapSheet}
             />
         </div>
     );

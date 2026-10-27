@@ -171,16 +171,18 @@ export function CountDoneDialog({
                                     {t('stock_count_recount').replace('{n}', fmtN(differing.length))}
                                 </Button>
                             )}
-                            <a
-                                href={stockCountApi.pdfUrl(shown.id)}
-                                target="_blank"
-                                rel="noopener"
-                                className={buttonVariants({ variant: 'outline' })}
-                            >
-                                <Printer className="h-4 w-4" aria-hidden />
-                                {t('stock_print')}
-                                <span className="sr-only">{t('stock_opens_new_tab')}</span>
-                            </a>
+                            {!manual && (
+                                <a
+                                    href={stockCountApi.pdfUrl(shown.id)}
+                                    target="_blank"
+                                    rel="noopener"
+                                    className={buttonVariants({ variant: 'outline' })}
+                                >
+                                    <Printer className="h-4 w-4" aria-hidden />
+                                    {t('stock_print')}
+                                    <span className="sr-only">{t('stock_opens_new_tab')}</span>
+                                </a>
+                            )}
                             <Button variant="outline" onClick={onClose}>
                                 {t('close')}
                             </Button>
