@@ -209,9 +209,11 @@ final class DemoStock implements DemoStep
         $clock->at($clock->daysAgo(12, 16));
         $count = $this->counts->open($this->warehouse($warehouses[2]), $this->itemIdsIn($warehouses[2]), $lead);
         $counted = $count->lines->values()->mapWithKeys(fn ($line, int $i) => [
-            $line->id => $i === 0 ? max(0, $line->system_qty - 1) : $line->system_qty,
+            $line->id => $i === 0 && $line->system_qty > 0
+                ? ['counted_qty' => $line->system_qty - 1, 'reason' => 'lost']
+                : ['counted_qty' => $line->system_qty],
         ])->all();
-        $this->counts->commit($this->counts->saveCounts($count, $counted), $lead);
+        $this->counts->commit($this->counts->saveLines($count, $counted), $lead);
 
         $clock->at($clock->daysAgo(1, 16));
         $this->counts->open($this->warehouse($warehouses[0]), $this->itemIdsIn($warehouses[0]), $lead);

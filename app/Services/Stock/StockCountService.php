@@ -14,7 +14,9 @@ use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Support\DocNumber;
 use App\Support\Refusal;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
 
 class StockCountService
@@ -178,90 +180,46 @@ class StockCountService
     }
 
     /**
-     * Commit a draft. Auto: each counted line with a variance records an adjust movement, moves
-     * the balance and total, reconciles FIFO lots and marks ticked-missing serials 'adjusted'.
-     * Manual: closed as a report only (serialized counts refused). The mode is persisted.
-     *
-     * @param  array<int, array<int>>  $missingSerials  stock-item id => serial ids ticked as not found
+     * Confirm a draft: every counted line that differs books an ADJ movement on the count's own
+     * warehouse, moves that balance and the total, realigns FIFO lots and settles the ticked serials.
      */
-    public function commit(StockCount $count, User $user, StockCountAdjustMode $mode = StockCountAdjustMode::Auto, array $missingSerials = []): StockCount
+    public function commit(StockCount $count, User $user): StockCount
     {
-        DB::transaction(function () use ($count, $user, $mode, $missingSerials) {
+        $adjusted = DB::transaction(function () use ($count, $user): int {
             $this->lockInDraft($count);
 
-            $lines = $count->lines()->with('item')->get();
-
-            // Manual is report-only; it can't reconcile the per-unit serials a serialized count needs.
-            if ($mode === StockCountAdjustMode::Manual && $lines->contains(fn ($l) => (bool) $l->item?->track_serial)) {
-                abort(422, 'count_serial_needs_auto');
+            $warehouse = $count->warehouse_id === null ? null : Warehouse::find($count->warehouse_id);
+            if ($warehouse === null) {
+                Refusal::fail('count_needs_warehouse', ['sku' => '']);
             }
 
-            if ($mode === StockCountAdjustMode::Auto) {
-                // Drafts that overlapped before opening was guarded: confirming both would book the difference twice
-                $other = $this->countLock->overlap($lines->pluck('stock_item_id')->all(), $count->warehouse_id, $count->id);
-                if ($other !== null) {
-                    Refusal::fail('count_overlap_commit', ['reference' => $other['reference']]);
-                }
+            $lines = $count->lines()->with('item')->orderBy('id')->get();
+            $this->assertReasonsGiven($lines);
 
-                foreach ($lines as $line) {
-                    $variance = $line->variance();
-                    if ($variance === null || $variance === 0) {
-                        continue;
-                    }
+            // Drafts that overlapped before opening was guarded: confirming both would book the difference twice
+            $other = $this->countLock->overlap($lines->pluck('stock_item_id')->all(), $count->warehouse_id, $count->id);
+            if ($other !== null) {
+                Refusal::fail('count_overlap_commit', ['reference' => $other['reference']]);
+            }
 
-                    /** @var StockItem|null $item */
-                    $item = StockItem::whereKey($line->stock_item_id)->lockForUpdate()->first();
-                    if ($item === null) {
-                        continue;
-                    }
-
-                    // The shelf the difference belongs to; refused when an all-warehouse count cannot say.
-                    $warehouse = $this->warehouseForDifference($count, $item);
-
-                    if ($item->track_serial) {
-                        $this->reconcileSerials($item, $variance, $missingSerials[$line->stock_item_id] ?? [], $count->reference, $user);
-                    }
-
-                    StockMovement::create([
-                        'type' => $variance > 0 ? 'adjust_up' : 'adjust_down',
-                        'stock_item_id' => $line->stock_item_id,
-                        'qty' => abs($variance),
-                        'from_label' => $variance < 0 ? $warehouse : null,
-                        'to_label' => $variance > 0 ? $warehouse : null,
-                        'reference' => $count->reference,
-                        'recorded_by' => $user->name,
-                        'user_id' => $user->id,
-                        'notes' => 'Stock count adjustment',
-                        'moved_at' => now(),
-                    ]);
-
-                    // Balance and total move by the difference; an all-warehouse count lands on the counted figure.
-                    $variance > 0
-                        ? $this->balanceService->add($item, $warehouse, $variance)
-                        : $this->balanceService->remove($item, $warehouse, abs($variance));
-                    $total = $count->warehouse !== null ? $item->current_stock + $variance : $line->counted_qty;
-                    $item->update([
-                        'current_stock' => $total,
-                        'last_move_at' => now()->toDateString(),
-                    ]);
-
-                    // Realign FIFO lots with the new total.
-                    $this->lotService->reconcile($item, $total);
+            $adjusted = 0;
+            foreach ($lines as $line) {
+                if ($this->bookLine($count, $line, $warehouse, $user)) {
+                    $adjusted++;
                 }
             }
 
             $count->update([
                 'status' => StockCountStatus::Committed,
                 'committed_at' => now(),
-                'adjust_mode' => $mode,
+                'committed_by' => $user->id,
+                'adjust_mode' => StockCountAdjustMode::Auto,
             ]);
+
+            return $adjusted;
         });
 
-        AuditLog::record(
-            'Committed stock count',
-            $count->reference.($mode === StockCountAdjustMode::Manual ? ' (manual - report only)' : ' (auto - stock adjusted)'),
-            subject: $count,
-        );
+        AuditLog::record('Committed stock count', "{$count->reference} ({$adjusted} items adjusted)", subject: $count);
 
         return $count->fresh('lines');
     }
@@ -274,56 +232,144 @@ class StockCountService
     }
 
     /**
-     * The warehouse a counted difference is booked against: the count's own warehouse, else
-     * the one warehouse the item holds stock in ('Unassigned' when none); spread items are refused.
+     * Every counted line that differs needs a reason on its side, and a custom one its note.
+     *
+     * @param  EloquentCollection<int, StockCountLine>  $lines
      */
-    private function warehouseForDifference(StockCount $count, StockItem $item): string
+    private function assertReasonsGiven(EloquentCollection $lines): void
     {
-        if (filled($count->warehouse)) {
-            return $count->warehouse;
+        foreach ($lines as $line) {
+            $variance = $line->variance();
+            if ($variance === null || $variance === 0) {
+                continue;
+            }
+
+            $sku = (string) $line->item?->sku;
+            if ($line->reason === null || ($line->reason === StockCountReason::Custom && blank($line->reason_note))) {
+                Refusal::fail('count_reason_missing', ['sku' => $sku]);
+            }
+            if (! $line->reason->fitsVariance($variance)) {
+                Refusal::fail('count_reason_wrong_side', ['sku' => $sku]);
+            }
+        }
+    }
+
+    /** Book one line's difference and settle its ticked serials; true when the stock changed. */
+    private function bookLine(StockCount $count, StockCountLine $line, Warehouse $warehouse, User $user): bool
+    {
+        $variance = $line->variance();
+        $missing = $this->uniqueIds($line->missing_serial_ids ?? []);
+        $found = $this->uniqueIds($line->found_serial_ids ?? []);
+        if ($variance === null || ($variance === 0 && $missing === [] && $found === [])) {
+            return false;
         }
 
-        $holding = $item->balances()->with('warehouse')->where('qty', '>', 0)->get();
-        if ($holding->count() > 1) {
-            Refusal::fail('count_needs_warehouse', ['sku' => $item->sku]);
+        /** @var StockItem|null $item */
+        $item = StockItem::whereKey($line->stock_item_id)->lockForUpdate()->first();
+        if ($item === null) {
+            return false;
         }
 
-        return $holding->first()?->warehouse?->name ?? 'Unassigned';
+        $serials = $item->track_serial ? $this->lockTickedSerials($count, $item, $variance, $missing, $found) : null;
+
+        // A serial line whose losses and finds cancel out moves no stock but still logs every serial
+        $movement = $variance === 0 ? null : $this->recordMovement($count, $line, $item, $warehouse, $variance, $user);
+        if ($serials !== null) {
+            $this->settleSerials($serials, $count, $warehouse, $movement, $user);
+        }
+        if ($variance === 0) {
+            return false;
+        }
+
+        $variance > 0
+            ? $this->balanceService->addTo($item, $warehouse, $variance)
+            : $this->balanceService->removeFrom($item, $warehouse, abs($variance));
+        $total = $item->current_stock + $variance;
+        $item->update([
+            'current_stock' => $total,
+            'last_move_at' => now()->toDateString(),
+        ]);
+        $this->lotService->reconcile($item, $total);
+
+        return true;
+    }
+
+    private function recordMovement(StockCount $count, StockCountLine $line, StockItem $item, Warehouse $warehouse, int $variance, User $user): StockMovement
+    {
+        $type = $variance > 0 ? 'adjust_up' : 'adjust_down';
+
+        return StockMovement::create([
+            'doc_no' => DocNumber::next($type, (int) now()->year),
+            'type' => $type,
+            'stock_item_id' => $item->id,
+            'qty' => abs($variance),
+            'from_label' => $variance < 0 ? $warehouse->name : null,
+            'to_label' => $variance > 0 ? $warehouse->name : null,
+            'from_warehouse_id' => $variance < 0 ? $warehouse->id : null,
+            'to_warehouse_id' => $variance > 0 ? $warehouse->id : null,
+            'reference' => $count->reference,
+            'reason' => $line->reason?->value,
+            'notes' => $line->reason === StockCountReason::Custom ? $line->reason_note : null,
+            'recorded_by' => $user->name,
+            'user_id' => $user->id,
+            'moved_at' => now(),
+        ]);
     }
 
     /**
-     * Mark the ticked-missing serials of a serialized line as 'adjusted' (shortages only: exactly |variance| ids).
+     * Re-read the draft's ticked serials under lock: missing ones must still be in stock here, found ones
+     * still written off here by the original count, and together they must explain the line's variance.
      *
-     * @param  array<int>  $serialIds
+     * @param  list<int>  $missing
+     * @param  list<int>  $found
+     * @return array{missing: EloquentCollection<int, StockItemSerial>, found: EloquentCollection<int, StockItemSerial>}
      */
-    private function reconcileSerials(StockItem $item, int $variance, array $serialIds, string $reference, User $user): void
+    private function lockTickedSerials(StockCount $count, StockItem $item, int $variance, array $missing, array $found): array
     {
-        if ($variance > 0) {
+        if ($variance > 0 && $found === []) {
             Refusal::fail('count_serial_over', ['sku' => $item->sku]);
         }
 
-        $need = abs($variance);
-        $ids = array_values(array_unique(array_map('intval', $serialIds)));
+        $serials = fn (string $status) => StockItemSerial::where('stock_item_id', $item->id)
+            ->where('warehouse_id', $count->warehouse_id)
+            ->where('status', $status)
+            ->lockForUpdate();
 
-        $serials = StockItemSerial::where('stock_item_id', $item->id)
-            ->where('status', 'in_stock')
-            ->whereIn('id', $ids)
-            ->get();
+        $originalReference = $count->recountOf?->reference;
+        $missingRows = $serials('in_stock')->whereIn('id', $missing)->get();
+        $foundRows = $found === [] || $originalReference === null
+            ? new EloquentCollection
+            : $serials('adjusted')->where('reference', $originalReference)->whereIn('id', $found)->get();
 
-        if (count($ids) !== $need || $serials->count() !== $need) {
-            Refusal::fail('count_serial_missing_mismatch', ['need' => $need, 'sku' => $item->sku]);
+        if ($variance !== count($found) - count($missing) || $missingRows->count() !== count($missing) || $foundRows->count() !== count($found)) {
+            Refusal::fail('count_serial_missing_mismatch', ['need' => max(0, count($found) - $variance), 'sku' => $item->sku]);
         }
 
-        StockItemSerial::whereIn('id', $serials->pluck('id'))
-            ->update(['status' => 'adjusted', 'reference' => $reference]);
+        return ['missing' => $missingRows, 'found' => $foundRows];
+    }
 
-        foreach ($serials as $row) {
-            StockItemSerialEvent::log($row, 'adjusted', [
-                'reference' => $reference,
-                'warehouse' => $row->warehouse?->name,
-                'user_id' => $user->id,
-                'recorded_by' => $user->name,
-            ]);
+    /**
+     * Missing serials are written off as 'adjusted', found ones return to stock; both log an event on the line's movement.
+     *
+     * @param  array{missing: EloquentCollection<int, StockItemSerial>, found: EloquentCollection<int, StockItemSerial>}  $serials
+     */
+    private function settleSerials(array $serials, StockCount $count, Warehouse $warehouse, ?StockMovement $movement, User $user): void
+    {
+        $event = [
+            'stock_movement_id' => $movement?->id,
+            'reference' => $count->reference,
+            'warehouse' => $warehouse->name,
+            'user_id' => $user->id,
+            'recorded_by' => $user->name,
+        ];
+
+        foreach ($serials['missing'] as $serial) {
+            $serial->update(['status' => 'adjusted', 'reference' => $count->reference]);
+            StockItemSerialEvent::log($serial, 'adjusted', $event);
+        }
+        foreach ($serials['found'] as $serial) {
+            $serial->update(['status' => 'in_stock', 'reference' => $count->reference]);
+            StockItemSerialEvent::log($serial, 'found', $event);
         }
     }
 

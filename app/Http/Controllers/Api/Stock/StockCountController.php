@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Stock;
 
-use App\Enums\Stock\StockCountAdjustMode;
 use App\Enums\Stock\StockCountReason;
 use App\Enums\Stock\StockCountStatus;
 use App\Http\Controllers\Controller;
@@ -111,25 +110,14 @@ class StockCountController extends Controller
     public function commit(Request $request, StockCount $stockCount): JsonResponse
     {
         $this->gateManage($request);
-        $data = $request->validate([
-            'mode' => ['nullable', 'in:auto,manual'],
-            'missing_serials' => ['array'],
-            'missing_serials.*' => ['array'],
-            'missing_serials.*.*' => ['integer'],
-        ]);
-        $mode = StockCountAdjustMode::from($data['mode'] ?? 'auto');
+        // Confirming always adjusts; serial ticks come from the draft lines
+        $request->validate(['mode' => ['prohibited']]);
 
-        // keys arrive as strings (stock-item ids) from JSON; cast to int.
-        $missing = [];
-        foreach ($data['missing_serials'] ?? [] as $itemId => $ids) {
-            $missing[(int) $itemId] = array_map('intval', $ids);
-        }
+        $count = $this->service->commit($stockCount, $request->user());
 
-        $count = $this->service->commit($stockCount, $request->user(), $mode, $missing);
-
-        // Fire real-time stock-level alerts for every item whose on-hand was adjusted.
+        // Stock-level alerts for the items whose on-hand changed
         foreach ($count->lines()->with('item')->get() as $line) {
-            if ($line->item) {
+            if ($line->item && ($line->variance() ?? 0) !== 0) {
                 app(StockNotificationService::class)->alert($line->item->fresh());
             }
         }

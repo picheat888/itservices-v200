@@ -106,10 +106,8 @@ class StockItemHistoryTest extends TestCase
         $count = $this->actingAs($super)->postJson('/api/stock-counts', ['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Main'])->id, 'stock_item_ids' => [$item->id]])->assertCreated()->json('data');
         $lineId = $count['lines'][0]['id'];
         $missingId = $item->serials()->where('status', 'in_stock')->orderBy('id')->value('id');
-        $this->actingAs($super)->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$missingId]]]])->assertOk();
-        $this->actingAs($super)->postJson("/api/stock-counts/{$count['id']}/commit", [
-            'mode' => 'auto', 'missing_serials' => [(string) $item->id => [$missingId]],
-        ])->assertOk();
+        $this->actingAs($super)->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$missingId], 'reason' => 'lost']]])->assertOk();
+        $this->actingAs($super)->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertDatabaseHas('stock_item_serial_events', ['stock_item_serial_id' => $missingId, 'event' => 'adjusted']);
     }

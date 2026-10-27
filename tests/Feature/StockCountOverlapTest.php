@@ -105,7 +105,7 @@ class StockCountOverlapTest extends TestCase
         $item = $this->item('A-1', ['Main' => 10]);
         $counts = collect(['SC-2026-901', 'SC-2026-902'])->map(function (string $reference) use ($item) {
             $count = StockCount::create(['reference' => $reference, 'warehouse' => 'Main', 'status' => StockCountStatus::Draft, 'counted_by' => $this->user->id]);
-            $count->lines()->create(['stock_item_id' => $item->id, 'system_qty' => 10, 'counted_qty' => 8]);
+            $count->lines()->create(['stock_item_id' => $item->id, 'system_qty' => 10, 'counted_qty' => 8, 'reason' => 'lost']);
 
             return $count;
         });
@@ -121,15 +121,18 @@ class StockCountOverlapTest extends TestCase
         $this->assertSame(8, $item->fresh()->current_stock);
     }
 
-    public function test_a_report_only_commit_changes_no_stock_so_an_overlap_does_not_stop_it(): void
+    public function test_a_report_only_commit_is_refused_so_an_overlap_cannot_slip_past(): void
     {
         $item = $this->item('A-1', ['Main' => 10]);
         foreach (['SC-2026-901', 'SC-2026-902'] as $reference) {
             $count = StockCount::create(['reference' => $reference, 'warehouse' => 'Main', 'status' => StockCountStatus::Draft, 'counted_by' => $this->user->id]);
-            $count->lines()->create(['stock_item_id' => $item->id, 'system_qty' => 10, 'counted_qty' => 8]);
+            $count->lines()->create(['stock_item_id' => $item->id, 'system_qty' => 10, 'counted_qty' => 8, 'reason' => 'lost']);
         }
+        $first = StockCount::where('reference', 'SC-2026-901')->value('id');
 
-        $this->postJson('/api/stock-counts/'.StockCount::where('reference', 'SC-2026-901')->value('id').'/commit', ['mode' => 'manual'])->assertOk();
+        $this->postJson("/api/stock-counts/{$first}/commit", ['mode' => 'manual'])
+            ->assertUnprocessable()->assertJsonValidationErrors(['mode']);
+        $this->assertSame('draft', StockCount::find($first)->status->value);
         $this->assertSame(10, $item->fresh()->current_stock);
     }
 }

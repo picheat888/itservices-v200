@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Stock\StockCount;
 use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Stock\StockCountService;
@@ -68,7 +71,7 @@ class StockCountSerialTest extends TestCase
         $this->assertSame(3, $count['lines'][0]['system_qty']);
     }
 
-    public function test_auto_commit_marks_missing_serials_adjusted(): void
+    public function test_commit_marks_missing_serials_adjusted(): void
     {
         $item = $this->serialItem('UPS-1', 3);
         $serials = $item->serials()->orderBy('id')->get();
@@ -77,33 +80,33 @@ class StockCountSerialTest extends TestCase
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         // Counted 1 → short by 2; tick 2 serials as missing.
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id, $serials[1]->id]]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id, $serials[1]->id], 'reason' => 'lost']]])->assertOk();
 
-        $missing = [$serials[0]->id, $serials[1]->id];
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", [
-            'mode' => 'auto',
-            'missing_serials' => [(string) $item->id => $missing],
-        ])->assertOk()->assertJsonPath('data.status', 'committed');
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk()->assertJsonPath('data.status', 'committed');
 
         $this->assertSame(1, $item->fresh()->current_stock);
-        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_down', 'qty' => 2]);
+        $movement = StockMovement::where('stock_item_id', $item->id)->sole();
+        $this->assertSame(['adjust_down', 2, 'lost'], [$movement->type, $movement->qty, $movement->reason]);
         $this->assertSame('adjusted', $serials[0]->fresh()->status);
         $this->assertSame('adjusted', $serials[1]->fresh()->status);
         $this->assertSame('in_stock', $serials[2]->fresh()->status);
+        $this->assertSame($count['reference'], $serials[0]->fresh()->reference);
+        $this->assertSame(2, StockItemSerialEvent::where('event', 'adjusted')->where('stock_movement_id', $movement->id)->count());
     }
 
-    public function test_manual_commit_blocked_when_serialized_item_present(): void
+    public function test_serial_commit_needs_no_mode(): void
     {
         $item = $this->serialItem('UPS-1', 3);
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => $item->serials()->orderBy('id')->limit(2)->pluck('id')->all()]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => $item->serials()->orderBy('id')->limit(2)->pluck('id')->all(), 'reason' => 'broken']]])->assertOk();
 
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'count_serial_needs_auto');
-        $this->assertSame(3, $item->fresh()->current_stock);
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertOk()
+            ->assertJsonPath('data.adjust_mode', 'auto');
+        $this->assertSame(1, $item->fresh()->current_stock);
+        $this->assertSame(2, $item->serials()->where('status', 'adjusted')->count());
     }
 
     public function test_wrong_missing_count_is_rejected(): void
@@ -113,14 +116,15 @@ class StockCountSerialTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id]]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id], 'reason' => 'lost']]])->assertOk();
 
-        // One serial ticked in the draft, two sent at commit.
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", [
-            'mode' => 'auto',
-            'missing_serials' => [(string) $item->id => [$serials[0]->id, $serials[1]->id]],
-        ])->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('need', 1)->assertJsonPath('sku', 'UPS-1');
+        // One serial ticked in the draft, but the stored figure says two are short.
+        StockCountLine::whereKey($lineId)->update(['counted_qty' => 1]);
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('need', 2)->assertJsonPath('sku', 'UPS-1');
         $this->assertSame(3, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::count());
     }
 
     public function test_serial_from_another_item_is_rejected(): void
@@ -131,12 +135,15 @@ class StockCountSerialTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$item->serials()->orderBy('id')->value('id')]]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$item->serials()->orderBy('id')->value('id')], 'reason' => 'lost']]])->assertOk();
 
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", [
-            'mode' => 'auto',
-            'missing_serials' => [(string) $item->id => [$otherSerial->id]],
-        ])->assertStatus(422);
+        // The stored tick swapped for another item's serial behind the draft's back.
+        StockCountLine::whereKey($lineId)->update(['missing_serial_ids' => json_encode([$otherSerial->id])]);
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch');
+        $this->assertSame('in_stock', $otherSerial->fresh()->status);
+        $this->assertSame(0, StockMovement::count());
     }
 
     public function test_positive_variance_on_serialized_item_is_rejected(): void
@@ -146,12 +153,10 @@ class StockCountSerialTest extends TestCase
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         // Counted 5 > system 2 (a serialized sheet can only reach this by a stored figure).
-        StockCountLine::whereKey($lineId)->update(['counted_qty' => 5]);
+        StockCountLine::whereKey($lineId)->update(['counted_qty' => 5, 'reason' => 'inbound']);
 
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", [
-            'mode' => 'auto',
-            'missing_serials' => [(string) $item->id => []],
-        ])->assertStatus(422)->assertJsonPath('message', 'count_serial_over')->assertJsonPath('sku', 'UPS-1');
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_over')->assertJsonPath('sku', 'UPS-1');
     }
 
     public function test_serial_system_qty_counts_this_warehouse_serials(): void
@@ -269,5 +274,76 @@ class StockCountSerialTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.lines.0.counted_qty', 3)
             ->assertJsonPath('data.lines.0.found_serial_ids', [$adjusted->id]);
+    }
+
+    // Review Focus 2: a ticked serial that left in_stock after the draft was saved
+    public function test_ticked_serial_that_left_the_warehouse_refuses_commit(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        $serials = $item->serials()->orderBy('id')->get();
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id], 'reason' => 'lost']]])->assertOk();
+        $serials[0]->update(['status' => 'issued']);
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('sku', 'UPS-1');
+
+        $this->assertSame('issued', $serials[0]->fresh()->status);
+        $this->assertSame(3, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::count());
+        $this->assertSame(0, StockItemSerialEvent::where('event', 'adjusted')->count());
+        $this->assertSame('draft', StockCount::find($count['id'])->status->value);
+    }
+
+    /** Commit an original count that writes $missing off, then open its recount. */
+    private function recountAfterWriteOff(StockItem $item, array $missing, User $user): StockCount
+    {
+        $service = app(StockCountService::class);
+        $warehouse = Warehouse::firstOrCreate(['name' => 'Main']);
+        $original = $service->open($warehouse, [$item->id], $user);
+        $service->saveLines($original, [$original->lines->first()->id => ['missing_serial_ids' => $missing, 'reason' => 'lost']]);
+        $service->commit($original->fresh(), $user);
+
+        return $service->open($warehouse, [$item->id], $user, $original->fresh());
+    }
+
+    public function test_a_found_serial_on_a_recount_returns_to_stock(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        $lost = $item->serials()->orderBy('id')->first();
+        $user = $this->super();
+        $recount = $this->recountAfterWriteOff($item, [$lost->id], $user);
+        $this->assertSame(2, $recount->lines->first()->system_qty);
+        app(StockCountService::class)->saveLines($recount, [$recount->lines->first()->id => ['found_serial_ids' => [$lost->id], 'reason' => 'miscount']]);
+
+        app(StockCountService::class)->commit($recount->fresh(), $user);
+
+        $this->assertSame(['in_stock', $recount->reference], [$lost->fresh()->status, $lost->fresh()->reference]);
+        $this->assertSame(3, $item->fresh()->current_stock);
+        $up = StockMovement::where('type', 'adjust_up')->sole();
+        $this->assertSame([1, 'miscount', $recount->reference, 'ADJ-'.now()->year.'-002'], [$up->qty, $up->reason, $up->reference, $up->doc_no]);
+        $this->assertDatabaseHas('stock_item_serial_events', ['stock_item_serial_id' => $lost->id, 'event' => 'found', 'stock_movement_id' => $up->id, 'reference' => $recount->reference]);
+    }
+
+    public function test_a_net_zero_serial_line_logs_events_without_a_movement(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        [$lost, $present] = $item->serials()->orderBy('id')->limit(2)->get()->all();
+        $user = $this->super();
+        $recount = $this->recountAfterWriteOff($item, [$lost->id], $user);
+        app(StockCountService::class)->saveLines($recount, [$recount->lines->first()->id => [
+            'found_serial_ids' => [$lost->id], 'missing_serial_ids' => [$present->id],
+        ]]);
+        $movements = StockMovement::count();
+
+        app(StockCountService::class)->commit($recount->fresh(), $user);
+
+        $this->assertSame($movements, StockMovement::count());
+        $this->assertSame(2, $item->fresh()->current_stock);
+        $this->assertSame(['in_stock', 'adjusted'], [$lost->fresh()->status, $present->fresh()->status]);
+        $this->assertDatabaseHas('stock_item_serial_events', ['stock_item_serial_id' => $lost->id, 'event' => 'found', 'stock_movement_id' => null]);
+        $this->assertDatabaseHas('stock_item_serial_events', ['stock_item_serial_id' => $present->id, 'event' => 'adjusted', 'reference' => $recount->reference]);
     }
 }

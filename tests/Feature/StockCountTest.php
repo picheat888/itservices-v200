@@ -2,15 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Stock\StockCountStatus;
 use App\Models\Permission\RolePermission;
+use App\Models\Stock\StockCount;
+use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Stock\StockNotificationService;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Mockery;
 use Tests\TestCase;
 
 class StockCountTest extends TestCase
@@ -98,7 +103,7 @@ class StockCountTest extends TestCase
 
         $count = $this->open($this->warehouse(), [$item->id]);
         $this->assertSame(10, $count['lines'][0]['system_qty']);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7, 'reason' => 'lost']]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $balances = $item->fresh()->balances()->with('warehouse')->get()->mapWithKeys(fn ($b) => [$b->warehouse->name => $b->qty]);
@@ -113,7 +118,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
 
         $count = $this->open($this->warehouse(), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 12]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 12, 'reason' => 'inbound']]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertSame(12, $item->fresh()->current_stock);
@@ -130,7 +135,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
 
         $count = $this->open($this->warehouse('Branch'), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 4]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 4, 'reason' => 'lost']]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertSame(14, $item->fresh()->current_stock);
@@ -212,7 +217,7 @@ class StockCountTest extends TestCase
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
 
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 7]]])
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 7, 'reason' => 'lost']]])
             ->assertOk()
             ->assertJsonPath('data.lines.0.variance', -3);
 
@@ -230,7 +235,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 9]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 9, 'reason' => 'inbound']]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertSame(9, $item->fresh()->current_stock);
@@ -255,7 +260,7 @@ class StockCountTest extends TestCase
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7, 'reason' => 'lost']]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
@@ -269,7 +274,7 @@ class StockCountTest extends TestCase
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7, 'reason' => 'lost']]])->assertOk();
 
         // A concurrent commit closes the count the moment this commit's transaction begins.
         $fired = false;
@@ -320,53 +325,196 @@ class StockCountTest extends TestCase
         $this->assertDatabaseCount('stock_counts', 0);
     }
 
-    public function test_manual_commit_is_report_only(): void
+    public function test_commit_refuses_a_mode_key(): void
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 4]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 4, 'reason' => 'lost']]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])
-            ->assertOk()
-            ->assertJsonPath('data.status', 'committed')
-            ->assertJsonPath('data.adjust_mode', 'manual');
+            ->assertUnprocessable()->assertJsonValidationErrors(['mode']);
 
-        // Report only: stock untouched, no movements recorded.
+        $this->assertSame('draft', StockCount::find($count['id'])->status->value);
         $this->assertSame(10, $item->fresh()->current_stock);
         $this->assertSame(0, StockMovement::count());
     }
 
-    public function test_auto_commit_persists_mode_and_adjusts(): void
+    public function test_commit_refuses_mode_auto_too(): void
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 7]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 7, 'reason' => 'lost']]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'auto'])
-            ->assertOk()
-            ->assertJsonPath('data.adjust_mode', 'auto');
+            ->assertUnprocessable()->assertJsonValidationErrors(['mode']);
 
-        $this->assertSame(7, $item->fresh()->current_stock);
-        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_down', 'qty' => 3]);
+        $this->assertSame(10, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::count());
     }
 
-    public function test_commit_without_mode_defaults_to_auto(): void
+    public function test_commit_stores_auto(): void
     {
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 8]]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 8, 'reason' => 'used']]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
             ->assertOk()
             ->assertJsonPath('data.adjust_mode', 'auto');
 
         $this->assertSame(8, $item->fresh()->current_stock);
+    }
+
+    public function test_commit_refuses_a_difference_without_reason(): void
+    {
+        $match = $this->item('A-1', 5);
+        $short = $this->item('B-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->open($this->warehouse(), [$match->id, $short->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [
+            $count['lines'][0]['id'] => ['counted_qty' => 5],
+            $count['lines'][1]['id'] => ['counted_qty' => 7],
+        ]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_reason_missing')->assertJsonPath('sku', 'B-1');
+
+        // A custom reason whose note went missing is refused the same way
+        StockCountLine::whereKey($count['lines'][1]['id'])->update(['reason' => 'custom', 'reason_note' => null]);
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_reason_missing')->assertJsonPath('sku', 'B-1');
+
+        $this->assertSame('draft', StockCount::find($count['id'])->status->value);
+        $this->assertSame(0, StockMovement::count());
+        $this->assertSame(10, $short->fresh()->current_stock);
+    }
+
+    public function test_commit_books_doc_no_reason_and_notes(): void
+    {
+        $short = $this->item('A-1', 10);
+        $over = $this->item('B-1', 4);
+        $user = $this->super();
+        $this->actingAs($user);
+        $count = $this->open($this->warehouse(), [$short->id, $over->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [
+            $count['lines'][0]['id'] => ['counted_qty' => 8, 'reason' => 'used'],
+            $count['lines'][1]['id'] => ['counted_qty' => 5, 'reason' => 'custom', 'reason_note' => 'พบหลังตู้'],
+        ]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk()->assertJsonPath('data.adjust_mode', 'auto');
+
+        $year = now()->year;
+        $mainId = $this->warehouse()->id;
+        $down = StockMovement::where('stock_item_id', $short->id)->sole();
+        $this->assertSame(["ADJ-{$year}-001", 'adjust_down', 2, 'used', null, $count['reference'], 'Main', $mainId], [
+            $down->doc_no, $down->type, $down->qty, $down->reason, $down->notes, $down->reference, $down->from_label, $down->from_warehouse_id,
+        ]);
+        $up = StockMovement::where('stock_item_id', $over->id)->sole();
+        $this->assertSame(["ADJ-{$year}-002", 'adjust_up', 1, 'custom', 'พบหลังตู้', 'Main', $mainId], [
+            $up->doc_no, $up->type, $up->qty, $up->reason, $up->notes, $up->to_label, $up->to_warehouse_id,
+        ]);
+
+        $this->assertSame(8, $short->fresh()->current_stock);
+        $this->assertSame(8, (int) $short->balances()->where('warehouse_id', $mainId)->value('qty'));
+        $this->assertSame(5, $over->fresh()->current_stock);
+        $this->assertSame(5, (int) $over->balances()->where('warehouse_id', $mainId)->value('qty'));
+
+        $stored = StockCount::find($count['id']);
+        $this->assertSame($user->id, $stored->committed_by);
+        $this->assertSame('auto', $stored->adjust_mode->value);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'Committed stock count', 'target' => "{$count['reference']} (2 items adjusted)"]);
+    }
+
+    // STK-6: a warehouse renamed while the draft is open still takes the difference
+    public function test_commit_after_warehouse_rename_books_the_same_warehouse(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $main = $this->warehouse();
+        $count = $this->open($main, [$item->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 6, 'reason' => 'lost']]])->assertOk();
+        $main->update(['name' => 'Main 2']);
+        $warehouses = Warehouse::count();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+
+        $this->assertSame($warehouses, Warehouse::count());
+        $this->assertSame(6, (int) $item->balances()->where('warehouse_id', $main->id)->value('qty'));
+        $this->assertSame(1, $item->balances()->count());
+        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'from_label' => 'Main 2', 'from_warehouse_id' => $main->id]);
+    }
+
+    public function test_commit_without_warehouse_is_refused(): void
+    {
+        $item = $this->item('A-1', 10);
+        $user = $this->super();
+        $this->actingAs($user);
+        $count = StockCount::create(['status' => StockCountStatus::Draft, 'counted_by' => $user->id]);
+        $count->lines()->create(['stock_item_id' => $item->id, 'system_qty' => 10, 'counted_qty' => 8, 'reason' => 'lost']);
+        $this->assertNull($count->fresh()->warehouse_id);
+
+        $this->postJson("/api/stock-counts/{$count->id}/commit", [])
+            ->assertStatus(422)->assertJsonPath('message', 'count_needs_warehouse')->assertJsonPath('sku', '');
+
+        $this->assertSame(10, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::count());
+    }
+
+    // STK-12: only the items whose stock changed are re-checked for alerts
+    public function test_alerts_only_for_changed_items(): void
+    {
+        $match = $this->item('A-1', 5);
+        $short = $this->item('B-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->open($this->warehouse(), [$match->id, $short->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [
+            $count['lines'][0]['id'] => ['counted_qty' => 5],
+            $count['lines'][1]['id'] => ['counted_qty' => 7, 'reason' => 'lost'],
+        ]])->assertOk();
+        $alerts = $this->spy(StockNotificationService::class);
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+
+        $alerts->shouldHaveReceived('alert')->once();
+        $alerts->shouldHaveReceived('alert')->with(Mockery::on(fn (StockItem $item) => $item->id === $short->id && $item->current_stock === 7));
+    }
+
+    public function test_all_matching_rows_still_commit(): void
+    {
+        $a = $this->item('A-1', 10);
+        $b = $this->item('B-1', 3);
+        $this->actingAs($this->super());
+        $count = $this->open($this->warehouse(), [$a->id, $b->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [
+            $count['lines'][0]['id'] => ['counted_qty' => 10],
+            $count['lines'][1]['id'] => ['counted_qty' => 3],
+        ]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk()->assertJsonPath('data.status', 'committed');
+
+        $this->assertSame(0, StockMovement::count());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'Committed stock count', 'target' => "{$count['reference']} (0 items adjusted)"]);
+    }
+
+    public function test_second_commit_is_refused(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->open($this->warehouse(), [$item->id]);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 9, 'reason' => 'broken']]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+        $movements = StockMovement::count();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
+
+        $this->assertSame($movements, StockMovement::count());
+        $this->assertSame(9, $item->fresh()->current_stock);
     }
 
     public function test_reference_auto_numbers_per_year(): void
