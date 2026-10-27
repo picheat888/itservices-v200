@@ -207,14 +207,27 @@ final class DemoStock implements DemoStep
         $ctx->actAs($lead);
 
         $clock->at($clock->daysAgo(12, 16));
-        $count = $this->counts->open(['warehouse' => $warehouses[2], 'note' => 'Quarter-end count'], $lead);
+        $count = $this->counts->open($this->warehouse($warehouses[2]), $this->itemIdsIn($warehouses[2]), $lead);
         $counted = $count->lines->values()->mapWithKeys(fn ($line, int $i) => [
             $line->id => $i === 0 ? max(0, $line->system_qty - 1) : $line->system_qty,
         ])->all();
         $this->counts->commit($this->counts->saveCounts($count, $counted), $lead);
 
         $clock->at($clock->daysAgo(1, 16));
-        $this->counts->open(['warehouse' => $warehouses[0], 'note' => 'Monthly spot check'], $lead);
+        $this->counts->open($this->warehouse($warehouses[0]), $this->itemIdsIn($warehouses[0]), $lead);
+    }
+
+    private function warehouse(string $name): Warehouse
+    {
+        return Warehouse::query()->where('name', $name)->firstOrFail();
+    }
+
+    /** @return list<int> items holding stock in the named warehouse */
+    private function itemIdsIn(string $name): array
+    {
+        return StockItem::query()
+            ->whereHas('balances', fn ($q) => $q->where('qty', '>', 0)->whereHas('warehouse', fn ($w) => $w->where('name', $name)))
+            ->pluck('id')->all();
     }
 
     /** A controller-shaped request acting as $user. */

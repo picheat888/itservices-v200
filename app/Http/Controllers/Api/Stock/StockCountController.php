@@ -96,7 +96,7 @@ class StockCountController extends Controller
 
         $count = $this->service->saveCounts($stockCount, $byLineId);
 
-        return (new StockCountResource($count->load(['countedBy', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -126,7 +126,7 @@ class StockCountController extends Controller
             }
         }
 
-        return (new StockCountResource($count->load(['countedBy', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response();
     }
 
