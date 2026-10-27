@@ -401,6 +401,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         Route::put('workflows/{workflow}', [WorkflowController::class, 'update'])->name('api.workflows.update');
     });
     Route::post('stock-counts/{stockCount}/commit', [StockCountController::class, 'commit'])->name('api.stock-counts.commit');
+    Route::post('stock-counts/{stockCount}/recount', [StockCountController::class, 'recount'])->name('api.stock-counts.recount');
     Route::apiResource('stock-counts', StockCountController::class)->except(['edit', 'create']);
 
     // Permissions / RBAC + audit

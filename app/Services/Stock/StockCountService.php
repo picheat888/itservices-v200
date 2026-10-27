@@ -67,6 +67,28 @@ class StockCountService
         });
     }
 
+    /** Open a draft in the same warehouse holding only the rows of a confirmed sheet whose count did not match. */
+    public function recount(StockCount $original, User $user): StockCount
+    {
+        if ($original->status !== StockCountStatus::Committed || $original->adjust_mode === StockCountAdjustMode::Manual) {
+            Refusal::fail('count_recount_not_committed', ['reference' => $original->reference]);
+        }
+
+        $warehouse = $original->warehouse_id === null ? null : Warehouse::find($original->warehouse_id);
+        if ($warehouse === null) {
+            Refusal::fail('count_needs_warehouse', ['sku' => '']);
+        }
+
+        $itemIds = $original->lines()->get()
+            ->filter(fn (StockCountLine $line) => ($line->variance() ?? 0) !== 0)
+            ->pluck('stock_item_id')->all();
+        if ($itemIds === []) {
+            Refusal::fail('count_recount_nothing', ['reference' => $original->reference]);
+        }
+
+        return $this->open($warehouse, $itemIds, $user, $original);
+    }
+
     /**
      * Save a draft's lines; only the keys present in a line's payload change.
      *
@@ -160,9 +182,8 @@ class StockCountService
         $valid = $missing === [] || $query('in_stock')->whereIn('id', $missing)->count() === count($missing);
 
         if ($valid && $found !== []) {
-            $original = $count->recountOf;
-            $valid = $original !== null
-                && $query('adjusted')->where('reference', $original->reference)->whereIn('id', $found)->count() === count($found);
+            $lost = $count->lostSerials($line->stock_item_id);
+            $valid = $lost !== null && $lost->whereIn('id', $found)->count() === count($found);
         }
 
         if (! $valid) {
@@ -335,11 +356,9 @@ class StockCountService
             ->where('status', $status)
             ->lockForUpdate();
 
-        $originalReference = $count->recountOf?->reference;
         $missingRows = $serials('in_stock')->whereIn('id', $missing)->get();
-        $foundRows = $found === [] || $originalReference === null
-            ? new EloquentCollection
-            : $serials('adjusted')->where('reference', $originalReference)->whereIn('id', $found)->get();
+        $lost = $found === [] ? null : $count->lostSerials($item->id);
+        $foundRows = $lost === null ? new EloquentCollection : $lost->lockForUpdate()->whereIn('id', $found)->get();
 
         if ($variance !== count($found) - count($missing) || $missingRows->count() !== count($missing) || $foundRows->count() !== count($found)) {
             Refusal::fail('count_serial_missing_mismatch', ['need' => max(0, count($found) - $variance), 'sku' => $item->sku]);

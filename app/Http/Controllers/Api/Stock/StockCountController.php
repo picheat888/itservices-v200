@@ -126,6 +126,16 @@ class StockCountController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
+    public function recount(Request $request, StockCount $stockCount): JsonResponse
+    {
+        $this->gateManage($request);
+
+        $count = $this->service->recount($stockCount, $request->user());
+
+        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
+            ->additional(['message' => 'success'])->response()->setStatusCode(201);
+    }
+
     public function destroy(Request $request, StockCount $stockCount): JsonResponse
     {
         $this->gateManage($request);

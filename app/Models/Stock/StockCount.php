@@ -5,6 +5,7 @@ namespace App\Models\Stock;
 use App\Enums\Stock\StockCountAdjustMode;
 use App\Enums\Stock\StockCountStatus;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -63,5 +64,24 @@ class StockCount extends Model
     public function committedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'committed_by');
+    }
+
+    /**
+     * Serials of the item the original count wrote off in this warehouse and nothing has touched since;
+     * null when this is not a recount.
+     *
+     * @return Builder<StockItemSerial>|null
+     */
+    public function lostSerials(int $stockItemId): ?Builder
+    {
+        $original = $this->recountOf;
+        if ($original === null) {
+            return null;
+        }
+
+        return StockItemSerial::where('stock_item_id', $stockItemId)
+            ->where('warehouse_id', $this->warehouse_id)
+            ->where('status', 'adjusted')
+            ->where('reference', $original->reference);
     }
 }

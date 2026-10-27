@@ -41,6 +41,10 @@ class StockCountResource extends JsonResource
                 'missing_serial_ids' => $l->missing_serial_ids ?? [],
                 'found_serial_ids' => $l->found_serial_ids ?? [],
                 'track_serial' => (bool) $l->item?->track_serial,
+                // Serials the original count wrote off, open to tick back on a recount
+                'lost_serials' => $l->item?->track_serial
+                    ? ($this->resource->lostSerials($l->stock_item_id)?->orderBy('id')->get(['id', 'serial'])->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values() ?? [])
+                    : [],
                 // Only present once the in-stock serials are eager-loaded (the show endpoint).
                 'serials' => $l->item && $l->item->relationLoaded('serials')
                     ? $l->item->serials->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values()
