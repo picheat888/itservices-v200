@@ -3,9 +3,11 @@
 namespace App\Services\Stock;
 
 use App\Enums\Stock\StockCountAdjustMode;
+use App\Enums\Stock\StockCountReason;
 use App\Enums\Stock\StockCountStatus;
 use App\Models\AuditLog;
 use App\Models\Stock\StockCount;
+use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
@@ -64,24 +66,113 @@ class StockCountService
     }
 
     /**
-     * Set counted quantities on a draft session's lines.
+     * Save a draft's lines; only the keys present in a line's payload change.
      *
-     * @param  array<int, ?int>  $countedByLineId  line id => counted qty (null clears)
+     * @param  array<int, array{counted_qty?: ?int, reason?: ?string, reason_note?: ?string, missing_serial_ids?: ?list<int>, found_serial_ids?: ?list<int>}>  $lines  keyed by line id
      */
-    public function saveCounts(StockCount $count, array $countedByLineId): StockCount
+    public function saveLines(StockCount $count, array $lines): StockCount
     {
         abort_unless($count->status === StockCountStatus::Draft, 422, 'count_not_editable');
 
-        DB::transaction(function () use ($count, $countedByLineId) {
-            foreach ($count->lines as $line) {
-                if (array_key_exists($line->id, $countedByLineId)) {
-                    $value = $countedByLineId[$line->id];
-                    $line->update(['counted_qty' => $value === null ? null : max(0, (int) $value)]);
+        DB::transaction(function () use ($count, $lines) {
+            foreach ($count->lines()->with('item')->get() as $line) {
+                if (array_key_exists($line->id, $lines)) {
+                    $this->saveLine($count, $line, $lines[$line->id]);
                 }
             }
         });
 
         return $count->fresh('lines');
+    }
+
+    /** @param  array{counted_qty?: ?int, reason?: ?string, reason_note?: ?string, missing_serial_ids?: ?list<int>, found_serial_ids?: ?list<int>}  $payload */
+    private function saveLine(StockCount $count, StockCountLine $line, array $payload): void
+    {
+        $sku = (string) $line->item?->sku;
+        $isSerial = (bool) $line->item?->track_serial;
+        $clearing = array_key_exists('counted_qty', $payload) && $payload['counted_qty'] === null;
+
+        if ($clearing) {
+            $line->update(['counted_qty' => null, 'reason' => null, 'reason_note' => null, 'missing_serial_ids' => null, 'found_serial_ids' => null]);
+
+            return;
+        }
+
+        $changes = [];
+
+        if ($isSerial && (array_key_exists('missing_serial_ids', $payload) || array_key_exists('found_serial_ids', $payload))) {
+            $missing = $this->uniqueIds($payload['missing_serial_ids'] ?? $line->missing_serial_ids ?? []);
+            $found = $this->uniqueIds($payload['found_serial_ids'] ?? $line->found_serial_ids ?? []);
+            $this->assertSerialsBelong($count, $line, $missing, $found);
+
+            $changes['missing_serial_ids'] = $missing;
+            $changes['found_serial_ids'] = $found;
+            $changes['counted_qty'] = $line->system_qty - count($missing) + count($found);
+        } elseif (! $isSerial && array_key_exists('counted_qty', $payload)) {
+            $changes['counted_qty'] = (int) $payload['counted_qty'];
+        }
+
+        if (array_key_exists('reason', $payload)) {
+            $changes['reason'] = $payload['reason'] === null ? null : StockCountReason::from($payload['reason']);
+        }
+        if (array_key_exists('reason_note', $payload)) {
+            $changes['reason_note'] = $payload['reason_note'];
+        }
+
+        $line->fill($changes);
+        $this->assertReasonFits($line, $sku);
+        $line->save();
+    }
+
+    /** A reason must explain the line's variance, and a custom one needs its note. */
+    private function assertReasonFits(StockCountLine $line, string $sku): void
+    {
+        if ($line->reason === null) {
+            return;
+        }
+
+        $variance = $line->variance();
+        if ($variance === null || ! $line->reason->fitsVariance($variance)) {
+            Refusal::fail('count_reason_wrong_side', ['sku' => $sku]);
+        }
+        if ($line->reason === StockCountReason::Custom && blank($line->reason_note)) {
+            Refusal::fail('count_reason_note_missing', ['sku' => $sku]);
+        }
+    }
+
+    /**
+     * Ticked-missing ids must be this warehouse's in-stock serials of the item; found ids must be the
+     * adjusted serials the original count wrote off here (recounts only).
+     *
+     * @param  list<int>  $missing
+     * @param  list<int>  $found
+     */
+    private function assertSerialsBelong(StockCount $count, StockCountLine $line, array $missing, array $found): void
+    {
+        $query = fn (string $status) => StockItemSerial::where('stock_item_id', $line->stock_item_id)
+            ->where('warehouse_id', $count->warehouse_id)
+            ->where('status', $status);
+
+        $valid = $missing === [] || $query('in_stock')->whereIn('id', $missing)->count() === count($missing);
+
+        if ($valid && $found !== []) {
+            $original = $count->recountOf;
+            $valid = $original !== null
+                && $query('adjusted')->where('reference', $original->reference)->whereIn('id', $found)->count() === count($found);
+        }
+
+        if (! $valid) {
+            Refusal::fail('count_serial_not_here', ['sku' => (string) $line->item?->sku]);
+        }
+    }
+
+    /**
+     * @param  array<int, mixed>  $ids
+     * @return list<int>
+     */
+    private function uniqueIds(array $ids): array
+    {
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 
     /**

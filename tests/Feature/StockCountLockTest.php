@@ -95,7 +95,7 @@ class StockCountLockTest extends TestCase
             ->assertUnprocessable()->assertJsonPath('message', 'count_in_progress');
         $this->assertSame(10, $item->fresh()->current_stock);
 
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 10]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 10]]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->postJson("/api/stock-requests/{$request->id}/fulfill", ['from_warehouse' => 'Main'])->assertOk();

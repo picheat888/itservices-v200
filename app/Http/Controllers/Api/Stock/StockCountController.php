@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Stock;
 
 use App\Enums\Stock\StockCountAdjustMode;
+use App\Enums\Stock\StockCountReason;
 use App\Enums\Stock\StockCountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Stock\StockCountResource;
@@ -84,17 +85,24 @@ class StockCountController extends Controller
     {
         $this->gateManage($request);
         $data = $request->validate([
-            'counts' => ['required', 'array'],
-            'counts.*' => ['nullable', 'integer', 'min:0'],
+            'lines' => ['required', 'array'],
+            'lines.*' => ['array'],
+            'lines.*.counted_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'lines.*.reason' => ['nullable', Rule::enum(StockCountReason::class)],
+            'lines.*.reason_note' => ['nullable', 'string', 'max:500'],
+            'lines.*.missing_serial_ids' => ['nullable', 'array'],
+            'lines.*.missing_serial_ids.*' => ['integer'],
+            'lines.*.found_serial_ids' => ['nullable', 'array'],
+            'lines.*.found_serial_ids.*' => ['integer'],
         ]);
 
         // keys arrive as strings from JSON; cast to int line ids.
         $byLineId = [];
-        foreach ($data['counts'] as $lineId => $qty) {
-            $byLineId[(int) $lineId] = $qty === null ? null : (int) $qty;
+        foreach ($data['lines'] as $lineId => $payload) {
+            $byLineId[(int) $lineId] = $payload;
         }
 
-        $count = $this->service->saveCounts($stockCount, $byLineId);
+        $count = $this->service->saveLines($stockCount, $byLineId);
 
         return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response();

@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Stock\StockCountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -75,7 +77,7 @@ class StockCountSerialTest extends TestCase
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
         // Counted 1 → short by 2; tick 2 serials as missing.
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id, $serials[1]->id]]]])->assertOk();
 
         $missing = [$serials[0]->id, $serials[1]->id];
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [
@@ -96,7 +98,7 @@ class StockCountSerialTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => $item->serials()->orderBy('id')->limit(2)->pluck('id')->all()]]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])
             ->assertStatus(422)
@@ -111,13 +113,13 @@ class StockCountSerialTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$serials[0]->id]]]])->assertOk();
 
-        // Short by 2 but only 1 serial ticked.
+        // One serial ticked in the draft, two sent at commit.
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [
             'mode' => 'auto',
-            'missing_serials' => [(string) $item->id => [$serials[0]->id]],
-        ])->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('need', 2)->assertJsonPath('sku', 'UPS-1');
+            'missing_serials' => [(string) $item->id => [$serials[0]->id, $serials[1]->id]],
+        ])->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('need', 1)->assertJsonPath('sku', 'UPS-1');
         $this->assertSame(3, $item->fresh()->current_stock);
     }
 
@@ -129,7 +131,7 @@ class StockCountSerialTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$item->serials()->orderBy('id')->value('id')]]]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [
             'mode' => 'auto',
@@ -143,8 +145,8 @@ class StockCountSerialTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        // Counted 5 > system 2.
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 5]])->assertOk();
+        // Counted 5 > system 2 (a serialized sheet can only reach this by a stored figure).
+        StockCountLine::whereKey($lineId)->update(['counted_qty' => 5]);
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [
             'mode' => 'auto',
@@ -162,5 +164,110 @@ class StockCountSerialTest extends TestCase
         $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
 
         $this->assertSame(2, $count['lines'][0]['system_qty']);
+    }
+
+    public function test_serial_line_qty_comes_from_ticks(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        $serials = $item->serials()->orderBy('id')->get();
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 99, 'missing_serial_ids' => [$serials[0]->id]]]])
+            ->assertOk()
+            ->assertJsonPath('data.lines.0.counted_qty', 2)
+            ->assertJsonPath('data.lines.0.missing_serial_ids', [$serials[0]->id]);
+    }
+
+    public function test_an_empty_tick_list_counts_every_serial_present(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => []]]])
+            ->assertOk()->assertJsonPath('data.lines.0.counted_qty', 3);
+    }
+
+    public function test_clearing_a_serial_line_clears_its_ticks(): void
+    {
+        $item = $this->serialItem('UPS-1', 3);
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$item->serials()->value('id')]]]])->assertOk();
+
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => null]]])
+            ->assertOk()
+            ->assertJsonPath('data.lines.0.counted_qty', null)
+            ->assertJsonPath('data.lines.0.missing_serial_ids', []);
+    }
+
+    public function test_missing_serial_of_another_warehouse_is_refused(): void
+    {
+        $item = $this->serialItem('UPS-1', 2, 'Main');
+        $elsewhere = $item->serials()->create([
+            'serial' => 'UPS-1-SN9', 'status' => 'in_stock', 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Other'])->id,
+        ]);
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$elsewhere->id]]]])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_not_here')->assertJsonPath('sku', 'UPS-1');
+    }
+
+    public function test_missing_serial_of_another_item_is_refused_in_the_draft(): void
+    {
+        $item = $this->serialItem('UPS-1', 2);
+        $other = $this->serialItem('UPS-2', 2);
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['missing_serial_ids' => [$other->serials()->value('id')]]]])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_not_here');
+    }
+
+    public function test_a_found_serial_on_a_count_that_is_not_a_recount_is_refused(): void
+    {
+        $item = $this->serialItem('UPS-1', 2);
+        $adjusted = $item->serials()->create([
+            'serial' => 'UPS-1-SN9', 'status' => 'adjusted', 'reference' => 'SC-2026-001',
+            'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Main'])->id,
+        ]);
+        $this->actingAs($this->super());
+        $count = $this->open(Warehouse::firstOrCreate(['name' => 'Main']), [$item->id]);
+        $lineId = $count['lines'][0]['id'];
+
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['found_serial_ids' => [$adjusted->id]]]])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_not_here');
+    }
+
+    public function test_a_found_serial_of_the_original_count_is_accepted_on_a_recount(): void
+    {
+        $item = $this->serialItem('UPS-1', 2);
+        $warehouse = Warehouse::firstOrCreate(['name' => 'Main']);
+        $user = $this->super();
+        $original = app(StockCountService::class)->open($warehouse, [$item->id], $user);
+        $original->update(['status' => 'committed']);
+        $adjusted = $item->serials()->create([
+            'serial' => 'UPS-1-SN9', 'status' => 'adjusted', 'reference' => $original->reference, 'warehouse_id' => $warehouse->id,
+        ]);
+        $unrelated = $item->serials()->create([
+            'serial' => 'UPS-1-SN8', 'status' => 'adjusted', 'reference' => 'SC-2020-999', 'warehouse_id' => $warehouse->id,
+        ]);
+        $recount = app(StockCountService::class)->open($warehouse, [$item->id], $user, $original);
+        $lineId = $recount->lines->first()->id;
+        $this->actingAs($user);
+
+        $this->putJson("/api/stock-counts/{$recount->id}", ['lines' => [$lineId => ['found_serial_ids' => [$unrelated->id]]]])
+            ->assertStatus(422)->assertJsonPath('message', 'count_serial_not_here');
+        $this->putJson("/api/stock-counts/{$recount->id}", ['lines' => [$lineId => ['found_serial_ids' => [$adjusted->id]]]])
+            ->assertOk()
+            ->assertJsonPath('data.lines.0.counted_qty', 3)
+            ->assertJsonPath('data.lines.0.found_serial_ids', [$adjusted->id]);
     }
 }

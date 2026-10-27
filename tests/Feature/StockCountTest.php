@@ -79,7 +79,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $id = $this->open($this->warehouse(), [$a->id, $b->id])['id'];
         $lineId = $this->getJson("/api/stock-counts/{$id}")->json('data.lines.0.id');
-        $this->putJson("/api/stock-counts/{$id}", ['counts' => [$lineId => 3]])->assertOk();
+        $this->putJson("/api/stock-counts/{$id}", ['lines' => [$lineId => ['counted_qty' => 3]]])->assertOk();
 
         $this->getJson('/api/stock-counts')->assertOk()
             ->assertJsonMissingPath('data.0.lines')
@@ -98,7 +98,7 @@ class StockCountTest extends TestCase
 
         $count = $this->open($this->warehouse(), [$item->id]);
         $this->assertSame(10, $count['lines'][0]['system_qty']);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7]]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $balances = $item->fresh()->balances()->with('warehouse')->get()->mapWithKeys(fn ($b) => [$b->warehouse->name => $b->qty]);
@@ -113,7 +113,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
 
         $count = $this->open($this->warehouse(), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 12]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 12]]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertSame(12, $item->fresh()->current_stock);
@@ -130,7 +130,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
 
         $count = $this->open($this->warehouse('Branch'), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 4]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 4]]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertSame(14, $item->fresh()->current_stock);
@@ -212,7 +212,7 @@ class StockCountTest extends TestCase
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
 
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 7]])
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 7]]])
             ->assertOk()
             ->assertJsonPath('data.lines.0.variance', -3);
 
@@ -230,7 +230,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 9]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 9]]])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
 
         $this->assertSame(9, $item->fresh()->current_stock);
@@ -255,7 +255,7 @@ class StockCountTest extends TestCase
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7]]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
@@ -269,7 +269,7 @@ class StockCountTest extends TestCase
         $item = $this->item('A-1', 10);
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$count['lines'][0]['id'] => ['counted_qty' => 7]]])->assertOk();
 
         // A concurrent commit closes the count the moment this commit's transaction begins.
         $fired = false;
@@ -305,7 +305,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 4]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 4]]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])
             ->assertOk()
@@ -323,7 +323,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 7]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 7]]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'auto'])
             ->assertOk()
@@ -339,7 +339,7 @@ class StockCountTest extends TestCase
         $this->actingAs($this->super());
         $count = $this->open($this->warehouse(), [$item->id]);
         $lineId = $count['lines'][0]['id'];
-        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 8]])->assertOk();
+        $this->putJson("/api/stock-counts/{$count['id']}", ['lines' => [$lineId => ['counted_qty' => 8]]])->assertOk();
 
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
             ->assertOk()
@@ -375,5 +375,116 @@ class StockCountTest extends TestCase
             RolePermission::create(['role_id' => $user->role_id, 'permission' => $p, 'allowed' => true]);
         }
         $this->actingAs($user)->postJson('/api/stock-counts', $body)->assertCreated();
+    }
+
+    /** Open a one-line count (system 10) and return [count id, line id]. */
+    private function openOneLine(): array
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->open($this->warehouse(), [$item->id]);
+
+        return [$count['id'], $count['lines'][0]['id']];
+    }
+
+    private function saveLine(int $countId, int $lineId, array $payload)
+    {
+        return $this->putJson("/api/stock-counts/{$countId}", ['lines' => [$lineId => $payload]]);
+    }
+
+    public function test_save_stores_qty_reason_and_note(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'used', 'reason_note' => 'sent to HR'])->assertOk();
+
+        $this->getJson("/api/stock-counts/{$countId}")
+            ->assertJsonPath('data.lines.0.counted_qty', 7)
+            ->assertJsonPath('data.lines.0.reason', 'used')
+            ->assertJsonPath('data.lines.0.reason_note', 'sent to HR')
+            ->assertJsonPath('data.lines.0.found_serial_ids', []);
+    }
+
+    public function test_save_refuses_a_reason_from_the_wrong_side(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 12, 'reason' => 'lost'])
+            ->assertStatus(422)->assertJsonPath('message', 'count_reason_wrong_side')->assertJsonPath('sku', 'A-1');
+    }
+
+    public function test_save_refuses_a_reason_on_a_line_with_no_difference(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 10, 'reason' => 'miscount'])
+            ->assertStatus(422)->assertJsonPath('message', 'count_reason_wrong_side');
+    }
+
+    public function test_custom_needs_a_note(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'custom'])
+            ->assertStatus(422)->assertJsonPath('message', 'count_reason_note_missing')->assertJsonPath('sku', 'A-1');
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'custom', 'reason_note' => 'water damage'])->assertOk();
+    }
+
+    public function test_save_allows_a_difference_without_reason(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7])
+            ->assertOk()->assertJsonPath('data.lines.0.reason', null);
+    }
+
+    public function test_counted_qty_is_capped(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 1000001])->assertStatus(422);
+        $this->saveLine($countId, $lineId, ['counted_qty' => 1000000])->assertOk();
+    }
+
+    public function test_only_the_keys_sent_change(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'lost'])->assertOk();
+
+        $this->saveLine($countId, $lineId, ['reason_note' => 'box 3'])
+            ->assertOk()
+            ->assertJsonPath('data.lines.0.counted_qty', 7)
+            ->assertJsonPath('data.lines.0.reason', 'lost')
+            ->assertJsonPath('data.lines.0.reason_note', 'box 3');
+    }
+
+    public function test_a_stored_reason_that_stops_fitting_after_a_qty_change_is_refused(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'lost'])->assertOk();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 12])
+            ->assertStatus(422)->assertJsonPath('message', 'count_reason_wrong_side');
+        $this->saveLine($countId, $lineId, ['counted_qty' => 12, 'reason' => null])->assertOk();
+    }
+
+    public function test_clearing_the_count_clears_reason_and_note(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'custom', 'reason_note' => 'x'])->assertOk();
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => null])
+            ->assertOk()
+            ->assertJsonPath('data.lines.0.counted_qty', null)
+            ->assertJsonPath('data.lines.0.reason', null)
+            ->assertJsonPath('data.lines.0.reason_note', null);
+    }
+
+    public function test_a_committed_count_cannot_be_saved(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+        DB::table('stock_counts')->where('id', $countId)->update(['status' => 'committed']);
+
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7])->assertStatus(422);
     }
 }

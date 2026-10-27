@@ -39,7 +39,7 @@ class StockCountResource extends JsonResource
                 'reason' => $l->reason?->value,
                 'reason_note' => $l->reason_note,
                 'missing_serial_ids' => $l->missing_serial_ids ?? [],
-                'found_serial_ids' => $l->found_serial_ids,
+                'found_serial_ids' => $l->found_serial_ids ?? [],
                 'track_serial' => (bool) $l->item?->track_serial,
                 // Only present once the in-stock serials are eager-loaded (the show endpoint).
                 'serials' => $l->item && $l->item->relationLoaded('serials')
