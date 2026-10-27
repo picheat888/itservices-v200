@@ -4,6 +4,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
 import { FormErrorBanner } from '@/shared/components/field';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -12,6 +13,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
@@ -28,7 +30,7 @@ import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Ban, Check, FilePlus2, Filter, Search, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { RequestRowMenu } from '../../components/request-row-menu';
-import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
+import { NEW_REQUEST_DETAIL, useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { allocKey, greedyAlloc, prunePicks, refillAlloc } from '../../lib/fulfil-alloc';
 import { stockRefusalText } from '../../lib/refusal';
@@ -77,6 +79,8 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         isPlaceholderData: requestsPlaceholder,
     } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status, search: sentSearch || undefined });
     const requests = requestsPage?.data ?? [];
+    // A request the user just submitted stays on top for a minute
+    const newReqs = useNewRows({ scope: 'stock-requests', rows: requests, rowKey: (r) => r.id, detail: NEW_REQUEST_DETAIL });
     const { approve, reject, cancel, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     // Open state is separate from the data so the dialog content stays mounted during the close animation.
@@ -177,8 +181,8 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         });
     };
 
-    const hasRowButtons = requests.some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'));
-    const hasRowMenu = requests.some((r) => r.can_cancel);
+    const hasRowButtons = [...requests, ...newReqs.pinned].some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'));
+    const hasRowMenu = [...requests, ...newReqs.pinned].some((r) => r.can_cancel);
 
     const columns: Column<(typeof requests)[number]>[] = [
         {
@@ -187,7 +191,12 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             header: t('stock_request_no'),
             width: '110px',
             className: 'whitespace-nowrap',
-            render: (r) => <span className="text-xs font-semibold">{requestNo(r)}</span>,
+            render: (r) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-xs font-semibold">{requestNo(r)}</span>
+                    {newReqs.isNew(r) && <NewBadge />}
+                </div>
+            ),
         },
         {
             key: 'requested_at',
@@ -421,7 +430,9 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             <DataTable
                 columns={columns}
                 rows={requests}
+                pinned={newReqs.pinned}
                 rowKey={(r) => r.id}
+                rowClassName={(r) => (newReqs.isNew(r) ? NEW_ROW_CLASS : undefined)}
                 loading={requestsLoading || (requestsFetching && requestsPlaceholder)}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
                 empty={

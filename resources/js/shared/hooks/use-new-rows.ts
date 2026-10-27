@@ -13,6 +13,8 @@ interface NewRowsOptions<T> {
     rowKey: (row: T) => RowId;
     /** Fetches a pinned record the current page does not hold; leave out for lists that hold every row. */
     detail?: { key: (id: RowId) => QueryKey; fetch: (id: RowId) => Promise<T> };
+    /** False while the list is not on screen (another tab): no detail fetch. */
+    active?: boolean;
 }
 
 export interface NewRows<T> {
@@ -23,7 +25,7 @@ export interface NewRows<T> {
     isPinnedOnly: (row: T) => boolean;
 }
 
-export function useNewRows<T>({ scope, rows, rowKey, detail }: NewRowsOptions<T>): NewRows<T> {
+export function useNewRows<T>({ scope, rows, rowKey, detail, active = true }: NewRowsOptions<T>): NewRows<T> {
     const entries = useNewRowsStore((s) => s.entries);
     const user = currentUserId();
     const [now, setNow] = useState(() => Date.now());
@@ -38,7 +40,7 @@ export function useNewRows<T>({ scope, rows, rowKey, detail }: NewRowsOptions<T>
 
     const ids = useMemo(() => (user === null ? [] : liveIds(entries, user, scope, now)), [entries, user, scope, now]);
     const onPage = useMemo(() => new Map(rows.map((r) => [rowKey(r), r] as const)), [rows, rowKey]);
-    const missing = detail ? ids.filter((id) => !onPage.has(id)) : [];
+    const missing = detail && active ? ids.filter((id) => !onPage.has(id)) : [];
 
     const fetched = useQueries({
         queries: missing.map((id) => ({

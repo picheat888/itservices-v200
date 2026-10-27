@@ -7,6 +7,7 @@ import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { InfoPopover } from '@/shared/components/info-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
@@ -16,6 +17,7 @@ import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { type ListParamPatch, useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalName } from '@/shared/hooks/use-local-name';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -59,7 +61,15 @@ import { RequestDrawer } from '../components/request-drawer';
 import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
 import { STOCK_STATUS_TONE, StockLevelBar } from '../components/stock-level-bar';
-import { useStockCounts, useStockItem, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
+import {
+    NEW_ITEM_DETAIL,
+    useStockCounts,
+    useStockItem,
+    useStockItemMutations,
+    useStockItemsPage,
+    useStockRequests,
+    useStockSummary,
+} from '../hooks/use-stock';
 import { AuditTab } from './tabs/counting-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { OverviewTab } from './tabs/overview-tab';
@@ -252,6 +262,8 @@ export default function StockPage() {
     const { data: itemsPageData, isLoading: itemsLoading, isFetching: itemsFetching, isPlaceholderData: itemsPlaceholder } = itemsPageQuery;
     const items = itemsPageData?.data ?? [];
     const itemsTotal = itemsPageData?.meta.total ?? 0;
+    // An item the user just added stays on top for a minute
+    const newItems = useNewRows({ scope: 'stock-items', rows: items, rowKey: (i) => i.id, detail: NEW_ITEM_DETAIL, active: tab === 'items' });
 
     const canViewRequests = can('view_request');
     const { data: requestsPage } = useStockRequests({}, canViewRequests);
@@ -309,7 +321,12 @@ export default function StockPage() {
             header: t('stock_sku'),
             width: '110px',
             className: 'whitespace-nowrap',
-            render: (i) => <span className="text-xs">{i.sku}</span>,
+            render: (i) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-xs">{i.sku}</span>
+                    {newItems.isNew(i) && <NewBadge />}
+                </div>
+            ),
         },
         {
             key: 'name',
@@ -760,7 +777,9 @@ export default function StockPage() {
                             <DataTable
                                 columns={columns}
                                 rows={items}
+                                pinned={newItems.pinned}
                                 rowKey={(i) => i.id}
+                                rowClassName={(i) => (newItems.isNew(i) ? NEW_ROW_CLASS : undefined)}
                                 onRowClick={(i) => setViewId(i.id)}
                                 loading={itemsLoading || (itemsFetching && itemsPlaceholder)}
                                 caption={t('stock_items_tab')}

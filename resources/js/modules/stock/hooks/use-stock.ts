@@ -1,6 +1,8 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_LIST, FRESH_VIEW } from '@/shared/lib/freshness';
+import type { RowId } from '@/shared/lib/new-rows';
 import type { StockCountAdjustMode } from '@/shared/types';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     stockApi,
@@ -18,6 +20,11 @@ const SUMMARY = ['stock-summary'] as const;
 const MOVEMENTS = ['stock-movements'] as const;
 const REQUESTS = ['stock-requests'] as const;
 const COUNTS = ['stock-counts'] as const;
+
+// Where a just-created row is read when the current page does not hold it
+export const NEW_ITEM_DETAIL = { key: (id: RowId) => [...ITEMS, 'detail', id], fetch: (id: RowId) => stockApi.get(Number(id)) };
+export const NEW_MOVEMENT_DETAIL = { key: (id: RowId) => [...MOVEMENTS, 'detail', id], fetch: (id: RowId) => stockMovementApi.get(Number(id)) };
+export const NEW_REQUEST_DETAIL = { key: (id: RowId) => [...REQUESTS, 'detail', id], fetch: (id: RowId) => stockRequestApi.get(Number(id)) };
 
 interface StockItemFilters {
     search?: string;
@@ -64,9 +71,21 @@ export function useStockItemMutations() {
     };
 
     return {
-        create: useMutation({ mutationFn: (p: StockItemPayload) => stockApi.create(p), onSuccess: inv }),
+        create: useMutation({
+            mutationFn: (p: StockItemPayload) => stockApi.create(p),
+            onSuccess: (item) => {
+                markNew('stock-items', item.id);
+                inv();
+            },
+        }),
         update: useMutation({ mutationFn: (v: { id: number; payload: StockItemPayload }) => stockApi.update(v.id, v.payload), onSuccess: inv }),
-        remove: useMutation({ mutationFn: (id: number) => stockApi.remove(id), onSuccess: inv }),
+        remove: useMutation({
+            mutationFn: (id: number) => stockApi.remove(id),
+            onSuccess: (_, id) => {
+                dropNew('stock-items', id);
+                inv();
+            },
+        }),
     };
 }
 
@@ -97,7 +116,8 @@ export function useRecordMovement() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (p: StockMovementPayload) => stockMovementApi.create(p),
-        onSuccess: () => {
+        onSuccess: (movement) => {
+            markNew('stock-movements', movement.id);
             qc.invalidateQueries({ queryKey: MOVEMENTS });
             qc.invalidateQueries({ queryKey: ITEMS });
             qc.invalidateQueries({ queryKey: SUMMARY });
@@ -126,7 +146,13 @@ export function useStockRequestActions() {
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
-        submit: useMutation({ mutationFn: (p: StockRequestPayload) => stockRequestApi.create(p), onSuccess: inv }),
+        submit: useMutation({
+            mutationFn: (p: StockRequestPayload) => stockRequestApi.create(p),
+            onSuccess: (request) => {
+                markNew('stock-requests', request.id);
+                inv();
+            },
+        }),
         approve: useMutation({ mutationFn: (id: number) => stockRequestApi.approve(id), onSuccess: inv }),
         reject: useMutation({ mutationFn: (id: number) => stockRequestApi.reject(id), onSuccess: inv }),
         cancel: useMutation({ mutationFn: (id: number) => stockRequestApi.cancel(id), onSuccess: inv }),

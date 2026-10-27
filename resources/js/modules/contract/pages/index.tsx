@@ -191,6 +191,7 @@ export default function ContractsPage() {
         rows,
         rowKey: (c) => c.id,
         detail: { key: (id) => ['contract', id], fetch: (id) => contractApi.get(Number(id)) },
+        active: tab === 'all',
     });
     const rowPermissions = { canEdit, canCancel, canExpire, canReactivate, canDelete };
     const columns = useContractColumns(newRows.isNew, (c) => (

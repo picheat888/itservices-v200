@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -9,6 +10,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { searchLabel } from '@/shared/lib/search-words';
@@ -20,7 +22,7 @@ import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
+import { NEW_MOVEMENT_DETAIL, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_HEX } from '../shared';
 
 // Types offered by the filter (and accepted from ?type=).
@@ -52,6 +54,8 @@ export function MovementsTab() {
         isPlaceholderData: movementsPlaceholder,
     } = useStockMovements({ type: type === 'all' ? undefined : type, search: sentSearch || undefined, page, per_page: perPage });
     const movements = movementsPage?.data ?? [];
+    // Movements the user just recorded stay on top for a minute
+    const newMoves = useNewRows({ scope: 'stock-movements', rows: movements, rowKey: (m) => m.id, detail: NEW_MOVEMENT_DETAIL });
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
     // Open state is separate from the data so the detail stays mounted during the close animation.
     const [moveOpen, setMoveOpen] = useState(false);
@@ -68,7 +72,12 @@ export function MovementsTab() {
             header: t('stock_doc_no'),
             width: '110px',
             className: 'whitespace-nowrap',
-            render: (m) => <span className="text-xs font-semibold">{m.doc_no ?? '—'}</span>,
+            render: (m) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-xs font-semibold">{m.doc_no ?? '—'}</span>
+                    {newMoves.isNew(m) && <NewBadge />}
+                </div>
+            ),
         },
         {
             key: 'moved_at',
@@ -190,7 +199,9 @@ export function MovementsTab() {
             <DataTable
                 columns={columns}
                 rows={movements}
+                pinned={newMoves.pinned}
                 rowKey={(m) => m.id}
+                rowClassName={(m) => (newMoves.isNew(m) ? NEW_ROW_CLASS : undefined)}
                 onRowClick={(m) => {
                     setViewMove(m);
                     setMoveOpen(true);
