@@ -3,6 +3,7 @@ import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-stat
 import { useHeldHeight } from '@/shared/hooks/use-held-height';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
+import { splitPinned } from '@/shared/lib/new-rows';
 import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -59,6 +60,8 @@ interface DataTableProps<T> {
     isRowClickable?: (row: T) => boolean;
     /** Extra classes for a single row — for marking rows that need to stand out (e.g. a left accent). */
     rowClassName?: (row: T) => string | undefined;
+    /** Rows drawn above every page whatever the search, filter or page (newly created ones); totals and paging ignore them. */
+    pinned?: T[];
     /** Detail drawn in a full-width row under a row (an expanded row); null or undefined draws nothing. */
     renderExpanded?: (row: T) => React.ReactNode;
     /** The id of a row's expanded detail row, for the expand button's aria-controls. */
@@ -136,6 +139,7 @@ export function DataTable<T>({
     onRowClick,
     isRowClickable,
     rowClassName,
+    pinned,
     renderExpanded,
     expandedRowId,
     focusableRows = true,
@@ -209,6 +213,7 @@ export function DataTable<T>({
     const setPageSize = (s: number) => (server ? server.onPageSizeChange(s) : paging ? paging.onPageSizeChange(s) : setClientPageSize(s));
     // Server: rows are already the page. Client: slice (unless pagination is hidden).
     const pageRows = server ? rows : hidePagination ? filtered : filtered.slice(start, start + pageSize);
+    const drawnRows = pinned?.length ? [...pinned, ...splitPinned(pageRows, pinned, rowKey)] : pageRows;
 
     // Steady pager: hold the table height while a page loads
     const heldHeight = useHeldHeight(bodyRef, !!loading && !fillHeight);
@@ -382,18 +387,8 @@ export function DataTable<T>({
                                     ))}
                                 </tr>
                             ))}
-                        {!loading && pageRows.length === 0 && (
-                            <tr>
-                                <td colSpan={columns.length} className={cn('text-muted-foreground px-0 text-center', emptyState ? 'py-10' : 'py-0')}>
-                                    {/* Empty content: pinned to the visible scroller width */}
-                                    <div className="sticky left-0 box-border w-[100cqw] max-w-full px-4">
-                                        {emptyState ?? <EmptyState {...(empty ?? { title: t('cmn_no_data') })} />}
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
                         {!loading &&
-                            pageRows.map((row) => {
+                            drawnRows.map((row) => {
                                 const clickable = !!onRowClick && (isRowClickable?.(row) ?? true);
                                 const expanded = renderExpanded?.(row);
                                 const rowStop = clickable && focusableRows;
@@ -440,6 +435,16 @@ export function DataTable<T>({
                                     </Fragment>
                                 );
                             })}
+                        {!loading && pageRows.length === 0 && (
+                            <tr>
+                                <td colSpan={columns.length} className={cn('text-muted-foreground px-0 text-center', emptyState ? 'py-10' : 'py-0')}>
+                                    {/* Empty content: pinned to the visible scroller width */}
+                                    <div className="sticky left-0 box-border w-[100cqw] max-w-full px-4">
+                                        {emptyState ?? <EmptyState {...(empty ?? { title: t('cmn_no_data') })} />}
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
                         {/* Fixed / fill height: pad short pages with empty rows so the table height
                             (and the pagination bar below it) never shifts between pages, and the last
                             page doesn't leave a big gap under the final row. In fillHeight mode each

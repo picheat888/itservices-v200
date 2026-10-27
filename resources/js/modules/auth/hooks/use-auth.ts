@@ -4,6 +4,7 @@ import { httpStatus } from '@/shared/lib/http-errors';
 import { announceSignIn } from '@/shared/lib/login-redirect';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { SUPER_ROLE, type User } from '@/shared/types';
+import { clearNewRows } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function useAuth() {
@@ -64,6 +65,7 @@ export function useLogout() {
                     new Promise((resolve) => window.setTimeout(resolve, PUSH_STOP_WAIT_MS)),
                 ]);
             }
+            clearNewRows();
             return authApi.logout();
         },
         // onSettled: a failed logout call still leaves; the login page sends them back if the session survived

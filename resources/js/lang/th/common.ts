@@ -203,6 +203,9 @@ export const common: Dict = {
     cmn_rows_per_page: 'แสดง',
     cmn_of: 'จาก',
 
+    // new-badge.tsx — ป้ายแถวที่เพิ่งเพิ่ม
+    badge_new: 'ใหม่',
+
     // datetime.ts — labels moved from the component
     rel_just_now: 'เมื่อสักครู่',
     rel_minutes: '{n} นาทีที่แล้ว',

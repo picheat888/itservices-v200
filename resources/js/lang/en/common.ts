@@ -203,6 +203,9 @@ export const common: Dict = {
     cmn_rows_per_page: 'Rows per page',
     cmn_of: 'of',
 
+    // new-badge.tsx — badge on a just-created row
+    badge_new: 'New',
+
     // datetime.ts — labels moved from the component
     rel_just_now: 'just now',
     rel_minutes: '{n} min ago',
