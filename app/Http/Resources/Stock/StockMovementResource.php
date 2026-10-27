@@ -31,6 +31,7 @@ class StockMovementResource extends JsonResource
             'recorded_by' => $this->recorded_by,
             'recorded_by_th' => $this->whenLoaded('user', fn () => $this->user?->name_th),
             'notes' => $this->notes,
+            'reason' => $this->reason,
             'moved_at' => $this->moved_at?->toDateTimeString(),
         ];
     }

@@ -44,6 +44,21 @@ class StockCountTest extends TestCase
             ->assertJsonPath('data.lines.0.system_qty', 10);
     }
 
+    public function test_show_carries_the_new_line_and_count_fields(): void
+    {
+        $this->item('A-1', 10, 'Main');
+        $this->actingAs($this->super());
+        $id = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data.id');
+
+        $response = $this->getJson("/api/stock-counts/{$id}")->assertOk();
+
+        $this->assertIsInt($response->json('data.warehouse_id'));
+        $response->assertJsonPath('data.recount_of', null)
+            ->assertJsonPath('data.committed_by', null)
+            ->assertJsonPath('data.lines.0.reason', null)
+            ->assertJsonPath('data.lines.0.missing_serial_ids', []);
+    }
+
     public function test_list_reports_line_totals_without_the_lines(): void
     {
         $this->item('A-1', 10);

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockCount extends Model
 {
-    protected $fillable = ['reference', 'warehouse', 'warehouse_id', 'category', 'status', 'adjust_mode', 'note', 'counted_by', 'committed_at'];
+    protected $fillable = ['reference', 'warehouse', 'warehouse_id', 'category', 'status', 'adjust_mode', 'note', 'counted_by', 'committed_at', 'recount_of_id', 'committed_by'];
 
     protected function casts(): array
     {
@@ -51,5 +51,17 @@ class StockCount extends Model
     public function countedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'counted_by');
+    }
+
+    /** @return BelongsTo<StockCount, $this> */
+    public function recountOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'recount_of_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function committedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'committed_by');
     }
 }

@@ -15,12 +15,17 @@ class StockCountResource extends JsonResource
             'id' => $this->id,
             'reference' => $this->reference,
             'warehouse' => $this->warehouse,
+            'warehouse_id' => $this->warehouse_id,
             'category' => $this->category,
             'category_th' => null,
             'status' => $this->status?->value,
             'adjust_mode' => $this->adjust_mode?->value,
             'note' => $this->note,
             'counted_by' => $this->whenLoaded('countedBy', fn () => $this->countedBy?->name),
+            'committed_by' => $this->whenLoaded('committedBy', fn () => $this->committedBy?->name),
+            'recount_of' => $this->whenLoaded('recountOf', fn () => $this->recountOf
+                ? ['id' => $this->recountOf->id, 'reference' => $this->recountOf->reference]
+                : null),
             'committed_at' => $this->committed_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'lines' => $this->whenLoaded('lines', fn () => $this->lines->map(fn ($l) => [
@@ -31,6 +36,10 @@ class StockCountResource extends JsonResource
                 'system_qty' => $l->system_qty,
                 'counted_qty' => $l->counted_qty,
                 'variance' => $l->variance(),
+                'reason' => $l->reason?->value,
+                'reason_note' => $l->reason_note,
+                'missing_serial_ids' => $l->missing_serial_ids ?? [],
+                'found_serial_ids' => $l->found_serial_ids,
                 'track_serial' => (bool) $l->item?->track_serial,
                 // Only present once the in-stock serials are eager-loaded (the show endpoint).
                 'serials' => $l->item && $l->item->relationLoaded('serials')

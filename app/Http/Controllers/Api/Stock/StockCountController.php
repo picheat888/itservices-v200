@@ -78,6 +78,8 @@ class StockCountController extends Controller
 
         return (new StockCountResource($stockCount->load([
             'countedBy',
+            'committedBy',
+            'recountOf',
             'lines.item.serials' => fn ($q) => $q->where('status', 'in_stock'),
         ])))->response();
     }

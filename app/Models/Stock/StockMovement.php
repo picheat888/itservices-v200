@@ -10,7 +10,7 @@ class StockMovement extends Model
 {
     protected $fillable = [
         'doc_no', 'type', 'stock_item_id', 'qty', 'unit_cost', 'from_label', 'to_label',
-        'reference', 'recorded_by', 'user_id', 'notes', 'moved_at', 'from_warehouse_id', 'to_warehouse_id',
+        'reference', 'recorded_by', 'user_id', 'notes', 'moved_at', 'from_warehouse_id', 'to_warehouse_id', 'reason',
     ];
 
     /** Movement types that increase on-hand stock; the rest decrease it. */
