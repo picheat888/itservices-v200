@@ -139,11 +139,7 @@ class RequestTicketFileBridgeTest extends TestCase
         $this->assertSame(0, $request->refresh()->ticket->attachments()->count());
     }
 
-    /**
-     * The one hole this arrangement could open: ticket attachments are deleted
-     * bytes-and-all, so removing a mirrored file from the case would destroy the
-     * evidence an approved request was decided on. It is refused outright.
-     */
+    /** Deleting a mirrored file would destroy the evidence the request was approved on. */
     public function test_a_technician_may_not_delete_a_file_that_belongs_to_the_request(): void
     {
         $request = $this->approvedRequestWithOneFile();
@@ -152,32 +148,22 @@ class RequestTicketFileBridgeTest extends TestCase
 
         $this->actingAs($this->technician)
             ->deleteJson("/api/tickets/{$ticket->id}/attachments/{$mirror->id}")
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'file_from_request')
-            ->assertJsonPath('reference', $request->reference);
+            ->assertForbidden();
 
         $this->assertDatabaseHas('ticket_attachments', ['id' => $mirror->id]);
         Storage::disk('local')->assertExists($request->attachments()->firstOrFail()->path);
     }
 
-    /** A file the technician uploaded themselves is still theirs to take back. */
-    public function test_a_technician_still_deletes_a_file_they_attached_themselves(): void
+    /** Only the person who opened a case attaches files to it, so a technician adds nothing. */
+    public function test_a_technician_cannot_attach_files_to_the_case(): void
     {
-        $request = $this->approvedRequestWithOneFile();
-        $ticket = $request->ticket;
+        $ticket = $this->approvedRequestWithOneFile()->ticket;
 
         $this->actingAs($this->technician)->post("/api/tickets/{$ticket->id}/attachments", [
             'files' => [UploadedFile::fake()->image('bench-photo.jpg')],
-        ], ['Accept' => 'application/json'])->assertOk();
+        ], ['Accept' => 'application/json'])->assertForbidden();
 
-        $own = $ticket->attachments()->whereNull('request_attachment_id')->firstOrFail();
-
-        $this->actingAs($this->technician)
-            ->deleteJson("/api/tickets/{$ticket->id}/attachments/{$own->id}")
-            ->assertOk();
-
-        $this->assertDatabaseMissing('ticket_attachments', ['id' => $own->id]);
-        Storage::disk('local')->assertMissing($own->path);
+        $this->assertSame(1, $ticket->attachments()->count());
     }
 
     /**
@@ -206,36 +192,16 @@ class RequestTicketFileBridgeTest extends TestCase
         $this->actingAs($stranger)->get($mirror->url())->assertForbidden();
     }
 
-    /**
-     * The cap is on what a technician uploads, not on what the request brought with
-     * it — otherwise a case that arrived with five files would silently halve the
-     * room left for the photos taken while working it.
-     */
-    public function test_the_mirrored_files_do_not_eat_the_tickets_own_upload_quota(): void
+    /** A case a request opened is nobody's to change, its own requester included. */
+    public function test_the_requester_cannot_attach_files_to_a_case_a_request_opened(): void
     {
-        $request = $this->submitComputer([
-            UploadedFile::fake()->create('quote.pdf', 20, 'application/pdf'),
-            UploadedFile::fake()->create('specs.pdf', 20, 'application/pdf'),
-        ]);
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
-        $ticket = $request->refresh()->ticket;
+        $ticket = $this->approvedRequestWithOneFile()->ticket;
 
-        $ten = array_map(fn (int $i) => UploadedFile::fake()->image("bench-{$i}.jpg"), range(1, 10));
+        $this->actingAs($this->requester)->post("/api/tickets/{$ticket->id}/attachments", [
+            'files' => [UploadedFile::fake()->image('extra.jpg')],
+        ], ['Accept' => 'application/json'])->assertForbidden();
 
-        $this->actingAs($this->technician)
-            ->post("/api/tickets/{$ticket->id}/attachments", ['files' => $ten], ['Accept' => 'application/json'])
-            ->assertOk();
-
-        $this->assertSame(12, $ticket->attachments()->count());
-
-        // And the eleventh upload is still refused.
-        $this->actingAs($this->technician)
-            ->post("/api/tickets/{$ticket->id}/attachments", [
-                'files' => [UploadedFile::fake()->image('one-too-many.jpg')],
-            ], ['Accept' => 'application/json'])
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'too_many_files')
-            ->assertJsonPath('remaining', 0);
+        $this->assertSame(1, $ticket->attachments()->count());
     }
 
     /** The case's file list says where a mirrored file came from. */

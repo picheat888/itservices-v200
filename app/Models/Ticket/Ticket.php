@@ -153,4 +153,24 @@ class Ticket extends Model
     {
         return $this->assignee_id === null;
     }
+
+    /** The opener may attach files while the case is Open (a case a request opened takes none). */
+    public function acceptsFilesFrom(User $user): bool
+    {
+        return $user->hasPermission('tickets.create') && $this->isOpenToItsRequester($user);
+    }
+
+    /** The opener may change the details and remove files while the case is Open (never a request's case). */
+    public function isEditableBy(User $user): bool
+    {
+        return $user->hasPermission('tickets.edit_own') && $this->isOpenToItsRequester($user);
+    }
+
+    private function isOpenToItsRequester(User $user): bool
+    {
+        return $user->employee_id !== null
+            && $this->requester_id === $user->employee_id
+            && $this->status === TicketStatus::Open
+            && $this->serviceRequest === null;
+    }
 }
