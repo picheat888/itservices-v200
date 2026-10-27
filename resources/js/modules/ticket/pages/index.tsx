@@ -314,7 +314,9 @@ export default function TicketsPage() {
         rows,
         rowKey: (tk) => tk.id,
         detail: { key: (id) => ['ticket', 'view', id], fetch: (id) => ticketApi.get(Number(id)) },
-        active: tab === 'all' || tab === 'mine' || tab === 'my',
+        // Only the All list fetches a pinned ticket; the other tabs pin it only when it is on their page
+        active: tab === 'all',
+        waiting: isFetching,
     });
     const meta = listData?.meta;
 

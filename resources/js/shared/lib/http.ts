@@ -10,6 +10,7 @@ import {
     serviceUnavailableKind,
     showsOwnThrottle,
     wasShownInline,
+    queryFailureTakesScreen,
 } from '@/shared/lib/http-errors';
 import { redirectToLogin, signedOutRedirectFor } from '@/shared/lib/login-redirect';
 import { formatNumber } from '@/shared/lib/number';
@@ -145,7 +146,7 @@ http.interceptors.response.use(
 queryClient.getQueryCache().subscribe((event) => {
     if (event.type !== 'updated' || event.action.type !== 'error') return;
     const error = event.action.error;
-    if (event.query.state.data !== undefined || !isServerFailure(error) || isQuietServerError(error) || httpStatus(error) === 503) return;
+    if (!queryFailureTakesScreen(error, event.query.state.data !== undefined, event.query.meta?.quietServerError === true)) return;
     useAppErrorStore.getState().show('server', null, requestIdOf(error));
 });
 

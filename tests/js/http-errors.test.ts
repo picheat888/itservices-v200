@@ -6,6 +6,7 @@ import {
     isRecordMissing,
     markShownInline,
     outranks,
+    queryFailureTakesScreen,
     quietPathAfterMove,
     retryAfterOf,
     serviceUnavailableKind,
@@ -114,4 +115,13 @@ test('a failed background refresh of a record on screen is not missing', () => {
     assert.equal(isRecordMissing({ response: { status: 500 } }, true), false);
     assert.equal(isRecordMissing({ response: { status: 429 } }, true), false);
     assert.equal(isRecordMissing(null, false), false);
+});
+
+test('a failed read takes the screen only with nothing shown and no quiet mark', () => {
+    const err500 = { config: {}, response: { status: 500, data: {}, headers: {} } };
+    assert.equal(queryFailureTakesScreen(err500, false, false), true);
+    assert.equal(queryFailureTakesScreen(err500, true, false), false);
+    assert.equal(queryFailureTakesScreen(err500, false, true), false);
+    assert.equal(queryFailureTakesScreen({ config: {}, response: { status: 404, data: {}, headers: {} } }, false, false), false);
+    assert.equal(queryFailureTakesScreen({ config: {}, response: { status: 503, data: {}, headers: {} } }, false, false), false);
 });

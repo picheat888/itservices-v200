@@ -54,6 +54,11 @@ export function isQuietServerError(error: unknown): boolean {
     return !!(error as FailureShape | null)?.config?.quietServerError;
 }
 
+/** A read that failed after its retries takes over the screen: a 5xx (not 503) with nothing shown and no quiet mark on the call or the query. */
+export function queryFailureTakesScreen(error: unknown, hasData: boolean, quiet: boolean): boolean {
+    return !hasData && !quiet && isServerFailure(error) && !isQuietServerError(error) && httpStatus(error) !== 503;
+}
+
 /** The sign-in form, its device-limit dialog and the password form word their own throttle wait, so a 429 there raises no toast or wait screen. */
 export function showsOwnThrottle(url: string | undefined): boolean {
     return !!url && (url.endsWith('/login') || url.includes('/login/devices/') || url === '/password');

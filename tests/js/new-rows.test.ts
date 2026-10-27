@@ -9,8 +9,11 @@ import {
     NEW_ROW_MS,
     type NewRowEntry,
     nextExpiry,
+    pinOrder,
     pruneExpired,
+    restoreEntries,
     splitPinned,
+    forUser,
 } from '../../resources/js/shared/lib/new-rows.ts';
 
 const U = 7;
@@ -90,4 +93,28 @@ test('a pin whose record is gone or hidden is dropped', () => {
     assert.equal(dropOnMissing(403), true);
     assert.equal(dropOnMissing(500), false);
     assert.equal(dropOnMissing(undefined), false);
+});
+
+test('a pin that ran out keeps its place below the live ones until the list changes', () => {
+    assert.deepEqual(pinOrder([3], [1, 2]), [3, 1, 2]);
+    assert.deepEqual(pinOrder([1], [1, 2]), [1, 2]);
+    assert.deepEqual(pinOrder([], []), []);
+});
+
+test('a reload keeps only live, well-formed pins', () => {
+    const live = { user: U, scope: 'items', id: 1, at: 50_000 };
+    const old = { user: U, scope: 'items', id: 2, at: 0 };
+    assert.deepEqual(restoreEntries({ entries: [live, old, { junk: true }] }, 70_000), [live]);
+    assert.deepEqual(restoreEntries(undefined, 70_000), []);
+    assert.deepEqual(restoreEntries({ entries: 'x' }, 70_000), []);
+});
+
+test('another signed-in user drops every pin that is not theirs', () => {
+    let e = addEntries([], U, 'items', [1], 0);
+    e = addEntries(e, 8, 'items', [2], 0);
+    assert.deepEqual(
+        forUser(e, 8).map((x) => x.id),
+        [2],
+    );
+    assert.deepEqual(forUser(e, null), []);
 });

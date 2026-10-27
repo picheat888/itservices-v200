@@ -1,52 +1,68 @@
 // Rows the user just created on one list: drawn first for a minute, from the list itself or, when the page lacks them, the record's own detail query.
 import { httpStatus } from '@/shared/lib/http-errors';
-import { dropOnMissing, liveIds, nextExpiry, type RowId } from '@/shared/lib/new-rows';
+import { dropOnMissing, liveIds, nextExpiry, pinOrder, type RowId } from '@/shared/lib/new-rows';
 import { currentUserId, dropNew, useNewRowsStore } from '@/stores/new-rows';
 import { useQueries, type QueryKey } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface NewRowsOptions<T> {
-    /** The list's name, the same one its create form passes to markNew. */
+    /** The list's name, the same one its create mutation passes to markNew. */
     scope: string;
     /** Rows the list holds now (the current page, or every row for a client-side list). */
     rows: T[];
     rowKey: (row: T) => RowId;
     /** Fetches a pinned record the current page does not hold; leave out for lists that hold every row. */
     detail?: { key: (id: RowId) => QueryKey; fetch: (id: RowId) => Promise<T> };
-    /** False while the list is not on screen (another tab): no detail fetch. */
+    /** False where the list is off screen or is a view the record may not belong to: only rows already on the page are pinned. */
     active?: boolean;
+    /** The list is still loading: hold the detail fetches until it answers (the record is often on the page). */
+    waiting?: boolean;
 }
 
 export interface NewRows<T> {
     /** Rows to draw first, newest save on top. */
     pinned: T[];
+    /** Pinned and still inside its minute (tint and badge). */
     isNew: (row: T) => boolean;
-    /** The row is shown only because it is pinned (another page, or outside the filter). */
-    isPinnedOnly: (row: T) => boolean;
 }
 
-export function useNewRows<T>({ scope, rows, rowKey, detail, active = true }: NewRowsOptions<T>): NewRows<T> {
+export function useNewRows<T>({ scope, rows, rowKey, detail, active = true, waiting = false }: NewRowsOptions<T>): NewRows<T> {
     const entries = useNewRowsStore((s) => s.entries);
     const user = currentUserId();
     const [now, setNow] = useState(() => Date.now());
+    const live = useMemo(() => (user === null ? [] : liveIds(entries, user, scope, now)), [entries, user, scope, now]);
+
+    // A pin that runs out keeps its place (without tint or badge) until the list itself changes, so nothing jumps under a tap
+    const [held, setHeld] = useState<{ rows: T[]; ids: RowId[] }>({ rows, ids: [] });
+    const heldIds = held.rows === rows ? held.ids : [];
+    const shown = useRef<RowId[]>([]);
+    const ids = pinOrder(live, heldIds);
+    useEffect(() => {
+        shown.current = ids;
+    });
 
     // Re-render when the next pin runs out
     useEffect(() => {
         const wait = nextExpiry(entries, Date.now());
         if (wait === null) return;
-        const timer = window.setTimeout(() => setNow(Date.now()), wait + 50);
+        const timer = window.setTimeout(() => {
+            const at = Date.now();
+            const stillLive = user === null ? [] : liveIds(entries, user, scope, at);
+            setHeld({ rows, ids: shown.current.filter((id) => !stillLive.includes(id)) });
+            setNow(at);
+        }, wait + 50);
         return () => window.clearTimeout(timer);
-    }, [entries, now]);
+    }, [entries, now, rows, user, scope]);
 
-    const ids = useMemo(() => (user === null ? [] : liveIds(entries, user, scope, now)), [entries, user, scope, now]);
     const onPage = useMemo(() => new Map(rows.map((r) => [rowKey(r), r] as const)), [rows, rowKey]);
     const missing = detail && active ? ids.filter((id) => !onPage.has(id)) : [];
 
     const fetched = useQueries({
         queries: missing.map((id) => ({
-            queryKey: detail!.key(id),
+            queryKey: [...detail!.key(id), 'new-row'],
             queryFn: () => detail!.fetch(id),
-            retry: false,
+            enabled: !waiting,
+            meta: { quietServerError: true },
         })),
     });
 
@@ -66,11 +82,10 @@ export function useNewRows<T>({ scope, rows, rowKey, detail, active = true }: Ne
         const row = onPage.get(id) ?? fromDetail.get(id);
         return row === undefined ? [] : [row];
     });
-    const live = new Set(ids);
+    const liveSet = new Set(live);
 
     return {
         pinned,
-        isNew: (row) => live.has(rowKey(row)),
-        isPinnedOnly: (row) => fromDetail.has(rowKey(row)),
+        isNew: (row) => liveSet.has(rowKey(row)),
     };
 }

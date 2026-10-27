@@ -78,12 +78,15 @@ function NameCell({
     name,
     sub,
     logoUrl,
+    badge,
 }: {
     icon: typeof Users;
     color: string;
     name: string;
     sub?: string | null;
     logoUrl?: string | null;
+    /** Shown under the name, e.g. the new-row badge. */
+    badge?: React.ReactNode;
 }) {
     return (
         <div className="flex items-center gap-3 whitespace-nowrap">
@@ -97,6 +100,7 @@ function NameCell({
             <div className="min-w-0">
                 <TruncText text={name} className="font-medium" />
                 {sub && <div className="text-muted-foreground truncate text-[11.5px]">{sub}</div>}
+                {badge && <div className="mt-0.5 flex">{badge}</div>}
             </div>
         </div>
     );
@@ -526,16 +530,7 @@ export default function AccessControlPage() {
             key: 'name',
             header: t('access_name'),
             minWidth: '14rem',
-            render: (g) => (
-                <div className="flex min-w-0 flex-col gap-0.5">
-                    <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} />
-                    {newEg.isNew(g) && (
-                        <div className="flex">
-                            <NewBadge />
-                        </div>
-                    )}
-                </div>
-            ),
+            render: (g) => <NameCell icon={Users} color="#7c3aed" name={g.name} sub={g.email} badge={newEg.isNew(g) ? <NewBadge /> : undefined} />,
         },
         { key: 'owner', header: t('access_owner'), width: '200px', render: (g) => <OwnerCell owner={ownerLabel(g)} photoUrl={g.owner_photo_url} /> },
         {
@@ -553,16 +548,7 @@ export default function AccessControlPage() {
             key: 'name',
             header: t('access_name'),
             minWidth: '14rem',
-            render: (s) => (
-                <div className="flex min-w-0 flex-col gap-0.5">
-                    <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} />
-                    {newFs.isNew(s) && (
-                        <div className="flex">
-                            <NewBadge />
-                        </div>
-                    )}
-                </div>
-            ),
+            render: (s) => <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} badge={newFs.isNew(s) ? <NewBadge /> : undefined} />,
         },
         {
             key: 'size',
@@ -588,14 +574,14 @@ export default function AccessControlPage() {
             header: t('access_name'),
             minWidth: '14rem',
             render: (p) => (
-                <div className="flex min-w-0 flex-col gap-0.5">
-                    <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} />
-                    {newSp.isNew(p) && (
-                        <div className="flex">
-                            <NewBadge />
-                        </div>
-                    )}
-                </div>
+                <NameCell
+                    icon={Globe}
+                    color={p.color ?? '#6366f1'}
+                    name={p.name}
+                    sub={p.url}
+                    logoUrl={p.logo_url}
+                    badge={newSp.isNew(p) ? <NewBadge /> : undefined}
+                />
             ),
         },
         { key: 'policy', header: t('access_policy'), width: '200px', render: (p) => <TruncText text={p.policy} /> },
@@ -609,14 +595,7 @@ export default function AccessControlPage() {
             header: t('access_name'),
             minWidth: '16rem',
             render: (s) => (
-                <div className="flex min-w-0 flex-col gap-0.5">
-                    <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} />
-                    {newSw.isNew(s) && (
-                        <div className="flex">
-                            <NewBadge />
-                        </div>
-                    )}
-                </div>
+                <NameCell icon={Package} color="#f59e0b" name={s.name} logoUrl={s.logo_url} badge={newSw.isNew(s) ? <NewBadge /> : undefined} />
             ),
         },
         { key: 'publisher', header: t('access_publisher'), width: '160px', render: (s) => <TruncText text={s.publisher} /> },

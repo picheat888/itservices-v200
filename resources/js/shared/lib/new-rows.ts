@@ -56,3 +56,24 @@ export function splitPinned<T>(rows: T[], pinned: T[], rowKey: (r: T) => RowId):
 export function dropOnMissing(status: number | undefined): boolean {
     return status === 404 || status === 403;
 }
+
+/** Live pins first, then pins that just ran out and keep their place until the list changes. */
+export function pinOrder(live: RowId[], held: RowId[]): RowId[] {
+    return [...live, ...held.filter((id) => !live.includes(id))];
+}
+
+const isEntry = (e: unknown): e is NewRowEntry => {
+    const x = e as Partial<NewRowEntry> | null;
+    return !!x && typeof x.user === 'number' && typeof x.scope === 'string' && typeof x.at === 'number' && (typeof x.id === 'number' || typeof x.id === 'string');
+};
+
+/** Pins read back from storage: well-formed and still live only. */
+export function restoreEntries(persisted: unknown, now: number): NewRowEntry[] {
+    const list = (persisted as { entries?: unknown } | undefined)?.entries;
+    return Array.isArray(list) ? pruneExpired(list.filter(isEntry), now) : [];
+}
+
+/** Only the signed-in user's pins (none when signed out). */
+export function forUser(entries: NewRowEntry[], user: number | null): NewRowEntry[] {
+    return user === null ? [] : entries.filter((e) => e.user === user);
+}

@@ -80,7 +80,13 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     } = useStockRequests({ page, per_page: perPage, status: status === 'all' ? undefined : status, search: sentSearch || undefined });
     const requests = requestsPage?.data ?? [];
     // A request the user just submitted stays on top for a minute
-    const newReqs = useNewRows({ scope: 'stock-requests', rows: requests, rowKey: (r) => r.id, detail: NEW_REQUEST_DETAIL });
+    const newReqs = useNewRows({
+        scope: 'stock-requests',
+        rows: requests,
+        rowKey: (r) => r.id,
+        detail: NEW_REQUEST_DETAIL,
+        waiting: requestsFetching,
+    });
     const { approve, reject, cancel, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     // Open state is separate from the data so the dialog content stays mounted during the close animation.

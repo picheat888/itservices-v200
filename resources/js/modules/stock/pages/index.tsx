@@ -263,7 +263,14 @@ export default function StockPage() {
     const items = itemsPageData?.data ?? [];
     const itemsTotal = itemsPageData?.meta.total ?? 0;
     // An item the user just added stays on top for a minute
-    const newItems = useNewRows({ scope: 'stock-items', rows: items, rowKey: (i) => i.id, detail: NEW_ITEM_DETAIL, active: tab === 'items' });
+    const newItems = useNewRows({
+        scope: 'stock-items',
+        rows: items,
+        rowKey: (i) => i.id,
+        detail: NEW_ITEM_DETAIL,
+        active: tab === 'items',
+        waiting: itemsFetching,
+    });
 
     const canViewRequests = can('view_request');
     const { data: requestsPage } = useStockRequests({}, canViewRequests);

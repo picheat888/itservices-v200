@@ -17,7 +17,7 @@ export function isContractDeletable(c: Contract): boolean {
     return c.status === 'active' && (c.assets_count ?? c.linked_assets.length) === 0;
 }
 
-export function useContractActions(onDone: () => void) {
+export function useContractActions(onDone: () => void = () => undefined) {
     const t = useT();
     const fmtN = useNumberFormat();
     const confirm = useConfirm();

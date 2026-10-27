@@ -184,7 +184,7 @@ export default function ContractsPage() {
     const totalRows = meta?.total ?? 0;
     usePageInRange(list, meta?.last_page);
     // Lifecycle actions from the row menu
-    const rowActions = useContractActions(() => undefined);
+    const rowActions = useContractActions();
     // A contract the user just added stays on top for a minute
     const newRows = useNewRows({
         scope: 'contracts',
@@ -192,6 +192,7 @@ export default function ContractsPage() {
         rowKey: (c) => c.id,
         detail: { key: (id) => ['contract', id], fetch: (id) => contractApi.get(Number(id)) },
         active: tab === 'all',
+        waiting: isFetching,
     });
     const rowPermissions = { canEdit, canCancel, canExpire, canReactivate, canDelete };
     const columns = useContractColumns(newRows.isNew, (c) => (
@@ -599,7 +600,7 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
             align: 'right',
             width: '100px',
             className: 'whitespace-nowrap text-xs tabular-nums',
-            render: (c) => formatNumber(c.assets_count ?? 0, lang),
+            render: (c) => formatNumber(c.assets_count ?? c.linked_assets.length, lang),
         },
         {
             key: 'status',

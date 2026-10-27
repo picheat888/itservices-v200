@@ -472,6 +472,7 @@ export default function AssetsPage() {
         rowKey: (a) => a.id,
         detail: { key: (id) => ['asset', id], fetch: (id) => assetApi.get(Number(id)) },
         active: tab === 'inventory',
+        waiting: isFetching,
     });
     const tableRows = [...newAssets.pinned, ...splitPinned(rows, newAssets.pinned, (a) => a.id)];
 
@@ -1226,202 +1227,209 @@ export default function AssetsPage() {
                                                     ))}
                                                 </tr>
                                             ))
-                                        ) : tableRows.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={14} className="px-4">
-                                                    {hasActiveFilters ? (
-                                                        <EmptyState
-                                                            kind="search"
-                                                            title={t('asset_empty_inventory_filtered')}
-                                                            hint={t('asset_empty_inventory_filtered_hint')}
-                                                        >
-                                                            <Button size="sm" variant="outline" onClick={clearFilters}>
-                                                                <X className="h-4 w-4" aria-hidden="true" />
-                                                                {t('reset_filters')}
-                                                            </Button>
-                                                        </EmptyState>
-                                                    ) : (
-                                                        <EmptyState
-                                                            kind="empty"
-                                                            title={t('asset_empty_inventory_none')}
-                                                            hint={
-                                                                canCreate
-                                                                    ? t('asset_empty_inventory_none_hint').replace('{button}', t('register_asset'))
-                                                                    : null
-                                                            }
-                                                        />
-                                                    )}
-                                                </td>
-                                            </tr>
                                         ) : (
-                                            tableRows.map((a) => (
-                                                <tr
-                                                    key={a.id}
-                                                    onClick={() => openAsset(a)}
-                                                    data-row-click=""
-                                                    data-selected={selectedIds.includes(a.id)}
-                                                    className={cn(
-                                                        'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
-                                                        selectedIds.includes(a.id) ? ROW_SELECTED : 'row-hover',
-                                                        !selectedIds.includes(a.id) && newAssets.isNew(a) && NEW_ROW_CLASS,
-                                                        rowLockedOut(a) && ROW_LOCKED,
-                                                    )}
-                                                >
-                                                    <td
+                                            <>
+                                                {tableRows.map((a) => (
+                                                    <tr
+                                                        key={a.id}
+                                                        onClick={() => openAsset(a)}
+                                                        data-row-click=""
+                                                        data-selected={selectedIds.includes(a.id)}
                                                         className={cn(
-                                                            'px-2 py-2.5',
-                                                            PINNED_CELL,
-                                                            'left-0',
-                                                            rowSelectable(a) ? 'cursor-pointer' : rowActionable(a) ? 'cursor-not-allowed' : '',
+                                                            'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
+                                                            selectedIds.includes(a.id) ? ROW_SELECTED : 'row-hover',
+                                                            !selectedIds.includes(a.id) && newAssets.isNew(a) && NEW_ROW_CLASS,
+                                                            rowLockedOut(a) && ROW_LOCKED,
                                                         )}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (rowSelectable(a)) toggleRow(a, !selectedIds.includes(a.id));
-                                                        }}
                                                     >
-                                                        <div className="flex items-center justify-center px-2 py-1.5">
-                                                            {rowLockedOut(a) ? (
-                                                                // Locked out by the active status group: the lock opens the reason
-                                                                <InfoPopover
-                                                                    label={t('asset_locked_hint')}
-                                                                    content={t('asset_locked_hint')}
-                                                                    className="text-muted-foreground inline-flex"
-                                                                >
-                                                                    <Lock className="size-4" aria-hidden />
-                                                                </InfoPopover>
-                                                            ) : rowActionable(a) ? (
-                                                                <Checkbox
-                                                                    aria-label={`${t('asset_select_row')} ${a.asset_code}`}
-                                                                    checked={selectedIds.includes(a.id)}
-                                                                    disabled={!rowSelectable(a)}
-                                                                    onCheckedChange={(v) => toggleRow(a, v === true)}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                />
-                                                            ) : (
-                                                                // Written-off (or other non-bulk-actionable) rows: no checkbox, keep the column width.
-                                                                <span className="block size-5" aria-hidden />
+                                                        <td
+                                                            className={cn(
+                                                                'px-2 py-2.5',
+                                                                PINNED_CELL,
+                                                                'left-0',
+                                                                rowSelectable(a) ? 'cursor-pointer' : rowActionable(a) ? 'cursor-not-allowed' : '',
                                                             )}
-                                                        </div>
-                                                    </td>
-                                                    <td className={cn(PINNED_CELL, 'left-10 px-3 py-2.5 whitespace-nowrap')}>
-                                                        <button
-                                                            type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                openAsset(a);
+                                                                if (rowSelectable(a)) toggleRow(a, !selectedIds.includes(a.id));
                                                             }}
-                                                            aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
-                                                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring block rounded text-left text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
                                                         >
-                                                            {a.asset_code}
-                                                        </button>
-                                                        {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-28" />}
-                                                        {newAssets.isNew(a) && (
-                                                            <div className="mt-1">
-                                                                <NewBadge />
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    {/* Brand over model: "Latitude 5440" alone does not say Dell. */}
-                                                    <td className="max-w-[10rem] px-3 py-2.5">
-                                                        {a.brand && (
-                                                            <div className="text-muted-foreground truncate text-xs" title={a.brand}>
-                                                                {a.brand}
-                                                            </div>
-                                                        )}
-                                                        <div className="truncate font-medium" title={a.model ?? undefined}>
-                                                            {a.model ?? '—'}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-2.5">
-                                                        <span className="flex items-center gap-2 whitespace-nowrap">
-                                                            <AssetTypeIcon
-                                                                type={a.type}
-                                                                className="text-muted-foreground h-4 w-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                            {catLabel(a.type)}
-                                                        </span>
-                                                    </td>
-                                                    {/* What IT reads off the sticker; the search already matches it. */}
-                                                    <td className="max-w-[8rem] truncate px-3 py-2.5 text-xs" title={a.serial ?? undefined}>
-                                                        {a.serial || <span className="text-muted-foreground">—</span>}
-                                                    </td>
-                                                    {/* Holder with their department under it (the department alone was a column
-                                                        empty for every pool and shared asset). */}
-                                                    <td className="max-w-[8.5rem] px-3 py-2.5">
-                                                        {a.owner_name ? (
-                                                            <>
-                                                                <TruncText text={localPair(a.owner_name, a.owner_name_th, lang)} />
-                                                                {a.department && (
-                                                                    <TruncText
-                                                                        text={localPair(a.department, a.department_th, lang)}
-                                                                        className="text-muted-foreground text-xs"
+                                                            <div className="flex items-center justify-center px-2 py-1.5">
+                                                                {rowLockedOut(a) ? (
+                                                                    // Locked out by the active status group: the lock opens the reason
+                                                                    <InfoPopover
+                                                                        label={t('asset_locked_hint')}
+                                                                        content={t('asset_locked_hint')}
+                                                                        className="text-muted-foreground inline-flex"
+                                                                    >
+                                                                        <Lock className="size-4" aria-hidden />
+                                                                    </InfoPopover>
+                                                                ) : rowActionable(a) ? (
+                                                                    <Checkbox
+                                                                        aria-label={`${t('asset_select_row')} ${a.asset_code}`}
+                                                                        checked={selectedIds.includes(a.id)}
+                                                                        disabled={!rowSelectable(a)}
+                                                                        onCheckedChange={(v) => toggleRow(a, v === true)}
+                                                                        onClick={(e) => e.stopPropagation()}
                                                                     />
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-muted-foreground">—</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-3 py-2.5">
-                                                        <AssetPlace asset={a} t={t} />
-                                                    </td>
-                                                    <td className="px-3 py-2.5 whitespace-nowrap">
-                                                        <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
-                                                    </td>
-                                                    <td className="px-3 py-2.5 whitespace-nowrap">
-                                                        <AssetCoverCell asset={a} />
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-xs whitespace-nowrap">
-                                                        {a.purchase_date ? (
-                                                            fmt.date(a.purchase_date)
-                                                        ) : (
-                                                            <span className="text-muted-foreground">—</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-xs whitespace-nowrap">
-                                                        {a.handed_over_at ? (
-                                                            fmt.date(a.handed_over_at)
-                                                        ) : (
-                                                            <span className="text-muted-foreground">—</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="max-w-[9rem] px-3 py-2.5">
-                                                        <TruncText text={localPair(a.supplier, a.supplier_th, lang)} />
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
-                                                        {a.source === 'rented' ? (
-                                                            // The contract's rent is for the whole contract — repeated on every unit it read as
-                                                            // each one's value. A "Rented" badge with the contract code under it instead.
-                                                            <div className="flex flex-col items-end">
-                                                                <StatusBadge tone="violet" dot={false}>
-                                                                    {t('asset_rented_badge')}
-                                                                </StatusBadge>
-                                                                {a.contract_code && (
-                                                                    <div className="text-muted-foreground text-xs">{a.contract_code}</div>
+                                                                ) : (
+                                                                    // Written-off (or other non-bulk-actionable) rows: no checkbox, keep the column width.
+                                                                    <span className="block size-5" aria-hidden />
                                                                 )}
                                                             </div>
-                                                        ) : (
-                                                            a.value_display
-                                                        )}
-                                                    </td>
-                                                    <td className={cn(PINNED_CELL, 'right-0 px-3 py-2.5')}>
-                                                        <AssetRowMenu
-                                                            asset={a}
-                                                            canAccept={a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode}
-                                                            canReceive={canReceive && a.status === 'pending_return'}
-                                                            canTransfer={canTransfer && a.status === 'ready'}
-                                                            canEdit={canEdit && a.status !== 'writeoff'}
-                                                            onView={() => openAsset(a)}
-                                                            onAccept={() => accept.mutate(a.id)}
-                                                            onReceive={() => setReceiveAsset(a)}
-                                                            onTransfer={() => setTransferAsset(a)}
-                                                            onEdit={() => openEdit(a)}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+                                                        <td className={cn(PINNED_CELL, 'left-10 px-3 py-2.5 whitespace-nowrap')}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openAsset(a);
+                                                                }}
+                                                                aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
+                                                                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring block rounded text-left text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+                                                            >
+                                                                {a.asset_code}
+                                                            </button>
+                                                            {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-28" />}
+                                                            {newAssets.isNew(a) && (
+                                                                <div className="mt-1">
+                                                                    <NewBadge />
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        {/* Brand over model: "Latitude 5440" alone does not say Dell. */}
+                                                        <td className="max-w-[10rem] px-3 py-2.5">
+                                                            {a.brand && (
+                                                                <div className="text-muted-foreground truncate text-xs" title={a.brand}>
+                                                                    {a.brand}
+                                                                </div>
+                                                            )}
+                                                            <div className="truncate font-medium" title={a.model ?? undefined}>
+                                                                {a.model ?? '—'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <span className="flex items-center gap-2 whitespace-nowrap">
+                                                                <AssetTypeIcon
+                                                                    type={a.type}
+                                                                    className="text-muted-foreground h-4 w-4"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {catLabel(a.type)}
+                                                            </span>
+                                                        </td>
+                                                        {/* What IT reads off the sticker; the search already matches it. */}
+                                                        <td className="max-w-[8rem] truncate px-3 py-2.5 text-xs" title={a.serial ?? undefined}>
+                                                            {a.serial || <span className="text-muted-foreground">—</span>}
+                                                        </td>
+                                                        {/* Holder with their department under it (the department alone was a column
+                                                        empty for every pool and shared asset). */}
+                                                        <td className="max-w-[8.5rem] px-3 py-2.5">
+                                                            {a.owner_name ? (
+                                                                <>
+                                                                    <TruncText text={localPair(a.owner_name, a.owner_name_th, lang)} />
+                                                                    {a.department && (
+                                                                        <TruncText
+                                                                            text={localPair(a.department, a.department_th, lang)}
+                                                                            className="text-muted-foreground text-xs"
+                                                                        />
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <AssetPlace asset={a} t={t} />
+                                                        </td>
+                                                        <td className="px-3 py-2.5 whitespace-nowrap">
+                                                            <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
+                                                        </td>
+                                                        <td className="px-3 py-2.5 whitespace-nowrap">
+                                                            <AssetCoverCell asset={a} />
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-xs whitespace-nowrap">
+                                                            {a.purchase_date ? (
+                                                                fmt.date(a.purchase_date)
+                                                            ) : (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-xs whitespace-nowrap">
+                                                            {a.handed_over_at ? (
+                                                                fmt.date(a.handed_over_at)
+                                                            ) : (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="max-w-[9rem] px-3 py-2.5">
+                                                            <TruncText text={localPair(a.supplier, a.supplier_th, lang)} />
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
+                                                            {a.source === 'rented' ? (
+                                                                // The contract's rent is for the whole contract — repeated on every unit it read as
+                                                                // each one's value. A "Rented" badge with the contract code under it instead.
+                                                                <div className="flex flex-col items-end">
+                                                                    <StatusBadge tone="violet" dot={false}>
+                                                                        {t('asset_rented_badge')}
+                                                                    </StatusBadge>
+                                                                    {a.contract_code && (
+                                                                        <div className="text-muted-foreground text-xs">{a.contract_code}</div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                a.value_display
+                                                            )}
+                                                        </td>
+                                                        <td className={cn(PINNED_CELL, 'right-0 px-3 py-2.5')}>
+                                                            <AssetRowMenu
+                                                                asset={a}
+                                                                canAccept={a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode}
+                                                                canReceive={canReceive && a.status === 'pending_return'}
+                                                                canTransfer={canTransfer && a.status === 'ready'}
+                                                                canEdit={canEdit && a.status !== 'writeoff'}
+                                                                onView={() => openAsset(a)}
+                                                                onAccept={() => accept.mutate(a.id)}
+                                                                onReceive={() => setReceiveAsset(a)}
+                                                                onTransfer={() => setTransferAsset(a)}
+                                                                onEdit={() => openEdit(a)}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {/* Nothing matched: said under any pinned new asset, like every other list */}
+                                                {rows.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={14} className="px-4">
+                                                            {hasActiveFilters ? (
+                                                                <EmptyState
+                                                                    kind="search"
+                                                                    title={t('asset_empty_inventory_filtered')}
+                                                                    hint={t('asset_empty_inventory_filtered_hint')}
+                                                                >
+                                                                    <Button size="sm" variant="outline" onClick={clearFilters}>
+                                                                        <X className="h-4 w-4" aria-hidden="true" />
+                                                                        {t('reset_filters')}
+                                                                    </Button>
+                                                                </EmptyState>
+                                                            ) : (
+                                                                <EmptyState
+                                                                    kind="empty"
+                                                                    title={t('asset_empty_inventory_none')}
+                                                                    hint={
+                                                                        canCreate
+                                                                            ? t('asset_empty_inventory_none_hint').replace(
+                                                                                  '{button}',
+                                                                                  t('register_asset'),
+                                                                              )
+                                                                            : null
+                                                                    }
+                                                                />
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </>
                                         )}
                                     </tbody>
                                 </table>

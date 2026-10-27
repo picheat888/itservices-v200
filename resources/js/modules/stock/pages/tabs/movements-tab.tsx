@@ -55,7 +55,13 @@ export function MovementsTab() {
     } = useStockMovements({ type: type === 'all' ? undefined : type, search: sentSearch || undefined, page, per_page: perPage });
     const movements = movementsPage?.data ?? [];
     // Movements the user just recorded stay on top for a minute
-    const newMoves = useNewRows({ scope: 'stock-movements', rows: movements, rowKey: (m) => m.id, detail: NEW_MOVEMENT_DETAIL });
+    const newMoves = useNewRows({
+        scope: 'stock-movements',
+        rows: movements,
+        rowKey: (m) => m.id,
+        detail: NEW_MOVEMENT_DETAIL,
+        waiting: movementsFetching,
+    });
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
     // Open state is separate from the data so the detail stays mounted during the close animation.
     const [moveOpen, setMoveOpen] = useState(false);

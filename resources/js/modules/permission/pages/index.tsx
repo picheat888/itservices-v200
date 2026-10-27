@@ -298,7 +298,7 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         value: r.value,
         label: r.label,
         search: r.label,
-        hint: newRoles.isNew(r) ? t('badge_new') : undefined,
+        badge: newRoles.isNew(r) ? <NewBadge /> : undefined,
         icon: <RoleBar color={r.color} className="h-4" />,
     }));
 

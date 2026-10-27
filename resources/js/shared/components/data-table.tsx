@@ -360,6 +360,54 @@ export function DataTable<T>({
                         </tr>
                     </thead>
                     <tbody>
+                        {/* Pinned rows stay put while a new page loads, so they never blink or fade in again */}
+                        {(loading ? (pinned ?? []) : drawnRows).map((row) => {
+                            const clickable = !!onRowClick && (isRowClickable?.(row) ?? true);
+                            const expanded = renderExpanded?.(row);
+                            const rowStop = clickable && focusableRows;
+                            return (
+                                <Fragment key={rowKey(row)}>
+                                    <tr
+                                        onClick={clickable ? () => onRowClick?.(row) : undefined}
+                                        data-row-click={clickable ? '' : undefined}
+                                        // Clickable rows are reachable by Tab and open on Enter / Space.
+                                        tabIndex={rowStop ? 0 : undefined}
+                                        onKeyDown={rowStop ? (e) => onRowKeyDown(e, row) : undefined}
+                                        className={cn(
+                                            // last:border-b-0, never border-0 (keeps a rowClassName left accent)
+                                            'border-border/60 border-b last:border-b-0',
+                                            clickable &&
+                                                'row-hover focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
+                                            rowClassName?.(row),
+                                        )}
+                                    >
+                                        {columns.map((c) => (
+                                            <td
+                                                key={c.key}
+                                                style={stickyStyle(c)}
+                                                className={cn(
+                                                    'px-[var(--row-px)] py-[var(--row-py)]',
+                                                    alignClass(c.align),
+                                                    c.className,
+                                                    hideClass(c),
+                                                    stickyClass(c, false),
+                                                )}
+                                            >
+                                                {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    {expanded != null && expanded !== false && (
+                                        <tr id={expandedRowId?.(row)} className="border-border/60 border-b last:border-b-0">
+                                            <td colSpan={columns.length} className="p-0">
+                                                {/* Pinned to the visible scroller width, like the empty state */}
+                                                <div className="sticky left-0 box-border w-[100cqw] max-w-full">{expanded}</div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </Fragment>
+                            );
+                        })}
                         {loading &&
                             // As many skeleton rows as the page on screen (loadingRows, else 6, on a first load).
                             Array.from({ length: pageRows.length || loadingRows || 6 }).map((_, r) => (
@@ -387,54 +435,6 @@ export function DataTable<T>({
                                     ))}
                                 </tr>
                             ))}
-                        {!loading &&
-                            drawnRows.map((row) => {
-                                const clickable = !!onRowClick && (isRowClickable?.(row) ?? true);
-                                const expanded = renderExpanded?.(row);
-                                const rowStop = clickable && focusableRows;
-                                return (
-                                    <Fragment key={rowKey(row)}>
-                                        <tr
-                                            onClick={clickable ? () => onRowClick?.(row) : undefined}
-                                            data-row-click={clickable ? '' : undefined}
-                                            // Clickable rows are reachable by Tab and open on Enter / Space.
-                                            tabIndex={rowStop ? 0 : undefined}
-                                            onKeyDown={rowStop ? (e) => onRowKeyDown(e, row) : undefined}
-                                            className={cn(
-                                                // last:border-b-0, never border-0 (keeps a rowClassName left accent)
-                                                'border-border/60 border-b last:border-b-0',
-                                                clickable &&
-                                                    'row-hover focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2',
-                                                rowClassName?.(row),
-                                            )}
-                                        >
-                                            {columns.map((c) => (
-                                                <td
-                                                    key={c.key}
-                                                    style={stickyStyle(c)}
-                                                    className={cn(
-                                                        'px-[var(--row-px)] py-[var(--row-py)]',
-                                                        alignClass(c.align),
-                                                        c.className,
-                                                        hideClass(c),
-                                                        stickyClass(c, false),
-                                                    )}
-                                                >
-                                                    {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                        {expanded != null && expanded !== false && (
-                                            <tr id={expandedRowId?.(row)} className="border-border/60 border-b last:border-b-0">
-                                                <td colSpan={columns.length} className="p-0">
-                                                    {/* Pinned to the visible scroller width, like the empty state */}
-                                                    <div className="sticky left-0 box-border w-[100cqw] max-w-full">{expanded}</div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </Fragment>
-                                );
-                            })}
                         {!loading && pageRows.length === 0 && (
                             <tr>
                                 <td colSpan={columns.length} className={cn('text-muted-foreground px-0 text-center', emptyState ? 'py-10' : 'py-0')}>
@@ -451,9 +451,9 @@ export function DataTable<T>({
                             filler is pinned to `rowHeight` so it matches the real rows exactly. */}
                         {!loading &&
                             (fixedPageSize || fillHeight) &&
-                            pageRows.length > 0 &&
-                            pageRows.length < pageSize &&
-                            Array.from({ length: pageSize - pageRows.length }).map((_, i) => (
+                            drawnRows.length > 0 &&
+                            drawnRows.length < pageSize &&
+                            Array.from({ length: pageSize - drawnRows.length }).map((_, i) => (
                                 <tr key={`filler-${i}`} aria-hidden style={rowHeight ? { height: rowHeight } : undefined}>
                                     {columns.map((c) => (
                                         <td key={c.key} className="px-[var(--row-px)] py-[var(--row-py)]">

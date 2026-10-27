@@ -3,6 +3,7 @@
 namespace App\Models\Stock;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -42,6 +43,26 @@ class StockRequest extends Model
             'rejected_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    /** Super, approvers and fulfillers see every request; everyone else only their own. */
+    public static function seesAll(User $user): bool
+    {
+        return $user->isSuper() || $user->hasPermission('stock.approve') || $user->hasPermission('stock.fulfill');
+    }
+
+    /**
+     * @param  Builder<StockRequest>  $query
+     * @return Builder<StockRequest>
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return static::seesAll($user) ? $query : $query->where('user_id', $user->id);
+    }
+
+    public function isVisibleTo(User $user): bool
+    {
+        return static::seesAll($user) || (int) $this->user_id === (int) $user->id;
     }
 
     /** Pending: its requester or an approver. Approved: an approver or a fulfiller. Nothing later. */

@@ -21,6 +21,8 @@ export interface SearchOption {
     tag?: string;
     /** Optional secondary line under the label (e.g. a job title). */
     hint?: string;
+    /** Optional badge after the label (e.g. the new-row badge). */
+    badge?: React.ReactNode;
     /** Optional avatar URL; when the field is present an avatar slot renders (initials fallback). */
     avatar?: string | null;
     /** Optional leading visual (e.g. a type icon or status color dot). When any option
@@ -508,6 +510,7 @@ export function SearchableSelect({
                             <span className="block truncate">{o.label}</span>
                             {o.hint && <span className="text-muted-foreground block truncate text-xs">{o.hint}</span>}
                         </span>
+                        {o.badge && <span className="shrink-0">{o.badge}</span>}
                         {o.tag && (
                             <span className="bg-accent text-muted-foreground max-w-[110px] shrink-0 truncate rounded px-1.5 py-0.5 text-[10px] font-medium">
                                 {o.tag}

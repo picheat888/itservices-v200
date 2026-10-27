@@ -178,7 +178,9 @@ export default function RequestsPage() {
         rows,
         rowKey: (r) => r.id,
         detail: { key: (id) => ['request', id], fetch: (id) => requestApi.get(Number(id)) },
-        active: tab !== 'overview',
+        // Only the All list fetches a pinned request; approvals and queue pin it only when it is on their page
+        active: tab === 'all',
+        waiting: isFetching,
     });
     const meta = pageData?.meta;
     const metaPeriod = useShownPeriod(period, isPlaceholderData);

@@ -4,6 +4,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import {
     OverviewHeader,
     periodReachesToday,
@@ -24,6 +25,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSelectRefresh, type SelectRefresh } from '@/shared/hooks/use-select-refresh';
@@ -68,6 +70,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { employeeApi } from '../api/employeeApi';
 import { AddEmployeeDrawer } from '../components/add-employee-drawer';
 import { DepartmentMembersDialog } from '../components/department-members-dialog';
 import { DepartmentModal } from '../components/department-modal';
@@ -821,6 +824,7 @@ function DirectoryTab({
         rows,
         rowKey: (e) => e.id,
         detail: { key: (id) => ['employee', id], fetch: (id) => employeeApi.get(Number(id)) },
+        waiting: isFetching,
     });
 
     const handleSearch = (v: string) => list.setFilter('search', v);
@@ -1044,11 +1048,8 @@ function DirectoryTab({
     );
 }
 
-import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
-import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { EmployeeSummary } from '../api/employeeApi';
-import { employeeApi } from '../api/employeeApi';
 
 const DASH_DEPT_LIMIT = 8;
 

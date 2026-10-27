@@ -44,10 +44,7 @@ class StockRequestController extends Controller
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 
-        $seesAll = $user->isSuper() || $user->hasPermission('stock.approve') || $user->hasPermission('stock.fulfill');
-        if (! $seesAll) {
-            $query->where('user_id', $user->id);
-        }
+        $query->visibleTo($user);
 
         // Aggregate counts over the full (visibility-scoped) set — feed the sidebar
         // badge and the Requests tab chip, which must not depend on the current page.
@@ -88,8 +85,7 @@ class StockRequestController extends Controller
         $user = $request->user();
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
-        $seesAll = $user->isSuper() || $user->hasPermission('stock.approve') || $user->hasPermission('stock.fulfill');
-        abort_unless($seesAll || $stockRequest->user_id === $user->id, 404);
+        abort_unless($stockRequest->isVisibleTo($user), 404);
 
         return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee'])))->response();
     }
