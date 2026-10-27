@@ -1,4 +1,5 @@
 import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshness';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { sectionApi } from '../api/sectionApi';
 import { EMP } from './query-keys';
@@ -32,13 +33,22 @@ export function useSectionMutations() {
     return {
         create: useMutation({
             mutationFn: (p: { department_id: number; name: string; name_th?: string | null }) => sectionApi.create(p),
-            onSuccess: invalidate,
+            onSuccess: (section) => {
+                markNew('sections', section.id);
+                return invalidate();
+            },
         }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: { department_id: number; name: string; name_th?: string | null } }) =>
                 sectionApi.update(v.id, v.payload),
             onSuccess: invalidate,
         }),
-        remove: useMutation({ mutationFn: (id: number) => sectionApi.remove(id), onSuccess: invalidate }),
+        remove: useMutation({
+            mutationFn: (id: number) => sectionApi.remove(id),
+            onSuccess: (_, id) => {
+                dropNew('sections', id);
+                return invalidate();
+            },
+        }),
     };
 }

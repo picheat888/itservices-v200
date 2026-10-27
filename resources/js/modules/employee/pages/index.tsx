@@ -156,6 +156,9 @@ export default function EmployeesPage() {
     const refreshDepartments = useSelectRefresh(departmentsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
+    // A department or position the user just added stays on top for a minute
+    const newDepts = useNewRows({ scope: 'departments', rows: departments, rowKey: (d) => d.id });
+    const newPositions = useNewRows({ scope: 'positions', rows: positions, rowKey: (p) => p.id });
 
     const [importOpen, setImportOpen] = useState(false);
     const [editEmp, setEditEmp] = useState<Employee | null>(null);
@@ -335,7 +338,16 @@ export default function EmployeesPage() {
     };
 
     const posColumns: Column<Position>[] = [
-        { key: 'code', header: t('pos_code'), render: (p) => <span className="text-muted-foreground text-xs">{p.code}</span> },
+        {
+            key: 'code',
+            header: t('pos_code'),
+            render: (p) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-muted-foreground text-xs">{p.code}</span>
+                    {newPositions.isNew(p) && <NewBadge />}
+                </div>
+            ),
+        },
         { key: 'title', header: t('pos_title'), render: (p) => <span className="font-medium">{p.title}</span> },
         {
             key: 'members',
@@ -456,7 +468,16 @@ export default function EmployeesPage() {
     };
 
     const deptColumns: Column<Department>[] = [
-        { key: 'code', header: t('section_code'), render: (d) => <span className="text-muted-foreground text-xs">{d.code}</span> },
+        {
+            key: 'code',
+            header: t('section_code'),
+            render: (d) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-muted-foreground text-xs">{d.code}</span>
+                    {newDepts.isNew(d) && <NewBadge />}
+                </div>
+            ),
+        },
         { key: 'tag', header: t('dept_code'), render: (d) => <span className="bg-muted rounded-md px-2 py-0.5 text-xs">{d.tag}</span> },
         {
             key: 'name',
@@ -596,7 +617,9 @@ export default function EmployeesPage() {
                         <DataTable
                             columns={posColumns}
                             rows={positions}
+                            pinned={newPositions.pinned}
                             rowKey={(p) => p.id}
+                            rowClassName={(p) => (newPositions.isNew(p) ? NEW_ROW_CLASS : undefined)}
                             onRowClick={(p) => setViewPos(p)}
                             searchPlaceholder={t('emp_positions_search')}
                             searchable={(p) => `${p.code} ${p.title}`}
@@ -631,7 +654,9 @@ export default function EmployeesPage() {
                         <DataTable
                             columns={deptColumns}
                             rows={departments}
+                            pinned={newDepts.pinned}
                             rowKey={(d) => d.id}
+                            rowClassName={(d) => (newDepts.isNew(d) ? NEW_ROW_CLASS : undefined)}
                             onRowClick={(d) => setViewDept(d)}
                             searchPlaceholder={t('emp_departments_search')}
                             searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}
@@ -790,6 +815,13 @@ function DirectoryTab({
     });
     const rows = data?.data ?? [];
     const total = data?.meta?.total ?? 0;
+    // An employee the user just added stays on top for a minute
+    const newEmployees = useNewRows({
+        scope: 'employees',
+        rows,
+        rowKey: (e) => e.id,
+        detail: { key: (id) => ['employee', id], fetch: (id) => employeeApi.get(Number(id)) },
+    });
 
     const handleSearch = (v: string) => list.setFilter('search', v);
     const handleDept = (v: string) => list.setFilter('dept', v === 'all' ? '' : v);
@@ -817,7 +849,19 @@ function DirectoryTab({
     ];
 
     const columns: Column<Employee>[] = [
-        { key: 'code', header: t('tbl_emp_id'), width: '96px', sticky: 'left', className: 'text-xs whitespace-nowrap', render: (e) => e.code },
+        {
+            key: 'code',
+            header: t('tbl_emp_id'),
+            width: '96px',
+            sticky: 'left',
+            className: 'text-xs whitespace-nowrap',
+            render: (e) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span>{e.code}</span>
+                    {newEmployees.isNew(e) && <NewBadge />}
+                </div>
+            ),
+        },
         {
             key: 'name',
             header: t('sub_directory'),
@@ -980,7 +1024,9 @@ function DirectoryTab({
             <DataTable
                 columns={columns}
                 rows={rows}
+                pinned={newEmployees.pinned}
                 rowKey={(e) => e.id}
+                rowClassName={(e) => (newEmployees.isNew(e) ? NEW_ROW_CLASS : undefined)}
                 onRowClick={onView}
                 loading={isLoading || (isFetching && isPlaceholderData)}
                 server={{ ...list.table.paging, total }}
@@ -998,8 +1044,11 @@ function DirectoryTab({
     );
 }
 
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { EmployeeSummary } from '../api/employeeApi';
+import { employeeApi } from '../api/employeeApi';
 
 const DASH_DEPT_LIMIT = 8;
 

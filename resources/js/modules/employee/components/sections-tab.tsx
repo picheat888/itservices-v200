@@ -1,7 +1,9 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useListParams } from '@/shared/hooks/use-list-params';
+import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { localName, localPair } from '@/shared/lib/local-name';
@@ -38,6 +40,8 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const refreshDepartments = useSelectRefresh(departmentsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const mut = useSectionMutations();
+    // A section the user just added stays on top for a minute, whatever the department filter
+    const newSections = useNewRows({ scope: 'sections', rows: sections, rowKey: (s) => s.id });
     const [editSection, setEditSection] = useState<Section | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     // Search, department, order, page and rows-per-page live in the URL (?search, dept, sort, page, per).
@@ -103,7 +107,16 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     };
 
     const columns: Column<Section>[] = [
-        { key: 'code', header: t('section_code'), render: (s) => <span className="text-muted-foreground text-xs">{s.code}</span> },
+        {
+            key: 'code',
+            header: t('section_code'),
+            render: (s) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-muted-foreground text-xs">{s.code}</span>
+                    {newSections.isNew(s) && <NewBadge />}
+                </div>
+            ),
+        },
         { key: 'name', header: t('section'), render: (s) => <span className="font-medium">{localName(s, lang)}</span> },
         { key: 'department', header: t('department'), render: (s) => <span className="text-muted-foreground">{deptLabel(s) ?? '—'}</span> },
         {
@@ -160,7 +173,9 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
             <DataTable
                 columns={columns}
                 rows={view}
+                pinned={newSections.pinned}
                 rowKey={(s) => s.id}
+                rowClassName={(s) => (newSections.isNew(s) ? NEW_ROW_CLASS : undefined)}
                 loading={isLoading}
                 empty={
                     sections.length === 0

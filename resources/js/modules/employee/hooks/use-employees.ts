@@ -2,6 +2,7 @@ import { overviewPeriodKey, type OverviewPeriod } from '@/shared/components/over
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { ME_KEY } from '@/shared/lib/query-client';
+import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from '../api/employeeApi';
 import { DEPT, EMP } from './query-keys';
@@ -114,7 +115,13 @@ export function useEmployeeMutations() {
         qc.invalidateQueries({ queryKey: ME_KEY });
     };
     return {
-        create: useMutation({ mutationFn: (p: EmployeePayload) => employeeApi.create(p), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: EmployeePayload) => employeeApi.create(p),
+            onSuccess: (created) => {
+                markNew('employees', created.employee.id);
+                return invalidate();
+            },
+        }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: EmployeePayload }) => employeeApi.update(v.id, v.payload),
             onSuccess: invalidate,
@@ -125,7 +132,10 @@ export function useEmployeeMutations() {
         }),
         remove: useMutation({
             mutationFn: (id: number) => employeeApi.remove(id),
-            onSuccess: invalidate,
+            onSuccess: (_, id) => {
+                dropNew('employees', id);
+                return invalidate();
+            },
         }),
         cancelResign: useMutation({
             mutationFn: (id: number) => employeeApi.cancelResign(id),
