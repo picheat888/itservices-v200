@@ -22,7 +22,8 @@ import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { NEW_MOVEMENT_DETAIL, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
+import { NEW_MOVEMENT_DETAIL, useMovementLots, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
+import { LotCard } from '../../components/lot-card';
 import { movementNote } from '../../lib/movement-note';
 import { MV_META, MV_TONE_HEX } from '../shared';
 
@@ -71,6 +72,9 @@ export function MovementsTab() {
     const moveSerials = useMemo(() => moveSerialsQuery.data ?? [], [moveSerialsQuery.data]);
     // The movement itself never changes once posted; its serials are asked again on open
     useRefetchOnOpen(moveOpen, moveSerialsQuery);
+    // Lot a receive opened (receive rows only)
+    const moveLotsQuery = useMovementLots(viewMove?.id ?? null, moveOpen && viewMove?.type === 'receive');
+    const receiveLot = moveLotsQuery.data?.lots[0];
 
     const columns: Column<(typeof movements)[number]>[] = [
         {
@@ -314,6 +318,23 @@ export function MovementsTab() {
                                             </div>
                                         )}
 
+                                        {/* Lot of this receive */}
+                                        {viewMove.type === 'receive' && receiveLot?.lot_no && (
+                                            <div>
+                                                <div className={cn(EYEBROW, 'mb-1')}>{t('stock_recv_lots_title')}</div>
+                                                <LotCard
+                                                    lotNo={receiveLot.lot_no}
+                                                    warehouse={receiveLot.warehouse}
+                                                    remaining={receiveLot.remaining}
+                                                    state={receiveLot.state}
+                                                    printable={moveSerials.length === 0}
+                                                />
+                                                {moveSerials.length > 0 && (
+                                                    <p className="text-muted-foreground mt-1 text-xs">{t('stock_recv_serial_note')}</p>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {/* Serial list + reprint labels (retroactive, e.g. for a Receive) */}
                                         {moveSerials.length > 0 && (
                                             <div>
@@ -326,7 +347,7 @@ export function MovementsTab() {
                                                         className={buttonVariants({ variant: 'outline', size: 'sm' })}
                                                     >
                                                         <Printer className="h-3.5 w-3.5" aria-hidden />
-                                                        {t('stock_print')}
+                                                        {t('stock_lot_print_serial_stickers')}
                                                     </a>
                                                 </div>
                                                 <div className="border-border max-h-48 overflow-auto overscroll-contain rounded-lg border">

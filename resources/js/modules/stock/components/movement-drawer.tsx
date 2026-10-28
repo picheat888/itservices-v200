@@ -13,7 +13,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
-import type { StockItem, StockMovementType } from '@/shared/types';
+import type { ReceiveLot, StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -36,6 +36,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { LotCard } from './lot-card';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { countLockFor } from '../lib/count-lock';
 import { stockRefusalText } from '../lib/refusal';
@@ -110,6 +111,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
         prevStock: number;
         movementId: number;
         docNo: string | null;
+        lot: ReceiveLot | null;
     } | null>(null);
     // Form snapshot taken right after seeding; null = capture on the next render
     const [baseline, setBaseline] = useState<string | null>(null);
@@ -392,6 +394,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                     prevStock: selected.current_stock,
                     movementId: movement.id,
                     docNo: movement.doc_no,
+                    lot: movement.lot ?? null,
                 });
             } else {
                 setSaved(true);
@@ -435,6 +438,18 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                             </div>
                         </div>
 
+                        {/* Lot opened by this receive */}
+                        {done.lot && done.serials.length === 0 && (
+                            <LotCard
+                                lotNo={done.lot.lot_no}
+                                warehouse={done.lot.warehouse}
+                                qty={done.lot.qty}
+                                unitCost={done.lot.unit_cost}
+                                unit={done.item.unit}
+                                printable
+                            />
+                        )}
+
                         {done.serials.length > 0 && (
                             <div>
                                 <div className="mb-2 flex items-center justify-between">
@@ -448,10 +463,11 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                         className={buttonVariants({ size: 'sm' })}
                                     >
                                         <Printer className="h-3.5 w-3.5" aria-hidden />
-                                        {t('stock_print')}
+                                        {t('stock_lot_print_serial_stickers')}
                                         <span className="sr-only">{t('stock_opens_new_tab')}</span>
                                     </a>
                                 </div>
+                                <p className="text-muted-foreground mb-2 text-xs">{t('stock_lot_serial_sticker_hint')}</p>
                                 <div className="flex max-h-40 flex-wrap gap-1.5 overflow-auto">
                                     {done.serials.map((s, i) => (
                                         <span key={i} className="bg-accent inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs">
