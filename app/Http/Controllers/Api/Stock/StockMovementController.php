@@ -355,7 +355,7 @@ class StockMovementController extends Controller
                 $movement->setRelation('openedLot', $openedLot->load('warehouse'));
             } else {
                 $this->balances->remove($item, (string) $fromWh, $qty);
-                $this->lotService->legacyConsume($item, $qty);
+                $this->lotService->consume($item, Warehouse::resolveId((string) $fromWh), $qty, $movement, $data['reference'] ?? null);
             }
 
             // Register each received unit's serial against the SKU + log a history event.

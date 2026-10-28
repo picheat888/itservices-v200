@@ -12,10 +12,14 @@ use App\Models\User;
 use App\Services\Stock\StockCountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\AssertsLotLedger;
+use Tests\Concerns\ParksStockOnLots;
 use Tests\TestCase;
 
 class StockCountSerialTest extends TestCase
 {
+    use AssertsLotLedger;
+    use ParksStockOnLots;
     use RefreshDatabase;
 
     private function super(): User
@@ -31,10 +35,10 @@ class StockCountSerialTest extends TestCase
             'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
         ]);
         $whId = Warehouse::firstOrCreate(['name' => $wh])->id;
-        $item->balances()->create(['warehouse_id' => $whId, 'qty' => $stock]);
         for ($i = 1; $i <= $stock; $i++) {
             $item->serials()->create(['serial' => "{$sku}-SN{$i}", 'status' => 'in_stock', 'warehouse_id' => $whId]);
         }
+        $this->parkStock($item, $whId, $stock);
 
         return $item;
     }
@@ -142,6 +146,8 @@ class StockCountSerialTest extends TestCase
         $this->assertSame('in_stock', $serials[2]->fresh()->status);
         $this->assertSame($count['reference'], $serials[0]->fresh()->reference);
         $this->assertSame(2, StockItemSerialEvent::where('event', 'adjusted')->where('stock_movement_id', $movement->id)->count());
+        $this->assertLotsMatchBalances($item);
+        $this->assertLotsMatchEntries($item);
     }
 
     public function test_serial_commit_needs_no_mode(): void

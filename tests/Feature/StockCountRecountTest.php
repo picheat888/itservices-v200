@@ -13,16 +13,18 @@ use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ParksStockOnLots;
 use Tests\TestCase;
 
 class StockCountRecountTest extends TestCase
 {
+    use ParksStockOnLots;
     use RefreshDatabase;
 
     private function plainItem(string $sku, int $stock, Warehouse $wh): StockItem
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100]);
-        $item->balances()->create(['warehouse_id' => $wh->id, 'qty' => $stock]);
+        $this->parkStock($item, $wh->id, $stock);
 
         return $item;
     }
@@ -30,10 +32,10 @@ class StockCountRecountTest extends TestCase
     private function serialItem(string $sku, int $stock, Warehouse $wh): StockItem
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true]);
-        $item->balances()->create(['warehouse_id' => $wh->id, 'qty' => $stock]);
         for ($i = 1; $i <= $stock; $i++) {
             $item->serials()->create(['serial' => "{$sku}-SN{$i}", 'status' => 'in_stock', 'warehouse_id' => $wh->id]);
         }
+        $this->parkStock($item, $wh->id, $stock);
 
         return $item;
     }

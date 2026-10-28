@@ -11,6 +11,7 @@ use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -300,11 +301,18 @@ class StockCountService
         }
 
         $serials = $item->track_serial ? $this->lockTickedSerials($count, $item, $variance, $missing, $found) : null;
+        // Overage lots cost the average before this line changes the stock
+        $unitCost = $item->avgCost();
 
         // A serial line whose losses and finds cancel out moves no stock but still logs every serial
         $movement = $variance === 0 ? null : $this->recordMovement($count, $line, $item, $warehouse, $variance, $user);
         if ($serials !== null) {
+            $this->bookSerialLots($serials, $item, $warehouse, $unitCost, $movement, $count->reference);
             $this->settleSerials($serials, $count, $warehouse, $movement, $user);
+        } elseif ($variance < 0) {
+            $this->lotService->consume($item, $warehouse->id, abs($variance), $movement, $count->reference);
+        } else {
+            $this->lotService->open($item, $warehouse->id, $variance, $unitCost, $movement, $count->reference);
         }
         if ($variance === 0) {
             return false;
@@ -313,14 +321,43 @@ class StockCountService
         $variance > 0
             ? $this->balanceService->addTo($item, $warehouse, $variance)
             : $this->balanceService->removeFrom($item, $warehouse, abs($variance));
-        $total = $item->current_stock + $variance;
         $item->update([
-            'current_stock' => $total,
+            'current_stock' => $item->current_stock + $variance,
             'last_move_at' => now()->toDateString(),
         ]);
-        $this->lotService->legacyReconcile($item, $total, $movement?->id);
 
         return true;
+    }
+
+    /**
+     * Missing serials leave their own lots; found ones go back to their lot when it sits here, else into one new lot here.
+     *
+     * @param  array{missing: EloquentCollection<int, StockItemSerial>, found: EloquentCollection<int, StockItemSerial>}  $serials
+     */
+    private function bookSerialLots(array $serials, StockItem $item, Warehouse $warehouse, float $unitCost, ?StockMovement $movement, string $reference): void
+    {
+        $missing = $serials['missing'];
+        $qtyByLot = $missing->whereNotNull('stock_lot_id')
+            ->countBy('stock_lot_id')
+            ->mapWithKeys(fn (int $qty, $lotId): array => [(int) $lotId => $qty])
+            ->all();
+        $this->lotService->consumeLots($qtyByLot, $movement, $reference);
+        $this->lotService->consume($item, $warehouse->id, $missing->whereNull('stock_lot_id')->count(), $movement, $reference);
+
+        $lotsHere = StockLot::whereKey($serials['found']->pluck('stock_lot_id')->filter()->unique()->all())
+            ->where('warehouse_id', $warehouse->id)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+        [$backHome, $homeless] = $serials['found']->partition(fn (StockItemSerial $serial): bool => in_array((int) $serial->stock_lot_id, $lotsHere, true));
+
+        foreach ($backHome->countBy('stock_lot_id') as $lotId => $qty) {
+            $this->lotService->restore(StockLot::findOrFail((int) $lotId), $qty, $movement, $reference);
+        }
+        if ($homeless->isNotEmpty()) {
+            $lot = $this->lotService->open($item, $warehouse->id, $homeless->count(), $unitCost, $movement, $reference);
+            StockItemSerial::whereKey($homeless->modelKeys())->update(['stock_lot_id' => $lot->id]);
+        }
     }
 
     private function recordMovement(StockCount $count, StockCountLine $line, StockItem $item, Warehouse $warehouse, int $variance, User $user): StockMovement

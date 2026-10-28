@@ -11,7 +11,6 @@ use App\Models\Stock\Warehouse;
 use App\Support\LotNumber;
 use App\Support\Refusal;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 /**
  * FIFO lots per warehouse. Receipts open numbered lots, draws take the oldest lots in one warehouse,
@@ -207,69 +206,5 @@ class StockLotService
             'reference' => $reference,
             'occurred_at' => $movement?->moved_at ?? now(),
         ]);
-    }
-
-    /**
-     * Open an unnumbered lot with no warehouse; a null cost falls back to the item's average cost.
-     *
-     * @deprecated Old whole-item lot path; a later STK-8 task removes it.
-     */
-    public function legacyAddLot(StockItem $item, int $qty, ?float $unitCost, ?int $movementId, ?Carbon $receivedAt = null): void
-    {
-        if ($qty <= 0) {
-            return;
-        }
-
-        StockLot::create([
-            'stock_item_id' => $item->id,
-            'stock_movement_id' => $movementId,
-            'unit_cost' => $unitCost ?? $item->avgCost(),
-            'qty_received' => $qty,
-            'qty_remaining' => $qty,
-            'received_at' => $receivedAt ?? now(),
-        ]);
-    }
-
-    /**
-     * Draw down qty from the item's oldest open lots in any warehouse, without ledger entries.
-     *
-     * @deprecated Old whole-item lot path; a later STK-8 task removes it.
-     */
-    public function legacyConsume(StockItem $item, int $qty): void
-    {
-        $remaining = $qty;
-
-        $lots = StockLot::where('stock_item_id', $item->id)
-            ->where('qty_remaining', '>', 0)
-            ->orderBy('received_at')
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get();
-
-        foreach ($lots as $lot) {
-            if ($remaining <= 0) {
-                break;
-            }
-            $take = min($lot->qty_remaining, $remaining);
-            $lot->qty_remaining -= $take;
-            $lot->save();
-            $remaining -= $take;
-        }
-    }
-
-    /**
-     * Align open lots with a target on-hand quantity after a count commit.
-     *
-     * @deprecated Old whole-item lot path; a later STK-8 task removes it.
-     */
-    public function legacyReconcile(StockItem $item, int $targetQty, ?int $movementId = null): void
-    {
-        $current = (int) StockLot::where('stock_item_id', $item->id)->sum('qty_remaining');
-
-        if ($targetQty > $current) {
-            $this->legacyAddLot($item, $targetQty - $current, null, $movementId);
-        } elseif ($targetQty < $current) {
-            $this->legacyConsume($item, $current - $targetQty);
-        }
     }
 }

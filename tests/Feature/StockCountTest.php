@@ -16,10 +16,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Mockery;
+use Tests\Concerns\AssertsLotLedger;
+use Tests\Concerns\ParksStockOnLots;
 use Tests\TestCase;
 
 class StockCountTest extends TestCase
 {
+    use AssertsLotLedger;
+    use ParksStockOnLots;
     use RefreshDatabase;
 
     private function super(): User
@@ -30,8 +34,7 @@ class StockCountTest extends TestCase
     private function item(string $sku, int $stock, string $wh = 'Main'): StockItem
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100]);
-        // Warehouse scoping is balance-based now โ€” park the stock in the given warehouse.
-        $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => $wh])->id, 'qty' => $stock]);
+        $this->parkStock($item, Warehouse::firstOrCreate(['name' => $wh])->id, $stock);
 
         return $item;
     }
@@ -97,7 +100,7 @@ class StockCountTest extends TestCase
     public function test_a_one_warehouse_count_adjusts_that_warehouse_and_the_total_by_the_difference(): void
     {
         $item = $this->item('A-1', 10, 'Main');
-        $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch'])->id, 'qty' => 5]);
+        $this->parkStock($item, Warehouse::firstOrCreate(['name' => 'Branch'])->id, 5);
         $item->update(['current_stock' => 15]);
         $this->actingAs($this->super());
 
@@ -110,6 +113,8 @@ class StockCountTest extends TestCase
         $this->assertSame(['Main' => 7, 'Branch' => 5], $balances->sortKeys()->reverse()->all());
         $this->assertSame(12, $item->fresh()->current_stock);
         $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_down', 'qty' => 3, 'from_label' => 'Main']);
+        $this->assertLotsMatchBalances($item->fresh());
+        $this->assertLotsMatchEntries($item);
     }
 
     public function test_a_count_of_a_warehouse_adjusts_an_item_that_sits_only_there(): void
@@ -130,7 +135,7 @@ class StockCountTest extends TestCase
     public function test_a_count_of_one_warehouse_leaves_the_other_warehouse_balance_alone(): void
     {
         $item = $this->item('A-1', 10, 'Main');
-        $item->balances()->create(['warehouse_id' => $this->warehouse('Branch')->id, 'qty' => 5]);
+        $this->parkStock($item, $this->warehouse('Branch')->id, 5);
         $item->update(['current_stock' => 15]);
         $this->actingAs($this->super());
 
@@ -182,7 +187,7 @@ class StockCountTest extends TestCase
     public function test_system_qty_is_this_warehouse_only(): void
     {
         $both = $this->item('A-1', 10, 'Main');
-        $both->balances()->create(['warehouse_id' => $this->warehouse('Other')->id, 'qty' => 5]);
+        $this->parkStock($both, $this->warehouse('Other')->id, 5);
         $both->update(['current_stock' => 15]);
         $elsewhere = $this->item('B-1', 7, 'Other');
         $this->actingAs($this->super());

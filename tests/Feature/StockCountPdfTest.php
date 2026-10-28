@@ -11,21 +11,23 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
+use Tests\Concerns\ParksStockOnLots;
 use Tests\TestCase;
 
 class StockCountPdfTest extends TestCase
 {
+    use ParksStockOnLots;
     use RefreshDatabase;
 
     private function item(string $sku, int $stock, Warehouse $wh, bool $serial = false): StockItem
     {
         $item = StockItem::create(['sku' => $sku, 'name' => "Name {$sku}", 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => $serial]);
-        $item->balances()->create(['warehouse_id' => $wh->id, 'qty' => $stock]);
         if ($serial) {
             for ($i = 1; $i <= $stock; $i++) {
                 $item->serials()->create(['serial' => "{$sku}-SN{$i}", 'status' => 'in_stock', 'warehouse_id' => $wh->id]);
             }
         }
+        $this->parkStock($item, $wh->id, $stock);
 
         return $item;
     }

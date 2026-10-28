@@ -11,10 +11,12 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\ParksStockOnLots;
 use Tests\TestCase;
 
 class StockCountOverlapTest extends TestCase
 {
+    use ParksStockOnLots;
     use RefreshDatabase;
 
     private User $user;
@@ -30,7 +32,7 @@ class StockCountOverlapTest extends TestCase
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => array_sum($balances), 'min_stock' => 1, 'max_stock' => 100]);
         foreach ($balances as $warehouse => $qty) {
-            $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => $warehouse])->id, 'qty' => $qty]);
+            $this->parkStock($item, Warehouse::firstOrCreate(['name' => $warehouse])->id, $qty);
         }
 
         return $item;
