@@ -7450,7 +7450,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ทุกการรับเข้าเปิด Lot ใหม่เลข `LOT-YYYYMMDD-NNNN` พร้อมพิมพ์สติกเกอร์ QR ของ Lot ได้
 - เบิกสินค้า 1 คำขอได้ 1 ใบ ISS หยิบ Lot เก่าสุดก่อนแยกตามคลัง มี PDF ใบ ISS
 - คืนของต้องระบุคำขอเบิก และกลับเข้า Lot เดิมของคำขอนั้น
-- โอนย้ายย้ายทั้ง Lot ส่วนนับสต็อกลงยอดที่ Lot ของคลังที่นับ
+- โอนย้ายทั้ง Lot ส่วนนับสต็อกลงยอดที่ Lot ของคลังที่นับ
 - หน้า Lot `/stock/lots/:lotNo` มีการเทียบยอด กล่องสแกนตรวจ Lot แท็บ Lot ประวัติสินค้าบอก Lot ทุกแถว และแถวคำขอเบิกเปิดรายละเอียดพร้อมพิมพ์ ISS กับคืนของ
 
 หมายเหตุทางเทคนิค
@@ -7460,4 +7460,5 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - dependency ใหม่ `chillerlan/php-qrcode ^6` QR ใช้ `APP_URL` เป็นฐาน
 - ข้อมูลเก่าก่อน STK-8 ไม่ย้อนเติม เบิกจาก Lot เก่าถูกปฏิเสธจนกว่าจะสร้างข้อมูลสต็อกใหม่
 - ผู้ใช้ต้องรัน `php artisan migrate` เอง แล้วสร้างข้อมูล perf สต็อกใหม่
-- commit `aa49ae66..ad802a1d` (spec `docs/superpowers/specs/2026-10-28-stock-lot-tracking-design.md`)
+- รอบแก้หลังรีวิวรวม (code review, security review, design review) `ba6f3c33` `d3c55adf` `c1272507` ย้ายการรับเข้าไป `StockReceiveService` คืนของลงวันที่ก่อนวันจ่ายถูกปฏิเสธด้วย `return_before_issue` สแกน Lot ต่อกันเร็ว ๆ ไม่ตกหล่น ลิงก์ Lot ในแอปเปิดแท็บใหม่ และแก้ WCAG ของหน้า Lot คำขอเบิก การคืน และการโอนย้าย
+- commit `aa49ae66` ถึง `c1272507` (spec `docs/superpowers/specs/2026-10-28-stock-lot-tracking-design.md`)
