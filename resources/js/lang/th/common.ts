@@ -252,6 +252,9 @@ export const common: Dict = {
     // http.ts, form error banners — a save the server failed
     err_action_server: 'ทำรายการไม่สำเร็จ เพราะเซิร์ฟเวอร์มีปัญหา กรุณาลองใหม่อีกครั้ง',
 
+    // dialog-header.tsx — form dialog description for screen readers
+    form_modal_desc: 'กรอกข้อมูลแล้วกดบันทึก',
+
     // error-state.tsx — reference row
     err_reference_label: 'รหัสอ้างอิง',
     err_copy_reference: 'คัดลอกรหัสอ้างอิง',

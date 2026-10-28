@@ -88,7 +88,13 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             {/* Title and labelled fields say it all: no description, stated explicitly (Radix / WAI-ARIA) */}
             <FormDialogContent>
-                <FocusDialogHeader icon={Users} eyebrow={t('employees')} title={view ? t('edit_position') : t('add_position')} code={view?.title} />
+                <FocusDialogHeader
+                    icon={Users}
+                    eyebrow={t('employees')}
+                    title={view ? t('edit_position') : t('add_position')}
+                    code={view?.title}
+                    srDescription={t('form_modal_desc')}
+                />
                 <form onSubmit={submit} className="contents">
                     <DialogBody>
                         <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />

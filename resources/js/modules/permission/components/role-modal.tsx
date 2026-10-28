@@ -110,7 +110,7 @@ export function RoleModal({
                     title={title}
                     code={viewRole?.label}
                     subtitle={copiedFrom ? <span className="text-muted-foreground text-sm">{copiedFrom}</span> : undefined}
-                    srDescription={copiedFrom}
+                    srDescription={copiedFrom ?? t('form_modal_desc')}
                 />
                 <DialogBody>
                     <FormErrorBanner message={formError.message} shakeKey={formError.shakeKey} />

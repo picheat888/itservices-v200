@@ -104,6 +104,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                     icon={Users}
                     eyebrow={t('employees')}
                     title={view ? t('edit_section') : t('add_section')}
+                    srDescription={t('form_modal_desc')}
                     code={view?.code || undefined}
                 />
                 <form onSubmit={submit} className="contents">

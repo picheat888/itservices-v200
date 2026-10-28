@@ -92,6 +92,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                     icon={Users}
                     eyebrow={t('employees')}
                     title={view ? t('edit_department') : t('add_department')}
+                    srDescription={t('form_modal_desc')}
                     code={view ? localName(view, lang) : undefined}
                 />
                 <form onSubmit={submit} className="contents">

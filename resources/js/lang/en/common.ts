@@ -252,6 +252,9 @@ export const common: Dict = {
     // http.ts, form error banners — a save the server failed
     err_action_server: "That didn't go through because the server ran into a problem. Please try again.",
 
+    // dialog-header.tsx — form dialog description for screen readers
+    form_modal_desc: 'Fill in the details, then save.',
+
     // error-state.tsx — reference row
     err_reference_label: 'Reference',
     err_copy_reference: 'Copy reference code',
