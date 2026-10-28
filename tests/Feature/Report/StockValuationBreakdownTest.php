@@ -11,6 +11,7 @@ use App\Models\Settings\Unit;
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
+use App\Models\Stock\StockLotEntry;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -74,12 +75,17 @@ class StockValuationBreakdownTest extends TestCase
         ], $attributes));
     }
 
-    private function lot(StockItem $item, int $received, int $remaining, float $cost, string $receivedAt): void
+    /** @param  array<string, int>  $draws  issue qty keyed by the day it left the lot */
+    private function lot(StockItem $item, int $received, int $remaining, float $cost, string $receivedAt, array $draws = []): void
     {
-        StockLot::create([
+        $lot = StockLot::create([
             'stock_item_id' => $item->id, 'unit_cost' => $cost,
             'qty_received' => $received, 'qty_remaining' => $remaining, 'received_at' => $receivedAt,
         ]);
+        StockLotEntry::create(['stock_lot_id' => $lot->id, 'qty' => $received, 'occurred_at' => $receivedAt]);
+        foreach ($draws as $at => $qty) {
+            StockLotEntry::create(['stock_lot_id' => $lot->id, 'qty' => -$qty, 'occurred_at' => $at]);
+        }
     }
 
     private function balance(StockItem $item, Warehouse $warehouse, int $qty): void
@@ -103,7 +109,7 @@ class StockValuationBreakdownTest extends TestCase
         $this->movement($ssd, 'issue', 4, '2026-09-10 09:00:00');
         $this->movement($ssd, 'receive', 5, '2026-09-20 09:00:00', ['unit_cost' => 120]);
         $this->movement($ssd, 'issue', 3, '2026-09-22 09:00:00');
-        $this->lot($ssd, 10, 3, 100, '2026-09-01 09:00:00');
+        $this->lot($ssd, 10, 3, 100, '2026-09-01 09:00:00', ['2026-09-10 09:00:00' => 4, '2026-09-22 09:00:00' => 3]);
         $this->lot($ssd, 5, 5, 120, '2026-09-20 09:00:00');
         $this->balance($ssd, $main, 6);
         $this->balance($ssd, $branch, 2);
@@ -121,7 +127,7 @@ class StockValuationBreakdownTest extends TestCase
         $mouse = $this->item('Mouse', $cables, 0, 10, '2026-09-24');
         $this->movement($mouse, 'receive', 3, '2026-01-10 09:00:00', ['unit_cost' => 10]);
         $this->movement($mouse, 'issue', 3, '2026-09-24 09:00:00');
-        $this->lot($mouse, 3, 0, 10, '2026-01-10 09:00:00');
+        $this->lot($mouse, 3, 0, 10, '2026-01-10 09:00:00', ['2026-09-24 09:00:00' => 3]);
 
         $legacy = $this->item('Legacy part', $cables, 4, 25, null);
 
@@ -236,8 +242,8 @@ class StockValuationBreakdownTest extends TestCase
         $this->assertSame('2026-09-15', $data['as_of']);
         $this->assertFalse($data['today']);
         $this->assertNull($data['warehouses']);
-        // SSD 6 @100, HDD 160, Cable 150, Mouse 3 @10, Legacy 4 at the item cost.
-        $this->assertEqualsWithDelta(1040.0, $data['tiles']['value'], 0.001);
+        // SSD 6 @100, HDD 160, Cable 150, Mouse 3 @10; Legacy 4 has no lots so no ledger value.
+        $this->assertEqualsWithDelta(940.0, $data['tiles']['value'], 0.001);
         $this->assertSame([20, 5, 5, 0], [$data['tiles']['qty'], $data['tiles']['held'], $data['tiles']['items'], $data['tiles']['out']]);
         $this->assertEqualsWithDelta(340.0, $data['tiles']['dead90']['value'], 0.001);
         $this->assertSame(3, $data['tiles']['dead90']['count']);
@@ -322,10 +328,10 @@ class StockValuationBreakdownTest extends TestCase
 
         $past = $this->actingAs($user)->getJson('/api/reports/tabular/stock.valuation/rows?as_of=2026-09-15')->assertOk()->json('data');
         $this->assertSame(
-            [$this->s['ssd']->id, $this->s['hdd']->id, $this->s['cable']->id, $this->s['legacy']->id, $this->s['mouse']->id],
+            [$this->s['ssd']->id, $this->s['hdd']->id, $this->s['cable']->id, $this->s['mouse']->id, $this->s['legacy']->id],
             array_column($past, 'id'),
         );
-        $this->assertSame(['2026-09-10', '2026-03-01', '2025-06-01', null, '2026-01-10'], array_column($past, 'last_move'));
+        $this->assertSame(['2026-09-10', '2026-03-01', '2025-06-01', '2026-01-10', null], array_column($past, 'last_move'));
 
         $today = $this->actingAs($user)->getJson('/api/reports/tabular/stock.valuation/rows')->assertOk()->json('data');
         $this->assertSame([$this->s['ssd']->id, $this->s['hdd']->id, $this->s['cable']->id, $this->s['legacy']->id], array_column($today, 'id'));

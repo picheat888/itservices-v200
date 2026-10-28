@@ -4,7 +4,6 @@ namespace App\Services\Report\Stock;
 
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
-use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\User;
 use App\Services\Report\Tabular\CellDate;
@@ -17,8 +16,10 @@ use App\Services\Report\Tabular\ThaiWords;
 use App\Support\SearchTerms;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * "มูลค่าคงคลัง" (Report Center → Stock): on-hand quantity × FIFO cost per SKU at the end of the chosen day, most
@@ -80,7 +81,7 @@ class StockValuationReport extends TabularReport
         return [
             'qty_on_hand' => 'จำนวนคงเหลือ ณ สิ้นวันที่เลือกในรายงาน คิดจากคงเหลือปัจจุบันลบผลรับเข้าออกสุทธิหลังวันนั้น (ย้ายคลังไม่นับ) รายงานแสดงเฉพาะ SKU ที่คงเหลือมากกว่า 0',
             'avg_cost' => 'มูลค่าคงคลังหารด้วยจำนวนคงเหลือ ณ วันที่เลือก ปัดทศนิยม 2 ตำแหน่ง',
-            'stock_value' => 'มูลค่าแบบ FIFO ณ สิ้นวันที่เลือก: วันนี้ = ผลรวมจำนวนคงเหลือของแต่ละ Lot คูณราคา Lot, วันในอดีต = ตัดจำนวนคงเหลือจาก Lot ที่รับเข้าล่าสุดถึงวันนั้นย้อนไปทีละ Lot ส่วนที่ไม่พอใช้ราคา Lot เก่าที่สุดหรือต้นทุนที่ตั้งไว้ ปัดทศนิยม 2 ตำแหน่ง',
+            'stock_value' => 'มูลค่าแบบ FIFO ณ สิ้นวันที่เลือก: วันนี้ = ผลรวมจำนวนคงเหลือของแต่ละ Lot คูณราคา Lot, วันในอดีต = ผลรวมของทุกรายการในประวัติ Lot ถึงวันนั้น (จำนวนที่เปลี่ยน คูณราคา Lot) ปัดทศนิยม 2 ตำแหน่ง',
             'last_move' => 'วันที่ของรายการเคลื่อนไหวล่าสุดของ SKU จนถึงวันที่เลือก รวมย้ายคลัง (ถ้าเลือกวันนี้ใช้วันเคลื่อนไหวล่าสุดที่บันทึกบน SKU) ว่าง = ไม่เคยเคลื่อนไหว',
         ];
     }
@@ -323,11 +324,8 @@ class StockValuationReport extends TabularReport
             ->select('stock_items.*')
             ->selectSub($movedAfter, 'moved_after')
             ->selectRaw('? as valued_current', [$isCurrent ? 1 : 0])
-            ->with([
-                'lots' => $isCurrent
-                    ? fn ($q) => $q->where('qty_remaining', '>', 0)
-                    : fn ($q) => $q->where('received_at', '<=', $asOf)->orderByDesc('received_at')->orderByDesc('id'),
-            ])
+            ->when(! $isCurrent, fn (Builder $q) => $q->selectSub($this->ledgerValueAt($asOf), 'value_at'))
+            ->when($isCurrent, fn (Builder $q) => $q->with(['lots' => fn ($lots) => $lots->where('qty_remaining', '>', 0)]))
             ->when($filters['category_id'], fn (Builder $q, $id) => $q->where('category_id', (int) $id));
 
         // Last move at the day: the item's own stamp today, else the ledger up to that day.
@@ -378,31 +376,24 @@ class StockValuationReport extends TabularReport
         return $item->current_stock - (int) $item->moved_after;
     }
 
-    // Today = the open lots; a past day = lots received by then, newest first, the rest at the oldest lot's or item cost.
+    // Today = the open lots; a past day = the ledger summed up to then (see ledgerValueAt)
     private function valueAt(StockItem $item): float
     {
         if ((bool) $item->valued_current) {
             return round($item->stockValue(), 2);
         }
 
-        $needed = $this->qtyAt($item);
-        $value = 0.0;
-        foreach ($item->lots as $lot) {
-            if ($needed <= 0) {
-                break;
-            }
-            $taken = min($needed, $lot->qty_received);
-            $value += $taken * (float) $lot->unit_cost;
-            $needed -= $taken;
-        }
+        return round((float) $item->value_at, 2);
+    }
 
-        if ($needed > 0) {
-            /** @var StockLot|null $oldest */
-            $oldest = $item->lots->last();
-            $value += $needed * (float) ($oldest?->unit_cost ?? $item->cost);
-        }
-
-        return round($value, 2);
+    /** Correlated subquery on stock_items: Σ entry qty × lot unit cost up to $asOf. */
+    private function ledgerValueAt(Carbon $asOf): QueryBuilder
+    {
+        return DB::table('stock_lot_entries')
+            ->join('stock_lots', 'stock_lots.id', '=', 'stock_lot_entries.stock_lot_id')
+            ->selectRaw('COALESCE(SUM(stock_lot_entries.qty * stock_lots.unit_cost), 0)')
+            ->whereColumn('stock_lots.stock_item_id', 'stock_items.id')
+            ->where('stock_lot_entries.occurred_at', '<=', $asOf);
     }
 
     private function lastMoveAt(StockItem $item): ?Carbon

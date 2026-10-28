@@ -10,6 +10,7 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Unit;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
+use App\Models\Stock\StockLotEntry;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -71,12 +72,19 @@ class StockReportsTest extends TestCase
         ], $attributes));
     }
 
-    private function lot(StockItem $item, int $received, int $remaining, float $cost, string $receivedAt): StockLot
+    /** @param  array<string, int>  $draws  issue qty keyed by the day it left the lot */
+    private function lot(StockItem $item, int $received, int $remaining, float $cost, string $receivedAt, array $draws = []): StockLot
     {
-        return StockLot::create([
+        $lot = StockLot::create([
             'stock_item_id' => $item->id, 'unit_cost' => $cost,
             'qty_received' => $received, 'qty_remaining' => $remaining, 'received_at' => $receivedAt,
         ]);
+        StockLotEntry::create(['stock_lot_id' => $lot->id, 'qty' => $received, 'occurred_at' => $receivedAt]);
+        foreach ($draws as $at => $qty) {
+            StockLotEntry::create(['stock_lot_id' => $lot->id, 'qty' => -$qty, 'occurred_at' => $at]);
+        }
+
+        return $lot;
     }
 
     // ── stock.movements ─────────────────────────────────────────────────────────────
@@ -202,7 +210,7 @@ class StockReportsTest extends TestCase
         $this->movement($item, 'receive', 5, '2026-09-20 09:00:00', ['unit_cost' => 120]);
         $this->movement($item, 'issue', 3, '2026-09-22 09:00:00');
         $this->movement($item, 'transfer', 2, '2026-09-23 09:00:00', ['from_label' => 'Main', 'to_label' => 'Branch']);
-        $this->lot($item, 10, 3, 100, '2026-09-01 09:00:00');
+        $this->lot($item, 10, 3, 100, '2026-09-01 09:00:00', ['2026-09-10 09:00:00' => 4, '2026-09-22 09:00:00' => 3]);
         $this->lot($item, 5, 5, 120, '2026-09-20 09:00:00');
 
         return $item;
@@ -249,7 +257,7 @@ class StockReportsTest extends TestCase
         $this->assertNull($rowAt('2026-08-31'));
     }
 
-    public function test_valuation_values_stock_without_lots_at_the_item_cost(): void
+    public function test_valuation_gives_stock_without_lots_no_value_on_a_past_day(): void
     {
         $this->item(['name' => 'Legacy', 'current_stock' => 4, 'cost' => 25]);
 
@@ -257,7 +265,7 @@ class StockReportsTest extends TestCase
             ->getJson('/api/reports/tabular/stock.valuation/rows?as_of=2026-09-01')->assertOk()->json('data.0');
 
         $this->assertEquals(4, $row['qty_on_hand']);
-        $this->assertEqualsWithDelta(100.0, $row['stock_value'], 0.001);
+        $this->assertEqualsWithDelta(0.0, $row['stock_value'], 0.001);
     }
 
     public function test_card_sort_and_dead_stock_days_are_view_filters_kept_in_the_url(): void
