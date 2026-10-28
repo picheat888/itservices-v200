@@ -29,8 +29,8 @@ class PdfNumberFormatTest extends TestCase
                 'lines' => [['type' => 'receive', 'count' => 1, 'qty' => 1500, 'sign' => 1], ['type' => 'issue', 'count' => 1, 'qty' => 266, 'sign' => -1]],
                 'computed' => 1234, 'current' => 1234, 'difference' => 0,
             ],
-            'balances' => [['warehouse' => 'Main', 'qty' => 1234]],
-            'lots' => [['unit_cost' => 1234.5, 'qty_received' => 1500, 'qty_remaining' => 1234, 'received_at' => '2026-10-01T09:00:00', 'doc_no' => 'RC-2026-0001', 'serials' => []]],
+            'balances' => [['warehouse' => 'Main', 'qty' => 1234, 'lot_count' => 1]],
+            'lots' => [['lot_no' => 'LOT-20261001-0001', 'warehouse' => 'Main', 'unit_cost' => 1234.5, 'qty_received' => 1500, 'qty_remaining' => 1234, 'received_at' => '2026-10-01T09:00:00', 'doc_no' => 'RC-2026-0001', 'serials' => []]],
             'serials' => [],
             'movements' => [[
                 'type' => 'receive', 'doc_no' => 'RC-2026-0001', 'moved_at' => '2026-10-01T09:00:00',
