@@ -32,6 +32,9 @@ class AuthController extends Controller
 
     private const DEVICE_LOCK_WAIT_SECONDS = 5;
 
+    /** Preferences the login screen can set, so they save while a password change is owed. */
+    private const WALL_PREFERENCES = ['dark', 'lang', 'sidebar'];
+
     public function login(LoginRequest $request, DeviceService $devices, PendingLogin $pendingLogins): JsonResponse
     {
         $user = $request->resolveUser();
@@ -165,6 +168,10 @@ class AuthController extends Controller
         ]);
 
         $user = $request->user();
+        // Behind the password wall only what the login screen can change gets through
+        $owesPassword = $user->must_change_password || $user->isPasswordExpired();
+        abort_if($owesPassword && array_diff(array_keys($data), self::WALL_PREFERENCES) !== [], response()->json(['message' => 'password_expired'], 403));
+
         $user->preferences = array_merge($user->resolvedPreferences(), $data);
         $user->save();
 

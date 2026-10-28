@@ -79,6 +79,18 @@ class PasswordExpiryEnforcementTest extends TestCase
         $this->assertSame('th', $user->fresh()->preferences['lang']);
     }
 
+    public function test_behind_the_wall_preferences_take_only_theme_language_and_sidebar(): void
+    {
+        $user = $this->user(['must_change_password' => true, 'preferences' => ['accent' => '#2563eb']]);
+
+        $this->actingAs($user)->putJson('/api/preferences', ['dark' => true, 'sidebar' => 'icons'])->assertOk();
+        $this->actingAs($user)->putJson('/api/preferences', ['accent' => '#dc2626'])
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'password_expired');
+
+        $this->assertSame('#2563eb', $user->fresh()->preferences['accent']);
+    }
+
     public function test_changing_the_password_lifts_the_block(): void
     {
         $user = $this->user(['must_change_password' => true]);
