@@ -2,9 +2,11 @@
 import NotFoundPage from '@/app/not-found';
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { httpStatus } from '@/shared/lib/http-errors';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { LotDetail, StockMovementType } from '@/shared/types';
@@ -33,10 +35,17 @@ export default function LotHistoryPage() {
     const t = useT();
     const { lotNo } = useParams();
     useDocumentTitle('stock_lot_history_title');
-    const { data, isLoading, error } = useLot(lotNo ?? null);
+    const { data, isLoading, error, refetch } = useLot(lotNo ?? null);
 
-    if ((error as { response?: { status?: number } } | null)?.response?.status === 404) {
+    if (httpStatus(error) === 404) {
         return <NotFoundPage />;
+    }
+    if (error && !data) {
+        return (
+            <div className="bg-background mx-auto min-h-dvh max-w-5xl px-6 py-8">
+                <LoadFailedPanel onRetry={() => refetch()} />
+            </div>
+        );
     }
     if (isLoading || !data) {
         return (
@@ -62,7 +71,9 @@ function LotHistoryView({ lot, t }: { lot: LotDetail; t: Translate }) {
     const fmtN = useNumberFormat();
     const { format: formatMoney } = useCurrency();
     const { tiles, check } = lot;
-    const formula = `${fmtN(tiles.received)} − ${fmtN(tiles.issued)} + ${fmtN(tiles.returned)} = ${fmtN(tiles.remaining)}`;
+    // The count adjustment joins the sum only when a count touched the Lot
+    const adjustTerm = tiles.adjusted === 0 ? '' : ` ${tiles.adjusted > 0 ? '+' : '−'} ${fmtN(Math.abs(tiles.adjusted))}`;
+    const formula = `${fmtN(tiles.received)} − ${fmtN(tiles.issued)} + ${fmtN(tiles.returned)}${adjustTerm} = ${fmtN(tiles.remaining)}`;
 
     return (
         <div className="bg-background mx-auto min-h-dvh max-w-5xl px-6 py-8">
