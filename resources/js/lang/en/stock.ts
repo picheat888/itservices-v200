@@ -566,6 +566,7 @@ export const stock: Dict = {
     stock_hist_lots_moved: 'Lots moved',
     stock_hist_new_lot: 'New Lot',
     stock_hist_cost: 'Cost',
+    stock_hist_lot_count: 'Lots',
 
     // lot-scan-dialog.tsx — สแกนเช็ค Lot
     stock_scan_lot: 'Scan to check a Lot',

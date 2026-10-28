@@ -15,6 +15,7 @@ import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StockSummary, SummaryFacts } from '../components/history-summary';
 import { useStockItemHistory } from '../hooks/use-stock';
+import { LotLines, LotLink } from '../components/lot-link';
 import { movementNote } from '../lib/movement-note';
 
 type View = 'issue' | 'receive' | 'return' | 'adjust' | 'transfer';
@@ -169,7 +170,7 @@ export default function ItemHistoryPage() {
             </div>
 
             {view ? (
-                <CategoryView view={view} movements={moves(view)} serialsOf={serialsOf} t={t} fmt={fmt} formatMoney={formatMoney} />
+                <CategoryView view={view} data={data} movements={moves(view)} serialsOf={serialsOf} t={t} fmt={fmt} formatMoney={formatMoney} />
             ) : (
                 <Hub data={data} onOpen={(v) => setParams({ v })} t={t} fmt={fmt} formatMoney={formatMoney} />
             )}
@@ -240,6 +241,7 @@ function Hub({
 // ── A category sub-view ────────────────────────────────────────────────
 function CategoryView({
     view,
+    data,
     movements,
     serialsOf,
     t,
@@ -247,6 +249,7 @@ function CategoryView({
     formatMoney,
 }: {
     view: View;
+    data: StockItemHistory;
     movements: Movement[];
     serialsOf: (m: Movement, e: SerialEvent['event'][]) => string[];
     t: Translate;
@@ -263,6 +266,29 @@ function CategoryView({
         return list.length ? <span className="text-xs">{list.join(', ')}</span> : '—';
     };
     const qtyCell = (m: Movement) => <span className="tabular-nums">{fmtN(m.qty)}</span>;
+    const lotsByNo = new Map(data.lots.map((l) => [l.lot_no, l]));
+    // A count overage opens a Lot under the adjustment's own document
+    const isNewLot = (m: Movement, lotNo: string | null) => m.type === 'adjust_up' && !!m.doc_no && lotsByNo.get(lotNo)?.doc_no === m.doc_no;
+    const lotCell = (m: Movement) => (
+        <LotLines lots={m.lots.map((l) => ({ lotNo: l.lot_no, note: isNewLot(m, l.lot_no) ? t('stock_hist_new_lot') : fmtN(l.qty) }))} />
+    );
+    // What came back into the lots this issue drew, from returns naming the same request
+    const returnedFor = (m: Movement): number => {
+        if (m.request_reference === null) {
+            return 0;
+        }
+        const drawn = m.lots.map((l) => l.lot_no);
+        return data.movements
+            .filter((r) => r.type === 'return' && r.request_reference === m.request_reference)
+            .flatMap((r) => r.lots)
+            .filter((l) => drawn.includes(l.lot_no))
+            .reduce((sum, l) => sum + l.qty, 0);
+    };
+    const leftInLot = (m: Movement) => {
+        const lot = lotsByNo.get(m.lots[0]?.lot_no ?? null);
+        return lot ? <span className="tabular-nums">{fmtN(lot.qty_remaining)}</span> : '—';
+    };
+    const warehouseOf =(m: Movement) => m.to_label ?? m.from_label ?? '—';
 
     let headers: string[];
     let rows: ReactNode[][];
@@ -280,9 +306,11 @@ function CategoryView({
             t('stock_hist_request_by'),
             t('stock_hist_request_no'),
             t('stock_qty'),
+            t('stock_hist_lots_cut'),
+            t('stock_hist_returned'),
             t('stock_hist_serials'),
         ];
-        wrapColumns = [9];
+        wrapColumns = [11];
         rows = movements.map((m, i) => [
             String(i + 1),
             <span>{m.doc_no ?? '—'}</span>,
@@ -293,6 +321,8 @@ function CategoryView({
             m.to_label ?? '—',
             m.reference ?? '—',
             qtyCell(m),
+            lotCell(m),
+            <span className="tabular-nums">{fmtN(returnedFor(m))}</span>,
             serialCell(m),
         ]);
     } else if (view === 'return') {
@@ -303,11 +333,14 @@ function CategoryView({
             t('stock_hist_action'),
             t('stock_warehouse'),
             t('stock_hist_return_by'),
+            t('stock_hist_request_no'),
+            t('stock_hist_request_by'),
+            t('stock_hist_return_into'),
             t('stock_hist_serials'),
             t('stock_qty'),
             t('stock_hist_note'),
         ];
-        wrapColumns = [6, 8];
+        wrapColumns = [9, 11];
         rows = movements.map((m, i) => [
             String(i + 1),
             <span>{m.doc_no ?? '—'}</span>,
@@ -315,6 +348,9 @@ function CategoryView({
             action(m),
             m.to_label ?? '—',
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
+            m.request_reference ?? '—',
+            m.requester ?? '—',
+            lotCell(m),
             serialCell(m),
             qtyCell(m),
             movementNote(m, t) ?? '—',
@@ -329,11 +365,13 @@ function CategoryView({
             t('stock_hist_ref_doc'),
             t('stock_warehouse'),
             t('stock_cost'),
+            t('stock_hist_col_lot'),
+            t('stock_hist_left_in_lot'),
             t('stock_hist_serials'),
             t('stock_qty'),
             t('stock_hist_note'),
         ];
-        wrapColumns = [8, 10];
+        wrapColumns = [10, 12];
         rows = movements.map((m, i) => [
             String(i + 1),
             <span>{m.doc_no ?? '—'}</span>,
@@ -343,6 +381,8 @@ function CategoryView({
             m.reference ?? '—',
             m.to_label ?? '—',
             m.unit_cost != null ? <span className="tabular-nums">{formatMoney(m.unit_cost)}</span> : '—',
+            <LotLink lotNo={m.lots[0]?.lot_no ?? null} />,
+            leftInLot(m),
             serialCell(m),
             qtyCell(m),
             movementNote(m, t) ?? '—',
@@ -355,11 +395,13 @@ function CategoryView({
             t('stock_hist_ref_doc'),
             t('stock_hist_action'),
             t('stock_hist_adjust_by'),
+            t('stock_warehouse'),
+            t('stock_hist_col_lot'),
             t('stock_hist_serials'),
             t('stock_qty'),
             t('stock_hist_note'),
         ];
-        wrapColumns = [6, 8];
+        wrapColumns = [8, 10];
         rows = movements.map((m, i) => [
             String(i + 1),
             <span>{m.doc_no ?? '—'}</span>,
@@ -367,6 +409,8 @@ function CategoryView({
             m.reference ?? '—',
             action(m),
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
+            warehouseOf(m),
+            lotCell(m),
             serialCell(m),
             qtyCell(m),
             movementNote(m, t) ?? '—',
@@ -380,11 +424,12 @@ function CategoryView({
             t('stock_from'),
             t('stock_to'),
             t('stock_hist_transfer_by'),
+            t('stock_hist_lots_moved'),
             t('stock_hist_serials'),
             t('stock_qty'),
             t('stock_hist_note'),
         ];
-        wrapColumns = [7, 9];
+        wrapColumns = [8, 10];
         rows = movements.map((m, i) => [
             String(i + 1),
             <span>{m.doc_no ?? '—'}</span>,
@@ -393,6 +438,7 @@ function CategoryView({
             m.from_label ?? '—',
             m.to_label ?? '—',
             pairOf(m.recorded_by, m.recorded_by_th) ?? '—',
+            lotCell(m),
             serialCell(m),
             qtyCell(m),
             movementNote(m, t) ?? '—',

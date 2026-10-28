@@ -7,6 +7,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockItemHistory, StockMovementType } from '@/shared/types';
 import type { ReactNode } from 'react';
+import { LotLink } from './lot-link';
 
 type Translate = ReturnType<typeof useT>;
 
@@ -86,16 +87,28 @@ export function StockSummary({ data, t, formatMoney }: { data: StockItemHistory;
 
             <Section title={t('stock_hist_by_warehouse')}>
                 <SimpleTable
-                    headers={[t('stock_warehouse'), t('stock_qty')]}
-                    numeric={[1]}
-                    rows={data.balances.map((b) => [b.warehouse ?? '—', fmtN(b.qty)])}
-                    totals={data.balances.length ? [[t('stock_mv_total'), fmtN(data.balances.reduce((sum, b) => sum + b.qty, 0))]] : []}
+                    headers={[t('stock_warehouse'), t('stock_hist_lot_count'), t('stock_qty')]}
+                    numeric={[1, 2]}
+                    rows={data.balances.map((b) => [b.warehouse ?? '—', fmtN(b.lot_count), fmtN(b.qty)])}
+                    totals={
+                        data.balances.length
+                            ? [
+                                  [
+                                      t('stock_mv_total'),
+                                      fmtN(data.balances.reduce((sum, b) => sum + b.lot_count, 0)),
+                                      fmtN(data.balances.reduce((sum, b) => sum + b.qty, 0)),
+                                  ],
+                              ]
+                            : []
+                    }
                 />
             </Section>
 
             <Section title={`${t('stock_hist_open_lots')} (${fmtN(openLots.length)})`}>
                 <SimpleTable
                     headers={[
+                        t('stock_hist_col_lot'),
+                        t('stock_warehouse'),
                         t('stock_hist_lot_from'),
                         t('stock_hist_receive_date'),
                         t('stock_cost'),
@@ -103,8 +116,10 @@ export function StockSummary({ data, t, formatMoney }: { data: StockItemHistory;
                         t('stock_hist_remaining'),
                         t('stock_hist_value'),
                     ]}
-                    numeric={[2, 3, 4, 5]}
+                    numeric={[4, 5, 6, 7]}
                     rows={openLots.map((l) => [
+                        <LotLink lotNo={l.lot_no} />,
+                        l.warehouse,
                         l.doc_no ?? '—',
                         l.received_at ? date(l.received_at) : '—',
                         formatMoney(l.unit_cost),
@@ -117,6 +132,8 @@ export function StockSummary({ data, t, formatMoney }: { data: StockItemHistory;
                             ? [
                                   [
                                       t('stock_mv_total'),
+                                      '',
+                                      '',
                                       '',
                                       '',
                                       '',
