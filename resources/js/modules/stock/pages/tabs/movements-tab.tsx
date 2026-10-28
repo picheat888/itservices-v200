@@ -23,6 +23,7 @@ import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { LotCard } from '../../components/lot-card';
+import { LotsDrawnCard } from '../../components/lots-drawn-card';
 import { NEW_MOVEMENT_DETAIL, useMovementLots, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { movementNote } from '../../lib/movement-note';
 import { MV_META, MV_TONE_HEX } from '../shared';
@@ -73,7 +74,7 @@ export function MovementsTab() {
     // The movement itself never changes once posted; its serials are asked again on open
     useRefetchOnOpen(moveOpen, moveSerialsQuery);
     // Lot a receive opened (receive rows only)
-    const moveLotsQuery = useMovementLots(viewMove?.id ?? null, moveOpen && viewMove?.type === 'receive');
+    const moveLotsQuery = useMovementLots(viewMove?.id ?? null, moveOpen && ['receive', 'issue', 'return'].includes(viewMove?.type ?? ''));
     const receiveLot = moveLotsQuery.data?.lots[0];
     // Serial vs non-serial is only known once the serials have loaded
     const serialsSettled = moveSerialsQuery.isSuccess;
@@ -336,6 +337,11 @@ export function MovementsTab() {
                                                 )}
                                             </div>
                                         )}
+
+                                        {/* Lots drawn by an issue, or put back by a return */}
+                                        {(viewMove.type === 'issue' || viewMove.type === 'return') &&
+                                            moveLotsQuery.data &&
+                                            moveLotsQuery.data.lots.length > 0 && <LotsDrawnCard data={moveLotsQuery.data} kind={viewMove.type} />}
 
                                         {/* Serial list + reprint labels (retroactive, e.g. for a Receive) */}
                                         {moveSerials.length > 0 && (

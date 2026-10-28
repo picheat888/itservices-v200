@@ -21,10 +21,10 @@ import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/typ
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooterBar, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { movementNote } from '../lib/movement-note';
-import { Box, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
-import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { Box, ChevronLeft, ChevronRight, ExternalLink, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
+import { ItemLotsTab } from './item-lots-tab';
 import { StockMovementsTab } from './stock-movements-tab';
 
 const ITEM_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
@@ -43,7 +43,6 @@ const SN_TONE: Record<StockSerialStatus, 'green' | 'violet' | 'blue' | 'gray'> =
     adjusted: 'gray',
 };
 
-const LOTS_PER_PAGE = 10;
 const SERIALS_PER_PAGE = 10;
 
 type TabId = 'overview' | 'movements' | 'lots' | 'serials';
@@ -144,8 +143,7 @@ export function StockItemDetailModal({
     const t = useT();
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
-    const { symbol, format } = useCurrency();
-    const lotDetailId = useId();
+    const { symbol } = useCurrency();
     const itemQuery = useStockItem(itemId);
     const { data } = itemQuery;
     // History is fetched here (same query key as the Movements tab) so the tab count is known up front
@@ -161,20 +159,14 @@ export function StockItemDetailModal({
 
     const [tab, setTab] = useState<TabId>('overview');
     const marks = useTabFreshness(tab, { overview: [itemQuery], movements: [historyQuery], lots: [itemQuery], serials: [itemQuery] });
-    const [lotPage, setLotPage] = useState(0);
     const [serialPage, setSerialPage] = useState(0);
-    const [expandedLot, setExpandedLot] = useState<number | null>(null);
     useEffect(() => {
         setTab('overview');
-        setLotPage(0);
         setSerialPage(0);
-        setExpandedLot(null);
     }, [itemId]);
 
     const balances = useMemo(() => (item?.balances ?? []).filter((b) => b.qty > 0), [item]);
     const lots = (item?.lots ?? []).filter((l) => l.qty_remaining > 0);
-    const lotPageCount = Math.max(1, Math.ceil(lots.length / LOTS_PER_PAGE));
-    const pagedLots = lots.slice(lotPage * LOTS_PER_PAGE, lotPage * LOTS_PER_PAGE + LOTS_PER_PAGE);
     const serials = (item?.serials ?? []).filter((s) => s.status !== 'issued');
     const serialPageCount = Math.max(1, Math.ceil(serials.length / SERIALS_PER_PAGE));
     const pagedSerials = serials.slice(serialPage * SERIALS_PER_PAGE, serialPage * SERIALS_PER_PAGE + SERIALS_PER_PAGE);
@@ -328,127 +320,7 @@ export function StockItemDetailModal({
                             {tab === 'movements' && itemId != null && <StockMovementsTab itemId={itemId} />}
 
                             {/* Lots */}
-                            {tab === 'lots' && (
-                                <div>
-                                    <SectionRow right={format(item.total_value)}>{t('stock_lots_title')}</SectionRow>
-                                    {lots.length > 0 ? (
-                                        <div className="border-border overflow-x-auto rounded-lg border">
-                                            <table className="w-full text-sm">
-                                                <thead className={TABLE_HEAD}>
-                                                    <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] uppercase">
-                                                        <th scope="col" className="px-3 py-2 font-medium">
-                                                            {t('stock_hist_receive_no')}
-                                                        </th>
-                                                        <th scope="col" className="px-3 py-2 font-medium">
-                                                            {t('stock_date')}
-                                                        </th>
-                                                        <th scope="col" className="px-3 py-2 text-right font-medium">
-                                                            {t('stock_unit_cost')}
-                                                        </th>
-                                                        <th scope="col" className="px-3 py-2 text-right font-medium">
-                                                            {t('stock_lot_remaining')}
-                                                        </th>
-                                                        <th scope="col" className="px-3 py-2 text-right font-medium">
-                                                            {t('stock_lot_value')}
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {pagedLots.map((l) => {
-                                                        const expanded = expandedLot === l.id;
-                                                        const detailId = `${lotDetailId}-${l.id}`;
-                                                        const lotNote = movementNote(l, t);
-                                                        return (
-                                                            <Fragment key={l.id}>
-                                                                <tr
-                                                                    className={cn(
-                                                                        'border-b transition-colors',
-                                                                        expanded ? 'bg-accent/30 border-transparent' : 'border-border/60',
-                                                                    )}
-                                                                >
-                                                                    <td className="px-3 py-1.5 text-xs">
-                                                                        <button
-                                                                            type="button"
-                                                                            aria-expanded={expanded}
-                                                                            aria-controls={expanded ? detailId : undefined}
-                                                                            onClick={() => setExpandedLot((id) => (id === l.id ? null : l.id))}
-                                                                            className="hover:bg-accent focus-visible:ring-ring -mx-1 inline-flex min-h-7 items-center gap-1.5 rounded px-1 text-left focus-visible:ring-2 focus-visible:outline-hidden"
-                                                                        >
-                                                                            <ChevronDown
-                                                                                className={cn(
-                                                                                    'h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none',
-                                                                                    expanded && 'rotate-180',
-                                                                                )}
-                                                                                aria-hidden
-                                                                            />
-                                                                            <span translate="no">{l.doc_no ?? '—'}</span>
-                                                                        </button>
-                                                                    </td>
-                                                                    <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap">
-                                                                        {fmt.date(l.received_at)}
-                                                                    </td>
-                                                                    <td className="px-3 py-1.5 text-right text-xs whitespace-nowrap tabular-nums">
-                                                                        {format(l.unit_cost)}
-                                                                    </td>
-                                                                    <td className="px-3 py-1.5 text-right whitespace-nowrap tabular-nums">
-                                                                        {fmtN(l.qty_remaining)}
-                                                                        <span className="text-muted-foreground">/{fmtN(l.qty_received)}</span>
-                                                                    </td>
-                                                                    <td className="px-3 py-1.5 text-right font-semibold whitespace-nowrap tabular-nums">
-                                                                        {format(l.value)}
-                                                                    </td>
-                                                                </tr>
-                                                                {expanded && (
-                                                                    <tr id={detailId} className="border-border/60 border-b last:border-0">
-                                                                        <td colSpan={5} className="bg-muted/20 px-4 py-3">
-                                                                            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
-                                                                                <Meta label={t('stock_reference')}>{l.reference || '—'}</Meta>
-                                                                                <Meta label={t('stock_warehouse')}>{l.warehouse || '—'}</Meta>
-                                                                                <Meta label={t('stock_supplier')}>{l.supplier || '—'}</Meta>
-                                                                                <Meta label={t('stock_by')}>
-                                                                                    {localPair(l.recorded_by, l.recorded_by_th, lang) || '—'}
-                                                                                </Meta>
-                                                                                <Meta label={t('stock_serial_received')}>
-                                                                                    {fmt.date(l.received_at)}
-                                                                                </Meta>
-                                                                                <Meta label={t('stock_qty')}>
-                                                                                    <span className="tabular-nums">
-                                                                                        {fmtN(l.qty_remaining)}/{fmtN(l.qty_received)}
-                                                                                    </span>
-                                                                                </Meta>
-                                                                            </div>
-                                                                            {lotNote && (
-                                                                                <div className="text-muted-foreground mt-2.5 text-xs">
-                                                                                    <span>{t('stock_notes')}:</span> {lotNote}
-                                                                                </div>
-                                                                            )}
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                            </Fragment>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                            {lots.length > LOTS_PER_PAGE && (
-                                                <Pager
-                                                    page={lotPage}
-                                                    pageCount={lotPageCount}
-                                                    total={lots.length}
-                                                    perPage={LOTS_PER_PAGE}
-                                                    onPage={setLotPage}
-                                                />
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <EmptyState
-                                            title={t('stock_empty_item_modal_lots')}
-                                            hint={t('stock_empty_item_modal_lots_hint')}
-                                            className="min-h-0 rounded-lg border border-dashed py-5"
-                                        />
-                                    )}
-                                </div>
-                            )}
+                            {tab === 'lots' && <ItemLotsTab lots={item.lots ?? []} />}
 
                             {/* Serials (tab only present when track_serial) */}
                             {tab === 'serials' && (
