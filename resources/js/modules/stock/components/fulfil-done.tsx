@@ -8,7 +8,7 @@ import type { IssueResult } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { DialogBody, DialogFooterBar } from '@/shared/ui/dialog';
 import { Check, Printer } from 'lucide-react';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { issuePdfUrl } from '../api/stockApi';
 
 interface FulfilDoneProps {
@@ -32,6 +32,12 @@ export function FulfilDone({ requestId, requestNo, itemName, qty, newOnHand, rec
     const t = useT();
     const fmtN = useNumberFormat();
     const lotsTitleId = useId();
+    const doneRef = useRef<HTMLButtonElement>(null);
+
+    // The fulfil button that had focus is gone; land keyboard and screen-reader users on the result
+    useEffect(() => {
+        doneRef.current?.focus();
+    }, []);
 
     return (
         <>
@@ -41,7 +47,7 @@ export function FulfilDone({ requestId, requestNo, itemName, qty, newOnHand, rec
                 eyebrow={t('stock')}
                 title={t('stock_issued_title')}
                 code={issue.doc_no ?? undefined}
-                srDescription={t('stock_issued_title')}
+                srDescription={t('stock_issue_ready_hint')}
             />
             <DialogBody className="space-y-4">
                 {/* Amount out and the new on-hand */}
@@ -134,7 +140,7 @@ export function FulfilDone({ requestId, requestNo, itemName, qty, newOnHand, rec
                 <Button variant="outline" onClick={onViewRequest}>
                     {t('stock_issue_view_request')}
                 </Button>
-                <Button onClick={onDone}>
+                <Button ref={doneRef} onClick={onDone}>
                     <Check className="h-4 w-4" aria-hidden />
                     {t('stock_done')}
                 </Button>

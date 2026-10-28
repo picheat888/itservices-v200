@@ -69,6 +69,7 @@ class StockItemResource extends JsonResource
                 'warehouse' => $s->warehouse?->name,
                 'reference' => $s->reference,
                 'received_at' => $s->received_at?->toDateTimeString(),
+                'stock_lot_id' => $s->stock_lot_id,
             ])),
             // Draft counts holding the item: no movement on that warehouse (all of them when null) until it closes.
             'counting' => $this->whenLoaded('draftCountLines', fn () => $this->draftCountLines->map(fn ($line) => [

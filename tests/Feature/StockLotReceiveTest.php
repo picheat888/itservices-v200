@@ -84,6 +84,25 @@ class StockLotReceiveTest extends TestCase
         $this->assertLotsMatchBalances($item);
     }
 
+    public function test_item_show_names_each_serials_lot(): void
+    {
+        Warehouse::create(['name' => 'Main']);
+        $item = $this->item(true);
+        $user = User::factory()->create(['role' => 'super']);
+
+        $this->actingAs($user)
+            ->postJson('/api/stock-movements', [
+                'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['LS-1', 'LS-2'], 'to_label' => 'Main',
+            ])
+            ->assertCreated();
+
+        $lot = StockLot::where('stock_item_id', $item->id)->sole();
+        $show = $this->actingAs($user)->getJson("/api/stock-items/{$item->id}")->assertOk();
+
+        $this->assertSame([$lot->id, $lot->id], collect($show->json('data.serials'))->pluck('stock_lot_id')->all());
+        $this->assertSame($lot->lot_no, collect($show->json('data.lots'))->firstWhere('id', $lot->id)['lot_no']);
+    }
+
     public function test_receive_into_unassigned_opens_a_null_warehouse_lot(): void
     {
         $item = $this->item();

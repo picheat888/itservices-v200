@@ -395,7 +395,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         remaining: l.qty_remaining,
     }));
     const lotNoById = new Map((fulfillItem?.lots ?? []).map((l) => [l.id, l.lot_no]));
-    const serialLotNo = (lotId: number | null | undefined) => (lotId != null ? (lotNoById.get(lotId) ?? null) : null);
+    const serialLotNo = (lotId: number | null) => (lotId !== null ? (lotNoById.get(lotId) ?? null) : null);
     const serialsShowLots = fulfillInStock.some((s) => serialLotNo(s.stock_lot_id) !== null);
     // New on-hand: the refreshed item once it lands, until then the stock read before the fulfil less what went out
     const fulfilNewOnHand = fulfilDone

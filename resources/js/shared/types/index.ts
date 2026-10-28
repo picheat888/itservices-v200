@@ -705,8 +705,8 @@ export interface StockItemSerial {
     warehouse: string | null;
     reference: string | null;
     received_at: string | null;
-    /** The serial's lot, when the server sends it (fulfil serial list shows its lot number). */
-    stock_lot_id?: number | null;
+    /** The lot the serial came in with; null for serials received before lot tracking. */
+    stock_lot_id: number | null;
 }
 
 /** One lot row of the item resource (show response). */
