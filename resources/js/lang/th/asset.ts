@@ -98,7 +98,7 @@ export const asset: Dict = {
     asset_receive_hint: 'ตั้งไว้เป็นคลังเดิมของทรัพย์สิน ถ้าย้ายที่เก็บ เลือกคลังใหม่ได้',
     asset_recall: 'ยกเลิกการโอน',
     asset_return_to_pool: 'ดึงกลับเข้าคลัง',
-    asset_recall_title: 'เรียกคืนสินทรัพย์',
+    asset_recall_title: 'เรียกคืนทรัพย์สิน',
     asset_recall_action: 'เรียกคืน',
     asset_force_recall: 'บังคับเรียกคืน',
     asset_recall_confirm: 'ต้องการเรียกคืนทรัพย์สินนี้กลับเข้าคลังใช่หรือไม่?',
