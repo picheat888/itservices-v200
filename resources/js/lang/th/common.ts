@@ -236,6 +236,7 @@ export const common: Dict = {
     err_reference: 'รหัสอ้างอิงสำหรับแจ้ง IT: {id}',
     err_maintenance_title: 'ปิดปรับปรุงชั่วคราว',
     err_maintenance_body: 'ระบบกำลังปรับปรุง ใช้งานได้อีกครั้งในประมาณ {n} นาที',
+    err_maintenance_body_one: 'ระบบกำลังปรับปรุง ใช้งานได้อีกครั้งในประมาณ 1 นาที',
     err_maintenance_later: 'ระบบกำลังปรับปรุง กรุณาลองใหม่ภายหลัง',
     err_busy_title: 'ระบบมีผู้ใช้งานมาก',
     err_busy_body: 'มีผู้ใช้งานพร้อมกันมาก รอให้ครบเวลาแล้วกดลองใหม่',

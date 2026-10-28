@@ -1,7 +1,7 @@
 // The countdown maths shared by the idle warning and the error dialogs: clock text, seconds left, ring fill.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clock, elapsedShare, secondsLeft, waitSpoken, waitWords } from '../../resources/js/shared/lib/countdown.ts';
+import { clock, elapsedShare, maintenanceLine, secondsLeft, waitSpoken, waitWords } from '../../resources/js/shared/lib/countdown.ts';
 
 const words: Record<string, string> = {
     login_time_minutes: '{n} minutes',
@@ -9,6 +9,9 @@ const words: Record<string, string> = {
     session_one_minute: '1 minute',
     session_one_second: '1 second',
     err_wait_spoken: 'You can try again in {time}.',
+    err_maintenance_body: 'The system is being updated. You can use it again in about {n} minutes.',
+    err_maintenance_body_one: 'The system is being updated. You can use it again in about a minute.',
+    err_maintenance_later: 'The system is being updated. Please try again later.',
 };
 const t = (key: string) => words[key] ?? key;
 const fmtN = (n: number) => String(n);
@@ -48,4 +51,10 @@ test('longer waits read in the plural, minutes rounded up', () => {
 test('the error dialogs say the wait in words for screen readers', () => {
     assert.equal(waitSpoken(45, t, fmtN), 'You can try again in 45 seconds.');
     assert.equal(waitSpoken(120, t, fmtN), 'You can try again in 2 minutes.');
+});
+
+test('maintenance names the minutes to wait, a single minute in words', () => {
+    assert.equal(maintenanceLine(600, t, fmtN), 'The system is being updated. You can use it again in about 10 minutes.');
+    assert.equal(maintenanceLine(45, t, fmtN), 'The system is being updated. You can use it again in about a minute.');
+    assert.equal(maintenanceLine(null, t, fmtN), 'The system is being updated. Please try again later.');
 });

@@ -128,6 +128,14 @@ class ErrorPagesTest extends TestCase
         $response->assertSee('about 2 minutes');
     }
 
+    public function test_503_with_one_minute_left_says_about_a_minute(): void
+    {
+        $response = $this->get('/files/__test-error/503?retry_after=45');
+
+        $response->assertSee('ประมาณ 1 นาที');
+        $response->assertSee('Please check back in about a minute.');
+    }
+
     public function test_503_without_retry_after_says_later(): void
     {
         $response = $this->get('/files/__test-error/503');

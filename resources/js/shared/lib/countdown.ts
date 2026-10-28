@@ -30,3 +30,10 @@ export function waitWords(seconds: number, t: Translate, fmtN: FormatNumber): st
 export function waitSpoken(seconds: number, t: Translate, fmtN: FormatNumber): string {
     return t('err_wait_spoken').replace('{time}', waitWords(seconds, t, fmtN));
 }
+
+/** The maintenance line: about N minutes (rounded up), a single minute in words, or "later" without a Retry-After. */
+export function maintenanceLine(retryAfter: number | null, t: Translate, fmtN: FormatNumber): string {
+    if (retryAfter === null) return t('err_maintenance_later');
+    const minutes = Math.ceil(retryAfter / 60);
+    return minutes <= 1 ? t('err_maintenance_body_one') : t('err_maintenance_body').replace('{n}', fmtN(minutes));
+}

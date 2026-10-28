@@ -30,7 +30,7 @@ return [
     ],
     '503' => [
         'title' => 'Service Unavailable',
-        'body' => '{1} We are down for maintenance. Please check back in about :minutes minute.|[2,*] We are down for maintenance. Please check back in about :minutes minutes.',
+        'body' => '{1} We are down for maintenance. Please check back in about a minute.|[2,*] We are down for maintenance. Please check back in about :minutes minutes.',
         'body_later' => 'We are down for maintenance. Please check back later.',
     ],
 

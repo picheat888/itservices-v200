@@ -9,11 +9,9 @@ import { useCountdown } from '@/shared/hooks/use-countdown';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { SHEET_CLOSE_MS, usePresence } from '@/shared/hooks/use-presence';
 import { retryFailedQueries } from '@/shared/lib/app-error-actions';
-import { clock, elapsedShare, waitSpoken } from '@/shared/lib/countdown';
-import { formatNumber } from '@/shared/lib/number';
+import { clock, elapsedShare, maintenanceLine, waitSpoken } from '@/shared/lib/countdown';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore } from '@/stores/app-error';
-import { useUiStore } from '@/stores/ui';
 import { Hourglass, Loader2, ServerCrash, Users, WifiOff, Wrench, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -133,9 +131,8 @@ function BusyBody({ retryAfter }: { retryAfter: number | null }) {
 
 function MaintenanceBody({ retryAfter }: { retryAfter: number | null }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const line =
-        retryAfter === null ? t('err_maintenance_later') : t('err_maintenance_body').replace('{n}', formatNumber(Math.ceil(retryAfter / 60), lang));
+    const fmtN = useNumberFormat();
+    const line = maintenanceLine(retryAfter, t, fmtN);
 
     return <WaitBody icon={Wrench} tone="info" title={t('err_maintenance_title')} line={line} retryAfter={retryAfter} />;
 }
