@@ -18,6 +18,7 @@ import { ArrowUpFromLine, Ban, Check, ClipboardList, Printer, RotateCcw, Triangl
 import { useId } from 'react';
 import { issuePdfUrl } from '../api/stockApi';
 import { useRequestTrail, useStockItem, useStockRequest } from '../hooks/use-stock';
+import { LOT_INK } from '../lib/lot-accent';
 import { toPickableLots } from '../lib/lot-pick';
 import { previewLotPicks, REQ_TONE, requestSteps, shownRequest, type RequestStep } from '../lib/request-detail';
 import { LotLink } from './lot-link';
@@ -48,9 +49,20 @@ interface RequestDetailDialogProps extends RequestDetailActions {
     requestNo: (r: StockRequest) => string;
     /** Stock per warehouse and the Lot preview read the item, which needs stock.view. */
     canViewStock: boolean;
+    /** Where focus goes once the dialog has closed. */
+    onCloseAutoFocus?: (e: Event) => void;
 }
 
-export function RequestDetailDialog({ open, onClose, request, readAt, requestNo, canViewStock, ...actions }: RequestDetailDialogProps) {
+export function RequestDetailDialog({
+    open,
+    onClose,
+    request,
+    readAt,
+    requestNo,
+    canViewStock,
+    onCloseAutoFocus,
+    ...actions
+}: RequestDetailDialogProps) {
     const t = useT();
     const freshQuery = useStockRequest(request?.id ?? null, open);
     const r = shownRequest(request, readAt, freshQuery.data, freshQuery.dataUpdatedAt);
@@ -60,7 +72,7 @@ export function RequestDetailDialog({ open, onClose, request, readAt, requestNo,
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className={mediumDialogContentClass} onOpenAutoFocus={focusDialogOnOpen}>
+            <DialogContent className={mediumDialogContentClass} onOpenAutoFocus={focusDialogOnOpen} onCloseAutoFocus={onCloseAutoFocus}>
                 {r && (
                     <>
                         <FocusDialogHeader
@@ -109,6 +121,13 @@ function StepBar({ request }: { request: StockRequest }) {
     const steps = requestSteps(request, (name, nameTh) => pairOf(name, nameTh) ?? name);
     const TITLE: Record<RequestStep['key'], string> = { asked: t('stock_rq_asked'), approve: t('stock_approve'), fulfil: t('stock_fulfill') };
     const WAITING: Record<RequestStep['key'], string | null> = { asked: null, approve: t('stock_rq_pending'), fulfil: t('stock_rq_awaiting_fulfil') };
+    // The dot's state in words; a closed step already says rejected / cancelled in its title
+    const STATE: Record<RequestStep['state'], string | null> = {
+        done: t('stock_rq_step_done'),
+        now: t('stock_rq_step_now'),
+        wait: t('stock_rq_step_wait'),
+        closed: null,
+    };
 
     return (
         <ol className="grid grid-cols-3 gap-3">
@@ -124,6 +143,7 @@ function StepBar({ request }: { request: StockRequest }) {
                                 translate={s.doc ? 'no' : undefined}
                             >
                                 {title}
+                                {STATE[s.state] && <span className="sr-only"> ({STATE[s.state]})</span>}
                             </div>
                             {who && <div className={cn(LABEL, 'truncate')}>{who}</div>}
                             {s.when && <div className={cn(LABEL, 'whitespace-nowrap')}>{fmt.dateTime(s.when)}</div>}
@@ -168,7 +188,9 @@ function ItemCard({ request }: { request: StockRequest }) {
         <div className="border-border flex items-center gap-4 rounded-lg border px-4 py-3">
             <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{request.item_name}</div>
-                <div className={LABEL}>{request.sku}</div>
+                <div className={LABEL} translate="no">
+                    {request.sku}
+                </div>
             </div>
             <div className="shrink-0 text-right">
                 <div className={LABEL}>{t('stock_rq_asked')}</div>
@@ -275,7 +297,7 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
             </h3>
             <ItemState query={query}>
                 {available < qty && (
-                    <p className="mb-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                    <p className="mb-2 flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-400">
                         <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                         {`${t('stock_insufficient')} (${fmtN(available)})`}
                     </p>
@@ -318,7 +340,7 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
                                         </td>
                                         <td className={cn(TD, 'whitespace-nowrap')}>{p.received_at ? fmt.date(p.received_at) : '—'}</td>
                                         <td className={cn(TD, 'text-right')}>{fmtN(p.remaining)}</td>
-                                        <td className={cn(TD, 'text-right font-bold text-violet-800 dark:text-violet-300')}>{fmtN(p.take)}</td>
+                                        <td className={cn(TD, 'text-right font-bold', LOT_INK)}>{fmtN(p.take)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -404,7 +426,7 @@ function IssueTrail({ trail }: { trail: RequestTrail }) {
                                     <tr key={`${l.warehouse}-${l.lot_id}`} className="group">
                                         <td className={cn(TD, 'truncate')}>{warehouseName(l.warehouse, t)}</td>
                                         <td className={cn(TD, 'truncate')}>
-                                            {l.lot_no ? <LotLink lotNo={l.lot_no} /> : t('stock_lot_before_tracking')}
+                                            {l.lot_no ? <LotLink lotNo={l.lot_no} newTab /> : t('stock_lot_before_tracking')}
                                         </td>
                                         <td className={cn(TD, 'text-right whitespace-nowrap')}>{format(l.unit_cost)}</td>
                                         <td className={cn(TD, 'text-right')}>{fmtN(l.qty)}</td>
@@ -472,7 +494,7 @@ function IssueTrail({ trail }: { trail: RequestTrail }) {
                                                 {j === 0 && ret.moved_at ? fmt.dateTime(ret.moved_at) : ''}
                                             </td>
                                             <td className={cn(TD, 'truncate')}>
-                                                {l.lot_no ? <LotLink lotNo={l.lot_no} /> : t('stock_lot_before_tracking')}
+                                                {l.lot_no ? <LotLink lotNo={l.lot_no} newTab /> : t('stock_lot_before_tracking')}
                                             </td>
                                             <td className={cn(TD, 'text-right')}>{fmtN(l.qty)}</td>
                                             <td className={cn(TD, 'truncate')}>{j === 0 ? (ret.recorded_by ?? '—') : ''}</td>
@@ -513,7 +535,7 @@ function DetailFooter({
 
     return (
         <DialogFooterBar className="flex-wrap">
-            {r.status === 'fulfilled' && (
+            {r.status === 'fulfilled' && r.issue_doc_no && (
                 <a href={issuePdfUrl(r.id)} target="_blank" rel="noopener" className={cn(buttonVariants({ variant: 'outline' }), 'mr-auto')}>
                     <Printer className="h-4 w-4" aria-hidden />
                     {t('stock_issue_print')}
@@ -533,7 +555,7 @@ function DetailFooter({
                 </>
             )}
             {(cancelPending || cancelApproved) && (
-                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => onCancel(r)}>
+                <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => onCancel(r)}>
                     <Ban className="h-4 w-4" aria-hidden />
                     {t('stock_cancel_request')}
                 </Button>

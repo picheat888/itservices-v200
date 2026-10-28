@@ -28,7 +28,7 @@ import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Ban, Check, FilePlus2, Filter, Search, TriangleAlert, X } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { FulfilDone } from '../../components/fulfil-done';
 import { LotPickBox } from '../../components/lot-pick-box';
 import { RequestDetailDialog } from '../../components/request-detail-dialog';
@@ -58,8 +58,8 @@ export function RequestsTab({
 }: {
     can: (p: string) => boolean;
     onNew: () => void;
-    /** Opens the return drawer with this request chosen. */
-    onReturn?: (requestId: number) => void;
+    /** Opens the return drawer with this request chosen; `returnFocus` puts focus back on the row once it closes. */
+    onReturn?: (requestId: number, returnFocus?: (e: Event) => void) => void;
 }) {
     const fmt = useDateFormat();
     const t = useT();
@@ -201,13 +201,28 @@ export function RequestsTab({
         });
     };
 
+    // The row (or its menu button) a dialog chain started from: detail, fulfil and the return drawer hand focus back to it
+    const originRef = useRef<HTMLElement | null>(null);
+    const rememberOrigin = (el?: HTMLElement | null) => {
+        const from = el ?? (document.activeElement as HTMLElement | null);
+        if (from && from !== document.body && !from.closest('[role="dialog"], [role="menu"]')) originRef.current = from;
+    };
+    const returnFocus = (e: Event) => {
+        e.preventDefault();
+        // The next dialog of the chain is already open and holds focus
+        if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+        if (originRef.current?.isConnected) originRef.current.focus();
+    };
+
     const openDetail = (r: StockRequest, readAt = requestsReadAt) => {
+        rememberOrigin();
         setDetailReq(r);
         setDetailReadAt(readAt);
         setDetailOpen(true);
     };
 
     const openFulfil = (r: StockRequest) => {
+        rememberOrigin();
         setDetailOpen(false);
         setFulfillReq(r);
         setFulfilDone(null);
@@ -222,7 +237,7 @@ export function RequestsTab({
 
     const returnFrom = (requestId: number) => {
         setDetailOpen(false);
-        onReturn?.(requestId);
+        onReturn?.(requestId, returnFocus);
     };
 
     const hasRowButtons = [...requests, ...newReqs.pinned].some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'));
@@ -377,7 +392,15 @@ export function RequestsTab({
                             <span className="hidden xl:inline">{t('stock_fulfill')}</span>
                         </Button>
                     )}
-                    <RequestRowMenu request={r} requestNo={requestNo(r)} onOpen={openDetail} onCancel={confirmCancel} />
+                    <RequestRowMenu
+                        request={r}
+                        requestNo={requestNo(r)}
+                        onOpen={(row, trigger) => {
+                            rememberOrigin(trigger);
+                            openDetail(row);
+                        }}
+                        onCancel={confirmCancel}
+                    />
                 </div>
             ),
         },
@@ -491,7 +514,7 @@ export function RequestsTab({
                 pinned={newReqs.pinned}
                 rowKey={(r) => r.id}
                 rowClassName={(r) => (newReqs.isNew(r) ? NEW_ROW_CLASS : undefined)}
-                onRowClick={openDetail}
+                onRowClick={(r) => openDetail(r)}
                 loading={requestsLoading || (requestsFetching && requestsPlaceholder)}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
                 empty={
@@ -513,11 +536,12 @@ export function RequestsTab({
                 onCancel={confirmCancel}
                 onFulfil={can('fulfill') ? openFulfil : undefined}
                 onReturn={can('return') && onReturn ? returnFrom : undefined}
+                onCloseAutoFocus={returnFocus}
             />
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
             <Dialog open={fulfillOpen} onOpenChange={(o) => !o && guardFulfillClose(closeFulfill)}>
-                <FormDialogContent>
+                <FormDialogContent onCloseAutoFocus={returnFocus}>
                     {fulfilDone && fulfillReq ? (
                         <FulfilDone
                             requestId={fulfillReq.id}
@@ -560,7 +584,7 @@ export function RequestsTab({
 
                                         <div role="status" aria-live="polite">
                                             {gone && (
-                                                <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                                <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-400">
                                                     <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                                                     <span>
                                                         {gone.serials > 0 && t('stock_fulfil_serials_gone').replace('{n}', fmtN(gone.serials))}

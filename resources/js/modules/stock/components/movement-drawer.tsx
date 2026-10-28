@@ -8,6 +8,7 @@ import { MoneyInput } from '@/shared/components/money-input';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useCloseAfterSave } from '@/shared/hooks/use-close-after-save';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
@@ -36,7 +37,15 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useExistingSerials, useRecordMovement, useReturnableRequests, useStockItem, useStockItems, useStockRequest } from '../hooks/use-stock';
+import {
+    useExistingSerials,
+    useRecordMovement,
+    useReloadReturnable,
+    useReturnableRequests,
+    useStockItem,
+    useStockItems,
+    useStockRequest,
+} from '../hooks/use-stock';
 import { countLockFor } from '../lib/count-lock';
 import { refusalField, returnLines, transferLots } from '../lib/movement-form';
 import { stockRefusalText } from '../lib/refusal';
@@ -71,13 +80,17 @@ export function MovementDrawer({
     kind,
     onClose,
     initialRequestId,
+    onCloseAutoFocus,
 }: {
     kind: MovementKind | null;
     onClose: () => void;
     /** Return mode opened from a request: its item and the request start chosen. */
     initialRequestId?: number;
+    /** Where focus goes once the dialog has closed (the request row it came from). */
+    onCloseAutoFocus?: (e: Event) => void;
 }) {
     const t = useT();
+    const fmt = useDateFormat();
     const fmtN = useNumberFormat();
     const open = kind !== null;
     // Last non-null kind keeps the body mounted through the close animation
@@ -128,6 +141,11 @@ export function MovementDrawer({
     const { data: seedRequest } = useStockRequest(initialRequestId ?? null, kind === 'return');
     const [seedSkuDone, setSeedSkuDone] = useState(false);
     const [seedDone, setSeedDone] = useState(false);
+    // The request it opened from has nothing left to return
+    const [seedNote, setSeedNote] = useState<string | null>(null);
+    // Whether the user has edited the form; the late seeds never reset the baseline over their edits
+    const dirtyRef = useRef(false);
+    const reloadReturnable = useReloadReturnable();
 
     // Receive: serial capture
     const [serials, setSerials] = useState<string[]>([]);
@@ -185,40 +203,46 @@ export function MovementDrawer({
         setFieldErrors({});
         setSeedSkuDone(false);
         setSeedDone(false);
+        setSeedNote(null);
         setBaseline(null);
         setSaved(false);
         setFrom('');
         setTo('');
     }, [open, kind]);
 
-    // Opened from a request: its item is the SKU (the form stays clean until the user edits)
+    // Opened from a request: its item is the SKU (the form stays clean until the user edits); a SKU the user picked wins
     useEffect(() => {
         if (kind !== 'return' || !initialRequestId || seedSkuDone || seedRequest?.id !== initialRequestId) {
             return;
         }
         setSku(String(seedRequest.stock_item_id));
         setSeedSkuDone(true);
-        setBaseline(null);
+        if (!dirtyRef.current) setBaseline(null);
     }, [kind, initialRequestId, seedSkuDone, seedRequest]);
 
-    // ...then the request itself, found by its reference among the item's returnable requests
+    // ...then the request itself, asked for by its id
     const seedPending = !!initialRequestId && seedSkuDone && !seedDone;
-    const { data: seedMatches } = useReturnableRequests(seedPending ? Number(sku) : null, seedRequest?.reference ?? '', seedPending);
+    const seedQuery = useReturnableRequests(seedPending ? Number(sku) : null, '', seedPending, initialRequestId);
     useEffect(() => {
-        const found = seedPending ? seedMatches?.find((r) => r.id === initialRequestId) : undefined;
+        if (!seedPending || !seedQuery.isSuccess || seedQuery.isPlaceholderData) {
+            return;
+        }
+        const found = seedQuery.data.find((r) => r.id === initialRequestId);
+        setSeedDone(true);
         if (!found) {
+            setSeedNote(t('stock_return_seed_nothing_left'));
             return;
         }
         setReturnRequest(found);
-        setSeedDone(true);
-        setBaseline(null);
-    }, [seedPending, seedMatches, initialRequestId]);
+        if (!dirtyRef.current) setBaseline(null);
+    }, [seedPending, seedQuery.isSuccess, seedQuery.isPlaceholderData, seedQuery.data, initialRequestId, t]);
 
     const onReturnRequestChange = (request: ReturnableRequest | null) => {
         setReturnRequest(request);
         setReturnQtys({});
         setReturnSerialIds(new Set());
         setSeedDone(true);
+        setSeedNote(null);
         clearErrors('stock_request_id', 'lots', 'serial_ids');
     };
 
@@ -239,7 +263,9 @@ export function MovementDrawer({
         setReturnRequest(null);
         setReturnQtys({});
         setReturnSerialIds(new Set());
+        setSeedSkuDone(true);
         setSeedDone(true);
+        setSeedNote(null);
         setFieldErrors({});
         setFrom(kind === 'transfer' ? primaryWarehouse(it) : '');
         setTo(kind === 'receive' ? primaryWarehouse(it) : '');
@@ -357,6 +383,7 @@ export function MovementDrawer({
         }
     }, [open, baseline, snapshot]);
     const isDirty = baseline !== null && snapshot !== baseline;
+    dirtyRef.current = isDirty;
     const guardClose = useDiscardGuard(open && !done && !saved && isDirty);
 
     // Action label always carries the movement name; serial modes append the count
@@ -389,12 +416,27 @@ export function MovementDrawer({
 
     // A refusal tied to a form field shows under it; anything else is a toast
     const showRefusal = (e: unknown, fields: string[]) => {
-        const text = stockRefusalText(e, t);
+        const text = stockRefusalText(e, t, fmt.dateTime);
         const field = refusalField(e);
         if (field && fields.includes(field)) {
             setFieldErrors({ [field]: text });
         } else {
             useToastStore.getState().push(text, 'error');
+        }
+    };
+
+    // After a refused return the request's "left" may be stale: read it again (gone = nothing left to return)
+    const refreshReturnRequest = async (itemId: number, requestId: number) => {
+        try {
+            const fresh = await reloadReturnable(itemId, requestId);
+            setReturnRequest(fresh);
+            if (!fresh) {
+                setReturnQtys({});
+                setReturnSerialIds(new Set());
+                setSeedNote(t('stock_return_seed_nothing_left'));
+            }
+        } catch {
+            // The refusal is already on screen; the old figures stay until the next pick
         }
     };
 
@@ -436,6 +478,7 @@ export function MovementDrawer({
                 closeAfterSave();
             } catch (e) {
                 showRefusal(e, RETURN_FIELDS);
+                await refreshReturnRequest(selected.id, returnRequest.id);
             }
             return;
         }
@@ -481,7 +524,7 @@ export function MovementDrawer({
     if (done) {
         return (
             <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-                <FormDialogContent>
+                <FormDialogContent onCloseAutoFocus={onCloseAutoFocus}>
                     <FocusDialogHeader
                         icon={Check}
                         tone="success"
@@ -570,7 +613,7 @@ export function MovementDrawer({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
-            <FormDialogContent>
+            <FormDialogContent onCloseAutoFocus={onCloseAutoFocus}>
                 <FocusDialogHeader
                     icon={k ? KIND_ICON[k] : ArrowDownToLine}
                     eyebrow={t('stock')}
@@ -689,6 +732,7 @@ export function MovementDrawer({
                                 clearErrors('serial_ids');
                             }}
                             errors={fieldErrors}
+                            seedNote={seedNote ?? undefined}
                         />
                     )}
 

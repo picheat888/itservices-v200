@@ -12,8 +12,8 @@ import {
     stockCountApi,
     stockMovementApi,
     stockRequestApi,
-    type StockItemPageParams,
     type LinePatch,
+    type StockItemPageParams,
     type StockItemPayload,
     type StockMovementPayload,
     type StockRequestPayload,
@@ -137,15 +137,30 @@ export const useStockRequest = (id: number | null, enabled = true) =>
         ...FRESH_VIEW,
     });
 
-/** Fulfilled requests of an item with something left to return (the return form's picker). */
-export const useReturnableRequests = (itemId: number | null, search: string, enabled = true) =>
+const RETURNABLE = [...REQUESTS, 'returnable'] as const;
+
+/** Fulfilled requests of an item with something left to return (the return form's picker); `requestId` asks for that one only. */
+export const useReturnableRequests = (itemId: number | null, search: string, enabled = true, requestId?: number) =>
     useQuery({
-        queryKey: [...REQUESTS, 'returnable', itemId, search],
-        queryFn: () => getReturnableRequests(itemId as number, search),
+        queryKey: [...RETURNABLE, itemId, search, requestId ?? null],
+        queryFn: () => getReturnableRequests(itemId as number, search, requestId),
         enabled: itemId !== null && enabled,
         placeholderData: (prev) => prev,
         ...FRESH_VIEW,
     });
+
+/** After a refused return: drop the cached returnable lists and read the chosen request again (null = nothing left). */
+export function useReloadReturnable() {
+    const qc = useQueryClient();
+    return async (itemId: number, requestId: number) => {
+        await qc.invalidateQueries({ queryKey: RETURNABLE });
+        const rows = await qc.fetchQuery({
+            queryKey: [...RETURNABLE, itemId, '', requestId],
+            queryFn: () => getReturnableRequests(itemId, '', requestId),
+        });
+        return rows.find((r) => r.id === requestId) ?? null;
+    };
+}
 
 /** Record a movement; refresh movements, items and summary (stock changed). */
 export function useRecordMovement() {
@@ -221,6 +236,12 @@ export function useStockCountMutations() {
         qc.invalidateQueries({ queryKey: SUMMARY });
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
+    // Commit and recount move stock: Lot balances and what requests can still return change too
+    const invStock = () => {
+        inv();
+        qc.invalidateQueries({ queryKey: LOTS });
+        qc.invalidateQueries({ queryKey: REQUESTS });
+    };
     return {
         open: useMutation({
             mutationFn: (b: { warehouse_id: number; stock_item_ids: number[] }) => stockCountApi.open(b),
@@ -230,8 +251,8 @@ export function useStockCountMutations() {
             mutationFn: (v: { id: number; lines: Record<number, LinePatch> }) => stockCountApi.saveLines(v.id, v.lines),
             onSuccess: inv,
         }),
-        commit: useMutation({ mutationFn: (id: number) => stockCountApi.commit(id), onSuccess: inv }),
-        recount: useMutation({ mutationFn: (id: number) => stockCountApi.recount(id), onSuccess: inv }),
+        commit: useMutation({ mutationFn: (id: number) => stockCountApi.commit(id), onSuccess: invStock }),
+        recount: useMutation({ mutationFn: (id: number) => stockCountApi.recount(id), onSuccess: invStock }),
         cancel: useMutation({ mutationFn: (id: number) => stockCountApi.cancel(id), onSuccess: inv }),
     };
 }

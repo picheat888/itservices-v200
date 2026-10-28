@@ -150,9 +150,11 @@ export const stockRequestApi = {
         return { request: data.data, issue: data.issue };
     },
     trail: (id: number) => http.get<ApiEnvelope<RequestTrail>>(`/stock-requests/${id}/trail`).then((r) => r.data.data),
-    returnable: (stockItemId: number, search?: string) =>
+    returnable: (stockItemId: number, search?: string, requestId?: number) =>
         http
-            .get<ApiEnvelope<ReturnableRequest[]>>('/stock-requests/returnable', { params: { stock_item_id: stockItemId, search: search || undefined } })
+            .get<ApiEnvelope<ReturnableRequest[]>>('/stock-requests/returnable', {
+                params: { stock_item_id: stockItemId, search: search || undefined, stock_request_id: requestId },
+            })
             .then((r) => r.data.data),
     issuePdfUrl: (requestId: number) => `/pdf/stock-requests/${requestId}/issue`,
 };

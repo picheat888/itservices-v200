@@ -8,7 +8,7 @@ import type { IssueResult } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { DialogBody, DialogFooterBar } from '@/shared/ui/dialog';
 import { Check, Printer } from 'lucide-react';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { issuePdfUrl } from '../api/stockApi';
 
 interface FulfilDoneProps {
@@ -33,10 +33,18 @@ export function FulfilDone({ requestId, requestNo, itemName, qty, newOnHand, rec
     const fmtN = useNumberFormat();
     const lotsTitleId = useId();
     const doneRef = useRef<HTMLButtonElement>(null);
+    // Filled just after mount so screen readers announce it (a live region read only when its text changes)
+    const [announcement, setAnnouncement] = useState('');
+    const summary = [t('stock_issued_title'), issue.doc_no ?? '', `−${fmtN(qty)}`, itemName ?? '', `${t('stock_new_onhand')} ${fmtN(newOnHand)}`]
+        .filter(Boolean)
+        .join(' ');
 
     // The fulfil button that had focus is gone; land keyboard and screen-reader users on the result
     useEffect(() => {
         doneRef.current?.focus();
+        const timer = window.setTimeout(() => setAnnouncement(summary), 150);
+        return () => window.clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
@@ -50,6 +58,9 @@ export function FulfilDone({ requestId, requestNo, itemName, qty, newOnHand, rec
                 srDescription={t('stock_issue_ready_hint')}
             />
             <DialogBody className="space-y-4">
+                <p role="status" className="sr-only">
+                    {announcement}
+                </p>
                 {/* Amount out and the new on-hand */}
                 <div className="flex flex-col items-center gap-0.5 text-center">
                     <div className="text-4xl leading-tight font-extrabold text-red-700 tabular-nums dark:text-red-400">−{fmtN(qty)}</div>

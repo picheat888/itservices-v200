@@ -8,18 +8,29 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { digitsOnly } from '@/shared/lib/number';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { ReturnableRequest } from '@/shared/types';
 import { Input } from '@/shared/ui/input';
 import { Check } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useReturnableRequests } from '../hooks/use-stock';
 import { fillAllLeft, returnLines } from '../lib/movement-form';
 
 export type ReturnFieldErrors = { stock_request_id?: string; lots?: string; serial_ids?: string };
 
 const CELL = 'border-t px-2 py-2 align-top first:pl-3 last:pr-3';
-const HEAD = 'bg-muted/40 px-2 py-1.5 text-[11px] font-medium first:pl-3 last:pr-3';
+const HEAD = 'px-2 py-1.5 text-xs font-medium first:pl-3 last:pr-3';
+const FOCUS_RING = 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset';
+
+// A server refusal moves focus to the part of the form it is about
+function useFocusOnError<T extends HTMLElement>(error?: string) {
+    const ref = useRef<T>(null);
+    useEffect(() => {
+        if (error) ref.current?.focus();
+    }, [error]);
+    return ref;
+}
 
 export function ReturnRequestFields({
     itemId,
@@ -32,6 +43,7 @@ export function ReturnRequestFields({
     serialIds,
     onSerialIdsChange,
     errors,
+    seedNote,
 }: {
     itemId: number;
     unit: string | null;
@@ -43,12 +55,14 @@ export function ReturnRequestFields({
     serialIds: Set<number>;
     onSerialIdsChange: (ids: Set<number>) => void;
     errors: ReturnFieldErrors;
+    /** Opened from a request that has nothing left to return: said under the request field. */
+    seedNote?: string;
 }) {
     const t = useT();
 
     return (
         <div className="space-y-3">
-            <RequestPicker itemId={itemId} request={request} onChange={onRequestChange} error={errors.stock_request_id} />
+            <RequestPicker itemId={itemId} request={request} onChange={onRequestChange} error={errors.stock_request_id} note={seedNote} />
 
             {request && !isSerial && <LotReturnTable request={request} unit={unit} qtys={qtys} onChange={onQtysChange} error={errors.lots} />}
             {request && isSerial && (
@@ -74,11 +88,13 @@ function RequestPicker({
     request,
     onChange,
     error,
+    note,
 }: {
     itemId: number;
     request: ReturnableRequest | null;
     onChange: (request: ReturnableRequest | null) => void;
     error?: string;
+    note?: string;
 }) {
     const t = useT();
     const fmt = useDateFormat();
@@ -113,6 +129,11 @@ function RequestPicker({
                     emptyHint={t('stock_empty_return_requests_hint')}
                 />
             </Field>
+            {note && !request && (
+                <p role="status" className="-mt-1 text-xs text-amber-800 dark:text-amber-400">
+                    {note}
+                </p>
+            )}
             {noneReturnable && (
                 <EmptyState
                     kind="pick"
@@ -142,6 +163,8 @@ function LotReturnTable({
     const t = useT();
     const fmtN = useNumberFormat();
     const titleId = useId();
+    const errorId = useId();
+    const tableRef = useFocusOnError<HTMLTableElement>(error);
     const { lines, total } = returnLines(request.lots, qtys);
 
     return (
@@ -159,8 +182,15 @@ function LotReturnTable({
                         {t('stock_return_all_left')}
                     </button>
                 </div>
-                <table aria-labelledby={titleId} className="w-full border-separate border-spacing-0 text-sm">
-                    <thead>
+                <table
+                    ref={tableRef}
+                    tabIndex={-1}
+                    aria-labelledby={titleId}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
+                    className={cn('w-full border-separate border-spacing-0 text-sm', FOCUS_RING)}
+                >
+                    <thead className={TABLE_HEAD}>
                         <tr className="text-muted-foreground text-left">
                             <th scope="col" className={HEAD}>
                                 {t('stock_lot_word')}
@@ -198,7 +228,7 @@ function LotReturnTable({
                     </b>
                 </div>
             </div>
-            {error && <FormErrorBanner message={error} className="text-xs" />}
+            <div id={errorId}>{error && <FormErrorBanner message={error} className="text-xs" />}</div>
         </div>
     );
 }
@@ -270,6 +300,8 @@ function SerialReturnList({
 }) {
     const t = useT();
     const titleId = useId();
+    const errorId = useId();
+    const groupRef = useFocusOnError<HTMLDivElement>(error);
     const serials = request.serials;
     const allPicked = serials.length > 0 && selected.size === serials.length;
 
@@ -308,7 +340,15 @@ function SerialReturnList({
                     {allPicked ? t('stock_return_select_none') : t('stock_return_select_all')}
                 </button>
             </div>
-            <div role="group" aria-labelledby={titleId} className="max-h-52 space-y-1 overflow-y-auto">
+            <div
+                ref={groupRef}
+                role="group"
+                tabIndex={-1}
+                aria-labelledby={titleId}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? errorId : undefined}
+                className={cn('max-h-52 space-y-1 overflow-y-auto rounded-md', FOCUS_RING)}
+            >
                 {serials.map((s) => {
                     const checked = selected.has(s.id);
                     return (
@@ -337,7 +377,7 @@ function SerialReturnList({
                     );
                 })}
             </div>
-            {error && <FormErrorBanner message={error} className="text-xs" />}
+            <div id={errorId}>{error && <FormErrorBanner message={error} className="text-xs" />}</div>
         </div>
     );
 }

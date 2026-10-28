@@ -132,14 +132,18 @@ test('the row menu: details always, the issue sheet when fulfilled, then a separ
     const print = menu.indexOf("t('stock_issue_print')");
     const cancel = menu.indexOf("t('stock_cancel_request')");
     assert.ok(view > 0 && print > view && cancel > print, 'details, print, cancel in that order');
-    assert.match(menu, /request\.status === 'fulfilled' &&/);
+    assert.match(menu, /request\.status === 'fulfilled' && request\.issue_doc_no &&/, 'no ISS, no issue sheet to print');
     assert.match(menu, /issuePdfUrl\(request\.id\)/);
     assert.match(menu, /request\.can_cancel &&[\s\S]*<DropdownMenuSeparator \/>[\s\S]*text-destructive/);
 });
 
 test('every row opens the detail and carries the menu; row buttons keep their own click', () => {
     assert.match(tab, /onRowClick=\{/);
-    assert.match(tab, /<RequestRowMenu request=\{r\} requestNo=\{requestNo\(r\)\} onOpen=\{openDetail\} onCancel=\{confirmCancel\} \/>/);
+    // The menu hands over its button, where focus returns when the detail closes
+    assert.match(
+        tab,
+        /<RequestRowMenu[\s\S]*?onOpen=\{\(row, trigger\) => \{\s*rememberOrigin\(trigger\);\s*openDetail\(row\);[\s\S]*?onCancel=\{confirmCancel\}/,
+    );
     assert.doesNotMatch(tab, /\{r\.can_cancel && <RequestRowMenu/);
     assert.equal(tab.match(/e\.stopPropagation\(\)/g)?.length, 3, 'approve, reject and fulfil');
     assert.match(menu, /stopPropagation/);
@@ -177,9 +181,19 @@ test('every detail word exists in both languages', () => {
         'stock_rq_return_from_this',
         'stock_rq_awaiting_fulfil',
         'stock_rq_serial_lot_note',
+        'stock_rq_step_done',
+        'stock_rq_step_now',
+        'stock_rq_step_wait',
+        'stock_return_seed_nothing_left',
+        'stock_refusal_return_before_issue',
     ] as const;
     for (const key of keys) {
         assert.ok(th[key], `th ${key}`);
         assert.ok(en[key], `en ${key}`);
     }
+});
+
+test('each step says its state to screen readers; a request with no ISS has no issue sheet to print', () => {
+    assert.match(dialog, /STATE\[s\.state\] && <span className="sr-only">/);
+    assert.match(dialog, /r\.status === 'fulfilled' && r\.issue_doc_no &&/);
 });

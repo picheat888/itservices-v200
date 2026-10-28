@@ -238,7 +238,10 @@ export default function StockPage() {
     const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
     // Return drawer opened from a request detail starts with that request chosen
     const [returnRequestId, setReturnRequestId] = useState<number | undefined>(undefined);
-    const returnFromRequest = (requestId: number) => {
+    // Focus goes back to the request row once that drawer closes
+    const returnFocusRef = useRef<((e: Event) => void) | undefined>(undefined);
+    const returnFromRequest = (requestId: number, returnFocus?: (e: Event) => void) => {
+        returnFocusRef.current = returnFocus;
         setReturnRequestId(requestId);
         setMoveKind('return');
     };
@@ -846,6 +849,10 @@ export default function StockPage() {
                 onClose={() => {
                     setMoveKind(null);
                     setReturnRequestId(undefined);
+                }}
+                onCloseAutoFocus={(e) => {
+                    returnFocusRef.current?.(e);
+                    returnFocusRef.current = undefined;
                 }}
             />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />

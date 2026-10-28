@@ -3,6 +3,7 @@ import { useT } from '@/lang';
 import type { StockRequest } from '@/shared/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import { Ban, Eye, MoreVertical, Printer } from 'lucide-react';
+import { useRef } from 'react';
 import { issuePdfUrl } from '../api/stockApi';
 
 // Clicks inside the menu (its portal bubbles through React) never open the row
@@ -16,14 +17,17 @@ export function RequestRowMenu({
 }: {
     request: StockRequest;
     requestNo: string;
-    onOpen: (r: StockRequest) => void;
+    /** `trigger` is the menu button, where focus returns once the detail closes. */
+    onOpen: (r: StockRequest, trigger: HTMLElement | null) => void;
     onCancel: (r: StockRequest) => void;
 }) {
     const t = useT();
+    const triggerRef = useRef<HTMLButtonElement>(null);
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <button
+                    ref={triggerRef}
                     type="button"
                     onClick={keepFromRow}
                     aria-label={`${t('actions')} ${requestNo}`}
@@ -33,11 +37,11 @@ export function RequestRowMenu({
                 </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48" onClick={keepFromRow}>
-                <DropdownMenuItem onClick={() => onOpen(request)}>
+                <DropdownMenuItem onClick={() => onOpen(request, triggerRef.current)}>
                     <Eye className="h-4 w-4" />
                     {t('stock_rq_view_detail')}
                 </DropdownMenuItem>
-                {request.status === 'fulfilled' && (
+                {request.status === 'fulfilled' && request.issue_doc_no && (
                     <DropdownMenuItem asChild>
                         <a href={issuePdfUrl(request.id)} target="_blank" rel="noopener">
                             <Printer className="h-4 w-4" />

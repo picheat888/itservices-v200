@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -20,6 +21,7 @@ import type { StockMovementType } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { LotCard } from '../../components/lot-card';
@@ -73,11 +75,14 @@ export function MovementsTab() {
     const moveSerials = useMemo(() => moveSerialsQuery.data ?? [], [moveSerialsQuery.data]);
     // The movement itself never changes once posted; its serials are asked again on open
     useRefetchOnOpen(moveOpen, moveSerialsQuery);
-    // Lot a receive opened (receive rows only)
-    const moveLotsQuery = useMovementLots(viewMove?.id ?? null, moveOpen && ['receive', 'issue', 'return'].includes(viewMove?.type ?? ''));
+    // Lot a receive opened, or the lots an issue / return touched
+    const showsLots = ['receive', 'issue', 'return'].includes(viewMove?.type ?? '');
+    const moveLotsQuery = useMovementLots(viewMove?.id ?? null, moveOpen && showsLots);
     const receiveLot = moveLotsQuery.data?.lots[0];
-    // Serial vs non-serial is only known once the serials have loaded
-    const serialsSettled = moveSerialsQuery.isSuccess;
+    // Serial vs non-serial is only known once the serials have loaded (or failed: then no sticker block)
+    const serialsSettled = moveSerialsQuery.isSuccess || moveSerialsQuery.isError;
+    // The lot section waits for both reads, so the sticker block never pops in late
+    const lotsPending = showsLots && !moveLotsQuery.isError && (!moveLotsQuery.data || (viewMove?.type === 'receive' && !serialsSettled));
 
     const columns: Column<(typeof movements)[number]>[] = [
         {
@@ -321,8 +326,12 @@ export function MovementsTab() {
                                             </div>
                                         )}
 
+                                        {/* Lots: skeleton while reading, retry if the read failed */}
+                                        {lotsPending && <Skeleton className="h-32 w-full rounded-xl" />}
+                                        {showsLots && moveLotsQuery.isError && <LoadFailedPanel onRetry={() => moveLotsQuery.refetch()} />}
+
                                         {/* Lot of this receive */}
-                                        {viewMove.type === 'receive' && receiveLot?.lot_no && (
+                                        {!lotsPending && viewMove.type === 'receive' && receiveLot?.lot_no && (
                                             <div>
                                                 <div className={cn(EYEBROW, 'mb-1')}>{t('stock_recv_lots_title')}</div>
                                                 <LotCard
@@ -330,16 +339,17 @@ export function MovementsTab() {
                                                     warehouse={receiveLot.warehouse}
                                                     remaining={receiveLot.remaining}
                                                     state={receiveLot.state}
-                                                    printable={serialsSettled && moveSerials.length === 0}
+                                                    printable={moveSerialsQuery.isSuccess && moveSerials.length === 0}
                                                 />
-                                                {serialsSettled && moveSerials.length > 0 && (
+                                                {moveSerials.length > 0 && (
                                                     <p className="text-muted-foreground mt-1 text-xs">{t('stock_recv_serial_note')}</p>
                                                 )}
                                             </div>
                                         )}
 
                                         {/* Lots drawn by an issue, or put back by a return */}
-                                        {(viewMove.type === 'issue' || viewMove.type === 'return') &&
+                                        {!lotsPending &&
+                                            (viewMove.type === 'issue' || viewMove.type === 'return') &&
                                             moveLotsQuery.data &&
                                             moveLotsQuery.data.lots.length > 0 && <LotsDrawnCard data={moveLotsQuery.data} kind={viewMove.type} />}
 
