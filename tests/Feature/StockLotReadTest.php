@@ -116,6 +116,7 @@ class StockLotReadTest extends TestCase
         $this->assertSame([null, $request->reference, $request->reference], array_column($entries, 'request_reference'));
         $this->assertSame(['Keeper', 'Somchai K', 'Somchai K'], array_column($entries, 'person'));
         $this->assertSame(['A', 'A', 'A'], array_column($entries, 'warehouse'));
+        $this->assertSame(['PO-2026-131', $request->reference, $request->reference], array_column($entries, 'reference'));
     }
 
     public function test_lot_page_shows_a_transfer_as_zero_and_the_warehouse_change(): void
@@ -395,6 +396,24 @@ class StockLotReadTest extends TestCase
         // Newest fulfilled first
         $all = $this->getJson("/api/stock-requests/returnable?stock_item_id={$item->id}")->assertOk()->json('data');
         $this->assertSame([$wanida->id, $anan->id], array_column($all, 'id'));
+    }
+
+    public function test_returnable_filters_by_request_id(): void
+    {
+        $item = $this->item();
+        $lot = $this->receive($item, 'A', '2026-09-30 09:10:00', ['qty' => 20]);
+        $anan = $this->fulfilled($item, 1, ['from_warehouse' => 'A'], name: 'Anan P');
+        $this->fulfilled($item, 1, ['from_warehouse' => 'A'], name: 'Wanida S');
+        $done = $this->fulfilled($item, 2, ['from_warehouse' => 'A'], name: 'Done D');
+        $this->returnLots($item, $done, [['lot_id' => $lot->id, 'qty' => 2]]);
+
+        $rows = $this->getJson("/api/stock-requests/returnable?stock_item_id={$item->id}&stock_request_id={$anan->id}")->assertOk()->json('data');
+        $this->assertSame([$anan->id], array_column($rows, 'id'));
+
+        // A request with nothing left to return is not listed
+        $this->getJson("/api/stock-requests/returnable?stock_item_id={$item->id}&stock_request_id={$done->id}")
+            ->assertOk()
+            ->assertJsonPath('data', []);
     }
 
     public function test_returnable_lists_the_serials_still_out(): void

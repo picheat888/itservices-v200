@@ -615,4 +615,5 @@ export const stock: Dict = {
     stock_refusal_lot_short: '{lot_no} มีของไม่พอ ลองเปิดหน้านี้ใหม่แล้วทำอีกครั้ง',
     stock_refusal_return_request_invalid: 'คืนของจากใบเบิกนี้ไม่ได้ ใบเบิกต้องเป็นของสินค้านี้และจ่ายของแล้ว',
     stock_refusal_return_lot_over: 'คืนเข้า {lot_no} ได้ไม่เกิน {left} ชิ้น',
+    stock_refusal_return_before_issue: 'วันที่คืนต้องไม่ก่อนวันที่จ่ายของ {date}',
 };

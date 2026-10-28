@@ -9,9 +9,11 @@
  */
 import { refusalText } from '@/shared/lib/api-errors';
 
-export function stockRefusalText(error: unknown, t: (key: string) => string): string {
-    return refusalText(error, t, 'stock_refusal_', (name, value) =>
+export function stockRefusalText(error: unknown, t: (key: string) => string, formatDate?: (value: string) => string): string {
+    return refusalText(error, t, 'stock_refusal_', (name, value) => {
         // A request's status is quoted by its key ('approved'); show the label the list shows.
-        name === 'expected' || name === 'current' ? t(`stock_rq_${String(value)}`) : String(value ?? ''),
-    );
+        if (name === 'expected' || name === 'current') return t(`stock_rq_${String(value)}`);
+        if (name === 'date' && formatDate && value) return formatDate(String(value));
+        return String(value ?? '');
+    });
 }

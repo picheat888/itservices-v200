@@ -50,6 +50,7 @@ class StockReturnService
             $this->countLock->assertFree($item->id, $lotsByWarehouse->keys()->all());
 
             $movedAt = isset($data['moved_at']) ? Carbon::parse($data['moved_at']) : now();
+            $this->assertNotBeforeIssue($stockRequest, $movedAt);
             $docNo = DocNumber::next('return', (int) $movedAt->year);
             $reference = $stockRequest->reference ?? "REQ-{$stockRequest->id}";
 
@@ -102,6 +103,17 @@ class StockReturnService
         }
 
         return $locked;
+    }
+
+    /** A return cannot be dated before the request's issue (its first ISS row, or the fulfil time). */
+    private function assertNotBeforeIssue(StockRequest $stockRequest, Carbon $movedAt): void
+    {
+        $firstIssue = StockMovement::where('stock_request_id', $stockRequest->id)->where('type', 'issue')->min('moved_at');
+        $issuedAt = $firstIssue !== null ? Carbon::parse($firstIssue) : $stockRequest->fulfilled_at;
+
+        if ($issuedAt !== null && $movedAt->lt($issuedAt)) {
+            Refusal::fail('return_before_issue', ['date' => $issuedAt->toDateTimeString()], 'moved_at');
+        }
     }
 
     /**

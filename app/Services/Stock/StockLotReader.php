@@ -201,14 +201,16 @@ class StockLotReader
     }
 
     /**
-     * Fulfilled requests of an item with something left to return, newest first.
+     * Fulfilled requests of an item with something left to return, newest first (or just the one request asked for).
      *
      * @return list<array<string, mixed>>
      */
-    public function returnable(StockItem $item, ?string $search): array
+    public function returnable(StockItem $item, ?string $search, ?int $requestId = null): array
     {
         $figures = $this->lots->drawnAndReturned(
-            StockRequest::where('stock_item_id', $item->id)->where('status', 'fulfilled'),
+            StockRequest::where('stock_item_id', $item->id)
+                ->where('status', 'fulfilled')
+                ->when($requestId !== null, fn ($q) => $q->whereKey($requestId)),
         );
         $leftByRequest = collect($figures)
             ->map(fn (array $lots): int => array_sum(array_map(fn (array $lot): int => max(0, $lot['issued'] - $lot['returned']), $lots)))
@@ -260,14 +262,17 @@ class StockLotReader
             return [];
         }
 
-        $ledger = StockLotEntry::whereIn('stock_lot_id', $entries->pluck('stock_lot_id')->unique()->values()->all())
+        $runningByEntry = [];
+        $runningByLot = [];
+        StockLotEntry::whereIn('stock_lot_id', $entries->pluck('stock_lot_id')->unique()->values()->all())
             ->orderBy('id')
             ->get(['id', 'stock_lot_id', 'qty'])
-            ->groupBy('stock_lot_id');
+            ->each(function (StockLotEntry $row) use (&$runningByEntry, &$runningByLot): void {
+                $runningByLot[$row->stock_lot_id] = ($runningByLot[$row->stock_lot_id] ?? 0) + (int) $row->qty;
+                $runningByEntry[$row->id] = $runningByLot[$row->stock_lot_id];
+            });
 
-        return $entries->mapWithKeys(fn (StockLotEntry $entry): array => [
-            $entry->id => (int) $ledger->get($entry->stock_lot_id, collect())->where('id', '<=', $entry->id)->sum('qty'),
-        ])->all();
+        return $entries->mapWithKeys(fn (StockLotEntry $entry): array => [$entry->id => $runningByEntry[$entry->id] ?? 0])->all();
     }
 
     /**
@@ -320,6 +325,7 @@ class StockLotReader
                 'occurred_at' => $entry->occurred_at?->toDateTimeString(),
                 'doc_no' => $movement?->doc_no ?? $entry->reference,
                 'type' => $type,
+                'reference' => $movement?->reference,
                 'request_reference' => $movement?->request?->reference,
                 'person' => $movement?->request?->requester_name ?? $recordedBy,
                 'recorded_by' => $recordedBy,

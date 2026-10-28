@@ -10,16 +10,12 @@ use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
-use App\Models\Stock\Warehouse;
-use App\Services\Stock\StockBalanceService;
-use App\Services\Stock\StockCountLock;
 use App\Services\Stock\StockLotReader;
-use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
+use App\Services\Stock\StockReceiveService;
 use App\Services\Stock\StockReturnService;
 use App\Services\Stock\StockTransferService;
 use App\Support\DateDisplay;
-use App\Support\DocNumber;
 use App\Support\DocumentName;
 use App\Support\Refusal;
 use App\Support\SearchTerms;
@@ -27,11 +23,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use InvalidArgumentException;
 use Picqer\Barcode\Renderers\HtmlRenderer;
 use Picqer\Barcode\Types\TypeCode128;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -40,9 +34,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class StockMovementController extends Controller
 {
     public function __construct(
-        private readonly StockLotService $lotService,
-        private readonly StockBalanceService $balances,
-        private readonly StockCountLock $countLock,
+        private readonly StockReceiveService $receives,
         private readonly StockReturnService $returns,
         private readonly StockTransferService $transfers,
     ) {}
@@ -233,7 +225,7 @@ class StockMovementController extends Controller
             $movement = $this->transfers->record($item, $data['from_label'], $data['to_label'], $data['lot_ids'], $data, $request->user());
             AuditLog::record('Stock transfer', "{$item->sku} ×{$movement->qty}", subject: $item);
         } else {
-            $movement = $this->record($data, $request->user()?->name, $request->user()?->id, $serials);
+            $movement = $this->receives->record($data, $request->user()?->name, $request->user()?->id, $serials);
         }
 
         // Fire a real-time stock-level alert now that on-hand has changed.
@@ -300,116 +292,5 @@ class StockMovementController extends Controller
     private function isSerialItem(mixed $stockItemId): bool
     {
         return is_numeric($stockItemId) && (bool) StockItem::whereKey((int) $stockItemId)->value('track_serial');
-    }
-
-    /**
-     * Persist a receive and apply it to the item's stock, balances, lots and serials in one transaction.
-     *
-     * @param  array<string, mixed>  $data
-     * @param  array<int, string>  $serials
-     */
-    public function record(array $data, ?string $recordedBy, ?int $userId = null, array $serials = []): StockMovement
-    {
-        if ($data['type'] === 'return') {
-            throw new InvalidArgumentException('Returns are booked by StockReturnService.');
-        }
-        if ($data['type'] === 'transfer') {
-            throw new InvalidArgumentException('Transfers are booked by StockTransferService.');
-        }
-
-        return DB::transaction(function () use ($data, $recordedBy, $userId, $serials) {
-            /** @var StockItem $item */
-            $item = StockItem::lockForUpdate()->findOrFail($data['stock_item_id']);
-            $type = $data['type'];
-            $inbound = in_array($type, StockMovement::INBOUND, true);
-
-            // Quantity: serialized receive → number of serials
-            $qty = $serials !== [] ? count($serials) : (int) ($data['qty'] ?? 0);
-
-            $fromWh = $data['from_label'] ?? null;
-            $toWh = $data['to_label'] ?? null;
-
-            $this->countLock->assertFree($item->id, [
-                in_array($type, StockMovement::FROM_WAREHOUSE, true) ? $fromWh : null,
-                in_array($type, StockMovement::TO_WAREHOUSE, true) ? $toWh : null,
-            ]);
-
-            // Outbound (non-transfer) needs enough total stock; per-warehouse guard is in the balance service.
-            if (! $inbound && $item->current_stock < $qty) {
-                Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
-            }
-
-            $openedLot = null;
-            $unitCost = $type === 'receive' && isset($data['unit_cost']) ? (float) $data['unit_cost'] : null;
-            $movedAt = isset($data['moved_at']) ? Carbon::parse($data['moved_at']) : now();
-
-            $movement = StockMovement::create([
-                'doc_no' => DocNumber::next($type, (int) $movedAt->year),
-                'type' => $type,
-                'stock_item_id' => $item->id,
-                'qty' => $qty,
-                'unit_cost' => $unitCost,
-                'from_label' => $fromWh,
-                'to_label' => $toWh,
-                'reference' => $data['reference'] ?? null,
-                'recorded_by' => $recordedBy,
-                'user_id' => $userId,
-                'notes' => $data['notes'] ?? null,
-                'moved_at' => $movedAt,
-            ]);
-
-            // Inbound lot cost is the pre-movement average, so resolve it before current_stock changes.
-            $inboundLotCost = $inbound ? ($unitCost ?? $item->avgCost()) : null;
-
-            $item->current_stock += $movement->delta();
-            $this->touchLastMove($item, $movement);
-            $item->save();
-
-            if ($inbound) {
-                // Destination defaults to 'Unassigned' (never '') so balances and serials agree.
-                $inboundWarehouse = $toWh ?: 'Unassigned';
-                $this->balances->add($item, $inboundWarehouse, $qty);
-
-                $openedLot = $this->lotService->open($item, Warehouse::resolveId($inboundWarehouse), $qty, $inboundLotCost, $movement, $data['reference'] ?? null);
-                $movement->setRelation('openedLot', $openedLot->load('warehouse'));
-            } else {
-                $this->balances->remove($item, (string) $fromWh, $qty);
-                $this->lotService->consume($item, Warehouse::resolveId((string) $fromWh), $qty, $movement, $data['reference'] ?? null);
-            }
-
-            // Register each received unit's serial against the SKU + log a history event.
-            foreach ($serials as $serial) {
-                $row = StockItemSerial::create([
-                    'stock_item_id' => $item->id,
-                    'stock_movement_id' => $movement->id,
-                    'serial' => $serial,
-                    'status' => 'in_stock',
-                    'warehouse_id' => Warehouse::resolveId($inboundWarehouse),
-                    'reference' => $data['reference'] ?? null,
-                    'received_at' => $movement->moved_at,
-                    'stock_lot_id' => $openedLot?->id,
-                ]);
-                StockItemSerialEvent::log($row, 'received', [
-                    'stock_movement_id' => $movement->id,
-                    'reference' => $data['reference'] ?? null,
-                    'warehouse' => $inboundWarehouse,
-                    'user_id' => $userId,
-                    'recorded_by' => $recordedBy,
-                    'occurred_at' => $movement->moved_at,
-                ]);
-            }
-
-            AuditLog::record('Stock '.$type, "{$item->sku} ×{$qty}", subject: $item);
-
-            return $movement;
-        });
-    }
-
-    /** The item's last movement day only moves forward: a backdated entry does not make it look idle. */
-    private function touchLastMove(StockItem $item, StockMovement $movement): void
-    {
-        if ($item->last_move_at === null || $movement->moved_at->greaterThan($item->last_move_at->endOfDay())) {
-            $item->last_move_at = $movement->moved_at->toDateString();
-        }
     }
 }

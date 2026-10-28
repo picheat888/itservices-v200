@@ -2,7 +2,6 @@
 
 namespace Database\Seeders\Demo;
 
-use App\Http\Controllers\Api\Stock\StockMovementController;
 use App\Http\Controllers\Api\Stock\StockRequestController;
 use App\Models\Settings\Category;
 use App\Models\Settings\Unit;
@@ -15,6 +14,7 @@ use App\Models\User;
 use App\Services\Stock\StockCountService;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
+use App\Services\Stock\StockReceiveService;
 use App\Services\Stock\StockReturnService;
 use App\Services\Stock\StockTransferService;
 use Illuminate\Http\Request;
@@ -27,7 +27,7 @@ use RuntimeException;
  * committed with a variance and one is still a draft, and the final quantities leave
  * items out of stock, below minimum and above maximum.
  *
- * Receipts go through StockMovementController::record(), transfers through StockTransferService, requisitions through
+ * Receipts go through StockReceiveService, transfers through StockTransferService, requisitions through
  * StockRequestController's actions and the return through StockReturnService.
  */
 final class DemoStock implements DemoStep
@@ -76,7 +76,7 @@ final class DemoStock implements DemoStep
     ];
 
     public function __construct(
-        private readonly StockMovementController $movements,
+        private readonly StockReceiveService $receives,
         private readonly StockRequestController $requests,
         private readonly StockCountService $counts,
         private readonly StockNotificationService $alerts,
@@ -130,7 +130,7 @@ final class DemoStock implements DemoStep
             foreach ($lots as [$daysAgo, $qty, $cost, $w]) {
                 $moment = $clock->daysAgo($daysAgo, 10);
                 $clock->at($moment);
-                $this->movements->record([
+                $this->receives->record([
                     'stock_item_id' => $ctx->items[$key]->id,
                     'type' => 'receive',
                     'qty' => $qty,

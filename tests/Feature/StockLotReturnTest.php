@@ -284,4 +284,23 @@ class StockLotReturnTest extends TestCase
         $this->assertSame(0, StockMovement::where('type', 'return')->count());
         $this->assertLedger($item);
     }
+
+    public function test_return_dated_before_the_issue_is_refused(): void
+    {
+        $item = $this->item();
+        [, $l2, $request] = $this->issuedTen($item);
+        $issuedAt = StockMovement::where('type', 'issue')->where('stock_request_id', $request->id)->min('moved_at');
+
+        $this->returnStock($item, $request, ['moved_at' => now()->subDay()->toDateTimeString(), 'lots' => [['lot_id' => $l2->id, 'qty' => 1]]])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'return_before_issue')
+            ->assertJsonPath('date', (string) $issuedAt)
+            ->assertJsonValidationErrors('moved_at');
+
+        $this->assertSame(0, StockMovement::where('type', 'return')->count());
+
+        // On or after the issue is fine
+        $this->returnStock($item, $request, ['moved_at' => (string) $issuedAt, 'lots' => [['lot_id' => $l2->id, 'qty' => 1]]])->assertCreated();
+        $this->assertLedger($item);
+    }
 }

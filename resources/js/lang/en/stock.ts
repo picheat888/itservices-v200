@@ -615,4 +615,5 @@ export const stock: Dict = {
     stock_refusal_lot_short: '{lot_no} does not hold enough. Reopen this page and try again.',
     stock_refusal_return_request_invalid: 'This request cannot be returned against. It must be for this item and already fulfilled.',
     stock_refusal_return_lot_over: 'At most {left} can be returned into {lot_no}.',
+    stock_refusal_return_before_issue: "The return date can't be before the issue date {date}",
 };

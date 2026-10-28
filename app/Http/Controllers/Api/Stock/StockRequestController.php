@@ -123,9 +123,14 @@ class StockRequestController extends Controller
         $data = $request->validate([
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
             'search' => ['nullable', 'string', 'max:200'],
+            'stock_request_id' => ['nullable', 'integer'],
         ]);
 
-        return response()->json(['data' => $reader->returnable(StockItem::findOrFail($data['stock_item_id']), $data['search'] ?? null)]);
+        return response()->json(['data' => $reader->returnable(
+            StockItem::findOrFail($data['stock_item_id']),
+            $data['search'] ?? null,
+            isset($data['stock_request_id']) ? (int) $data['stock_request_id'] : null,
+        )]);
     }
 
     /** Submit a new stock request (status: pending). */
