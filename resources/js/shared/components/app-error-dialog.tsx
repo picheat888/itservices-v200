@@ -6,15 +6,16 @@ import { CountdownRing } from '@/shared/components/countdown-ring';
 import { ErrorIcon, ErrorState } from '@/shared/components/error-state';
 import { useConnectionRecovery } from '@/shared/hooks/use-connection-recovery';
 import { useCountdown } from '@/shared/hooks/use-countdown';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { SHEET_CLOSE_MS, usePresence } from '@/shared/hooks/use-presence';
 import { retryFailedQueries } from '@/shared/lib/app-error-actions';
-import { clock, elapsedShare } from '@/shared/lib/countdown';
+import { clock, elapsedShare, waitSpoken } from '@/shared/lib/countdown';
 import { formatNumber } from '@/shared/lib/number';
 import { Button } from '@/shared/ui/button';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
 import { Hourglass, Loader2, ServerCrash, Users, WifiOff, Wrench, type LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const RING_TONE = {
     wait: 'text-amber-600 dark:text-amber-400',
@@ -150,8 +151,16 @@ interface WaitBodyProps {
 // Rate limit, busy server and maintenance: a ring counts down the server's Retry-After; without one, the plain icon and Retry at once
 function WaitBody({ retryAfter, icon, tone, title, line }: WaitBodyProps) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { left, done } = useCountdown(retryAfter);
     const counted = retryAfter !== null;
+    // Filled a moment after opening, so the screen reader hears the wait once; the ring itself is silent
+    const [settled, setSettled] = useState(false);
+    useEffect(() => {
+        const id = setTimeout(() => setSettled(true), 150);
+        return () => clearTimeout(id);
+    }, []);
+    const spoken = !counted || !settled ? '' : done ? t('err_ready_spoken') : waitSpoken(retryAfter, t, fmtN);
 
     const visual = counted ? (
         <CountdownRing
@@ -177,7 +186,7 @@ function WaitBody({ retryAfter, icon, tone, title, line }: WaitBodyProps) {
                     </Button>
                 }
             />
-            <LiveRegion text={counted && done ? t('err_ready_spoken') : ''} />
+            <LiveRegion text={spoken} />
         </>
     );
 }

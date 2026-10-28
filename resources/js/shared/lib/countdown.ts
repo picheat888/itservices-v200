@@ -13,3 +13,20 @@ export function secondsLeft(endsAt: number, now: number): number {
 export function elapsedShare(left: number, total: number): number {
     return total > 0 ? Math.max(0, Math.min(1, (total - left) / total)) : 1;
 }
+
+type Translate = (key: string) => string;
+type FormatNumber = (n: number) => string;
+
+/** A wait in words: "1 minute", "15 minutes", "1 second", "45 seconds" (minutes rounded up from 60 seconds on). */
+export function waitWords(seconds: number, t: Translate, fmtN: FormatNumber): string {
+    if (seconds >= 60) {
+        const minutes = Math.ceil(seconds / 60);
+        return minutes === 1 ? t('session_one_minute') : t('login_time_minutes').replace('{n}', fmtN(minutes));
+    }
+    return seconds === 1 ? t('session_one_second') : t('login_time_seconds').replace('{n}', fmtN(seconds));
+}
+
+/** What a screen reader hears when an error dialog opens with a wait: "You can try again in 45 seconds." */
+export function waitSpoken(seconds: number, t: Translate, fmtN: FormatNumber): string {
+    return t('err_wait_spoken').replace('{time}', waitWords(seconds, t, fmtN));
+}

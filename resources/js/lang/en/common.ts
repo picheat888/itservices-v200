@@ -242,6 +242,7 @@ export const common: Dict = {
     err_network_still: "Still can't connect.",
     err_ready: 'Ready',
     err_ready_spoken: 'You can try again now.',
+    err_wait_spoken: 'You can try again in {time}.',
 
     // error-boundary.tsx — crash screen
     err_render_title: "This page can't be shown",

@@ -242,6 +242,7 @@ export const common: Dict = {
     err_network_still: 'ยังเชื่อมต่อไม่ได้',
     err_ready: 'พร้อม',
     err_ready_spoken: 'ลองใหม่ได้แล้ว',
+    err_wait_spoken: 'ลองใหม่ได้ในอีก {time}',
 
     // error-boundary.tsx — crash screen
     err_render_title: 'หน้านี้แสดงผลไม่ได้',

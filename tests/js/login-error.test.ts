@@ -1,7 +1,7 @@
 // The words a failed sign-in shows: lockout, busy sign-ins, wrong credentials, closed account, expired confirmation, outage, no connection.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { loginErrorText, waitWords } from '../../resources/js/modules/auth/lib/login-error.ts';
+import { loginErrorText } from '../../resources/js/modules/auth/lib/login-error.ts';
 
 const words: Record<string, string> = {
     login_err_server: 'Cannot reach the server.',
@@ -24,16 +24,6 @@ const t = (key: string) => words[key] ?? key;
 const fmtN = (n: number) => String(n);
 const answer = (status: number, data: unknown = {}, headers: Record<string, string> = {}) => ({ response: { status, data, headers } });
 const text = (error: unknown) => loginErrorText(error, t, fmtN);
-
-test('one minute and one second read in the singular', () => {
-    assert.equal(waitWords(60, t, fmtN), '1 minute');
-    assert.equal(waitWords(1, t, fmtN), '1 second');
-});
-test('longer waits read in the plural, minutes rounded up', () => {
-    assert.equal(waitWords(61, t, fmtN), '2 minutes');
-    assert.equal(waitWords(900, t, fmtN), '15 minutes');
-    assert.equal(waitWords(45, t, fmtN), '45 seconds');
-});
 
 test('no answer at all is a connection problem', () => assert.equal(text(new Error('Network Error')), 'Cannot reach the server.'));
 test('a lockout names the wait', () =>

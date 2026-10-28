@@ -1,20 +1,13 @@
 // Words for a failed sign-in: lockout, busy sign-ins, wrong credentials, closed account, expired confirmation, outage, no connection.
 // Pure (no React), so node tests load it as is.
 
+import { waitWords } from '../../../shared/lib/countdown.ts';
+
 type Translate = (key: string) => string;
 type FormatNumber = (n: number) => string;
 
 interface FailureShape {
     response?: { status?: number; data?: { retry_after?: unknown; message?: unknown } | null; headers?: Record<string, unknown> };
-}
-
-/** A wait in words: "1 minute", "15 minutes", "1 second", "45 seconds" (minutes rounded up from 60 seconds on). */
-export function waitWords(seconds: number, t: Translate, fmtN: FormatNumber): string {
-    if (seconds >= 60) {
-        const minutes = Math.ceil(seconds / 60);
-        return minutes === 1 ? t('session_one_minute') : t('login_time_minutes').replace('{n}', fmtN(minutes));
-    }
-    return seconds === 1 ? t('session_one_second') : t('login_time_seconds').replace('{n}', fmtN(seconds));
 }
 
 /** The banner text for a failed sign-in or a failed device sign-out. */

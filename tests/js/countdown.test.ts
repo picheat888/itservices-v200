@@ -1,7 +1,17 @@
 // The countdown maths shared by the idle warning and the error dialogs: clock text, seconds left, ring fill.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clock, elapsedShare, secondsLeft } from '../../resources/js/shared/lib/countdown.ts';
+import { clock, elapsedShare, secondsLeft, waitSpoken, waitWords } from '../../resources/js/shared/lib/countdown.ts';
+
+const words: Record<string, string> = {
+    login_time_minutes: '{n} minutes',
+    login_time_seconds: '{n} seconds',
+    session_one_minute: '1 minute',
+    session_one_second: '1 second',
+    err_wait_spoken: 'You can try again in {time}.',
+};
+const t = (key: string) => words[key] ?? key;
+const fmtN = (n: number) => String(n);
 
 test('the clock reads minutes and seconds, past an hour too', () => {
     assert.equal(clock(105), '1:45');
@@ -22,4 +32,20 @@ test('the ring fills as time passes and is full with no total', () => {
     assert.equal(elapsedShare(21, 42), 0.5);
     assert.equal(elapsedShare(0, 42), 1);
     assert.equal(elapsedShare(5, 0), 1);
+});
+
+test('one minute and one second read in the singular', () => {
+    assert.equal(waitWords(60, t, fmtN), '1 minute');
+    assert.equal(waitWords(1, t, fmtN), '1 second');
+});
+
+test('longer waits read in the plural, minutes rounded up', () => {
+    assert.equal(waitWords(61, t, fmtN), '2 minutes');
+    assert.equal(waitWords(900, t, fmtN), '15 minutes');
+    assert.equal(waitWords(45, t, fmtN), '45 seconds');
+});
+
+test('the error dialogs say the wait in words for screen readers', () => {
+    assert.equal(waitSpoken(45, t, fmtN), 'You can try again in 45 seconds.');
+    assert.equal(waitSpoken(120, t, fmtN), 'You can try again in 2 minutes.');
 });
