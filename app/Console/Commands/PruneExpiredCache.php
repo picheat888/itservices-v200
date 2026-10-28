@@ -43,7 +43,11 @@ class PruneExpiredCache extends Command
                 ->where('expiration', '<=', $now)
                 ->limit(self::CHUNK)
                 ->pluck('key');
-            $deleted += $keys->isEmpty() ? 0 : DB::connection($connection)->table($table)->whereIn('key', $keys)->delete();
+            // Expiration checked again: a key renewed since the read stays
+            $deleted += $keys->isEmpty() ? 0 : DB::connection($connection)->table($table)
+                ->whereIn('key', $keys)
+                ->where('expiration', '<=', $now)
+                ->delete();
         } while ($keys->count() === self::CHUNK);
 
         return $deleted;

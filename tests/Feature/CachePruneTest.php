@@ -40,6 +40,22 @@ class CachePruneTest extends TestCase
         $this->assertSame(['live-lock'], DB::table('cache_locks')->pluck('key')->all());
     }
 
+    public function test_a_row_renewed_between_the_read_and_the_delete_is_kept(): void
+    {
+        $this->row('cache_locks', 'renewed-lock', -60);
+        $renewed = false;
+        DB::listen(function ($query) use (&$renewed) {
+            if (! $renewed && str_starts_with(strtolower($query->sql), 'select') && str_contains($query->sql, 'cache_locks')) {
+                $renewed = true;
+                DB::table('cache_locks')->where('key', 'renewed-lock')->update(['expiration' => time() + 600]);
+            }
+        });
+
+        $this->artisan('cache:prune-expired')->assertSuccessful();
+
+        $this->assertSame(['renewed-lock'], DB::table('cache_locks')->pluck('key')->all());
+    }
+
     public function test_another_cache_store_is_left_alone(): void
     {
         config(['cache.default' => 'array']);
