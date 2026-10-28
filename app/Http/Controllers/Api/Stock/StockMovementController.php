@@ -393,11 +393,11 @@ class StockMovementController extends Controller
                     if ($type === 'return' && $item->track_serial && $serialIds !== []) {
                         $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $inboundLotCost);
                     } else {
-                        $this->lotService->addLot($item, $qty, $inboundLotCost, $movement->id, $movement->moved_at);
+                        $this->lotService->legacyAddLot($item, $qty, $inboundLotCost, $movement->id, $movement->moved_at);
                     }
                 } else {
                     $this->balances->remove($item, (string) $fromWh, $qty);
-                    $this->lotService->consume($item, $qty);
+                    $this->lotService->legacyConsume($item, $qty);
                 }
 
                 // Register each received unit's serial against the SKU + log a history event.
@@ -460,7 +460,7 @@ class StockMovementController extends Controller
             ->each(function ($group) use ($item, $movement, $fallbackCost) {
                 $cost = $group->first()->movement?->unit_cost;
                 $lotCost = $cost !== null ? (float) $cost : $fallbackCost;
-                $this->lotService->addLot($item, $group->count(), $lotCost, $movement->id, $movement->moved_at);
+                $this->lotService->legacyAddLot($item, $group->count(), $lotCost, $movement->id, $movement->moved_at);
             });
 
         foreach ($serials as $row) {

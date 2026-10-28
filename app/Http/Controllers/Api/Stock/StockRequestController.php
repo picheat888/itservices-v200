@@ -295,7 +295,7 @@ class StockRequestController extends Controller
             $item->current_stock -= $stockRequest->qty;
             $item->last_move_at = now()->toDateString();
             $item->save();
-            $this->lotService->consume($item, $stockRequest->qty);
+            $this->lotService->legacyConsume($item, $stockRequest->qty);
 
             $stockRequest->update([
                 'status' => 'fulfilled',
