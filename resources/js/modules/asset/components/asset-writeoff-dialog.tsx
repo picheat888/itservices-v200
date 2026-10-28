@@ -6,6 +6,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useHeldWhileOpen } from '@/shared/hooks/use-held-while-open';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { fieldError, serverMessage } from '@/shared/lib/api-errors';
@@ -25,7 +26,9 @@ import { useAssetMutations } from '../hooks/use-assets';
 export function AssetWriteoffDialog({ ids, open, onClose, onDone }: { ids: number[]; open: boolean; onClose: () => void; onDone: () => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
-    const selectedCount = t('asset_bulk_count').replace('{count}', fmtN(ids.length));
+    // The count stays put while the dialog animates out after the selection is cleared
+    const shownCount = useHeldWhileOpen(ids.length, open);
+    const selectedCount = t('asset_bulk_count').replace('{count}', fmtN(shownCount));
     const { bulk } = useAssetMutations();
     const reasonsQuery = useWriteoffReasons();
     const refreshReasons = useSelectRefresh(reasonsQuery);

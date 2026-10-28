@@ -7,6 +7,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useFormRebase } from '@/shared/hooks/use-form-rebase';
+import { useHeldWhileOpen } from '@/shared/hooks/use-held-while-open';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
@@ -50,6 +51,7 @@ export function AssetLocationDialog({
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
+    const shownCount = useHeldWhileOpen(ids?.length ?? 0, isOpen);
 
     const locationOptions = useMemo(() => locations.map((l) => ({ value: String(l.id), label: l.name, search: l.name })), [locations]);
 
@@ -103,18 +105,14 @@ export function AssetLocationDialog({
         }
     };
 
-    const description = isBulk
-        ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0))
-        : view
-          ? `${view.asset_code} - ${view.model ?? ''}`
-          : '';
+    const description = isBulk ? t('asset_bulk_count').replace('{count}', fmtN(shownCount)) : view ? `${view.asset_code} - ${view.model ?? ''}` : '';
 
     return (
         <Dialog open={isOpen} onOpenChange={(o) => !o && guardClose(onClose)}>
             <FormDialogContent>
                 <FocusDialogHeader
                     icon={MapPin}
-                    eyebrow={isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : view?.asset_code}
+                    eyebrow={isBulk ? t('asset_bulk_count').replace('{count}', fmtN(shownCount)) : view?.asset_code}
                     title={isBulk ? t('asset_bulk_location_title') : t('asset_location_title')}
                     subtitle={!isBulk && view?.model ? <span className="text-muted-foreground text-sm">{view.model}</span> : undefined}
                     srDescription={description || undefined}

@@ -6,6 +6,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useHeldWhileOpen } from '@/shared/hooks/use-held-while-open';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
@@ -53,6 +54,7 @@ export function AssetTransferDialog({
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
+    const shownCount = useHeldWhileOpen(ids?.length ?? 0, isOpen);
     const busy = isBulk ? bulkTransfer.isPending : transfer.isPending;
     // Asked for only while the dialog is open — a closed dialog picks nobody.
     const readinessQuery = useRecipientReadiness(isOpen);
@@ -135,7 +137,7 @@ export function AssetTransferDialog({
     };
 
     const description = isBulk
-        ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0))
+        ? t('asset_bulk_count').replace('{count}', fmtN(shownCount))
         : shownAsset
           ? `${shownAsset.asset_code} - ${shownAsset.model ?? ''}`
           : '';
@@ -145,7 +147,7 @@ export function AssetTransferDialog({
             <FormDialogContent>
                 <FocusDialogHeader
                     icon={Share2}
-                    eyebrow={isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : shownAsset?.asset_code}
+                    eyebrow={isBulk ? t('asset_bulk_count').replace('{count}', fmtN(shownCount)) : shownAsset?.asset_code}
                     title={isBulk ? t('asset_bulk_transfer_title') : t('transfer_asset')}
                     subtitle={!isBulk && shownAsset?.model ? <span className="text-muted-foreground text-sm">{shownAsset.model}</span> : undefined}
                     srDescription={description || undefined}

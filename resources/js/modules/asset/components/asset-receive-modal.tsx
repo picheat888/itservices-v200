@@ -5,6 +5,7 @@ import { Field, FormErrorBanner } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useFormError } from '@/shared/hooks/use-form-error';
+import { useHeldWhileOpen } from '@/shared/hooks/use-held-while-open';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { serverMessage } from '@/shared/lib/api-errors';
@@ -46,6 +47,7 @@ export function AssetReceiveModal({
     const isRecall = mode === 'recall';
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
+    const shownCount = useHeldWhileOpen(ids?.length ?? 0, isOpen);
     const busy = isBulk ? (isRecall ? bulkRecall.isPending : bulkReceive.isPending) : isRecall ? recall.isPending : receive.isPending;
 
     useEffect(() => {
@@ -94,7 +96,7 @@ export function AssetReceiveModal({
           ? t('asset_recall_title')
           : t('asset_receive_title');
     // Asset code (or the selected count) on top, the model as the chip
-    const eyebrow = isBulk ? t('asset_bulk_count').replace('{count}', fmtN(ids?.length ?? 0)) : (shownAsset?.asset_code ?? '');
+    const eyebrow = isBulk ? t('asset_bulk_count').replace('{count}', fmtN(shownCount)) : (shownAsset?.asset_code ?? '');
     const note = isBulk ? null : isRecall ? t('asset_recall_sub') : t('asset_receive_sub');
 
     return (
