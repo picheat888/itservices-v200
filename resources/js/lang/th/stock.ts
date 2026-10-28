@@ -351,6 +351,8 @@ export const stock: Dict = {
     stock_empty_movements_search_hint: 'ลองเปลี่ยนคำค้นหรือล้างตัวกรอง',
     stock_empty_item_modal_lots: 'ไม่มี Lot คงเหลือ',
     stock_empty_item_modal_lots_hint: 'Lot จะเกิดเมื่อรับเข้าพร้อมต้นทุน',
+    stock_empty_item_lots_filtered: 'ไม่พบ Lot ที่ตรงกับตัวกรองหรือคำค้น',
+    stock_empty_item_lots_filtered_hint: 'ลองเลือกตัวกรองอื่นหรือค้นด้วยเลข Lot อื่น',
     stock_empty_item_modal_serials: 'ยังไม่มี Serial',
     stock_empty_item_modal_serials_hint: 'Serial จะถูกบันทึกตอนรับเข้า',
     stock_empty_item_modal_movements: 'ยังไม่มีความเคลื่อนไหว',
@@ -460,7 +462,6 @@ export const stock: Dict = {
     stock_refusal_count_serial_missing_mismatch: 'Serial ที่ติ๊กไว้ของ {sku} ไม่ตรงกับของในคลังแล้ว เปิดตรวจ Serial ของรายการนี้อีกครั้ง',
 
     // lots — รับเข้าเสร็จและสติกเกอร์ Lot
-    stock_lot_issued_no: 'เลข Lot ที่ระบบออกให้',
     stock_lot_held_at: 'อยู่ที่คลัง',
     stock_lot_qty_in_lot: 'จำนวนใน Lot',
     stock_lot_unit_cost: 'ต้นทุน/หน่วย',
@@ -472,7 +473,6 @@ export const stock: Dict = {
     stock_lot_word: 'Lot',
     stock_lot_unassigned: 'ยังไม่ระบุคลัง',
     stock_lot_before_tracking: '— ก่อนเริ่มเก็บ Lot',
-    stock_lot_new: 'Lot ใหม่',
 
     // fulfil dialog และใบจ่ายของ — จ่ายของบอก Lot
     stock_fulfil_from_warehouse: 'จ่ายจากคลัง',
@@ -506,6 +506,7 @@ export const stock: Dict = {
     // movement-drawer.tsx — คืนของและย้ายคลังตาม Lot
     stock_return_request_label: 'ใบเบิกที่ของนี้ถูกจ่ายออกไป',
     stock_return_request_hint: 'แสดงเฉพาะใบเบิกของสินค้านี้ที่ยังคืนได้ ค้นด้วยเลขใบเบิกหรือชื่อผู้ขอ',
+    stock_return_seed_nothing_left: 'ใบเบิกนี้ไม่มีของให้คืนแล้ว',
     stock_return_request_ph: 'ค้นด้วยเลขใบเบิกหรือชื่อผู้ขอ',
     stock_return_option_left: 'คืนได้ {n}',
     stock_return_request_pick: '— เลือกใบเบิก —',
@@ -536,12 +537,14 @@ export const stock: Dict = {
     stock_lots_total_value: 'มูลค่าคงเหลือรวม',
     stock_lots_col_held_at: 'อยู่ที่คลัง',
     stock_lots_col_received: 'รับเข้า',
+    stock_lots_col_received_on: 'วันที่รับเข้า',
     stock_lots_col_out: 'จ่ายไป',
     stock_lots_col_back: 'คืนกลับ',
     stock_lots_formula_note: 'รับเข้า ลบ จ่ายไป บวก คืนกลับ ต้องเท่ากับคงเหลือทุกแถว ถ้าไม่เท่าแปลว่ามีการปรับจากใบนับ ดูได้ในประวัติของ Lot',
     stock_lot_history_title: 'ประวัติ Lot',
     stock_lot_head_at: 'อยู่ที่{warehouse}',
-    stock_lot_head_cost: 'ต้นทุน {cost} บาท/ชิ้น',
+    stock_lot_head_cost: 'ต้นทุน {cost}/{unit}',
+    stock_lot_type_issue: 'จ่ายของ',
     stock_lot_print_sticker: 'พิมพ์สติกเกอร์',
     stock_lot_tile_received: 'รับเข้า',
     stock_lot_tile_issued: 'จ่ายไป',
@@ -554,7 +557,6 @@ export const stock: Dict = {
     stock_lot_ref: 'อ้างอิง {ref}',
     stock_lot_issued_by: 'จ่ายโดย {name}',
     stock_lot_returned_by: 'รับคืนโดย {name}',
-    stock_lot_missing: 'ไม่พบ Lot นี้',
 
     // stock-item-history — ประวัติ SKU ที่มี Lot
     stock_hist_col_lot: 'Lot',
@@ -578,6 +580,7 @@ export const stock: Dict = {
     stock_scan_lot_view_history: 'ดูประวัติ Lot',
     stock_scan_lot_reprint: 'พิมพ์สติกเกอร์ใหม่',
     stock_scan_lot_session: 'สแกนแล้วในรอบนี้ ({n})',
+    stock_scan_lot_done: 'สแกนแล้ว {lot_no}',
     stock_scan_lot_clear: 'ล้างรายการ',
     stock_scan_lot_tablet_note: 'บนคอมพิวเตอร์ช่องสแกนพร้อมรับทันทีที่เปิด บน iPad แตะช่องก่อนหนึ่งครั้ง สแกนต่อกันได้เรื่อย ๆ โดยไม่ต้องปิดกล่อง',
 
@@ -599,7 +602,10 @@ export const stock: Dict = {
     stock_rq_can_return_n: 'ยังคืนได้อีก {n} ชิ้น',
     stock_rq_return_from_this: 'คืนของจากใบนี้',
     stock_rq_awaiting_fulfil: 'รอจ่ายของ',
-    stock_rq_serial_lot_note: 'สินค้ามี Serial: Lot มาจาก Serial ที่เลือกตอนจ่ายของ',
+    stock_rq_step_done: 'เสร็จแล้ว',
+    stock_rq_step_now: 'ขั้นปัจจุบัน',
+    stock_rq_step_wait: 'ยังไม่ถึง',
+    stock_rq_serial_lot_note: 'สินค้ามี Serial ใช้ Lot ของ Serial ที่เลือกตอนจ่ายของ',
 
     // stock-movement-detail — เหตุการณ์รับเข้า
     stock_recv_lots_title: 'Lot ของใบรับเข้านี้',

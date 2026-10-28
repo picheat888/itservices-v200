@@ -39,7 +39,7 @@ export function SummaryFacts({ data, t, formatMoney }: { data: StockItemHistory;
     );
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
+export function Fact({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="border-border bg-muted/30 rounded-lg border px-4 py-2">
             <div className="text-muted-foreground text-xs">{label}</div>

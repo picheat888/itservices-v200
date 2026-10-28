@@ -351,6 +351,8 @@ export const stock: Dict = {
     stock_empty_movements_search_hint: 'Try other words or clear the filters.',
     stock_empty_item_modal_lots: 'No remaining Lots',
     stock_empty_item_modal_lots_hint: 'Lots are created when you receive with a cost.',
+    stock_empty_item_lots_filtered: 'No Lots match this filter or search',
+    stock_empty_item_lots_filtered_hint: 'Try another filter or Lot number',
     stock_empty_item_modal_serials: 'No serials yet',
     stock_empty_item_modal_serials_hint: 'Serials are recorded on receive.',
     stock_empty_item_modal_movements: 'No movement yet',
@@ -460,7 +462,6 @@ export const stock: Dict = {
     stock_refusal_count_serial_missing_mismatch: 'The ticked serials of {sku} no longer match the stock. Open the serial check for this item again.',
 
     // lots — รับเข้าเสร็จและสติกเกอร์ Lot
-    stock_lot_issued_no: 'Lot number issued by the system',
     stock_lot_held_at: 'Held at warehouse',
     stock_lot_qty_in_lot: 'Qty in Lot',
     stock_lot_unit_cost: 'Unit cost',
@@ -472,7 +473,6 @@ export const stock: Dict = {
     stock_lot_word: 'Lot',
     stock_lot_unassigned: 'Unassigned',
     stock_lot_before_tracking: '— before Lots were tracked',
-    stock_lot_new: 'New Lot',
 
     // fulfil dialog และใบจ่ายของ — จ่ายของบอก Lot
     stock_fulfil_from_warehouse: 'Issue from warehouse',
@@ -483,7 +483,8 @@ export const stock: Dict = {
     stock_fulfil_col_pick: 'Pick',
     stock_fulfil_received_on: 'Received {date}',
     stock_fulfil_take_whole: 'Take the whole Lot',
-    stock_fulfil_lot_note: 'The system picks the oldest Lot in each warehouse. If you change a warehouse quantity, the Lot list is recalculated at once.',
+    stock_fulfil_lot_note:
+        'The system picks the oldest Lot in each warehouse. If you change a warehouse quantity, the Lot list is recalculated at once.',
     stock_fulfil_serial_lot_note: 'Serialized items still tick Serials as before. Each row also shows the Lot of that Serial.',
     stock_issued_title: 'Issued',
     stock_issue_doc_no: 'Issue sheet no.',
@@ -506,6 +507,7 @@ export const stock: Dict = {
     // movement-drawer.tsx — คืนของและย้ายคลังตาม Lot
     stock_return_request_label: 'Request this was issued under',
     stock_return_request_hint: 'Only requests for this item that can still be returned are shown. Search by request number or requester name.',
+    stock_return_seed_nothing_left: 'Nothing left to return on this request',
     stock_return_request_ph: 'Search by request number or requester',
     stock_return_option_left: 'Returnable {n}',
     stock_return_request_pick: '— Select a request —',
@@ -523,7 +525,8 @@ export const stock: Dict = {
     stock_transfer_picked: '{picked}/{count} Lots',
     stock_transfer_col_received: 'Received',
     stock_transfer_total: 'Total moved',
-    stock_transfer_note: 'Only Lots that still hold stock in the source warehouse are shown. A moved Lot goes to {warehouse} as a whole, and keeps its Lot number and sticker.',
+    stock_transfer_note:
+        'Only Lots that still hold stock in the source warehouse are shown. A moved Lot goes to {warehouse} as a whole, and keeps its Lot number and sticker.',
     stock_transfer_serial_note: 'Serialized items: moving a Lot moves every Serial still in it.',
     stock_transfer_submit: 'Transfer ({n})',
     stock_empty_return_requests: 'No request can be returned',
@@ -536,12 +539,15 @@ export const stock: Dict = {
     stock_lots_total_value: 'Total remaining value',
     stock_lots_col_held_at: 'Warehouse',
     stock_lots_col_received: 'Received',
+    stock_lots_col_received_on: 'Received on',
     stock_lots_col_out: 'Issued',
     stock_lots_col_back: 'Returned',
-    stock_lots_formula_note: 'Received minus issued plus returned must equal remaining on every row. If it does not, a count adjusted the Lot. See the Lot history.',
+    stock_lots_formula_note:
+        'Received minus issued plus returned must equal remaining on every row. If it does not, a count adjusted the Lot. See the Lot history.',
     stock_lot_history_title: 'Lot history',
     stock_lot_head_at: 'In {warehouse}',
-    stock_lot_head_cost: 'Cost {cost} per unit',
+    stock_lot_head_cost: 'Cost {cost}/{unit}',
+    stock_lot_type_issue: 'Issue',
     stock_lot_print_sticker: 'Print sticker',
     stock_lot_tile_received: 'Received',
     stock_lot_tile_issued: 'Issued',
@@ -554,7 +560,6 @@ export const stock: Dict = {
     stock_lot_ref: 'Ref {ref}',
     stock_lot_issued_by: 'Issued by {name}',
     stock_lot_returned_by: 'Received by {name}',
-    stock_lot_missing: 'Lot not found',
 
     // stock-item-history — ประวัติ SKU ที่มี Lot
     stock_hist_col_lot: 'Lot',
@@ -578,8 +583,10 @@ export const stock: Dict = {
     stock_scan_lot_view_history: 'View Lot history',
     stock_scan_lot_reprint: 'Reprint sticker',
     stock_scan_lot_session: 'Scanned this session ({n})',
+    stock_scan_lot_done: 'Scanned {lot_no}',
     stock_scan_lot_clear: 'Clear list',
-    stock_scan_lot_tablet_note: 'On a computer the scan box is ready as soon as it opens. On an iPad, tap the box once first. You can keep scanning without closing the dialog.',
+    stock_scan_lot_tablet_note:
+        'On a computer the scan box is ready as soon as it opens. On an iPad, tap the box once first. You can keep scanning without closing the dialog.',
 
     // requests-tab.tsx — รายการและรายละเอียดคำขอเบิก
     stock_rq_view_detail: 'View details',
@@ -588,7 +595,8 @@ export const stock: Dict = {
     stock_rq_asked: 'Requested',
     stock_rq_stock_now: 'Stock now',
     stock_rq_lots_to_pick: 'Lots to pick (oldest first)',
-    stock_rq_pick_note: 'Calculated from the stock when this page opened. When you issue, the system creates an issue sheet (ISS) with the Lots actually drawn, ready to print for delivery.',
+    stock_rq_pick_note:
+        'Calculated from the stock when this page opened. When you issue, the system creates an issue sheet (ISS) with the Lots actually drawn, ready to print for delivery.',
     stock_rq_issue_sheet: 'Issue sheet',
     stock_rq_issued_at: 'Issued on',
     stock_rq_issued_by: 'Issued by',
@@ -599,6 +607,9 @@ export const stock: Dict = {
     stock_rq_can_return_n: '{n} can still be returned',
     stock_rq_return_from_this: 'Return from this request',
     stock_rq_awaiting_fulfil: 'Awaiting fulfillment',
+    stock_rq_step_done: 'done',
+    stock_rq_step_now: 'current step',
+    stock_rq_step_wait: 'not yet',
     stock_rq_serial_lot_note: 'Serial-tracked item: the Lots follow the serials picked at fulfillment.',
 
     // stock-movement-detail — เหตุการณ์รับเข้า

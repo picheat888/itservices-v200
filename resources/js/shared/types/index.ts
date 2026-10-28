@@ -972,9 +972,12 @@ export interface LotDetail {
     tiles: { received: number; issued: number; returned: number; adjusted: number; remaining: number };
     check: { balanced: boolean; diff: number };
     entries: {
+        id: number;
         occurred_at: string | null;
         doc_no: string | null;
         type: LotEntryType;
+        /** The movement's own reference (a receive's PO). */
+        reference: string | null;
         request_reference: string | null;
         person: string | null;
         recorded_by: string | null;

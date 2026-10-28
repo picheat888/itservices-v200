@@ -14,8 +14,8 @@ import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer,
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StockSummary, SummaryFacts } from '../components/history-summary';
-import { useStockItemHistory } from '../hooks/use-stock';
 import { LotLines, LotLink } from '../components/lot-link';
+import { useStockItemHistory } from '../hooks/use-stock';
 import { movementNote } from '../lib/movement-note';
 
 type View = 'issue' | 'receive' | 'return' | 'adjust' | 'transfer';
@@ -112,7 +112,9 @@ export default function ItemHistoryPage() {
     const serialsOf = (m: Movement, events: SerialEvent['event'][]): string[] =>
         data.serials
             .filter((s) =>
-                s.events.some((e) => events.includes(e.event) && ((m.doc_no && e.doc_no === m.doc_no) || (m.reference && e.reference === m.reference))),
+                s.events.some(
+                    (e) => events.includes(e.event) && ((m.doc_no && e.doc_no === m.doc_no) || (m.reference && e.reference === m.reference)),
+                ),
             )
             .map((s) => s.serial);
 
@@ -288,7 +290,7 @@ function CategoryView({
         const lot = lotsByNo.get(m.lots[0]?.lot_no ?? null);
         return lot ? <span className="tabular-nums">{fmtN(lot.qty_remaining)}</span> : '—';
     };
-    const warehouseOf =(m: Movement) => m.to_label ?? m.from_label ?? '—';
+    const warehouseOf = (m: Movement) => m.to_label ?? m.from_label ?? '—';
 
     let headers: string[];
     let rows: ReactNode[][];

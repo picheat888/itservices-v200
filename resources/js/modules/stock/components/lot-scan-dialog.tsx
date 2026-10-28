@@ -9,17 +9,16 @@ import { cn } from '@/shared/lib/utils';
 import type { LotLookup } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, focusDialogOnOpen, FormDialogContent } from '@/shared/ui/dialog';
-import { Printer, ScanQrCode } from 'lucide-react';
+import { ExternalLink, Printer, ScanQrCode } from 'lucide-react';
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { lookupLot, lotLabelsPdfUrl } from '../api/stockApi';
+import { LOT_ACCENT, LOT_BOX } from '../lib/lot-accent';
 import { parseLotCode } from '../lib/lot-code';
 import { stockRefusalText } from '../lib/refusal';
+import { LotStateBadge } from './lot-state-badge';
 
-// Violet marks lots, as on the Lot tab
-const LOT_ACCENT = '#6d28d9';
-
-type Note = { kind: 'ok' | 'bad'; text: string } | null;
+// `detail` is read out with the note only (warehouse and balance of a good scan)
+type Note = { kind: 'ok' | 'bad'; text: string; detail?: string } | null;
 
 export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const t = useT();
@@ -29,8 +28,10 @@ export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     const scanRef = useRef<HTMLInputElement>(null);
 
     const [code, setCode] = useState('');
-    const [busy, setBusy] = useState(false);
     const [note, setNote] = useState<Note>(null);
+    // Codes waiting for a lookup: a fast second scan queues behind the first instead of being dropped
+    const queue = useRef<string[]>([]);
+    const looking = useRef(false);
     const [scans, setScans] = useState<LotLookup[]>([]);
     // Bumped per good scan so the result card remounts and flashes again
     const [flash, setFlash] = useState(0);
@@ -43,38 +44,54 @@ export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             setCode('');
             setNote(null);
             setScans([]);
+            queue.current = [];
         }
     }
 
     const current = scans[0] ?? null;
 
+    const leftText = (l: LotLookup) => (l.state === 'empty' ? t('stock_lots_emptied') : `${fmtN(l.remaining)} ${l.item.unit ?? t('stock_units')}`);
+
     // A repeat scan moves to the top of the list
     const record = (found: LotLookup) => {
         setScans((prev) => [found, ...prev.filter((s) => s.lot_no !== found.lot_no)]);
         setFlash((n) => n + 1);
-        setNote({ kind: 'ok', text: found.serial ? `${found.serial} → ${found.lot_no}` : found.lot_no });
+        const done = t('stock_scan_lot_done').replace('{lot_no}', found.lot_no);
+        setNote({
+            kind: 'ok',
+            text: found.serial ? `${found.serial} → ${done}` : done,
+            detail: `${t('stock_lot_held_at')} ${found.warehouse} ${t('stock_scan_lot_left')} ${leftText(found)}`,
+        });
     };
 
-    const scan = async () => {
-        const raw = code.trim();
-        if (raw === '' || busy) return;
-        setBusy(true);
-        try {
-            // The server also matches serials, so a code with no lot number still goes through
-            record(await lookupLot(parseLotCode(raw) ?? raw));
-        } catch (error) {
-            setNote({ kind: 'bad', text: stockRefusalText(error, t) });
-        } finally {
-            setCode('');
-            setBusy(false);
-            scanRef.current?.focus();
+    // Looks the queued codes up one at a time, in scan order
+    const drain = async () => {
+        if (looking.current) return;
+        looking.current = true;
+        while (queue.current.length > 0) {
+            const raw = queue.current.shift() as string;
+            try {
+                // The server also matches serials, so a code with no lot number still goes through
+                record(await lookupLot(parseLotCode(raw) ?? raw));
+            } catch (error) {
+                setNote({ kind: 'bad', text: stockRefusalText(error, t) });
+            }
         }
+        looking.current = false;
+    };
+
+    const scan = () => {
+        const raw = code.trim();
+        setCode('');
+        if (raw === '') return;
+        queue.current.push(raw);
+        void drain();
     };
 
     const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        void scan();
+        scan();
     };
 
     const clearList = () => {
@@ -90,7 +107,6 @@ export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         scanRef.current?.focus({ preventScroll: true });
     };
 
-    const leftText = (l: LotLookup) => (l.state === 'empty' ? t('stock_lots_emptied') : `${fmtN(l.remaining)} ${l.item.unit ?? t('stock_units')}`);
     const emptied = current?.state === 'empty';
 
     return (
@@ -125,37 +141,26 @@ export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                             )}
                         >
                             {note?.text}
+                            {note?.detail && <span className="sr-only"> {note.detail}</span>}
                         </p>
                     </div>
 
                     {/* Result card for the latest scan */}
                     {current ? (
-                        <div
-                            key={flash}
-                            className={cn(
-                                'lot-hit shrink-0 rounded-xl border p-4',
-                                emptied
-                                    ? 'border-border bg-muted/40'
-                                    : 'border-violet-300 bg-violet-50/60 dark:border-violet-800 dark:bg-violet-950/30',
-                            )}
-                        >
+                        <div key={flash} className={cn('lot-hit shrink-0 rounded-xl border p-4', emptied ? 'border-border bg-muted/40' : LOT_BOX)}>
                             <div className="flex items-start gap-3">
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-xl font-bold tracking-wide tabular-nums">{current.lot_no}</div>
+                                    <div className="text-xl font-bold tracking-wide tabular-nums" translate="no">
+                                        {current.lot_no}
+                                    </div>
                                     <div className="mt-0.5 text-sm">
-                                        {current.item.name} <span className="text-muted-foreground text-xs">{current.item.sku}</span>
+                                        {current.item.name}{' '}
+                                        <span className="text-muted-foreground text-xs" translate="no">
+                                            {current.item.sku}
+                                        </span>
                                     </div>
                                 </div>
-                                <span
-                                    className={cn(
-                                        'inline-flex h-6 shrink-0 items-center rounded-full px-2.5 text-xs font-semibold',
-                                        emptied
-                                            ? 'bg-muted text-muted-foreground'
-                                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                    )}
-                                >
-                                    {emptied ? t('stock_lots_emptied') : t('stock_lots_in_stock')}
-                                </span>
+                                <LotStateBadge state={current.state} className="shrink-0" />
                             </div>
                             <dl className="mt-3.5 grid grid-cols-2 gap-3">
                                 <div>
@@ -177,13 +182,16 @@ export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                             </dl>
                             {current.item.track_serial && <p className="text-muted-foreground mt-2.5 text-xs">{t('stock_scan_lot_serial_note')}</p>}
                             <div className="mt-3.5 flex flex-wrap gap-2">
-                                <Link
-                                    to={`/stock/lots/${encodeURIComponent(current.lot_no)}`}
-                                    onClick={() => onOpenChange(false)}
+                                <a
+                                    href={`/stock/lots/${encodeURIComponent(current.lot_no)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className={buttonVariants({ variant: 'outline' })}
                                 >
                                     {t('stock_scan_lot_view_history')}
-                                </Link>
+                                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                                    <span className="sr-only">{t('stock_opens_new_tab')}</span>
+                                </a>
                                 <a
                                     href={lotLabelsPdfUrl(current.lot_no)}
                                     target="_blank"
@@ -224,7 +232,9 @@ export function LotScanDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                                     key={s.lot_no}
                                     className="border-border/60 grid grid-cols-[150px_minmax(0,1fr)_110px_70px] items-center gap-2.5 border-t px-3 py-2 text-[13px]"
                                 >
-                                    <span className="font-semibold tabular-nums">{s.lot_no}</span>
+                                    <span className="font-semibold tabular-nums" translate="no">
+                                        {s.lot_no}
+                                    </span>
                                     <span className="truncate">{s.item.name}</span>
                                     <span className="truncate">{s.warehouse}</span>
                                     <span className="text-right tabular-nums">{leftText(s)}</span>

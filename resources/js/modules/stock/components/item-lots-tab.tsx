@@ -10,9 +10,9 @@ import type { StockLotRow } from '@/shared/types';
 import { Input } from '@/shared/ui/input';
 import { Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { lotLabelsPdfUrl } from '../api/stockApi';
 import { parseLotCode } from '../lib/lot-code';
+import { LotLink } from './lot-link';
 
 type LotView = 'in_stock' | 'empty' | 'all';
 
@@ -56,6 +56,8 @@ export function ItemLotsTab({ lots }: { lots: StockLotRow[] }) {
                     placeholder={t('stock_scan_lot_ph')}
                     aria-label={t('stock_scan_lot_ph')}
                     autoComplete="off"
+                    spellCheck={false}
+                    enterKeyHint="search"
                     className="pl-9 text-ellipsis"
                 />
             </div>
@@ -83,7 +85,7 @@ export function ItemLotsTab({ lots }: { lots: StockLotRow[] }) {
                 <div className="border-border overflow-x-auto rounded-lg border">
                     <table className="w-full text-sm">
                         <thead className={TABLE_HEAD}>
-                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px]">
+                            <tr className="border-border text-muted-foreground border-b text-left text-xs">
                                 <th scope="col" className={TH}>
                                     {t('stock_hist_col_lot')}
                                 </th>
@@ -91,7 +93,7 @@ export function ItemLotsTab({ lots }: { lots: StockLotRow[] }) {
                                     {t('stock_lots_col_held_at')}
                                 </th>
                                 <th scope="col" className={TH}>
-                                    {t('stock_lots_col_received')}
+                                    {t('stock_lots_col_received_on')}
                                 </th>
                                 <th scope="col" className={cn(TH, 'text-right')}>
                                     {t('stock_unit_cost_short')}
@@ -119,19 +121,15 @@ export function ItemLotsTab({ lots }: { lots: StockLotRow[] }) {
                         <tbody>
                             {shown.map((l) => (
                                 <tr key={l.id} className="border-border/60 border-b last:border-0">
-                                    <td className="px-3 py-2 text-xs font-semibold whitespace-nowrap" translate="no">
-                                        {l.lot_no ? (
-                                            <Link to={`/stock/lots/${encodeURIComponent(l.lot_no)}`} className="text-brand-ink hover:underline">
-                                                {l.lot_no}
-                                            </Link>
-                                        ) : (
-                                            '—'
-                                        )}
+                                    <td className="px-3 py-2 text-xs whitespace-nowrap">
+                                        <LotLink lotNo={l.lot_no} newTab />
                                     </td>
                                     <td className="px-3 py-2 text-xs whitespace-nowrap">{l.warehouse}</td>
                                     <td className="px-3 py-2 text-xs whitespace-nowrap">
                                         <div>{fmt.date(l.received_at)}</div>
-                                        <div className="text-muted-foreground">{l.received_doc_no ?? l.doc_no ?? '—'}</div>
+                                        <div className="text-muted-foreground" translate="no">
+                                            {l.received_doc_no ?? l.doc_no ?? '—'}
+                                        </div>
                                     </td>
                                     <td className="px-3 py-2 text-right text-xs whitespace-nowrap tabular-nums">{format(l.unit_cost)}</td>
                                     <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">{fmtN(l.qty_received)}</td>
@@ -157,10 +155,17 @@ export function ItemLotsTab({ lots }: { lots: StockLotRow[] }) {
                         </tbody>
                     </table>
                 </div>
-            ) : (
+            ) : lots.length === 0 ? (
                 <EmptyState
                     title={t('stock_empty_item_modal_lots')}
                     hint={t('stock_empty_item_modal_lots_hint')}
+                    className="min-h-0 rounded-lg border border-dashed py-5"
+                />
+            ) : (
+                <EmptyState
+                    kind="search"
+                    title={t('stock_empty_item_lots_filtered')}
+                    hint={t('stock_empty_item_lots_filtered_hint')}
                     className="min-h-0 rounded-lg border border-dashed py-5"
                 />
             )}

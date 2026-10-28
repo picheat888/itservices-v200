@@ -3,38 +3,32 @@ import NotFoundPage from '@/app/not-found';
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { httpStatus } from '@/shared/lib/http-errors';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
-import type { LotDetail, StockMovementType } from '@/shared/types';
+import type { LotDetail } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Check, ChevronLeft, Printer, TriangleAlert } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { lotLabelsPdfUrl } from '../api/stockApi';
+import { Fact } from '../components/history-summary';
 import { useLot } from '../hooks/use-stock';
+import { MV_META } from './shared';
 
 type Translate = ReturnType<typeof useT>;
 type Entry = LotDetail['entries'][number];
-
-const TYPE_BADGE: Record<StockMovementType, string> = {
-    receive: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
-    issue: 'bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300',
-    return: 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300',
-    transfer: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
-    adjust_up: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
-    adjust_down: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
-};
 
 const COUNT_REASONS = ['lost', 'broken', 'used', 'inbound', 'returned', 'miscount', 'custom'];
 
 export default function LotHistoryPage() {
     const t = useT();
     const { lotNo } = useParams();
-    useDocumentTitle('stock_lot_history_title');
+    useDocumentTitle('stock_lot_history_title', lotNo);
     const { data, isLoading, error, refetch } = useLot(lotNo ?? null);
 
     if (httpStatus(error) === 404) {
@@ -89,10 +83,14 @@ function LotHistoryView({ lot, t }: { lot: LotDetail; t: Translate }) {
             <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                     <div className="text-muted-foreground text-xs font-semibold">{t('stock_lot_history_title')}</div>
-                    <h1 className="mt-1 text-xl font-extrabold tabular-nums">{lot.lot_no}</h1>
+                    <h1 className="mt-1 text-xl font-semibold tabular-nums" translate="no">
+                        {lot.lot_no}
+                    </h1>
                     <div className="text-muted-foreground mt-1 text-sm">
-                        {lot.item.name} {lot.item.sku} {t('stock_lot_head_at').replace('{warehouse}', lot.warehouse)}{' '}
-                        {t('stock_lot_head_cost').replace('{cost}', formatMoney(lot.unit_cost))}
+                        {lot.item.name} <span translate="no">{lot.item.sku}</span> {t('stock_lot_head_at').replace('{warehouse}', lot.warehouse)}{' '}
+                        {t('stock_lot_head_cost')
+                            .replace('{cost}', formatMoney(lot.unit_cost))
+                            .replace('{unit}', lot.item.unit ?? t('stock_units'))}
                     </div>
                 </div>
                 <a
@@ -103,24 +101,28 @@ function LotHistoryView({ lot, t }: { lot: LotDetail; t: Translate }) {
                 >
                     <Printer className="h-4 w-4" aria-hidden />
                     {t('stock_lot_print_sticker')}
+                    <span className="sr-only">{t('stock_opens_new_tab')}</span>
                 </a>
             </div>
 
             {/* Tiles */}
-            <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-                <Tile label={t('stock_lot_tile_received')} value={fmtN(tiles.received)} />
-                <Tile label={t('stock_lot_tile_issued')} value={`−${fmtN(tiles.issued)}`} tone="text-red-700 dark:text-red-400" />
-                <Tile label={t('stock_lot_tile_returned')} value={`+${fmtN(tiles.returned)}`} tone="text-green-700 dark:text-green-400" />
-                <Tile label={t('stock_lot_tile_remaining')} value={fmtN(tiles.remaining)} />
+            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                <Fact label={t('stock_lot_tile_received')}>{fmtN(tiles.received)}</Fact>
+                <Fact label={t('stock_lot_tile_issued')}>
+                    <span className="text-red-700 dark:text-red-400">−{fmtN(tiles.issued)}</span>
+                </Fact>
+                <Fact label={t('stock_lot_tile_returned')}>
+                    <span className="text-emerald-700 dark:text-emerald-400">+{fmtN(tiles.returned)}</span>
+                </Fact>
+                <Fact label={t('stock_lot_tile_remaining')}>{fmtN(tiles.remaining)}</Fact>
             </div>
 
             {/* Check bar */}
             <div
-                role="status"
                 className={cn(
                     'mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
                     check.balanced
-                        ? 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
                         : 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300',
                 )}
             >
@@ -137,12 +139,15 @@ function LotHistoryView({ lot, t }: { lot: LotDetail; t: Translate }) {
     );
 }
 
-function Tile({ label, value, tone }: { label: string; value: string; tone?: string }) {
+// Type of a ledger row in the movements tab colours; an issue reads "จ่ายของ" here (board 8)
+function TypeBadge({ type, t }: { type: Entry['type']; t: Translate }) {
+    const meta = MV_META[type];
+    const Icon = meta.icon;
     return (
-        <div className="border-border rounded-lg border px-3.5 py-2.5">
-            <div className="text-muted-foreground text-xs">{label}</div>
-            <div className={cn('mt-0.5 text-2xl font-bold tabular-nums', tone)}>{value}</div>
-        </div>
+        <StatusBadge tone={meta.tone} dot={false}>
+            <Icon className="h-3 w-3" aria-hidden />
+            {type === 'issue' ? t('stock_lot_type_issue') : t(`stock_mv_${type}`)}
+        </StatusBadge>
     );
 }
 
@@ -189,20 +194,27 @@ function EntryTable({ entries, t }: { entries: Entry[]; t: Translate }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {entries.map((e, i) => (
-                        <tr key={i} className="border-border/60 border-b align-top last:border-0">
+                    {entries.map((e) => (
+                        <tr key={e.id} className="border-border/60 border-b align-top last:border-0">
                             <td className="px-3 py-2 whitespace-nowrap">
                                 {date(e.occurred_at)}
                                 <div className="text-muted-foreground text-xs">{time(e.occurred_at)}</div>
                             </td>
-                            <td className="px-3 py-2 font-medium whitespace-nowrap">{e.doc_no ?? '—'}</td>
                             <td className="px-3 py-2 whitespace-nowrap">
-                                <span className={cn('inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium', TYPE_BADGE[e.type])}>
-                                    {t(`stock_mv_${e.type}`)}
-                                </span>
+                                <div className="font-medium" translate="no">
+                                    {e.doc_no ?? '—'}
+                                </div>
+                                {e.reference && e.reference !== e.request_reference && e.reference !== e.doc_no && (
+                                    <div className="text-muted-foreground text-xs">{t('stock_lot_ref').replace('{ref}', e.reference)}</div>
+                                )}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                                <TypeBadge type={e.type} t={t} />
                                 {e.reason && <div className="text-muted-foreground mt-0.5 text-xs">{reasonText(e.reason, t)}</div>}
                             </td>
-                            <td className="px-3 py-2 whitespace-nowrap">{e.request_reference ?? '—'}</td>
+                            <td className="px-3 py-2 whitespace-nowrap" translate="no">
+                                {e.request_reference ?? '—'}
+                            </td>
                             <td className="px-3 py-2">
                                 {e.person ?? e.recorded_by ?? '—'}
                                 {e.recorded_by && e.person && (
@@ -217,7 +229,7 @@ function EntryTable({ entries, t }: { entries: Entry[]; t: Translate }) {
                             <td
                                 className={cn(
                                     'px-3 py-2 text-right font-semibold tabular-nums',
-                                    e.qty > 0 && 'text-green-700 dark:text-green-400',
+                                    e.qty > 0 && 'text-emerald-700 dark:text-emerald-400',
                                     e.qty < 0 && 'text-red-700 dark:text-red-400',
                                 )}
                             >

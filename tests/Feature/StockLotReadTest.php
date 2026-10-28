@@ -117,6 +117,7 @@ class StockLotReadTest extends TestCase
         $this->assertSame(['Keeper', 'Somchai K', 'Somchai K'], array_column($entries, 'person'));
         $this->assertSame(['A', 'A', 'A'], array_column($entries, 'warehouse'));
         $this->assertSame(['PO-2026-131', $request->reference, $request->reference], array_column($entries, 'reference'));
+        $this->assertSame($lot->entries()->orderBy('id')->pluck('id')->all(), array_column($entries, 'id'));
     }
 
     public function test_lot_page_shows_a_transfer_as_zero_and_the_warehouse_change(): void

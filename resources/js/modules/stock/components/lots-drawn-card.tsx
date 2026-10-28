@@ -3,8 +3,10 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
+import { cn } from '@/shared/lib/utils';
 import type { MovementLots } from '@/shared/types';
-import { Link } from 'react-router-dom';
+import { LOT_INK } from '../lib/lot-accent';
+import { LotLink } from './lot-link';
 
 const TH = 'px-3 py-1.5 font-medium';
 
@@ -24,13 +26,11 @@ export function LotsDrawnCard({ data, kind }: { data: MovementLots; kind: 'issue
 
     return (
         <div className="border-border rounded-lg border p-3">
-            <div className="mb-2 text-sm font-semibold text-violet-700 dark:text-violet-300">
-                {isIssue ? t('stock_issue_lots_cut') : t('stock_hist_return_into')}
-            </div>
+            <div className={cn('mb-2 text-sm font-semibold', LOT_INK)}>{isIssue ? t('stock_issue_lots_cut') : t('stock_hist_return_into')}</div>
             <div className="border-border overflow-x-auto rounded-md border">
                 <table className="w-full text-sm">
                     <thead className={TABLE_HEAD}>
-                        <tr className="text-muted-foreground text-left text-[11px]">
+                        <tr className="text-muted-foreground text-left text-xs">
                             <th scope="col" className={TH}>
                                 {t('stock_hist_col_lot')}
                             </th>
@@ -53,14 +53,8 @@ export function LotsDrawnCard({ data, kind }: { data: MovementLots; kind: 'issue
                     <tbody className="tabular-nums">
                         {data.lots.map((l) => (
                             <tr key={l.lot_id} className="border-border/60 border-t">
-                                <td className="px-3 py-1.5 text-xs font-semibold whitespace-nowrap" translate="no">
-                                    {l.lot_no ? (
-                                        <Link to={`/stock/lots/${encodeURIComponent(l.lot_no)}`} className="text-brand-ink hover:underline">
-                                            {l.lot_no}
-                                        </Link>
-                                    ) : (
-                                        '—'
-                                    )}
+                                <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+                                    <LotLink lotNo={l.lot_no} newTab />
                                 </td>
                                 <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.unit_cost)}</td>
                                 <td className="px-3 py-1.5 text-right">{fmtN(l.qty)}</td>

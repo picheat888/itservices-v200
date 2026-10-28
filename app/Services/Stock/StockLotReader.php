@@ -322,6 +322,7 @@ class StockLotReader
             $balance += $entry->qty;
 
             return [
+                'id' => $entry->id,
                 'occurred_at' => $entry->occurred_at?->toDateTimeString(),
                 'doc_no' => $movement?->doc_no ?? $entry->reference,
                 'type' => $type,

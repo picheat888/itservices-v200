@@ -4,9 +4,10 @@ import { EmptyState } from '@/shared/components/empty-state';
 import { FormErrorBanner } from '@/shared/components/field';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockLotRow } from '@/shared/types';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 const ROW = 'grid grid-cols-[1rem_minmax(0,1fr)_6.5rem_4rem] items-center gap-2.5 px-3';
 
@@ -34,7 +35,14 @@ export function TransferLotList({
     const fmt = useDateFormat();
     const fmtN = useNumberFormat();
     const titleId = useId();
+    const errorId = useId();
+    const groupRef = useRef<HTMLDivElement>(null);
     const picked = lots.filter((l) => selected.has(l.id));
+
+    // A server refusal lands on the lot list, so keyboard and screen-reader users hear it there
+    useEffect(() => {
+        if (error) groupRef.current?.focus();
+    }, [error]);
     const total = picked.reduce((sum, l) => sum + l.qty_remaining, 0);
 
     const toggle = (id: number) => {
@@ -70,7 +78,7 @@ export function TransferLotList({
                         {t('stock_transfer_picked').replace('{picked}', fmtN(picked.length)).replace('{count}', fmtN(lots.length))}
                     </span>
                 </div>
-                <div className={cn(ROW, 'text-muted-foreground border-t py-1.5 text-[11px] font-medium')} aria-hidden>
+                <div className={cn(ROW, TABLE_HEAD, 'text-muted-foreground border-t py-1.5 text-xs font-medium')} aria-hidden>
                     <span />
                     <span>{t('stock_lot_word')}</span>
                     <span>{t('stock_transfer_col_received')}</span>
@@ -78,7 +86,15 @@ export function TransferLotList({
                 </div>
 
                 {/* Lot rows */}
-                <div role="group" aria-labelledby={titleId}>
+                <div
+                    ref={groupRef}
+                    role="group"
+                    tabIndex={-1}
+                    aria-labelledby={titleId}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
+                    className="focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
+                >
                     {lots.map((lot) => {
                         const checked = selected.has(lot.id);
                         return (
@@ -100,8 +116,14 @@ export function TransferLotList({
                                 <span className="truncate font-semibold tabular-nums" translate="no">
                                     {lot.lot_no ?? t('stock_lot_before_tracking')}
                                 </span>
-                                <span className="text-muted-foreground text-xs">{lot.received_at ? fmt.date(lot.received_at) : '—'}</span>
-                                <span className="text-right tabular-nums">{fmtN(lot.qty_remaining)}</span>
+                                <span className="text-muted-foreground text-xs">
+                                    <span className="sr-only">{t('stock_transfer_col_received')} </span>
+                                    {lot.received_at ? fmt.date(lot.received_at) : '—'}
+                                </span>
+                                <span className="text-right tabular-nums">
+                                    <span className="sr-only">{t('stock_lot_remaining')} </span>
+                                    {fmtN(lot.qty_remaining)}
+                                </span>
                             </label>
                         );
                     })}
@@ -115,7 +137,7 @@ export function TransferLotList({
                     </b>
                 </div>
             </div>
-            {error && <FormErrorBanner message={error} className="text-xs" />}
+            <div id={errorId}>{error && <FormErrorBanner message={error} className="text-xs" />}</div>
 
             <p className="text-muted-foreground text-xs leading-relaxed">
                 {t('stock_transfer_note').replace('{warehouse}', to || t('stock_to_warehouse'))}

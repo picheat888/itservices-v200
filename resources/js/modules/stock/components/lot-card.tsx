@@ -8,8 +8,9 @@ import { buttonVariants } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Printer } from 'lucide-react';
 import { useId, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { lotLabelsPdfUrl, lotQrUrl } from '../api/stockApi';
+import { LotLink } from './lot-link';
+import { LotStateBadge } from './lot-state-badge';
 
 interface LotCardProps {
     lotNo: string;
@@ -39,24 +40,8 @@ export function LotCard({ lotNo, warehouse, qty, remaining, unitCost, state, uni
             <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <Link
-                            to={`/stock/lots/${encodeURIComponent(lotNo)}`}
-                            className="text-lg font-bold tracking-wide tabular-nums hover:underline"
-                        >
-                            {lotNo}
-                        </Link>
-                        {state && (
-                            <span
-                                className={cn(
-                                    'ml-auto inline-flex h-6 shrink-0 items-center rounded-full px-2.5 text-xs font-semibold',
-                                    state === 'empty'
-                                        ? 'bg-muted text-muted-foreground'
-                                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                )}
-                            >
-                                {state === 'empty' ? t('stock_lots_emptied') : t('stock_lots_in_stock')}
-                            </span>
-                        )}
+                        <LotLink lotNo={lotNo} newTab className="text-lg font-bold tracking-wide tabular-nums" />
+                        {state && <LotStateBadge state={state} className="ml-auto shrink-0" />}
                     </div>
                     <dl className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                         <div>
@@ -86,7 +71,7 @@ export function LotCard({ lotNo, warehouse, qty, remaining, unitCost, state, uni
                 {printable && (
                     <img
                         src={lotQrUrl(lotNo)}
-                        alt={lotNo}
+                        alt=""
                         width={72}
                         height={72}
                         className="border-border h-18 w-18 shrink-0 rounded-md border bg-white p-1"
