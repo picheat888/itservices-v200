@@ -707,8 +707,15 @@ export interface StockItemSerial {
     received_at: string | null;
 }
 
-export interface StockLot {
+/** One lot row of the item resource (show response). */
+export interface StockLotRow {
     id: number;
+    lot_no: string | null;
+    /** Where the lot sits now ("Unassigned" when it has no warehouse). */
+    warehouse: string;
+    received_doc_no: string | null;
+    qty_issued: number;
+    qty_returned: number;
     unit_cost: number;
     qty_received: number;
     qty_remaining: number;
@@ -717,7 +724,6 @@ export interface StockLot {
     /** Receive-movement details (null for seeded lots without a movement). */
     doc_no?: string | null;
     reference?: string | null;
-    warehouse?: string | null;
     supplier?: string | null;
     recorded_by?: string | null;
     recorded_by_th?: string | null;
@@ -764,7 +770,7 @@ export interface StockItem {
     /** Per-unit serials — only present on the single-item (show) response. */
     serials?: StockItemSerial[];
     /** FIFO cost lots — only present on the single-item (show) response. */
-    lots?: StockLot[];
+    lots?: StockLotRow[];
     /** Per-warehouse balances — only present on the single-item (show) response. */
     balances?: StockBalance[];
     /** Draft stock counts holding the item: no movement on that warehouse (every one when null) until it closes. */
@@ -794,7 +800,7 @@ export interface StockItemHistory {
         current: number;
         difference: number;
     };
-    balances: { warehouse: string | null; qty: number }[];
+    balances: { warehouse: string | null; qty: number; lot_count: number }[];
     movements: {
         id: number;
         doc_no: string | null;
@@ -809,8 +815,21 @@ export interface StockItemHistory {
         reason?: CountReason | null;
         notes: string | null;
         moved_at: string | null;
+        /** Lots this movement drew from, returned into, moved or opened. */
+        lots: { lot_no: string | null; qty: number }[];
+        request_reference: string | null;
+        requester: string | null;
     }[];
-    lots: { unit_cost: number; qty_received: number; qty_remaining: number; received_at: string | null; doc_no: string | null; serials: string[] }[];
+    lots: {
+        unit_cost: number;
+        qty_received: number;
+        qty_remaining: number;
+        received_at: string | null;
+        doc_no: string | null;
+        lot_no: string | null;
+        warehouse: string;
+        serials: string[];
+    }[];
     serials: { serial: string; status: StockSerialStatus; warehouse: string | null; events: SerialEvent[] }[];
 }
 
@@ -874,6 +893,18 @@ export interface StockMovement {
     reason?: CountReason | null;
     notes: string | null;
     moved_at: string | null;
+    /** The lot a receive opened — only on the create response. */
+    lot?: ReceiveLot;
+}
+
+/** The lot on a receive response. */
+export interface ReceiveLot {
+    id: number;
+    lot_no: string;
+    /** null = Unassigned. */
+    warehouse: string | null;
+    qty: number;
+    unit_cost: number;
 }
 
 export type StockRequestStatus = 'pending' | 'approved' | 'fulfilled' | 'rejected' | 'cancelled';
@@ -896,6 +927,8 @@ export interface StockRequest {
     fulfilled_at: string | null;
     fulfilled_by: string | null;
     fulfilled_by_th?: string | null;
+    /** ISS number of the issue sheet, once fulfilled. */
+    issue_doc_no?: string | null;
     rejected_at: string | null;
     cancelled_by: string | null;
     cancelled_at: string | null;
@@ -906,6 +939,114 @@ export interface StockRequest {
     can_cancel: boolean;
     /** The reader filed it. */
     is_own: boolean;
+}
+
+/** The issue on a fulfil response; a null warehouse is Unassigned. */
+export interface IssueResult {
+    doc_no: string | null;
+    lines: { warehouse: string | null; lot_id: number; lot_no: string | null; qty: number }[];
+}
+
+export type LotState = 'in_stock' | 'empty';
+
+export interface LotItemFacts {
+    id: number | null;
+    sku: string | null;
+    name: string | null;
+    unit: string | null;
+    track_serial: boolean;
+}
+
+export type LotEntryType = StockMovementType;
+
+/** GET /stock-lots/{lotNo} — the lot page. */
+export interface LotDetail {
+    lot_no: string;
+    item: LotItemFacts;
+    warehouse: string;
+    unit_cost: number;
+    received_at: string | null;
+    received_doc_no: string | null;
+    tiles: { received: number; issued: number; returned: number; adjusted: number; remaining: number };
+    check: { balanced: boolean; diff: number };
+    entries: {
+        occurred_at: string | null;
+        doc_no: string | null;
+        type: LotEntryType;
+        request_reference: string | null;
+        person: string | null;
+        recorded_by: string | null;
+        warehouse: string;
+        from_warehouse: string | null;
+        qty: number;
+        balance_after: number;
+        reason: CountReason | string | null;
+    }[];
+}
+
+/** GET /stock-lots/lookup?code= — what a scanned code points at. */
+export interface LotLookup {
+    lot_no: string;
+    item: LotItemFacts;
+    warehouse: string;
+    remaining: number;
+    received_at: string | null;
+    unit_cost: number;
+    state: LotState;
+    /** Set when the code was a serial of that lot. */
+    serial?: string;
+}
+
+/** GET /stock-movements/{id}/lots */
+export interface MovementLots {
+    lots: {
+        lot_id: number;
+        lot_no: string | null;
+        warehouse: string;
+        unit_cost: number;
+        qty: number;
+        returned: number;
+        remaining: number;
+        state: LotState;
+    }[];
+    returns: { doc_no: string | null; qty: number }[];
+    returnable: number;
+}
+
+/** GET /stock-requests/{id}/trail — a null issue means nothing was issued yet; warehouses read "Unassigned". */
+export interface RequestTrail {
+    issue: {
+        doc_no: string | null;
+        moved_at: string | null;
+        recorded_by: string | null;
+        lines: {
+            warehouse: string;
+            lot_id: number;
+            lot_no: string | null;
+            received_at: string | null;
+            unit_cost: number;
+            qty: number;
+            returned: number;
+        }[];
+    } | null;
+    returns: {
+        doc_no: string | null;
+        moved_at: string | null;
+        recorded_by: string | null;
+        lines: { warehouse: string; lot_no: string | null; qty: number }[];
+    }[];
+    returnable: number;
+}
+
+/** GET /stock-requests/returnable — a fulfilled request with something left to return. */
+export interface ReturnableRequest {
+    id: number;
+    reference: string | null;
+    requester_name: string;
+    fulfilled_at: string | null;
+    left: number;
+    lots: { lot_id: number; lot_no: string | null; warehouse: string; issued: number; returned: number; left: number }[];
+    serials: { id: number; serial: string; lot_no: string | null }[];
 }
 
 /** Slim item row the summary sends for the Overview reorder list. */

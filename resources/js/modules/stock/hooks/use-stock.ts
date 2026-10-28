@@ -4,6 +4,10 @@ import type { RowId } from '@/shared/lib/new-rows';
 import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+    getLot,
+    getMovementLots,
+    getRequestTrail,
+    getReturnableRequests,
     stockApi,
     stockCountApi,
     stockMovementApi,
@@ -20,6 +24,7 @@ const SUMMARY = ['stock-summary'] as const;
 const MOVEMENTS = ['stock-movements'] as const;
 const REQUESTS = ['stock-requests'] as const;
 const COUNTS = ['stock-counts'] as const;
+const LOTS = ['stock-lots'] as const;
 
 // Where a just-created row is read when the current page does not hold it
 export const NEW_ITEM_DETAIL = { key: (id: RowId) => [...ITEMS, 'detail', id], fetch: (id: RowId) => stockApi.get(Number(id)) };
@@ -111,6 +116,28 @@ export const useMovementSerials = (id: number | null, enabled = true) =>
         ...FRESH_VIEW,
     });
 
+/** Lots one movement's document touched (movement detail dialog). */
+export const useMovementLots = (id: number | null, enabled = true) =>
+    useQuery({ queryKey: [...MOVEMENTS, 'lots', id], queryFn: () => getMovementLots(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
+
+/** One lot's page: tiles, check and ledger entries. */
+export const useLot = (lotNo: string | null, enabled = true) =>
+    useQuery({ queryKey: [...LOTS, lotNo], queryFn: () => getLot(lotNo as string), enabled: lotNo !== null && enabled, ...FRESH_VIEW });
+
+/** A request's issue and returns with their lots. */
+export const useRequestTrail = (id: number | null, enabled = true) =>
+    useQuery({ queryKey: [...REQUESTS, 'trail', id], queryFn: () => getRequestTrail(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
+
+/** Fulfilled requests of an item with something left to return (the return form's picker). */
+export const useReturnableRequests = (itemId: number | null, search: string, enabled = true) =>
+    useQuery({
+        queryKey: [...REQUESTS, 'returnable', itemId, search],
+        queryFn: () => getReturnableRequests(itemId as number, search),
+        enabled: itemId !== null && enabled,
+        placeholderData: (prev) => prev,
+        ...FRESH_VIEW,
+    });
+
 /** Record a movement; refresh movements, items and summary (stock changed). */
 export function useRecordMovement() {
     const qc = useQueryClient();
@@ -121,6 +148,8 @@ export function useRecordMovement() {
             qc.invalidateQueries({ queryKey: MOVEMENTS });
             qc.invalidateQueries({ queryKey: ITEMS });
             qc.invalidateQueries({ queryKey: SUMMARY });
+            qc.invalidateQueries({ queryKey: LOTS });
+            qc.invalidateQueries({ queryKey: REQUESTS });
         },
     });
 }
@@ -143,6 +172,7 @@ export function useStockRequestActions() {
         qc.invalidateQueries({ queryKey: ITEMS });
         qc.invalidateQueries({ queryKey: SUMMARY });
         qc.invalidateQueries({ queryKey: MOVEMENTS });
+        qc.invalidateQueries({ queryKey: LOTS });
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {

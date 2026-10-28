@@ -2,6 +2,12 @@ import { ensureCsrf, http } from '@/shared/lib/http';
 import type {
     ApiEnvelope,
     CountReason,
+    IssueResult,
+    LotDetail,
+    LotLookup,
+    MovementLots,
+    RequestTrail,
+    ReturnableRequest,
     StockCount,
     StockItem,
     StockItemHistory,
@@ -14,7 +20,8 @@ import type {
 export interface StockMovementPayload {
     type: StockMovementType;
     stock_item_id: number;
-    qty: number;
+    /** Not sent for a return or a transfer (the lots carry the quantity). */
+    qty?: number;
     from_label?: string | null;
     to_label?: string | null;
     reference?: string | null;
@@ -25,6 +32,13 @@ export interface StockMovementPayload {
     serial_ids?: number[];
     /** Unit cost for this received lot (FIFO costing). */
     unit_cost?: number;
+    /** Return: the fulfilled request being returned against. */
+    stock_request_id?: number;
+    /** Return of a non-serial item: how much goes back into each lot the request drew. */
+    lots?: { lot_id: number; qty: number }[];
+    /** Transfer: the whole lots being moved. */
+    lot_ids?: number[];
+    moved_at?: string | null;
 }
 
 export interface StockRequestPayload {
@@ -114,9 +128,40 @@ export const stockRequestApi = {
     approve: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/approve`),
     reject: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/reject`),
     cancel: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/cancel`),
-    fulfill: (id: number, body?: { serial_ids?: number[]; allocations?: { warehouse: string; qty: number }[]; from_warehouse?: string }) =>
-        mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`, body),
+    // Fulfil answers with the request plus the issue sheet at the top level, so it reads the whole body
+    fulfill: async (
+        id: number,
+        body?: { serial_ids?: number[]; allocations?: { warehouse: string; qty: number }[]; from_warehouse?: string },
+    ): Promise<{ request: StockRequest; issue: IssueResult }> => {
+        await ensureCsrf();
+        const { data } = await http.post<ApiEnvelope<StockRequest> & { issue: IssueResult }>(`/stock-requests/${id}/fulfill`, body);
+        return { request: data.data, issue: data.issue };
+    },
+    trail: (id: number) => http.get<ApiEnvelope<RequestTrail>>(`/stock-requests/${id}/trail`).then((r) => r.data.data),
+    returnable: (stockItemId: number, search?: string) =>
+        http
+            .get<ApiEnvelope<ReturnableRequest[]>>('/stock-requests/returnable', { params: { stock_item_id: stockItemId, search: search || undefined } })
+            .then((r) => r.data.data),
+    issuePdfUrl: (requestId: number) => `/pdf/stock-requests/${requestId}/issue`,
 };
+
+export const stockLotApi = {
+    get: (lotNo: string) => http.get<ApiEnvelope<LotDetail>>(`/stock-lots/${encodeURIComponent(lotNo)}`).then((r) => r.data.data),
+    lookup: (code: string) => http.get<ApiEnvelope<LotLookup>>('/stock-lots/lookup', { params: { code } }).then((r) => r.data.data),
+    qrUrl: (lotNo: string) => `/api/stock-lots/${encodeURIComponent(lotNo)}/qr`,
+    labelsPdfUrl: (lotNo: string, copies = 1) => `/pdf/stock-lots/${encodeURIComponent(lotNo)}/labels?copies=${copies}`,
+};
+
+/** A movement's lots: what its document drew, returned or moved. */
+export const getMovementLots = (id: number) => http.get<ApiEnvelope<MovementLots>>(`/stock-movements/${id}/lots`).then((r) => r.data.data);
+
+export const getLot = stockLotApi.get;
+export const lookupLot = stockLotApi.lookup;
+export const getRequestTrail = stockRequestApi.trail;
+export const getReturnableRequests = stockRequestApi.returnable;
+export const lotQrUrl = stockLotApi.qrUrl;
+export const lotLabelsPdfUrl = stockLotApi.labelsPdfUrl;
+export const issuePdfUrl = stockRequestApi.issuePdfUrl;
 
 /** One line's changes in a count save; only the keys present are touched. */
 export interface LinePatch {

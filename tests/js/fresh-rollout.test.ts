@@ -113,7 +113,7 @@ const SITES: Site[] = [
     { file: 'modules/asset/components/asset-receive-modal.tsx', refresh: 1 },
     { file: 'modules/asset/components/asset-writeoff-dialog.tsx', refresh: 1, flagRemoved: 1 },
     { file: 'modules/asset/components/asset-transfer-dialog.tsx', refresh: 1, openRefetch: 1 },
-    { file: 'modules/stock/hooks/use-stock.ts', freshView: 9, freshList: 1 },
+    { file: 'modules/stock/hooks/use-stock.ts', freshView: 13, freshList: 1 },
     { file: 'modules/stock/pages/index.tsx', marks: 1, refresh: 2, openRefetch: 1 },
     { file: 'modules/stock/components/stock-item-modal.tsx', refresh: 5, flagRemoved: 4, seedOnce: 1, rebase: 1 },
     { file: 'modules/stock/components/request-drawer.tsx', refresh: 1, flagRemoved: 1 },
