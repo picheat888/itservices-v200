@@ -294,6 +294,9 @@ class StockMovementController extends Controller
         if ($data['type'] === 'return') {
             throw new InvalidArgumentException('Returns are booked by StockReturnService.');
         }
+        if ($data['type'] === 'transfer') {
+            throw new InvalidArgumentException('Transfers are booked by StockTransferService.');
+        }
 
         return DB::transaction(function () use ($data, $recordedBy, $userId, $serials) {
             /** @var StockItem $item */

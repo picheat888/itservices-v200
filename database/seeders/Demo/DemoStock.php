@@ -8,6 +8,7 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Unit;
 use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockLot;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -15,6 +16,7 @@ use App\Services\Stock\StockCountService;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockReturnService;
+use App\Services\Stock\StockTransferService;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -25,7 +27,7 @@ use RuntimeException;
  * committed with a variance and one is still a draft, and the final quantities leave
  * items out of stock, below minimum and above maximum.
  *
- * Movements go through StockMovementController::record(), requisitions through
+ * Receipts go through StockMovementController::record(), transfers through StockTransferService, requisitions through
  * StockRequestController's actions and the return through StockReturnService.
  */
 final class DemoStock implements DemoStep
@@ -35,7 +37,7 @@ final class DemoStock implements DemoStep
         'toner-hp' => ['HP 58A Toner', 'Toner / Cartridge', 'cartridge', 4, 20, [[150, 10, 2350, 0], [60, 8, 2490, 0]]],
         'toner-ricoh' => ['Ricoh IM C3000 Toner Black', 'Toner / Cartridge', 'cartridge', 3, 12, [[120, 6, 1850, 0], [40, 6, 1920, 1]]],
         'toner-ricoh-c' => ['Ricoh IM C3000 Toner Cyan', 'Toner / Cartridge', 'cartridge', 2, 8, [[120, 3, 2100, 0]]],
-        'mouse' => ['Wireless Mouse Logitech M185', 'Accessories', 'pc', 10, 40, [[170, 30, 390, 0], [45, 20, 350, 1]]],
+        'mouse' => ['Wireless Mouse Logitech M185', 'Accessories', 'pc', 10, 40, [[170, 20, 390, 0], [168, 10, 390, 0], [45, 20, 350, 1]]],
         'keyboard' => ['USB Keyboard', 'Accessories', 'pc', 8, 30, [[170, 20, 290, 0]]],
         'headset' => ['USB Headset', 'Accessories', 'pc', 5, 20, [[100, 12, 850, 0]]],
         'usb-hub' => ['USB-C Hub 7-in-1', 'Accessories', 'pc', 3, 10, [[90, 6, 1290, 0]]],
@@ -80,6 +82,7 @@ final class DemoStock implements DemoStep
         private readonly StockNotificationService $alerts,
         private readonly StockReturnService $returns,
         private readonly StockLotService $lots,
+        private readonly StockTransferService $transfers,
     ) {}
 
     public function run(DemoContext $ctx, DemoClock $clock): void
@@ -147,15 +150,37 @@ final class DemoStock implements DemoStep
         foreach (self::TRANSFERS as [$key, $from, $to, $qty, $daysAgo]) {
             $moment = $clock->daysAgo($daysAgo, 11);
             $clock->at($moment);
-            $this->movements->record([
-                'stock_item_id' => $ctx->items[$key]->id,
-                'type' => 'transfer',
-                'qty' => $qty,
-                'from_label' => $warehouses[$from],
-                'to_label' => $warehouses[$to],
+            $item = $ctx->items[$key];
+            $this->transfers->record($item, $warehouses[$from], $warehouses[$to], $this->lotsCovering($item, $warehouses[$from], $qty), [
                 'moved_at' => $moment->toDateTimeString(),
-            ], $lead->name, $lead->id);
+            ], $lead);
         }
+    }
+
+    /**
+     * The oldest lots of the item in a warehouse, enough of them to hold at least qty (transfers move whole lots).
+     *
+     * @return list<int>
+     */
+    private function lotsCovering(StockItem $item, string $warehouse, int $qty): array
+    {
+        $ids = [];
+        $held = 0;
+        $lots = StockLot::where('stock_item_id', $item->id)
+            ->where('warehouse_id', Warehouse::resolveId($warehouse))
+            ->where('qty_remaining', '>', 0)
+            ->orderBy('received_at')->orderBy('id')
+            ->get();
+
+        foreach ($lots as $lot) {
+            if ($held >= $qty) {
+                break;
+            }
+            $ids[] = $lot->id;
+            $held += $lot->qty_remaining;
+        }
+
+        return $ids;
     }
 
     /** Two mice from a fulfilled requisition come back into the lot they were drawn from. */
