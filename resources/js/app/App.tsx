@@ -16,7 +16,7 @@ import { PermissionsPage } from '@/modules/permission';
 import { ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
-import { ItemHistoryPage, StockPage } from '@/modules/stock';
+import { ItemHistoryPage, LotHistoryPage, StockPage } from '@/modules/stock';
 import { TicketsPage } from '@/modules/ticket';
 import { WorkflowsPage } from '@/modules/workflow';
 import { AppErrorDialog } from '@/shared/components/app-error-dialog';
@@ -218,6 +218,14 @@ function App() {
                         element={
                             <RequirePermission anyOf={['stock.view']}>
                                 <ItemHistoryPage />
+                            </RequirePermission>
+                        }
+                    />
+                    <Route
+                        path="stock/lots/:lotNo"
+                        element={
+                            <RequirePermission anyOf={['stock.view']}>
+                                <LotHistoryPage />
                             </RequirePermission>
                         }
                     />
