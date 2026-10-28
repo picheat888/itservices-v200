@@ -5,12 +5,13 @@ namespace App\Models\Stock;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockMovement extends Model
 {
     protected $fillable = [
         'doc_no', 'type', 'stock_item_id', 'qty', 'unit_cost', 'from_label', 'to_label',
-        'reference', 'recorded_by', 'user_id', 'notes', 'moved_at', 'from_warehouse_id', 'to_warehouse_id', 'reason',
+        'reference', 'recorded_by', 'user_id', 'notes', 'moved_at', 'from_warehouse_id', 'to_warehouse_id', 'reason', 'stock_request_id',
     ];
 
     /** Movement types that increase on-hand stock; the rest decrease it. */
@@ -63,5 +64,17 @@ class StockMovement extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<StockRequest, $this> */
+    public function request(): BelongsTo
+    {
+        return $this->belongsTo(StockRequest::class, 'stock_request_id');
+    }
+
+    /** @return HasMany<StockLotEntry, $this> */
+    public function lotEntries(): HasMany
+    {
+        return $this->hasMany(StockLotEntry::class);
     }
 }

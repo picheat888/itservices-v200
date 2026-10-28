@@ -10,7 +10,7 @@ class StockItemSerial extends Model
 {
     protected $fillable = [
         'stock_item_id', 'stock_movement_id', 'serial',
-        'status', 'warehouse_id', 'reference', 'received_at',
+        'status', 'warehouse_id', 'reference', 'received_at', 'stock_lot_id',
     ];
 
     /** @return BelongsTo<StockItem, $this> */
@@ -29,6 +29,12 @@ class StockItemSerial extends Model
     public function movement(): BelongsTo
     {
         return $this->belongsTo(StockMovement::class, 'stock_movement_id');
+    }
+
+    /** @return BelongsTo<StockLot, $this> */
+    public function lot(): BelongsTo
+    {
+        return $this->belongsTo(StockLot::class, 'stock_lot_id');
     }
 
     /** @return HasMany<StockItemSerialEvent, $this> */
