@@ -85,6 +85,14 @@ class CidrTest extends TestCase
         $this->assertNotSame(Cidr::clientNetwork('2001:44c8:6730:66dd::1'), Cidr::clientNetwork('2001:44c8:6737:9dce::1'));
     }
 
+    public function test_an_ipv6_address_on_the_local_network_is_counted_whole(): void
+    {
+        $this->assertSame('fd00:1:2:3::10', Cidr::clientNetwork('fd00:1:2:3::10'));
+        $this->assertNotSame(Cidr::clientNetwork('fd00:1:2:3::10'), Cidr::clientNetwork('fd00:1:2:3::99'));
+        $this->assertSame('fe80::1', Cidr::clientNetwork('fe80::1'));
+        $this->assertSame('::1', Cidr::clientNetwork('::1'));
+    }
+
     public function test_text_that_is_not_an_address_is_kept_as_is(): void
     {
         $this->assertSame('not-an-ip', Cidr::clientNetwork('not-an-ip'));

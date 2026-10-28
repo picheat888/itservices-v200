@@ -31,8 +31,8 @@ class Cidr
     }
 
     /**
-     * The client's network for counting and trusting: an IPv4 address as is, an IPv6 address as its /64
-     * in one spelling (devices rotate the last 64 bits), anything else unchanged.
+     * The client's network for counting and trusting: a public IPv6 address (2000::/3) as its /64, since
+     * devices rotate the last 64 bits; IPv4 and local IPv6 (ULA, link-local) whole; anything else unchanged.
      */
     public static function clientNetwork(?string $ip): string
     {
@@ -40,7 +40,8 @@ class Cidr
         if ($bytes === null) {
             return (string) $ip;
         }
-        if (strlen($bytes) === 4) {
+        // One office LAN shares a /64, so local addresses keep each machine apart
+        if (strlen($bytes) === 4 || (ord($bytes[0]) & 0xE0) !== 0x20) {
             return (string) inet_ntop($bytes);
         }
 
