@@ -33,6 +33,13 @@ class StockMovementResource extends JsonResource
             'notes' => $this->notes,
             'reason' => $this->reason,
             'moved_at' => $this->moved_at?->toDateTimeString(),
+            'lot' => $this->whenLoaded('openedLot', fn () => [
+                'id' => $this->openedLot->id,
+                'lot_no' => $this->openedLot->lot_no,
+                'warehouse' => $this->openedLot->warehouse_id !== null ? $this->openedLot->warehouse?->name : null,
+                'qty' => $this->openedLot->qty_received,
+                'unit_cost' => (float) $this->openedLot->unit_cost,
+            ]),
         ];
     }
 }

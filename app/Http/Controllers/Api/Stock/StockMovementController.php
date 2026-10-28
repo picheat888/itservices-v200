@@ -340,6 +340,7 @@ class StockMovementController extends Controller
                 Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
             }
 
+            $openedLot = null;
             $unitCost = $type === 'receive' && isset($data['unit_cost']) ? (float) $data['unit_cost'] : null;
             $movedAt = isset($data['moved_at']) ? Carbon::parse($data['moved_at']) : now();
 
@@ -390,7 +391,10 @@ class StockMovementController extends Controller
                     $inboundWarehouse = $toWh ?: 'Unassigned';
                     $this->balances->add($item, $inboundWarehouse, $qty);
 
-                    if ($type === 'return' && $item->track_serial && $serialIds !== []) {
+                    if ($type === 'receive') {
+                        $openedLot = $this->lotService->open($item, Warehouse::resolveId($inboundWarehouse), $qty, $inboundLotCost, $movement, $data['reference'] ?? null);
+                        $movement->setRelation('openedLot', $openedLot->load('warehouse'));
+                    } elseif ($type === 'return' && $item->track_serial && $serialIds !== []) {
                         $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $inboundLotCost);
                     } else {
                         $this->lotService->legacyAddLot($item, $qty, $inboundLotCost, $movement->id, $movement->moved_at);
@@ -410,6 +414,7 @@ class StockMovementController extends Controller
                         'warehouse_id' => Warehouse::resolveId($inboundWarehouse),
                         'reference' => $data['reference'] ?? null,
                         'received_at' => $movement->moved_at,
+                        'stock_lot_id' => $openedLot?->id,
                     ]);
                     StockItemSerialEvent::log($row, 'received', [
                         'stock_movement_id' => $movement->id,
