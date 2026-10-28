@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockRequest extends Model
 {
@@ -89,5 +90,11 @@ class StockRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @return HasMany<StockMovement, $this> */
+    public function issueMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'stock_request_id')->where('type', 'issue')->orderBy('id');
     }
 }

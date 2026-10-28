@@ -34,6 +34,7 @@ class StockRequestResource extends JsonResource
             'fulfilled_at' => $this->fulfilled_at?->toDateTimeString(),
             'fulfilled_by' => $this->fulfilled_by,
             'fulfilled_by_th' => null,
+            'issue_doc_no' => $this->relationLoaded('issueMovements') ? $this->issueMovements->first()?->doc_no : null,
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
             'cancelled_by' => $this->cancelled_by,
             'cancelled_at' => $this->cancelled_at?->toDateTimeString(),

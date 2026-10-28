@@ -6,15 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Stock\StockRequestResource;
 use App\Models\AuditLog;
 use App\Models\Stock\StockItem;
-use App\Models\Stock\StockItemSerial;
-use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
-use App\Services\Stock\StockBalanceService;
-use App\Services\Stock\StockCountLock;
-use App\Services\Stock\StockLotService;
+use App\Services\Stock\StockIssueService;
 use App\Services\Stock\StockNotificationService;
-use App\Services\Stock\StockSerialService;
-use App\Support\DocNumber;
 use App\Support\Refusal;
 use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
@@ -24,10 +18,7 @@ use Illuminate\Support\Facades\DB;
 class StockRequestController extends Controller
 {
     public function __construct(
-        private readonly StockSerialService $serialService,
-        private readonly StockLotService $lotService,
-        private readonly StockBalanceService $balances,
-        private readonly StockCountLock $countLock,
+        private readonly StockIssueService $issues,
     ) {}
 
     /**
@@ -40,7 +31,7 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
         // Actionable first (await approval → await fulfillment → done), newest within each group.
-        $query = StockRequest::with(['item.unit', 'user.employee'])
+        $query = StockRequest::with(['item.unit', 'user.employee', 'issueMovements'])
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 
@@ -87,7 +78,7 @@ class StockRequestController extends Controller
 
         abort_unless($stockRequest->isVisibleTo($user), 404);
 
-        return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee'])))->response();
+        return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee', 'issueMovements'])))->response();
     }
 
     /** Submit a new stock request (status: pending). */
@@ -208,10 +199,7 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.fulfill'), 403);
         $this->assertStatus($stockRequest, 'approved');
 
-        // A request can be issued across several source warehouses at once:
-        //  - serialized items: derive the per-warehouse split from the chosen serials;
-        //  - quantity items: an explicit `allocations` list, or the legacy single
-        //    `from_warehouse` (whole qty from one warehouse).
+        // Serial items split by the picked serials; others by `allocations` or one `from_warehouse`
         $data = $request->validate([
             'serial_ids' => ['array'],
             'serial_ids.*' => ['integer'],
@@ -221,89 +209,7 @@ class StockRequestController extends Controller
             'from_warehouse' => ['nullable', 'string', 'max:120'],
         ]);
 
-        DB::transaction(function () use ($stockRequest, $user, $data) {
-            $this->lockInStatus($stockRequest, 'approved');
-
-            /** @var StockItem $item */
-            $item = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id);
-
-            if ($item->current_stock < $stockRequest->qty) {
-                Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
-            }
-
-            // Build the per-warehouse allocation map (warehouse => qty).
-            $serials = collect();
-            if ($item->track_serial) {
-                $serials = StockItemSerial::with('warehouse')
-                    ->where('stock_item_id', $item->id)
-                    ->where('status', 'in_stock')
-                    ->whereIn('id', $data['serial_ids'] ?? [])
-                    ->get();
-                if ($serials->count() !== $stockRequest->qty) {
-                    Refusal::fail('issue_serials_mismatch', ['qty' => $stockRequest->qty], 'serial_ids');
-                }
-                $allocation = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse?->name ?: 'Unassigned')->map->count();
-            } elseif (! empty($data['allocations'])) {
-                $allocation = collect($data['allocations'])
-                    ->groupBy('warehouse')
-                    ->map(fn ($rows) => (int) collect($rows)->sum('qty'));
-            } else {
-                // Legacy single-warehouse path.
-                $allocation = collect([(($data['from_warehouse'] ?? null) ?: 'Unassigned') => $stockRequest->qty]);
-            }
-
-            if ((int) $allocation->sum() !== $stockRequest->qty) {
-                Refusal::fail('allocation_mismatch', ['qty' => $stockRequest->qty], 'allocations');
-            }
-
-            $this->countLock->assertFree($item->id, $allocation->keys()->all());
-
-            $reference = $stockRequest->reference ?? "REQ-{$stockRequest->id}";
-
-            // Group the chosen serials by their source warehouse so each issue movement
-            // can claim — and link its events to — exactly the serials drawn from it.
-            $serialsByWarehouse = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse?->name ?: 'Unassigned');
-
-            // One issue movement + per-warehouse balance deduction per source warehouse.
-            foreach ($allocation as $warehouse => $qty) {
-                if ($qty <= 0) {
-                    continue;
-                }
-                $movement = StockMovement::create([
-                    'doc_no' => DocNumber::next('issue', (int) now()->year),
-                    'type' => 'issue',
-                    'stock_item_id' => $item->id,
-                    'qty' => $qty,
-                    'from_label' => (string) $warehouse,
-                    'to_label' => $stockRequest->requester_name,
-                    'reference' => $reference,
-                    'recorded_by' => $user->name,
-                    'user_id' => $user->id,
-                    'moved_at' => now(),
-                ]);
-                $this->balances->remove($item, (string) $warehouse, (int) $qty);
-
-                // Serialized: mark this warehouse's serials issued and link their events to
-                // THIS movement, so the movement-detail dialog lists them reliably.
-                if ($item->track_serial) {
-                    $whSerialIds = $serialsByWarehouse->get($warehouse, collect())->pluck('id')->all();
-                    $this->serialService->issue($item, $whSerialIds, $user, $movement, $reference);
-                }
-            }
-
-            // Cached total + FIFO happen once for the whole request.
-            $item->current_stock -= $stockRequest->qty;
-            $item->last_move_at = now()->toDateString();
-            $item->save();
-            $this->lotService->legacyConsume($item, $stockRequest->qty);
-
-            $stockRequest->update([
-                'status' => 'fulfilled',
-                'fulfilled_at' => now(),
-                // Who released the stock, which is not necessarily who approved it.
-                'fulfilled_by' => $user->name,
-            ]);
-        });
+        $this->issues->fulfil($stockRequest, $user, $data);
 
         // Fire a real-time stock-level alert now that on-hand has been decremented.
         app(StockNotificationService::class)->alert(StockItem::find($stockRequest->stock_item_id));
@@ -311,7 +217,9 @@ class StockRequestController extends Controller
         AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'fulfilled');
 
-        return (new StockRequestResource($stockRequest->load('item')))->response();
+        return (new StockRequestResource($stockRequest->load(['item', 'issueMovements'])))
+            ->additional(['issue' => $this->issues->summary($stockRequest)])
+            ->response();
     }
 
     /** Nobody decides their own requisition — holding stock.approve included. */

@@ -6,6 +6,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Stock\StockLotService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +19,9 @@ class StockCountLockTest extends TestCase
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => array_sum($balances), 'min_stock' => 1, 'max_stock' => 100]);
         foreach ($balances as $warehouse => $qty) {
-            $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => $warehouse])->id, 'qty' => $qty]);
+            $warehouseId = Warehouse::firstOrCreate(['name' => $warehouse])->id;
+            $item->balances()->create(['warehouse_id' => $warehouseId, 'qty' => $qty]);
+            app(StockLotService::class)->open($item, $warehouseId, $qty, 0, null);
         }
 
         return $item;
