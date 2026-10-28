@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Settings\AppSetting;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockLot;
+use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Support\CompanyProfile;
@@ -74,19 +76,27 @@ class StockItemHistoryPdfTest extends TestCase
             'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => false,
         ]);
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'unit_cost' => 10, 'to_label' => 'Main'])->assertCreated();
-        $this->postJson('/api/stock-movements', ['type' => 'return', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'Main'])->assertCreated();
+        $request = StockRequest::create([
+            'stock_item_id' => $item->id, 'requester_name' => 'Somchai', 'qty' => 3, 'reason' => 'use', 'status' => 'approved',
+        ]);
+        $this->postJson("/api/stock-requests/{$request->id}/fulfill", ['from_warehouse' => 'Main'])->assertOk();
+        $lotId = StockLot::where('stock_item_id', $item->id)->value('id');
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'stock_request_id' => $request->id, 'lots' => [['lot_id' => $lotId, 'qty' => 2]],
+        ])->assertCreated();
 
         $data = $this->getJson("/api/stock-items/{$item->id}/history")->assertOk()->json('data');
 
         $lines = collect($data['reconciliation']['lines'])->keyBy('type');
         $this->assertSame(5, $lines['receive']['qty']);
+        $this->assertSame(3, $lines['issue']['qty']);
         $this->assertSame(2, $lines['return']['qty']);
         $this->assertSame(1, $lines['return']['sign']);
-        $this->assertSame(7, $data['reconciliation']['computed']);
+        $this->assertSame(4, $data['reconciliation']['computed']);
         $this->assertSame(0, $data['reconciliation']['difference']);
-        $this->assertSame([['warehouse' => 'Main', 'qty' => 7]], $data['balances']);
+        $this->assertSame([['warehouse' => 'Main', 'qty' => 4]], $data['balances']);
 
-        $item->update(['current_stock' => 9]);
+        $item->update(['current_stock' => 6]);
         $this->assertSame(2, $this->getJson("/api/stock-items/{$item->id}/history")->json('data.reconciliation.difference'));
     }
 

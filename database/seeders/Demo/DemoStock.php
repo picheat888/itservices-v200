@@ -12,19 +12,21 @@ use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Stock\StockCountService;
+use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
+use App\Services\Stock\StockReturnService;
 use Illuminate\Http\Request;
 use RuntimeException;
 
 /**
  * The spare-parts store: consumables and parts in three warehouses. Receipts come in
  * several lots at different prices (so FIFO cost has something to show), stock moves
- * between warehouses and comes back, requisitions sit in every status, one count is
+ * between warehouses, a requisition comes partly back, requisitions sit in every status, one count is
  * committed with a variance and one is still a draft, and the final quantities leave
  * items out of stock, below minimum and above maximum.
  *
- * Movements go through StockMovementController::record() and requisitions through
- * StockRequestController's actions — that is where the app keeps this logic today.
+ * Movements go through StockMovementController::record(), requisitions through
+ * StockRequestController's actions and the return through StockReturnService.
  */
 final class DemoStock implements DemoStep
 {
@@ -76,6 +78,8 @@ final class DemoStock implements DemoStep
         private readonly StockRequestController $requests,
         private readonly StockCountService $counts,
         private readonly StockNotificationService $alerts,
+        private readonly StockReturnService $returns,
+        private readonly StockLotService $lots,
     ) {}
 
     public function run(DemoContext $ctx, DemoClock $clock): void
@@ -91,6 +95,7 @@ final class DemoStock implements DemoStep
         $this->receive($ctx, $clock, $lead, $warehouses);
         $this->moveAround($ctx, $clock, $lead, $warehouses);
         $this->requisitions($ctx, $clock, $lead, $tech, $warehouses);
+        $this->returnFromTheFloor($ctx, $clock, $lead);
         $this->counts($ctx, $clock, $lead, $warehouses);
 
         // Bells for whatever ended out / low / over.
@@ -136,7 +141,7 @@ final class DemoStock implements DemoStep
         }
     }
 
-    /** Transfers between warehouses, and a return from the floor. @param list<string> $warehouses */
+    /** Transfers between warehouses. @param list<string> $warehouses */
     private function moveAround(DemoContext $ctx, DemoClock $clock, User $lead, array $warehouses): void
     {
         foreach (self::TRANSFERS as [$key, $from, $to, $qty, $daysAgo]) {
@@ -151,17 +156,21 @@ final class DemoStock implements DemoStep
                 'moved_at' => $moment->toDateTimeString(),
             ], $lead->name, $lead->id);
         }
+    }
+
+    /** Two mice from a fulfilled requisition come back into the lot they were drawn from. */
+    private function returnFromTheFloor(DemoContext $ctx, DemoClock $clock, User $lead): void
+    {
+        $requisition = StockRequest::where('stock_item_id', $ctx->items['mouse']->id)->where('status', 'fulfilled')->firstOrFail();
+        $lotId = array_key_first($this->lots->issuedLeft($requisition));
 
         $moment = $clock->daysAgo(15, 15);
         $clock->at($moment);
-        $this->movements->record([
-            'stock_item_id' => $ctx->items['keyboard']->id,
-            'type' => 'return',
-            'qty' => 2,
-            'to_label' => $warehouses[0],
+        $this->returns->record($ctx->items['mouse'], $requisition, [
+            'lots' => [['lot_id' => $lotId, 'qty' => 2]],
             'moved_at' => $moment->toDateTimeString(),
             'notes' => 'Returned after the training room closed',
-        ], $lead->name, $lead->id);
+        ], $lead);
     }
 
     /** @param list<string> $warehouses */

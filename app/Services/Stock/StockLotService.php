@@ -6,6 +6,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockLotEntry;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Support\LotNumber;
 use App\Support\Refusal;
@@ -158,6 +159,27 @@ class StockLotService
         }
 
         return $plan;
+    }
+
+    /**
+     * What a request can still return per lot: what its issues drew minus what its returns put back.
+     *
+     * @return array<int, int> lot id => qty left, only lots with something left
+     */
+    public function issuedLeft(StockRequest $request): array
+    {
+        $movementIds = StockMovement::where('stock_request_id', $request->id)
+            ->whereIn('type', ['issue', 'return'])
+            ->pluck('id');
+
+        return StockLotEntry::whereIn('stock_movement_id', $movementIds)
+            ->groupBy('stock_lot_id')
+            ->orderBy('stock_lot_id')
+            ->selectRaw('stock_lot_id, SUM(qty) as total')
+            ->pluck('total', 'stock_lot_id')
+            ->map(fn ($total): int => -(int) $total)
+            ->filter(fn (int $left): bool => $left > 0)
+            ->all();
     }
 
     /** @return Builder<StockLot> */
