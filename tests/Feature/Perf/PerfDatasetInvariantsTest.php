@@ -66,6 +66,9 @@ class PerfDatasetInvariantsTest extends TestCase
             ['request_approvals', 'service_request_id', 'service_requests'], ['request_approvals', 'approver_employee_id', 'employees'],
             ['stock_movements', 'stock_item_id', 'stock_items'], ['stock_lots', 'stock_movement_id', 'stock_movements'], ['stock_balances', 'warehouse_id', 'warehouses'],
             ['stock_requests', 'stock_item_id', 'stock_items'], ['stock_count_lines', 'stock_count_id', 'stock_counts'],
+            ['stock_lots', 'warehouse_id', 'warehouses'], ['stock_item_serials', 'stock_lot_id', 'stock_lots'], ['stock_movements', 'stock_request_id', 'stock_requests'],
+            ['stock_lot_entries', 'stock_lot_id', 'stock_lots'], ['stock_lot_entries', 'stock_movement_id', 'stock_movements'],
+            ['stock_lot_entries', 'warehouse_id', 'warehouses'], ['stock_lot_entries', 'from_warehouse_id', 'warehouses'],
             ['access_memberships', 'employee_id', 'employees'], ['notifications', 'notifiable_id', 'users'],
             ['assets', 'contract_id', 'contracts'], ['assets', 'category_id', 'categories'], ['assets', 'model_id', 'asset_models'], ['assets', 'owner_employee_id', 'employees'],
             ['asset_transfers', 'asset_id', 'assets'], ['contracts', 'vendor_id', 'vendors'], ['employees', 'manager_id', 'employees'],
@@ -98,6 +101,41 @@ class PerfDatasetInvariantsTest extends TestCase
 
         $this->assertSame(sha1_file($first), sha1_file($second));
         $this->assertNotSame(sha1_file($first), sha1_file($other));
+    }
+
+    public function test_stock_lots_match_balances_and_the_lot_ledger(): void
+    {
+        $db = PerfImport::into($this->generate());
+
+        // Lots per warehouse = balances (a null warehouse is its own bucket)
+        $lotsByBucket = [];
+        foreach ($db->table('stock_lots')->where('qty_remaining', '>', 0)->get() as $lot) {
+            $key = $lot->stock_item_id.'|'.($lot->warehouse_id ?? 'null');
+            $lotsByBucket[$key] = ($lotsByBucket[$key] ?? 0) + (int) $lot->qty_remaining;
+        }
+        $balances = [];
+        foreach ($db->table('stock_balances')->where('qty', '!=', 0)->get() as $b) {
+            $balances[$b->stock_item_id.'|'.($b->warehouse_id ?? 'null')] = (int) $b->qty;
+        }
+        ksort($lotsByBucket);
+        ksort($balances);
+        $this->assertNotEmpty($balances);
+        $this->assertSame($balances, $lotsByBucket);
+
+        // Each lot = Σ its entries
+        $entrySums = $db->table('stock_lot_entries')->groupBy('stock_lot_id')->selectRaw('stock_lot_id, SUM(qty) as total')->pluck('total', 'stock_lot_id')->all();
+        $drift = [];
+        foreach ($db->table('stock_lots')->get(['id', 'qty_remaining']) as $lot) {
+            if ((int) ($entrySums[$lot->id] ?? 0) !== (int) $lot->qty_remaining) {
+                $drift[] = $lot->id;
+            }
+        }
+        $this->assertSame([], array_slice($drift, 0, 10), count($drift).' lots differ from their ledger');
+
+        // Lot numbers: present, unique, LOT-YYYYMMDD-NNNN
+        $numbers = $db->table('stock_lots')->pluck('lot_no');
+        $this->assertSame(0, $numbers->filter(fn ($no) => $no === null || ! preg_match('/^LOT-\d{8}-\d{4,}$/', $no))->count());
+        $this->assertSame($numbers->count(), $numbers->unique()->count());
     }
 
     public function test_workflow_positions_have_active_holders(): void

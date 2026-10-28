@@ -83,7 +83,27 @@ class StockStepTest extends TestCase
                 $this->assertMatchesRegularExpression('/^(RCV|ISS|RET|TRF)-\d{4}-\d{3,}$/', $m->doc_no);
             }
         }
-        $this->assertSame($this->db->table('stock_movements')->whereNotNull('doc_no')->count(), $this->db->table('stock_movements')->whereNotNull('doc_no')->distinct()->count('doc_no'));
+        // One number per document: only ISS and RET span rows (one per warehouse), all of the same request
+        foreach ($this->db->table('stock_movements')->whereNotNull('doc_no')->get()->groupBy('doc_no') as $docNo => $rows) {
+            $this->assertCount(1, $rows->pluck('type')->unique(), "{$docNo} mixes types");
+            if (in_array($rows->first()->type, ['issue', 'return'], true)) {
+                $this->assertNotNull($rows->first()->stock_request_id, "{$docNo} has no request");
+                $this->assertCount(1, $rows->pluck('stock_request_id')->unique(), "{$docNo} spans requests");
+                $warehouses = $rows->pluck($rows->first()->type === 'issue' ? 'from_label' : 'to_label');
+                $this->assertSame($rows->count(), $warehouses->filter()->unique()->count(), "{$docNo} needs one row per warehouse");
+            } else {
+                $this->assertCount(1, $rows, "{$docNo} is used twice");
+                $this->assertNull($rows->first()->stock_request_id);
+            }
+        }
+        foreach ($this->db->table('stock_movements')->where('type', 'issue')->get()->groupBy('stock_request_id') as $requestId => $rows) {
+            $this->assertCount(1, $rows->pluck('doc_no')->unique(), "request {$requestId} has more than one ISS");
+            $this->assertSame($this->db->table('stock_requests')->where('id', $requestId)->value('reference'), $rows->first()->reference);
+            $this->assertSame((int) $this->db->table('stock_requests')->where('id', $requestId)->value('qty'), (int) $rows->sum('qty'));
+        }
+        foreach ($this->db->table('stock_movements')->where('type', 'return')->pluck('stock_request_id') as $requestId) {
+            $this->assertSame('fulfilled', $this->db->table('stock_requests')->where('id', $requestId)->value('status'));
+        }
 
         $fulfilled = $this->db->table('stock_requests')->where('status', 'fulfilled')->pluck('reference')->all();
         $this->assertNotEmpty($fulfilled);
@@ -102,6 +122,76 @@ class StockStepTest extends TestCase
         }
         foreach ($this->db->table('stock_requests')->whereIn('status', ['pending', 'approved'])->get() as $r) {
             $this->assertGreaterThan('2026-09-15', $r->created_at);
+        }
+    }
+
+    public function test_lots_are_numbered_per_day_and_opened_by_receipts_or_overages(): void
+    {
+        $movements = $this->db->table('stock_movements')->get()->keyBy('id');
+        $byDay = [];
+        foreach ($this->db->table('stock_lots')->orderBy('id')->get() as $lot) {
+            $opener = $movements[$lot->stock_movement_id];
+            $this->assertContains($opener->type, ['receive', 'adjust_up']);
+            $this->assertSame(substr($opener->moved_at, 0, 10), substr($lot->received_at, 0, 10));
+            $this->assertMatchesRegularExpression('/^LOT-\d{8}-\d{4,}$/', $lot->lot_no);
+            $this->assertSame('LOT-'.str_replace('-', '', substr($opener->moved_at, 0, 10)), substr($lot->lot_no, 0, 12));
+            $byDay[substr($lot->lot_no, 4, 8)][] = (int) substr($lot->lot_no, 13);
+        }
+        $this->assertNotEmpty($byDay);
+        foreach ($byDay as $day => $numbers) {
+            $this->assertSame(range(1, count($numbers)), $numbers, "lot numbers of {$day} are not a running sequence");
+        }
+    }
+
+    public function test_every_movement_writes_its_lot_entries(): void
+    {
+        $entries = $this->db->table('stock_lot_entries')->get()->groupBy('stock_movement_id');
+        $lots = $this->db->table('stock_lots')->get()->keyBy('id');
+        $drawn = [];
+        foreach ($this->db->table('stock_movements')->orderBy('id')->get() as $m) {
+            $rows = $entries->get($m->id, collect());
+            $this->assertNotEmpty($rows, "movement {$m->id} ({$m->type}) has no lot entries");
+            foreach ($rows as $e) {
+                $this->assertSame($m->moved_at, $e->occurred_at);
+                $this->assertSame($m->stock_item_id, $lots[$e->stock_lot_id]->stock_item_id);
+            }
+            match ($m->type) {
+                'receive', 'adjust_up' => $this->assertSame([[$m->qty, $m->to_warehouse_id]], $rows->map(fn ($e) => [$e->qty, $e->warehouse_id])->all()),
+                'issue', 'adjust_down' => $this->assertSame([-$m->qty, [$m->from_warehouse_id]], [(int) $rows->sum('qty'), $rows->pluck('warehouse_id')->unique()->values()->all()]),
+                'return' => $this->assertSame([$m->qty, [$m->to_warehouse_id]], [(int) $rows->sum('qty'), $rows->pluck('warehouse_id')->unique()->values()->all()]),
+                'transfer' => $this->assertSame([0, [$m->from_warehouse_id], [$m->to_warehouse_id]], [(int) $rows->sum(fn ($e) => abs($e->qty)), $rows->pluck('from_warehouse_id')->unique()->values()->all(), $rows->pluck('warehouse_id')->unique()->values()->all()]),
+            };
+            foreach ($rows as $e) {
+                if ($m->type === 'issue') {
+                    $this->assertLessThan(0, $e->qty);
+                    $drawn[$m->stock_request_id][$e->stock_lot_id] = ($drawn[$m->stock_request_id][$e->stock_lot_id] ?? 0) - $e->qty;
+                } elseif ($m->type === 'return') {
+                    $this->assertGreaterThan(0, $e->qty);
+                    $drawn[$m->stock_request_id][$e->stock_lot_id] = ($drawn[$m->stock_request_id][$e->stock_lot_id] ?? 0) - $e->qty;
+                    $this->assertGreaterThanOrEqual(0, $drawn[$m->stock_request_id][$e->stock_lot_id], "return {$m->id} gives lot {$e->stock_lot_id} more than its request drew");
+                }
+            }
+        }
+        $this->assertGreaterThan(0, $this->db->table('stock_lot_entries')->where('qty', 0)->count());
+    }
+
+    public function test_serials_ride_with_their_lot(): void
+    {
+        $lots = $this->db->table('stock_lots')->get()->keyBy('id');
+        $inStockPerLot = [];
+        foreach ($this->db->table('stock_item_serials')->get() as $s) {
+            $this->assertNotNull($s->stock_lot_id, "serial {$s->id} has no lot");
+            $lot = $lots[$s->stock_lot_id];
+            $this->assertSame($s->stock_item_id, $lot->stock_item_id);
+            $this->assertSame($s->stock_movement_id, $lot->stock_movement_id);
+            if ($s->status === 'in_stock') {
+                $this->assertSame($lot->warehouse_id, $s->warehouse_id, "serial {$s->id} sits away from its lot");
+                $inStockPerLot[$s->stock_lot_id] = ($inStockPerLot[$s->stock_lot_id] ?? 0) + 1;
+            }
+        }
+        $tracked = $this->db->table('stock_items')->where('track_serial', 1)->pluck('id')->all();
+        foreach ($this->db->table('stock_lots')->whereIn('stock_item_id', $tracked)->get() as $lot) {
+            $this->assertSame((int) $lot->qty_remaining, $inStockPerLot[$lot->id] ?? 0, "lot {$lot->lot_no} holds a different count than its serials");
         }
     }
 

@@ -47,17 +47,20 @@ class Stock implements PerfStep
     /** @var array<int, array<int, int>> balance by item then warehouse index */
     private array $bal = [];
 
-    /** @var array<int, list<array<string, mixed>>> */
+    /** @var array<int, array<int, array<string, mixed>>> lots by item then lot id */
     private array $lots = [];
+
+    /** @var array<string, int> last lot number per day (Ymd) */
+    private array $lotSeq = [];
 
     /** @var array<int, list<array<string, mixed>>> */
     private array $serials = [];
 
-    /** @var array<int, int> */
-    private array $issuedTotal = [];
+    /** @var array<int, list<array{id: int, reference: string}>> fulfilled requests by item */
+    private array $fulfilled = [];
 
-    /** @var array<int, int> */
-    private array $returnedTotal = [];
+    /** @var array<int, array<int, array{issued: int, returned: int}>> per request and lot */
+    private array $draws = [];
 
     /** @var array<int, string> */
     private array $alertState = [];
@@ -143,8 +146,7 @@ class Stock implements PerfStep
             $this->bal[$id] = [];
             $this->lots[$id] = [];
             $this->serials[$id] = [];
-            $this->issuedTotal[$id] = 0;
-            $this->returnedTotal[$id] = 0;
+            $this->fulfilled[$id] = [];
             $this->alertState[$id] = 'ok';
         }
     }
@@ -319,25 +321,88 @@ class Stock implements PerfStep
         $this->bal[$item][$wh] = ($this->bal[$item][$wh] ?? 0) + $delta;
     }
 
-    private function addLot(int $item, int $qty, float $cost, int $movementId, CarbonImmutable $at): void
+    private function warehouseId(int $wh): int
     {
-        $this->lots[$item][] = [
-            'id' => $this->ctx->reg->nextId('stock_lots'), 'movement' => $movementId, 'cost' => $cost,
-            'received' => $qty, 'remaining' => $qty, 'at' => $at,
-        ];
+        return $this->warehouseIds[$this->warehouses[$wh]];
     }
 
-    private function consume(int $item, int $qty): void
+    // LOT-YYYYMMDD-NNNN counted across all items per day, like LotNumber
+    private function nextLotNo(CarbonImmutable $at): string
     {
-        foreach ($this->lots[$item] as &$lot) {
+        $day = $at->format('Ymd');
+        $this->lotSeq[$day] = ($this->lotSeq[$day] ?? 0) + 1;
+
+        return sprintf('LOT-%s-%04d', $day, $this->lotSeq[$day]);
+    }
+
+    // Weighted-average cost of what is on hand, like StockItem::avgCost()
+    private function avgCost(int $item): float
+    {
+        $total = $this->total($item);
+        if ($total <= 0) {
+            return 0.0;
+        }
+        $value = 0.0;
+        foreach ($this->lots[$item] as $lot) {
+            $value += $lot['remaining'] * $lot['cost'];
+        }
+
+        return round($value / $total, 2);
+    }
+
+    // One signed row of the lot ledger, stamped with the lot's warehouse after the change
+    private function lotEntry(array $lot, int $qty, int $movementId, CarbonImmutable $at, ?string $reference, ?int $fromWh = null): void
+    {
+        $this->ctx->sql->insert('stock_lot_entries', $this->fill('stock_lot_entries', [
+            'id' => $this->ctx->reg->nextId('stock_lot_entries'), 'stock_lot_id' => $lot['id'], 'stock_movement_id' => $movementId,
+            'warehouse_id' => $this->warehouseId($lot['wh']), 'from_warehouse_id' => $fromWh === null ? null : $this->warehouseId($fromWh),
+            'qty' => $qty, 'reference' => $reference, 'occurred_at' => $at, 'created_at' => $at, 'updated_at' => $at,
+        ]));
+    }
+
+    private function openLot(int $item, int $wh, int $qty, float $cost, int $movementId, CarbonImmutable $at, ?string $reference): int
+    {
+        $id = $this->ctx->reg->nextId('stock_lots');
+        $this->lots[$item][$id] = [
+            'id' => $id, 'no' => $this->nextLotNo($at), 'wh' => $wh, 'movement' => $movementId, 'cost' => $cost,
+            'received' => $qty, 'remaining' => $qty, 'at' => $at,
+        ];
+        $this->lotEntry($this->lots[$item][$id], $qty, $movementId, $at, $reference);
+
+        return $id;
+    }
+
+    /** @return list<int> ids of the lots holding stock in one warehouse, oldest first */
+    private function openLotsIn(int $item, int $wh): array
+    {
+        $open = array_filter($this->lots[$item], fn (array $lot): bool => $lot['wh'] === $wh && $lot['remaining'] > 0);
+        uasort($open, fn (array $a, array $b): int => [$a['at'], $a['id']] <=> [$b['at'], $b['id']]);
+
+        return array_keys($open);
+    }
+
+    // Change one lot by a signed qty and write its entry
+    private function shiftLot(int $item, int $lotId, int $qty, int $movementId, CarbonImmutable $at, ?string $reference): void
+    {
+        $this->lots[$item][$lotId]['remaining'] += $qty;
+        $this->lotEntry($this->lots[$item][$lotId], $qty, $movementId, $at, $reference);
+    }
+
+    /** @return array<int, int> lot id => qty taken, oldest lots of one warehouse first */
+    private function consumeFifo(int $item, int $wh, int $qty, int $movementId, CarbonImmutable $at, ?string $reference): array
+    {
+        $taken = [];
+        foreach ($this->openLotsIn($item, $wh) as $lotId) {
             if ($qty === 0) {
                 break;
             }
-            $take = min($qty, $lot['remaining']);
-            $lot['remaining'] -= $take;
+            $take = min($qty, $this->lots[$item][$lotId]['remaining']);
+            $this->shiftLot($item, $lotId, -$take, $movementId, $at, $reference);
+            $taken[$lotId] = $take;
             $qty -= $take;
         }
-        unset($lot);
+
+        return $taken;
     }
 
     private function serialEvent(int $serialId, int $item, string $event, int $movementId, ?string $reference, string $warehouse, ?string $from, ?string $to, array $by, CarbonImmutable $at): void
@@ -364,13 +429,16 @@ class Stock implements PerfStep
             'from_label' => null, 'to_label' => $this->warehouses[$wh], 'reference' => $reference, 'recorded_by' => $by[1], 'user_id' => $by[0],
             'notes' => null, 'moved_at' => $at,
         ]);
-        $this->addLot($item, $qty, $cost, $id, $at);
+        $lotId = $this->openLot($item, $wh, $qty, $cost, $id, $at, $reference);
         $this->adjustBalance($item, $wh, $qty);
 
         if ($it['tracked']) {
             for ($u = 0; $u < $qty; $u++) {
                 $sid = $reg->nextId('stock_item_serials');
-                $this->serials[$item][] = ['id' => $sid, 'no' => $it['sku'].'-S'.(count($this->serials[$item]) + 1), 'status' => 'in_stock', 'wh' => $wh, 'movement' => $id, 'ref' => $reference, 'at' => $at];
+                $this->serials[$item][] = [
+                    'id' => $sid, 'no' => $it['sku'].'-S'.(count($this->serials[$item]) + 1), 'status' => 'in_stock', 'wh' => $wh,
+                    'lot' => $lotId, 'request' => null, 'movement' => $id, 'ref' => $reference, 'at' => $at,
+                ];
                 $this->serialEvent($sid, $item, 'received', $id, $reference, $this->warehouses[$wh], null, $this->warehouses[$wh], $by, $at);
             }
         }
@@ -389,23 +457,29 @@ class Stock implements PerfStep
         }
         $targets = array_values(array_diff(range(0, count($this->warehouses) - 1), [$from]));
         $to = $rng->pick($targets);
-        $qty = $rng->int(1, max(1, intdiv($balances[$from], 2)));
+        $open = $this->openLotsIn($item, $from);
+        $lotIds = array_slice($rng->shuffle($open), 0, $rng->int(1, max(1, intdiv(count($open), 2))));
+        sort($lotIds);
+        $qty = array_sum(array_map(fn (int $lotId): int => $this->lots[$item][$lotId]['remaining'], $lotIds));
         $by = $this->itStaff();
 
+        // Whole lots move: one TRF row for their sum, a qty-0 entry per lot
         $id = $this->movement([
             'doc_no' => $reg->docNo('TRF', $at->year), 'type' => 'transfer', 'stock_item_id' => $item, 'qty' => $qty, 'unit_cost' => null,
             'from_label' => $this->warehouses[$from], 'to_label' => $this->warehouses[$to], 'reference' => null, 'recorded_by' => $by[1], 'user_id' => $by[0],
             'notes' => null, 'moved_at' => $at,
         ]);
+        foreach ($lotIds as $lotId) {
+            $this->lots[$item][$lotId]['wh'] = $to;
+            $this->lotEntry($this->lots[$item][$lotId], 0, $id, $at, null, $from);
+        }
         $this->adjustBalance($item, $from, -$qty);
         $this->adjustBalance($item, $to, $qty);
 
         if ($this->items[$item]['tracked']) {
-            $left = $qty;
             foreach ($this->serials[$item] as &$serial) {
-                if ($left > 0 && $serial['status'] === 'in_stock' && $serial['wh'] === $from) {
+                if ($serial['status'] === 'in_stock' && in_array($serial['lot'], $lotIds, true)) {
                     $serial['wh'] = $to;
-                    $left--;
                     $this->serialEvent($serial['id'], $item, 'transferred', $id, null, $this->warehouses[$to], $this->warehouses[$from], $this->warehouses[$to], $by, $at);
                 }
             }
@@ -417,36 +491,88 @@ class Stock implements PerfStep
     {
         $rng = $this->ctx->rng;
         $reg = $this->ctx->reg;
-        $available = $this->issuedTotal[$item] - $this->returnedTotal[$item];
-        if ($available < 1) {
+        $candidates = [];
+        foreach ($this->fulfilled[$item] as $request) {
+            $left = $this->returnableLeft($request['id']);
+            if ($left !== []) {
+                $candidates[] = [$request, $left];
+            }
+        }
+        if ($candidates === []) {
             return;
         }
-        $qty = min($rng->int(1, 3), $available);
-        $wh = $rng->pick($this->items[$item]['main']);
+        [$request, $left] = $rng->pick($candidates);
+        $qty = min($rng->int(1, 3), array_sum($left));
+        $tracked = $this->items[$item]['tracked'];
         $by = $this->itStaff();
 
-        $id = $this->movement([
-            'doc_no' => $reg->docNo('RET', $at->year), 'type' => 'return', 'stock_item_id' => $item, 'qty' => $qty, 'unit_cost' => null,
-            'from_label' => null, 'to_label' => $this->warehouses[$wh], 'reference' => null, 'recorded_by' => $by[1], 'user_id' => $by[0],
-            'notes' => 'Returned unused', 'moved_at' => $at,
-        ]);
-        $this->addLot($item, $qty, (float) $this->items[$item]['cost'], $id, $at);
-        $this->adjustBalance($item, $wh, $qty);
-        $this->returnedTotal[$item] += $qty;
-
-        if ($this->items[$item]['tracked']) {
-            $left = $qty;
-            foreach ($this->serials[$item] as &$serial) {
-                if ($left > 0 && $serial['status'] === 'issued') {
-                    $serial['status'] = 'in_stock';
-                    $serial['wh'] = $wh;
-                    $left--;
-                    $this->serialEvent($serial['id'], $item, 'returned', $id, null, $this->warehouses[$wh], null, $this->warehouses[$wh], $by, $at);
+        // Which lots take the units back: the returned serials' own lots, else the request's lots in id order
+        $qtyByLot = [];
+        $returning = [];
+        if ($tracked) {
+            foreach ($this->serials[$item] as $index => $serial) {
+                if (count($returning) < $qty && $serial['status'] === 'issued' && $serial['request'] === $request['id']) {
+                    $returning[] = $index;
+                    $qtyByLot[$serial['lot']] = ($qtyByLot[$serial['lot']] ?? 0) + 1;
                 }
             }
-            unset($serial);
+        } else {
+            $need = $qty;
+            foreach ($left as $lotId => $lotLeft) {
+                if ($need === 0) {
+                    break;
+                }
+                $qtyByLot[$lotId] = min($need, $lotLeft);
+                $need -= $qtyByLot[$lotId];
+            }
+        }
+        ksort($qtyByLot);
+
+        $byWarehouse = [];
+        foreach ($qtyByLot as $lotId => $lotQty) {
+            $byWarehouse[$this->lots[$item][$lotId]['wh']][$lotId] = $lotQty;
+        }
+
+        // One RET number; one row per warehouse the lots sit in now
+        $docNo = $reg->docNo('RET', $at->year);
+        foreach ($byWarehouse as $wh => $lotQtys) {
+            $id = $this->movement([
+                'doc_no' => $docNo, 'type' => 'return', 'stock_item_id' => $item, 'stock_request_id' => $request['id'], 'qty' => array_sum($lotQtys), 'unit_cost' => null,
+                'from_label' => null, 'to_label' => $this->warehouses[$wh], 'reference' => $request['reference'], 'recorded_by' => $by[1], 'user_id' => $by[0],
+                'notes' => 'Returned unused', 'moved_at' => $at,
+            ]);
+            foreach ($lotQtys as $lotId => $lotQty) {
+                $this->shiftLot($item, $lotId, $lotQty, $id, $at, $request['reference']);
+                $this->draws[$request['id']][$lotId]['returned'] += $lotQty;
+            }
+            $this->adjustBalance($item, $wh, array_sum($lotQtys));
+
+            foreach ($returning as $index) {
+                $serial = &$this->serials[$item][$index];
+                if (isset($lotQtys[$serial['lot']])) {
+                    $serial['status'] = 'in_stock';
+                    $serial['wh'] = $wh;
+                    $serial['request'] = null;
+                    $this->serialEvent($serial['id'], $item, 'returned', $id, null, $this->warehouses[$wh], null, $this->warehouses[$wh], $by, $at);
+                }
+                unset($serial);
+            }
         }
         $this->refreshAlert($item, $at);
+    }
+
+    /** @return array<int, int> lot id => qty the request drew and has not yet returned, lots in id order */
+    private function returnableLeft(int $requestId): array
+    {
+        $left = [];
+        foreach ($this->draws[$requestId] ?? [] as $lotId => $lot) {
+            if ($lot['issued'] > $lot['returned']) {
+                $left[$lotId] = $lot['issued'] - $lot['returned'];
+            }
+        }
+        ksort($left);
+
+        return $left;
     }
 
     /** @param array<string, mixed> $request */
@@ -463,6 +589,8 @@ class Stock implements PerfStep
             $this->receive($item, $it['main'][0], $need * 2 + $it['typical'], $at->subMinute());
         }
 
+        // One ISS number per request; one row per source warehouse
+        $docNo = $reg->docNo('ISS', $at->year);
         $sources = $this->bal[$item];
         arsort($sources);
         foreach ($sources as $wh => $available) {
@@ -474,27 +602,37 @@ class Stock implements PerfStep
                 continue;
             }
             $id = $this->movement([
-                'doc_no' => $reg->docNo('ISS', $at->year), 'type' => 'issue', 'stock_item_id' => $item, 'qty' => $take, 'unit_cost' => null,
+                'doc_no' => $docNo, 'type' => 'issue', 'stock_item_id' => $item, 'stock_request_id' => $request['id'], 'qty' => $take, 'unit_cost' => null,
                 'from_label' => $this->warehouses[$wh], 'to_label' => $request['requester']['name'], 'reference' => $request['reference'],
                 'recorded_by' => $byName, 'user_id' => $byId, 'notes' => null, 'moved_at' => $at,
             ]);
             $this->adjustBalance($item, $wh, -$take);
-            $this->consume($item, $take);
-            $this->issuedTotal[$item] += $take;
             $need -= $take;
 
             if ($it['tracked']) {
-                $left = $take;
+                // Serials draw their own lots
+                $taken = [];
                 foreach ($this->serials[$item] as &$serial) {
-                    if ($left > 0 && $serial['status'] === 'in_stock' && $serial['wh'] === $wh) {
+                    if (array_sum($taken) < $take && $serial['status'] === 'in_stock' && $serial['wh'] === $wh) {
                         $serial['status'] = 'issued';
-                        $left--;
+                        $serial['request'] = $request['id'];
+                        $taken[$serial['lot']] = ($taken[$serial['lot']] ?? 0) + 1;
                         $this->serialEvent($serial['id'], $item, 'issued', $id, $request['reference'], $this->warehouses[$wh], $this->warehouses[$wh], $request['requester']['name'], [$byId, $byName], $at);
                     }
                 }
                 unset($serial);
+                foreach ($taken as $lotId => $lotQty) {
+                    $this->shiftLot($item, $lotId, -$lotQty, $id, $at, $request['reference']);
+                }
+            } else {
+                $taken = $this->consumeFifo($item, $wh, $take, $id, $at, $request['reference']);
+            }
+            foreach ($taken as $lotId => $lotQty) {
+                $this->draws[$request['id']][$lotId] ??= ['issued' => 0, 'returned' => 0];
+                $this->draws[$request['id']][$lotId]['issued'] += $lotQty;
             }
         }
+        $this->fulfilled[$item][] = ['id' => $request['id'], 'reference' => $request['reference']];
 
         $reg->event('stock.request', [
             'request_id' => $request['id'], 'reference' => $request['reference'], 'sku' => $it['sku'], 'name' => $it['name'], 'qty' => $request['qty'],
@@ -573,8 +711,11 @@ class Stock implements PerfStep
             'from_label' => $up ? null : $this->warehouses[$wh], 'to_label' => $up ? $this->warehouses[$wh] : null, 'reference' => $reference,
             'recorded_by' => $by[1], 'user_id' => $by[0], 'notes' => 'Stock count adjustment', 'moved_at' => $at,
         ]);
+        // Shortage draws the counted warehouse FIFO; overage opens a lot there at the average cost before the change
+        $up
+            ? $this->openLot($item, $wh, $qty, $this->avgCost($item), $id, $at, $reference)
+            : $this->consumeFifo($item, $wh, $qty, $id, $at, $reference);
         $this->adjustBalance($item, $wh, $diff);
-        $up ? $this->addLot($item, $qty, (float) $this->items[$item]['cost'], $id, $at) : $this->consume($item, $qty);
         $this->refreshAlert($item, $at);
     }
 
@@ -601,14 +742,15 @@ class Stock implements PerfStep
             }
             foreach ($this->lots[$id] as $lot) {
                 $sql->insert('stock_lots', $this->fill('stock_lots', [
-                    'id' => $lot['id'], 'stock_item_id' => $id, 'stock_movement_id' => $lot['movement'], 'unit_cost' => $lot['cost'],
+                    'id' => $lot['id'], 'stock_item_id' => $id, 'stock_movement_id' => $lot['movement'], 'lot_no' => $lot['no'],
+                    'warehouse_id' => $this->warehouseId($lot['wh']), 'unit_cost' => $lot['cost'],
                     'qty_received' => $lot['received'], 'qty_remaining' => $lot['remaining'], 'received_at' => $lot['at'],
                     'created_at' => $lot['at'], 'updated_at' => $lot['at'],
                 ]));
             }
             foreach ($this->serials[$id] as $serial) {
                 $sql->insert('stock_item_serials', $this->fill('stock_item_serials', [
-                    'id' => $serial['id'], 'stock_item_id' => $id, 'stock_movement_id' => $serial['movement'], 'serial' => $serial['no'],
+                    'id' => $serial['id'], 'stock_item_id' => $id, 'stock_movement_id' => $serial['movement'], 'stock_lot_id' => $serial['lot'], 'serial' => $serial['no'],
                     'status' => $serial['status'], 'warehouse_id' => $serial['wh'] + 1, 'reference' => $serial['ref'], 'received_at' => $serial['at'],
                     'created_at' => $serial['at'], 'updated_at' => $serial['at'],
                 ]));
