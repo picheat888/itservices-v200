@@ -36,8 +36,8 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { LotCard } from './lot-card';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
+import { LotCard } from './lot-card';
 import { countLockFor } from '../lib/count-lock';
 import { stockRefusalText } from '../lib/refusal';
 

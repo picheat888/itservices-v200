@@ -22,8 +22,8 @@ import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { NEW_MOVEMENT_DETAIL, useMovementLots, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { LotCard } from '../../components/lot-card';
+import { NEW_MOVEMENT_DETAIL, useMovementLots, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { movementNote } from '../../lib/movement-note';
 import { MV_META, MV_TONE_HEX } from '../shared';
 
@@ -75,6 +75,8 @@ export function MovementsTab() {
     // Lot a receive opened (receive rows only)
     const moveLotsQuery = useMovementLots(viewMove?.id ?? null, moveOpen && viewMove?.type === 'receive');
     const receiveLot = moveLotsQuery.data?.lots[0];
+    // Serial vs non-serial is only known once the serials have loaded
+    const serialsSettled = moveSerialsQuery.isSuccess;
 
     const columns: Column<(typeof movements)[number]>[] = [
         {
@@ -327,9 +329,9 @@ export function MovementsTab() {
                                                     warehouse={receiveLot.warehouse}
                                                     remaining={receiveLot.remaining}
                                                     state={receiveLot.state}
-                                                    printable={moveSerials.length === 0}
+                                                    printable={serialsSettled && moveSerials.length === 0}
                                                 />
-                                                {moveSerials.length > 0 && (
+                                                {serialsSettled && moveSerials.length > 0 && (
                                                     <p className="text-muted-foreground mt-1 text-xs">{t('stock_recv_serial_note')}</p>
                                                 )}
                                             </div>
