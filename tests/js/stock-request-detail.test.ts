@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { stock as en } from '../../resources/js/lang/en/stock.ts';
 import { stock as th } from '../../resources/js/lang/th/stock.ts';
-import { previewLotPicks, requestSteps } from '../../resources/js/modules/stock/lib/request-detail.ts';
+import { toPickableLots } from '../../resources/js/modules/stock/lib/lot-pick.ts';
+import { previewLotPicks, REQ_TONE, requestSteps, shownRequest } from '../../resources/js/modules/stock/lib/request-detail.ts';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 const tab = read('resources/js/modules/stock/pages/tabs/requests-tab.tsx');
@@ -91,6 +92,40 @@ test('the approved preview fills the largest warehouse first, then its oldest lo
     );
 });
 
+test('the detail shows the fresh request only once it was read after the row it opened from', () => {
+    const row = { id: 7, status: 'fulfilled' };
+    const cachedApproved = { id: 7, status: 'approved' };
+    assert.equal(shownRequest(row, 2000, cachedApproved, 1000), row, 'an older cached copy never overrides the row');
+    assert.equal(shownRequest(row, 2000, { id: 7, status: 'fulfilled' }, 3000).status, 'fulfilled');
+    const refetched = { id: 7, status: 'fulfilled' };
+    assert.equal(shownRequest(row, 2000, refetched, 2000), refetched);
+    assert.equal(shownRequest(row, 2000, { id: 8, status: 'pending' }, 3000), row, 'another request never shows');
+    assert.equal(shownRequest(row, 2000, undefined, 0), row);
+    assert.equal(shownRequest(null, 0, undefined, 0), null);
+});
+
+test('one tone map and one lot mapping serve the tab, the fulfil seed and the detail', () => {
+    assert.equal(REQ_TONE.cancelled, 'gray');
+    assert.deepEqual(
+        toPickableLots({ lots: [{ id: 2, lot_no: 'LOT-20260812-0003', warehouse: 'คลังกลาง IT', received_at: null, qty_remaining: 6 }] }),
+        [{ lot_id: 2, lot_no: 'LOT-20260812-0003', warehouse: 'คลังกลาง IT', received_at: '', remaining: 6 }],
+    );
+    assert.deepEqual(toPickableLots(undefined), []);
+    for (const src of [tab, dialog]) {
+        assert.doesNotMatch(src, /const REQ_TONE/);
+        assert.match(src, /REQ_TONE\[/);
+    }
+    assert.match(tab, /toPickableLots\(fulfillItem\)/);
+    assert.match(dialog, /toPickableLots\(/);
+});
+
+test('serial items skip the Lot preview when approved; the read-only detail never raises an alert', () => {
+    assert.match(dialog, /track_serial \?/);
+    assert.match(dialog, /t\('stock_rq_serial_lot_note'\)/);
+    assert.doesNotMatch(dialog, /FormErrorBanner/);
+    assert.doesNotMatch(dialog, /role="alert"/);
+});
+
 test('the row menu: details always, the issue sheet when fulfilled, then a separator and the red cancel', () => {
     assert.match(menu, /MoreVertical/);
     const view = menu.indexOf("t('stock_rq_view_detail')");
@@ -141,6 +176,7 @@ test('every detail word exists in both languages', () => {
         'stock_rq_can_return_n',
         'stock_rq_return_from_this',
         'stock_rq_awaiting_fulfil',
+        'stock_rq_serial_lot_note',
     ] as const;
     for (const key of keys) {
         assert.ok(th[key], `th ${key}`);

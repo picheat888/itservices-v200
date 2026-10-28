@@ -36,21 +36,14 @@ import { RequestRowMenu } from '../../components/request-row-menu';
 import { NEW_REQUEST_DETAIL, useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { allocKey, greedyAlloc, prunePicks, refillAlloc } from '../../lib/fulfil-alloc';
-import type { PickableLot } from '../../lib/lot-pick';
+import { toPickableLots, type PickableLot } from '../../lib/lot-pick';
 import { stockRefusalText } from '../../lib/refusal';
+import { REQ_TONE } from '../../lib/request-detail';
 
 // Fulfilling takes stock out: the issue colour of the movement list
 const FULFIL_ACCENT = '#7c3aed';
 
 const requestNo = (r: StockRequest) => r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`;
-
-const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red' | 'gray'> = {
-    pending: 'amber',
-    approved: 'blue',
-    fulfilled: 'green',
-    rejected: 'red',
-    cancelled: 'gray',
-};
 
 // Statuses offered by the filter (and accepted from ?status=).
 const REQUEST_STATUS_FILTERS: StockRequestStatus[] = ['pending', 'approved', 'fulfilled', 'rejected', 'cancelled'];
@@ -87,6 +80,7 @@ export function RequestsTab({
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
     const {
         data: requestsPage,
+        dataUpdatedAt: requestsReadAt,
         isLoading: requestsLoading,
         isFetching: requestsFetching,
         isPlaceholderData: requestsPlaceholder,
@@ -120,6 +114,8 @@ export function RequestsTab({
     useRefetchOnOpen(fulfillOpen, fulfillItemQuery);
     // Request detail (board 12): the row it opened from stays shown through the close animation
     const [detailReq, setDetailReq] = useState<StockRequest | null>(null);
+    // When the row was read: the detail's own copy shows only once read at or after it
+    const [detailReadAt, setDetailReadAt] = useState(0);
     const [detailOpen, setDetailOpen] = useState(false);
 
     // Seed once per request, when its item first loads: greedy allocation (largest warehouse first); a refresh only updates what is shown
@@ -205,8 +201,9 @@ export function RequestsTab({
         });
     };
 
-    const openDetail = (r: StockRequest) => {
+    const openDetail = (r: StockRequest, readAt = requestsReadAt) => {
         setDetailReq(r);
+        setDetailReadAt(readAt);
         setDetailOpen(true);
     };
 
@@ -220,7 +217,7 @@ export function RequestsTab({
     // Fulfil done screen → "ดูคำขอเบิก"; the row read before the fulfil still says approved until the fresh request lands
     const viewFulfilled = (r: StockRequest) => {
         setFulfillOpen(false);
-        openDetail({ ...r, status: 'fulfilled', issue_doc_no: fulfilDone?.issue.doc_no ?? r.issue_doc_no });
+        openDetail({ ...r, status: 'fulfilled', issue_doc_no: fulfilDone?.issue.doc_no ?? r.issue_doc_no }, Date.now());
     };
 
     const returnFrom = (requestId: number) => {
@@ -425,13 +422,7 @@ export function RequestsTab({
     const guardFulfillClose = useDiscardGuard(fulfillOpen && !fulfilDone && fulfillDirty);
     const closeFulfill = () => setFulfillOpen(false);
     // The item's open lots in the shape the lot preview reads
-    const fulfillLots: PickableLot[] = (fulfillItem?.lots ?? []).map((l) => ({
-        lot_id: l.id,
-        lot_no: l.lot_no,
-        warehouse: l.warehouse,
-        received_at: l.received_at ?? '',
-        remaining: l.qty_remaining,
-    }));
+    const fulfillLots: PickableLot[] = toPickableLots(fulfillItem);
     const lotNoById = new Map((fulfillItem?.lots ?? []).map((l) => [l.id, l.lot_no]));
     const serialLotNo = (lotId: number | null) => (lotId !== null ? (lotNoById.get(lotId) ?? null) : null);
     const serialsShowLots = fulfillInStock.some((s) => serialLotNo(s.stock_lot_id) !== null);
@@ -514,6 +505,7 @@ export function RequestsTab({
                 open={detailOpen}
                 onClose={() => setDetailOpen(false)}
                 request={detailReq}
+                readAt={detailReadAt}
                 requestNo={requestNo}
                 canViewStock={can('view')}
                 onApprove={confirmApprove}

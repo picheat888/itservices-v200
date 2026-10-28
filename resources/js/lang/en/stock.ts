@@ -599,6 +599,7 @@ export const stock: Dict = {
     stock_rq_can_return_n: '{n} can still be returned',
     stock_rq_return_from_this: 'Return from this request',
     stock_rq_awaiting_fulfil: 'Awaiting fulfillment',
+    stock_rq_serial_lot_note: 'Serial-tracked item: the Lots follow the serials picked at fulfillment.',
 
     // stock-movement-detail — เหตุการณ์รับเข้า
     stock_recv_lots_title: 'Lot of this receipt',

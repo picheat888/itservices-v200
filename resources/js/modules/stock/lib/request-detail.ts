@@ -2,6 +2,20 @@
 import { greedyAlloc, type Balance } from './fulfil-alloc.ts';
 import { pickLots, type LotPick, type PickableLot } from './lot-pick.ts';
 
+/** Badge and filter-dot tone of each request status. */
+export const REQ_TONE: Record<RequestStepFacts['status'], 'amber' | 'blue' | 'green' | 'red' | 'gray'> = {
+    pending: 'amber',
+    approved: 'blue',
+    fulfilled: 'green',
+    rejected: 'red',
+    cancelled: 'gray',
+};
+
+/** The fresh request once it was read at or after the row the detail opened from; until then the row (an older cached copy never wins). */
+export function shownRequest<T extends { id: number }>(row: T | null, rowReadAt: number, fresh: T | undefined, freshReadAt: number): T | null {
+    return row && fresh && fresh.id === row.id && freshReadAt >= rowReadAt ? fresh : row;
+}
+
 export type RequestStepState = 'done' | 'now' | 'wait' | 'closed';
 export type RequestStepKey = 'asked' | 'approve' | 'fulfil';
 

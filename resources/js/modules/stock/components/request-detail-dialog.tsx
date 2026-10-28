@@ -3,7 +3,6 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
-import { FormErrorBanner } from '@/shared/components/field';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -11,25 +10,17 @@ import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
-import type { RequestTrail, StockItem, StockRequest, StockRequestStatus } from '@/shared/types';
+import type { RequestTrail, StockItem, StockRequest } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooterBar, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { ArrowUpFromLine, Ban, Check, ClipboardList, Printer, RotateCcw, X } from 'lucide-react';
+import { ArrowUpFromLine, Ban, Check, ClipboardList, Printer, RotateCcw, TriangleAlert, X } from 'lucide-react';
 import { useId } from 'react';
 import { issuePdfUrl } from '../api/stockApi';
 import { useRequestTrail, useStockItem, useStockRequest } from '../hooks/use-stock';
-import type { PickableLot } from '../lib/lot-pick';
-import { previewLotPicks, requestSteps, type RequestStep } from '../lib/request-detail';
+import { toPickableLots } from '../lib/lot-pick';
+import { previewLotPicks, REQ_TONE, requestSteps, shownRequest, type RequestStep } from '../lib/request-detail';
 import { LotLink } from './lot-link';
-
-const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red' | 'gray'> = {
-    pending: 'amber',
-    approved: 'blue',
-    fulfilled: 'green',
-    rejected: 'red',
-    cancelled: 'gray',
-};
 
 const LABEL = 'text-muted-foreground text-xs';
 const H3 = 'mb-2 text-sm font-semibold';
@@ -52,15 +43,17 @@ interface RequestDetailDialogProps extends RequestDetailActions {
     onClose: () => void;
     /** The row the dialog opened from; the fresh request replaces it once read. */
     request: StockRequest | null;
+    /** When that row was read (ms). */
+    readAt: number;
     requestNo: (r: StockRequest) => string;
     /** Stock per warehouse and the Lot preview read the item, which needs stock.view. */
     canViewStock: boolean;
 }
 
-export function RequestDetailDialog({ open, onClose, request, requestNo, canViewStock, ...actions }: RequestDetailDialogProps) {
+export function RequestDetailDialog({ open, onClose, request, readAt, requestNo, canViewStock, ...actions }: RequestDetailDialogProps) {
     const t = useT();
-    const fresh = useStockRequest(request?.id ?? null, open).data;
-    const r = fresh && fresh.id === request?.id ? fresh : request;
+    const freshQuery = useStockRequest(request?.id ?? null, open);
+    const r = shownRequest(request, readAt, freshQuery.data, freshQuery.dataUpdatedAt);
     const readsStock = !!r && canViewStock && (r.status === 'pending' || r.status === 'approved');
     const itemQuery = useStockItem(readsStock && r ? r.stock_item_id : null, open);
     const trailQuery = useRequestTrail(r?.status === 'fulfilled' ? r.id : null, open);
@@ -82,7 +75,15 @@ export function RequestDetailDialog({ open, onClose, request, requestNo, canView
                             <ItemCard request={r} />
                             <RequestFacts request={r} />
                             {readsStock && r.status === 'pending' && <StockNow query={itemQuery} />}
-                            {readsStock && r.status === 'approved' && <PickPreview query={itemQuery} qty={r.qty} />}
+                            {readsStock &&
+                                r.status === 'approved' &&
+                                (!itemQuery.data ? (
+                                    <ItemState query={itemQuery}>{null}</ItemState>
+                                ) : itemQuery.data.track_serial ? (
+                                    <StockNow query={itemQuery} note={t('stock_rq_serial_lot_note')} />
+                                ) : (
+                                    <PickPreview query={itemQuery} qty={r.qty} />
+                                ))}
                             {r.status === 'fulfilled' &&
                                 (trailQuery.isError ? (
                                     <LoadFailedPanel onRetry={() => trailQuery.refetch()} />
@@ -203,8 +204,8 @@ function RequestFacts({ request }: { request: StockRequest }) {
 
 type ItemQuery = { data?: StockItem; isError: boolean; refetch: () => unknown };
 
-// Pending: stock per warehouse
-function StockNow({ query }: { query: ItemQuery }) {
+// Pending, and approved serial items: stock per warehouse
+function StockNow({ query, note }: { query: ItemQuery; note?: string }) {
     const t = useT();
     const fmtN = useNumberFormat();
     const titleId = useId();
@@ -252,6 +253,7 @@ function StockNow({ query }: { query: ItemQuery }) {
                         </table>
                     </div>
                 )}
+                {note && <p className={cn(LABEL, 'mt-1.5')}>{note}</p>}
             </ItemState>
         </section>
     );
@@ -263,14 +265,7 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
     const fmt = useDateFormat();
     const fmtN = useNumberFormat();
     const titleId = useId();
-    const lots: PickableLot[] = (query.data?.lots ?? []).map((l) => ({
-        lot_id: l.id,
-        lot_no: l.lot_no,
-        warehouse: l.warehouse,
-        received_at: l.received_at ?? '',
-        remaining: l.qty_remaining,
-    }));
-    const picks = previewLotPicks(query.data?.balances ?? [], lots, qty);
+    const picks = previewLotPicks(query.data?.balances ?? [], toPickableLots(query.data), qty);
     const available = (query.data?.balances ?? []).reduce((sum, b) => sum + Math.max(0, b.qty), 0);
 
     return (
@@ -279,7 +274,12 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
                 {t('stock_rq_lots_to_pick')}
             </h3>
             <ItemState query={query}>
-                {available < qty && <FormErrorBanner message={`${t('stock_insufficient')} (${fmtN(available)})`} className="mb-2" />}
+                {available < qty && (
+                    <p className="mb-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                        <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                        {`${t('stock_insufficient')} (${fmtN(available)})`}
+                    </p>
+                )}
                 {picks.length > 0 && (
                     <div className="border-border overflow-hidden rounded-lg border">
                         <table className="w-full table-fixed border-separate border-spacing-0 text-sm">

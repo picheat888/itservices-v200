@@ -20,7 +20,7 @@ test('the row menu offers cancel only where the server allows it', () => {
 
 test('cancelled is a status the filter offers and the badge colours grey', () => {
     assert.match(tab, /REQUEST_STATUS_FILTERS: StockRequestStatus\[\] = \[[^\]]*'cancelled'\]/);
-    assert.match(tab, /cancelled: 'gray'/);
+    assert.match(read('resources/js/modules/stock/lib/request-detail.ts'), /cancelled: 'gray'/);
 });
 
 test('the confirm speaks of cancelling, not deleting', () => {
