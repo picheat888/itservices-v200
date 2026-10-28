@@ -54,6 +54,9 @@ Schedule::command('logs:prune')->dailyAt('02:00');
 // Same quiet hour as the retention sweep above — it deletes, it never sends.
 Schedule::command('reports:prune-exports')->dailyAt('02:15');
 
+// Expired database cache rows and locks; the store itself drops a row only when that key is read again
+Schedule::command('cache:prune-expired')->dailyAt('02:30');
+
 // Scheduled report emails. Every five minutes so a schedule set for 07:00 goes out at 07:00,
 // not at the next hour; a sweep with nothing due is one indexed query.
 Schedule::command('reports:send-scheduled')->everyFiveMinutes();
