@@ -7444,3 +7444,20 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `90851951` ระหว่างบังคับเปลี่ยนรหัส `PUT /api/preferences` รับได้แค่ dark, lang, sidebar ฟิลด์อื่นได้ 403 password_expired
 - ไฟล์แนบ Ticket ปิดโดยไม่แก้โค้ด เจ้าของเคสที่บทบาทไม่มี `tickets.edit_own` (เช่น it_stock) แนบได้ตอนเปิดเคสแต่ลบไม่ได้ ตรงกับกฎที่ตกลงใน TKT-1 ถ้าต้องการให้แก้ได้ ให้ติ๊กสิทธิ์ในหน้าสิทธิ์
 - `2b6fcac4` เลิก track `.env-bak` (APP_KEY เก่า ไม่ใช่ key ปัจจุบัน) .gitignore ใช้ `.env*` ยกเว้น `.env.example` ส่วนการลบออกจาก history และ force push รออีก session หยุดก่อน
+
+## สต็อกติดตามเป็น Lot STK-8 (2026-10-28)
+สิ่งที่ผู้ใช้เห็น
+- ทุกการรับเข้าเปิด Lot ใหม่เลข `LOT-YYYYMMDD-NNNN` พร้อมพิมพ์สติกเกอร์ QR ของ Lot ได้
+- เบิกสินค้า 1 คำขอได้ 1 ใบ ISS หยิบ Lot เก่าสุดก่อนแยกตามคลัง มี PDF ใบ ISS
+- คืนของต้องระบุคำขอเบิก และกลับเข้า Lot เดิมของคำขอนั้น
+- โอนย้ายย้ายทั้ง Lot ส่วนนับสต็อกลงยอดที่ Lot ของคลังที่นับ
+- หน้า Lot `/stock/lots/:lotNo` มีการเทียบยอด กล่องสแกนตรวจ Lot แท็บ Lot ประวัติสินค้าบอก Lot ทุกแถว และแถวคำขอเบิกเปิดรายละเอียดพร้อมพิมพ์ ISS กับคืนของ
+
+หมายเหตุทางเทคนิค
+- ตารางใหม่ `stock_lot_entries` (บัญชี Lot) คอลัมน์ใหม่ `stock_lots.lot_no`, `stock_lots.warehouse_id`, `stock_item_serials.stock_lot_id`, `stock_movements.stock_request_id`
+- `doc_no` ของความเคลื่อนไหวไม่ unique แล้ว เลข ISS กับ RET คร่อมได้หลายแถว
+- มูลค่าสต็อกย้อนหลังอ่านจากบัญชี Lot สต็อกที่ไม่มี Lot ย้อนหลังมีค่า 0
+- dependency ใหม่ `chillerlan/php-qrcode ^6` QR ใช้ `APP_URL` เป็นฐาน
+- ข้อมูลเก่าก่อน STK-8 ไม่ย้อนเติม เบิกจาก Lot เก่าถูกปฏิเสธจนกว่าจะสร้างข้อมูลสต็อกใหม่
+- ผู้ใช้ต้องรัน `php artisan migrate` เอง แล้วสร้างข้อมูล perf สต็อกใหม่
+- commit `aa49ae66..ad802a1d` (spec `docs/superpowers/specs/2026-10-28-stock-lot-tracking-design.md`)
