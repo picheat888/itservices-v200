@@ -70,4 +70,24 @@ class CidrTest extends TestCase
         $this->assertSame(32, Cidr::prefixLength('2001:db8::/32'));
         $this->assertSame(0, Cidr::prefixLength('garbage'));
     }
+
+    public function test_an_ipv4_client_is_counted_by_its_whole_address(): void
+    {
+        $this->assertSame('203.150.12.80', Cidr::clientNetwork('203.150.12.80'));
+        $this->assertSame('203.150.12.80', Cidr::clientNetwork('::ffff:203.150.12.80'));
+    }
+
+    public function test_an_ipv6_client_is_counted_by_its_64_network_in_one_spelling(): void
+    {
+        $this->assertSame('2403:6200:8892:a79a::/64', Cidr::clientNetwork('2403:6200:8892:a79a:e04c:c631:4468:1596'));
+        $this->assertSame('2403:6200:8892:a79a::/64', Cidr::clientNetwork('2403:6200:8892:A79A:dd5b:8ec7:1274:fc35'));
+        $this->assertSame('2001:db8::/64', Cidr::clientNetwork('2001:0db8:0000:0000:0000:0000:0000:0005'));
+        $this->assertNotSame(Cidr::clientNetwork('2001:44c8:6730:66dd::1'), Cidr::clientNetwork('2001:44c8:6737:9dce::1'));
+    }
+
+    public function test_text_that_is_not_an_address_is_kept_as_is(): void
+    {
+        $this->assertSame('not-an-ip', Cidr::clientNetwork('not-an-ip'));
+        $this->assertSame('', Cidr::clientNetwork(null));
+    }
 }

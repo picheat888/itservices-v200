@@ -8,6 +8,7 @@ use App\Models\Auth\LoginEvent;
 use App\Models\User;
 use App\Services\Auth\LoginEventRecorder;
 use App\Services\Auth\PendingLogin;
+use App\Support\Cidr;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -158,17 +159,23 @@ class LoginRequest extends FormRequest
         return $this->namedAccount;
     }
 
-    /** Whether this account signed in from this IP within the last 90 days. */
+    /** Whether this account signed in from this IP (IPv6: this /64) within the last 90 days. */
     private function fromKnownIp(): bool
     {
         $user = $this->account();
+        if ($user === null) {
+            return false;
+        }
 
-        return $user !== null && LoginEvent::query()
+        $network = Cidr::clientNetwork($this->ip());
+
+        return LoginEvent::query()
             ->where('user_id', $user->id)
             ->where('event', LoginEventType::SignedIn)
-            ->where('ip', $this->ip())
             ->where('created_at', '>=', now()->subDays(self::KNOWN_IP_DAYS))
-            ->exists();
+            ->distinct()
+            ->pluck('ip')
+            ->contains(fn (?string $ip) => Cidr::clientNetwork($ip) === $network);
     }
 
     /** The 403 for a pending token that expired, was used, or belongs to another browser. */
@@ -280,7 +287,7 @@ class LoginRequest extends FormRequest
         $user = $this->account();
         $who = $user !== null ? 'id:'.$user->id : 'name:'.hash('sha256', $this->normalisedLoginName());
 
-        return 'login-ip:'.$who.'|'.$this->ip();
+        return 'login-ip:'.$who.'|'.Cidr::clientNetwork($this->ip());
     }
 
     /** Cross-IP counter: one per account (email and username alike), else per normalised typed name, hashed so no name can match an account key. */

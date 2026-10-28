@@ -13,6 +13,7 @@ use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DbIpLookup;
 use App\Services\Auth\DeviceUserProvider;
 use App\Services\Auth\GeoIpLookup;
+use App\Support\Cidr;
 use App\Support\ErrorPage;
 use App\Support\NotificationKind;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -92,13 +93,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('pdf', fn (Request $request) => self::perPerson($request, 20));
         RateLimiter::for('files', fn (Request $request) => self::perPerson($request, 600));
 
-        RateLimiter::for('client-errors', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+        RateLimiter::for('client-errors', fn (Request $request) => Limit::perMinute(20)->by(Cidr::clientNetwork($request->ip())));
 
         // Sign-in per IP: a whole office shares one public IP
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(50)->by($request->ip())->response(self::tooManySignIns(...)));
+        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(50)->by(Cidr::clientNetwork($request->ip()))->response(self::tooManySignIns(...)));
         RateLimiter::for('login-pending', fn (Request $request) => [
             Limit::perMinute(10)->by(self::pendingTokenKey($request))->response(self::tooManySignIns(...)),
-            Limit::perMinute(50)->by($request->ip())->response(self::tooManySignIns(...)),
+            Limit::perMinute(50)->by(Cidr::clientNetwork($request->ip()))->response(self::tooManySignIns(...)),
         ]);
 
         // Password change: 5 tries a minute per account; its wrong current passwords also count toward the sign-in lockout
@@ -122,11 +123,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute($perMinute)->by('user:'.$userId);
         }
 
-        $browser = $request->hasSession() ? 'browser:'.$request->session()->getId() : 'no-session:'.$request->ip();
+        $browser = $request->hasSession() ? 'browser:'.$request->session()->getId() : 'no-session:'.Cidr::clientNetwork($request->ip());
 
         return [
             Limit::perMinute($perMinute)->by($browser),
-            Limit::perMinute(self::SIGNED_OUT_IP_PER_MINUTE)->by('ip:'.$request->ip()),
+            Limit::perMinute(self::SIGNED_OUT_IP_PER_MINUTE)->by('ip:'.Cidr::clientNetwork($request->ip())),
         ];
     }
 
@@ -148,7 +149,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $token = $request->input('pending');
 
-        return $request->ip().'|'.(is_string($token) && $token !== '' ? sha1($token) : '');
+        return Cidr::clientNetwork($request->ip()).'|'.(is_string($token) && $token !== '' ? sha1($token) : '');
     }
 
     /**

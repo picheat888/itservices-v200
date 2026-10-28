@@ -446,6 +446,39 @@ class LoginDeviceLimitTest extends TestCase
             ->assertJsonPath('message', 'too_many_attempts');
     }
 
+    public function test_a_new_ipv6_address_in_a_known_64_network_still_signs_in_while_locked(): void
+    {
+        $user = User::factory()->create();
+        $this->signedInBefore($user, '2403:6200:8892:a79a:e04c:c631:4468:1596', 3);
+        $this->lockFromOtherIps($user->email);
+
+        $this->browser(self::BROWSER_A, '2403:6200:8892:a79a:dd5b:8ec7:1274:fc35')
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertOk();
+    }
+
+    public function test_an_ipv6_address_in_another_64_network_is_still_locked(): void
+    {
+        $user = User::factory()->create();
+        $this->signedInBefore($user, '2403:6200:8892:a79a:e04c:c631:4468:1596', 3);
+        $this->lockFromOtherIps($user->email);
+
+        $this->browser(self::BROWSER_A, '2403:6200:8892:a79b::1')
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertStatus(429)
+            ->assertJsonPath('message', 'too_many_attempts');
+    }
+
+    public function test_fifty_attempts_spread_over_one_ipv6_64_network_are_throttled(): void
+    {
+        for ($i = 1; $i <= 50; $i++) {
+            $this->failSignIn("nobody{$i}", '2001:db8:0:1::'.dechex($i))->assertStatus(422);
+        }
+
+        $this->failSignIn('nobody51', '2001:db8:0:1::ffff')->assertStatus(429)->assertJsonPath('message', 'too_many_sign_ins');
+        $this->failSignIn('nobody52', '2001:db8:0:2::1')->assertStatus(422);
+    }
+
     public function test_an_old_sign_in_does_not_make_an_ip_known(): void
     {
         $user = User::factory()->create();

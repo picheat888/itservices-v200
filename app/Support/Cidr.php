@@ -30,6 +30,23 @@ class Cidr
         return (ord($range['network'][$wholeBytes]) & $mask) === (ord($address[$wholeBytes]) & $mask);
     }
 
+    /**
+     * The client's network for counting and trusting: an IPv4 address as is, an IPv6 address as its /64
+     * in one spelling (devices rotate the last 64 bits), anything else unchanged.
+     */
+    public static function clientNetwork(?string $ip): string
+    {
+        $bytes = self::pack((string) $ip);
+        if ($bytes === null) {
+            return (string) $ip;
+        }
+        if (strlen($bytes) === 4) {
+            return (string) inet_ntop($bytes);
+        }
+
+        return inet_ntop(substr($bytes, 0, 8).str_repeat("\0", 8)).'/64';
+    }
+
     /** The prefix length: after the slash, or 32 / 128 for a single address; 0 when the text is not a range. */
     public static function prefixLength(string $cidr): int
     {
