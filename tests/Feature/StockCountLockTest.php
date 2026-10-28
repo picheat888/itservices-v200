@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockLot;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -53,7 +54,8 @@ class StockCountLockTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('message', 'count_in_progress')
             ->assertJsonPath('reference', $count['reference']);
-        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1, 'from_label' => 'Branch', 'to_label' => 'Main'])
+        $branchLot = StockLot::where('stock_item_id', $item->id)->where('warehouse_id', Warehouse::where('name', 'Branch')->value('id'))->value('id');
+        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'lot_ids' => [$branchLot], 'from_label' => 'Branch', 'to_label' => 'Main'])
             ->assertUnprocessable()->assertJsonPath('message', 'count_in_progress');
 
         // Another shelf of the same item is not being counted.

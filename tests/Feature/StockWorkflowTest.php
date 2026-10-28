@@ -7,10 +7,12 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Services\Stock\StockLotService;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -89,26 +91,24 @@ class StockWorkflowTest extends TestCase
     {
         $item = $this->item(0);
 
-        // Seed the source warehouse via a receive (creates a balance at WH-HQ).
+        // Seed the source warehouse via a receive (creates a balance and a lot at WH-HQ).
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-HQ'])
             ->assertCreated();
+        $lotId = StockLot::where('stock_item_id', $item->id)->value('id');
 
-        // Transfer 2 from WH-HQ โ’ WH-2: total on-hand is unchanged (neutral).
+        // Transfer the lot WH-HQ to WH-2: total on-hand is unchanged (neutral).
         $this->actingAs($this->superUser())
-            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 2, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'lot_ids' => [$lotId], 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
             ->assertCreated();
         $this->assertSame(3, $item->fresh()->current_stock);
 
-        // Only 1 left at WH-HQ โ’ transferring 5 from there is rejected.
+        // The lot no longer sits in WH-HQ, so moving it from there again is refused.
         $this->actingAs($this->superUser())
-            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'lot_ids' => [$lotId], 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('qty')
-            // A reason and its figures, which the SPA puts into a sentence of its own.
-            ->assertJsonPath('message', 'not_enough_stock_in_warehouse')
-            ->assertJsonPath('warehouse', 'WH-HQ')
-            ->assertJsonPath('available', 1);
+            ->assertJsonValidationErrors('lot_ids')
+            ->assertJsonPath('message', 'transfer_lot_invalid');
     }
 
     public function test_movement_requires_type_specific_permission(): void
@@ -116,9 +116,10 @@ class StockWorkflowTest extends TestCase
         $item = $this->item();
         // Holds only stock.receive โ€” cannot transfer.
         $user = $this->userWith(['stock.view', 'stock.receive']);
+        $lot = app(StockLotService::class)->open($item, null, 1, 0, null);
 
         $this->actingAs($user)
-            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1, 'from_label' => 'WH-A', 'to_label' => 'WH-B'])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'lot_ids' => [$lot->id], 'from_label' => 'WH-A', 'to_label' => 'WH-B'])
             ->assertForbidden();
 
         $this->actingAs($user)

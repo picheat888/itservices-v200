@@ -53,12 +53,23 @@ class StockTransferTest extends TestCase
         return (int) StockItemSerial::where('serial', $serial)->value('id');
     }
 
-    private function transferSerials(StockItem $item, array $serialIds, string $from = 'WH-A', string $to = 'WH-B'): TestResponse
+    /** @param  list<int>  $lotIds */
+    private function transferLots(StockItem $item, array $lotIds, string $from = 'WH-A', string $to = 'WH-B'): TestResponse
     {
         return $this->postJson('/api/stock-movements', [
             'type' => 'transfer', 'stock_item_id' => $item->id, 'from_label' => $from, 'to_label' => $to,
-            'serial_ids' => $serialIds,
+            'lot_ids' => $lotIds,
         ]);
+    }
+
+    private function lotOf(int $serialId): int
+    {
+        return (int) StockItemSerial::whereKey($serialId)->value('stock_lot_id');
+    }
+
+    private function lastLot(StockItem $item): int
+    {
+        return (int) StockLot::where('stock_item_id', $item->id)->max('id');
     }
 
     public function test_transfer_is_stock_and_lot_neutral_and_moves_balance(): void
@@ -70,26 +81,26 @@ class StockTransferTest extends TestCase
             'type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 10, 'unit_cost' => 100, 'to_label' => 'WH-A',
         ])->assertCreated();
 
-        $this->postJson('/api/stock-movements', [
-            'type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 4, 'from_label' => 'WH-A', 'to_label' => 'WH-B',
-        ])->assertCreated()->assertJsonPath('data.type', 'transfer');
+        $this->transferLots($item, [$this->lastLot($item)])->assertCreated()->assertJsonPath('data.type', 'transfer');
 
         $item->refresh();
         $this->assertSame(10, $item->current_stock, 'transfer must not change total');
         $this->assertSame(10, (int) StockLot::where('stock_item_id', $item->id)->sum('qty_remaining'), 'transfer must not consume lots');
-        $this->assertSame(6, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-A')->value('id')])->value('qty'));
-        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-B')->value('id')])->value('qty'));
+        $this->assertSame(0, $this->balance($item, 'WH-A'));
+        $this->assertSame(10, $this->balance($item, 'WH-B'));
     }
 
-    public function test_transfer_rejects_over_source_balance(): void
+    public function test_transfer_rejects_a_lot_that_is_not_in_the_source_warehouse(): void
     {
         $this->actingAs($this->super());
         $item = $this->item();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-A'])->assertCreated();
 
-        $this->postJson('/api/stock-movements', [
-            'type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5, 'from_label' => 'WH-A', 'to_label' => 'WH-B',
-        ])->assertStatus(422);
+        $this->transferLots($item, [$this->lastLot($item)], 'WH-B', 'WH-A')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'transfer_lot_invalid');
+
+        $this->assertSame(3, $this->balance($item, 'WH-A'));
     }
 
     public function test_transfer_assigns_doc_no(): void
@@ -98,12 +109,10 @@ class StockTransferTest extends TestCase
         $item = $this->item();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'to_label' => 'WH-A'])->assertCreated();
 
-        $this->postJson('/api/stock-movements', [
-            'type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 2, 'from_label' => 'WH-A', 'to_label' => 'WH-B',
-        ])->assertCreated()->assertJsonPath('data.doc_no', 'TRF-'.now()->year.'-001');
+        $this->transferLots($item, [$this->lastLot($item)])->assertCreated()->assertJsonPath('data.doc_no', 'TRF-'.now()->year.'-001');
     }
 
-    public function test_serialized_transfer_moves_selected_serials_warehouse(): void
+    public function test_serialized_transfer_moves_the_serials_of_the_lot(): void
     {
         $this->actingAs($this->super());
         $item = $this->item(0, true);
@@ -113,17 +122,14 @@ class StockTransferTest extends TestCase
 
         $serialId = StockItemSerial::where('serial', 'SNT-1')->value('id');
 
-        $this->postJson('/api/stock-movements', [
-            'type' => 'transfer', 'stock_item_id' => $item->id, 'from_label' => 'WH-A', 'to_label' => 'WH-B',
-            'serial_ids' => [$serialId],
-        ])->assertCreated();
+        $this->transferLots($item, [$this->lotOf($serialId)])->assertCreated();
 
         $this->assertSame(Warehouse::where('name', 'WH-B')->value('id'), StockItemSerial::find($serialId)->warehouse_id);
-        $this->assertSame(Warehouse::where('name', 'WH-A')->value('id'), StockItemSerial::where('serial', 'SNT-2')->value('warehouse_id'));
-        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-B')->value('id')])->value('qty'));
+        $this->assertSame(Warehouse::where('name', 'WH-B')->value('id'), StockItemSerial::where('serial', 'SNT-2')->value('warehouse_id'));
+        $this->assertSame(2, $this->balance($item, 'WH-B'));
     }
 
-    public function test_serialized_transfer_refuses_serials_of_another_item(): void
+    public function test_transfer_refuses_a_lot_of_another_item(): void
     {
         $this->actingAs($this->super());
         $item = $this->item(0, true);
@@ -131,10 +137,10 @@ class StockTransferTest extends TestCase
         $own = $this->receiveSerial($item, 'SNT-1', 'WH-A');
         $foreign = $this->receiveSerial($other, 'SNT-X', 'WH-A');
 
-        $this->transferSerials($item, [$foreign])
+        $this->transferLots($item, [$this->lotOf($foreign)])
             ->assertStatus(422)
-            ->assertJsonPath('message', 'transfer_serials_invalid')
-            ->assertJsonValidationErrors(['serial_ids']);
+            ->assertJsonPath('message', 'transfer_lot_invalid')
+            ->assertJsonValidationErrors(['lot_ids']);
 
         $this->assertSame(1, $this->balance($item, 'WH-A'));
         $this->assertSame(0, $this->balance($item, 'WH-B'));
@@ -143,47 +149,46 @@ class StockTransferTest extends TestCase
         $this->assertSame(0, StockMovement::where('type', 'transfer')->count());
     }
 
-    public function test_serialized_transfer_refuses_an_issued_serial(): void
+    public function test_transfer_refuses_an_emptied_lot(): void
     {
         $this->actingAs($this->super());
         $item = $this->item(0, true);
         $issued = $this->receiveSerial($item, 'SNT-1', 'WH-A');
-        StockItemSerial::whereKey($issued)->update(['status' => 'issued']);
+        StockLot::whereKey($this->lotOf($issued))->update(['qty_remaining' => 0]);
 
-        $this->transferSerials($item, [$issued])
+        $this->transferLots($item, [$this->lotOf($issued)])
             ->assertStatus(422)
-            ->assertJsonPath('message', 'transfer_serials_invalid');
+            ->assertJsonPath('message', 'transfer_lot_invalid');
 
-        $this->assertSame(1, $this->balance($item, 'WH-A'));
         $this->assertSame(Warehouse::where('name', 'WH-A')->value('id'), StockItemSerial::find($issued)->warehouse_id);
         $this->assertSame(0, StockMovement::where('type', 'transfer')->count());
     }
 
-    public function test_serialized_transfer_refuses_a_serial_outside_the_source_warehouse(): void
+    public function test_transfer_refuses_a_lot_outside_the_source_warehouse(): void
     {
         $this->actingAs($this->super());
         $item = $this->item(0, true);
         $this->receiveSerial($item, 'SNT-1', 'WH-A');
         $elsewhere = $this->receiveSerial($item, 'SNT-2', 'WH-B');
 
-        $this->transferSerials($item, [$elsewhere], 'WH-A', 'WH-B')
+        $this->transferLots($item, [$this->lotOf($elsewhere)], 'WH-A', 'WH-B')
             ->assertStatus(422)
-            ->assertJsonPath('message', 'transfer_serials_invalid');
+            ->assertJsonPath('message', 'transfer_lot_invalid');
 
         $this->assertSame(1, $this->balance($item, 'WH-A'));
         $this->assertSame(1, $this->balance($item, 'WH-B'));
         $this->assertSame(0, StockMovement::where('type', 'transfer')->count());
     }
 
-    public function test_serialized_transfer_requires_serial_ids(): void
+    public function test_transfer_requires_lot_ids(): void
     {
         $this->actingAs($this->super());
         $item = $this->item(0, true);
         $this->receiveSerial($item, 'SNT-1', 'WH-A');
 
         $this->postJson('/api/stock-movements', [
-            'type' => 'transfer', 'stock_item_id' => $item->id, 'from_label' => 'WH-A', 'to_label' => 'WH-B', 'qty' => 1,
-        ])->assertStatus(422)->assertJsonPath('message', 'transfer_serials_required');
+            'type' => 'transfer', 'stock_item_id' => $item->id, 'from_label' => 'WH-A', 'to_label' => 'WH-B',
+        ])->assertStatus(422)->assertJsonValidationErrors(['lot_ids']);
 
         $this->assertSame(1, $this->balance($item, 'WH-A'));
         $this->assertSame(0, StockMovement::where('type', 'transfer')->count());
@@ -219,11 +224,12 @@ class StockTransferTest extends TestCase
         $this->actingAs($this->super());
         $item = $this->item();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'to_label' => 'WH-A'])->assertCreated();
+        $lot = $this->lastLot($item);
 
-        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1, 'from_label' => 'WH-A', 'to_label' => 'WH-NEW'])
+        $this->transferLots($item, [$lot], 'WH-A', 'WH-NEW')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['to_label']);
-        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1, 'from_label' => 'WH-NEW', 'to_label' => 'WH-B'])
+        $this->transferLots($item, [$lot], 'WH-NEW', 'WH-B')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['from_label']);
 
@@ -237,11 +243,11 @@ class StockTransferTest extends TestCase
         $item = $this->item();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 4])->assertCreated();
 
-        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 3, 'from_label' => 'Unassigned', 'to_label' => 'WH-A'])
+        $this->transferLots($item, [$this->lastLot($item)], 'Unassigned', 'WH-A')
             ->assertCreated();
 
-        $this->assertSame(3, $this->balance($item, 'WH-A'));
-        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => null])->value('qty'));
+        $this->assertSame(4, $this->balance($item, 'WH-A'));
+        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => null])->value('qty'));
         $this->assertDatabaseMissing('warehouses', ['name' => 'Unassigned']);
     }
 
@@ -251,7 +257,7 @@ class StockTransferTest extends TestCase
         $item = $this->item();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'to_label' => 'WH-A'])->assertCreated();
 
-        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1])
+        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'lot_ids' => [$this->lastLot($item)]])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['from_label', 'to_label']);
     }

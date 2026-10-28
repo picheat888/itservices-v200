@@ -67,7 +67,7 @@ class StockItemHistoryTest extends TestCase
 
         $this->actingAs($super)->postJson('/api/stock-movements', [
             'type' => 'transfer', 'stock_item_id' => $item->id,
-            'from_label' => 'Main', 'to_label' => 'HQ', 'serial_ids' => [$serialId],
+            'from_label' => 'Main', 'to_label' => 'HQ', 'lot_ids' => [$item->serials()->value('stock_lot_id')],
         ])->assertCreated();
 
         $this->assertDatabaseHas('stock_item_serial_events', [

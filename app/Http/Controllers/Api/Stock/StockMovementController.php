@@ -16,6 +16,7 @@ use App\Services\Stock\StockCountLock;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockReturnService;
+use App\Services\Stock\StockTransferService;
 use App\Support\DateDisplay;
 use App\Support\DocNumber;
 use App\Support\DocumentName;
@@ -41,6 +42,7 @@ class StockMovementController extends Controller
         private readonly StockBalanceService $balances,
         private readonly StockCountLock $countLock,
         private readonly StockReturnService $returns,
+        private readonly StockTransferService $transfers,
     ) {}
 
     /** Permission per movement type; issuing only happens by fulfilling a Request (StockRequestController). */
@@ -176,18 +178,21 @@ class StockMovementController extends Controller
         $data = $request->validate([
             'type' => ['required', Rule::in(array_keys(self::TYPE_PERMISSION))],
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
-            // qty is derived from serials (serialized receive), serial_ids (serialized transfer / return) or a return's lots.
-            'qty' => ['exclude_if:type,return', 'required_without_all:serials,serial_ids', 'nullable', 'integer', 'min:1'],
+            // qty is derived from serials (serialized receive), serial_ids (serialized return) or lots (return / transfer).
+            'qty' => ['exclude_if:type,return', 'prohibited_if:type,transfer', 'required_without_all:serials,serial_ids,lot_ids', 'nullable', 'integer', 'min:1'],
             'unit_cost' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'from_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('from_label')],
             'to_label' => ['required_if:type,transfer', 'prohibited_if:type,return', 'nullable', 'string', 'max:120', $knownWarehouse('to_label')],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'moved_at' => ['nullable', 'date', 'before_or_equal:now'],
-            'serials' => ['array'],
+            'serials' => ['prohibited_if:type,transfer', 'array'],
             'serials.*' => ['nullable', 'string', 'max:120'],
-            'serial_ids' => ['array'],
+            'serial_ids' => ['prohibited_if:type,transfer', 'array'],
             'serial_ids.*' => ['integer', 'exists:stock_item_serials,id'],
+            // A transfer names the whole lots it moves
+            'lot_ids' => ['required_if:type,transfer', 'exclude_unless:type,transfer', 'array', 'min:1'],
+            'lot_ids.*' => ['integer', 'exists:stock_lots,id'],
             // A return names the fulfilled request and, for non-serial items, the lots it gives back to.
             'stock_request_id' => ['required_if:type,return', 'exclude_unless:type,return', 'integer', 'exists:stock_requests,id'],
             'lots' => [Rule::requiredIf(fn () => $request->input('type') === 'return' && ! $this->isSerialItem($request->input('stock_item_id'))), 'exclude_unless:type,return', 'array'],
@@ -200,12 +205,14 @@ class StockMovementController extends Controller
         $item = StockItem::findOrFail($data['stock_item_id']);
         $serials = $this->validateSerials($data, $item);
         $this->validateReturnSerials($data, $item);
-        $this->validateTransferSerials($data, $item);
 
         if ($data['type'] === 'return') {
             $movement = $this->returns->record($item, StockRequest::findOrFail($data['stock_request_id']), $data, $request->user());
             $returned = (int) StockMovement::where('type', 'return')->where('doc_no', $movement->doc_no)->sum('qty');
             AuditLog::record('Stock return', "{$item->sku} ×{$returned}", subject: $item);
+        } elseif ($data['type'] === 'transfer') {
+            $movement = $this->transfers->record($item, $data['from_label'], $data['to_label'], $data['lot_ids'], $data, $request->user());
+            AuditLog::record('Stock transfer', "{$item->sku} ×{$movement->qty}", subject: $item);
         } else {
             $movement = $this->record($data, $request->user()?->name, $request->user()?->id, $serials);
         }
@@ -277,38 +284,7 @@ class StockMovementController extends Controller
     }
 
     /**
-     * For a serialized transfer, every chosen serial must belong to the item, be in stock,
-     * and sit in the source warehouse. No-op otherwise.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function validateTransferSerials(array $data, StockItem $item): void
-    {
-        if ($data['type'] !== 'transfer' || ! $item->track_serial) {
-            return;
-        }
-
-        $ids = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
-        if ($ids === []) {
-            Refusal::fail('transfer_serials_required', field: 'serial_ids');
-        }
-
-        $fromLabel = (string) ($data['from_label'] ?? '');
-        $sourceWarehouseId = $fromLabel === 'Unassigned' ? null : Warehouse::where('name', $fromLabel)->value('id');
-
-        $inSource = StockItemSerial::whereIn('id', $ids)
-            ->where('stock_item_id', $item->id)
-            ->where('status', 'in_stock')
-            ->where('warehouse_id', $sourceWarehouseId)
-            ->count();
-
-        if ($inSource !== count($ids)) {
-            Refusal::fail('transfer_serials_invalid', field: 'serial_ids');
-        }
-    }
-
-    /**
-     * Persist a receive or transfer and apply it to the item's stock, balances, lots and serials in one transaction.
+     * Persist a receive and apply it to the item's stock, balances, lots and serials in one transaction.
      *
      * @param  array<string, mixed>  $data
      * @param  array<int, string>  $serials
@@ -323,21 +299,10 @@ class StockMovementController extends Controller
             /** @var StockItem $item */
             $item = StockItem::lockForUpdate()->findOrFail($data['stock_item_id']);
             $type = $data['type'];
-            $isTransfer = $type === 'transfer';
             $inbound = in_array($type, StockMovement::INBOUND, true);
 
-            $serialIds = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
-            // Serialized transfer: the item's own serials among the picked ids; qty follows this list.
-            $transferSerials = $isTransfer && $item->track_serial && $serialIds !== []
-                ? StockItemSerial::lockForUpdate()->whereIn('id', $serialIds)->where('stock_item_id', $item->id)->get()
-                : collect();
-
-            // Quantity: serialized receive → number of serials; serialized transfer → number of picked serials.
-            $qty = match (true) {
-                $serials !== [] => count($serials),
-                $isTransfer && $item->track_serial => $transferSerials->count(),
-                default => (int) ($data['qty'] ?? 0),
-            };
+            // Quantity: serialized receive → number of serials
+            $qty = $serials !== [] ? count($serials) : (int) ($data['qty'] ?? 0);
 
             $fromWh = $data['from_label'] ?? null;
             $toWh = $data['to_label'] ?? null;
@@ -348,7 +313,7 @@ class StockMovementController extends Controller
             ]);
 
             // Outbound (non-transfer) needs enough total stock; per-warehouse guard is in the balance service.
-            if (! $inbound && ! $isTransfer && $item->current_stock < $qty) {
+            if (! $inbound && $item->current_stock < $qty) {
                 Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
             }
 
@@ -371,65 +336,45 @@ class StockMovementController extends Controller
                 'moved_at' => $movedAt,
             ]);
 
-            if ($isTransfer) {
-                // Stock- and cost-neutral: only the per-warehouse balance (and serial location) move.
-                $this->balances->move($item, (string) $fromWh, (string) $toWh, $qty);
-                if ($transferSerials->isNotEmpty()) {
-                    StockItemSerial::whereIn('id', $transferSerials->pluck('id'))->update(['warehouse_id' => Warehouse::resolveId((string) $toWh)]);
-                    foreach ($transferSerials as $row) {
-                        StockItemSerialEvent::log($row, 'transferred', [
-                            'stock_movement_id' => $movement->id,
-                            'from_label' => (string) $fromWh,
-                            'to_label' => (string) $toWh,
-                            'user_id' => $userId,
-                            'recorded_by' => $recordedBy,
-                            'occurred_at' => $movement->moved_at,
-                        ]);
-                    }
-                }
-                $this->touchLastMove($item, $movement);
-                $item->save();
+            // Inbound lot cost is the pre-movement average, so resolve it before current_stock changes.
+            $inboundLotCost = $inbound ? ($unitCost ?? $item->avgCost()) : null;
+
+            $item->current_stock += $movement->delta();
+            $this->touchLastMove($item, $movement);
+            $item->save();
+
+            if ($inbound) {
+                // Destination defaults to 'Unassigned' (never '') so balances and serials agree.
+                $inboundWarehouse = $toWh ?: 'Unassigned';
+                $this->balances->add($item, $inboundWarehouse, $qty);
+
+                $openedLot = $this->lotService->open($item, Warehouse::resolveId($inboundWarehouse), $qty, $inboundLotCost, $movement, $data['reference'] ?? null);
+                $movement->setRelation('openedLot', $openedLot->load('warehouse'));
             } else {
-                // Inbound lot cost is the pre-movement average, so resolve it before current_stock changes.
-                $inboundLotCost = $inbound ? ($unitCost ?? $item->avgCost()) : null;
+                $this->balances->remove($item, (string) $fromWh, $qty);
+                $this->lotService->legacyConsume($item, $qty);
+            }
 
-                $item->current_stock += $movement->delta();
-                $this->touchLastMove($item, $movement);
-                $item->save();
-
-                if ($inbound) {
-                    // Destination defaults to 'Unassigned' (never '') so balances and serials agree.
-                    $inboundWarehouse = $toWh ?: 'Unassigned';
-                    $this->balances->add($item, $inboundWarehouse, $qty);
-
-                    $openedLot = $this->lotService->open($item, Warehouse::resolveId($inboundWarehouse), $qty, $inboundLotCost, $movement, $data['reference'] ?? null);
-                    $movement->setRelation('openedLot', $openedLot->load('warehouse'));
-                } else {
-                    $this->balances->remove($item, (string) $fromWh, $qty);
-                    $this->lotService->legacyConsume($item, $qty);
-                }
-
-                // Register each received unit's serial against the SKU + log a history event.
-                foreach ($serials as $serial) {
-                    $row = StockItemSerial::create([
-                        'stock_item_id' => $item->id,
-                        'stock_movement_id' => $movement->id,
-                        'serial' => $serial,
-                        'status' => 'in_stock',
-                        'warehouse_id' => Warehouse::resolveId($inboundWarehouse),
-                        'reference' => $data['reference'] ?? null,
-                        'received_at' => $movement->moved_at,
-                        'stock_lot_id' => $openedLot?->id,
-                    ]);
-                    StockItemSerialEvent::log($row, 'received', [
-                        'stock_movement_id' => $movement->id,
-                        'reference' => $data['reference'] ?? null,
-                        'warehouse' => $inboundWarehouse,
-                        'user_id' => $userId,
-                        'recorded_by' => $recordedBy,
-                        'occurred_at' => $movement->moved_at,
-                    ]);
-                }
+            // Register each received unit's serial against the SKU + log a history event.
+            foreach ($serials as $serial) {
+                $row = StockItemSerial::create([
+                    'stock_item_id' => $item->id,
+                    'stock_movement_id' => $movement->id,
+                    'serial' => $serial,
+                    'status' => 'in_stock',
+                    'warehouse_id' => Warehouse::resolveId($inboundWarehouse),
+                    'reference' => $data['reference'] ?? null,
+                    'received_at' => $movement->moved_at,
+                    'stock_lot_id' => $openedLot?->id,
+                ]);
+                StockItemSerialEvent::log($row, 'received', [
+                    'stock_movement_id' => $movement->id,
+                    'reference' => $data['reference'] ?? null,
+                    'warehouse' => $inboundWarehouse,
+                    'user_id' => $userId,
+                    'recorded_by' => $recordedBy,
+                    'occurred_at' => $movement->moved_at,
+                ]);
             }
 
             AuditLog::record('Stock '.$type, "{$item->sku} ×{$qty}", subject: $item);
