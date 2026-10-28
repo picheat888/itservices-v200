@@ -128,6 +128,15 @@ export const useLot = (lotNo: string | null, enabled = true) =>
 export const useRequestTrail = (id: number | null, enabled = true) =>
     useQuery({ queryKey: [...REQUESTS, 'trail', id], queryFn: () => getRequestTrail(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
 
+/** One request (the return form opened from it reads its item and reference). */
+export const useStockRequest = (id: number | null, enabled = true) =>
+    useQuery({
+        queryKey: NEW_REQUEST_DETAIL.key(id ?? 0),
+        queryFn: () => stockRequestApi.get(id as number),
+        enabled: id !== null && enabled,
+        ...FRESH_VIEW,
+    });
+
 /** Fulfilled requests of an item with something left to return (the return form's picker). */
 export const useReturnableRequests = (itemId: number | null, search: string, enabled = true) =>
     useQuery({

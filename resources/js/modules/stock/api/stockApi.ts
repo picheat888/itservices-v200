@@ -12,34 +12,46 @@ import type {
     StockItem,
     StockItemHistory,
     StockMovement,
-    StockMovementType,
     StockRequest,
     StockSummary,
 } from '@/shared/types';
 
-export interface StockMovementPayload {
-    type: StockMovementType;
+/** Receive: a quantity (or one serial per unit) from a vendor into a warehouse. */
+export interface ReceivePayload {
+    type: 'receive';
     stock_item_id: number;
-    /** Not sent for a return or a transfer (the lots carry the quantity). */
-    qty?: number;
-    from_label?: string | null;
-    to_label?: string | null;
-    reference?: string | null;
-    notes?: string | null;
+    qty: number;
+    from_label?: string;
+    to_label?: string;
+    reference?: string;
+    notes?: string;
     /** Per-unit serials captured for a serialized receive. */
     serials?: string[];
-    /** Existing serial ids being issued out for a serialized issue. */
-    serial_ids?: number[];
     /** Unit cost for this received lot (FIFO costing). */
     unit_cost?: number;
-    /** Return: the fulfilled request being returned against. */
-    stock_request_id?: number;
-    /** Return of a non-serial item: how much goes back into each lot the request drew. */
-    lots?: { lot_id: number; qty: number }[];
-    /** Transfer: the whole lots being moved. */
-    lot_ids?: number[];
-    moved_at?: string | null;
 }
+
+/** Return against a fulfilled request: lots for a non-serial item, the request's serials for a serial one. */
+export interface ReturnPayload {
+    type: 'return';
+    stock_item_id: number;
+    stock_request_id: number;
+    lots?: { lot_id: number; qty: number }[];
+    serial_ids?: number[];
+    notes?: string;
+}
+
+/** Transfer: whole lots from one warehouse to another. */
+export interface TransferPayload {
+    type: 'transfer';
+    stock_item_id: number;
+    from_label: string;
+    to_label: string;
+    lot_ids: number[];
+    notes?: string;
+}
+
+export type StockMovementPayload = ReceivePayload | ReturnPayload | TransferPayload;
 
 export interface StockRequestPayload {
     stock_item_id: number;

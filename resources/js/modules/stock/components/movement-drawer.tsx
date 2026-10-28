@@ -13,7 +13,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { digitsOnly } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
-import type { ReceiveLot, StockItem, StockMovementType } from '@/shared/types';
+import type { ReceiveLot, ReturnableRequest, StockItem, StockMovementType } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -36,10 +36,18 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
-import { LotCard } from './lot-card';
+import { useExistingSerials, useRecordMovement, useReturnableRequests, useStockItem, useStockItems, useStockRequest } from '../hooks/use-stock';
 import { countLockFor } from '../lib/count-lock';
+import { refusalField, returnLines, transferLots } from '../lib/movement-form';
 import { stockRefusalText } from '../lib/refusal';
+import { LotCard } from './lot-card';
+import { ReturnRequestFields } from './return-request-fields';
+import { TransferLotList } from './transfer-lot-list';
+
+// The form fields a return or transfer refusal can point at
+type MovementFieldErrors = Partial<Record<'stock_request_id' | 'lots' | 'serial_ids' | 'lot_ids' | 'from_label' | 'to_label', string>>;
+const RETURN_FIELDS = ['stock_request_id', 'lots', 'serial_ids'];
+const TRANSFER_FIELDS = ['lot_ids', 'from_label', 'to_label'];
 
 type SerialStatus = 'ok' | 'empty' | 'dup-system' | 'dup-batch';
 
@@ -59,7 +67,16 @@ export type MovementKind = Extract<StockMovementType, 'receive' | 'return' | 'tr
 // Same icons as the movement buttons on the stock page
 const KIND_ICON: Record<MovementKind, LucideIcon> = { receive: ArrowDownToLine, return: RotateCcw, transfer: ArrowLeftRight };
 
-export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; onClose: () => void }) {
+export function MovementDrawer({
+    kind,
+    onClose,
+    initialRequestId,
+}: {
+    kind: MovementKind | null;
+    onClose: () => void;
+    /** Return mode opened from a request: its item and the request start chosen. */
+    initialRequestId?: number;
+}) {
     const t = useT();
     const fmtN = useNumberFormat();
     const open = kind !== null;
@@ -90,11 +107,27 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     const [reference, setReference] = useState('');
     const [notes, setNotes] = useState('');
 
-    // Transfer: selected serial ids (serialized SKUs)
-    const [transferSerialIds, setTransferSerialIds] = useState<Set<number>>(new Set());
+    // Transfer: the whole lots being moved
+    const [transferLotIds, setTransferLotIds] = useState<Set<number>>(new Set());
 
-    // Return: selected issued-serial ids (serialized SKUs)
+    // Return: the request, per-lot quantities (non-serial) or its serials (serial)
+    const [returnRequest, setReturnRequest] = useState<ReturnableRequest | null>(null);
+    const [returnQtys, setReturnQtys] = useState<Record<number, string>>({});
     const [returnSerialIds, setReturnSerialIds] = useState<Set<number>>(new Set());
+
+    // Refusals the server tied to a return / transfer field
+    const [fieldErrors, setFieldErrors] = useState<MovementFieldErrors>({});
+    const clearErrors = (...fields: (keyof MovementFieldErrors)[]) =>
+        setFieldErrors((prev) =>
+            fields.some((f) => prev[f])
+                ? Object.fromEntries(Object.entries(prev).filter(([f]) => !fields.includes(f as keyof MovementFieldErrors)))
+                : prev,
+        );
+
+    // Opened from a request: seed its item, then let the return fields choose it
+    const { data: seedRequest } = useStockRequest(initialRequestId ?? null, kind === 'return');
+    const [seedSkuDone, setSeedSkuDone] = useState(false);
+    const [seedDone, setSeedDone] = useState(false);
 
     // Receive: serial capture
     const [serials, setSerials] = useState<string[]>([]);
@@ -121,16 +154,12 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     const isSerial = isReceive && !!selected?.track_serial;
     const isTransfer = k === 'transfer';
 
-    // Per-warehouse detail (balances + serials) for a transfer
+    // Per-warehouse detail (balances + lots) for a transfer
     const transferItemId = isTransfer && sku ? Number(sku) : null;
     const { data: transferItemDetail } = useStockItem(transferItemId);
 
     const isReturn = k === 'return';
     const returnIsSerial = isReturn && !!selected?.track_serial;
-    // Item detail (serials) for a serialized return
-    const returnItemId = returnIsSerial && sku ? Number(sku) : null;
-    const { data: returnItemDetail } = useStockItem(returnItemId);
-    const availableReturnSerials = useMemo(() => (returnItemDetail?.serials ?? []).filter((s) => s.status === 'issued'), [returnItemDetail]);
 
     // Every serial known to the system, lower-cased for matching
     const existingSet = useMemo(() => new Set(existingSerials.map((s) => s.trim().toLowerCase())), [existingSerials]);
@@ -149,13 +178,49 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
         setMode('manual');
         setScan('');
         setDone(null);
-        setTransferSerialIds(new Set());
+        setTransferLotIds(new Set());
+        setReturnRequest(null);
+        setReturnQtys({});
         setReturnSerialIds(new Set());
+        setFieldErrors({});
+        setSeedSkuDone(false);
+        setSeedDone(false);
         setBaseline(null);
         setSaved(false);
         setFrom('');
         setTo('');
     }, [open, kind]);
+
+    // Opened from a request: its item is the SKU (the form stays clean until the user edits)
+    useEffect(() => {
+        if (kind !== 'return' || !initialRequestId || seedSkuDone || seedRequest?.id !== initialRequestId) {
+            return;
+        }
+        setSku(String(seedRequest.stock_item_id));
+        setSeedSkuDone(true);
+        setBaseline(null);
+    }, [kind, initialRequestId, seedSkuDone, seedRequest]);
+
+    // ...then the request itself, found by its reference among the item's returnable requests
+    const seedPending = !!initialRequestId && seedSkuDone && !seedDone;
+    const { data: seedMatches } = useReturnableRequests(seedPending ? Number(sku) : null, seedRequest?.reference ?? '', seedPending);
+    useEffect(() => {
+        const found = seedPending ? seedMatches?.find((r) => r.id === initialRequestId) : undefined;
+        if (!found) {
+            return;
+        }
+        setReturnRequest(found);
+        setSeedDone(true);
+        setBaseline(null);
+    }, [seedPending, seedMatches, initialRequestId]);
+
+    const onReturnRequestChange = (request: ReturnableRequest | null) => {
+        setReturnRequest(request);
+        setReturnQtys({});
+        setReturnSerialIds(new Set());
+        setSeedDone(true);
+        clearErrors('stock_request_id', 'lots', 'serial_ids');
+    };
 
     // Focus the scan input when entering scan mode
     useEffect(() => {
@@ -170,31 +235,18 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
         setSku(value);
         setQty(1);
         setSerials(isReceive && it?.track_serial ? [''] : []);
-        setTransferSerialIds(new Set());
+        setTransferLotIds(new Set());
+        setReturnRequest(null);
+        setReturnQtys({});
         setReturnSerialIds(new Set());
-        if (kind === 'receive') {
-            setFrom('');
-            setTo(primaryWarehouse(it));
-        } else if (kind === 'transfer') {
-            setFrom(primaryWarehouse(it));
-            setTo('');
-        } else {
-            setFrom(primaryWarehouse(it));
-            setTo(kind === 'return' ? primaryWarehouse(it) : '');
-        }
+        setSeedDone(true);
+        setFieldErrors({});
+        setFrom(kind === 'transfer' ? primaryWarehouse(it) : '');
+        setTo(kind === 'receive' ? primaryWarehouse(it) : '');
     };
 
-    // A from/to control bound to master data (warehouse / vendor) or free text
-    const locationField = (
-        type: 'warehouse' | 'vendor' | 'text',
-        name: string,
-        value: string,
-        onChange: (v: string) => void,
-        placeholder: string,
-    ) => {
-        if (type === 'text') {
-            return <Input name={name} autoComplete="off" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />;
-        }
+    // A receive's supplier / destination control bound to master data
+    const locationField = (type: 'warehouse' | 'vendor', value: string, onChange: (v: string) => void, placeholder: string) => {
         const options = type === 'warehouse' ? warehouses : vendors;
         return (
             <SearchableSelect
@@ -206,10 +258,6 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
             />
         );
     };
-
-    // Which master-data source backs the from/to fields for this movement kind
-    const fromType: 'warehouse' | 'vendor' | 'text' = k === 'receive' ? 'vendor' : k === 'return' ? 'text' : 'warehouse';
-    const toType = 'warehouse' as const;
 
     // Serial slot management
     const setSerialCount = (n: number) => {
@@ -259,35 +307,50 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
     const emptyCount = statuses.filter((s) => s === 'empty').length;
     const serialValid = isSerial && serials.length > 0 && statuses.every((s) => s === 'ok');
 
-    // Transfer validation from the per-warehouse detail
-    const transferIsSerial = isTransfer && !!selected?.track_serial;
+    // Transfer: whole lots of the source warehouse
     const sourceBalance = isTransfer ? (transferItemDetail?.balances?.find((b) => b.warehouse === from)?.qty ?? 0) : 0;
-    const availableTransferSerials = useMemo(
-        () => (transferItemDetail?.serials ?? []).filter((s) => s.status === 'in_stock' && s.warehouse === from),
-        [transferItemDetail, from],
-    );
-    const transferQtyValid = !transferIsSerial && qty >= 1 && qty <= sourceBalance;
-    const transferSerialValid = transferIsSerial && transferSerialIds.size > 0;
+    const sourceLots = useMemo(() => transferLots(transferItemDetail?.lots ?? [], from), [transferItemDetail, from]);
+    const pickedLots = sourceLots.filter((l) => transferLotIds.has(l.id));
+    const transferQty = pickedLots.reduce((sum, l) => sum + l.qty_remaining, 0);
     const sameWarehouse = isTransfer && !!from && from === to;
-    const canSubmitTransfer =
-        isTransfer && !!selected && !!from && !!to && !sameWarehouse && (transferIsSerial ? transferSerialValid : transferQtyValid);
-    const transferQtyError =
-        qty > sourceBalance && sourceBalance > 0 ? t('stock_mv_qty_over_source') : sourceBalance === 0 ? t('stock_mv_source_empty') : undefined;
+    const canSubmitTransfer = isTransfer && !!selected && !!from && !!to && !sameWarehouse && pickedLots.length > 0;
 
-    const returnSerialValid = returnIsSerial && returnSerialIds.size > 0 && !!to;
+    // Return: what goes back into each lot the request drew, or the request's serials
+    const returned = returnLines(returnRequest?.lots ?? [], returnQtys);
+    const returnCount = returnIsSerial ? returnSerialIds.size : returned.total;
+    const canSubmitReturn = isReturn && !!selected && !!returnRequest && returnCount > 0 && (returnIsSerial || !returned.over);
+    // The warehouses a return arrives in: where the touched lots sit now
+    const returnWarehouses = (() => {
+        if (!returnRequest) return [];
+        const pickedLotNos = new Set(returnRequest.serials.filter((s) => returnSerialIds.has(s.id)).map((s) => s.lot_no));
+        return returnRequest.lots
+            .filter((l) => (returnIsSerial ? pickedLotNos.has(l.lot_no) : Number(returnQtys[l.lot_id] || 0) > 0))
+            .map((l) => l.warehouse);
+    })();
+
     // Receive requires a reference, supplier, destination warehouse and unit cost
-    const receiveValid = !isReceive || (!!reference.trim() && !!from.trim() && !!to.trim() && unitCost.trim() !== '');
-    const canSubmit = isTransfer
-        ? canSubmitTransfer
-        : returnIsSerial
-          ? returnSerialValid
-          : !!selected && (isSerial ? serialValid : qty >= 1) && receiveValid;
+    const receiveValid = !!reference.trim() && !!from.trim() && !!to.trim() && unitCost.trim() !== '';
+    const canSubmit = isTransfer ? canSubmitTransfer : isReturn ? canSubmitReturn : !!selected && (isSerial ? serialValid : qty >= 1) && receiveValid;
 
     // Count freeze: the warehouse sides this movement touches (receive/return arrive, transfer leaves and arrives).
-    const countedBy = countLockFor(selected, isTransfer ? [from, to] : [to]);
+    const countedBy = countLockFor(selected, isTransfer ? [from, to] : isReturn ? returnWarehouses : [to]);
     const countedReason = countedBy ? t('stock_refusal_count_in_progress').replace('{reference}', countedBy) : null;
 
-    const snapshot = JSON.stringify([sku, qty, unitCost, from, to, reference, notes, serials, scan, [...transferSerialIds], [...returnSerialIds]]);
+    const snapshot = JSON.stringify([
+        sku,
+        qty,
+        unitCost,
+        from,
+        to,
+        reference,
+        notes,
+        serials,
+        scan,
+        [...transferLotIds],
+        returnRequest?.id ?? null,
+        returnQtys,
+        [...returnSerialIds],
+    ]);
     useEffect(() => {
         if (open && baseline === null) {
             setBaseline(snapshot);
@@ -302,12 +365,10 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
             return `${t('stock_mv_receive')} (${fmtN(okCount)})`;
         }
         if (isTransfer) {
-            return transferIsSerial && transferSerialIds.size > 0
-                ? `${t('stock_mv_transfer')} (${fmtN(transferSerialIds.size)})`
-                : t('stock_mv_transfer');
+            return transferQty > 0 ? t('stock_transfer_submit').replace('{n}', fmtN(transferQty)) : t('stock_mv_transfer');
         }
-        if (returnIsSerial) {
-            return returnSerialIds.size > 0 ? `${t('stock_mv_return')} (${fmtN(returnSerialIds.size)})` : t('stock_mv_return');
+        if (isReturn) {
+            return returnCount > 0 ? t('stock_return_submit').replace('{n}', fmtN(returnCount)) : t('stock_mv_return');
         }
         return k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : t('save');
     })();
@@ -326,47 +387,55 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
         }
     };
 
+    // A refusal tied to a form field shows under it; anything else is a toast
+    const showRefusal = (e: unknown, fields: string[]) => {
+        const text = stockRefusalText(e, t);
+        const field = refusalField(e);
+        if (field && fields.includes(field)) {
+            setFieldErrors({ [field]: text });
+        } else {
+            useToastStore.getState().push(text, 'error');
+        }
+    };
+
     const send = async () => {
         if (!selected || !canSubmit || countedBy !== null) {
             return;
         }
 
-        // Transfer payload: no reference, serial_ids instead of serials
+        // Transfer: the whole lots picked
         if (isTransfer) {
-            const effectiveQty = transferIsSerial ? transferSerialIds.size : qty;
             try {
                 await record.mutateAsync({
                     type: 'transfer',
                     stock_item_id: selected.id,
-                    qty: effectiveQty,
-                    from_label: from.trim() || undefined,
-                    to_label: to.trim() || undefined,
+                    from_label: from,
+                    to_label: to,
+                    lot_ids: pickedLots.map((l) => l.id),
                     notes: notes.trim() || undefined,
-                    serial_ids: transferIsSerial ? [...transferSerialIds] : undefined,
                 });
                 setSaved(true);
                 closeAfterSave();
             } catch (e) {
-                useToastStore.getState().push(stockRefusalText(e, t), 'error');
+                showRefusal(e, TRANSFER_FIELDS);
             }
             return;
         }
 
-        // Serialized return: the chosen issued serials (qty derived from them)
-        if (returnIsSerial) {
+        // Return: against the request, into its lots or with its serials
+        if (isReturn && returnRequest) {
             try {
                 await record.mutateAsync({
                     type: 'return',
                     stock_item_id: selected.id,
-                    qty: returnSerialIds.size,
-                    to_label: to.trim() || undefined,
+                    stock_request_id: returnRequest.id,
+                    ...(returnIsSerial ? { serial_ids: [...returnSerialIds] } : { lots: returned.payload }),
                     notes: notes.trim() || undefined,
-                    serial_ids: [...returnSerialIds],
                 });
                 setSaved(true);
                 closeAfterSave();
             } catch (e) {
-                useToastStore.getState().push(stockRefusalText(e, t), 'error');
+                showRefusal(e, RETURN_FIELDS);
             }
             return;
         }
@@ -375,7 +444,7 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
         const effectiveQty = isSerial ? serials.length : qty;
         try {
             const movement = await record.mutateAsync({
-                type: kind!,
+                type: 'receive',
                 stock_item_id: selected.id,
                 qty: effectiveQty,
                 from_label: from.trim() || undefined,
@@ -383,23 +452,18 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                 reference: reference.trim() || undefined,
                 notes: notes.trim() || undefined,
                 serials: cleanSerials,
-                unit_cost: isReceive && unitCost.trim() !== '' ? Number(unitCost) : undefined,
+                unit_cost: unitCost.trim() !== '' ? Number(unitCost) : undefined,
             });
-            if (isReceive) {
-                // Receipt step: the movement id drives the label PDF
-                setDone({
-                    item: selected,
-                    serials: cleanSerials ?? [],
-                    qty: effectiveQty,
-                    prevStock: selected.current_stock,
-                    movementId: movement.id,
-                    docNo: movement.doc_no,
-                    lot: movement.lot ?? null,
-                });
-            } else {
-                setSaved(true);
-                closeAfterSave();
-            }
+            // Receipt step: the movement id drives the label PDF
+            setDone({
+                item: selected,
+                serials: cleanSerials ?? [],
+                qty: effectiveQty,
+                prevStock: selected.current_stock,
+                movementId: movement.id,
+                docNo: movement.doc_no,
+                lot: movement.lot ?? null,
+            });
         } catch (e) {
             useToastStore.getState().push(stockRefusalText(e, t), 'error');
         }
@@ -532,13 +596,13 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                         <div className="space-y-3">
                             {/* From / arrow / To */}
                             <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                                <Field label={t('stock_from')} required>
+                                <Field label={t('stock_from')} required error={fieldErrors.from_label}>
                                     <SearchableSelect
                                         value={from}
                                         onChange={(v) => {
                                             setFrom(v);
-                                            setTransferSerialIds(new Set());
-                                            setQty(1);
+                                            setTransferLotIds(new Set());
+                                            clearErrors('from_label', 'to_label', 'lot_ids');
                                         }}
                                         placeholder={t('stock_warehouse')}
                                         refresh={refreshWarehouses}
@@ -550,10 +614,13 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                     <ArrowRight className="text-muted-foreground h-4 w-4" aria-hidden />
                                 </div>
 
-                                <Field label={t('stock_to')} required>
+                                <Field label={t('stock_to')} required error={fieldErrors.to_label}>
                                     <SearchableSelect
                                         value={to}
-                                        onChange={setTo}
+                                        onChange={(v) => {
+                                            setTo(v);
+                                            clearErrors('to_label');
+                                        }}
                                         placeholder={t('stock_warehouse')}
                                         refresh={refreshWarehouses}
                                         options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
@@ -584,121 +651,48 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                 </div>
                             )}
 
-                            {/* Qty-only transfer */}
-                            {!selected.track_serial && from && !sameWarehouse && (
-                                <Field label={t('stock_qty')} required error={transferQtyError}>
-                                    <Input
-                                        name="qty"
-                                        inputMode="numeric"
-                                        autoComplete="off"
-                                        value={qty || ''}
-                                        disabled={sourceBalance === 0}
-                                        onChange={(e) => setQty(Math.min(sourceBalance, Number(digitsOnly(e.target.value))))}
-                                    />
-                                </Field>
-                            )}
-
-                            {/* Serialized transfer: pick list */}
-                            {selected.track_serial && from && !sameWarehouse && (
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground text-xs font-semibold">{t('stock_mv_pick_transfer_serials')}</span>
-                                        {availableTransferSerials.length > 0 && (
-                                            <button
-                                                type="button"
-                                                className="text-brand hover:text-brand/80 min-h-6 px-1 text-xs font-medium transition-colors"
-                                                onClick={() => {
-                                                    if (transferSerialIds.size === availableTransferSerials.length) {
-                                                        setTransferSerialIds(new Set());
-                                                    } else {
-                                                        setTransferSerialIds(new Set(availableTransferSerials.map((s) => s.id)));
-                                                    }
-                                                }}
-                                            >
-                                                {transferSerialIds.size === availableTransferSerials.length
-                                                    ? t('stock_return_select_none')
-                                                    : t('stock_return_select_all')}
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {availableTransferSerials.length > 0 ? (
-                                        <div className="max-h-52 space-y-1 overflow-y-auto">
-                                            {availableTransferSerials.map((s) => {
-                                                const checked = transferSerialIds.has(s.id);
-                                                return (
-                                                    <label
-                                                        key={s.id}
-                                                        className={cn(
-                                                            'flex cursor-pointer items-center gap-2.5 rounded-md border px-2.5 py-2 transition-colors',
-                                                            checked ? 'border-brand/40 bg-brand/5' : 'border-border hover:bg-muted/50',
-                                                        )}
-                                                    >
-                                                        <input
-                                                            name="transfer_serials"
-                                                            type="checkbox"
-                                                            className="accent-brand h-4 w-4 shrink-0 rounded"
-                                                            checked={checked}
-                                                            onChange={() => {
-                                                                setTransferSerialIds((prev) => {
-                                                                    const next = new Set(prev);
-                                                                    if (next.has(s.id)) {
-                                                                        next.delete(s.id);
-                                                                    } else {
-                                                                        next.add(s.id);
-                                                                    }
-                                                                    return next;
-                                                                });
-                                                            }}
-                                                        />
-                                                        <span className="text-sm" translate="no">
-                                                            {s.serial}
-                                                        </span>
-                                                        {checked && <Check className="text-brand ml-auto h-3.5 w-3.5" aria-hidden />}
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <EmptyState
-                                            kind="pick"
-                                            title={t('stock_empty_movement_transfer_serials').replace('{warehouse}', from || '—')}
-                                            hint={t('stock_empty_movement_transfer_serials_hint')}
-                                            className="min-h-0 rounded-md border border-dashed py-4"
-                                        />
-                                    )}
-
-                                    {/* Transfer serial summary */}
-                                    {availableTransferSerials.length > 0 && (
-                                        <div className="bg-muted/50 rounded-md p-2.5">
-                                            <div className="bg-muted h-1.5 overflow-hidden rounded-full">
-                                                <span
-                                                    className="bg-brand block h-full rounded-full"
-                                                    style={{
-                                                        width: `${availableTransferSerials.length ? (transferSerialIds.size / availableTransferSerials.length) * 100 : 0}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="mt-1.5 flex items-center gap-x-3 text-xs">
-                                                <span>
-                                                    <b>{fmtN(transferSerialIds.size)}</b>/{fmtN(availableTransferSerials.length)}{' '}
-                                                    {t('stock_mv_selected')}
-                                                </span>
-                                                {transferSerialIds.size > 0 && (
-                                                    <span className="text-brand flex items-center gap-1">
-                                                        <Check className="h-3 w-3" aria-hidden />
-                                                        {t('stock_mv_ready_to_move')}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                            {/* Whole lots to move */}
+                            {from && !sameWarehouse && (
+                                <TransferLotList
+                                    lots={sourceLots}
+                                    from={from}
+                                    to={to}
+                                    unit={selected.unit}
+                                    isSerial={selected.track_serial}
+                                    selected={transferLotIds}
+                                    onChange={(ids) => {
+                                        setTransferLotIds(ids);
+                                        clearErrors('lot_ids');
+                                    }}
+                                    error={fieldErrors.lot_ids}
+                                />
                             )}
                         </div>
                     )}
 
-                    {/* Receive / return */}
+                    {/* Return */}
+                    {isReturn && selected && (
+                        <ReturnRequestFields
+                            itemId={selected.id}
+                            unit={selected.unit}
+                            isSerial={selected.track_serial}
+                            request={returnRequest}
+                            onRequestChange={onReturnRequestChange}
+                            qtys={returnQtys}
+                            onQtysChange={(qtys) => {
+                                setReturnQtys(qtys);
+                                clearErrors('lots');
+                            }}
+                            serialIds={returnSerialIds}
+                            onSerialIdsChange={(ids) => {
+                                setReturnSerialIds(ids);
+                                clearErrors('serial_ids');
+                            }}
+                            errors={fieldErrors}
+                        />
+                    )}
+
+                    {/* Receive */}
 
                     {/* Tracking badge — receive only */}
                     {selected && isReceive && (
@@ -722,10 +716,10 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                         </div>
                     )}
 
-                    {/* Reference + From — receive only */}
-                    {!isTransfer && !isReturn && (
+                    {/* Reference + Supplier — receive only */}
+                    {isReceive && (
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label={t('stock_reference')} required={isReceive}>
+                            <Field label={t('stock_reference')} required>
                                 <Input
                                     name="reference"
                                     autoComplete="off"
@@ -735,16 +729,16 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                     placeholder={t('stock_reference_ph')}
                                 />
                             </Field>
-                            <Field label={k === 'receive' ? t('stock_supplier') : t('stock_from')} required={isReceive}>
-                                {locationField(fromType, 'from_label', from, setFrom, k === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
+                            <Field label={t('stock_supplier')} required>
+                                {locationField('vendor', from, setFrom, t('stock_supplier'))}
                             </Field>
                         </div>
                     )}
 
-                    {/* Destination — every non-transfer movement */}
-                    {!isTransfer && (
-                        <Field label={t('stock_to')} required={isReceive}>
-                            {locationField(toType, 'to_label', to, setTo, t('stock_warehouse'))}
+                    {/* Destination — receive only */}
+                    {isReceive && (
+                        <Field label={t('stock_to')} required>
+                            {locationField('warehouse', to, setTo, t('stock_warehouse'))}
                         </Field>
                     )}
 
@@ -755,9 +749,9 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                         </Field>
                     )}
 
-                    {/* Quantity-only capture — receive/return */}
-                    {selected && !isSerial && !isTransfer && !returnIsSerial && (
-                        <Field label={isReceive ? t('stock_qty_received') : t('stock_qty')} required>
+                    {/* Quantity-only capture — receive */}
+                    {selected && isReceive && !isSerial && (
+                        <Field label={t('stock_qty_received')} required>
                             <Input
                                 name="qty"
                                 inputMode="numeric"
@@ -766,78 +760,6 @@ export function MovementDrawer({ kind, onClose }: { kind: MovementKind | null; o
                                 onChange={(e) => setQty(Number(digitsOnly(e.target.value)))}
                             />
                         </Field>
-                    )}
-
-                    {/* Serialized return — pick the issued serials coming back */}
-                    {returnIsSerial && selected && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground text-xs font-semibold">{t('stock_return_pick')}</span>
-                                {availableReturnSerials.length > 0 && (
-                                    <button
-                                        type="button"
-                                        className="text-brand hover:text-brand/80 min-h-6 px-1 text-xs font-medium transition-colors"
-                                        onClick={() => {
-                                            if (returnSerialIds.size === availableReturnSerials.length) {
-                                                setReturnSerialIds(new Set());
-                                            } else {
-                                                setReturnSerialIds(new Set(availableReturnSerials.map((s) => s.id)));
-                                            }
-                                        }}
-                                    >
-                                        {returnSerialIds.size === availableReturnSerials.length
-                                            ? t('stock_return_select_none')
-                                            : t('stock_return_select_all')}
-                                    </button>
-                                )}
-                            </div>
-
-                            {availableReturnSerials.length > 0 ? (
-                                <div className="max-h-52 space-y-1 overflow-y-auto">
-                                    {availableReturnSerials.map((s) => {
-                                        const checked = returnSerialIds.has(s.id);
-                                        return (
-                                            <label
-                                                key={s.id}
-                                                className={cn(
-                                                    'flex cursor-pointer items-center gap-2.5 rounded-md border px-2.5 py-2 transition-colors',
-                                                    checked ? 'border-brand/40 bg-brand/5' : 'border-border hover:bg-muted/50',
-                                                )}
-                                            >
-                                                <input
-                                                    name="return_serials"
-                                                    type="checkbox"
-                                                    className="accent-brand h-4 w-4 shrink-0 rounded"
-                                                    checked={checked}
-                                                    onChange={() => {
-                                                        setReturnSerialIds((prev) => {
-                                                            const next = new Set(prev);
-                                                            if (next.has(s.id)) {
-                                                                next.delete(s.id);
-                                                            } else {
-                                                                next.add(s.id);
-                                                            }
-                                                            return next;
-                                                        });
-                                                    }}
-                                                />
-                                                <span className="text-sm" translate="no">
-                                                    {s.serial}
-                                                </span>
-                                                {checked && <Check className="text-brand ml-auto h-3.5 w-3.5" aria-hidden />}
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <EmptyState
-                                    kind="pick"
-                                    title={t('stock_empty_movement_return_serials')}
-                                    hint={t('stock_empty_movement_return_serials_hint')}
-                                    className="min-h-0 rounded-md border border-dashed py-4"
-                                />
-                            )}
-                        </div>
                     )}
 
                     {/* Serialized capture — receive only */}
