@@ -104,7 +104,9 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     // Activity heartbeat from the browser: the one GET the idle timeout counts as activity
     Route::get('session/ping', fn () => response()->json(['ok' => true]))
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.session.ping');
-    Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
+    // Language and theme picked on the login screen are saved during a forced password change too
+    Route::put('preferences', [AuthController::class, 'updatePreferences'])
+        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.preferences');
     // Profile Devices tab — the caller's own devices and last login events
     Route::get('me/devices', [MyDeviceController::class, 'index'])->name('api.me.devices');
     Route::delete('me/devices/{device}', [MyDeviceController::class, 'destroy'])->whereNumber('device')->name('api.me.devices.destroy');

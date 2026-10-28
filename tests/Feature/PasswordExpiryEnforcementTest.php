@@ -70,6 +70,15 @@ class PasswordExpiryEnforcementTest extends TestCase
         $this->actingAs($user)->getJson('/api/session/ping')->assertOk();
     }
 
+    public function test_it_can_still_save_the_language_picked_on_the_login_screen(): void
+    {
+        $user = $this->user(['must_change_password' => true, 'preferences' => ['lang' => 'en']]);
+
+        $this->actingAs($user)->putJson('/api/preferences', ['lang' => 'th'])->assertOk();
+
+        $this->assertSame('th', $user->fresh()->preferences['lang']);
+    }
+
     public function test_changing_the_password_lifts_the_block(): void
     {
         $user = $this->user(['must_change_password' => true]);
