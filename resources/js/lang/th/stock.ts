@@ -481,7 +481,7 @@ export const stock: Dict = {
 
     // fulfil dialog และใบจ่ายของ — จ่ายของบอก Lot
     stock_fulfil_from_warehouse: 'จ่ายจากคลัง',
-    stock_fulfil_has_n: 'มี {n} ชิ้น',
+    stock_fulfil_has_n: 'มี {n} {unit}',
     stock_fulfil_asked: 'ขอ {n} {unit}',
     stock_fulfil_pick_lots: 'หยิบจากสติกเกอร์ Lot นี้ (เก่าสุดก่อน)',
     stock_fulfil_col_left_in_lot: 'เหลือใน Lot',

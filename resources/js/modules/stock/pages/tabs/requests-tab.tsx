@@ -21,7 +21,7 @@ import { digitsOnly } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
-import type { StockRequest, StockRequestStatus } from '@/shared/types';
+import type { IssueResult, StockRequest, StockRequestStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
@@ -29,10 +29,13 @@ import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { ArrowUpFromLine, Ban, Check, FilePlus2, Filter, Search, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
+import { FulfilDone } from '../../components/fulfil-done';
+import { LotPickBox } from '../../components/lot-pick-box';
 import { RequestRowMenu } from '../../components/request-row-menu';
 import { NEW_REQUEST_DETAIL, useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { allocKey, greedyAlloc, prunePicks, refillAlloc } from '../../lib/fulfil-alloc';
+import type { PickableLot } from '../../lib/lot-pick';
 import { stockRefusalText } from '../../lib/refusal';
 
 // Fulfilling takes stock out: the issue colour of the movement list
@@ -101,6 +104,8 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const fulfillItemQuery = useStockItem(fulfillReq?.stock_item_id ?? null, fulfillOpen);
     // Picks a refresh took away, said once above the picking area until the user picks again
     const [gone, setGone] = useState<{ serials: number; warehouses: string[] } | null>(null);
+    // After a fulfil the dialog stays open on the ISS summary; `at` tells a refreshed item from the one read before
+    const [fulfilDone, setFulfilDone] = useState<{ issue: IssueResult; prevStock: number; at: number } | null>(null);
     const fulfillItem = fulfillItemQuery.data;
     useRefetchOnOpen(fulfillOpen, fulfillItemQuery);
 
@@ -115,7 +120,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     });
     // Fresh balances refill the allocation while it is still the seeded one; a changed allocation stays the user's
     useEffect(() => {
-        if (!fulfillOpen || !fulfillItem || !fulfillReq) return;
+        if (!fulfillOpen || !fulfillItem || !fulfillReq || fulfilDone) return;
         const balances = fulfillItem.balances ?? [];
         const refill = refillAlloc(alloc, seedAlloc, balances, fulfillReq.qty);
         if (refill) {
@@ -326,6 +331,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             title={t('stock_fulfill')}
                             onClick={() => {
                                 setFulfillReq(r);
+                                setFulfilDone(null);
                                 setFulfillOpen(true);
                             }}
                         >
@@ -378,8 +384,25 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     };
     const fulfillDirty = issueSerialIds.length > 0 || allocKey(alloc) !== allocKey(seedAlloc);
-    const guardFulfillClose = useDiscardGuard(fulfillOpen && fulfillDirty);
+    const guardFulfillClose = useDiscardGuard(fulfillOpen && !fulfilDone && fulfillDirty);
     const closeFulfill = () => setFulfillOpen(false);
+    // The item's open lots in the shape the lot preview reads
+    const fulfillLots: PickableLot[] = (fulfillItem?.lots ?? []).map((l) => ({
+        lot_id: l.id,
+        lot_no: l.lot_no,
+        warehouse: l.warehouse,
+        received_at: l.received_at ?? '',
+        remaining: l.qty_remaining,
+    }));
+    const lotNoById = new Map((fulfillItem?.lots ?? []).map((l) => [l.id, l.lot_no]));
+    const serialLotNo = (lotId: number | null | undefined) => (lotId != null ? (lotNoById.get(lotId) ?? null) : null);
+    const serialsShowLots = fulfillInStock.some((s) => serialLotNo(s.stock_lot_id) !== null);
+    // New on-hand: the refreshed item once it lands, until then the stock read before the fulfil less what went out
+    const fulfilNewOnHand = fulfilDone
+        ? fulfillItem && fulfillItemQuery.dataUpdatedAt > fulfilDone.at
+            ? fulfillItem.current_stock
+            : fulfilDone.prevStock - (fulfillReq?.qty ?? 0)
+        : 0;
 
     const setAllocFor = (warehouse: string, max: number, raw: number) => {
         setGone(null);
@@ -451,212 +474,274 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
             <Dialog open={fulfillOpen} onOpenChange={(o) => !o && guardFulfillClose(closeFulfill)}>
                 <FormDialogContent>
-                    <FocusDialogHeader
-                        icon={ArrowUpFromLine}
-                        accent={FULFIL_ACCENT}
-                        eyebrow={t('stock')}
-                        title={t('stock_fulfill')}
-                        code={fulfillReq ? requestNo(fulfillReq) : undefined}
-                        srDescription={t('stock_fulfill_desc')}
-                    />
-                    <DialogBody>
-                        {fulfillReq && (
-                            <div className="space-y-4">
-                                <div className="border-border rounded-lg border p-3">
-                                    <div className="text-sm font-semibold">{fulfillReq.item_name}</div>
-                                    <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
-                                        <span>{fulfillReq.sku}</span>
-                                        <span>
-                                            {t('stock_requester')}: {pairOf(fulfillReq.requester_name, fulfillReq.requester_name_th)}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div role="status" aria-live="polite">
-                                    {gone && (
-                                        <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-                                            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                                            <span>
-                                                {gone.serials > 0 && t('stock_fulfil_serials_gone').replace('{n}', fmtN(gone.serials))}
-                                                {gone.serials > 0 && gone.warehouses.length > 0 && ' '}
-                                                {gone.warehouses.length > 0 &&
-                                                    t('stock_fulfil_wh_gone').replace('{names}', gone.warehouses.join(', '))}
-                                            </span>
-                                        </p>
-                                    )}
-                                </div>
-                                {/* Quantity-only: spread the issue across warehouses (greedy pre-fill, editable). */}
-                                {!fulfillSerialized && (
-                                    <div className="border-border overflow-hidden rounded-lg border">
-                                        <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3 py-2')}>
-                                            <span className={EYEBROW}>{t('stock_issue_from')}</span>
-                                            <span
-                                                aria-live="polite"
-                                                className={cn(
-                                                    'text-xs tabular-nums',
-                                                    fulfillReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
-                                                )}
-                                            >
-                                                {fmtN(allocTotal)}/{fmtN(fulfillReq.qty)}
-                                            </span>
-                                        </div>
-                                        {fulfillBalances.length === 0 ? (
-                                            <EmptyState
-                                                title={t('stock_empty_requests_fulfil_balances')}
-                                                hint={t('stock_empty_requests_fulfil_balances_hint')}
-                                                className="min-h-0 py-4"
-                                            />
-                                        ) : (
-                                            fulfillBalances.map((b) => (
-                                                <div
-                                                    key={b.warehouse}
-                                                    className="border-border/60 flex items-center gap-3 border-b px-3 py-2 last:border-0"
-                                                >
-                                                    <span className="flex-1 text-sm">{b.warehouse}</span>
-                                                    <span className="text-muted-foreground text-xs tabular-nums">
-                                                        {fmtN(b.qty)} {fulfillItem?.unit}
-                                                    </span>
-                                                    <Input
-                                                        inputMode="numeric"
-                                                        name={`alloc-${b.warehouse}`}
-                                                        autoComplete="off"
-                                                        aria-label={b.warehouse}
-                                                        value={alloc[b.warehouse] ?? 0}
-                                                        onChange={(e) => setAllocFor(b.warehouse, b.qty, Number(digitsOnly(e.target.value)))}
-                                                        className="h-8 w-20 text-right tabular-nums"
-                                                    />
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                )}
-
-                                {totalAvailable < fulfillReq.qty && (
-                                    <FormErrorBanner message={`${t('stock_insufficient')} (${fmtN(totalAvailable)})`} />
-                                )}
-
-                                {/* Serialized: pick exactly the units (serials) that go out — across any warehouse. */}
-                                {fulfillSerialized && (
-                                    <div className="border-border overflow-hidden rounded-lg border">
-                                        <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3 py-2')}>
-                                            <span className={EYEBROW}>{t('stock_pick_serials')}</span>
-                                            <div className="flex items-center gap-2.5">
-                                                <button
-                                                    type="button"
-                                                    onClick={pickFifo}
-                                                    className="text-brand hover:text-brand/80 inline-flex min-h-6 items-center px-1 text-xs font-medium transition-colors"
-                                                >
-                                                    {t('stock_pick_fifo')} ({fmtN(fulfillReq.qty)})
-                                                </button>
-                                                <span
-                                                    aria-live="polite"
-                                                    className={cn(
-                                                        'text-xs tabular-nums',
-                                                        fulfillReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
-                                                    )}
-                                                >
-                                                    {fmtN(issueSerialIds.length)}/{fmtN(fulfillReq.qty)}
+                    {fulfilDone && fulfillReq ? (
+                        <FulfilDone
+                            requestId={fulfillReq.id}
+                            requestNo={requestNo(fulfillReq)}
+                            itemName={fulfillReq.item_name}
+                            qty={fulfillReq.qty}
+                            newOnHand={fulfilNewOnHand}
+                            recipient={pairOf(fulfillReq.requester_name, fulfillReq.requester_name_th) ?? fulfillReq.requester_name}
+                            issue={fulfilDone.issue}
+                            onViewRequest={closeFulfill}
+                            onDone={closeFulfill}
+                        />
+                    ) : (
+                        <>
+                            <FocusDialogHeader
+                                icon={ArrowUpFromLine}
+                                accent={FULFIL_ACCENT}
+                                eyebrow={t('stock')}
+                                title={t('stock_fulfill')}
+                                code={fulfillReq ? requestNo(fulfillReq) : undefined}
+                                srDescription={t('stock_fulfill_desc')}
+                            />
+                            <DialogBody>
+                                {fulfillReq && (
+                                    <div className="space-y-4">
+                                        <div className="border-border rounded-lg border p-3">
+                                            <div className="text-sm font-semibold">{fulfillReq.item_name}</div>
+                                            <div className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
+                                                <span>{fulfillReq.sku}</span>
+                                                <span>
+                                                    {t('stock_requester')} {pairOf(fulfillReq.requester_name, fulfillReq.requester_name_th)}
+                                                </span>
+                                                <span>
+                                                    {t('stock_fulfil_asked')
+                                                        .replace('{n}', fmtN(fulfillReq.qty))
+                                                        .replace('{unit}', fulfillReq.unit ?? fulfillItem?.unit ?? '')}
                                                 </span>
                                             </div>
                                         </div>
-                                        {/* Warehouse filter — only when serials span more than one warehouse. */}
-                                        {Object.keys(serialWhCounts).length > 1 && (
-                                            <div className="border-border/60 flex flex-wrap gap-1.5 border-b px-3 py-2">
-                                                {[['all', fulfillInStock.length] as const, ...Object.entries(serialWhCounts)].map(([wh, n]) => (
-                                                    <button
-                                                        key={wh}
-                                                        type="button"
-                                                        aria-pressed={serialWh === wh}
-                                                        onClick={() => setSerialWh(wh as string)}
-                                                        className={cn(
-                                                            'inline-flex min-h-6 items-center rounded-full border px-2 py-1 text-[11px] font-medium transition-colors',
-                                                            serialWh === wh
-                                                                ? 'border-brand bg-brand/10 text-brand'
-                                                                : 'border-border text-muted-foreground hover:bg-accent/50',
-                                                        )}
-                                                    >
-                                                        {wh === 'all' ? t('stock_all_warehouses') : (wh as string)}{' '}
-                                                        <span className="opacity-70">{fmtN(n)}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <div className="max-h-48 overflow-auto overscroll-contain">
-                                            {visibleSerials.length === 0 ? (
-                                                <EmptyState
-                                                    kind="pick"
-                                                    title={t('stock_empty_requests_fulfil_serials')}
-                                                    hint={t('stock_empty_requests_fulfil_serials_hint')}
-                                                    className="min-h-0 py-4"
-                                                />
-                                            ) : (
-                                                visibleSerials.map((s) => {
-                                                    const checked = issueSerialIds.includes(s.id);
-                                                    // Block extra picks once the requested qty is reached.
-                                                    const atLimit = !checked && issueSerialIds.length >= fulfillReq.qty;
-                                                    return (
-                                                        <label
-                                                            key={s.id}
-                                                            className={cn(
-                                                                'border-border/60 flex w-full items-center gap-3 border-b px-3 py-2 text-left transition-colors last:border-0',
-                                                                atLimit ? 'cursor-not-allowed opacity-40' : 'hover:bg-accent/40 cursor-pointer',
-                                                                checked && 'bg-brand/5',
-                                                            )}
-                                                        >
-                                                            <input
-                                                                name="issue_serials"
-                                                                type="checkbox"
-                                                                className="accent-brand h-4 w-4 shrink-0 rounded"
-                                                                checked={checked}
-                                                                disabled={atLimit}
-                                                                onChange={() => toggleIssueSerial(s.id)}
-                                                            />
-                                                            <span className="flex-1 text-xs">{s.serial}</span>
-                                                            <span className="text-muted-foreground text-[11px]">{s.warehouse ?? '—'}</span>
-                                                            {s.received_at && (
-                                                                <span className="text-muted-foreground text-[11px]">{fmt.date(s.received_at)}</span>
-                                                            )}
-                                                        </label>
-                                                    );
-                                                })
+
+                                        <div role="status" aria-live="polite">
+                                            {gone && (
+                                                <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                                    <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                    <span>
+                                                        {gone.serials > 0 && t('stock_fulfil_serials_gone').replace('{n}', fmtN(gone.serials))}
+                                                        {gone.serials > 0 && gone.warehouses.length > 0 && ' '}
+                                                        {gone.warehouses.length > 0 &&
+                                                            t('stock_fulfil_wh_gone').replace('{names}', gone.warehouses.join(', '))}
+                                                    </span>
+                                                </p>
                                             )}
                                         </div>
+                                        {/* Quantity-only: spread the issue across warehouses (greedy pre-fill, editable). */}
+                                        {!fulfillSerialized && (
+                                            <div className="border-border overflow-hidden rounded-lg border">
+                                                <div
+                                                    className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3 py-2')}
+                                                >
+                                                    <span className={EYEBROW}>{t('stock_issue_from')}</span>
+                                                    <span
+                                                        aria-live="polite"
+                                                        className={cn(
+                                                            'text-xs tabular-nums',
+                                                            fulfillReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
+                                                        )}
+                                                    >
+                                                        {fmtN(allocTotal)}/{fmtN(fulfillReq.qty)}
+                                                    </span>
+                                                </div>
+                                                {fulfillBalances.length === 0 ? (
+                                                    <EmptyState
+                                                        title={t('stock_empty_requests_fulfil_balances')}
+                                                        hint={t('stock_empty_requests_fulfil_balances_hint')}
+                                                        className="min-h-0 py-4"
+                                                    />
+                                                ) : (
+                                                    fulfillBalances.map((b) => (
+                                                        <div key={b.warehouse} className="border-border/60 border-b last:border-0">
+                                                            <div className="flex items-center gap-3 px-3 py-2">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="truncate text-sm font-medium">{b.warehouse}</div>
+                                                                    <div className="text-muted-foreground text-xs tabular-nums">
+                                                                        {t('stock_fulfil_has_n')
+                                                                            .replace('{n}', fmtN(b.qty))
+                                                                            .replace('{unit}', fulfillItem?.unit ?? '')}
+                                                                    </div>
+                                                                </div>
+                                                                <Input
+                                                                    inputMode="numeric"
+                                                                    name={`alloc-${b.warehouse}`}
+                                                                    autoComplete="off"
+                                                                    aria-label={b.warehouse}
+                                                                    value={alloc[b.warehouse] ?? 0}
+                                                                    onChange={(e) =>
+                                                                        setAllocFor(b.warehouse, b.qty, Number(digitsOnly(e.target.value)))
+                                                                    }
+                                                                    className="h-8 w-20 text-right tabular-nums"
+                                                                />
+                                                            </div>
+                                                            {(alloc[b.warehouse] ?? 0) > 0 && (
+                                                                <LotPickBox
+                                                                    warehouse={b.warehouse}
+                                                                    qty={alloc[b.warehouse] ?? 0}
+                                                                    lots={fulfillLots}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                        {!fulfillSerialized && fulfillBalances.length > 0 && (
+                                            <p className="text-muted-foreground text-xs">{t('stock_fulfil_lot_note')}</p>
+                                        )}
+
+                                        {totalAvailable < fulfillReq.qty && (
+                                            <FormErrorBanner message={`${t('stock_insufficient')} (${fmtN(totalAvailable)})`} />
+                                        )}
+
+                                        {/* Serialized: pick exactly the units (serials) that go out — across any warehouse. */}
+                                        {fulfillSerialized && (
+                                            <div className="border-border overflow-hidden rounded-lg border">
+                                                <div
+                                                    className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-3 py-2')}
+                                                >
+                                                    <span className={EYEBROW}>{t('stock_pick_serials')}</span>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={pickFifo}
+                                                            className="text-brand hover:text-brand/80 inline-flex min-h-6 items-center px-1 text-xs font-medium transition-colors"
+                                                        >
+                                                            {t('stock_pick_fifo')} ({fmtN(fulfillReq.qty)})
+                                                        </button>
+                                                        <span
+                                                            aria-live="polite"
+                                                            className={cn(
+                                                                'text-xs tabular-nums',
+                                                                fulfillReady ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground',
+                                                            )}
+                                                        >
+                                                            {fmtN(issueSerialIds.length)}/{fmtN(fulfillReq.qty)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {/* Warehouse filter — only when serials span more than one warehouse. */}
+                                                {Object.keys(serialWhCounts).length > 1 && (
+                                                    <div className="border-border/60 flex flex-wrap gap-1.5 border-b px-3 py-2">
+                                                        {[['all', fulfillInStock.length] as const, ...Object.entries(serialWhCounts)].map(
+                                                            ([wh, n]) => (
+                                                                <button
+                                                                    key={wh}
+                                                                    type="button"
+                                                                    aria-pressed={serialWh === wh}
+                                                                    onClick={() => setSerialWh(wh as string)}
+                                                                    className={cn(
+                                                                        'inline-flex min-h-6 items-center rounded-full border px-2 py-1 text-[11px] font-medium transition-colors',
+                                                                        serialWh === wh
+                                                                            ? 'border-brand bg-brand/10 text-brand'
+                                                                            : 'border-border text-muted-foreground hover:bg-accent/50',
+                                                                    )}
+                                                                >
+                                                                    {wh === 'all' ? t('stock_all_warehouses') : (wh as string)}{' '}
+                                                                    <span className="opacity-70">{fmtN(n)}</span>
+                                                                </button>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div className="max-h-48 overflow-auto overscroll-contain">
+                                                    {visibleSerials.length === 0 ? (
+                                                        <EmptyState
+                                                            kind="pick"
+                                                            title={t('stock_empty_requests_fulfil_serials')}
+                                                            hint={t('stock_empty_requests_fulfil_serials_hint')}
+                                                            className="min-h-0 py-4"
+                                                        />
+                                                    ) : (
+                                                        visibleSerials.map((s) => {
+                                                            const checked = issueSerialIds.includes(s.id);
+                                                            // Block extra picks once the requested qty is reached.
+                                                            const atLimit = !checked && issueSerialIds.length >= fulfillReq.qty;
+                                                            return (
+                                                                <label
+                                                                    key={s.id}
+                                                                    className={cn(
+                                                                        'border-border/60 flex w-full items-center gap-3 border-b px-3 py-2 text-left transition-colors last:border-0',
+                                                                        atLimit
+                                                                            ? 'cursor-not-allowed opacity-40'
+                                                                            : 'hover:bg-accent/40 cursor-pointer',
+                                                                        checked && 'bg-brand/5',
+                                                                    )}
+                                                                >
+                                                                    <input
+                                                                        name="issue_serials"
+                                                                        type="checkbox"
+                                                                        className="accent-brand h-4 w-4 shrink-0 rounded"
+                                                                        checked={checked}
+                                                                        disabled={atLimit}
+                                                                        onChange={() => toggleIssueSerial(s.id)}
+                                                                    />
+                                                                    <span className="flex-1 text-xs">{s.serial}</span>
+                                                                    {serialLotNo(s.stock_lot_id) && (
+                                                                        <span className="text-[11px] font-medium tabular-nums" translate="no">
+                                                                            {serialLotNo(s.stock_lot_id)}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-muted-foreground text-[11px]">{s.warehouse ?? '—'}</span>
+                                                                    {s.received_at && (
+                                                                        <span className="text-muted-foreground text-[11px]">
+                                                                            {fmt.date(s.received_at)}
+                                                                        </span>
+                                                                    )}
+                                                                </label>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {fulfillSerialized && serialsShowLots && (
+                                            <p className="text-muted-foreground text-xs">{t('stock_fulfil_serial_lot_note')}</p>
+                                        )}
                                     </div>
                                 )}
-                            </div>
-                        )}
-                    </DialogBody>
-                    <DialogFooterBar>
-                        <Button variant="outline" onClick={() => guardFulfillClose(closeFulfill)} disabled={fulfill.isPending}>
-                            {t('cancel')}
-                        </Button>
-                        <DisabledReason
-                            reason={fulfillCountedBy ? t('stock_refusal_count_in_progress').replace('{reference}', fulfillCountedBy) : null}
-                            label={t('stock_fulfill_deduct')}
-                        >
-                            <Button
-                                disabled={!fulfillReq || !fulfillReady || fulfill.isPending || fulfillCountedBy !== null}
-                                onClick={() =>
-                                    fulfillReq &&
-                                    fulfill.mutate(
-                                        {
-                                            id: fulfillReq.id,
-                                            serialIds: fulfillSerialized ? issueSerialIds : undefined,
-                                            allocations: fulfillSerialized
-                                                ? undefined
-                                                : Object.entries(alloc)
-                                                      .filter(([, q]) => q > 0)
-                                                      .map(([warehouse, qty]) => ({ warehouse, qty })),
-                                        },
-                                        { onError, onSuccess: () => setFulfillOpen(false) },
-                                    )
-                                }
-                            >
-                                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
-                                {t('stock_fulfill_deduct')}
-                            </Button>
-                        </DisabledReason>
-                    </DialogFooterBar>
+                            </DialogBody>
+                            <DialogFooterBar>
+                                <Button variant="outline" onClick={() => guardFulfillClose(closeFulfill)} disabled={fulfill.isPending}>
+                                    {t('cancel')}
+                                </Button>
+                                <DisabledReason
+                                    reason={fulfillCountedBy ? t('stock_refusal_count_in_progress').replace('{reference}', fulfillCountedBy) : null}
+                                    label={t('stock_fulfill_deduct')}
+                                >
+                                    <Button
+                                        disabled={!fulfillReq || !fulfillReady || fulfill.isPending || fulfillCountedBy !== null}
+                                        onClick={() =>
+                                            fulfillReq &&
+                                            fulfill.mutate(
+                                                {
+                                                    id: fulfillReq.id,
+                                                    serialIds: fulfillSerialized ? issueSerialIds : undefined,
+                                                    allocations: fulfillSerialized
+                                                        ? undefined
+                                                        : Object.entries(alloc)
+                                                              .filter(([, q]) => q > 0)
+                                                              .map(([warehouse, qty]) => ({ warehouse, qty })),
+                                                },
+                                                {
+                                                    onError,
+                                                    onSuccess: (res) =>
+                                                        setFulfilDone({
+                                                            issue: res.issue,
+                                                            prevStock: fulfillItem?.current_stock ?? 0,
+                                                            at: Date.now(),
+                                                        }),
+                                                },
+                                            )
+                                        }
+                                    >
+                                        <ArrowUpFromLine className="h-4 w-4" aria-hidden />
+                                        {t('stock_fulfill_deduct')}
+                                    </Button>
+                                </DisabledReason>
+                            </DialogFooterBar>
+                        </>
+                    )}
                 </FormDialogContent>
             </Dialog>
         </div>
