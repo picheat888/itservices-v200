@@ -11,9 +11,10 @@ import { stock as th } from '../../resources/js/lang/th/stock.ts';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 const tab = read('resources/js/modules/stock/pages/tabs/requests-tab.tsx');
+const menu = read('resources/js/modules/stock/components/request-row-menu.tsx');
 
-test('the row menu shows only where the server allows a cancel', () => {
-    assert.match(tab, /\{r\.can_cancel && <RequestRowMenu /);
+test('the row menu offers cancel only where the server allows it', () => {
+    assert.match(menu, /\{request\.can_cancel && \(/);
     assert.match(tab, /cancel\.mutateAsync\(r\.id\)/);
 });
 

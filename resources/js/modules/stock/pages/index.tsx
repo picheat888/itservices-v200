@@ -236,6 +236,12 @@ export default function StockPage() {
     const openAdd = () => dialogs.open({ add: '1' });
     const closeAdd = () => dialogs.close(['add']);
     const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
+    // Return drawer opened from a request detail starts with that request chosen
+    const [returnRequestId, setReturnRequestId] = useState<number | undefined>(undefined);
+    const returnFromRequest = (requestId: number) => {
+        setReturnRequestId(requestId);
+        setMoveKind('return');
+    };
     const [reqOpen, setReqOpen] = useState(false);
     const [scanOpen, setScanOpen] = useState(false);
 
@@ -813,7 +819,7 @@ export default function StockPage() {
                     )}
 
                     {tab === 'movements' && <MovementsTab />}
-                    {tab === 'requests' && <RequestsTab can={can} onNew={() => setReqOpen(true)} />}
+                    {tab === 'requests' && <RequestsTab can={can} onNew={() => setReqOpen(true)} onReturn={returnFromRequest} />}
 
                     {tab === 'audit' && <AuditTab can={can} />}
                 </div>
@@ -834,7 +840,14 @@ export default function StockPage() {
                 onClose={() => setViewId(null)}
                 onEdit={canManage ? (i) => setEditItem(i) : undefined}
             />
-            <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
+            <MovementDrawer
+                kind={moveKind}
+                initialRequestId={returnRequestId}
+                onClose={() => {
+                    setMoveKind(null);
+                    setReturnRequestId(undefined);
+                }}
+            />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />
             <LotScanDialog open={scanOpen} onOpenChange={setScanOpen} />
         </div>

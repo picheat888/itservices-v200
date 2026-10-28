@@ -598,6 +598,7 @@ export const stock: Dict = {
     stock_rq_returned_by: 'รับคืนโดย',
     stock_rq_can_return_n: 'ยังคืนได้อีก {n} ชิ้น',
     stock_rq_return_from_this: 'คืนของจากใบนี้',
+    stock_rq_awaiting_fulfil: 'รอจ่ายของ',
 
     // stock-movement-detail — เหตุการณ์รับเข้า
     stock_recv_lots_title: 'Lot ของใบรับเข้านี้',

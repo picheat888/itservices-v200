@@ -31,6 +31,7 @@ import { ArrowUpFromLine, Ban, Check, FilePlus2, Filter, Search, TriangleAlert, 
 import { useEffect, useId, useState } from 'react';
 import { FulfilDone } from '../../components/fulfil-done';
 import { LotPickBox } from '../../components/lot-pick-box';
+import { RequestDetailDialog } from '../../components/request-detail-dialog';
 import { RequestRowMenu } from '../../components/request-row-menu';
 import { NEW_REQUEST_DETAIL, useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
@@ -57,7 +58,16 @@ const REQUEST_STATUS_FILTERS: StockRequestStatus[] = ['pending', 'approved', 'fu
 // Small section heading inside the fulfill dialog.
 const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 
-export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
+export function RequestsTab({
+    can,
+    onNew,
+    onReturn,
+}: {
+    can: (p: string) => boolean;
+    onNew: () => void;
+    /** Opens the return drawer with this request chosen. */
+    onReturn?: (requestId: number) => void;
+}) {
     const fmt = useDateFormat();
     const t = useT();
     const fmtN = useNumberFormat();
@@ -108,6 +118,9 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const [fulfilDone, setFulfilDone] = useState<{ issue: IssueResult; prevStock: number; at: number } | null>(null);
     const fulfillItem = fulfillItemQuery.data;
     useRefetchOnOpen(fulfillOpen, fulfillItemQuery);
+    // Request detail (board 12): the row it opened from stays shown through the close animation
+    const [detailReq, setDetailReq] = useState<StockRequest | null>(null);
+    const [detailOpen, setDetailOpen] = useState(false);
 
     // Seed once per request, when its item first loads: greedy allocation (largest warehouse first); a refresh only updates what is shown
     useSeedOnce(fulfillOpen && fulfillReq && fulfillItem ? fulfillReq.id : null, () => {
@@ -192,8 +205,30 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
         });
     };
 
+    const openDetail = (r: StockRequest) => {
+        setDetailReq(r);
+        setDetailOpen(true);
+    };
+
+    const openFulfil = (r: StockRequest) => {
+        setDetailOpen(false);
+        setFulfillReq(r);
+        setFulfilDone(null);
+        setFulfillOpen(true);
+    };
+
+    // Fulfil done screen → "ดูคำขอเบิก"; the row read before the fulfil still says approved until the fresh request lands
+    const viewFulfilled = (r: StockRequest) => {
+        setFulfillOpen(false);
+        openDetail({ ...r, status: 'fulfilled', issue_doc_no: fulfilDone?.issue.doc_no ?? r.issue_doc_no });
+    };
+
+    const returnFrom = (requestId: number) => {
+        setDetailOpen(false);
+        onReturn?.(requestId);
+    };
+
     const hasRowButtons = [...requests, ...newReqs.pinned].some((r) => r.can_decide || (can('fulfill') && r.status === 'approved'));
-    const hasRowMenu = [...requests, ...newReqs.pinned].some((r) => r.can_cancel);
 
     const columns: Column<(typeof requests)[number]>[] = [
         {
@@ -286,6 +321,11 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 <div className="min-w-0">
                     <TruncText text={pairOf(r.fulfilled_by, r.fulfilled_by_th)} className="text-sm" />
                     {r.fulfilled_at && <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(r.fulfilled_at)}</div>}
+                    {r.issue_doc_no && (
+                        <div className="text-muted-foreground text-xs whitespace-nowrap" translate="no">
+                            {r.issue_doc_no}
+                        </div>
+                    )}
                 </div>
             ),
         },
@@ -293,19 +333,18 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            // Room for the buttons only when this page has a request the reader can approve or fulfill, plus the menu when one can be cancelled
-            width: hasRowButtons
-                ? hasRowMenu
-                    ? 'clamp(146px, calc(146px + (100vw - 1100px) * 0.5), 216px)'
-                    : 'clamp(110px, calc(110px + (100vw - 1100px) * 0.5), 176px)'
-                : '72px',
+            // Room for the buttons only when this page has a request the reader can approve or fulfill; the menu is on every row
+            width: hasRowButtons ? 'clamp(146px, calc(146px + (100vw - 1100px) * 0.5), 216px)' : '72px',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
                     {r.can_decide && (
                         <>
                             <Button
                                 size="sm"
-                                onClick={() => confirmApprove(r)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    confirmApprove(r);
+                                }}
                                 aria-label={t('stock_approve')}
                                 title={t('stock_approve')}
                                 className="bg-emerald-700 text-white hover:bg-emerald-800"
@@ -318,7 +357,10 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                 variant="destructive"
                                 aria-label={t('stock_reject')}
                                 title={t('stock_reject')}
-                                onClick={() => confirmReject(r)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    confirmReject(r);
+                                }}
                             >
                                 <X className="h-3.5 w-3.5" aria-hidden />
                             </Button>
@@ -329,20 +371,16 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             size="sm"
                             aria-label={t('stock_fulfill')}
                             title={t('stock_fulfill')}
-                            onClick={() => {
-                                setFulfillReq(r);
-                                setFulfilDone(null);
-                                setFulfillOpen(true);
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                openFulfil(r);
                             }}
                         >
                             <ArrowUpFromLine className="h-3.5 w-3.5" aria-hidden />
                             <span className="hidden xl:inline">{t('stock_fulfill')}</span>
                         </Button>
                     )}
-                    {r.can_cancel && <RequestRowMenu request={r} requestNo={requestNo(r)} onCancel={confirmCancel} />}
-                    {!r.can_decide && !r.can_cancel && !(can('fulfill') && r.status === 'approved') && (
-                        <span className="text-muted-foreground text-xs">—</span>
-                    )}
+                    <RequestRowMenu request={r} requestNo={requestNo(r)} onOpen={openDetail} onCancel={confirmCancel} />
                 </div>
             ),
         },
@@ -462,6 +500,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 pinned={newReqs.pinned}
                 rowKey={(r) => r.id}
                 rowClassName={(r) => (newReqs.isNew(r) ? NEW_ROW_CLASS : undefined)}
+                onRowClick={openDetail}
                 loading={requestsLoading || (requestsFetching && requestsPlaceholder)}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
                 empty={
@@ -469,6 +508,19 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                         ? { kind: 'search', title: t('stock_empty_requests_search'), hint: t('stock_empty_requests_search_hint') }
                         : { title: t('stock_empty_requests'), hint: t('stock_empty_requests_hint') }
                 }
+            />
+
+            <RequestDetailDialog
+                open={detailOpen}
+                onClose={() => setDetailOpen(false)}
+                request={detailReq}
+                requestNo={requestNo}
+                canViewStock={can('view')}
+                onApprove={confirmApprove}
+                onReject={confirmReject}
+                onCancel={confirmCancel}
+                onFulfil={can('fulfill') ? openFulfil : undefined}
+                onReturn={can('return') && onReturn ? returnFrom : undefined}
             />
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
@@ -483,7 +535,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                             newOnHand={fulfilNewOnHand}
                             recipient={pairOf(fulfillReq.requester_name, fulfillReq.requester_name_th) ?? fulfillReq.requester_name}
                             issue={fulfilDone.issue}
-                            onViewRequest={closeFulfill}
+                            onViewRequest={() => viewFulfilled(fulfillReq)}
                             onDone={closeFulfill}
                         />
                     ) : (
