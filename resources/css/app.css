@@ -493,6 +493,26 @@
     animation: row-in 0.3s ease-out both;
 }
 
+/* Lot scan result card: a violet ring that fades once per scan */
+@keyframes lot-hit {
+    from {
+        box-shadow: 0 0 0 4px hsl(262 83% 70%);
+    }
+    to {
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+.lot-hit {
+    animation: lot-hit 0.7s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lot-hit {
+        animation: none;
+    }
+}
+
 /* Table rows: a clickable row tints on hover / keyboard focus through --row-tint */
 .row-hover:focus-visible {
     --row-tint: var(--row-hover);

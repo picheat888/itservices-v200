@@ -46,6 +46,7 @@ import {
     FilePlus2,
     Plus,
     RotateCcw,
+    ScanQrCode,
     Search,
     Send,
     SquarePen,
@@ -56,6 +57,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { LotScanDialog } from '../components/lot-scan-dialog';
 import { MovementDrawer, type MovementKind } from '../components/movement-drawer';
 import { RequestDrawer } from '../components/request-drawer';
 import { StockItemDetailModal } from '../components/stock-item-detail-modal';
@@ -235,6 +237,7 @@ export default function StockPage() {
     const closeAdd = () => dialogs.close(['add']);
     const [moveKind, setMoveKind] = useState<MovementKind | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
+    const [scanOpen, setScanOpen] = useState(false);
 
     const summaryQuery = useStockSummary();
     const { data: summary, isError: summaryFailed, refetch: refetchSummary } = summaryQuery;
@@ -551,6 +554,12 @@ export default function StockPage() {
                             {stockAlert.label}
                         </AlertButton>
                     )}
+                    {can('view') && (
+                        <Button variant="outline" className="h-10" onClick={() => setScanOpen(true)}>
+                            <ScanQrCode className="h-4 w-4" aria-hidden />
+                            {t('stock_scan_lot')}
+                        </Button>
+                    )}
                     {can('request') && (
                         <Button onClick={() => setReqOpen(true)}>
                             <FilePlus2 className="h-4 w-4" aria-hidden />
@@ -827,6 +836,7 @@ export default function StockPage() {
             />
             <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />
+            <LotScanDialog open={scanOpen} onOpenChange={setScanOpen} />
         </div>
     );
 }
