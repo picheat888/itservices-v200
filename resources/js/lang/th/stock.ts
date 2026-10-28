@@ -301,6 +301,8 @@ export const stock: Dict = {
     stock_refusal_transfer_serials_required: 'รายการนี้เก็บ Serial ทุกชิ้น กรุณาเลือก Serial ในคลังต้นทางที่จะย้าย',
     stock_refusal_transfer_serials_invalid: 'Serial ที่เลือกต้องเป็นของรายการนี้ อยู่ในสต็อก และอยู่ในคลังต้นทางเท่านั้น',
     stock_refusal_transfer_lot_invalid: 'ย้ายได้เฉพาะ Lot ของรายการนี้ที่อยู่ในคลังต้นทางและยังมีของเหลืออยู่',
+    stock_refusal_lot_not_a_code: 'ไม่ใช่สติกเกอร์ Lot',
+    stock_refusal_lot_not_found: 'ไม่พบ {lot_no} ในระบบ',
     stock_refusal_serials_not_in_stock: 'Serial ที่เลือกบางรายการไม่ได้อยู่ในคลังของรายการนี้แล้ว',
     stock_refusal_not_enough_stock: 'สต็อกไม่พอ คงเหลือ {available}',
     stock_refusal_not_enough_stock_in_warehouse: 'สต็อกในคลัง {warehouse} ไม่พอ คงเหลือ {available}',

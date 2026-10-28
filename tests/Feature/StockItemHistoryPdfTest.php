@@ -94,7 +94,7 @@ class StockItemHistoryPdfTest extends TestCase
         $this->assertSame(1, $lines['return']['sign']);
         $this->assertSame(4, $data['reconciliation']['computed']);
         $this->assertSame(0, $data['reconciliation']['difference']);
-        $this->assertSame([['warehouse' => 'Main', 'qty' => 4]], $data['balances']);
+        $this->assertSame([['warehouse' => 'Main', 'qty' => 4, 'lot_count' => 1]], $data['balances']);
 
         $item->update(['current_stock' => 6]);
         $this->assertSame(2, $this->getJson("/api/stock-items/{$item->id}/history")->json('data.reconciliation.difference'));

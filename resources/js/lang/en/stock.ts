@@ -301,6 +301,8 @@ export const stock: Dict = {
     stock_refusal_transfer_serials_required: 'This item is serialized - select the in-stock serial(s) in the source warehouse to transfer.',
     stock_refusal_transfer_serials_invalid: 'Each selected serial must belong to this item, be in stock, and sit in the source warehouse.',
     stock_refusal_transfer_lot_invalid: 'This transfer can only move lots of this item that sit in the source warehouse and still hold stock.',
+    stock_refusal_lot_not_a_code: 'Not a Lot sticker',
+    stock_refusal_lot_not_found: '{lot_no} was not found',
     stock_refusal_serials_not_in_stock: 'Some selected serials are no longer in stock for this item.',
     stock_refusal_not_enough_stock: 'Not enough stock: {available} available.',
     stock_refusal_not_enough_stock_in_warehouse: 'Not enough stock in {warehouse}: {available} available.',

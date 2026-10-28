@@ -167,18 +167,43 @@ class StockLotService
      */
     public function issuedLeft(StockRequest $request): array
     {
-        $movementIds = StockMovement::where('stock_request_id', $request->id)
-            ->whereIn('type', ['issue', 'return'])
-            ->pluck('id');
-
-        return StockLotEntry::whereIn('stock_movement_id', $movementIds)
-            ->groupBy('stock_lot_id')
-            ->orderBy('stock_lot_id')
-            ->selectRaw('stock_lot_id, SUM(qty) as total')
-            ->pluck('total', 'stock_lot_id')
-            ->map(fn ($total): int => -(int) $total)
+        return collect($this->drawnAndReturned([$request->id])[$request->id] ?? [])
+            ->map(fn (array $lot): int => $lot['issued'] - $lot['returned'])
             ->filter(fn (int $left): bool => $left > 0)
             ->all();
+    }
+
+    /**
+     * Per request and lot: what its issues drew and what its returns put back.
+     *
+     * @param  list<int>|Builder<StockRequest>  $requests  request ids, or a query selecting them
+     * @return array<int, array<int, array{issued: int, returned: int}>> request id => lot id (ascending) => figures
+     */
+    public function drawnAndReturned(array|Builder $requests): array
+    {
+        $rows = StockLotEntry::query()
+            ->join('stock_movements', 'stock_movements.id', '=', 'stock_lot_entries.stock_movement_id')
+            ->whereIn('stock_movements.stock_request_id', $requests instanceof Builder ? $requests->select('id') : $requests)
+            ->whereIn('stock_movements.type', ['issue', 'return'])
+            ->groupBy('stock_movements.stock_request_id', 'stock_lot_entries.stock_lot_id', 'stock_movements.type')
+            ->orderBy('stock_lot_entries.stock_lot_id')
+            ->selectRaw('stock_movements.stock_request_id as request_id, stock_lot_entries.stock_lot_id as lot_id, stock_movements.type as type, SUM(stock_lot_entries.qty) as total')
+            ->toBase()
+            ->get();
+
+        $figures = [];
+        foreach ($rows as $row) {
+            $requestId = (int) $row->request_id;
+            $lotId = (int) $row->lot_id;
+            $figures[$requestId][$lotId] ??= ['issued' => 0, 'returned' => 0];
+            if ($row->type === 'issue') {
+                $figures[$requestId][$lotId]['issued'] -= (int) $row->total;
+            } else {
+                $figures[$requestId][$lotId]['returned'] += (int) $row->total;
+            }
+        }
+
+        return $figures;
     }
 
     /** @return Builder<StockLot> */

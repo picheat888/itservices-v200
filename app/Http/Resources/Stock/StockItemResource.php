@@ -83,6 +83,12 @@ class StockItemResource extends JsonResource
             // FIFO cost lots (eager-loaded). `value` is the remaining-on-hand worth of the lot.
             'lots' => $this->whenLoaded('lots', fn () => $this->lots->map(fn ($l) => [
                 'id' => $l->id,
+                'lot_no' => $l->lot_no,
+                // Where the lot sits now
+                'warehouse' => $l->warehouse?->name ?? 'Unassigned',
+                'received_doc_no' => $l->movement?->doc_no,
+                'qty_issued' => -(int) ($l->issued_sum ?? 0),
+                'qty_returned' => (int) ($l->returned_sum ?? 0),
                 'unit_cost' => (float) $l->unit_cost,
                 'qty_received' => $l->qty_received,
                 'qty_remaining' => $l->qty_remaining,
@@ -92,7 +98,6 @@ class StockItemResource extends JsonResource
                 // seeded lots that were created without a movement).
                 'doc_no' => $l->movement?->doc_no,
                 'reference' => $l->movement?->reference,
-                'warehouse' => $l->movement?->to_label,
                 'supplier' => $l->movement?->from_label,
                 'recorded_by' => $l->movement?->recorded_by,
                 'recorded_by_th' => $l->movement?->relationLoaded('user') ? $l->movement->user?->name_th : null,

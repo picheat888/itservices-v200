@@ -13,6 +13,7 @@ use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockBalanceService;
 use App\Services\Stock\StockCountLock;
+use App\Services\Stock\StockLotReader;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockReturnService;
@@ -100,6 +101,14 @@ class StockMovementController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
 
         return response()->json(['data' => $this->serialCodesFor($movement)]);
+    }
+
+    /** The lots this movement's document touched, its request's returns and what is still returnable. */
+    public function lots(Request $request, StockMovement $movement, StockLotReader $reader): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
+
+        return response()->json(['data' => $reader->forMovement($movement)]);
     }
 
     /**

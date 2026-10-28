@@ -70,6 +70,7 @@ use App\Http\Controllers\Api\Settings\WriteoffReasonController;
 use App\Http\Controllers\Api\Sidebar\SidebarBadgeController;
 use App\Http\Controllers\Api\Stock\StockCountController;
 use App\Http\Controllers\Api\Stock\StockItemController;
+use App\Http\Controllers\Api\Stock\StockLotController;
 use App\Http\Controllers\Api\Stock\StockMovementController;
 use App\Http\Controllers\Api\Stock\StockRequestController;
 use App\Http\Controllers\Api\Stock\WarehouseController;
@@ -368,15 +369,21 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::apiResource('stock-items', StockItemController::class);
     Route::get('stock-movements', [StockMovementController::class, 'index'])->name('api.stock-movements.index');
     Route::get('stock-movements/{movement}/serials', [StockMovementController::class, 'serials'])->name('api.stock-movements.serials');
+    Route::get('stock-movements/{movement}/lots', [StockMovementController::class, 'lots'])->name('api.stock-movements.lots');
     Route::get('stock-movements/{movement}', [StockMovementController::class, 'show'])->whereNumber('movement')->name('api.stock-movements.show');
     Route::post('stock-movements', [StockMovementController::class, 'store'])->name('api.stock-movements.store');
     Route::get('stock-requests', [StockRequestController::class, 'index'])->name('api.stock-requests.index');
     Route::post('stock-requests', [StockRequestController::class, 'store'])->name('api.stock-requests.store');
+    Route::get('stock-requests/returnable', [StockRequestController::class, 'returnable'])->name('api.stock-requests.returnable');
     Route::get('stock-requests/{stockRequest}', [StockRequestController::class, 'show'])->whereNumber('stockRequest')->name('api.stock-requests.show');
+    Route::get('stock-requests/{stockRequest}/trail', [StockRequestController::class, 'trail'])->name('api.stock-requests.trail');
     Route::post('stock-requests/{stockRequest}/approve', [StockRequestController::class, 'approve'])->name('api.stock-requests.approve');
     Route::post('stock-requests/{stockRequest}/reject', [StockRequestController::class, 'reject'])->name('api.stock-requests.reject');
     Route::post('stock-requests/{stockRequest}/fulfill', [StockRequestController::class, 'fulfill'])->name('api.stock-requests.fulfill');
     Route::post('stock-requests/{stockRequest}/cancel', [StockRequestController::class, 'cancel'])->name('api.stock-requests.cancel');
+    Route::get('stock-lots/lookup', [StockLotController::class, 'lookup'])->name('api.stock-lots.lookup');
+    Route::get('stock-lots/{lotNo}', [StockLotController::class, 'show'])->name('api.stock-lots.show');
+    Route::get('stock-lots/{lotNo}/qr', [StockLotController::class, 'qr'])->name('api.stock-lots.qr');
 
     // Request module (IT service requests) — options + transitions before the
     // resource so `{serviceRequest}` cannot swallow them.

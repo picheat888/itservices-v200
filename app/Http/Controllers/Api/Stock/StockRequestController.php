@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
 use App\Services\Stock\StockIssueService;
+use App\Services\Stock\StockLotReader;
 use App\Services\Stock\StockNotificationService;
 use App\Support\Refusal;
 use App\Support\SearchTerms;
@@ -79,6 +80,30 @@ class StockRequestController extends Controller
         abort_unless($stockRequest->isVisibleTo($user), 404);
 
         return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee', 'issueMovements'])))->response();
+    }
+
+    /** A request's issue and returns with their lots, behind the same gate and visibility as show. */
+    public function trail(Request $request, StockRequest $stockRequest, StockLotReader $reader): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
+
+        abort_unless($stockRequest->isVisibleTo($user), 404);
+
+        return response()->json(['data' => $reader->trail($stockRequest)]);
+    }
+
+    /** Fulfilled requests of one item that still have something to return (the return form's picker). */
+    public function returnable(Request $request, StockLotReader $reader): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('stock.return'), 403);
+
+        $data = $request->validate([
+            'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
+            'search' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        return response()->json(['data' => $reader->returnable(StockItem::findOrFail($data['stock_item_id']), $data['search'] ?? null)]);
     }
 
     /** Submit a new stock request (status: pending). */

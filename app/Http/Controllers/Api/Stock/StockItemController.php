@@ -198,7 +198,11 @@ class StockItemController extends Controller
         $this->gateView($request);
 
         $stockItem->load([
-            'lots' => fn ($q) => $q->with('movement.user.employee:id,first_name_th,last_name_th')->orderBy('received_at')->orderBy('id'),
+            'lots' => fn ($q) => $q->with(['movement.user.employee:id,first_name_th,last_name_th', 'warehouse'])
+                ->withSum(['entries as issued_sum' => fn ($e) => $e->whereHas('movement', fn ($m) => $m->where('type', 'issue'))], 'qty')
+                ->withSum(['entries as returned_sum' => fn ($e) => $e->whereHas('movement', fn ($m) => $m->where('type', 'return'))], 'qty')
+                ->orderBy('received_at')
+                ->orderBy('id'),
             'serials' => fn ($q) => $q->with('warehouse')->orderBy('serial'),
             'balances' => fn ($q) => $q->with('warehouse')->orderBy('warehouse_id'),
             'unit',

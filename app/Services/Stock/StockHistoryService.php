@@ -23,6 +23,8 @@ class StockHistoryService
 
     private const TAKES = ['issue', 'adjust_down'];
 
+    public function __construct(private readonly StockLotReader $lotReader) {}
+
     /**
      * Shared by the JSON endpoint and the PDF export.
      *
@@ -34,14 +36,20 @@ class StockHistoryService
             'unit',
             'balances.warehouse',
             'movements.user.employee:id,first_name_th,last_name_th',
+            'movements.request:id,reference,requester_name',
+            'movements.lotEntries' => fn ($q) => $q->orderBy('id'),
+            'movements.lotEntries.lot:id,lot_no',
             'lots' => fn ($q) => $q->latest('received_at'),
             'lots.movement',
+            'lots.warehouse',
             'serials.warehouse',
             'serials.events.movement',
             'serials.events.user.employee:id,first_name_th,last_name_th',
         ]);
 
         $lotSerials = $stockItem->serials->groupBy('stock_movement_id');
+        $carried = $this->lotReader->heldAt($stockItem->movements->where('type', 'transfer')->flatMap->lotEntries->values());
+        $openLots = $stockItem->lots->where('qty_remaining', '>', 0);
 
         return [
             'item' => [
@@ -57,7 +65,11 @@ class StockHistoryService
             'balances' => $stockItem->balances
                 ->filter(fn ($b) => $b->qty !== 0)
                 ->sortByDesc('qty')
-                ->map(fn ($b) => ['warehouse' => $b->warehouse?->name, 'qty' => $b->qty])
+                ->map(fn ($b) => [
+                    'warehouse' => $b->warehouse?->name,
+                    'qty' => $b->qty,
+                    'lot_count' => $openLots->where('warehouse_id', $b->warehouse_id)->count(),
+                ])
                 ->values(),
             'movements' => $stockItem->movements->map(fn ($m) => [
                 'id' => $m->id,
@@ -73,6 +85,12 @@ class StockHistoryService
                 'reason' => $m->reason,
                 'notes' => $this->note($m),
                 'moved_at' => $m->moved_at?->toIso8601String(),
+                'lots' => $m->lotEntries->map(fn ($e) => [
+                    'lot_no' => $e->lot?->lot_no,
+                    'qty' => $m->type === 'transfer' ? ($carried[$e->id] ?? 0) : abs($e->qty),
+                ])->values(),
+                'request_reference' => $m->request?->reference,
+                'requester' => $m->request?->requester_name,
             ])->values(),
             'lots' => $stockItem->lots->map(fn ($l) => [
                 'unit_cost' => $l->unit_cost,
@@ -80,6 +98,8 @@ class StockHistoryService
                 'qty_remaining' => $l->qty_remaining,
                 'received_at' => $l->received_at?->toIso8601String(),
                 'doc_no' => $l->movement?->doc_no,
+                'lot_no' => $l->lot_no,
+                'warehouse' => $l->warehouse?->name ?? 'Unassigned',
                 'serials' => ($lotSerials[$l->stock_movement_id] ?? collect())->pluck('serial')->values(),
             ])->values(),
             'serials' => $stockItem->serials->map(fn ($s) => [
