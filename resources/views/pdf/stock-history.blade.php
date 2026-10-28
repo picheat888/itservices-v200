@@ -35,6 +35,26 @@
     ];
     $rec = $history['reconciliation'];
     $openLots = array_values(array_filter($history['lots'], fn ($l) => $l['qty_remaining'] > 0));
+    $lotsByNo = array_column($history['lots'], null, 'lot_no');
+    // Issue rows: what came back into the lots this issue drew, from returns naming the same request.
+    $returnedFor = function (array $m) use ($history): int {
+        $drawn = array_column($m['lots'], 'lot_no');
+        $sum = 0;
+        foreach ($history['movements'] as $r) {
+            if ($r['type'] === 'return' && $m['request_reference'] !== null && $r['request_reference'] === $m['request_reference']) {
+                foreach ($r['lots'] as $l) {
+                    $sum += in_array($l['lot_no'], $drawn, true) ? $l['qty'] : 0;
+                }
+            }
+        }
+        return $sum;
+    };
+    $isNewLot = fn (array $m, ?string $lotNo) => $m['type'] === 'adjust_up' && !empty($m['doc_no']) && ($lotsByNo[$lotNo]['doc_no'] ?? null) === $m['doc_no'];
+    // One line per lot (escaped here, printed raw): the lot number and its quantity, or "New lot" for a count overage.
+    $lotLines = function (array $m) use ($isNewLot, $n): string {
+        $lines = array_map(fn ($l) => e($l['lot_no'] ?? '—').' <span class="muted">'.($isNewLot($m, $l['lot_no']) ? 'New lot' : $n($l['qty'])).'</span>', $m['lots']);
+        return $lines === [] ? '—' : implode('<br>', $lines);
+    };
     $lines = [$item['sku'].'  '.$item['name'], 'Data as of '.$printedAt];
 @endphp
 <!DOCTYPE html>
@@ -62,6 +82,7 @@
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
         table.data th.serials, table.data td.serials { width: 130px; font-size: 8px; word-break: break-all; }
+        table.data td.lots { white-space: nowrap; }
         .in { color: #059669; } .out { color: #dc2626; } .back { color: #0d9488; } .adj { color: #d97706; } .move { color: #2563eb; }
         .bg-in { background: #059669; } .bg-out { background: #dc2626; } .bg-back { background: #0d9488; } .bg-adj { background: #d97706; } .bg-move { background: #2563eb; }
         .muted { color: #475569; }
@@ -107,31 +128,31 @@
         {{-- On hand by warehouse --}}
         <h2>On hand by warehouse</h2>
         <table class="data">
-            <thead><tr><th>Warehouse</th><th class="r">Qty</th></tr></thead>
+            <thead><tr><th>Warehouse</th><th class="r">Lots</th><th class="r">Qty</th></tr></thead>
             <tbody>
             @forelse ($history['balances'] as $b)
-                <tr><td>{{ $b['warehouse'] ?? '—' }}</td><td class="r">{{ $n($b['qty']) }}</td></tr>
+                <tr><td>{{ $b['warehouse'] ?? '—' }}</td><td class="r">{{ $n($b['lot_count']) }}</td><td class="r">{{ $n($b['qty']) }}</td></tr>
             @empty
-                <tr><td colspan="2" class="empty">No stock on hand</td></tr>
+                <tr><td colspan="3" class="empty">No stock on hand</td></tr>
             @endforelse
             @if ($history['balances'])
-                <tr class="total"><td>Total</td><td class="r">{{ $n(array_sum(array_column($history['balances'], 'qty'))) }}</td></tr>
+                <tr class="total"><td>Total</td><td class="r">{{ $n(array_sum(array_column($history['balances'], 'lot_count'))) }}</td><td class="r">{{ $n(array_sum(array_column($history['balances'], 'qty'))) }}</td></tr>
             @endif
             </tbody>
         </table>
 
-        {{-- Open FIFO lots --}}
-        <h2>Open cost lots (FIFO) <span class="count">{{ count($openLots) }} lots</span></h2>
+        {{-- Lots with stock --}}
+        <h2>Lots with stock <span class="count">{{ count($openLots) }} lots</span></h2>
         <table class="data">
-            <thead><tr><th>Lot from</th><th>Received</th><th class="r">Unit cost ({{ $currency }})</th><th class="r">Received qty</th><th class="r">Remaining</th><th class="r">Value ({{ $currency }})</th></tr></thead>
+            <thead><tr><th>Lot</th><th>Warehouse</th><th>Receive no.</th><th>Receive date</th><th class="r">Unit cost ({{ $currency }})</th><th class="r">Remaining</th><th class="r">Value ({{ $currency }})</th></tr></thead>
             <tbody>
             @forelse ($openLots as $l)
-                <tr><td class="nw">{{ $l['doc_no'] ?? '—' }}</td><td class="nw">{{ $date($l['received_at']) }}</td><td class="r">{{ $money($l['unit_cost']) }}</td><td class="r">{{ $n($l['qty_received']) }}</td><td class="r">{{ $n($l['qty_remaining']) }}</td><td class="r">{{ $money($l['qty_remaining'] * $l['unit_cost']) }}</td></tr>
+                <tr><td class="nw"><b>{{ $l['lot_no'] ?? '—' }}</b></td><td>{{ $l['warehouse'] }}</td><td class="nw">{{ $l['doc_no'] ?? '—' }}</td><td class="nw">{{ $date($l['received_at']) }}</td><td class="r">{{ $money($l['unit_cost']) }}</td><td class="r">{{ $n($l['qty_remaining']) }}</td><td class="r">{{ $money($l['qty_remaining'] * $l['unit_cost']) }}</td></tr>
             @empty
-                <tr><td colspan="6" class="empty">No open lots</td></tr>
+                <tr><td colspan="7" class="empty">No lots with stock</td></tr>
             @endforelse
             @if ($openLots)
-                <tr class="total"><td>Total</td><td></td><td></td><td></td><td class="r">{{ $n(array_sum(array_column($openLots, 'qty_remaining'))) }}</td><td class="r">{{ $money($item['stock_value']) }}</td></tr>
+                <tr class="total"><td>Total</td><td></td><td></td><td></td><td></td><td class="r">{{ $n(array_sum(array_column($openLots, 'qty_remaining'))) }}</td><td class="r">{{ $money($item['stock_value']) }}</td></tr>
             @endif
             </tbody>
         </table>
@@ -159,11 +180,11 @@
             $signed = fn (array $m) => $m['type'] === 'adjust_down' ? -$m['qty'] : $m['qty'];
             $total = array_sum(array_map($signed, $moves));
             $columns = [
-                'issue' => ['#', 'Doc no.', 'Date/time', 'Action', 'Warehouse', 'Issued by', 'Requested by', 'Request no.', 'Qty', 'Serials'],
-                'receive' => ['#', 'Doc no.', 'Date/time', 'Action', 'Supplier', 'Reference doc', 'Warehouse', 'Unit cost ('.$currency.')', 'Serials', 'Qty', 'Note'],
-                'return' => ['#', 'Doc no.', 'Date/time', 'Action', 'Warehouse', 'Received by', 'Serials', 'Qty', 'Note'],
-                'adjust' => ['#', 'Doc no.', 'Date/time', 'Reference doc', 'Action', 'By', 'Serials', 'Qty', 'Note'],
-                'transfer' => ['#', 'Doc no.', 'Date/time', 'Action', 'From', 'To', 'By', 'Serials', 'Qty', 'Note'],
+                'issue' => ['#', 'Doc no.', 'Date/time', 'Action', 'Warehouse', 'Issued by', 'Requested by', 'Request no.', 'Qty', 'Lots drawn', 'Returned', 'Serials'],
+                'receive' => ['#', 'Doc no.', 'Date/time', 'Action', 'Supplier', 'Reference doc', 'Warehouse', 'Unit cost ('.$currency.')', 'Lot', 'Remaining in lot', 'Serials', 'Qty', 'Note'],
+                'return' => ['#', 'Doc no.', 'Date/time', 'Action', 'Warehouse', 'Received by', 'Request no.', 'Requested by', 'Returned into lot', 'Serials', 'Qty', 'Note'],
+                'adjust' => ['#', 'Doc no.', 'Date/time', 'Reference doc', 'Action', 'By', 'Warehouse', 'Lot', 'Serials', 'Qty', 'Note'],
+                'transfer' => ['#', 'Doc no.', 'Date/time', 'Action', 'From', 'To', 'By', 'Lots moved', 'Serials', 'Qty', 'Note'],
             ][$view];
             $qtyIndex = array_search('Qty', $columns, true);
         @endphp
@@ -171,7 +192,7 @@
         <table class="data">
             <thead><tr>
                 @foreach ($columns as $c)
-                    <th class="{{ in_array($c, ['#', 'Qty'], true) || str_starts_with($c, 'Unit cost') ? 'r' : '' }}{{ $c === 'Serials' ? ' serials' : '' }}">{{ $c }}</th>
+                    <th class="{{ in_array($c, ['#', 'Qty', 'Returned', 'Remaining in lot'], true) || str_starts_with($c, 'Unit cost') ? 'r' : '' }}{{ $c === 'Serials' ? ' serials' : '' }}">{{ $c }}</th>
                 @endforeach
             </tr></thead>
             <tbody>
@@ -184,25 +205,32 @@
                         <td>{{ $m['reference'] ?? '—' }}</td>
                     @endif
                     <td class="nw {{ $tone[$m['type']] }}">{{ $mvLabel[$m['type']] ?? $m['type'] }}</td>
+                    @php $firstLot = $m['lots'][0]['lot_no'] ?? null; @endphp
                     @switch($view)
                         @case('issue')
                             <td>{{ $m['from_label'] ?? '—' }}</td><td>{{ $by($m) }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td class="nw">{{ $m['reference'] ?? '—' }}</td>
                             @break
                         @case('receive')
                             <td>{{ $m['from_label'] ?? '—' }}</td><td class="nw">{{ $m['reference'] ?? '—' }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td class="r">{{ isset($m['unit_cost']) ? $money($m['unit_cost']) : '—' }}</td>
+                            <td class="lots">{{ $firstLot ?? '—' }}</td><td class="r">{{ $firstLot !== null && isset($lotsByNo[$firstLot]) ? $n($lotsByNo[$firstLot]['qty_remaining']) : '—' }}</td>
                             @break
                         @case('return')
-                            <td>{{ $m['to_label'] ?? '—' }}</td><td>{{ $by($m) }}</td>
+                            <td>{{ $m['to_label'] ?? '—' }}</td><td>{{ $by($m) }}</td><td class="nw">{{ $m['request_reference'] ?? '—' }}</td><td>{{ $m['requester'] ?? '—' }}</td>
+                            <td class="lots">{!! $lotLines($m) !!}</td>
                             @break
                         @case('adjust')
-                            <td>{{ $by($m) }}</td>
+                            <td>{{ $by($m) }}</td><td>{{ $m['to_label'] ?? $m['from_label'] ?? '—' }}</td>
+                            <td class="lots">{!! $lotLines($m) !!}</td>
                             @break
                         @default
                             <td>{{ $m['from_label'] ?? '—' }}</td><td>{{ $m['to_label'] ?? '—' }}</td><td>{{ $by($m) }}</td>
+                            <td class="lots">{!! $lotLines($m) !!}</td>
                     @endswitch
                     @php $qty = $view === 'adjust' ? ($signed($m) > 0 ? '+' : '−').$n(abs($signed($m))) : $n($m['qty']); @endphp
                     @if ($view === 'issue')
                         <td class="r">{{ $qty }}</td>
+                        <td class="lots">{!! $lotLines($m) !!}</td>
+                        <td class="r returned">{{ $n($returnedFor($m)) }}</td>
                         <td class="serials">{{ $serialsOf($m, $event) }}</td>
                     @else
                         <td class="serials">{{ $serialsOf($m, $event) }}</td>

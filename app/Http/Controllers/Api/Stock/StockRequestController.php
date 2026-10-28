@@ -7,6 +7,7 @@ use App\Http\Resources\Stock\StockRequestResource;
 use App\Models\AuditLog;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
+use App\Services\Stock\StockIssuePdf;
 use App\Services\Stock\StockIssueService;
 use App\Services\Stock\StockLotReader;
 use App\Services\Stock\StockNotificationService;
@@ -15,6 +16,8 @@ use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\HeaderUtils;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockRequestController extends Controller
 {
@@ -91,6 +94,25 @@ class StockRequestController extends Controller
         abort_unless($stockRequest->isVisibleTo($user), 404);
 
         return response()->json(['data' => $reader->trail($stockRequest)]);
+    }
+
+    /** Stream the issue sheet (ISS) PDF of a fulfilled request, behind the same gate and visibility as show. */
+    public function issuePdf(Request $request, StockRequest $stockRequest, StockIssuePdf $sheets): StreamedResponse
+    {
+        $user = $request->user();
+        abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
+
+        abort_unless($stockRequest->isVisibleTo($user), 404);
+
+        $bytes = $sheets->render($stockRequest, $user);
+        $filename = $sheets->filename($stockRequest);
+
+        return new StreamedResponse(function () use ($bytes) {
+            echo $bytes;
+        }, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $filename, 'stock-issue.pdf'),
+        ]);
     }
 
     /** Fulfilled requests of one item that still have something to return (the return form's picker). */

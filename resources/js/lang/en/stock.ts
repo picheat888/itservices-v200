@@ -311,6 +311,7 @@ export const stock: Dict = {
     stock_refusal_allocation_mismatch: 'Allocation across warehouses must total {qty}.',
     stock_refusal_request_wrong_status: 'The request must be {expected} (currently {current}).',
     stock_refusal_request_not_cancellable: 'This request can no longer be cancelled (currently {current}).',
+    stock_refusal_request_not_issued: 'This request has not been issued yet',
     stock_refusal_count_not_editable: 'This count can no longer be edited.',
     stock_refusal_count_closed: 'This count is already closed.',
     stock_refusal_count_in_progress: 'This item is being counted in {reference}. It can move on this warehouse once that count is closed.',

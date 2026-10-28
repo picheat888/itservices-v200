@@ -311,6 +311,7 @@ export const stock: Dict = {
     stock_refusal_allocation_mismatch: 'จำนวนที่แบ่งจ่ายจากแต่ละคลังต้องรวมได้ {qty}',
     stock_refusal_request_wrong_status: 'คำขอนี้ต้องอยู่ในสถานะ {expected} (ตอนนี้เป็น {current})',
     stock_refusal_request_not_cancellable: 'ยกเลิกคำขอนี้ไม่ได้ (ตอนนี้เป็น {current})',
+    stock_refusal_request_not_issued: 'คำขอนี้ยังไม่ได้จ่ายของ',
     stock_refusal_count_not_editable: 'ใบนับนี้แก้ไขไม่ได้แล้ว',
     stock_refusal_count_closed: 'ใบนับนี้ปิดไปแล้ว',
     stock_refusal_count_in_progress: 'รายการนี้อยู่ระหว่างนับสต็อก {reference} รับเข้า เบิก หรือย้ายในคลังนี้ได้หลังปิดใบนับ',

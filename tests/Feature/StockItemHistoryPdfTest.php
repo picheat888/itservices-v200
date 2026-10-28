@@ -10,6 +10,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Support\CompanyProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class StockItemHistoryPdfTest extends TestCase
@@ -98,6 +99,55 @@ class StockItemHistoryPdfTest extends TestCase
 
         $item->update(['current_stock' => 6]);
         $this->assertSame(2, $this->getJson("/api/stock-items/{$item->id}/history")->json('data.reconciliation.difference'));
+    }
+
+    public function test_history_views_name_the_lots(): void
+    {
+        $this->actingAs($this->super());
+        $item = StockItem::create([
+            'sku' => 'INK-2', 'name' => 'Ink', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => false,
+        ]);
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'unit_cost' => 10, 'to_label' => 'Main'])->assertCreated();
+        $lot = StockLot::where('stock_item_id', $item->id)->firstOrFail();
+        $request = StockRequest::create([
+            'stock_item_id' => $item->id, 'requester_name' => 'Somchai', 'qty' => 3, 'reason' => 'use', 'status' => 'approved',
+        ]);
+        $this->postJson("/api/stock-requests/{$request->id}/fulfill", ['from_warehouse' => 'Main'])->assertOk();
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'stock_request_id' => $request->id, 'lots' => [['lot_id' => $lot->id, 'qty' => 2]],
+        ])->assertCreated();
+        Warehouse::create(['name' => 'Annex']);
+        $this->postJson('/api/stock-movements', [
+            'type' => 'transfer', 'stock_item_id' => $item->id, 'from_label' => 'Main', 'to_label' => 'Annex', 'lot_ids' => [$lot->id],
+        ])->assertCreated();
+        $html = function (string $view) use ($item): string {
+            $seen = new \ArrayObject;
+            View::composer('pdf.stock-history', function ($v) use ($seen) {
+                $seen->append(array_diff_key($v->getData(), ['__env' => 1, 'app' => 1, 'errors' => 1]));
+            });
+            $this->get("/pdf/stock-items/{$item->id}/history?v={$view}")->assertOk();
+
+            return view('pdf.stock-history', $seen[count($seen) - 1])->render();
+        };
+
+        $summary = $html('summary');
+        $this->assertStringContainsString('Lots with stock', $summary);
+        $this->assertStringContainsString($lot->lot_no, $summary);
+        $issue = $html('issue');
+        $this->assertStringContainsString('Lots drawn', $issue);
+        $this->assertStringContainsString($lot->lot_no, $issue);
+        $this->assertMatchesRegularExpression('/<td class="r returned">\s*2\s*<\/td>/', $issue);
+        $receive = $html('receive');
+        $this->assertStringContainsString('Remaining in lot', $receive);
+        $this->assertStringContainsString($lot->lot_no, $receive);
+        $return = $html('return');
+        $this->assertStringContainsString('Returned into lot', $return);
+        $this->assertStringContainsString($request->reference, $return);
+        $this->assertStringContainsString($lot->lot_no, $return);
+        $transfer = $html('transfer');
+        $this->assertStringContainsString('Lots moved', $transfer);
+        $this->assertStringContainsString($lot->lot_no.' <span class="muted">4</span>', $transfer);
     }
 
     public function test_letterhead_uses_saved_company_facts_and_no_sample_name(): void

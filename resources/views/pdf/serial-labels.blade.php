@@ -1,8 +1,7 @@
 @php
     // 3 stickers per row across an A4 page (210mm − 16mm margins ≈ 194mm / ~64mm cells).
     $rows = array_chunk($labels, 3);
-    // dompdf has no `text-overflow: ellipsis`, so truncate the name in PHP. The char cap
-    // keeps "Name: …" on one line inside the 50 mm sticker; overflow:hidden is the backstop.
+    // dompdf has no `text-overflow: ellipsis`, so the name is cut in PHP to stay on one line.
     $name = \Illuminate\Support\Str::limit($item->name ?? '', 30);
 @endphp
 <!DOCTYPE html>
@@ -51,8 +50,8 @@
                                 <div class="serial">{{ $label['serial'] }}</div>
                                 <table class="line foot">
                                     <tr>
-                                        <td><span class="lbl">Date:</span> {{ $date }}</td>
-                                        <td class="cat">{{ $warehouse }}</td>
+                                        <td>@if ($label['lot_no'])<span class="lbl">Lot:</span> {{ $label['lot_no'] }}@endif</td>
+                                        <td class="cat">{{ $date }}</td>
                                     </tr>
                                 </table>
                             </div>

@@ -24,6 +24,6 @@ class LotQr
 
     public static function payload(string $lotNo): string
     {
-        return url('/stock/lots/'.$lotNo);
+        return rtrim((string) config('app.url'), '/').'/stock/lots/'.$lotNo;
     }
 }

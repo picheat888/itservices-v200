@@ -24,6 +24,7 @@ use App\Support\DocumentName;
 use App\Support\Refusal;
 use App\Support\SearchTerms;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -112,12 +113,21 @@ class StockMovementController extends Controller
     }
 
     /**
-     * The serial codes attached to a movement, ordered. Shared by the detail dialog
-     * (serials) and the printable label sheet (labelsPdf).
+     * The serial codes attached to a movement, ordered (the detail dialog's list).
      *
      * @return Collection<int, string>
      */
     private function serialCodesFor(StockMovement $movement): Collection
+    {
+        return $this->serialsOf($movement)->pluck('serial')->values();
+    }
+
+    /**
+     * The serials attached to a movement, ordered by code; shared by the detail dialog and the sticker sheet.
+     *
+     * @return Builder<StockItemSerial>
+     */
+    private function serialsOf(StockMovement $movement): Builder
     {
         $serialIds = StockItemSerialEvent::query()
             ->where('stock_item_id', $movement->stock_item_id)
@@ -132,7 +142,7 @@ class StockMovementController extends Controller
             ->pluck('stock_item_serial_id')
             ->unique();
 
-        return StockItemSerial::whereIn('id', $serialIds)->orderBy('serial')->pluck('serial')->values();
+        return StockItemSerial::whereIn('id', $serialIds)->orderBy('serial');
     }
 
     /** Stream an A4 sheet of 50 × 25 mm Code 128 serial stickers for one movement (dompdf). */
@@ -147,20 +157,20 @@ class StockMovementController extends Controller
         ), 403);
 
         $movement->loadMissing('item.category');
-        $serials = $this->serialCodesFor($movement);
+        $serials = $this->serialsOf($movement)->with('lot:id,lot_no')->get();
 
         // One Code 128 barcode per serial as HTML, at a fixed width (~47 mm ≈ 177 px) to fill the sticker.
         $type = new TypeCode128;
         $renderer = new HtmlRenderer;
-        $labels = $serials->map(fn (string $serial) => [
-            'serial' => $serial,
-            'barcode' => $renderer->render($type->getBarcode($serial), 177, 30),
+        $labels = $serials->map(fn (StockItemSerial $serial) => [
+            'serial' => $serial->serial,
+            'lot_no' => $serial->lot?->lot_no,
+            'barcode' => $renderer->render($type->getBarcode($serial->serial), 177, 30),
         ])->all();
 
         $pdf = Pdf::loadView('pdf.serial-labels', [
             'item' => $movement->item,
             'labels' => $labels,
-            'warehouse' => $movement->to_label ?: $movement->from_label,
             'date' => DateDisplay::date($movement->moved_at, null, 'en'),
         ])->setPaper('a4', 'portrait');
 

@@ -6,6 +6,7 @@ use App\Models\Settings\AppSetting;
 use App\Models\Settings\Category;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -131,6 +132,22 @@ class StockSerialLabelsPdfTest extends TestCase
 
         // The labels are English, so the month is too.
         $this->assertStringContainsString('03 October 2026', view('pdf.serial-labels', $seen[0])->render());
+    }
+
+    public function test_serial_label_prints_the_lot_line(): void
+    {
+        $this->travelTo('2026-10-21 09:00:00');
+        $item = $this->receivedItem();
+        $lotNo = StockLot::where('stock_item_id', $item->id)->value('lot_no');
+        $movementId = StockMovement::where('type', 'receive')->value('id');
+        $seen = $this->capturePdfView('pdf.serial-labels');
+
+        $this->get("/pdf/stock-movements/{$movementId}/labels")->assertOk();
+
+        $html = view('pdf.serial-labels', $seen[0])->render();
+        $this->assertSame(2, substr_count($html, 'Lot:</span> '.$lotNo));
+        $this->assertStringContainsString('21/10/2026', $html);
+        $this->assertStringNotContainsString('Main', $html);
     }
 
     public function test_history_writes_month_names_in_english_like_the_rest_of_the_document(): void

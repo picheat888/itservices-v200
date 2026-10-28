@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Stock\StockCountController;
 use App\Http\Controllers\Api\Stock\StockItemController;
+use App\Http\Controllers\Api\Stock\StockLotController;
 use App\Http\Controllers\Api\Stock\StockMovementController;
+use App\Http\Controllers\Api\Stock\StockRequestController;
 use App\Http\Controllers\File\FileController;
 use App\Http\Controllers\ServiceWorkerController;
 use App\Http\Controllers\WebManifestController;
@@ -22,6 +24,8 @@ Route::middleware([...$signedIn, 'throttle:pdf'])->prefix('pdf')->group(function
     Route::get('stock-items/{stockItem}/history', [StockItemController::class, 'historyPdf'])->name('pdf.stock-items.history');
     Route::get('stock-counts/{stockCount}', [StockCountController::class, 'pdf'])->name('pdf.stock-counts.show');
     Route::get('stock-movements/{movement}/labels', [StockMovementController::class, 'labelsPdf'])->name('pdf.stock-movements.labels');
+    Route::get('stock-lots/{lotNo}/labels', [StockLotController::class, 'labelsPdf'])->name('pdf.stock-lots.labels');
+    Route::get('stock-requests/{stockRequest}/issue', [StockRequestController::class, 'issuePdf'])->name('pdf.stock-requests.issue');
 });
 
 // Private uploads, each gated to the record's viewers (company branding stays public)
