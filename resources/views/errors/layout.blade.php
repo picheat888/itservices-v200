@@ -115,8 +115,8 @@
             --accent: hsl(217, 19%, 18%);
             --danger: #f87171;
             --wait: #fbbf24;
-            --brand: var(--brand-dark, #6692f1);
-            --brand-fg: var(--brand-dark-fg, #0f172a);
+            --brand: var(--brand-dark, {{ $page['accentDark'] }});
+            --brand-fg: var(--brand-dark-fg, {{ $page['accentDarkForeground'] }});
         }
 
         /* Dark: the OS preference when the reader never chose */
@@ -129,8 +129,8 @@
                 --accent: hsl(217, 19%, 18%);
                 --danger: #f87171;
                 --wait: #fbbf24;
-                --brand: var(--brand-dark, #6692f1);
-                --brand-fg: var(--brand-dark-fg, #0f172a);
+                --brand: var(--brand-dark, {{ $page['accentDark'] }});
+                --brand-fg: var(--brand-dark-fg, {{ $page['accentDarkForeground'] }});
             }
         }
 

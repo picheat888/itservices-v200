@@ -30,13 +30,16 @@ class ErrorPage
      *     reference: ?string,
      *     brand: array{name: string, logo_url: ?string},
      *     accent: string,
-     *     accentForeground: string
+     *     accentForeground: string,
+     *     accentDark: string,
+     *     accentDarkForeground: string
      * }
      */
     public static function for(int $code, Request $request, ?Throwable $exception = null): array
     {
         $brand = AppSetting::brand();
         $accent = self::accent();
+        $accentDark = self::accentDark($accent);
 
         return [
             'code' => $code,
@@ -51,6 +54,8 @@ class ErrorPage
             'brand' => ['name' => $brand['name'], 'logo_url' => $brand['logo_url'] ?? '/logo.svg'],
             'accent' => $accent,
             'accentForeground' => self::accentForeground($accent),
+            'accentDark' => $accentDark,
+            'accentDarkForeground' => self::accentForeground($accentDark),
         ];
     }
 
@@ -63,6 +68,25 @@ class ErrorPage
         }
 
         return self::contrast($rgb, [255, 255, 255]) >= self::contrast($rgb, [15, 23, 42]) ? '#ffffff' : '#0f172a';
+    }
+
+    /** The accent lifted towards white until it reads on the dark background (as resolveDarkBrand in the page script). */
+    public static function accentDark(string $hex): string
+    {
+        $rgb = self::rgb($hex);
+        if ($rgb === null) {
+            return '#ffffff';
+        }
+
+        for ($step = 0; $step <= 20; $step++) {
+            $share = $step * 0.05;
+            $shade = array_map(fn (int $value): float => 255 * $share + $value * (1 - $share), $rgb);
+            if (self::contrast($shade, [19, 23, 32]) >= 5.6) {
+                return '#'.implode('', array_map(fn (float $value): string => str_pad(dechex((int) round($value)), 2, '0', STR_PAD_LEFT), $shade));
+            }
+        }
+
+        return '#ffffff';
     }
 
     /** @return array{title: string, body: string} */
@@ -165,8 +189,8 @@ class ErrorPage
     /**
      * WCAG contrast ratio between two opaque colours (1–21).
      *
-     * @param  array{int, int, int}  $first
-     * @param  array{int, int, int}  $second
+     * @param  array{int|float, int|float, int|float}  $first
+     * @param  array{int|float, int|float, int|float}  $second
      */
     private static function contrast(array $first, array $second): float
     {
@@ -176,10 +200,10 @@ class ErrorPage
         return ($lighter + 0.05) / ($darker + 0.05);
     }
 
-    /** @param  array{int, int, int}  $rgb */
+    /** @param  array{int|float, int|float, int|float}  $rgb */
     private static function luminance(array $rgb): float
     {
-        [$red, $green, $blue] = array_map(function (int $channel): float {
+        [$red, $green, $blue] = array_map(function (int|float $channel): float {
             $value = $channel / 255;
 
             return $value <= 0.03928 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;

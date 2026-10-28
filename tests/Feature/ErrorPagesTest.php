@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Settings\AppSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -134,6 +135,16 @@ class ErrorPagesTest extends TestCase
         $response->assertStatus(503);
         $response->assertSee('กรุณากลับมาใหม่อีกครั้งภายหลัง');
         $response->assertDontSee('ประมาณ');
+    }
+
+    public function test_dark_mode_without_javascript_uses_the_company_accent(): void
+    {
+        AppSetting::put('theme_accent', '#16a34a');
+
+        $response = $this->get('/files/__test-error/404');
+
+        $response->assertSee('var(--brand-dark, #22a853)', false);
+        $response->assertDontSee('#6692f1', false);
     }
 
     public function test_the_page_renders_when_settings_cannot_be_read(): void
