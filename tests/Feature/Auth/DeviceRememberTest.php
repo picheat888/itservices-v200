@@ -245,6 +245,7 @@ class DeviceRememberTest extends TestCase
         $cookie = $this->meWithCookie($this->cookieFor($user, 'laptop-token'))->assertOk()->getCookie($recaller);
 
         $this->assertNotNull($cookie);
+        $this->assertSame(Auth::guard('web')->hashPasswordForCookie($user->getAuthPassword()), explode('|', $cookie->getValue())[2]);
         $newToken = explode('|', $cookie->getValue())[1];
         $this->assertNotSame('laptop-token', $newToken);
         $this->assertSame(hash('sha256', $newToken), $device->fresh()->remember_token_hash);
