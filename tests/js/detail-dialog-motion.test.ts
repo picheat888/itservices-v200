@@ -62,7 +62,7 @@ test('a row pointed at, touched or focused reads its detail ahead; a passing mou
 });
 
 test('prefetch reads the same cache entries the dialogs read, and nothing fresher than five seconds again', () => {
-    assert.match(hooks, /qc\.prefetchQuery\(\{ queryKey, queryFn, staleTime: FRESH_MS \}\)/);
+    assert.match(hooks, /qc\.prefetchQuery\(\{ queryKey, queryFn, staleTime: FRESH_MS, retry: false, meta: \{ quietServerError: true \} \}\)/);
     assert.match(hooks, /read\(NEW_REQUEST_DETAIL\.key\(r\.id\)/);
     assert.match(hooks, /read\(\[\.\.\.REQUESTS, 'trail', r\.id\]/);
     assert.match(hooks, /read\(\[\.\.\.ITEMS, 'detail', r\.stock_item_id\]/);
@@ -75,6 +75,23 @@ test('prefetch reads the same cache entries the dialogs read, and nothing freshe
     assert.match(hooks, /queryKey: \[\.\.\.MOVEMENTS, 'serials', id\]/);
     assert.match(hooks, /queryKey: \[\.\.\.MOVEMENTS, 'lots', id\]/);
     assert.match(hooks, /queryKey: \[\.\.\.COUNTS, id\]/);
+});
+
+test('a hover read that fails never takes over the screen: the error screen waits for a query the user opened', () => {
+    const http = read('resources/js/shared/lib/http.ts');
+    assert.match(http, /event\.query\.meta\?\.quietServerError === true/);
+    assert.match(hooks, /retry: false, meta: \{ quietServerError: true \}/);
+});
+
+test('the Lot table leaves the Lot number its full width in the 560 detail: narrow padding and number columns', () => {
+    const lots = read('resources/js/modules/stock/components/lots-drawn-card.tsx');
+    // 467px table minus 96 + 56 + 64 + 112 leaves 139px; LOT-YYYYMMDD-NNNN with its new-tab icon and padding takes 131px, "Returned" 61px
+    assert.match(
+        lots,
+        /<col \/>\s*<col className="w-24" \/>\s*<col className="w-14" \/>\s*\{isIssue && <col className="w-16" \/>\}\s*<col className="w-28" \/>/,
+    );
+    assert.match(lots, /const TH = 'px-2 py-1\.5 font-medium';/);
+    assert.doesNotMatch(lots, /px-3/);
 });
 
 test('the count skeleton is as tall as its sheet: measured row heights, the differing-line count, and the footer bar', () => {

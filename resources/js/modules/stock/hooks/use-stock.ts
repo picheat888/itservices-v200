@@ -230,7 +230,9 @@ export const useStockCount = (id: number | null, enabled = true) =>
 /** Reads what a detail dialog shows while its row is only pointed at, so the dialog opens filled; fresh data is not asked again. */
 export function useStockPrefetch() {
     const qc = useQueryClient();
-    const read = (queryKey: readonly unknown[], queryFn: () => Promise<unknown>) => void qc.prefetchQuery({ queryKey, queryFn, staleTime: FRESH_MS });
+    // A failed read stays quiet and is not retried; the dialog asks again when it opens
+    const read = (queryKey: readonly unknown[], queryFn: () => Promise<unknown>) =>
+        void qc.prefetchQuery({ queryKey, queryFn, staleTime: FRESH_MS, retry: false, meta: { quietServerError: true } });
     return {
         request: (r: Pick<StockRequest, 'id' | 'status' | 'stock_item_id'>, canViewStock: boolean) => {
             read(NEW_REQUEST_DETAIL.key(r.id), () => stockRequestApi.get(r.id));

@@ -9,7 +9,7 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { LOT_INK } from '../lib/lot-accent';
 import { LotLink } from './lot-link';
 
-const TH = 'px-3 py-1.5 font-medium';
+const TH = 'px-2 py-1.5 font-medium';
 
 function CardTitle({ isIssue }: { isIssue: boolean }) {
     const t = useT();
@@ -28,8 +28,8 @@ function lotsTable(t: ReturnType<typeof useT>, isIssue: boolean) {
     const cols = (
         <>
             <col />
-            <col className="w-28" />
-            <col className="w-16" />
+            <col className="w-24" />
+            <col className="w-14" />
             {isIssue && <col className="w-16" />}
             <col className="w-28" />
         </>
@@ -50,7 +50,7 @@ export function LotsDrawnSkeleton({ kind }: { kind: 'issue' | 'return' }) {
     const cells = isIssue ? 5 : 4;
     const bars = (row: string) =>
         Array.from({ length: cells }, (_, i) => (
-            <td key={`${row}-${i}`} className="px-3 py-1.5">
+            <td key={`${row}-${i}`} className="px-2 py-1.5">
                 <Skeleton className={cn('my-0.5 h-4', i === 0 ? 'w-36' : 'ml-auto w-10')} />
             </td>
         ));
@@ -92,24 +92,24 @@ export function LotsDrawnCard({ data, kind }: { data: MovementLots; kind: 'issue
                 <tbody className="tabular-nums">
                     {data.lots.map((l) => (
                         <tr key={l.lot_id} className="border-border/60 border-t">
-                            <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+                            <td className="px-2 py-1.5 text-xs whitespace-nowrap">
                                 <LotLink lotNo={l.lot_no} newTab />
                             </td>
-                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.unit_cost)}</td>
-                            <td className="px-3 py-1.5 text-right">{fmtN(l.qty)}</td>
-                            {isIssue && <td className="px-3 py-1.5 text-right">{fmtN(l.returned)}</td>}
-                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.qty * l.unit_cost)}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{format(l.unit_cost)}</td>
+                            <td className="px-2 py-1.5 text-right">{fmtN(l.qty)}</td>
+                            {isIssue && <td className="px-2 py-1.5 text-right">{fmtN(l.returned)}</td>}
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{format(l.qty * l.unit_cost)}</td>
                         </tr>
                     ))}
                 </tbody>
                 <tfoot className="bg-background sticky bottom-0">
                     <tr className="border-border border-t font-semibold tabular-nums">
-                        <td className="px-3 py-1.5" colSpan={2}>
+                        <td className="px-2 py-1.5" colSpan={2}>
                             {t('stock_issue_col_total')}
                         </td>
-                        <td className="px-3 py-1.5 text-right">{fmtN(totalQty)}</td>
-                        {isIssue && <td className="px-3 py-1.5 text-right">{fmtN(totalBack)}</td>}
-                        <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(totalValue)}</td>
+                        <td className="px-2 py-1.5 text-right">{fmtN(totalQty)}</td>
+                        {isIssue && <td className="px-2 py-1.5 text-right">{fmtN(totalBack)}</td>}
+                        <td className="px-2 py-1.5 text-right whitespace-nowrap">{format(totalValue)}</td>
                     </tr>
                 </tfoot>
             </ScrollTable>
