@@ -46,14 +46,13 @@ function watchTableWidth(box: HTMLElement, setFits: (fits: boolean) => void): ()
     const sizes = new ResizeObserver(measure);
     const follow = () => {
         const current = box.querySelector('table');
-        if (current !== table) {
-            if (table) sizes.unobserve(table);
-            table = current;
-            if (table) sizes.observe(table);
-        }
+        if (current === table) return;
+        if (table) sizes.unobserve(table);
+        table = current;
+        if (table) sizes.observe(table, { box: 'border-box' });
         measure();
     };
-    sizes.observe(box);
+    sizes.observe(box, { box: 'border-box' });
     follow();
     const swaps = new MutationObserver(follow);
     swaps.observe(box, { childList: true, subtree: true });

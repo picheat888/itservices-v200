@@ -586,7 +586,12 @@ export default function AccessControlPage() {
             ),
         },
         { key: 'policy', header: t('access_policy'), width: '200px', render: (p) => <TruncText text={p.policy} /> },
-        { key: 'members', header: t('access_members'), width: '164px', render: (p) => <AvatarStack members={p.members ?? []} /> },
+        {
+            key: 'members',
+            header: t('access_members'),
+            width: '164px',
+            render: (p) => <AvatarStack members={p.members ?? []} total={p.members_count} />,
+        },
         actionsCol<SocialPlatform>(openSocial),
     ];
 

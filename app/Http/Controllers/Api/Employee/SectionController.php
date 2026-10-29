@@ -31,7 +31,7 @@ class SectionController extends Controller
     /** Employees assigned to a section (for the "view members" dialog). */
     public function members(Section $section): JsonResponse
     {
-        $members = $section->employees()->with(['department', 'position', 'section'])
+        $members = $section->employees()->with(['department', 'position', 'section', 'user'])
             ->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();

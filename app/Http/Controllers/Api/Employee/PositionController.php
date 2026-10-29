@@ -28,7 +28,7 @@ class PositionController extends Controller
     /** Employees holding a position (for the "view members" dialog). */
     public function members(Position $position): JsonResponse
     {
-        $members = $position->employees()->with(['department', 'position', 'section'])
+        $members = $position->employees()->with(['department', 'position', 'section', 'user'])
             ->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();

@@ -61,7 +61,7 @@ class DepartmentController extends Controller
     // Members of a department (for the "view members" drawer).
     public function members(Department $department): JsonResponse
     {
-        $members = $department->employees()->with(['department', 'position', 'section'])->orderBy('first_name')->orderBy('last_name')->get();
+        $members = $department->employees()->with(['department', 'position', 'section', 'user'])->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();
     }

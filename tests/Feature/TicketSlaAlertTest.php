@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Ticket\TicketSlaAlertService;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TicketSlaAlertTest extends TestCase
@@ -183,5 +184,17 @@ class TicketSlaAlertTest extends TestCase
         RolePermission::firstOrCreate(['role_id' => $user->role_id, 'permission' => 'settings.sla'], ['allowed' => true]);
 
         return $user->refresh();
+    }
+
+    public function test_sweep_reads_request_types_in_one_query(): void
+    {
+        $this->staff();
+        Ticket::factory()->count(5)->create(['status' => 'open', 'created_at' => '2026-01-13 08:00:00']);
+
+        DB::enableQueryLog();
+        $this->sweep();
+        $lookups = collect(DB::getQueryLog())->filter(fn (array $q) => str_contains($q['query'], 'service_requests'));
+
+        $this->assertLessThanOrEqual(1, $lookups->count());
     }
 }

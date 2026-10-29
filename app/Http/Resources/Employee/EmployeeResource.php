@@ -86,13 +86,9 @@ class EmployeeResource extends JsonResource
             'created_by_name_th' => $this->whenLoaded('creator', fn () => $this->creator?->name_th),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
             'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
-            // Why this record cannot be deleted — empty means it is a clean mis-entry. Costs a
-            // handful of existence checks, so it rides along only on the single-employee
-            // endpoint, which is what the detail drawer (and its Delete button) reads.
+            // Delete blockers: single-employee endpoint only, and only for viewers who can delete
             'delete_blockers' => $this->when(
-                // apiResource names this one `employees.show` — the hand-written employee
-                // routes carry the `api.` prefix, the resource ones do not.
-                $request->routeIs('employees.show'),
+                $request->routeIs('employees.show') && (bool) $viewer?->hasPermission('employees.delete'),
                 fn () => app(EmployeeService::class)->deletionBlockers($this->resource),
             ),
         ];

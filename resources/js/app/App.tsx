@@ -1,5 +1,3 @@
-import '../../css/app.css';
-
 import { AppShell } from '@/app/layout/app-shell';
 import { Toaster } from '@/app/layout/toaster';
 import NotFoundPage from '@/app/not-found';

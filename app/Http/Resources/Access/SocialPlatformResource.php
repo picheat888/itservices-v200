@@ -10,6 +10,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /** @mixin SocialPlatform */
 class SocialPlatformResource extends JsonResource
 {
+    public const PREVIEW_MEMBERS = 5;
+
     public function toArray(Request $request): array
     {
         return [
@@ -27,7 +29,7 @@ class SocialPlatformResource extends JsonResource
                 'photo_url' => $m->employee?->photo_url,
                 'purpose' => $m->purpose,
             ])->values()),
-            'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),
+            'members_count' => $this->resource->getAttributes()['members_count'] ?? ($this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count()),
             // When and by whom it was added / last changed (names when the index loaded creator/updater).
             'created_at' => SystemTime::date($this->created_at),
             'updated_at' => SystemTime::date($this->updated_at),

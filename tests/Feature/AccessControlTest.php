@@ -613,13 +613,15 @@ class AccessControlTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'admin']));
         $g = EmailGroup::create(['name' => 'Big', 'email' => 'big@x.co']);
         $fs = FileShare::create(['name' => 'Big share', 'path' => '\\F\B']);
+        $sp = SocialPlatform::create(['name' => 'Big platform']);
         foreach (range(1, 7) as $i) {
             $e = Employee::create(['first_name' => "M{$i}", 'last_name' => 'Test']);
             $g->memberships()->create(['employee_id' => $e->id, 'granted_at' => '2026-01-01', 'revoked_at' => $i === 7 ? '2026-02-01' : null]);
             $fs->memberships()->create(['employee_id' => $e->id, 'granted_at' => '2026-01-01', 'revoked_at' => $i === 7 ? '2026-02-01' : null]);
+            $sp->memberships()->create(['employee_id' => $e->id, 'granted_at' => '2026-01-01', 'revoked_at' => $i === 7 ? '2026-02-01' : null]);
         }
 
-        foreach (['email-groups', 'file-shares'] as $kind) {
+        foreach (['email-groups', 'file-shares', 'social-platforms'] as $kind) {
             $row = $this->getJson("/api/{$kind}")->assertOk()->json('data.0');
             $this->assertCount(5, $row['members']);
             $this->assertSame(6, $row['members_count']);

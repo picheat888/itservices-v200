@@ -260,9 +260,8 @@ class EmployeeService
         }
         // Being one of the people a step is open to counts as much as holding it outright:
         // both are this person's name frozen into a request's approval trail.
-        if (RequestApproval::where('approver_employee_id', $employee->id)
-            ->orWhereJsonContains('approver_employee_ids', (int) $employee->id)
-            ->exists()) {
+        if (RequestApproval::where('approver_employee_id', $employee->id)->exists()
+            || RequestApproval::whereJsonContains('approver_employee_ids', (int) $employee->id)->exists()) {
             $blockers[] = 'approvals';
         }
         // Named on a workflow step (as its approver or as the deputy beside them). Letting
@@ -296,7 +295,7 @@ class EmployeeService
             || ServiceRequest::where('user_id', $user->id)->exists()
             || RequestApproval::where('acted_by_user_id', $user->id)->exists()
             || AccessMembership::where('granted_by', $user->id)->exists()
-            || DB::table('notifications')->where('notifiable_id', $user->id)->exists();
+            || DB::table('notifications')->where('notifiable_type', User::class)->where('notifiable_id', $user->id)->exists();
     }
 
     /** Removes a mis-entered employee and their login; call only after deletionBlockers() is empty. */

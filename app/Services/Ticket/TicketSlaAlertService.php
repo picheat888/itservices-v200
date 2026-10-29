@@ -42,6 +42,7 @@ class TicketSlaAlertService
         $sent = ['near_due' => 0, 'over_sla' => 0];
 
         Ticket::query()
+            ->with('serviceRequest')
             ->whereIn('status', TicketStatus::live())
             ->chunkById(200, function ($tickets) use (&$sent) {
                 foreach ($tickets as $ticket) {

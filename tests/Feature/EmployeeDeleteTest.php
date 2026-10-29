@@ -7,6 +7,7 @@ use App\Models\Asset\AssetTransfer;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
+use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\Ticket\Ticket;
@@ -36,6 +37,20 @@ class EmployeeDeleteTest extends TestCase
     private function employee(string $code = 'EMP-DEL1'): Employee
     {
         return Employee::create(['code' => $code, 'first_name' => 'Typed', 'last_name' => 'Wrong']);
+    }
+
+    public function test_blockers_are_only_sent_to_people_who_can_delete(): void
+    {
+        $employee = $this->employee();
+        $role = Role::create(['key' => 'viewer_'.uniqid(), 'name' => 'Viewer', 'is_system' => false]);
+        foreach (['employees.module', 'employees.view'] as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        $this->actingAs(User::factory()->create(['role' => $role->key]))
+            ->getJson("/api/employees/{$employee->id}")
+            ->assertOk()
+            ->assertJsonMissingPath('data.delete_blockers');
     }
 
     public function test_a_freshly_mistyped_employee_can_be_deleted(): void
