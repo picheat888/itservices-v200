@@ -484,10 +484,12 @@ export function ContractFormDrawer({
                                 key={i}
                                 type="button"
                                 onClick={() => goToStep(i)}
+                                aria-current={active ? 'step' : undefined}
                                 className="relative flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
                             >
                                 {i < steps.length - 1 && (
                                     <span
+                                        aria-hidden
                                         className={cn(
                                             'absolute top-[13px] right-[calc(-50%+17px)] left-[calc(50%+17px)] h-0.5 rounded-full',
                                             done ? 'bg-brand' : 'bg-border',
@@ -502,7 +504,7 @@ export function ContractFormDrawer({
                                         !active && !done && 'border-input text-muted-foreground',
                                     )}
                                 >
-                                    {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                                    {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}
                                 </span>
                                 <span
                                     className={cn(
@@ -511,6 +513,7 @@ export function ContractFormDrawer({
                                     )}
                                 >
                                     {t(s)}
+                                    {done && <span className="sr-only">{t('done')}</span>}
                                 </span>
                             </button>
                         );

@@ -305,13 +305,12 @@ export function GroupRoleDialog({
 
                     {/* Narrow screens show one pane at a time */}
                     {!readOnly && (
-                        <div className="border-border flex gap-1 border-t px-4 lg:hidden" role="tablist">
+                        <div className="border-border flex gap-1 border-t px-4 lg:hidden" role="group" aria-label={t('gr_pane_switch')}>
                             {(['pick', 'members'] as const).map((id) => (
                                 <button
                                     key={id}
                                     type="button"
-                                    role="tab"
-                                    aria-selected={tab === id}
+                                    aria-pressed={tab === id}
                                     onClick={() => setTab(id)}
                                     className={cn(
                                         '-mb-px border-b-2 px-3 py-2.5 text-sm font-medium',

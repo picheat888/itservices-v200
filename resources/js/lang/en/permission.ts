@@ -90,6 +90,7 @@ export const permission: Dict = {
     gr_pick_none_hint: 'Try other words or another department',
     gr_pick_all_in: 'Everyone listed is already in the group',
     gr_members_title: 'Current members',
+    gr_pane_switch: 'Members panels',
     gr_members_search: 'Search name, code or department…',
     gr_moved_from: 'From {name}',
     gr_new_member: 'New',

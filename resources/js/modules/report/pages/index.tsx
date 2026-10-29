@@ -100,6 +100,7 @@ export default function ReportsPage() {
                                             key={c.id}
                                             type="button"
                                             onClick={() => setChip(c.id)}
+                                            aria-pressed={domain === c.id}
                                             className={cn(
                                                 'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
                                                 domain === c.id

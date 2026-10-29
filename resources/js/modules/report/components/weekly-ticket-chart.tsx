@@ -96,6 +96,17 @@ function WeeklyBars({ weeks, range }: ChartProps) {
     const futureWidth = edgeX(weeks.length) - edgeX(startedCount);
     const futureLabel = t('rep_weekly_future');
 
+    // One week's numbers as text, for the hover title and the screen-reader list
+    const tip = (w: (typeof started)[number], i: number) => {
+        const { start, end } = spans[i];
+        const span = start === end ? dayMonth(start) : `${dayMonth(start)}–${dayMonth(end)}`;
+        return t('rep_weekly_tip')
+            .replace('{week}', span)
+            .replace('{opened}', fmtN(w.opened))
+            .replace('{closed}', fmtN(w.closed))
+            .replace('{backlog}', fmtN(w.backlog ?? 0));
+    };
+
     return (
         // The box takes the height on offer (flex-1); the SVG is laid over it so it never feeds back into that height.
         <div ref={box} className="relative w-full flex-1" style={{ minHeight: size ? (size.width * MIN_H) / W : undefined }}>
@@ -142,17 +153,9 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                 ))}
                 {started.map((w, i) => {
                     const x = xOf(i);
-                    const { start, end } = spans[i];
-                    const span = start === end ? dayMonth(start) : `${dayMonth(start)}–${dayMonth(end)}`;
                     return (
                         <g key={w.week_start}>
-                            <title>
-                                {t('rep_weekly_tip')
-                                    .replace('{week}', span)
-                                    .replace('{opened}', fmtN(w.opened))
-                                    .replace('{closed}', fmtN(w.closed))
-                                    .replace('{backlog}', fmtN(w.backlog ?? 0))}
-                            </title>
+                            <title>{tip(w, i)}</title>
                             {/* The whole week column answers the hover, not just its bars. */}
                             <rect x={x - gw / 2} y={PAD.t} width={gw} height={ch} className="fill-transparent" />
                             <rect
@@ -206,6 +209,12 @@ function WeeklyBars({ weeks, range }: ChartProps) {
                     </>
                 )}
             </svg>
+            {/* Same numbers as the hover text, for screen readers */}
+            <ul className="sr-only">
+                {started.map((w, i) => (
+                    <li key={w.week_start}>{tip(w, i)}</li>
+                ))}
+            </ul>
         </div>
     );
 }

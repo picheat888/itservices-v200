@@ -163,12 +163,13 @@ export function AssetTransferDialog({
                                 key={m}
                                 type="button"
                                 onClick={() => setMode(m)}
+                                aria-pressed={mode === m}
                                 className={cn(
                                     'flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                                     mode === m ? 'bg-background text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
-                                {m === 'employee' ? <Users className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                                {m === 'employee' ? <Users className="h-4 w-4" aria-hidden /> : <Share2 className="h-4 w-4" aria-hidden />}
                                 {m === 'employee' ? t('transfer_mode_employee') : t('transfer_mode_shared')}
                             </button>
                         ))}

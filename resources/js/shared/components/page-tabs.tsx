@@ -3,7 +3,7 @@ import { TabBarStatus, TabRefreshMark } from '@/shared/components/tab-refresh-ma
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import type { RefreshMark } from '@/shared/lib/refresh-mark';
 import { cn } from '@/shared/lib/utils';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 
 export interface PageTab<T extends string> {
     id: T;
@@ -30,11 +30,14 @@ export function PageTabs<T extends string>({
     active,
     onChange,
     className,
+    label,
 }: {
     tabs: PageTab<T>[];
     active: T;
     onChange: (id: T) => void;
     className?: string;
+    /** Screen-reader name of the tab list. */
+    label?: string;
 }) {
     const fmtN = useNumberFormat();
     const hasMarks = tabs.some((tb) => tb.refresh !== undefined);
@@ -45,12 +48,31 @@ export function PageTabs<T extends string>({
         tab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, [active]);
 
+    // Arrow / Home / End move between tabs (WAI-ARIA tabs pattern)
+    const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+        const ids = tabs.map((tb) => tb.id);
+        const i = ids.indexOf(active);
+        const byKey: Record<string, T | undefined> = {
+            ArrowRight: ids[(i + 1) % ids.length],
+            ArrowLeft: ids[(i - 1 + ids.length) % ids.length],
+            Home: ids[0],
+            End: ids[ids.length - 1],
+        };
+        const next = byKey[e.key];
+        if (next === undefined) return;
+        e.preventDefault();
+        onChange(next);
+        const buttons = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? []);
+        buttons[ids.indexOf(next)]?.focus();
+    };
+
     return (
         <>
             {hasMarks && <TabBarStatus marks={tabs.map((tb) => tb.refresh)} />}
             <div
                 ref={listRef}
                 role="tablist"
+                aria-label={label}
                 className={cn(
                     'border-border flex gap-1 overflow-x-auto border-b px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
                     className,
@@ -64,6 +86,8 @@ export function PageTabs<T extends string>({
                             type="button"
                             role="tab"
                             aria-selected={selected}
+                            tabIndex={selected ? 0 : -1}
+                            onKeyDown={onKeyDown}
                             onClick={() => onChange(tb.id)}
                             className={cn(
                                 'press focus-visible:ring-ring relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',

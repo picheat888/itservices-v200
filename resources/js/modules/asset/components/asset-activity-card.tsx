@@ -31,7 +31,7 @@ export function AssetActivityCard({ activity, highlightLast }: { activity: Asset
         <Card className="flex h-full flex-col overflow-hidden">
             <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between gap-3 border-b px-5 py-3.5')}>
                 <div className="flex items-center gap-2">
-                    <ArrowLeftRight className="text-muted-foreground h-4 w-4" />
+                    <ArrowLeftRight className="text-muted-foreground h-4 w-4" aria-hidden />
                     <span className="text-sm font-semibold">{t('asset_activity_title')}</span>
                 </div>
                 <div className="bg-muted flex shrink-0 gap-0.5 rounded-lg p-0.5">
@@ -40,6 +40,7 @@ export function AssetActivityCard({ activity, highlightLast }: { activity: Asset
                             key={v}
                             type="button"
                             onClick={() => setView(v)}
+                            aria-pressed={view === v}
                             className={cn(
                                 'rounded-[6px] px-2.5 py-1 text-xs font-semibold transition',
                                 view === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',

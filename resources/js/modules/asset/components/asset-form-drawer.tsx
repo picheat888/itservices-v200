@@ -27,7 +27,7 @@ import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Check, FileText, Infinity as InfinityIcon, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
 
@@ -109,6 +109,8 @@ export function AssetFormDrawer({
     onSaved?: () => void;
 }) {
     const t = useT();
+    const purchaseDateId = useId();
+    const warrantyEndId = useId();
     const confirmEdit = useConfirmEdit();
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
@@ -498,17 +500,27 @@ export function AssetFormDrawer({
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1.5" data-field="purchase_date">
                                             <div className="flex h-5 items-center">
-                                                <Label>
+                                                <Label htmlFor={purchaseDateId}>
                                                     {t('asset_purchase_date')}
                                                     <span className="text-destructive ml-0.5">*</span>
                                                 </Label>
                                             </div>
-                                            <DateInput value={form.purchase_date} onChange={(v) => upd('purchase_date', v)} />
-                                            {err.purchase_date && <p className="text-destructive text-xs">{err.purchase_date}</p>}
+                                            <DateInput
+                                                id={purchaseDateId}
+                                                value={form.purchase_date}
+                                                onChange={(v) => upd('purchase_date', v)}
+                                                aria-invalid={!!err.purchase_date}
+                                                aria-describedby={err.purchase_date ? `${purchaseDateId}-err` : undefined}
+                                            />
+                                            {err.purchase_date && (
+                                                <p id={`${purchaseDateId}-err`} className="text-destructive text-xs">
+                                                    {err.purchase_date}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="space-y-1.5" data-field="warranty_end">
                                             <div className="flex h-5 items-center justify-between">
-                                                <Label>
+                                                <Label htmlFor={warrantyEndId}>
                                                     {t('asset_warranty_end')}
                                                     {!form.warranty_lifetime && <span className="text-destructive ml-0.5">*</span>}
                                                 </Label>
@@ -537,9 +549,19 @@ export function AssetFormDrawer({
                                                     {t('asset_warranty_lifetime')}
                                                 </div>
                                             ) : (
-                                                <DateInput value={form.warranty_end} onChange={(v) => upd('warranty_end', v)} />
+                                                <DateInput
+                                                    id={warrantyEndId}
+                                                    value={form.warranty_end}
+                                                    onChange={(v) => upd('warranty_end', v)}
+                                                    aria-invalid={!!err.warranty_end}
+                                                    aria-describedby={err.warranty_end ? `${warrantyEndId}-err` : undefined}
+                                                />
                                             )}
-                                            {err.warranty_end && <p className="text-destructive text-xs">{err.warranty_end}</p>}
+                                            {err.warranty_end && (
+                                                <p id={`${warrantyEndId}-err`} className="text-destructive text-xs">
+                                                    {err.warranty_end}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </>
@@ -550,7 +572,7 @@ export function AssetFormDrawer({
                     {/* Notes */}
                     <div>
                         <SectionLabel>{t('asset_notes')}</SectionLabel>
-                        <Textarea value={form.notes} onChange={(e) => upd('notes', e.target.value)} rows={2} />
+                        <Textarea value={form.notes} onChange={(e) => upd('notes', e.target.value)} rows={2} aria-label={t('asset_notes')} />
                     </div>
                 </div>
 

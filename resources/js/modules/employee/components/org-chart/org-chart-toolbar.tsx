@@ -5,7 +5,7 @@ import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { OrgDir } from '../../lib/org-tree';
 
 interface OrgStats {
@@ -54,6 +54,7 @@ export function OrgChartToolbar({
     const lang = useUiStore((s) => s.lang);
     // Keyboard-highlighted suggestion
     const [activeIndex, setActiveIndex] = useState(0);
+    const listId = useId();
 
     const q = query.trim().toLowerCase();
     const suggestions = useMemo(() => {
@@ -110,6 +111,11 @@ export function OrgChartToolbar({
                             }}
                             placeholder={t('org_search_placeholder')}
                             aria-label={searchLabel(t('org_search_placeholder'))}
+                            role="combobox"
+                            aria-expanded={suggestions.length > 0}
+                            aria-controls={listId}
+                            aria-autocomplete="list"
+                            aria-activedescendant={suggestions.length > 0 ? `${listId}-${active}` : undefined}
                             autoComplete="off"
                             spellCheck={false}
                             className="text-foreground placeholder:text-muted-foreground w-56 min-w-0 border-none bg-transparent text-[12.5px] text-ellipsis outline-none"
@@ -128,11 +134,19 @@ export function OrgChartToolbar({
                     </div>
 
                     {suggestions.length > 0 && (
-                        <ul className="border-border bg-card absolute top-full left-0 z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border py-1 shadow-lg">
+                        <ul
+                            id={listId}
+                            role="listbox"
+                            className="border-border bg-card absolute top-full left-0 z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border py-1 shadow-lg"
+                        >
                             {suggestions.map((p, i) => (
-                                <li key={p.id}>
+                                <li key={p.id} role="presentation">
                                     <button
                                         type="button"
+                                        id={`${listId}-${i}`}
+                                        role="option"
+                                        aria-selected={i === active}
+                                        tabIndex={-1}
                                         // onMouseDown so the pick fires before the input blur
                                         onMouseDown={(e) => {
                                             e.preventDefault();

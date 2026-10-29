@@ -89,6 +89,7 @@ export const permission: Dict = {
     gr_pick_none_hint: 'ลองเปลี่ยนคำค้นหรือแผนก',
     gr_pick_all_in: 'ทุกคนในรายการนี้อยู่ในกลุ่มแล้ว',
     gr_members_title: 'สมาชิกปัจจุบัน',
+    gr_pane_switch: 'ส่วนของสมาชิก',
     gr_members_search: 'ค้นหาชื่อ, รหัส หรือแผนก…',
     gr_moved_from: 'ย้ายจาก {name}',
     gr_new_member: 'เพิ่มใหม่',
