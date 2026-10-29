@@ -10,12 +10,14 @@ use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\AppSetting;
 use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Ticket\TicketService;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 /**
@@ -192,6 +194,23 @@ class SlaTargetTest extends TestCase
 
         $this->assertDatabaseHas('sla_targets', ['scope' => 'request_type', 'match_value' => 'computer', 'resolve_hours' => 72]);
         $this->assertDatabaseHas('sla_targets', ['scope' => 'priority', 'match_value' => 'critical', 'resolve_hours' => 4]);
+    }
+
+    public function test_sla_save_is_all_or_nothing(): void
+    {
+        $this->rule(SlaScope::Priority, 'critical', 4);
+        $admin = $this->admin();
+        Event::listen('eloquent.saved: '.AppSetting::class, fn () => throw new \RuntimeException('disk full'));
+
+        $this->actingAs($admin)
+            ->putJson('/api/settings/sla', [
+                'ticket_sla' => ['critical' => ['resolve' => 9], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+                'ticket_sla_response' => 60,
+            ])
+            ->assertServerError();
+
+        $this->assertDatabaseHas('sla_targets', ['scope' => 'priority', 'match_value' => 'critical', 'resolve_hours' => 4]);
+        $this->assertDatabaseMissing('sla_targets', ['scope' => 'priority', 'match_value' => 'high']);
     }
 
     public function test_a_saved_priority_clock_round_trips_through_settings_get(): void

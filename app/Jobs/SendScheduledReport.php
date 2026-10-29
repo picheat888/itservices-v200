@@ -14,12 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimited;
 use Throwable;
 
-/**
- * Builds and mails one run of a scheduled report (App\Models\Report\ReportSchedule) in the
- * worker. `$runAt` is the slot the run is for — it decides the period the file covers, so a
- * run picked up late still reports on the right day, week or month. Rate limited so a
- * backlog goes out spaced; any failure is final, since a retry would mail recipients twice.
- */
+/** Builds and mails one scheduled report run for slot `$runAt`; rate limited, and never retried (a retry would mail twice). */
 class SendScheduledReport implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
@@ -62,6 +57,8 @@ class SendScheduledReport implements ShouldQueue
     /** A worker that times out or dies never reaches run()'s own catch — record it here. */
     public function failed(?Throwable $exception): void
     {
+        app(ReportScheduleService::class)->discardWork($this->scheduleId, CarbonImmutable::parse($this->runAt));
+
         $schedule = ReportSchedule::find($this->scheduleId);
         if ($schedule !== null) {
             app(ReportScheduleService::class)->finish($schedule, ReportSchedule::FAILED, 'build_failed');

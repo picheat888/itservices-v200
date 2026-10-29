@@ -26,6 +26,7 @@ use App\Support\TicketSla;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -226,6 +227,26 @@ class SettingsController extends Controller
 
         $data = $validator->validate();
 
+        try {
+            DB::transaction(fn () => $this->saveSla($data));
+        } finally {
+            // A rolled-back save must not leave its values in the caches
+            AppSetting::flushCache();
+            TicketSla::flush();
+        }
+
+        AuditLog::record('Updated SLA settings', 'ticket_sla');
+
+        return $this->show();
+    }
+
+    /**
+     * Writes the validated SLA settings and moves the stored deadlines of every open ticket.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function saveSla(array $data): void
+    {
         // Priority targets: one row each, written straight over whatever was there.
         foreach ($data['ticket_sla'] as $priority => $row) {
             SlaTarget::updateOrCreate(
@@ -269,31 +290,32 @@ class SettingsController extends Controller
         if (isset($data['ticket_sla_hours'])) {
             AppSetting::put(TicketSla::HOURS_KEY, json_encode($data['ticket_sla_hours']));
         }
-        TicketSla::flush(); // drop the per-request memo so this response reflects the new values
+        TicketSla::flush(); // the deadlines below use the new values
 
-        // Deadlines are persisted per ticket for SQL ordering — refresh every ticket
-        // still in motion under the new targets/window (closed history stays frozen).
-        // with(serviceRequest): the target of a request-born case is decided by what was
-        // requested, and asking per row here would be one query per open ticket.
+        // Stored deadlines of open tickets follow the new targets; closed history stays frozen
         Ticket::query()->with('serviceRequest')->whereIn('status', TicketStatus::liveValues())->chunkById(200, function ($tickets) {
             foreach ($tickets as $ticket) {
-                // Compute BEFORE disabling timestamps — usesTimestamps()=false also
-                // drops the created_at Carbon cast the business-time math needs.
+                // Compute before timestamps=false, which also drops the created_at cast
                 $dues = [
-                    'sla_response_due_at' => TicketSla::responseDueAt($ticket),
-                    'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
-                    // The deadlines moved — stale escalation state must re-evaluate.
-                    'sla_response_alert_level' => null,
-                    'sla_resolve_alert_level' => null,
+                    'sla_response' => TicketSla::responseDueAt($ticket),
+                    'sla_resolve' => TicketSla::resolveDueAt($ticket),
                 ];
+                $changes = [];
+                foreach ($dues as $clock => $due) {
+                    if ($ticket->{"{$clock}_due_at"}?->timestamp === $due?->timestamp) {
+                        continue;
+                    }
+                    // A moved deadline re-evaluates its own alert stage
+                    $changes["{$clock}_due_at"] = $due;
+                    $changes["{$clock}_alert_level"] = null;
+                }
+                if ($changes === []) {
+                    continue;
+                }
                 $ticket->timestamps = false; // a recompute is not an edit — keep updated_at
-                $ticket->forceFill($dues)->saveQuietly();
+                $ticket->forceFill($changes)->saveQuietly();
             }
         });
-
-        AuditLog::record('Updated SLA settings', 'ticket_sla');
-
-        return $this->show();
     }
 
     /**

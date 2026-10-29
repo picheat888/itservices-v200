@@ -3,6 +3,7 @@
 namespace Tests\Feature\Report;
 
 use App\Jobs\GenerateReportExport;
+use App\Jobs\SendScheduledReport;
 use App\Models\Asset\Asset;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -10,6 +11,7 @@ use App\Models\Report\ReportExport;
 use App\Models\User;
 use App\Services\Report\ReportExportService;
 use App\Services\Report\Tabular\TabularReportExporter;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Queue;
@@ -252,6 +254,30 @@ class ReportExportQueueTest extends TestCase
         $this->assertSame([$current, $waiting], ReportExport::query()->orderBy('id')->pluck('id')->all());
         $this->assertNotContains($stalled, ReportExport::query()->pluck('id')->all());
         Storage::disk('local')->assertMissing($expiredPath);
+    }
+
+    public function test_prune_sweeps_old_schedule_work_folders(): void
+    {
+        Storage::disk('local')->put('report-schedules/7/20260922100000/assets.pdf', 'x');
+        Storage::disk('local')->put('report-schedules/7/20260924120000/assets.pdf', 'x');
+
+        $this->artisan('reports:prune-exports')->assertSuccessful();
+
+        Storage::disk('local')->assertMissing('report-schedules/7/20260922100000');
+        Storage::disk('local')->assertExists('report-schedules/7/20260924120000/assets.pdf');
+    }
+
+    public function test_a_failed_scheduled_run_removes_its_own_work_folder(): void
+    {
+        $runAt = CarbonImmutable::parse('2026-09-25 07:00:00');
+        $folder = 'report-schedules/999/'.$runAt->format('YmdHis');
+        Storage::disk('local')->put("{$folder}/assets.pdf", 'x');
+        Storage::disk('local')->put('report-schedules/999/20260924070000/assets.pdf', 'x');
+
+        (new SendScheduledReport(999, $runAt->toIso8601String()))->failed(new \RuntimeException('worker died'));
+
+        Storage::disk('local')->assertMissing($folder);
+        Storage::disk('local')->assertExists('report-schedules/999/20260924070000/assets.pdf');
     }
 
     public function test_the_old_direct_download_is_gone(): void

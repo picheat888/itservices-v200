@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Employee\Employee;
+use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Ticket\TicketSlaAlertService;
@@ -125,5 +126,62 @@ class TicketSlaAlertTest extends TestCase
         // Taking it pins a fresh resolution deadline — its alert stage starts clean.
         $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertOk();
         $this->assertNull($ticket->fresh()->sla_resolve_alert_level);
+    }
+
+    public function test_saving_sla_without_moving_a_deadline_keeps_the_alert_stage(): void
+    {
+        $admin = $this->slaAdmin();
+        $ticket = $this->breachedCase();
+
+        $this->actingAs($admin)->putJson('/api/settings/sla', ['ticket_sla' => TicketSla::defaults()])->assertOk();
+
+        $fresh = $ticket->fresh();
+        $this->assertSame('over_sla', $fresh->sla_response_alert_level);
+        $this->assertSame('over_sla', $fresh->sla_resolve_alert_level);
+        // Nothing moved, so the next sweep stays quiet
+        $this->assertSame(['near_due' => 0, 'over_sla' => 0], $this->sweep());
+    }
+
+    public function test_moving_a_deadline_resets_its_alert_stage(): void
+    {
+        $admin = $this->slaAdmin();
+        $ticket = $this->breachedCase();
+        $dueBefore = $ticket->fresh()->sla_resolve_due_at;
+
+        $this->actingAs($admin)
+            ->putJson('/api/settings/sla', ['ticket_sla' => ['critical' => ['resolve' => 5]] + TicketSla::defaults()])
+            ->assertOk();
+
+        $fresh = $ticket->fresh();
+        $this->assertTrue($fresh->sla_resolve_due_at->greaterThan($dueBefore));
+        $this->assertNull($fresh->sla_resolve_alert_level);
+        // The response deadline did not move, so its stage stays
+        $this->assertSame('over_sla', $fresh->sla_response_alert_level);
+    }
+
+    /** An in-progress critical case past both deadlines, with both alert stages recorded. */
+    private function breachedCase(): Ticket
+    {
+        $ticket = Ticket::factory()->create([
+            'status' => 'in_progress', 'priority' => 'critical',
+            'assignee_id' => $this->staff('Assignee')->id,
+            'created_at' => '2026-01-13 08:00:00', 'responded_at' => '2026-01-13 08:05:00',
+        ]);
+        $ticket->forceFill([
+            'sla_response_due_at' => TicketSla::responseDueAt($ticket),
+            'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
+            'sla_response_alert_level' => 'over_sla',
+            'sla_resolve_alert_level' => 'over_sla',
+        ])->save();
+
+        return $ticket;
+    }
+
+    private function slaAdmin(): User
+    {
+        $user = $this->staff('Admin');
+        RolePermission::firstOrCreate(['role_id' => $user->role_id, 'permission' => 'settings.sla'], ['allowed' => true]);
+
+        return $user->refresh();
     }
 }

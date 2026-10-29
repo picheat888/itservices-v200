@@ -38,6 +38,12 @@ class ReportScheduleService
     /** Larger files are not attached; recipients with an account use the download link (10 MB, under Gmail and Exchange caps). */
     public int $attachmentLimitBytes = 10 * 1024 * 1024;
 
+    /** A run's work folder is named by its slot. */
+    private const WORK_FOLDER_FORMAT = 'YmdHis';
+
+    /** Older than this a work folder is a leftover: a run may wait in the queue one day at most. */
+    public const LEFTOVER_DAYS = 2;
+
     public function __construct(
         private TabularReportExporter $tabular,
         private TicketOverviewExporter $ticketOverview,
@@ -150,7 +156,7 @@ class ReportScheduleService
             return;
         }
 
-        $directory = "report-schedules/{$schedule->id}/".$runAt->format('YmdHis');
+        $directory = $this->workDirectory($schedule->id, $runAt);
 
         try {
             $period = $schedule->periodFor($runAt);
@@ -209,6 +215,41 @@ class ReportScheduleService
         } finally {
             Storage::disk('local')->deleteDirectory($directory);
         }
+    }
+
+    /** Where one run builds its file before it is moved into the owner's exports. */
+    public function workDirectory(int $scheduleId, CarbonImmutable $runAt): string
+    {
+        return "report-schedules/{$scheduleId}/".$runAt->format(self::WORK_FOLDER_FORMAT);
+    }
+
+    /** Removes the work folder of a run whose worker died before run() could clean up. */
+    public function discardWork(int $scheduleId, CarbonImmutable $runAt): void
+    {
+        Storage::disk('local')->deleteDirectory($this->workDirectory($scheduleId, $runAt));
+    }
+
+    /** Deletes run work folders named older than LEFTOVER_DAYS; returns how many. */
+    public function pruneLeftovers(): int
+    {
+        $disk = Storage::disk('local');
+        $cutoff = CarbonImmutable::now()->subDays(self::LEFTOVER_DAYS);
+        $removed = 0;
+
+        foreach ($disk->directories('report-schedules') as $scheduleFolder) {
+            foreach ($disk->directories($scheduleFolder) as $runFolder) {
+                $name = basename($runFolder);
+                if (preg_match('/^\d{14}$/', $name) !== 1) {
+                    continue;
+                }
+                if (CarbonImmutable::createFromFormat(self::WORK_FOLDER_FORMAT, $name)->lessThan($cutoff)) {
+                    $disk->deleteDirectory($runFolder);
+                    $removed++;
+                }
+            }
+        }
+
+        return $removed;
     }
 
     /** Record a run's outcome; a failed one rings the owner's bell. */

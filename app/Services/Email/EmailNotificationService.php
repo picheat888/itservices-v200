@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
  * Central send path for system emails. Event-driven sends are queued (per
@@ -193,8 +194,9 @@ class EmailNotificationService
     /**
      * Core send: applies DB SMTP config, sends the mailable, logs the result,
      * and bumps the template's last_sent_at (not for a test). Returns true on success.
+     * With $throwTransient a passing SMTP failure is thrown unlogged, so the queue retries it.
      */
-    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null, ?string $attachmentPath = null, ?string $attachmentName = null, bool $isTest = false): bool
+    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null, ?string $attachmentPath = null, ?string $attachmentName = null, bool $isTest = false, bool $throwTransient = false): bool
     {
         $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
         $subject = $this->brandedSubject($subject);
@@ -208,11 +210,11 @@ class EmailNotificationService
             $status = $logOnly ? 'failed' : 'sent';
             $error = $logOnly ? self::NOT_CONFIGURED_ERROR : null;
         } catch (\Throwable $e) {
+            if ($throwTransient && $this->isTransient($e)) {
+                throw $e;
+            }
             $status = 'failed';
-            // The mailer's own words, kept verbatim on purpose. Whoever reads the delivery
-            // log is the person who has to fix the mail server, and a friendlier sentence
-            // would drop the part they need — the malformed address, the refused
-            // connection, the rejecting host. Deliberately not translated or summarised.
+            // The mailer's own words verbatim: the person fixing the mail server needs them
             $error = $e->getMessage();
             Log::warning('Email send failed', ['to' => $toEmail, 'error' => $error]);
         }
@@ -236,6 +238,14 @@ class EmailNotificationService
         }
 
         return $status === 'sent';
+    }
+
+    /** A dropped connection (code 0) or a 4xx SMTP reply may pass; a 5xx or a bad address will not. */
+    private function isTransient(\Throwable $e): bool
+    {
+        $code = (int) $e->getCode();
+
+        return $e instanceof TransportExceptionInterface && ($code === 0 || ($code >= 400 && $code < 500));
     }
 
     /**

@@ -42,8 +42,38 @@ class MailConfigTimeoutTest extends TestCase
         $this->assertSame(MailConfigService::SMTP_TIMEOUT_SECONDS, config('mail.mailers.smtp.timeout'));
     }
 
+    public function test_changed_smtp_settings_reach_an_already_built_mailer(): void
+    {
+        MailSetting::current()->update(['host' => 'old.example.com', 'port' => 587, 'from_address' => 'it@example.com']);
+        app(MailConfigService::class)->apply();
+        $this->assertSame('old.example.com', $this->smtpStream()->getHost());
+
+        MailSetting::current()->update(['host' => 'new.example.com']);
+        app(MailConfigService::class)->apply();
+
+        $this->assertSame('new.example.com', $this->smtpStream()->getHost());
+    }
+
+    public function test_an_unconfigured_apply_still_drops_the_built_mailer(): void
+    {
+        // The .env fallback is SMTP and its mailer was built before the timeout was set
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.timeout' => null]);
+        $this->assertNotSame((float) MailConfigService::SMTP_TIMEOUT_SECONDS, $this->smtpStreamTimeout());
+
+        app(MailConfigService::class)->apply();
+
+        $this->assertFalse(MailSetting::current()->isConfigured());
+        $this->assertSame((float) MailConfigService::SMTP_TIMEOUT_SECONDS, $this->smtpStreamTimeout());
+    }
+
     /** The timeout the SMTP mailer's socket is actually built with. */
     private function smtpStreamTimeout(): float
+    {
+        return $this->smtpStream()->getTimeout();
+    }
+
+    /** The socket of the SMTP mailer as it is built now. */
+    private function smtpStream(): SocketStream
     {
         $transport = Mail::mailer('smtp')->getSymfonyTransport();
         $this->assertInstanceOf(EsmtpTransport::class, $transport);
@@ -51,6 +81,6 @@ class MailConfigTimeoutTest extends TestCase
         $stream = $transport->getStream();
         $this->assertInstanceOf(SocketStream::class, $stream);
 
-        return $stream->getTimeout();
+        return $stream;
     }
 }

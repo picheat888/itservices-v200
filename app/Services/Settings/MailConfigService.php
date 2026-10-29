@@ -4,19 +4,12 @@ namespace App\Services\Settings;
 
 use App\Models\Settings\MailSetting;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
 
-/**
- * Applies the admin-managed SMTP credentials (mail_settings) onto the runtime
- * mail config before any send. Per CLAUDE.md, mail config lives in the database
- * and .env is only a fallback — so we override config('mail.*') at send time.
- */
+/** Puts the SMTP settings from mail_settings onto config('mail.*') before each send; .env is the fallback. */
 class MailConfigService
 {
-    /**
-     * Seconds an SMTP connection may sit silent before the send fails. Without it a mail server
-     * that stops answering holds the queue worker until queue:listen's process timeout kills the
-     * whole listener — and every job behind it (report exports too) waits forever.
-     */
+    /** Seconds an SMTP connection may sit silent before the send fails, so the worker never hangs. */
     public const SMTP_TIMEOUT_SECONDS = 30;
 
     /** Overrides config('mail.*') from mail_settings when configured. */
@@ -28,6 +21,8 @@ class MailConfigService
         $settings = MailSetting::current();
 
         if (! $settings->isConfigured()) {
+            Mail::purge(config('mail.default'));
+
             return; // leave .env fallback in place
         }
 
@@ -39,5 +34,7 @@ class MailConfigService
         Config::set('mail.mailers.smtp.encryption', $settings->encryption ?: null);
         Config::set('mail.from.address', $settings->from_address);
         Config::set('mail.from.name', $settings->from_name ?: config('app.name'));
+        // A worker keeps built mailers; rebuild from the config just set
+        Mail::purge(config('mail.default'));
     }
 }

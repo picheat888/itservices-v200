@@ -17,6 +17,11 @@ class SendTemplatedEmail implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $tries = 3;
+
+    /** @var list<int> seconds before the second and third attempt */
+    public array $backoff = [60, 300];
+
     public function __construct(
         public string $toEmail,
         public string $subject,
@@ -40,6 +45,7 @@ class SendTemplatedEmail implements ShouldQueue
             $this->actionLabel,
             $this->eyebrow,
             $this->recipientName,
+            throwTransient: $this->attempts() < $this->tries,
         );
     }
 }

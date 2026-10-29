@@ -15,7 +15,10 @@ use App\Services\Auth\DeviceUserProvider;
 use App\Services\Auth\GeoIpLookup;
 use App\Support\Cidr;
 use App\Support\ErrorPage;
+use App\Support\NotificationCatalogue;
 use App\Support\NotificationKind;
+use App\Support\RequestSchemas;
+use App\Support\TicketSla;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Http\Events\RequestHandled;
@@ -50,7 +53,12 @@ class AppServiceProvider extends ServiceProvider
         // Settings cache per application instance (one request, one test)
         AppSetting::flushCache();
         // A long-lived queue worker boots once; each job reads settings fresh.
-        Event::listen(JobProcessing::class, fn () => AppSetting::flushCache());
+        Event::listen(JobProcessing::class, function () {
+            AppSetting::flushCache();
+            TicketSla::flush();
+            NotificationCatalogue::forgetSwitches();
+            RequestSchemas::flushManagedCache();
+        });
         // Permission keys are read once per user while a request is handled, never after it
         Event::listen(RouteMatched::class, fn (RouteMatched $e) => $e->request->attributes->set(User::PERMISSION_MEMO, []));
         Event::listen(RequestHandled::class, fn (RequestHandled $e) => $e->request->attributes->remove(User::PERMISSION_MEMO));

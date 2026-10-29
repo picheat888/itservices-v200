@@ -14,6 +14,9 @@ use App\Services\Email\EmailNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Symfony\Component\Mailer\Exception\TransportException;
+use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport\AbstractTransport;
 use Tests\TestCase;
 
 /**
@@ -346,5 +349,71 @@ class EmailDeliveryLogTest extends TestCase
         $log = EmailLog::query()->latest('id')->firstOrFail();
         $this->assertSame('sent', $log->status);
         $this->assertNull($log->error);
+    }
+
+    public function test_transient_smtp_failure_is_retried_before_it_is_logged(): void
+    {
+        $this->failSendsWith(421);
+
+        $first = $this->emailJob(attempt: 1);
+        try {
+            $first->handle($this->service());
+            $this->fail('A 421 on an early attempt goes back to the queue.');
+        } catch (TransportException $e) {
+            $this->assertSame(421, $e->getCode());
+        }
+        $this->assertSame(0, EmailLog::count());
+
+        $this->emailJob(attempt: 3)->handle($this->service());
+
+        $this->assertSame(['failed'], EmailLog::pluck('status')->all());
+    }
+
+    public function test_permanent_failure_logs_at_once(): void
+    {
+        $this->failSendsWith(550);
+
+        $this->emailJob(attempt: 1)->handle($this->service());
+
+        $this->assertSame(['failed'], EmailLog::pluck('status')->all());
+    }
+
+    public function test_a_test_send_never_waits_for_a_retry(): void
+    {
+        $this->failSendsWith(421);
+
+        $this->assertFalse($this->service()->sendTest('manee@example.com'));
+        $this->assertSame(['failed'], EmailLog::pluck('status')->all());
+    }
+
+    /** Every send through the default mailer fails with this SMTP reply code. */
+    private function failSendsWith(int $code): void
+    {
+        Mail::extend('failing', fn () => new class($code) extends AbstractTransport
+        {
+            public function __construct(private int $code)
+            {
+                parent::__construct();
+            }
+
+            protected function doSend(SentMessage $message): void
+            {
+                throw new TransportException("SMTP said {$this->code}", $this->code);
+            }
+
+            public function __toString(): string
+            {
+                return 'failing://';
+            }
+        });
+        config(['mail.default' => 'failing', 'mail.mailers.failing' => ['transport' => 'failing']]);
+    }
+
+    private function emailJob(int $attempt): SendTemplatedEmail
+    {
+        $job = (new SendTemplatedEmail('manee@example.com', 'Hello', '<p>Body</p>', 'test.template'))->withFakeQueueInteractions();
+        $job->job->attempts = $attempt;
+
+        return $job;
     }
 }
