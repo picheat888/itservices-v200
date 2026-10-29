@@ -135,9 +135,10 @@ class ReportHubTest extends TestCase
         $this->assertEquals(100.0, $tiles['sla_rate']['value']);
         // Against 0% in the 30 days before.
         $this->assertEquals(100.0, $tiles['sla_rate']['delta']);
+        // The same base as the assets overview report it opens: written-off assets count in the whole.
         $this->assertSame(1, $tiles['assets_in_use']['value']);
-        $this->assertSame(2, $tiles['assets_in_use']['total']);
-        $this->assertSame(50, $tiles['assets_in_use']['secondary']['value']);
+        $this->assertSame(3, $tiles['assets_in_use']['total']);
+        $this->assertSame(33, $tiles['assets_in_use']['secondary']['value']);
         $this->assertSame(2, $tiles['stock_below_min']['value']);
         $this->assertSame(['key' => 'out', 'value' => 1], $tiles['stock_below_min']['secondary']);
     }
@@ -189,12 +190,43 @@ class ReportHubTest extends TestCase
         $this->assertSame(1, $tilesFor('period=90d')['requests_pending']['secondary']['value']);
         $this->assertSame(2, $tilesFor('period=custom&from=2026-01-01&to=2026-09-25')['requests_pending']['secondary']['value']);
         $this->assertSame(0, $tilesFor('period=custom&from=2026-03-01&to=2026-09-24')['requests_pending']['secondary']['value']);
-        // Same rule as the "ต่ออายุและสิ้นสุดสัญญา" list at 30 days.
+        // Same rule as the "ต่ออายุและสิ้นสุดสัญญา" list at 30 days, and the link opens it there.
         $this->assertSame(1, $last30['contracts_expiring']['value']);
+        $this->assertSame(['within' => '30'], $last30['contracts_expiring']['filters']);
 
         $this->actingAs($user)->getJson('/api/reports/snapshot?period=decade')->assertUnprocessable();
         // The calendar periods the strip used to offer are gone.
         $this->actingAs($user)->getJson('/api/reports/snapshot?period=month')->assertUnprocessable();
+    }
+
+    /** Each tile's number is the one its report shows when opened through the tile's link. */
+    public function test_snapshot_tiles_match_the_report_their_link_opens(): void
+    {
+        $user = $this->userWith([...$this->reportRights('assets', 'contracts')]);
+        Asset::factory()->create(['status' => 'deployed']);
+        Asset::factory()->create(['status' => 'common']);
+        Asset::factory()->create(['status' => 'ready']);
+        Asset::factory()->create(['status' => 'writeoff']);
+        $vendor = Vendor::create(['name' => 'Acme']);
+        Contract::create(['vendor_id' => $vendor->id, 'name' => 'Past', 'type' => 'software', 'start_date' => '2025-09-01', 'end_date' => '2026-09-20', 'value' => 1, 'billing_cycle' => 'yearly']);
+        Contract::create(['vendor_id' => $vendor->id, 'name' => 'Soon', 'type' => 'software', 'start_date' => '2025-10-01', 'end_date' => '2026-10-10', 'value' => 1, 'billing_cycle' => 'yearly']);
+        Contract::create(['vendor_id' => $vendor->id, 'name' => 'In 60 days', 'type' => 'software', 'start_date' => '2025-12-01', 'end_date' => '2026-11-24', 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $tiles = collect($this->actingAs($user)->getJson('/api/reports/snapshot')->assertOk()->json('data.tiles'))->keyBy('key');
+        $summaryOf = function (array $tile) use ($user) {
+            $query = http_build_query($tile['filters'] ?? []);
+
+            return collect($this->actingAs($user)->getJson("/api/reports/tabular/{$tile['report_key']}/summary?{$query}")->assertOk()->json('data.summary'))
+                ->pluck('value', 'key');
+        };
+
+        $assets = $summaryOf($tiles['assets_in_use']);
+        $this->assertSame($assets['in_use'], $tiles['assets_in_use']['value']);
+        $this->assertSame($assets['total'], $tiles['assets_in_use']['total']);
+        $this->assertSame(50, $tiles['assets_in_use']['secondary']['value']);
+
+        $this->assertSame($summaryOf($tiles['contracts_expiring'])['total'], $tiles['contracts_expiring']['value']);
+        $this->assertSame(2, $tiles['contracts_expiring']['value']);
     }
 
     /** A custom period is the reader's own from / to — both needed, in order, and not past today. */

@@ -2,12 +2,12 @@
 
 namespace App\Services\Report;
 
-use App\Models\Asset\Asset;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Support\ReportCatalogue;
 use Carbon\CarbonImmutable;
+use Closure;
 
 /**
  * The number strip on top of the Report Center (/reports) — one endpoint for every tile.
@@ -214,7 +214,7 @@ class ReportSnapshotService
     }
 
     /**
-     * In use (deployed + common) out of everything not written off.
+     * In use (deployed + common) out of every asset, read off the assets overview report it opens.
      *
      * @return array<string, mixed>|null
      */
@@ -224,8 +224,9 @@ class ReportSnapshotService
             return null;
         }
 
-        $total = Asset::query()->where('status', '!=', 'writeoff')->count();
-        $inUse = Asset::query()->whereIn('status', ['deployed', 'common'])->count();
+        $summary = $this->summaryOf($viewer, ReportCatalogue::ASSETS_OVERVIEW, []);
+        $inUse = (int) $summary('in_use');
+        $total = (int) $summary('total');
 
         return $this->tile(
             'assets_in_use',
@@ -250,21 +251,33 @@ class ReportSnapshotService
             return null;
         }
 
+        $value = $this->summaryOf($viewer, $reportKey, $filters);
+        $figure = count($valueKeys) === 1 ? $value($valueKeys[0]) : array_sum(array_map($value, $valueKeys));
+
+        return $this->tile($tileKey, $reportKey, $figure, secondary: ['key' => $secondaryKey, 'value' => $value($summaryKey)], filters: $filters);
+    }
+
+    /**
+     * A tabular report's summary numbers at these filters, by key.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Closure(string): (int|float|null)
+     */
+    private function summaryOf(User $viewer, string $reportKey, array $filters): Closure
+    {
         $report = ReportCatalogue::tabular($reportKey);
         $resolved = $report->resolveFilters($filters);
         $summary = collect($report->summary($report->query($viewer, $resolved), $resolved))->keyBy('key');
-        $value = fn (string $key) => $summary->get($key) instanceof ReportSummary ? $summary->get($key)->value : null;
 
-        $figure = count($valueKeys) === 1 ? $value($valueKeys[0]) : array_sum(array_map($value, $valueKeys));
-
-        return $this->tile($tileKey, $reportKey, $figure, secondary: ['key' => $secondaryKey, 'value' => $value($summaryKey)]);
+        return fn (string $key) => $summary->get($key) instanceof ReportSummary ? $summary->get($key)->value : null;
     }
 
     /**
      * @param  array{key: string, value: int|float|null}|null  $secondary
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    private function tile(string $key, string $reportKey, int|float|null $value, ?int $total = null, ?string $unit = null, ?float $delta = null, ?array $secondary = null, ?array $trend = null): array
+    private function tile(string $key, string $reportKey, int|float|null $value, ?int $total = null, ?string $unit = null, ?float $delta = null, ?array $secondary = null, ?array $trend = null, array $filters = []): array
     {
         return [
             'key' => $key,
@@ -276,6 +289,8 @@ class ReportSnapshotService
             'secondary' => $secondary,
             // A short line of the value across the period (sparkline), where the history exists.
             'trend' => $trend,
+            // The report filters the number was counted at, for the tile's link.
+            'filters' => (object) array_map('strval', $filters),
         ];
     }
 }

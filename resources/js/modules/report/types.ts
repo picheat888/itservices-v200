@@ -104,6 +104,8 @@ export interface SnapshotTile {
     secondary: { key: string; value: number | null } | null;
     /** The value across the period (7 points; null = nothing measured there) — the sparkline. */
     trend: (number | null)[] | null;
+    /** The report filters the number was counted at; the tile's link opens the report with them. */
+    filters: Record<string, string>;
 }
 
 export interface ReportSnapshot {

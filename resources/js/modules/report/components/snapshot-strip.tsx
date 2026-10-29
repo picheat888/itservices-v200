@@ -12,6 +12,7 @@
  * their own text, so switching the period shows exactly what moved.
  */
 import { useT } from '@/lang';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatNumber } from '@/shared/lib/number';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
@@ -19,11 +20,11 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useReportCatalogue, useReportSnapshot } from '../hooks/use-reports';
+import { withParams } from '../lib/with-params';
 import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
 import { Sparkline } from './chart-parts';
 import { reportRoute } from './report-catalogue';
 import { periodRange } from './report-scope';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Tiles whose main number is counted over the chosen period rather than as of now. */
 const PERIOD_TILES = new Set(['sla_rate']);
@@ -57,7 +58,10 @@ function Delta({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod })
         );
     }
     const good = value > 0 === (UP_IS_GOOD[tile.key] ?? true);
-    const size = tile.unit === 'percent' ? t('rep_snap_delta_pt').replace('{n}', fmtN(Math.abs(value), { maxDecimals: 2 })) : fmtN(Math.abs(value), { maxDecimals: 2 });
+    const size =
+        tile.unit === 'percent'
+            ? t('rep_snap_delta_pt').replace('{n}', fmtN(Math.abs(value), { maxDecimals: 2 }))
+            : fmtN(Math.abs(value), { maxDecimals: 2 });
 
     return (
         <span className="min-w-0 truncate">
@@ -129,8 +133,8 @@ function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRa
 
     return (
         <Link
-            // Opens the report on the strip's own period, so it shows the days this number counts.
-            to={reportRoute({ key: tile.report_key, range: hasRange }, periodRange(range))}
+            // Opens the report on the strip's own period and the tile's filters, so it shows the number counted here.
+            to={withParams(reportRoute({ key: tile.report_key, range: hasRange }, periodRange(range)), tile.filters)}
             className="bg-card hover:bg-accent focus-visible:ring-brand flex min-w-0 flex-col gap-1 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
             <span className="text-muted-foreground truncate text-xs" title={label}>
