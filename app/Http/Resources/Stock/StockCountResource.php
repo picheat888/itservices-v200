@@ -61,6 +61,8 @@ class StockCountResource extends JsonResource
             // List rows carry SQL counts (withCount); full records count their loaded lines
             'line_count' => $this->lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->count()),
             'counted_lines' => $this->counted_lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->whereNotNull('counted_qty')->count()),
+            // Counted lines off the system figure: how tall a confirmed sheet's table is before it loads
+            'differing_lines' => $this->differing_lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->filter(fn ($l) => ($l->variance() ?? 0) !== 0)->count()),
         ];
     }
 

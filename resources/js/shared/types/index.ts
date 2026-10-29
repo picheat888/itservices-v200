@@ -876,6 +876,8 @@ export interface StockCount {
     lines?: StockCountLine[];
     line_count?: number;
     counted_lines?: number;
+    /** Counted lines off the system figure (the confirmed sheet lists these first). */
+    differing_lines?: number;
 }
 
 export interface StockMovement {

@@ -77,3 +77,11 @@ test('prefetch reads the same cache entries the dialogs read, and nothing freshe
     assert.match(hooks, /queryKey: \[\.\.\.MOVEMENTS, 'lots', id\]/);
     assert.match(hooks, /queryKey: \[\.\.\.COUNTS, id\]/);
 });
+
+test('the count skeleton is as tall as its sheet: measured row heights, the differing-line count, and the footer bar', () => {
+    assert.match(countParts, /const ROW_H = \{ sheet: 'h-\[53px\]', done: 'h-\[49px\]' \} as const;/);
+    assert.match(countParts, /listed\?\.differing_lines \?\? SKELETON_ROWS\.doneFallback/);
+    assert.match(countParts, /<DialogFooterBar aria-hidden>/);
+    assert.match(countSheet, /<CountDialogPending kind="sheet"/);
+    assert.match(countDone, /<CountDialogPending kind="done"/);
+});

@@ -40,7 +40,7 @@ export function CountDoneDialog({
     failed: boolean;
     onRetry: () => void;
     /** The list row it opened from, shown in the header while the record loads. */
-    listed?: Pick<StockCount, 'reference' | 'status'>;
+    listed?: Pick<StockCount, 'reference' | 'status' | 'differing_lines'>;
     canRecount: boolean;
     onClose: () => void;
     /** Opens another count (the recount just made). */
@@ -86,7 +86,7 @@ export function CountDoneDialog({
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className={cn(largeDialogContentClass, !missing && topAnchoredDialogClass, !shown && pendingFrameClass(missing))}>
                 {!shown ? (
-                    <CountDialogPending missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
+                    <CountDialogPending kind="done" missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
                 ) : (
                     <>
                         <FocusDialogHeader

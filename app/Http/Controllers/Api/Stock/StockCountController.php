@@ -40,7 +40,11 @@ class StockCountController extends Controller
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = StockCount::with('countedBy')
-            ->withCount(['lines', 'lines as counted_lines_count' => fn ($q) => $q->whereNotNull('counted_qty')])
+            ->withCount([
+                'lines',
+                'lines as counted_lines_count' => fn ($q) => $q->whereNotNull('counted_qty'),
+                'lines as differing_lines_count' => fn ($q) => $q->whereNotNull('counted_qty')->whereColumn('counted_qty', '!=', 'system_qty'),
+            ])
             ->latest('id')->paginate($perPage);
 
         return response()->json([

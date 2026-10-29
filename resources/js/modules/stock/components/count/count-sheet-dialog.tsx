@@ -64,7 +64,7 @@ export function CountSheetDialog({
     failed: boolean;
     onRetry: () => void;
     /** The list row it opened from, shown in the header while the record loads. */
-    listed?: Pick<StockCount, 'reference' | 'status'>;
+    listed?: Pick<StockCount, 'reference' | 'status' | 'differing_lines'>;
     canEdit: boolean;
     onClose: () => void;
     /** Resolves once the open count has been read again (after a save or the commit). */
@@ -263,7 +263,7 @@ export function CountSheetDialog({
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className={cn(focusDialogContentClass, !shown && pendingFrameClass(missing))}>
                 {!shown ? (
-                    <CountDialogPending missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
+                    <CountDialogPending kind="sheet" missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
                 ) : (
                     <>
                         <FocusDialogHeader

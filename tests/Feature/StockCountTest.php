@@ -92,8 +92,22 @@ class StockCountTest extends TestCase
         $this->getJson('/api/stock-counts')->assertOk()
             ->assertJsonMissingPath('data.0.lines')
             ->assertJsonPath('data.0.line_count', 2)
-            ->assertJsonPath('data.0.counted_lines', 1);
-        $this->getJson("/api/stock-counts/{$id}")->assertJsonCount(2, 'data.lines');
+            ->assertJsonPath('data.0.counted_lines', 1)
+            ->assertJsonPath('data.0.differing_lines', 1);
+        $this->getJson("/api/stock-counts/{$id}")->assertJsonCount(2, 'data.lines')->assertJsonPath('data.differing_lines', 1);
+    }
+
+    public function test_differing_lines_leave_out_lines_counted_as_the_system_says(): void
+    {
+        $a = $this->item('A-1', 10);
+        $b = $this->item('A-2', 5);
+        $this->actingAs($this->super());
+        $id = $this->open($this->warehouse(), [$a->id, $b->id])['id'];
+        $lines = collect($this->getJson("/api/stock-counts/{$id}")->json('data.lines'));
+        $counts = $lines->mapWithKeys(fn ($l) => [$l['id'] => ['counted_qty' => $l['system_qty']]])->all();
+        $this->putJson("/api/stock-counts/{$id}", ['lines' => $counts])->assertOk();
+
+        $this->getJson('/api/stock-counts')->assertJsonPath('data.0.counted_lines', 2)->assertJsonPath('data.0.differing_lines', 0);
     }
 
     // One-warehouse count: snapshots and adjusts that warehouse's balance, and the total by the difference
