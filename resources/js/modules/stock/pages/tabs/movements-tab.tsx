@@ -4,6 +4,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
+import { ScrollTable } from '@/shared/components/scroll-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
@@ -15,7 +16,6 @@ import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { searchLabel } from '@/shared/lib/search-words';
-import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
@@ -260,7 +260,7 @@ export function MovementsTab() {
                                         headerRight={<span className="text-muted-foreground text-xs">{fmt.dateTime(viewMove.moved_at)}</span>}
                                     />
 
-                                    <DialogBody className="overscroll-contain">
+                                    <DialogBody className="flex flex-col gap-6 space-y-0 overscroll-contain">
                                         {/* Item + signed quantity */}
                                         <div className="border-border flex items-center justify-between gap-3 rounded-xl border p-3.5">
                                             <div className="min-w-0">
@@ -365,14 +365,19 @@ export function MovementsTab() {
                                             (viewMove.type === 'issue' || viewMove.type === 'return') &&
                                             moveLotsQuery.data &&
                                             moveLotsQuery.data.lots.length > 0 && (
-                                                <div className="motion-content-in">
+                                                <div
+                                                    className={cn(
+                                                        'motion-content-in flex flex-col',
+                                                        moveLotsQuery.data.lots.length > 3 ? 'min-h-56' : 'shrink-0',
+                                                    )}
+                                                >
                                                     <LotsDrawnCard data={moveLotsQuery.data} kind={viewMove.type} />
                                                 </div>
                                             )}
 
                                         {/* Serial list + reprint labels (retroactive, e.g. for a Receive) */}
                                         {moveSerials.length > 0 && (
-                                            <div>
+                                            <div className={cn('flex flex-col', moveSerials.length > 3 ? 'min-h-40' : 'shrink-0')}>
                                                 <div className="mb-1 flex items-center justify-between gap-2">
                                                     <span className={EYEBROW}>{t('stock_serial_list')}</span>
                                                     <a
@@ -385,30 +390,30 @@ export function MovementsTab() {
                                                         {t('stock_lot_print_serial_stickers')}
                                                     </a>
                                                 </div>
-                                                <div className="border-border max-h-48 overflow-auto overscroll-contain rounded-lg border">
-                                                    <table className="w-full text-sm">
-                                                        <thead className={cn(TABLE_HEAD, 'sticky top-0')}>
-                                                            <tr className="text-muted-foreground text-left text-xs font-semibold">
-                                                                <th scope="col" className="w-10 px-3 py-1.5">
-                                                                    #
-                                                                </th>
-                                                                <th scope="col" className="px-3 py-1.5">
-                                                                    {t('stock_hist_serial')}
-                                                                </th>
+                                                <ScrollTable
+                                                    className="border-border min-h-0 rounded-lg border"
+                                                    tableClassName="w-full table-fixed text-sm"
+                                                    cols={
+                                                        <>
+                                                            <col className="w-12" />
+                                                            <col />
+                                                        </>
+                                                    }
+                                                    heads={[{ label: '#' }, { label: t('stock_hist_serial') }]}
+                                                    thClassName="px-3 py-1.5"
+                                                    headRowClassName="text-muted-foreground text-left text-xs font-semibold"
+                                                >
+                                                    <tbody>
+                                                        {moveSerials.map((s, i) => (
+                                                            <tr key={s} className="border-border/60 border-t">
+                                                                <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap tabular-nums">
+                                                                    {i + 1}
+                                                                </td>
+                                                                <td className="px-3 py-1.5 text-xs whitespace-nowrap">{s}</td>
                                                             </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {moveSerials.map((s, i) => (
-                                                                <tr key={s} className="border-border/60 border-t">
-                                                                    <td className="text-muted-foreground px-3 py-1.5 text-xs whitespace-nowrap tabular-nums">
-                                                                        {i + 1}
-                                                                    </td>
-                                                                    <td className="px-3 py-1.5 text-xs whitespace-nowrap">{s}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                        ))}
+                                                    </tbody>
+                                                </ScrollTable>
                                             </div>
                                         )}
 

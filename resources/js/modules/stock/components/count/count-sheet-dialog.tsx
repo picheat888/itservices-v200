@@ -3,12 +3,12 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { SaveButton } from '@/shared/components/save-button';
+import { ScrollTable } from '@/shared/components/scroll-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { searchLabel } from '@/shared/lib/search-words';
-import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { CountReason, StockCount, StockCountLine } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -33,7 +33,16 @@ import {
 } from '../../lib/count-sheet';
 import { stockRefusalText } from '../../lib/refusal';
 import { CountChip } from './count-chip';
-import { CountDialogPending, CountFacts, pendingFrameClass } from './count-dialog-parts';
+import {
+    COUNT_HEAD_ROW,
+    COUNT_TABLE,
+    COUNT_TH,
+    CountCols,
+    CountDialogPending,
+    CountFacts,
+    countHeads,
+    pendingFrameClass,
+} from './count-dialog-parts';
 import { CountReviewDialog } from './count-review-dialog';
 import { CountSerialDialog } from './count-serial-dialog';
 import { CountReadRow, CountSheetRow } from './count-sheet-row';
@@ -328,57 +337,36 @@ export function CountSheetDialog({
                             </div>
 
                             {/* Lines: the header stays, only the table scrolls */}
-                            <div
-                                ref={tableRef}
-                                className="border-border min-h-0 flex-1 scroll-pt-10 overflow-auto overscroll-contain rounded-lg border"
+                            <ScrollTable
+                                bodyRef={tableRef}
+                                className="border-border flex-1 rounded-lg border"
+                                tableClassName={COUNT_TABLE}
+                                cols={<CountCols kind="sheet" />}
+                                heads={countHeads(t)}
+                                thClassName={COUNT_TH}
+                                headRowClassName={COUNT_HEAD_ROW}
+                                after={
+                                    visible.length === 0 && <EmptyState kind="search" title={t('stock_count_no_match')} className="min-h-0 py-10" />
+                                }
                             >
-                                <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                                    <colgroup>
-                                        <col />
-                                        <col className="w-[72px] lg:w-[90px]" />
-                                        <col className="w-[104px] lg:w-[120px]" />
-                                        <col className="w-[88px] lg:w-[96px]" />
-                                        <col className="w-[210px] lg:w-[330px]" />
-                                    </colgroup>
-                                    <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10')}>
-                                        <tr className="text-muted-foreground text-left text-xs font-medium">
-                                            <th scope="col" className="border-border border-b px-3 py-2">
-                                                {t('stock_item')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2 text-right">
-                                                {t('stock_count_col_system')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2 text-right">
-                                                {t('stock_count_col_counted')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2 text-center">
-                                                {t('stock_count_col_diff')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2">
-                                                {t('stock_count_col_reason')}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody inert={busy !== null} className={cn(busy !== null && 'opacity-60')}>
-                                        {visible.map((l) =>
-                                            editable ? (
-                                                <CountSheetRow
-                                                    key={l.id}
-                                                    line={l}
-                                                    qtyText={edits[l.id]?.qty ?? (l.counted_qty === null ? '' : String(l.counted_qty))}
-                                                    onQty={(qty) => edit(l, { qty })}
-                                                    onReason={(reason: CountReason | null) => edit(l, { reason })}
-                                                    onNote={(note) => edit(l, { note })}
-                                                    onOpenSerials={() => setSerial({ lineId: l.id, open: true })}
-                                                />
-                                            ) : (
-                                                <CountReadRow key={l.id} line={l} />
-                                            ),
-                                        )}
-                                    </tbody>
-                                </table>
-                                {visible.length === 0 && <EmptyState kind="search" title={t('stock_count_no_match')} className="min-h-0 py-10" />}
-                            </div>
+                                <tbody inert={busy !== null} className={cn(busy !== null && 'opacity-60')}>
+                                    {visible.map((l) =>
+                                        editable ? (
+                                            <CountSheetRow
+                                                key={l.id}
+                                                line={l}
+                                                qtyText={edits[l.id]?.qty ?? (l.counted_qty === null ? '' : String(l.counted_qty))}
+                                                onQty={(qty) => edit(l, { qty })}
+                                                onReason={(reason: CountReason | null) => edit(l, { reason })}
+                                                onNote={(note) => edit(l, { note })}
+                                                onOpenSerials={() => setSerial({ lineId: l.id, open: true })}
+                                            />
+                                        ) : (
+                                            <CountReadRow key={l.id} line={l} />
+                                        ),
+                                    )}
+                                </tbody>
+                            </ScrollTable>
 
                             {editable && (
                                 <p className="text-muted-foreground flex shrink-0 items-start gap-2 text-xs">

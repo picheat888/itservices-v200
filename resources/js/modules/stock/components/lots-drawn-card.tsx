@@ -1,8 +1,8 @@
 // Card on the issue and return detail listing the lots a document drew from or put back into, with a total row.
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
+import { ScrollTable, type ScrollTableHead } from '@/shared/components/scroll-table';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { MovementLots } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -16,35 +16,36 @@ function CardTitle({ isIssue }: { isIssue: boolean }) {
     return <div className={cn('mb-2 text-sm font-semibold', LOT_INK)}>{isIssue ? t('stock_issue_lots_cut') : t('stock_hist_return_into')}</div>;
 }
 
-function LotsHead({ isIssue }: { isIssue: boolean }) {
-    const t = useT();
-    return (
-        <thead className={TABLE_HEAD}>
-            <tr className="text-muted-foreground text-left text-xs">
-                <th scope="col" className={TH}>
-                    {t('stock_hist_col_lot')}
-                </th>
-                <th scope="col" className={`${TH} text-right`}>
-                    {t('stock_unit_cost_short')}
-                </th>
-                <th scope="col" className={`${TH} text-right`}>
-                    {isIssue ? t('stock_issue_col_issued') : t('stock_return_col_back')}
-                </th>
-                {isIssue && (
-                    <th scope="col" className={`${TH} text-right`}>
-                        {t('stock_issue_col_returned')}
-                    </th>
-                )}
-                <th scope="col" className={`${TH} text-right`}>
-                    {t('stock_issue_col_total')}
-                </th>
-            </tr>
-        </thead>
+// The Lot table's header cells and columns, shared by the card and its skeleton
+function lotsTable(t: ReturnType<typeof useT>, isIssue: boolean) {
+    const heads: ScrollTableHead[] = [
+        { label: t('stock_hist_col_lot') },
+        { label: t('stock_unit_cost_short'), className: 'text-right' },
+        { label: isIssue ? t('stock_issue_col_issued') : t('stock_return_col_back'), className: 'text-right' },
+        ...(isIssue ? [{ label: t('stock_issue_col_returned'), className: 'text-right' }] : []),
+        { label: t('stock_issue_col_total'), className: 'text-right' },
+    ];
+    const cols = (
+        <>
+            <col />
+            <col className="w-28" />
+            <col className="w-16" />
+            {isIssue && <col className="w-16" />}
+            <col className="w-28" />
+        </>
     );
+    return {
+        heads,
+        cols,
+        thClassName: TH,
+        headRowClassName: 'text-muted-foreground text-left text-xs',
+        tableClassName: 'w-full table-fixed text-sm',
+    };
 }
 
 /** The card before its read arrives: the real title and header, bars for one Lot row and the total row. */
 export function LotsDrawnSkeleton({ kind }: { kind: 'issue' | 'return' }) {
+    const t = useT();
     const isIssue = kind === 'issue';
     const cells = isIssue ? 5 : 4;
     const bars = (row: string) =>
@@ -56,16 +57,15 @@ export function LotsDrawnSkeleton({ kind }: { kind: 'issue' | 'return' }) {
     return (
         <div className="border-border rounded-lg border p-3">
             <CardTitle isIssue={isIssue} />
-            <div className="border-border overflow-x-auto rounded-md border" aria-hidden>
-                <table className="w-full text-sm">
-                    <LotsHead isIssue={isIssue} />
+            <div aria-hidden>
+                <ScrollTable className="border-border rounded-md border" {...lotsTable(t, isIssue)}>
                     <tbody>
                         <tr className="border-border/60 border-t">{bars('lot')}</tr>
                     </tbody>
                     <tfoot>
                         <tr className="border-border border-t">{bars('total')}</tr>
                     </tfoot>
-                </table>
+                </ScrollTable>
             </div>
         </div>
     );
@@ -86,36 +86,33 @@ export function LotsDrawnCard({ data, kind }: { data: MovementLots; kind: 'issue
     const returnedQty = data.returns.reduce((sum, r) => sum + r.qty, 0);
 
     return (
-        <div className="border-border rounded-lg border p-3">
+        <div className="border-border flex min-h-0 flex-col rounded-lg border p-3">
             <CardTitle isIssue={isIssue} />
-            <div className="border-border overflow-x-auto rounded-md border">
-                <table className="w-full text-sm">
-                    <LotsHead isIssue={isIssue} />
-                    <tbody className="tabular-nums">
-                        {data.lots.map((l) => (
-                            <tr key={l.lot_id} className="border-border/60 border-t">
-                                <td className="px-3 py-1.5 text-xs whitespace-nowrap">
-                                    <LotLink lotNo={l.lot_no} newTab />
-                                </td>
-                                <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.unit_cost)}</td>
-                                <td className="px-3 py-1.5 text-right">{fmtN(l.qty)}</td>
-                                {isIssue && <td className="px-3 py-1.5 text-right">{fmtN(l.returned)}</td>}
-                                <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.qty * l.unit_cost)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr className="border-border border-t font-semibold tabular-nums">
-                            <td className="px-3 py-1.5" colSpan={2}>
-                                {t('stock_issue_col_total')}
+            <ScrollTable className="border-border min-h-0 rounded-md border" {...lotsTable(t, isIssue)}>
+                <tbody className="tabular-nums">
+                    {data.lots.map((l) => (
+                        <tr key={l.lot_id} className="border-border/60 border-t">
+                            <td className="px-3 py-1.5 text-xs whitespace-nowrap">
+                                <LotLink lotNo={l.lot_no} newTab />
                             </td>
-                            <td className="px-3 py-1.5 text-right">{fmtN(totalQty)}</td>
-                            {isIssue && <td className="px-3 py-1.5 text-right">{fmtN(totalBack)}</td>}
-                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(totalValue)}</td>
+                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.unit_cost)}</td>
+                            <td className="px-3 py-1.5 text-right">{fmtN(l.qty)}</td>
+                            {isIssue && <td className="px-3 py-1.5 text-right">{fmtN(l.returned)}</td>}
+                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(l.qty * l.unit_cost)}</td>
                         </tr>
-                    </tfoot>
-                </table>
-            </div>
+                    ))}
+                </tbody>
+                <tfoot className="bg-background sticky bottom-0">
+                    <tr className="border-border border-t font-semibold tabular-nums">
+                        <td className="px-3 py-1.5" colSpan={2}>
+                            {t('stock_issue_col_total')}
+                        </td>
+                        <td className="px-3 py-1.5 text-right">{fmtN(totalQty)}</td>
+                        {isIssue && <td className="px-3 py-1.5 text-right">{fmtN(totalBack)}</td>}
+                        <td className="px-3 py-1.5 text-right whitespace-nowrap">{format(totalValue)}</td>
+                    </tr>
+                </tfoot>
+            </ScrollTable>
             {isIssue && data.returns.length > 0 && (
                 <p className="text-muted-foreground mt-2 text-xs">
                     {t('stock_issue_returned_note')

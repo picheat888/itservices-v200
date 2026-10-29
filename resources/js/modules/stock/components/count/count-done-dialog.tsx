@@ -2,10 +2,10 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
+import { ScrollTable } from '@/shared/components/scroll-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCount } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
@@ -18,7 +18,16 @@ import { stockCountApi } from '../../api/stockApi';
 import { useStockCountMutations } from '../../hooks/use-stock';
 import { sheetSummary } from '../../lib/count-sheet';
 import { stockRefusalText } from '../../lib/refusal';
-import { CountDialogPending, CountFacts, pendingFrameClass } from './count-dialog-parts';
+import {
+    COUNT_HEAD_ROW,
+    COUNT_TABLE,
+    COUNT_TH,
+    CountCols,
+    CountDialogPending,
+    CountFacts,
+    countHeads,
+    pendingFrameClass,
+} from './count-dialog-parts';
 import { CountKpiCards } from './count-kpi-cards';
 import { varianceOf } from './count-line-parts';
 import { CountReadRow } from './count-sheet-row';
@@ -130,42 +139,21 @@ export function CountDoneDialog({
                                 {t('stock_count_only_diff')}
                             </label>
 
-                            <div className="border-border min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border">
-                                <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                                    <colgroup>
-                                        <col />
-                                        <col className="w-[72px] lg:w-[90px]" />
-                                        <col className="w-[72px] lg:w-[90px]" />
-                                        <col className="w-[88px] lg:w-[96px]" />
-                                        <col className="w-[220px] lg:w-[360px]" />
-                                    </colgroup>
-                                    <thead className={cn(TABLE_HEAD, 'sticky top-0 z-10')}>
-                                        <tr className="text-muted-foreground text-left text-xs font-medium">
-                                            <th scope="col" className="border-border border-b px-3 py-2">
-                                                {t('stock_item')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2 text-right">
-                                                {t('stock_count_col_system')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2 text-right">
-                                                {t('stock_count_col_counted')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2 text-center">
-                                                {t('stock_count_col_diff')}
-                                            </th>
-                                            <th scope="col" className="border-border border-b px-3 py-2">
-                                                {t('stock_count_col_reason')}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {rows.map((l) => (
-                                            <CountReadRow key={l.id} line={l} />
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {rows.length === 0 && <EmptyState title={t('stock_count_nothing_to_adjust')} className="min-h-0 py-8" />}
-                            </div>
+                            <ScrollTable
+                                className="border-border flex-1 rounded-lg border"
+                                tableClassName={COUNT_TABLE}
+                                cols={<CountCols kind="done" />}
+                                heads={countHeads(t)}
+                                thClassName={COUNT_TH}
+                                headRowClassName={COUNT_HEAD_ROW}
+                                after={rows.length === 0 && <EmptyState title={t('stock_count_nothing_to_adjust')} className="min-h-0 py-8" />}
+                            >
+                                <tbody>
+                                    {rows.map((l) => (
+                                        <CountReadRow key={l.id} line={l} />
+                                    ))}
+                                </tbody>
+                            </ScrollTable>
                         </DialogBody>
                         <DialogFooterBar>
                             {showRecount && (

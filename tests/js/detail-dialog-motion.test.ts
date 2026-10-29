@@ -44,9 +44,9 @@ test('skeletons have the shape of what replaces them, not one grey block', () =>
 
 test('content that lands after its skeleton fades in', () => {
     assert.match(css, /\.motion-content-in \{\s*animation: fade-in-only 160ms var\(--ease-enter\);/);
-    assert.match(requestDetail, /<div className="motion-content-in space-y-4">\s*<IssueTrail/);
-    assert.match(requestDetail, /return <div className="motion-content-in">\{children\}<\/div>;/);
-    assert.match(movements, /<div className="motion-content-in">\s*<LotsDrawnCard/);
+    assert.match(requestDetail, /<div className="motion-content-in flex min-h-0 flex-col gap-4">\s*<IssueTrail/);
+    assert.match(requestDetail, /return <div className="motion-content-in flex min-h-0 flex-col">\{children\}<\/div>;/);
+    assert.match(movements, /cn\(\s*'motion-content-in flex flex-col',\s*moveLotsQuery\.data\.lots\.length > 3 \? 'min-h-56' : 'shrink-0',?\s*\)/);
     assert.match(countSheet, /<DialogBody className="motion-content-in /);
     assert.match(countDone, /<DialogBody className="motion-content-in /);
 });
@@ -83,4 +83,32 @@ test('the count skeleton is as tall as its sheet: measured row heights, the diff
     assert.match(countParts, /<DialogFooterBar aria-hidden>/);
     assert.match(countSheet, /<CountDialogPending kind="sheet"/);
     assert.match(countDone, /<CountDialogPending kind="done"/);
+});
+
+test('rows scroll in their own box under a header strip, so the scrollbar never runs beside the header', () => {
+    const scrollTable = read('resources/js/shared/components/scroll-table.tsx');
+    // The visible header is its own non-scrolling strip with the same scrollbar gutter as the rows
+    assert.match(scrollTable, /<div aria-hidden className=\{cn\('shrink-0 overflow-hidden \[scrollbar-gutter:stable\]', TABLE_HEAD\)\}>/);
+    assert.match(scrollTable, /<div ref=\{bodyRef\} className="min-h-0 overflow-auto overscroll-contain \[scrollbar-gutter:stable\]">/);
+    // The data table keeps real column headers for screen readers
+    assert.match(scrollTable, /<th key=\{i\} scope="col" className="h-0 border-0 p-0">\s*<span className="sr-only">\{h\.label\}<\/span>/);
+    for (const [name, file] of [
+        ['request detail', requestDetail],
+        ['movements', movements],
+        ['count sheet', countSheet],
+        ['count done', countDone],
+        ['count skeleton', countParts],
+        ['lots drawn', read('resources/js/modules/stock/components/lots-drawn-card.tsx')],
+    ] as const) {
+        assert.match(file, /<ScrollTable/, name);
+        assert.doesNotMatch(file, /sticky top-0/, name);
+    }
+});
+
+test('a table of up to three rows keeps its full height; a longer one shrinks to about three rows before the body scrolls', () => {
+    assert.match(requestDetail, /const ROOMY_ROWS = 3;/);
+    assert.match(requestDetail, /rows > ROOMY_ROWS \? cn\('flex min-h-0 flex-col', min\) : 'flex shrink-0 flex-col'/);
+    assert.match(requestDetail, /scrollSection\(issue\.lines\.length, 'min-h-64'\)/);
+    assert.match(requestDetail, /scrollSection\(returnRows, 'min-h-52'\)/);
+    assert.match(movements, /moveSerials\.length > 3 \? 'min-h-40' : 'shrink-0'/);
 });

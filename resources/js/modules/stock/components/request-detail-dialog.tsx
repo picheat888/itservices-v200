@@ -4,6 +4,7 @@ import { useCurrency } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { ScrollTable } from '@/shared/components/scroll-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
@@ -36,6 +37,11 @@ const LABEL = 'text-muted-foreground text-xs';
 const H3 = 'mb-2 text-sm font-semibold';
 const TH = 'border-border border-b px-3 py-1.5 font-medium';
 const TD = 'border-border/60 border-b px-3 py-2 tabular-nums group-last:border-0';
+// Detail tables scroll in their own frame; one longer than ROOMY_ROWS keeps about three rows in view before the body scrolls
+const ROOMY_ROWS = 3;
+const TABLE_FRAME = 'border-border min-h-0 rounded-lg border';
+// Short tables keep their full height; longer ones shrink down to `min`
+const scrollSection = (rows: number, min: string) => (rows > ROOMY_ROWS ? cn('flex min-h-0 flex-col', min) : 'flex shrink-0 flex-col');
 const UNASSIGNED = 'Unassigned';
 
 export interface RequestDetailActions {
@@ -95,7 +101,7 @@ export function RequestDetailDialog({
                             titleSuffix={<StatusBadge tone={REQ_TONE[r.status]}>{t(`stock_rq_${r.status}` as Parameters<typeof t>[0])}</StatusBadge>}
                             srDescription={t('stock_rq_detail_title')}
                         />
-                        <DialogBody className="space-y-4 px-6 py-4">
+                        <DialogBody className="flex flex-col gap-4 space-y-0 px-6 py-4">
                             <StepBar request={r} />
                             <ItemCard request={r} />
                             <RequestFacts request={r} />
@@ -112,7 +118,7 @@ export function RequestDetailDialog({
                                 (trailQuery.isError ? (
                                     <LoadFailedPanel onRetry={() => trailQuery.refetch()} />
                                 ) : trailQuery.data ? (
-                                    <div className="motion-content-in space-y-4">
+                                    <div className="motion-content-in flex min-h-0 flex-col gap-4">
                                         <IssueTrail trail={trailQuery.data} />
                                     </div>
                                 ) : (
@@ -248,7 +254,7 @@ function StockNow({ query, note }: { query: ItemQuery; note?: string }) {
     const balances = (query.data?.balances ?? []).filter((b) => b.qty > 0);
 
     return (
-        <section aria-labelledby={titleId}>
+        <section aria-labelledby={titleId} className={scrollSection(balances.length, 'min-h-52')}>
             <h3 id={titleId} className={H3}>
                 {t('stock_rq_stock_now')}
             </h3>
@@ -262,32 +268,28 @@ function StockNow({ query, note }: { query: ItemQuery; note?: string }) {
                         />
                     </div>
                 ) : (
-                    <div className="border-border overflow-hidden rounded-lg border">
-                        <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                            <colgroup>
+                    <ScrollTable
+                        className={TABLE_FRAME}
+                        tableClassName="w-full table-fixed border-separate border-spacing-0 text-sm"
+                        cols={
+                            <>
                                 <col />
                                 <col className="w-28" />
-                            </colgroup>
-                            <thead className={TABLE_HEAD}>
-                                <tr className="text-muted-foreground text-left text-xs">
-                                    <th scope="col" className={TH}>
-                                        {t('stock_warehouse')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_lots_in_stock')}
-                                    </th>
+                            </>
+                        }
+                        heads={[{ label: t('stock_warehouse') }, { label: t('stock_lots_in_stock'), className: 'text-right' }]}
+                        thClassName={TH}
+                        headRowClassName="text-muted-foreground text-left text-xs"
+                    >
+                        <tbody>
+                            {balances.map((b) => (
+                                <tr key={b.warehouse} className="group">
+                                    <td className={cn(TD, 'truncate')}>{warehouseName(b.warehouse, t)}</td>
+                                    <td className={cn(TD, 'text-right')}>{fmtN(b.qty)}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {balances.map((b) => (
-                                    <tr key={b.warehouse} className="group">
-                                        <td className={cn(TD, 'truncate')}>{warehouseName(b.warehouse, t)}</td>
-                                        <td className={cn(TD, 'text-right')}>{fmtN(b.qty)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </ScrollTable>
                 )}
             </ItemState>
             {note && <p className={cn(LABEL, 'mt-1.5')}>{note}</p>}
@@ -305,7 +307,7 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
     const available = (query.data?.balances ?? []).reduce((sum, b) => sum + Math.max(0, b.qty), 0);
 
     return (
-        <section aria-labelledby={titleId}>
+        <section aria-labelledby={titleId} className={scrollSection(picks.length, 'min-h-56')}>
             <h3 id={titleId} className={H3}>
                 {t('stock_rq_lots_to_pick')}
             </h3>
@@ -332,49 +334,42 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
                     </p>
                 )}
                 {picks.length > 0 && (
-                    <div className="border-border overflow-hidden rounded-lg border">
-                        <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                            <colgroup>
+                    <ScrollTable
+                        className={TABLE_FRAME}
+                        tableClassName="w-full table-fixed border-separate border-spacing-0 text-sm"
+                        cols={
+                            <>
                                 <col />
                                 <col className="w-[34%]" />
                                 <col className="w-28" />
                                 <col className="w-24" />
                                 <col className="w-16" />
-                            </colgroup>
-                            <thead className={TABLE_HEAD}>
-                                <tr className="text-muted-foreground text-left text-xs">
-                                    <th scope="col" className={TH}>
-                                        {t('stock_warehouse')}
-                                    </th>
-                                    <th scope="col" className={TH}>
-                                        {t('stock_lot_word')}
-                                    </th>
-                                    <th scope="col" className={TH}>
-                                        {t('stock_lots_col_received')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_fulfil_col_left_in_lot')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_fulfil_col_pick')}
-                                    </th>
+                            </>
+                        }
+                        heads={[
+                            { label: t('stock_warehouse') },
+                            { label: t('stock_lot_word') },
+                            { label: t('stock_lots_col_received') },
+                            { label: t('stock_fulfil_col_left_in_lot'), className: 'text-right' },
+                            { label: t('stock_fulfil_col_pick'), className: 'text-right' },
+                        ]}
+                        thClassName={TH}
+                        headRowClassName="text-muted-foreground text-left text-xs"
+                    >
+                        <tbody>
+                            {picks.map((p) => (
+                                <tr key={`${p.warehouse}-${p.lot_id}`} className="group">
+                                    <td className={cn(TD, 'truncate')}>{warehouseName(p.warehouse, t)}</td>
+                                    <td className={cn(TD, 'truncate font-semibold')} translate="no">
+                                        {p.lot_no ?? t('stock_lot_before_tracking')}
+                                    </td>
+                                    <td className={cn(TD, 'whitespace-nowrap')}>{p.received_at ? fmt.date(p.received_at) : '—'}</td>
+                                    <td className={cn(TD, 'text-right')}>{fmtN(p.remaining)}</td>
+                                    <td className={cn(TD, 'text-right font-bold', LOT_INK)}>{fmtN(p.take)}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {picks.map((p) => (
-                                    <tr key={`${p.warehouse}-${p.lot_id}`} className="group">
-                                        <td className={cn(TD, 'truncate')}>{warehouseName(p.warehouse, t)}</td>
-                                        <td className={cn(TD, 'truncate font-semibold')} translate="no">
-                                            {p.lot_no ?? t('stock_lot_before_tracking')}
-                                        </td>
-                                        <td className={cn(TD, 'whitespace-nowrap')}>{p.received_at ? fmt.date(p.received_at) : '—'}</td>
-                                        <td className={cn(TD, 'text-right')}>{fmtN(p.remaining)}</td>
-                                        <td className={cn(TD, 'text-right font-bold', LOT_INK)}>{fmtN(p.take)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </ScrollTable>
                 )}
             </ItemState>
             <p className={cn(LABEL, 'mt-1.5')}>{t('stock_rq_pick_note')}</p>
@@ -394,7 +389,7 @@ function ItemState({ query, skeleton, children }: { query: ItemQuery; skeleton: 
             </div>
         );
     }
-    return <div className="motion-content-in">{children}</div>;
+    return <div className="motion-content-in flex min-h-0 flex-col">{children}</div>;
 }
 
 // A detail table before its read arrives: the real header row, bars in place of the cells
@@ -467,15 +462,16 @@ function IssueTrail({ trail }: { trail: RequestTrail }) {
     const issueTitleId = useId();
     const returnsTitleId = useId();
     const issue = trail.issue;
+    const returnRows = trail.returns.reduce((sum, ret) => sum + ret.lines.length, 0);
 
     return (
         <>
             {issue && (
-                <section aria-labelledby={issueTitleId}>
+                <section aria-labelledby={issueTitleId} className={scrollSection(issue.lines.length, 'min-h-64')}>
                     <h3 id={issueTitleId} className={H3}>
                         {t('stock_rq_issue_sheet')}
                     </h3>
-                    <div className="border-border overflow-hidden rounded-lg border">
+                    <div className="border-border flex min-h-0 flex-col overflow-hidden rounded-lg border">
                         <dl className="border-border grid grid-cols-3 gap-4 border-b px-3.5 py-3 text-sm">
                             <div className="min-w-0">
                                 <dt className={LABEL}>{t('stock_issue_doc_no')}</dt>
@@ -492,33 +488,28 @@ function IssueTrail({ trail }: { trail: RequestTrail }) {
                                 <dd className="truncate">{issue.recorded_by ?? '—'}</dd>
                             </div>
                         </dl>
-                        <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                            <colgroup>
-                                <col />
-                                <col className="w-[34%]" />
-                                <col className="w-28" />
-                                <col className="w-16" />
-                                <col className="w-20" />
-                            </colgroup>
-                            <thead className={TABLE_HEAD}>
-                                <tr className="text-muted-foreground text-left text-xs">
-                                    <th scope="col" className={TH}>
-                                        {t('stock_warehouse')}
-                                    </th>
-                                    <th scope="col" className={TH}>
-                                        {t('stock_lot_word')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_unit_cost_short')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_issue_col_issued')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_issue_col_returned')}
-                                    </th>
-                                </tr>
-                            </thead>
+                        <ScrollTable
+                            className="min-h-0"
+                            tableClassName="w-full table-fixed border-separate border-spacing-0 text-sm"
+                            cols={
+                                <>
+                                    <col />
+                                    <col className="w-[34%]" />
+                                    <col className="w-28" />
+                                    <col className="w-16" />
+                                    <col className="w-20" />
+                                </>
+                            }
+                            heads={[
+                                { label: t('stock_warehouse') },
+                                { label: t('stock_lot_word') },
+                                { label: t('stock_unit_cost_short'), className: 'text-right' },
+                                { label: t('stock_issue_col_issued'), className: 'text-right' },
+                                { label: t('stock_issue_col_returned'), className: 'text-right' },
+                            ]}
+                            thClassName={TH}
+                            headRowClassName="text-muted-foreground text-left text-xs"
+                        >
                             <tbody>
                                 {issue.lines.map((l) => (
                                     <tr key={`${l.warehouse}-${l.lot_id}`} className="group">
@@ -540,7 +531,7 @@ function IssueTrail({ trail }: { trail: RequestTrail }) {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </ScrollTable>
                     </div>
                     {trail.returns.length === 0 && trail.returnable > 0 && (
                         <p className={cn(LABEL, 'mt-1.5')}>{t('stock_rq_can_return_n').replace('{n}', fmtN(trail.returnable))}</p>
@@ -549,59 +540,50 @@ function IssueTrail({ trail }: { trail: RequestTrail }) {
             )}
 
             {trail.returns.length > 0 && (
-                <section aria-labelledby={returnsTitleId}>
+                <section aria-labelledby={returnsTitleId} className={scrollSection(returnRows, 'min-h-52')}>
                     <h3 id={returnsTitleId} className={H3}>
                         {t('stock_rq_returns_title')}
                     </h3>
-                    <div className="border-border overflow-hidden rounded-lg border">
-                        <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                            <colgroup>
+                    <ScrollTable
+                        className={TABLE_FRAME}
+                        tableClassName="w-full table-fixed border-separate border-spacing-0 text-sm"
+                        cols={
+                            <>
                                 <col className="w-[22%]" />
                                 <col className="w-[22%]" />
                                 <col />
                                 <col className="w-16" />
                                 <col className="w-[20%]" />
-                            </colgroup>
-                            <thead className={TABLE_HEAD}>
-                                <tr className="text-muted-foreground text-left text-xs">
-                                    <th scope="col" className={TH}>
-                                        {t('stock_rq_return_doc_no')}
-                                    </th>
-                                    <th scope="col" className={TH}>
-                                        {t('stock_rq_returned_at')}
-                                    </th>
-                                    <th scope="col" className={TH}>
-                                        {t('stock_hist_return_into')}
-                                    </th>
-                                    <th scope="col" className={cn(TH, 'text-right')}>
-                                        {t('stock_qty')}
-                                    </th>
-                                    <th scope="col" className={TH}>
-                                        {t('stock_rq_returned_by')}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {trail.returns.flatMap((ret, i) =>
-                                    ret.lines.map((l, j) => (
-                                        <tr key={`${ret.doc_no ?? i}-${j}`} className="group">
-                                            <td className={cn(TD, 'truncate font-semibold')} translate="no">
-                                                {j === 0 ? (ret.doc_no ?? '—') : ''}
-                                            </td>
-                                            <td className={cn(TD, 'whitespace-nowrap')}>
-                                                {j === 0 && ret.moved_at ? fmt.dateTime(ret.moved_at) : ''}
-                                            </td>
-                                            <td className={cn(TD, 'truncate')}>
-                                                {l.lot_no ? <LotLink lotNo={l.lot_no} newTab /> : t('stock_lot_before_tracking')}
-                                            </td>
-                                            <td className={cn(TD, 'text-right')}>{fmtN(l.qty)}</td>
-                                            <td className={cn(TD, 'truncate')}>{j === 0 ? (ret.recorded_by ?? '—') : ''}</td>
-                                        </tr>
-                                    )),
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                            </>
+                        }
+                        heads={[
+                            { label: t('stock_rq_return_doc_no') },
+                            { label: t('stock_rq_returned_at') },
+                            { label: t('stock_hist_return_into') },
+                            { label: t('stock_qty'), className: 'text-right' },
+                            { label: t('stock_rq_returned_by') },
+                        ]}
+                        thClassName={TH}
+                        headRowClassName="text-muted-foreground text-left text-xs"
+                    >
+                        <tbody>
+                            {trail.returns.flatMap((ret, i) =>
+                                ret.lines.map((l, j) => (
+                                    <tr key={`${ret.doc_no ?? i}-${j}`} className="group">
+                                        <td className={cn(TD, 'truncate font-semibold')} translate="no">
+                                            {j === 0 ? (ret.doc_no ?? '—') : ''}
+                                        </td>
+                                        <td className={cn(TD, 'whitespace-nowrap')}>{j === 0 && ret.moved_at ? fmt.dateTime(ret.moved_at) : ''}</td>
+                                        <td className={cn(TD, 'truncate')}>
+                                            {l.lot_no ? <LotLink lotNo={l.lot_no} newTab /> : t('stock_lot_before_tracking')}
+                                        </td>
+                                        <td className={cn(TD, 'text-right')}>{fmtN(l.qty)}</td>
+                                        <td className={cn(TD, 'truncate')}>{j === 0 ? (ret.recorded_by ?? '—') : ''}</td>
+                                    </tr>
+                                )),
+                            )}
+                        </tbody>
+                    </ScrollTable>
                     {trail.returnable > 0 && (
                         <p className={cn(LABEL, 'mt-1.5')}>{t('stock_rq_can_return_n').replace('{n}', fmtN(trail.returnable))}</p>
                     )}

@@ -4,8 +4,8 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
+import { ScrollTable, type ScrollTableHead } from '@/shared/components/scroll-table';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockCount } from '@/shared/types';
 import { DialogFooterBar } from '@/shared/ui/dialog';
@@ -44,6 +44,29 @@ const COLS = {
 } as const;
 const bar = (className: string) => <Skeleton className={className} />;
 
+// The lines table of both count dialogs (and their skeleton): one set of columns, header cells and classes
+export const COUNT_TABLE = 'w-full table-fixed border-separate border-spacing-0 text-sm';
+export const COUNT_TH = 'border-border border-b px-3 py-2';
+export const COUNT_HEAD_ROW = 'text-muted-foreground text-left text-xs font-medium';
+
+export const countHeads = (t: ReturnType<typeof useT>): ScrollTableHead[] => [
+    { label: t('stock_item') },
+    { label: t('stock_count_col_system'), className: 'text-right' },
+    { label: t('stock_count_col_counted'), className: 'text-right' },
+    { label: t('stock_count_col_diff'), className: 'text-center' },
+    { label: t('stock_count_col_reason') },
+];
+
+export function CountCols({ kind }: { kind: 'sheet' | 'done' }) {
+    return (
+        <>
+            {COLS[kind].map((w, i) => (
+                <col key={i} className={w || undefined} />
+            ))}
+        </>
+    );
+}
+
 /** What a count dialog shows before its record arrives: a skeleton shaped like the sheet, the retry panel, or "record missing". */
 export function CountDialogPending({
     kind,
@@ -69,13 +92,6 @@ export function CountDialogPending({
     const facts = done
         ? ['stock_warehouse', 'stock_count_opened_by', 'stock_count_opened_at', 'stock_count_committed_by', 'stock_count_committed_at']
         : ['stock_warehouse', 'stock_count_opened_by', 'stock_count_opened_at', 'stock_count_fact_progress'];
-    const heads = [
-        { label: t('stock_item'), align: '' },
-        { label: t('stock_count_col_system'), align: 'text-right' },
-        { label: t('stock_count_col_counted'), align: 'text-right' },
-        { label: t('stock_count_col_diff'), align: 'text-center' },
-        { label: t('stock_count_col_reason'), align: '' },
-    ];
     return (
         <>
             {/* Radix requires a DialogTitle while the record loads */}
@@ -124,41 +140,30 @@ export function CountDialogPending({
                                     ))}
                                 </div>
                             )}
-                            <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
-                                <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-                                    <colgroup>
-                                        {COLS[kind].map((w, i) => (
-                                            <col key={i} className={w || undefined} />
-                                        ))}
-                                    </colgroup>
-                                    <thead className={TABLE_HEAD}>
-                                        <tr className="text-muted-foreground text-left text-xs font-medium">
-                                            {heads.map((h) => (
-                                                <th key={h.label} scope="col" className={cn('border-border border-b px-3 py-2', h.align)}>
-                                                    {h.label}
-                                                </th>
-                                            ))}
+                            <ScrollTable
+                                className="border-border flex-1 rounded-lg border"
+                                tableClassName={COUNT_TABLE}
+                                cols={<CountCols kind={kind} />}
+                                heads={countHeads(t)}
+                                thClassName={COUNT_TH}
+                                headRowClassName={COUNT_HEAD_ROW}
+                                after={done && rows === 0 && <EmptyState title={t('stock_count_nothing_to_adjust')} className="min-h-0 py-8" />}
+                            >
+                                <tbody>
+                                    {Array.from({ length: rows }, (_, i) => (
+                                        <tr key={i} className={ROW_H[kind]}>
+                                            <td className="border-border/60 border-b px-3">
+                                                {bar('h-3.5 w-24')}
+                                                {bar('mt-1.5 h-3 w-40 max-w-full')}
+                                            </td>
+                                            <td className="border-border/60 border-b px-3">{bar('ml-auto h-4 w-8')}</td>
+                                            <td className="border-border/60 border-b px-3">{bar(done ? 'ml-auto h-4 w-8' : 'ml-auto h-8 w-16')}</td>
+                                            <td className="border-border/60 border-b px-3">{bar('mx-auto h-4 w-8')}</td>
+                                            <td className="border-border/60 border-b px-3">{bar(done ? 'h-4 w-3/4' : 'h-8 w-full')}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Array.from({ length: rows }, (_, i) => (
-                                            <tr key={i} className={ROW_H[kind]}>
-                                                <td className="border-border/60 border-b px-3">
-                                                    {bar('h-3.5 w-24')}
-                                                    {bar('mt-1.5 h-3 w-40 max-w-full')}
-                                                </td>
-                                                <td className="border-border/60 border-b px-3">{bar('ml-auto h-4 w-8')}</td>
-                                                <td className="border-border/60 border-b px-3">
-                                                    {bar(done ? 'ml-auto h-4 w-8' : 'ml-auto h-8 w-16')}
-                                                </td>
-                                                <td className="border-border/60 border-b px-3">{bar('mx-auto h-4 w-8')}</td>
-                                                <td className="border-border/60 border-b px-3">{bar(done ? 'h-4 w-3/4' : 'h-8 w-full')}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {done && rows === 0 && <EmptyState title={t('stock_count_nothing_to_adjust')} className="min-h-0 py-8" />}
-                            </div>
+                                    ))}
+                                </tbody>
+                            </ScrollTable>
                             {!done && bar('h-3 w-1/2 shrink-0')}
                         </div>
                         <span className="sr-only">{t('loading')}</span>
