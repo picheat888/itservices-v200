@@ -234,6 +234,7 @@ class ReportSnapshotService
             $inUse,
             total: $total,
             secondary: ['key' => 'rate', 'value' => $total > 0 ? (int) round($inUse / $total * 100) : null],
+            filters: $this->linkFilters(ReportCatalogue::ASSETS_OVERVIEW, []),
         );
     }
 
@@ -254,7 +255,28 @@ class ReportSnapshotService
         $value = $this->summaryOf($viewer, $reportKey, $filters);
         $figure = count($valueKeys) === 1 ? $value($valueKeys[0]) : array_sum(array_map($value, $valueKeys));
 
-        return $this->tile($tileKey, $reportKey, $figure, secondary: ['key' => $secondaryKey, 'value' => $value($summaryKey)], filters: $filters);
+        return $this->tile($tileKey, $reportKey, $figure, secondary: ['key' => $secondaryKey, 'value' => $value($summaryKey)], filters: $this->linkFilters($reportKey, $filters));
+    }
+
+    /**
+     * The tile's filters over the report's own defaults, every one named: a link that names the report's
+     * filters opens the page at them, not at filters the reader saved there. Dates and view choices keep
+     * their defaults by being left out.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, string>
+     */
+    private function linkFilters(string $reportKey, array $filters): array
+    {
+        $link = [];
+        foreach (ReportCatalogue::tabular($reportKey)->filters() as $filter) {
+            $definition = $filter->toArray();
+            if ($definition['type'] !== 'date' && ! $definition['view']) {
+                $link[$filter->name] = (string) ($filters[$filter->name] ?? $filter->default ?? '');
+            }
+        }
+
+        return $link;
     }
 
     /**
@@ -274,7 +296,7 @@ class ReportSnapshotService
 
     /**
      * @param  array{key: string, value: int|float|null}|null  $secondary
-     * @param  array<string, mixed>  $filters
+     * @param  array<string, string>  $filters
      * @return array<string, mixed>
      */
     private function tile(string $key, string $reportKey, int|float|null $value, ?int $total = null, ?string $unit = null, ?float $delta = null, ?array $secondary = null, ?array $trend = null, array $filters = []): array
@@ -290,7 +312,7 @@ class ReportSnapshotService
             // A short line of the value across the period (sparkline), where the history exists.
             'trend' => $trend,
             // The report filters the number was counted at, for the tile's link.
-            'filters' => (object) array_map('strval', $filters),
+            'filters' => (object) $filters,
         ];
     }
 }

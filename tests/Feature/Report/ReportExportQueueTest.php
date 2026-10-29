@@ -204,6 +204,26 @@ class ReportExportQueueTest extends TestCase
         $this->assertSame(['failed', 'ready'], array_column($this->bells($user), 'subtype'));
     }
 
+    /** A file built again later stays on "ไฟล์ส่งออกของฉัน" for 7 days from that build, not from the first request. */
+    public function test_a_retried_export_is_listed_for_7_days_from_its_rebuild(): void
+    {
+        $user = $this->userWith([...$this->reportRights('assets')]);
+        $this->mock(TabularReportExporter::class)->shouldReceive('store')->once()->andThrow(new \RuntimeException('disk full'));
+        $id = $this->actingAs($user)->postJson(self::OVERVIEW)->assertAccepted()->json('data.id');
+        $this->forgetMock(TabularReportExporter::class);
+        $this->app->forgetInstance(ReportExportService::class);
+
+        $this->travel(6)->days();
+        $this->actingAs($user)->postJson("/api/reports/exports/{$id}/retry")->assertAccepted();
+        $this->travel(3)->days();
+
+        $this->actingAs($user)->getJson('/api/reports/exports')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.status', 'ready');
+        $this->actingAs($user)->get("/api/reports/exports/{$id}/download")->assertOk();
+        $this->travel(5)->days();
+        $this->actingAs($user)->getJson('/api/reports/exports')->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_only_a_failed_export_can_be_retried(): void
     {
         $user = $this->userWith([...$this->reportRights('assets')]);

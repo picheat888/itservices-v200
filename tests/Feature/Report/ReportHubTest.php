@@ -192,7 +192,7 @@ class ReportHubTest extends TestCase
         $this->assertSame(0, $tilesFor('period=custom&from=2026-03-01&to=2026-09-24')['requests_pending']['secondary']['value']);
         // Same rule as the "ต่ออายุและสิ้นสุดสัญญา" list at 30 days, and the link opens it there.
         $this->assertSame(1, $last30['contracts_expiring']['value']);
-        $this->assertSame(['within' => '30'], $last30['contracts_expiring']['filters']);
+        $this->assertSame('30', $last30['contracts_expiring']['filters']['within']);
 
         $this->actingAs($user)->getJson('/api/reports/snapshot?period=decade')->assertUnprocessable();
         // The calendar periods the strip used to offer are gone.
@@ -220,6 +220,8 @@ class ReportHubTest extends TestCase
                 ->pluck('value', 'key');
         };
 
+        // Every tile link names the report's filters, so the page opens at them and not at a reader's saved ones
+        $this->assertSame(['status' => '', 'source' => '', 'category_id' => '', 'department_id' => '', 'search' => ''], $tiles['assets_in_use']['filters']);
         $assets = $summaryOf($tiles['assets_in_use']);
         $this->assertSame($assets['in_use'], $tiles['assets_in_use']['value']);
         $this->assertSame($assets['total'], $tiles['assets_in_use']['total']);

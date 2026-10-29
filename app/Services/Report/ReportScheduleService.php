@@ -174,7 +174,7 @@ class ReportScheduleService
                 'report.owner' => e($owner->name),
             ];
             $forAccounts = $this->mail->renderTemplate('report.scheduled', $vars + ['report.attachment_note' => e($this->accountNote($tooLarge, $size, $expires))]);
-            $forOthers = $this->mail->renderTemplate('report.scheduled', $vars + ['report.attachment_note' => e($this->outsideNote($tooLarge, $size, $owner, $expires))]);
+            $forOthers = $this->mail->renderTemplate('report.scheduled', $vars + ['report.attachment_note' => e($this->outsideNote($tooLarge, $size, $owner, now()->addDays(ReportExport::LIST_DAYS)))]);
 
             if ($forAccounts === null || $forOthers === null) {
                 $this->finish($schedule, ReportSchedule::FAILED, 'template_disabled');
@@ -378,10 +378,11 @@ class ReportScheduleService
             : "The report file is attached. You can also download it with the button below until {$until}; you will be asked to sign in first.";
     }
 
-    private function outsideNote(bool $tooLarge, int $size, User $owner, CarbonInterface $expires): string
+    /** @param  CarbonInterface  $listedUntil  the day the file leaves the owner's My exports */
+    private function outsideNote(bool $tooLarge, int $size, User $owner, CarbonInterface $listedUntil): string
     {
         return $tooLarge
-            ? 'The file ('.round($size / 1048576, 1)." MB) is too large to attach. Please ask {$owner->name} for it; they can download it from My exports on the Report Center until ".DateDisplay::date($expires, null, 'en').'.'
+            ? 'The file ('.round($size / 1048576, 1)." MB) is too large to attach. Please ask {$owner->name} for it; they can download it from My exports on the Report Center until ".DateDisplay::date($listedUntil, null, 'en').'.'
             : 'The report file is attached.';
     }
 

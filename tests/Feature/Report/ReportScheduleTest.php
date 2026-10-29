@@ -17,6 +17,7 @@ use App\Models\Report\ReportExport;
 use App\Models\Report\ReportSchedule;
 use App\Models\User;
 use App\Services\Report\ReportScheduleService;
+use App\Support\DateDisplay;
 use Carbon\CarbonImmutable;
 use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -415,9 +416,12 @@ class ReportScheduleTest extends TestCase
         Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('colleague@example.com')
             && $mail->attachmentPath === null && $mail->actionUrl !== null
             && str_contains($mail->bodyHtml, 'too large to attach. Download it with the button below'));
+        // The owner finds it on "ไฟล์ส่งออกของฉัน" only while it is listed, so the note gives that day, not the link's
+        $listedUntil = DateDisplay::date(now()->addDays(ReportExport::LIST_DAYS), null, 'en');
         Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('auditor@partner.co.th')
             && $mail->attachmentPath === null && $mail->actionUrl === null
-            && str_contains($mail->bodyHtml, 'Please ask '));
+            && str_contains($mail->bodyHtml, 'Please ask ')
+            && str_contains($mail->bodyHtml, "from My exports on the Report Center until {$listedUntil}."));
     }
 
     // ── managing ────────────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ class ReportExport extends Model
     /** How long a file stays on disk and its email link works. */
     public const KEEP_DAYS = 30;
 
-    /** How long a file stays on "ไฟล์ส่งออกของฉัน", counted from the request. */
+    /** How long a file stays on "ไฟล์ส่งออกของฉัน", counted from its build (a queued one from the request). */
     public const LIST_DAYS = 7;
 
     /** The queue report files are built on, apart from mail so a long build never holds up email. */
@@ -83,19 +83,23 @@ class ReportExport extends Model
     }
 
     /**
-     * On "ไฟล์ส่งออกของฉัน": current and asked for within LIST_DAYS.
+     * On "ไฟล์ส่งออกของฉัน": current, and built (or, still queued, asked for) within LIST_DAYS.
      *
      * @param  Builder<ReportExport>  $query
      * @return Builder<ReportExport>
      */
     public function scopeListed(Builder $query): Builder
     {
-        return $query->current()->where('created_at', '>', now()->subDays(self::LIST_DAYS));
+        $since = now()->subDays(self::LIST_DAYS);
+
+        return $query->current()->where(fn (Builder $q) => $q
+            ->where('finished_at', '>', $since)
+            ->orWhere(fn (Builder $queued) => $queued->whereNull('finished_at')->where('created_at', '>', $since)));
     }
 
     /** The moment this file leaves "ไฟล์ส่งออกของฉัน". */
     public function listedUntil(): CarbonInterface
     {
-        return $this->created_at->copy()->addDays(self::LIST_DAYS);
+        return ($this->finished_at ?? $this->created_at)->copy()->addDays(self::LIST_DAYS);
     }
 }
