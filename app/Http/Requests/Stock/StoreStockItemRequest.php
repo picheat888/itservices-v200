@@ -43,7 +43,7 @@ class StoreStockItemRequest extends FormRequest
             // current_stock and cost are no longer set on the SKU — stock arrives
             // via Receive (per-lot cost), and value is derived from FIFO lots.
             'min_stock' => ['required', 'integer', 'min:0'],
-            'max_stock' => ['required', 'integer', 'min:0', 'gte:min_stock'],
+            'max_stock' => ['required', 'integer', 'min:1', 'gte:min_stock'],
             'warranty_type_id' => ['required', 'integer', 'exists:warranty_types,id'],
         ];
     }

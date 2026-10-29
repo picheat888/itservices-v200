@@ -36,10 +36,16 @@ const empty: StockItemPayload = {
     brand_id: null,
     model_id: null,
     unit_id: null,
-    min_stock: 0,
-    max_stock: 0,
+    min_stock: null,
+    max_stock: null,
     warranty_type_id: null,
 };
+
+/** Digits only; an empty box stays null instead of becoming 0. */
+function toCount(raw: string): number | null {
+    const digits = digitsOnly(raw);
+    return digits === '' ? null : Number(digits);
+}
 
 /** Map an existing item onto the form payload (keys ordered like `empty` for the dirty check). */
 function itemToForm(item: StockItem): StockItemPayload {
@@ -112,6 +118,7 @@ export function StockItemModal({
         setAutoName(false);
         setSaved(false);
         setModelGone(null);
+        setMinMaxTouched({ min: false, max: false });
     });
     // While auto-name is on the name follows brand and model, never the server
     useFormRebase({
@@ -140,7 +147,18 @@ export function StockItemModal({
     // Save stays disabled until something changes; the same check guards closing
     const isDirty = JSON.stringify(form) !== JSON.stringify(base);
     const guardClose = useDiscardGuard(open && isDirty && !saved);
-    const minMaxInvalid = Number(form.max_stock) < Number(form.min_stock);
+    const [minMaxTouched, setMinMaxTouched] = useState({ min: false, max: false });
+    const minMissing = form.min_stock == null;
+    const maxMissing = form.max_stock == null;
+    const maxTooLow = form.max_stock != null && form.max_stock < 1;
+    const minMaxInvalid = form.min_stock != null && form.max_stock != null && form.max_stock >= 1 && form.max_stock < form.min_stock;
+    const maxError = maxMissing
+        ? t('stock_max_required')
+        : maxTooLow
+          ? t('stock_max_at_least_one')
+          : minMaxInvalid
+            ? t('stock_minmax_invalid')
+            : undefined;
     // SKU is auto-generated on create; everything else below is required
     const isValid =
         !!form.name.trim() &&
@@ -148,6 +166,9 @@ export function StockItemModal({
         form.brand_id != null &&
         form.model_id != null &&
         form.warranty_type_id != null &&
+        form.min_stock != null &&
+        form.max_stock != null &&
+        !maxTooLow &&
         !minMaxInvalid;
 
     const set = <K extends keyof StockItemPayload>(k: K, v: StockItemPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -265,22 +286,26 @@ export function StockItemModal({
                         </Field>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('stock_min_stock')}>
+                        <Field label={t('stock_min_stock')} required error={minMaxTouched.min && minMissing ? t('stock_min_required') : undefined}>
                             <Input
                                 name="min_stock"
                                 inputMode="numeric"
                                 autoComplete="off"
-                                value={form.min_stock}
-                                onChange={(e) => set('min_stock', Number(digitsOnly(e.target.value)))}
+                                value={form.min_stock ?? ''}
+                                placeholder={t('stock_min_ph')}
+                                onBlur={() => setMinMaxTouched((s) => ({ ...s, min: true }))}
+                                onChange={(e) => set('min_stock', toCount(e.target.value))}
                             />
                         </Field>
-                        <Field label={t('stock_max_stock')} error={minMaxInvalid ? t('stock_minmax_invalid') : undefined}>
+                        <Field label={t('stock_max_stock')} required error={minMaxTouched.max || minMaxInvalid ? maxError : undefined}>
                             <Input
                                 name="max_stock"
                                 inputMode="numeric"
                                 autoComplete="off"
-                                value={form.max_stock}
-                                onChange={(e) => set('max_stock', Number(digitsOnly(e.target.value)))}
+                                value={form.max_stock ?? ''}
+                                placeholder={t('stock_max_ph')}
+                                onBlur={() => setMinMaxTouched((s) => ({ ...s, max: true }))}
+                                onChange={(e) => set('max_stock', toCount(e.target.value))}
                             />
                         </Field>
                     </div>

@@ -68,8 +68,8 @@ export interface StockItemPayload {
     brand_id: number | null;
     model_id: number | null;
     unit_id: number | null;
-    min_stock: number;
-    max_stock: number;
+    min_stock: number | null;
+    max_stock: number | null;
     warranty_type_id: number | null;
 }
 

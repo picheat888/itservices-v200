@@ -364,6 +364,51 @@ class StockItemTest extends TestCase
             ->assertJsonValidationErrors(['max_stock']);
     }
 
+    /** @return array<string, mixed> */
+    private function validItemPayload(array $overrides = []): array
+    {
+        $brand = Brand::create(['name' => 'Acme '.fake()->unique()->numerify('####')]);
+
+        return array_merge([
+            'name' => 'X',
+            'category_id' => Category::create(['name' => 'Cable '.fake()->unique()->numerify('####')])->id,
+            'brand_id' => $brand->id,
+            'model_id' => AssetModel::create(['name' => 'M1', 'brand_id' => $brand->id])->id,
+            'warranty_type_id' => WarrantyType::create(['name' => '1y '.fake()->unique()->numerify('####')])->id,
+            'min_stock' => 0,
+            'max_stock' => 5,
+        ], $overrides);
+    }
+
+    public function test_max_stock_must_be_at_least_one(): void
+    {
+        $super = $this->superUser();
+        $this->actingAs($super)->postJson('/api/stock-items', $this->validItemPayload(['max_stock' => 0]))
+            ->assertStatus(422)->assertJsonValidationErrors(['max_stock']);
+
+        $item = $this->makeItem();
+        $this->actingAs($super)->putJson("/api/stock-items/{$item->id}", $this->validItemPayload(['sku' => $item->sku, 'max_stock' => 0]))
+            ->assertStatus(422)->assertJsonValidationErrors(['max_stock']);
+    }
+
+    public function test_min_and_max_are_required(): void
+    {
+        $payload = $this->validItemPayload();
+        unset($payload['min_stock'], $payload['max_stock']);
+
+        $this->actingAs($this->superUser())->postJson('/api/stock-items', $payload)
+            ->assertStatus(422)->assertJsonValidationErrors(['min_stock', 'max_stock']);
+    }
+
+    public function test_saving_an_old_item_with_max_zero_is_refused(): void
+    {
+        $item = $this->makeItem(['max_stock' => 0, 'min_stock' => 0]);
+
+        $this->actingAs($this->superUser())
+            ->putJson("/api/stock-items/{$item->id}", $this->validItemPayload(['sku' => $item->sku, 'name' => $item->name, 'min_stock' => 0, 'max_stock' => 0]))
+            ->assertStatus(422)->assertJsonValidationErrors(['max_stock']);
+    }
+
     public function test_user_without_manage_items_cannot_create(): void
     {
         $this->actingAs($this->regularUser())
