@@ -209,3 +209,9 @@ test('requests tab: the three name columns are wide enough for a full name', () 
     assert.match(tab, /key: 'item',[^}]*minWidth: '11rem'/);
     assert.match(tab, /key: 'reason', header: t\('stock_reason'\), minWidth: '9rem'/);
 });
+
+test('approve is the shared green in both the row and the request detail', () => {
+    assert.match(dialog, /<Button className=\{REQUEST_APPROVE_BUTTON\} onClick=\{\(\) => onApprove\(r\)\}>/);
+    assert.match(tab, /className=\{REQUEST_APPROVE_BUTTON\}/);
+    assert.doesNotMatch(tab, /bg-emerald-700 text-white/);
+});

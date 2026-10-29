@@ -8,6 +8,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { REQUEST_APPROVE_BUTTON } from '@/shared/lib/request-meta';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { RequestTrail, StockItem, StockRequest } from '@/shared/types';
@@ -548,7 +549,7 @@ function DetailFooter({
                         <X className="h-4 w-4" aria-hidden />
                         {t('stock_reject')}
                     </Button>
-                    <Button onClick={() => onApprove(r)}>
+                    <Button className={REQUEST_APPROVE_BUTTON} onClick={() => onApprove(r)}>
                         <Check className="h-4 w-4" aria-hidden />
                         {t('stock_approve')}
                     </Button>

@@ -19,6 +19,7 @@ import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { followRowOnRemoval, rowSpotOf, type RowSpot } from '@/shared/lib/menu-return-focus';
 import { digitsOnly } from '@/shared/lib/number';
+import { REQUEST_APPROVE_BUTTON } from '@/shared/lib/request-meta';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
@@ -367,7 +368,7 @@ export function RequestsTab({
                                 }}
                                 aria-label={t('stock_approve')}
                                 title={t('stock_approve')}
-                                className="bg-emerald-700 text-white hover:bg-emerald-800"
+                                className={REQUEST_APPROVE_BUTTON}
                             >
                                 <Check className="h-3.5 w-3.5" aria-hidden />
                                 <span className="hidden xl:inline">{t('stock_approve')}</span>
