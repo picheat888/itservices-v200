@@ -50,7 +50,7 @@ Schedule::command('tickets:send-weekly-digest')->weeklyOn(1, '08:30');
 // to keep forever, so out of the box this only ever touches email bodies and read bells.
 Schedule::command('logs:prune')->dailyAt('02:00');
 
-// Report files queued from the Report Center are kept for 7 days (ReportExport::KEEP_DAYS).
+// Report files stay on "ไฟล์ส่งออกของฉัน" 7 days and on disk, for the email link, 30 days (ReportExport::LIST_DAYS, KEEP_DAYS).
 // Same quiet hour as the retention sweep above — it deletes, it never sends.
 Schedule::command('reports:prune-exports')->dailyAt('02:15');
 

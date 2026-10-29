@@ -65,6 +65,7 @@ export interface ReportExportItem {
     created_at: string;
     finished_at: string | null;
     expires_at: string | null;
+    listed_until: string;
 }
 
 export interface ReportDefinition {

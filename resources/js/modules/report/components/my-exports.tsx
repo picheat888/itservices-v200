@@ -29,7 +29,7 @@ import { CARD_HEADING_TINT } from './card-heading';
 import { reportStem } from './report-catalogue';
 import { reportScope } from './report-scope';
 
-/** Mirrors ReportExport::KEEP_DAYS. */
+/** Mirrors ReportExport::LIST_DAYS. */
 const KEEP_DAYS = 7;
 
 /** A file still queued after this long most likely has no worker picking it up. */
@@ -65,7 +65,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     const size = formatSize(item.size_bytes);
     const madeAt = item.finished_at ?? item.created_at;
     // The panel heading already says how long files are kept; the exact day sits in the tooltip.
-    const keptUntil = item.expires_at ? t('rep_my_exports_kept_until').replace('{date}', fmt.date(item.expires_at)) : undefined;
+    const keptUntil = t('rep_my_exports_kept_until').replace('{date}', fmt.date(item.listed_until));
 
     const onDownload = () =>
         download.mutate(item, {

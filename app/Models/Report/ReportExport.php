@@ -3,13 +3,14 @@
 namespace App\Models\Report;
 
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One report file somebody asked for, built on the queue (App\Jobs\GenerateReportExport) and
- * kept for KEEP_DAYS on the private disk. Queued and managed through
+ * listed for LIST_DAYS and kept for KEEP_DAYS on the private disk. Queued and managed through
  * App\Services\Report\ReportExportService.
  */
 class ReportExport extends Model
@@ -22,8 +23,11 @@ class ReportExport extends Model
 
     public const FAILED = 'failed';
 
-    /** How long a finished file stays downloadable, from the app and from the email link. */
+    /** How long a file stays on disk and its email link works. */
     public const KEEP_DAYS = 30;
+
+    /** How long a file stays on "ไฟล์ส่งออกของฉัน", counted from the request. */
+    public const LIST_DAYS = 7;
 
     /** The queue report files are built on, apart from mail so a long build never holds up email. */
     public const QUEUE = 'reports';
@@ -68,7 +72,7 @@ class ReportExport extends Model
     }
 
     /**
-     * Still worth listing: waiting or being built, or finished and not yet past its expiry.
+     * Not yet past its expiry: waiting or being built, or a finished file its email link still reaches.
      *
      * @param  Builder<ReportExport>  $query
      * @return Builder<ReportExport>
@@ -76,5 +80,22 @@ class ReportExport extends Model
     public function scopeCurrent(Builder $query): Builder
     {
         return $query->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /**
+     * On "ไฟล์ส่งออกของฉัน": current and asked for within LIST_DAYS.
+     *
+     * @param  Builder<ReportExport>  $query
+     * @return Builder<ReportExport>
+     */
+    public function scopeListed(Builder $query): Builder
+    {
+        return $query->current()->where('created_at', '>', now()->subDays(self::LIST_DAYS));
+    }
+
+    /** The moment this file leaves "ไฟล์ส่งออกของฉัน". */
+    public function listedUntil(): CarbonInterface
+    {
+        return $this->created_at->copy()->addDays(self::LIST_DAYS);
     }
 }

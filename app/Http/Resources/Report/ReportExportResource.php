@@ -36,6 +36,7 @@ class ReportExportResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'finished_at' => $this->finished_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
+            'listed_until' => $this->listedUntil()->toIso8601String(),
         ];
     }
 }

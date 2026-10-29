@@ -84,6 +84,6 @@ class ReportExportController extends Controller
 
     private function owned(Request $request, int $export): ReportExport
     {
-        return ReportExport::query()->where('user_id', $request->user()->id)->current()->findOrFail($export);
+        return ReportExport::query()->where('user_id', $request->user()->id)->listed()->findOrFail($export);
     }
 }

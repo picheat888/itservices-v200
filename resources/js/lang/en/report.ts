@@ -190,7 +190,7 @@ export const report: Dict = {
     rep_export_filters_none: 'None (the whole report)',
     rep_export_pdf_cap: 'The PDF shows the latest {n} rows. Excel has all of them.',
     rep_export_queue_note:
-        'We make the file in the background. You can close this. When it is ready we tell you on the bell and by email with a download link. It stays in "My exports" for 30 days.',
+        'We make the file in the background. You can close this. When it is ready we tell you on the bell and by email with a download link. It stays in "My exports" for 7 days, and the email link works for 30 days.',
     rep_dialog_cancel: 'Cancel',
     rep_export_go_xlsx: 'Create Excel file',
     rep_export_go_pdf: 'Create PDF file',

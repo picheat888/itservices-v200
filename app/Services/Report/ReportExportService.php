@@ -23,7 +23,7 @@ use Throwable;
  *
  * `queue()` records what was asked for and hands it to GenerateReportExport; the job calls
  * `build()`, which writes the file to the private disk and rings the requester's bell either
- * way. A finished file stays downloadable for ReportExport::KEEP_DAYS, then `prune()`
+ * way. A file is listed for ReportExport::LIST_DAYS and its email link works for KEEP_DAYS, then `prune()`
  * (reports:prune-exports) removes it. Access is asked of ReportCatalogue again when the file
  * is built, so a report taken away between the request and the build is not delivered.
  */
@@ -181,7 +181,7 @@ class ReportExportService
     {
         return ReportExport::query()
             ->where('user_id', $user->id)
-            ->current()
+            ->listed()
             ->latest('id')
             ->get()
             ->filter(fn (ReportExport $export) => ReportCatalogue::allows($user, $export->report_key))
@@ -220,7 +220,7 @@ class ReportExportService
     }
 
     /**
-     * "ลบทั้งหมด" on the panel: remove every finished file of this person — ready or failed, with its
+     * "ลบทั้งหมด" on the panel: remove every finished file this person sees there — ready or failed, with its
      * file. One still queued or being built is left to finish, so no worker writes into a deleted
      * export. Returns how many went.
      */
@@ -228,7 +228,7 @@ class ReportExportService
     {
         $finished = ReportExport::query()
             ->where('user_id', $user->id)
-            ->current()
+            ->listed()
             ->whereIn('status', [ReportExport::READY, ReportExport::FAILED])
             ->get();
 

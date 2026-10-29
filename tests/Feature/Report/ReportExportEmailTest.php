@@ -110,6 +110,21 @@ class ReportExportEmailTest extends TestCase
         $this->actingAs($user)->get($link)->assertForbidden();
     }
 
+    public function test_a_file_leaves_my_exports_after_7_days_while_its_email_link_works_for_30(): void
+    {
+        [$user, $export, $link] = $this->readyExport();
+        $listedUntil = (string) $this->actingAs($user)->getJson('/api/reports/exports')->json('data.0.listed_until');
+        $this->assertStringStartsWith('2026-10-02T10:00:00', $listedUntil);
+
+        $this->travel(8)->days();
+        $this->actingAs($user)->getJson('/api/reports/exports')->assertOk()->assertJsonCount(0, 'data');
+        $this->actingAs($user)->get("/api/reports/exports/{$export->id}/download")->assertNotFound();
+        $this->actingAs($user)->deleteJson('/api/reports/exports')->assertOk()->assertJsonPath('data.deleted', 0);
+
+        $this->actingAs($user)->get($link)->assertOk();
+        Storage::disk('local')->assertExists($export->file_path);
+    }
+
     public function test_a_signed_out_reader_is_sent_to_sign_in_and_back_to_the_link(): void
     {
         [, , $link] = $this->readyExport();
