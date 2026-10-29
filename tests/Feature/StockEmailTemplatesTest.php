@@ -2,9 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendTemplatedEmail;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockRequest;
+use App\Models\User;
+use App\Notifications\StockRequestNotification;
 use App\Support\EmailTemplates;
 use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /** The Stock notification tab must expose the eight desk topics with their labels. */
@@ -34,6 +43,7 @@ class StockEmailTemplatesTest extends TestCase
             'stock.request_approved',
             'stock.request_rejected',
             'stock.request_fulfilled',
+            'stock.request_awaiting_fulfil',
         ];
 
         foreach ($keys as $key) {
@@ -56,5 +66,65 @@ class StockEmailTemplatesTest extends TestCase
         // Event-driven (real-time) templates.
         $this->assertDatabaseHas('email_templates', ['key' => 'stock.low_alert', 'cadence' => 'realtime']);
         $this->assertDatabaseHas('email_templates', ['key' => 'stock.request_created', 'cadence' => 'realtime']);
+        $this->assertDatabaseHas('email_templates', ['key' => 'stock.request_awaiting_fulfil', 'cadence' => 'realtime']);
+    }
+
+    public function test_the_ready_to_issue_template_has_the_approved_wording(): void
+    {
+        $template = EmailTemplates::find('stock.request_awaiting_fulfil');
+
+        $this->assertSame('Stock - Request ready to issue (คำขอเบิกรอจ่าย)', $template['name']);
+        $this->assertSame('Stock request ready to issue: {{stock.request_no}}', $template['subject']);
+        foreach ([
+            '<p>Hi {{user.first_name}},</p>',
+            '<p>A stock request has been approved and is ready to issue.</p>',
+            '<p>Please pick the items and issue them in the portal.</p>',
+            '<strong style="color:#64748b">Request No.: </strong>{{stock.request_no}}<br>',
+            '<strong style="color:#64748b">Requester: </strong>{{stock.request_by}}<br>',
+            '<strong style="color:#64748b">Approved By: </strong>{{stock.approver}}<br>',
+            '<strong style="color:#64748b">Item: </strong>{{stock.name}} ×{{stock.qty}}</p>',
+        ] as $line) {
+            $this->assertStringContainsString($line, $template['body_html']);
+        }
+    }
+
+    public function test_approving_mails_every_issuer_but_the_approver(): void
+    {
+        Notification::fake();
+        Queue::fake();
+        $approver = $this->userWith(['stock.view', 'stock.view_request', 'stock.approve', 'stock.fulfill']);
+        $issuer = $this->userWith(['stock.fulfill']);
+        $owner = $this->userWith(['stock.view', 'stock.request']);
+        $bystander = $this->userWith(['stock.view']);
+        $item = StockItem::create(['sku' => 'MAIL-1', 'name' => 'USB Keyboard Lite', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+        $req = StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => 'Somchai Jaidee', 'qty' => 2, 'reason' => 'r', 'status' => 'pending']);
+
+        $this->actingAs($approver)->postJson("/api/stock-requests/{$req->id}/approve")->assertOk();
+
+        $mails = collect(Queue::pushed(SendTemplatedEmail::class))
+            ->filter(fn (SendTemplatedEmail $job) => $job->templateKey === 'stock.request_awaiting_fulfil');
+        $this->assertSame([$issuer->email], $mails->pluck('toEmail')->values()->all());
+
+        $mail = $mails->first();
+        $this->assertSame("Stock request ready to issue: {$req->reference}", $mail->subject);
+        $text = html_entity_decode(strip_tags($mail->html));
+        $this->assertStringContainsString("Request No.: {$req->reference}", $text);
+        $this->assertStringContainsString('Requester: Somchai Jaidee', $text);
+        $this->assertStringContainsString("Approved By: {$approver->name}", $text);
+        $this->assertStringContainsString('Item: USB Keyboard Lite ×2', $text);
+        $this->assertStringContainsString('/stock?tab=requests', (string) $mail->actionUrl);
+
+        Notification::assertNotSentTo($bystander, StockRequestNotification::class);
+    }
+
+    /** A user whose own role grants exactly these permissions. */
+    private function userWith(array $permissions): User
+    {
+        $role = Role::create(['key' => 'mrole_'.uniqid(), 'name' => 'M', 'is_system' => false]);
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return User::factory()->create(['role_id' => $role->id, 'email' => 'm'.uniqid().'@x.test']);
     }
 }

@@ -12,11 +12,13 @@ use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Notifications\StockRequestNotification;
 use App\Services\Stock\StockLotService;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class StockWorkflowTest extends TestCase
@@ -241,6 +243,35 @@ class StockWorkflowTest extends TestCase
         $row = collect($this->actingAs($colleague)->getJson('/api/stock-requests')->assertOk()->json('data'))->firstWhere('id', $id);
         $this->assertTrue($row['can_decide']);
         $this->actingAs($colleague)->postJson("/api/stock-requests/{$id}/approve")->assertOk();
+    }
+
+    public function test_approving_rings_every_issuer_except_the_approver(): void
+    {
+        Notification::fake();
+        $item = $this->item(10);
+        $roleUser = function (array $permissions): User {
+            $role = Role::create(['key' => 'wf_'.uniqid(), 'name' => 'WF', 'is_system' => false]);
+            foreach ($permissions as $p) {
+                RolePermission::create(['role_id' => $role->id, 'permission' => $p, 'allowed' => true]);
+            }
+
+            return User::factory()->create(['role_id' => $role->id]);
+        };
+        $approver = $roleUser(['stock.view', 'stock.view_request', 'stock.approve', 'stock.fulfill']);
+        $issuer = $roleUser(['stock.view', 'stock.fulfill']);
+        $requester = $roleUser(['stock.view', 'stock.request']);
+        $bystander = $roleUser(['stock.view']);
+
+        $id = $this->actingAs($requester)
+            ->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 2, 'reason' => 'Spare'])
+            ->assertCreated()->json('data.id');
+        $this->actingAs($approver)->postJson("/api/stock-requests/{$id}/approve")->assertOk();
+
+        $awaiting = fn (StockRequestNotification $n, array $channels, object $to) => $n->toDatabase($to)['subtype'] === 'awaiting_fulfil';
+        Notification::assertSentTo($issuer, StockRequestNotification::class, $awaiting);
+        Notification::assertNotSentTo($approver, StockRequestNotification::class, $awaiting);
+        Notification::assertNotSentTo($requester, StockRequestNotification::class, $awaiting);
+        Notification::assertNotSentTo($bystander, StockRequestNotification::class);
     }
 
     /** "Available" = on hand minus what approved requisitions have already claimed. */

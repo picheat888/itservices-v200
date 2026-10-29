@@ -67,6 +67,7 @@ class StockRequestService
         });
         AuditLog::record('Approved stock request', "#{$stockRequest->id}", subject: $stockRequest);
         $this->notifications->requestResponded($stockRequest->load('item'), 'approved');
+        $this->notifications->requestAwaitingFulfil($stockRequest, $actor);
 
         return $stockRequest;
     }

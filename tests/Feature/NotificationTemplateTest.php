@@ -103,7 +103,7 @@ class NotificationTemplateTest extends TestCase
         $chrome = [
             'notif_title', 'notif_all', 'notif_mark_all', 'notif_clear_all', 'notif_empty',
             'notif_dismiss', 'notif_dismiss_failed', 'notif_keys_hint', 'notif_unread', 'notif_test_prefix', 'notif_showing', 'notif_end',
-            'notif_group_system', 'notif_password_title',
+            'notif_group_system', 'notif_password_title', 'notif_stock_req_line',
         ];
         $frontEnd = array_values(array_diff($matches[1], $chrome));
         $catalogue = array_column(NotificationCatalogue::all(), 'key');

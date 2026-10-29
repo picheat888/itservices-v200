@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Notification\NotificationTemplate;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockAlertLog;
@@ -13,6 +14,7 @@ use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
 use App\Services\Stock\StockNotificationService;
+use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -121,6 +123,128 @@ class StockNotificationServiceTest extends TestCase
         app(StockNotificationService::class)->requestWaiting($req);
 
         Notification::assertSentTo($approver, StockRequestNotification::class);
+    }
+
+    /** A fresh non-super user holding every listed permission. */
+    private function userWithPerms(array $permissions): User
+    {
+        $user = $this->userWithPerm(array_shift($permissions));
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $user->role_id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return $user;
+    }
+
+    private function openRequest(User $owner, string $status): StockRequest
+    {
+        $item = StockItem::firstOrCreate(['sku' => 'AF-1'], ['name' => 'USB Keyboard Lite', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+
+        return StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 2, 'reason' => 'r', 'status' => $status]);
+    }
+
+    /** @return list<int> ids of the stock requests the user holds a waiting bell for */
+    private function waitingBellsOf(User $user): array
+    {
+        return $user->notifications()->get()
+            ->filter(fn ($row) => ($row->data['subtype'] ?? null) === 'waiting')
+            ->map(fn ($row) => (int) $row->data['stock_request_id'])
+            ->sort()->values()->all();
+    }
+
+    public function test_awaiting_fulfil_bells_every_issuer_except_the_approver(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerms(['stock.approve', 'stock.fulfill']);
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $onlyApprover = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerm('stock.request');
+        $bystander = $this->userWithPerm('stock.view');
+        $req = $this->openRequest($owner, 'approved');
+
+        app(StockNotificationService::class)->requestAwaitingFulfil($req, $approver);
+
+        $isAwaiting = fn (StockRequestNotification $n, array $channels, object $to) => $n->toDatabase($to)['subtype'] === 'awaiting_fulfil';
+        Notification::assertSentTo($issuer, StockRequestNotification::class, $isAwaiting);
+        foreach ([$approver, $onlyApprover, $owner, $bystander] as $other) {
+            Notification::assertNotSentTo($other, StockRequestNotification::class);
+        }
+    }
+
+    public function test_a_requester_who_also_issues_hears_their_own_request_is_ready(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerms(['stock.request', 'stock.fulfill']);
+        $req = $this->openRequest($owner, 'approved');
+
+        app(StockNotificationService::class)->requestAwaitingFulfil($req, $approver);
+
+        Notification::assertSentTo($owner, StockRequestNotification::class);
+    }
+
+    public function test_the_awaiting_fulfil_bell_carries_number_item_qty_and_requester(): void
+    {
+        Notification::fake();
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $owner = $this->userWithPerm('stock.request');
+        $req = $this->openRequest($owner, 'approved');
+
+        app(StockNotificationService::class)->requestAwaitingFulfil($req, $this->userWithPerm('stock.approve'));
+
+        Notification::assertSentTo($issuer, StockRequestNotification::class, function (StockRequestNotification $n) use ($issuer, $req, $owner) {
+            $data = $n->toDatabase($issuer);
+
+            return $data['subtype'] === 'awaiting_fulfil'
+                && $data['reference'] === $req->reference
+                && $data['name'] === 'USB Keyboard Lite'
+                && $data['qty'] === 2
+                && $data['requester_name'] === $owner->name
+                && array_key_exists('requester_name_th', $data);
+        });
+    }
+
+    public function test_the_awaiting_fulfil_bell_can_be_switched_off(): void
+    {
+        Notification::fake();
+        NotificationTemplate::create(['key' => 'notif_stock_req_awaiting_fulfil', 'message_en' => 'x', 'message_th' => 'x', 'enabled' => false]);
+        NotificationCatalogue::forgetSwitches();
+        $this->userWithPerm('stock.fulfill');
+        $req = $this->openRequest($this->userWithPerm('stock.request'), 'approved');
+
+        app(StockNotificationService::class)->requestAwaitingFulfil($req, $this->userWithPerm('stock.approve'));
+        NotificationCatalogue::forgetSwitches();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_the_daily_reminder_sends_pending_to_approvers_and_approved_to_issuers(): void
+    {
+        $approver = $this->userWithPerm('stock.approve');
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $owner = $this->userWithPerm('stock.request');
+        $pending = $this->openRequest($owner, 'pending');
+        $approved = $this->openRequest($owner, 'approved');
+
+        app(StockNotificationService::class)->run();
+
+        $this->assertSame([$pending->id], $this->waitingBellsOf($approver));
+        $this->assertSame([$approved->id], $this->waitingBellsOf($issuer));
+        $this->assertSame([], $this->waitingBellsOf($owner));
+    }
+
+    public function test_a_holder_of_both_keys_gets_one_daily_reminder_per_request(): void
+    {
+        $both = $this->userWithPerms(['stock.approve', 'stock.fulfill']);
+        $owner = $this->userWithPerm('stock.request');
+        $pending = $this->openRequest($owner, 'pending');
+        $approved = $this->openRequest($owner, 'approved');
+
+        $service = app(StockNotificationService::class);
+        $service->run();
+        $service->run();
+
+        $this->assertSame([$pending->id, $approved->id], $this->waitingBellsOf($both));
     }
 
     public function test_receiving_over_max_fires_a_realtime_overstock_alert(): void

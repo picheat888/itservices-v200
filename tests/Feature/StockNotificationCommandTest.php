@@ -58,6 +58,21 @@ class StockNotificationCommandTest extends TestCase
         Notification::assertSentTo($counter, StockCountDraftNotification::class);
     }
 
+    public function test_the_daily_run_reminds_issuers_of_approved_requests(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $owner = $this->userWithPerm('stock.request');
+        $item = StockItem::create(['sku' => 'C-APR', 'name' => 'Apr', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+        StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 1, 'reason' => 'r', 'status' => 'approved']);
+
+        $this->artisan('stock:send-notifications')->assertExitCode(0);
+
+        Notification::assertSentTo($issuer, StockRequestNotification::class);
+        Notification::assertNotSentTo($approver, StockRequestNotification::class);
+    }
+
     public function test_force_clears_the_per_day_alert_dedup(): void
     {
         Notification::fake();
@@ -114,6 +129,71 @@ class StockNotificationCommandTest extends TestCase
             SendTemplatedEmail::class,
             fn (SendTemplatedEmail $job) => in_array($job->templateKey, ['stock.out_of_stock', 'stock.low_alert', 'stock.overstock_alert'], true),
         );
+    }
+
+    private function requestIn(string $status, User $owner, string $sku): StockRequest
+    {
+        $item = StockItem::create(['sku' => $sku, 'name' => "Item {$sku}", 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+
+        return StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 1, 'reason' => 'r', 'status' => $status]);
+    }
+
+    /** @return list<SendTemplatedEmail> */
+    private function requestDigestsTo(User $user): array
+    {
+        return collect(Queue::pushed(SendTemplatedEmail::class))
+            ->filter(fn (SendTemplatedEmail $job) => $job->templateKey === 'stock.request_approval_needed' && $job->toEmail === $user->email)
+            ->values()->all();
+    }
+
+    public function test_the_weekly_request_digest_gives_approvers_pending_and_issuers_approved(): void
+    {
+        Notification::fake();
+        Queue::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $both = $this->userWithPerm('stock.approve');
+        RolePermission::create(['role_id' => $both->role_id, 'permission' => 'stock.fulfill', 'allowed' => true]);
+        $owner = $this->userWithPerm('stock.request');
+        $pending = $this->requestIn('pending', $owner, 'WP-1');
+        $approved = $this->requestIn('approved', $owner, 'WA-1');
+
+        $this->artisan('stock:send-weekly-digest')->assertExitCode(0);
+
+        [$toApprover] = $this->requestDigestsTo($approver);
+        $this->assertStringContainsString($pending->reference, $toApprover->html);
+        $this->assertStringNotContainsString($approved->reference, $toApprover->html);
+        $this->assertStringContainsString('1 still open', $toApprover->subject);
+
+        [$toIssuer] = $this->requestDigestsTo($issuer);
+        $this->assertStringContainsString($approved->reference, $toIssuer->html);
+        $this->assertStringNotContainsString($pending->reference, $toIssuer->html);
+        $this->assertStringNotContainsString('Pending Approval', $toIssuer->html);
+
+        // A holder of both keys gets one mail carrying both parts.
+        $toBoth = $this->requestDigestsTo($both);
+        $this->assertCount(1, $toBoth);
+        $this->assertStringContainsString($pending->reference, $toBoth[0]->html);
+        $this->assertStringContainsString($approved->reference, $toBoth[0]->html);
+        $this->assertStringContainsString('Pending Approval', $toBoth[0]->html);
+        $this->assertStringContainsString('Awaiting Fulfilment', $toBoth[0]->html);
+        $this->assertStringContainsString('2 still open', $toBoth[0]->subject);
+
+        $this->assertSame([], $this->requestDigestsTo($owner));
+    }
+
+    public function test_an_issuer_with_nothing_approved_gets_no_request_digest(): void
+    {
+        Notification::fake();
+        Queue::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $this->requestIn('pending', $this->userWithPerm('stock.request'), 'WP-2');
+
+        $this->artisan('stock:send-weekly-digest')->assertExitCode(0);
+
+        $this->assertCount(1, $this->requestDigestsTo($approver));
+        $this->assertSame([], $this->requestDigestsTo($issuer));
     }
 
     public function test_the_weekly_digest_leaves_the_alert_ledger_alone(): void

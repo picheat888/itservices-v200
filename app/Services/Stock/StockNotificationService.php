@@ -18,11 +18,7 @@ use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
-/**
- * Central send path for Stock bell + email notifications. Mirrors
- * ContractExpiryAlertService: bells are cleared-and-resent so they re-surface
- * unread, emails go through the templated EmailNotificationService.
- */
+/** Central send path for Stock bells (cleared and resent so they resurface unread) and templated emails. */
 class StockNotificationService
 {
     public function __construct(private readonly EmailNotificationService $email) {}
@@ -38,10 +34,7 @@ class StockNotificationService
         };
     }
 
-    /**
-     * Evaluate one item: bell + email module holders when it is in an alert state
-     * (deduped to once per day per type), and clear its ledger once back to normal.
-     */
+    /** Bell + email module holders for an alerting item (once a day per type); clear its ledger once normal. */
     public function alert(StockItem $item): void
     {
         $type = $this->alertType($item);
@@ -115,8 +108,7 @@ class StockNotificationService
     }
 
     /**
-     * Queue a templated email to each recipient. Whether an address exists is decided by
-     * EmailNotificationService, which logs the ones it cannot reach.
+     * Queue a templated email to each recipient; EmailNotificationService logs the ones it cannot reach.
      *
      * @param  Collection<int, User>  $recipients
      * @param  array<string, mixed>  $vars
@@ -165,6 +157,19 @@ class StockNotificationService
         ], $this->stockUrl('requests'), 'View my request', $owner->name);
     }
 
+    /** Bell + email everyone who can issue stock that an approved request is ready, except the approver. */
+    public function requestAwaitingFulfil(StockRequest $request, User $approver): void
+    {
+        $recipients = $this->recipients('stock.fulfill')
+            ->reject(fn (User $user) => (int) $user->id === (int) $approver->id)
+            ->values();
+
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new StockRequestNotification($request, 'awaiting_fulfil'));
+        }
+        $this->emailEach($recipients, 'stock.request_awaiting_fulfil', $this->requestVars($request), $this->stockUrl('requests'));
+    }
+
     /** Bell the request owner that someone else cancelled it (no email template for this one). */
     public function requestCancelled(StockRequest $request): void
     {
@@ -182,36 +187,22 @@ class StockNotificationService
     private function requestVars(StockRequest $request): array
     {
         return $this->itemVars($request->item) + [
-            // NOTE: on this path stock.qty is the quantity REQUESTED, not what is on the
-            // shelf — the same variable name carries a different figure than it does in the
-            // alerts above. Worth knowing before writing {{stock.qty}} into a request mail
-            // next to {{stock.min}}, where it reads as a comparison and is not one.
+            // Quantity requested here, not on hand as in the alerts
             'stock.qty' => number_format((float) $request->qty),
             'stock.request_no' => e((string) $request->reference),
             'stock.request_by' => e((string) ($request->requester_name ?: '-')),
-            // Free text the requester typed, landing in an HTML email: escaped, and its line
-            // breaks turned into <br> so a reason written over two lines is not one sentence.
+            // Typed by hand: escaped, line breaks kept
             'stock.request_reason' => filled($request->reason) ? nl2br(e((string) $request->reason)) : '-',
             'stock.request_date' => DateDisplay::emailDate($request->created_at),
-            // One name for both outcomes: the column records whoever DECIDED, and the label
-            // in each template ("Approved By" / "Rejected By") says which it was.
+            // Whoever decided; each template's label says approved or rejected
             'stock.approver' => e((string) ($request->approver_name ?: '-')),
-            // Not the same person: approving is a decision, fulfilling is handing the stock
-            // over. Null on anything fulfilled before the column existed.
             'stock.fulfilled_by' => e((string) ($request->fulfilled_by ?: '-')),
             'stock.fulfilled_date' => DateDisplay::emailDate($request->fulfilled_at),
         ];
     }
 
     /**
-     * The figures that describe a stock item itself, rather than whatever is happening to it.
-     *
-     * min and max are the thresholds the alerts fire on, so a "below minimum" mail can say
-     * what the minimum actually is instead of leaving the reader to go and look it up.
-     *
-     * Both columns are NOT NULL and default to 0, so a zero here is a real setting ("no
-     * minimum") and prints as 0 rather than as a dash. The dashes below are for the one case
-     * that can produce nothing at all: a request whose item has since been deleted.
+     * The item's own figures; dashes only when a request's item has been deleted.
      *
      * @return array<string, string>
      */
@@ -230,14 +221,9 @@ class StockNotificationService
     }
 
     /**
-     * Daily sweep. Bells stay per-item (overwritten so they re-surface unread), but
-     * the email channel is a single DIGEST per recipient: one summary of all alerting
-     * items to stock.module holders, one summary of all open requests to approvers.
-     * Counting stays a bell-only nudge. Real-time per-item alert emails are unaffected.
+     * Daily sweep, bells only: alerting items, open requests and draft counts.
      *
-     * @param  bool  $force  Clear the per-day alert dedup ledger first, so every
-     *                       alerting item is treated as fresh again (testing). Bells
-     *                       and the digest already refresh on every run regardless.
+     * @param  bool  $force  Clear the per-day alert dedup ledger first (testing)
      * @return array{alerts:int, waiting:int, drafts:int}
      */
     public function run(bool $force = false): array
@@ -271,17 +257,7 @@ class StockNotificationService
     }
 
     /**
-     * The Monday summary: everything currently out, low or overstocked, and every request
-     * still waiting on somebody.
-     *
-     * Weekly rather than daily, and by mail only. An item that drops below its minimum
-     * already sends its own alert the moment it happens (stock.low_alert and its two
-     * siblings), so a daily list of the same things is the same news a second time — and a
-     * list that arrives every morning is one people learn to filter. The same reason the
-     * approvals and cases digests are weekly.
-     *
-     * The per-item BELLS stay daily: the tray is a place you look, not something that
-     * arrives, so repeating there costs nobody an interruption.
+     * Monday mail: alerting items to module holders, open requests to whoever can move them on.
      *
      * @return array{alerts: int, waiting: int}
      */
@@ -305,15 +281,39 @@ class StockNotificationService
 
         $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with('item')->get();
         if ($waiting->isNotEmpty()) {
-            // Only whoever can approve — the rest of the module cannot clear this list.
-            $this->emailEach($this->recipients('stock.approve'), 'stock.request_approval_needed', [
-                'count' => number_format($waiting->count()),
-                'stock.request_summary_table' => $this->buildRequestSummary($waiting),
-                'stock.requests_table' => $this->buildRequestRows($waiting),
-            ], $this->stockUrl('requests'), 'Review requests');
+            $this->emailRequestDigest($waiting);
         }
 
         return ['alerts' => $alertItems->count(), 'waiting' => $waiting->count()];
+    }
+
+    /**
+     * One mail per person: approvers get pending requests, issuers approved ones, a holder of both one mail with both.
+     *
+     * @param  Collection<int, StockRequest>  $waiting
+     */
+    private function emailRequestDigest(Collection $waiting): void
+    {
+        $approverIds = $this->recipients('stock.approve')->pluck('id')->all();
+        $issuerIds = $this->recipients('stock.fulfill')->pluck('id')->all();
+        $people = User::whereIn('id', array_unique([...$approverIds, ...$issuerIds]))->orderBy('id')->get();
+
+        foreach ($people as $person) {
+            $stages = array_keys(array_filter([
+                'pending' => in_array($person->id, $approverIds, true),
+                'approved' => in_array($person->id, $issuerIds, true),
+            ]));
+            $theirs = $waiting->whereIn('status', $stages)->values();
+            if ($theirs->isEmpty()) {
+                continue;
+            }
+
+            $this->emailEach(collect([$person]), 'stock.request_approval_needed', [
+                'count' => number_format($theirs->count()),
+                'stock.request_summary_table' => $this->buildRequestSummary($theirs, $stages),
+                'stock.requests_table' => $this->buildRequestRows($theirs),
+            ], $this->stockUrl('requests'), 'Review requests');
+        }
     }
 
     /** Bell-only alert refresh (no email) for the daily digest path. */
@@ -327,15 +327,7 @@ class StockNotificationService
         );
     }
 
-    /**
-     * Build the alert digest's item list (HTML), grouped line-per-item.
-     *
-     * @param  Collection<int, array{item: StockItem, type: string}>  $rows
-     */
-    /**
-     * What each alert state is called in a message to a person. Ordered worst first, which is
-     * also the order the summary reads in.
-     */
+    /** Alert state names in mail, worst first (the summary's order). */
     public const ALERT_LABELS = ['out' => 'Out of Stock', 'low' => 'Low Stock', 'over' => 'Overstock'];
 
     public const SUMMARY_HEADERS = ['Status', 'Number of Items'];
@@ -350,11 +342,7 @@ class StockNotificationService
     public const ITEM_NUMERIC = [2, 3, 4];
 
     /**
-     * How many items sit in each alert state.
-     *
-     * All three states are listed even when a count is zero: the shape stays the same from
-     * one week to the next, so "nothing is out of stock" is something the reader can see at a
-     * glance rather than infer from a missing row.
+     * How many items sit in each alert state, all three listed even at zero.
      *
      * @param  Collection<int, array{item: StockItem, type: string}>  $rows
      */
@@ -370,8 +358,7 @@ class StockNotificationService
     }
 
     /**
-     * One row per item, with the thresholds beside the figure that crossed them — a reader
-     * deciding what to order needs to see how far off it is, not only that it is off.
+     * One row per item, thresholds beside the figure that crossed them.
      *
      * @param  Collection<int, array{item: StockItem, type: string}>  $rows
      */
@@ -384,7 +371,7 @@ class StockNotificationService
             $item = $row['item'];
 
             return [
-                // text() escapes: SKUs and item names are typed by hand.
+                // text() escapes hand-typed SKUs and names
                 EmailTable::text((string) $item->sku, 20),
                 EmailTable::text((string) $item->name, 40),
                 number_format((int) $item->current_stock),
@@ -397,19 +384,7 @@ class StockNotificationService
         return EmailTable::render(self::ITEM_HEADERS, $table, self::ITEM_NUMERIC, self::ITEM_WIDTHS, [1]);
     }
 
-    /**
-     * Build the waiting digest's request list (HTML).
-     *
-     * @param  Collection<int, StockRequest>  $requests
-     */
-    /**
-     * What an OPEN request's status is called in a message to a person.
-     *
-     * "Approved" on its own reads like the request is finished, in a report whose whole point
-     * is what is still outstanding — so it says what is still owed instead. The statuses that
-     * close a request (fulfilled, rejected, cancelled) never appear here: the digest does not
-     * list them, and the template says so.
-     */
+    /** Open request statuses in mail, named by what is still owed. */
     public const REQUEST_STATUS_LABELS = ['pending' => 'Pending Approval', 'approved' => 'Awaiting Fulfilment'];
 
     public const REQUEST_SUMMARY_HEADERS = ['Status', 'Number of Requests'];
@@ -421,16 +396,17 @@ class StockNotificationService
     public const REQUEST_WIDTHS = ['16%', '20%', '14%', '32%', '18%'];
 
     /**
-     * How many open requests sit at each stage — both listed even at zero, so the shape stays
-     * the same week to week and an empty stage is something the reader sees rather than infers.
+     * How many open requests sit at each of the reader's stages, listed even at zero.
      *
      * @param  Collection<int, StockRequest>  $requests
+     * @param  list<string>  $stages
      */
-    private function buildRequestSummary(Collection $requests): string
+    private function buildRequestSummary(Collection $requests, array $stages): string
     {
         $counts = $requests->countBy(fn (StockRequest $request) => (string) $request->status);
 
         $rows = collect(self::REQUEST_STATUS_LABELS)
+            ->only($stages)
             ->map(fn (string $label, string $status) => [$label, number_format((int) ($counts[$status] ?? 0))])
             ->values()->all();
 
@@ -438,8 +414,7 @@ class StockNotificationService
     }
 
     /**
-     * One row per open request, oldest first — the one that has been waiting longest is the
-     * one the reader most needs to see.
+     * One row per open request, oldest first.
      *
      * @param  Collection<int, StockRequest>  $requests
      */
@@ -452,8 +427,7 @@ class StockNotificationService
                 EmailTable::text((string) $request->reference, 20),
                 EmailTable::text((string) ($request->requester_name ?: '-'), 26),
                 DateDisplay::emailDate($request->created_at),
-                // Escaped: the item name is typed by hand. The quantity rides with it because
-                // a request for one and a request for fifty are not the same decision.
+                // Escaped item name with its quantity
                 EmailTable::text(($item?->name ?? '-').' ×'.number_format((int) $request->qty), 44),
                 EmailTable::text(self::REQUEST_STATUS_LABELS[$request->status] ?? (string) $request->status),
             ];
@@ -462,24 +436,20 @@ class StockNotificationService
         return EmailTable::render(self::REQUEST_HEADERS, $rows, [], self::REQUEST_WIDTHS, [3]);
     }
 
-    /**
-     * Daily nag: bell-only (overwrite) to approvers while a request is unfulfilled.
-     * The summary email is sent once per run by run() (digest), not here.
-     */
+    /** Daily bell-only nag (overwritten): pending reminds approvers, approved reminds issuers. */
     public function requestWaiting(StockRequest $request): void
     {
+        $permission = $request->status === 'approved' ? 'stock.fulfill' : 'stock.approve';
+
         $this->sendBell(
-            $this->recipients('stock.approve'),
+            $this->recipients($permission),
             new StockRequestNotification($request, 'waiting'),
             StockRequestNotification::class,
             ['stock_request_id' => $request->id, 'subtype' => 'waiting'],
         );
     }
 
-    /**
-     * Daily reminder: bell-only (overwrite) to view_count holders while a count is draft.
-     * No email — purely an in-app nudge to submit the open count session.
-     */
+    /** Daily bell-only reminder (overwritten) to view_count holders while a count is draft. */
     public function countDraft(StockCount $count): void
     {
         $recipients = $this->recipients('stock.view_count');

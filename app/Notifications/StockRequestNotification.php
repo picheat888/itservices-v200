@@ -13,7 +13,7 @@ class StockRequestNotification extends Notification
 
     public function __construct(
         private readonly StockRequest $request,
-        private readonly string $subtype, // created | waiting | approved | rejected | fulfilled | cancelled
+        private readonly string $subtype, // created | waiting | approved | awaiting_fulfil | rejected | fulfilled | cancelled
     ) {}
 
     protected function notificationKey(): string
@@ -32,6 +32,8 @@ class StockRequestNotification extends Notification
             'sku' => $this->request->item?->sku,
             'name' => $this->request->item?->name,
             'qty' => $this->request->qty,
+            'requester_name' => $this->request->requester_name,
+            'requester_name_th' => $this->request->user?->name_th,
         ];
     }
 }

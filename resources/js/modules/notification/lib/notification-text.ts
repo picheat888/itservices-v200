@@ -36,6 +36,7 @@ export function notificationTitle(n: AppNotification, t: Translate, lang: Lang):
     // Number first: long titles truncate, and the number is what people refer to
     if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} ${n.data.subject}`;
     if (n.data.type === 'stock_alert') return `${n.data.name} (${n.data.sku})`;
+    if (n.data.type === 'stock_request' && n.data.subtype === 'awaiting_fulfil') return t('notif_stock_req_awaiting_fulfil');
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
     if (n.data.type === 'request') {
@@ -104,6 +105,14 @@ export function notificationMessage(n: AppNotification, t: Translate, lang: Lang
     if (n.data.type === 'ticket_owner')
         return t(`notif_ticket_owner_${n.data.event}` as Parameters<Translate>[0]).replaceAll('{name}', () => n.data.by ?? '—');
     if (n.data.type === 'stock_alert') return t(`notif_stock_${n.data.subtype}` as Parameters<Translate>[0]);
+    // Ready to issue: the sentence leads, the request follows
+    if (n.data.type === 'stock_request' && n.data.subtype === 'awaiting_fulfil') {
+        return t('notif_stock_req_line')
+            .replaceAll('{reference}', () => n.data.reference ?? `#${n.data.stock_request_id}`)
+            .replaceAll('{item}', () => n.data.name ?? n.data.sku ?? '—')
+            .replaceAll('{qty}', () => fmtN(n.data.qty ?? 0))
+            .replaceAll('{requester}', () => localPair(n.data.requester_name, n.data.requester_name_th, lang) ?? '—');
+    }
     if (n.data.type === 'stock_request') return t(`notif_stock_req_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
     if (n.data.type === 'request') {

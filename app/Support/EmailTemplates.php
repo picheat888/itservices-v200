@@ -654,6 +654,21 @@ This report summarizes all stock requests that are still open and have not yet b
                 'cadence' => 'realtime',
             ],
             [
+                'key' => 'stock.request_awaiting_fulfil',
+                'name' => 'Stock - Request ready to issue (คำขอเบิกรอจ่าย)',
+                'subject' => 'Stock request ready to issue: {{stock.request_no}}',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>A stock request has been approved and is ready to issue.</p>
+<p>Please pick the items and issue them in the portal.</p>
+<br>
+<p><strong style="color:#64748b">Request No.: </strong>{{stock.request_no}}<br>
+<strong style="color:#64748b">Requester: </strong>{{stock.request_by}}<br>
+<strong style="color:#64748b">Approved By: </strong>{{stock.approver}}<br>
+<strong style="color:#64748b">Item: </strong>{{stock.name}} ×{{stock.qty}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
                 'key' => 'stock.request_rejected',
                 'name' => 'Stock - Request rejected (คำขอเบิกไม่ได้รับอนุมัติ)',
                 'subject' => 'Your stock request has been rejected',
