@@ -1,10 +1,13 @@
+import NotFoundPage from '@/app/not-found';
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { EmptyState, type EmptyStateProps } from '@/shared/components/empty-state';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useLocalPair } from '@/shared/hooks/use-local-name';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { httpStatus } from '@/shared/lib/http-errors';
 import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
@@ -76,10 +79,20 @@ export default function ItemHistoryPage() {
     const { id } = useParams();
     const [params, setParams] = useSearchParams();
     const view = (params.get('v') as View | null) ?? null;
-    const { data, isLoading } = useStockItemHistory(id ? Number(id) : null);
+    const { data, isLoading, error, refetch } = useStockItemHistory(id ? Number(id) : null);
     const { dateTime: fmt } = useDateFormat();
     const { format: formatMoney } = useCurrency();
 
+    if (httpStatus(error) === 404) {
+        return <NotFoundPage />;
+    }
+    if (error && !data) {
+        return (
+            <div className="bg-background mx-auto min-h-dvh max-w-5xl px-6 py-8">
+                <LoadFailedPanel onRetry={() => refetch()} />
+            </div>
+        );
+    }
     if (isLoading || !data) {
         return (
             <div role="status" className="bg-background mx-auto min-h-dvh max-w-5xl px-6 py-8">
