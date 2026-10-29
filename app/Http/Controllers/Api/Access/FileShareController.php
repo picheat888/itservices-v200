@@ -90,6 +90,10 @@ class FileShareController extends Controller
     /** Soft-revoke a member's access to the file share. */
     public function revokeMember(FileShare $fileShare, AccessMembership $membership, AccessService $svc): JsonResponse
     {
+        if ($membership->revoked_at !== null) {
+            return response()->json(['message' => 'success']);
+        }
+
         AuditLog::record('Removed member from file share', $fileShare->name, ['employee' => $membership->employee?->name], subject: $fileShare);
         $svc->revoke($membership);
 

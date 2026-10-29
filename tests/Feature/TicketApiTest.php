@@ -463,14 +463,14 @@ class TicketApiTest extends TestCase
             ->assertJsonValidationErrors(['subject', 'description']);
     }
 
-    public function test_create_links_a_related_asset(): void
+    public function test_create_ignores_a_related_asset(): void
     {
         $asset = Asset::factory()->create();
         $this->actingAs($this->userWithEmployee('super'));
 
         $this->postJson('/api/tickets', $this->payload(['related_asset_id' => $asset->id]))
             ->assertCreated()
-            ->assertJsonPath('data.related_asset_id', $asset->id);
+            ->assertJsonPath('data.related_asset_id', null);
     }
 
     public function test_list_supports_whitelisted_sort_orders(): void

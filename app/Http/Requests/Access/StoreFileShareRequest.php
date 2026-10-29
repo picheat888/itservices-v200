@@ -27,7 +27,7 @@ class StoreFileShareRequest extends FormRequest
             // A file share must have an owner from creation (matches email groups).
             // Required on create; on edit the owner is changed via the members dialog (setOwner),
             // so the edit form doesn't send it.
-            'owner_employee_id' => [$this->isMethod('post') ? 'required' : 'nullable', 'exists:employees,id'],
+            'owner_employee_id' => $this->isMethod('post') ? ['required', 'exists:employees,id'] : ['prohibited'],
         ];
     }
 }

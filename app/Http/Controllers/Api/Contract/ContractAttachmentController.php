@@ -7,6 +7,7 @@ use App\Http\Resources\Contract\ContractResource;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAttachment;
+use App\Support\Refusal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -31,6 +32,10 @@ class ContractAttachmentController extends Controller
     public function store(Request $request, Contract $contract): JsonResponse
     {
         abort_unless($this->canUpload($request, $contract), 403);
+
+        if ($contract->isClosed()) {
+            Refusal::fail('contract_closed', field: 'contract');
+        }
 
         $request->validate([
             'files' => ['required', 'array', 'min:1'],
@@ -66,6 +71,10 @@ class ContractAttachmentController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.edit'), 403);
         abort_unless($attachment->contract_id === $contract->id, 404);
+
+        if ($contract->isClosed()) {
+            Refusal::fail('contract_closed', field: 'contract');
+        }
 
         Storage::disk('local')->delete($attachment->path);
         $attachment->delete();

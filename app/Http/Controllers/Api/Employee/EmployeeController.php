@@ -801,8 +801,15 @@ class EmployeeController extends Controller
         $resetting = $request->boolean('reset_password');
         abort_unless($changingUsername || $resetting, 422, 'Nothing to update.');
 
+        // Both permission checks come before the first write
         if ($changingUsername) {
             abort_unless((bool) $request->user()?->hasPermission('employees.set_credentials'), 403);
+        }
+        if ($resetting) {
+            abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
+        }
+
+        if ($changingUsername) {
             $user->update(['username' => $data['username']]);
             // Mirror onto the employee for display/search (same as account creation).
             $employee->update(['username' => $data['username']]);
@@ -811,7 +818,6 @@ class EmployeeController extends Controller
 
         $newPassword = null;
         if ($resetting) {
-            abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
             $force = $request->boolean('force_change');
             // No password supplied → generate one. The employee code was the old fallback, but
             // it is public knowledge and fails the very policy this endpoint enforces.

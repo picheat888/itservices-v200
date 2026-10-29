@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Asset;
 
 use App\Enums\Asset\AssetSource;
-use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -39,19 +38,7 @@ class StoreAssetRequest extends FormRequest
             'model_id' => ['required', 'integer', 'exists:asset_models,id'],
             'serial' => ['nullable', 'string', 'max:120'],
             'source' => ['required', Rule::enum(AssetSource::class)],
-            // Register only (see below): the starting state and holder of an asset entered
-            // into the system.
-            ...($assetId === null ? [
-                'status' => ['sometimes', Rule::enum(AssetStatus::class)],
-                // Owner is either an employee code (linked to the FK) or a shared/common-use
-                // label; the employee's name / department / position are read from the employee.
-                'owner' => ['nullable', 'string', 'max:200'],
-            ] : []),
-            // An edit never carries `status` or `owner`: once an asset exists, who holds it and
-            // in what state only change through the actions that keep the custody trail
-            // (transfer / accept / return / receive / recall / write-off). Accepting them here
-            // let an edit deploy, retire or reassign an asset with no trail, no reason and no
-            // permission beyond editing. Unlisted keys are dropped from validated().
+            // No `status` / `owner`: custody changes only through the trail actions; unlisted keys are dropped.
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
             // Purchased assets carry their own price; rented assets derive value from the contract.

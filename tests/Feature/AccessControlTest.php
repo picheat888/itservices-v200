@@ -7,6 +7,7 @@ use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
+use App\Models\AuditLog;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
@@ -133,11 +134,66 @@ class AccessControlTest extends TestCase
         $g = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co']);
         $e = Employee::create(['first_name' => 'A', 'last_name' => 'B']);
 
-        $m = $this->postJson("/api/email-groups/{$g->id}/members", ['employee_id' => $e->id, 'access_level' => 'Member'])
+        $m = $this->postJson("/api/email-groups/{$g->id}/members", ['employee_id' => $e->id, 'access_level' => null])
             ->assertStatus(201)->json('data.id');
 
         $this->postJson("/api/email-groups/{$g->id}/members/{$m}/revoke")->assertOk();
+        $this->postJson("/api/email-groups/{$g->id}/members/{$m}/revoke")->assertOk();
         $this->assertNotNull(AccessMembership::find($m)->revoked_at);
+        $this->assertSame(1, AuditLog::where('action', 'Removed member from email group')->count());
+    }
+
+    public function test_revoking_twice_audits_once_on_every_resource(): void
+    {
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $e = Employee::create(['first_name' => 'A', 'last_name' => 'B']);
+        $cases = [
+            ['file-shares', FileShare::create(['name' => 'Recipes', 'path' => '\\F\R']), 'Removed member from file share'],
+            ['social-platforms', SocialPlatform::create(['name' => 'LINE']), 'Removed member from social platform'],
+            ['software', Software::create(['name' => 'Acrobat', 'license_type' => 'subscription', 'seats' => 5]), 'Removed member from software'],
+        ];
+
+        foreach ($cases as [$path, $resource, $action]) {
+            $m = $resource->memberships()->create(['employee_id' => $e->id, 'granted_at' => '2026-01-01']);
+
+            $this->postJson("/api/{$path}/{$resource->id}/members/{$m->id}/revoke")->assertOk();
+            $this->postJson("/api/{$path}/{$resource->id}/members/{$m->id}/revoke")->assertOk();
+            $this->assertSame(1, AuditLog::where('action', $action)->count(), $action);
+        }
+    }
+
+    public function test_access_level_is_refused_where_the_resource_has_no_levels(): void
+    {
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $g = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co']);
+        $e = Employee::create(['first_name' => 'A', 'last_name' => 'B']);
+
+        $this->postJson("/api/email-groups/{$g->id}/members", ['employee_id' => $e->id, 'access_level' => ['x']])
+            ->assertUnprocessable()->assertJsonValidationErrors('access_level');
+
+        $this->postJson("/api/email-groups/{$g->id}/members", ['employee_id' => $e->id, 'access_level' => null])
+            ->assertCreated();
+    }
+
+    public function test_edit_cannot_change_the_owner(): void
+    {
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $owner = Employee::create(['first_name' => 'Own', 'last_name' => 'Er']);
+        $other = Employee::create(['first_name' => 'Oth', 'last_name' => 'Er']);
+        $dept = Department::create(['name' => 'Quality', 'tag' => 'QC']);
+        $g = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co', 'owner_employee_id' => $owner->id, 'department_id' => $dept->id]);
+        $fs = FileShare::create(['name' => 'Recipes', 'path' => '\\F\R', 'owner_employee_id' => $owner->id, 'department_id' => $dept->id]);
+
+        $this->putJson("/api/email-groups/{$g->id}", ['name' => 'QA', 'email' => 'qa@x.co', 'department_id' => $dept->id, 'owner_employee_id' => $other->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('owner_employee_id');
+        $this->putJson("/api/file-shares/{$fs->id}", ['name' => 'Recipes', 'path' => '\\F\R', 'department_id' => $dept->id, 'size' => 0, 'owner_employee_id' => $other->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('owner_employee_id');
+
+        $this->assertSame($owner->id, $g->fresh()->owner_employee_id);
+        $this->assertSame($owner->id, $fs->fresh()->owner_employee_id);
     }
 
     public function test_cannot_delete_group_with_active_members(): void

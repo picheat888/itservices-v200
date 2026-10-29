@@ -103,6 +103,7 @@ export const email: Dict = {
     email_var_note_table: 'auto-generated table',
     email_toggle_named: 'Enable {name}',
     email_err_required: 'Required',
+    email_err_body_too_long: 'The body is too long to save.',
     email_err_fix: "Couldn't save. Fix the fields outlined in red first.",
     email_when_ticket_created: 'A ticket is opened',
     email_to_ticket_created: 'The requester',

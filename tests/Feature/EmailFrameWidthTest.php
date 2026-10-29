@@ -81,7 +81,9 @@ class EmailFrameWidthTest extends TestCase
 
         foreach ([self::WIDE => 980, self::ORDINARY => EmailTemplates::DEFAULT_WIDTH] as $key => $expected) {
             $template = EmailTemplate::where('key', $key)->firstOrFail();
-            $html = $this->get("/api/email-templates/{$template->id}/preview")->assertOk()->getContent();
+            $html = $this->post('/api/email-templates/render-preview', [
+                'key' => $template->key, 'name' => $template->name, 'subject' => $template->subject, 'body_html' => $template->body_html,
+            ])->assertOk()->getContent();
 
             $this->assertSame($expected, $this->frameWidthOf($html), "Preview of {$key} is the wrong width.");
         }

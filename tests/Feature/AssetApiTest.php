@@ -478,6 +478,7 @@ class AssetApiTest extends TestCase
 
     public function test_receiving_to_pool_clears_the_usage_location(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $employee = Employee::create(['code' => 'EMP-7701', 'first_name' => 'Back', 'last_name' => 'Pool']);
         $this->actingAs($this->super());
         $asset = Asset::factory()->create([
@@ -758,6 +759,7 @@ class AssetApiTest extends TestCase
 
     public function test_mark_received_returns_asset_to_pool(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $employee = Employee::create(['code' => 'EMP-1500', 'first_name' => 'Ret', 'last_name' => 'Urn']);
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500', 'owner_employee_id' => $employee->id]);
@@ -772,6 +774,7 @@ class AssetApiTest extends TestCase
 
     public function test_mark_received_stores_asset_in_chosen_warehouse(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500', 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch A'])->id]);
 
@@ -1141,21 +1144,21 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.owner_name', 'Han Solo');
     }
 
-    public function test_registering_with_an_employee_owner_code_links_the_fk(): void
+    public function test_registering_ignores_status_and_owner(): void
     {
         $this->actingAs($this->super());
-        $employee = Employee::create(['code' => 'EMP-4242', 'first_name' => 'Reg', 'last_name' => 'Owner']);
+        Employee::create(['code' => 'EMP-4242', 'first_name' => 'Reg', 'last_name' => 'Owner']);
 
         $this->postJson('/api/assets', [
             'category_id' => $this->categoryId('laptop'), 'source' => 'purchased',
             'model_id' => $this->modelId('Dell 7420'), 'vendor_id' => $this->vendorId(), 'value' => 100,
-            'owner' => 'EMP-4242',
+            'status' => 'deployed', 'owner' => 'EMP-4242',
         ])->assertCreated()
-            ->assertJsonPath('data.owner', 'EMP-4242')
-            ->assertJsonPath('data.owner_employee_id', $employee->id);
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.owner_employee_id', null);
     }
 
-    public function test_registering_with_a_shared_label_owner_leaves_the_fk_null(): void
+    public function test_registering_ignores_a_shared_label_owner(): void
     {
         $this->actingAs($this->super());
 
@@ -1164,8 +1167,25 @@ class AssetApiTest extends TestCase
             'model_id' => $this->modelId('Brother X'), 'vendor_id' => $this->vendorId(), 'value' => 100,
             'owner' => 'Rack 2',
         ])->assertCreated()
-            ->assertJsonPath('data.owner', 'Rack 2')
+            ->assertJsonPath('data.owner', null)
             ->assertJsonPath('data.owner_employee_id', null);
+    }
+
+    public function test_receive_refuses_an_unknown_warehouse(): void
+    {
+        $this->actingAs($this->super());
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $asset = Asset::factory()->create(['status' => 'pending_return']);
+
+        $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Nowhere Store'])
+            ->assertUnprocessable()->assertJsonValidationErrors('warehouse');
+        $this->postJson('/api/assets/bulk-receive', ['ids' => [$asset->id], 'warehouse' => 'Nowhere Store'])
+            ->assertUnprocessable()->assertJsonValidationErrors('warehouse');
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Nowhere Store'])
+            ->assertUnprocessable()->assertJsonValidationErrors('warehouse');
+        $this->postJson('/api/assets/bulk-recall', ['ids' => [$asset->id], 'warehouse' => 'Nowhere Store'])
+            ->assertUnprocessable()->assertJsonValidationErrors('warehouse');
+        $this->assertDatabaseMissing('warehouses', ['name' => 'Nowhere Store']);
     }
 
     public function test_my_assets_and_accept_follow_the_fk_not_the_owner_string(): void
@@ -1236,6 +1256,7 @@ class AssetApiTest extends TestCase
      */
     public function test_recall_pulls_a_pending_acceptance_asset_back_into_the_pool(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $this->actingAs($this->super());
         $employee = Employee::create(['code' => 'EMP-RCL-1', 'first_name' => 'Wrong', 'last_name' => 'Person']);
         $asset = Asset::factory()->create([
@@ -1280,6 +1301,7 @@ class AssetApiTest extends TestCase
     /** A shared / common-use asset (deployed, no employee holder) can be recalled back into the pool. */
     public function test_recall_pulls_a_shared_deployed_asset_back_into_the_pool(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $this->actingAs($this->super());
         $asset = Asset::factory()->create([
             'status' => 'deployed',
@@ -1464,6 +1486,7 @@ class AssetApiTest extends TestCase
 
     public function test_bulk_recall_returns_common_assets_to_the_pool(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $this->actingAs($this->super());
         Warehouse::firstOrCreate(['name' => 'Central IT']);
         $a = Asset::factory()->create(['status' => 'common', 'owner' => 'Rack 1', 'owner_employee_id' => null]);
@@ -1476,6 +1499,7 @@ class AssetApiTest extends TestCase
 
     public function test_bulk_recall_cancels_pending_acceptance_hand_overs(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         // Cancel a batch of not-yet-accepted hand-overs — normal recall, only needs assets.transfer.
         $user = User::factory()->create(['role' => 'user']);
         RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.transfer', 'allowed' => true]);
@@ -1491,6 +1515,7 @@ class AssetApiTest extends TestCase
 
     public function test_bulk_recall_of_employee_held_needs_force_permission(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         Warehouse::firstOrCreate(['name' => 'Central IT']);
         $employee = Employee::create(['code' => 'EMP-BR1', 'first_name' => 'H', 'last_name' => 'E']);
 
@@ -1510,6 +1535,7 @@ class AssetApiTest extends TestCase
 
     public function test_bulk_receive_returns_pending_return_assets(): void
     {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
         $this->actingAs($this->super());
         Warehouse::firstOrCreate(['name' => 'Central IT']);
         $employee = Employee::create(['code' => 'EMP-BRC', 'first_name' => 'P', 'last_name' => 'R']);

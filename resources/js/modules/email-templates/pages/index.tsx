@@ -1693,7 +1693,14 @@ function EditorDialog({
             const serverErrors = response?.status === 422 ? response.data?.errors : undefined;
             const next: WordingErrors = {};
             for (const field of WORDING_FIELDS) {
-                if (serverErrors?.[field]) next[field] = values[field].trim() ? serverErrors[field][0] : t('email_err_required');
+                if (serverErrors?.[field]) {
+                    const reason = serverErrors[field][0];
+                    next[field] = !values[field].trim()
+                        ? t('email_err_required')
+                        : reason === 'body_too_long'
+                          ? t('email_err_body_too_long')
+                          : reason;
+                }
             }
             if (Object.keys(next).length > 0) {
                 showErrors(next);

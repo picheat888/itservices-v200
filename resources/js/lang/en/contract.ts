@@ -63,6 +63,7 @@ export const contract: Dict = {
     contract_per_month: '/mo',
     contract_per_quarter: '/qtr',
     contract_per_year: '/yr',
+    contract_refusal_contract_closed: 'A cancelled or expired contract cannot be changed.',
     contract_refusal_too_many_files: 'A contract can hold up to {max} files ({remaining} left).',
     contract_notify: 'Remind before',
     contract_attachments: 'Attachments',

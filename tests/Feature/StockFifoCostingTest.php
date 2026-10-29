@@ -117,4 +117,22 @@ class StockFifoCostingTest extends TestCase
         }
         $this->assertSame(0, $item->fresh()->current_stock);
     }
+
+    public function test_receive_qty_is_capped(): void
+    {
+        $item = $this->item();
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 1000001])
+            ->assertUnprocessable()->assertJsonValidationErrors('qty');
+        $this->assertSame(0, $item->fresh()->current_stock);
+
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 1000000])
+            ->assertCreated();
+
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'stock_request_id' => 1,
+            'lots' => [['lot_id' => 1, 'qty' => 1000001]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('lots.0.qty');
+    }
 }

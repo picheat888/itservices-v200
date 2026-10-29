@@ -44,6 +44,26 @@ class ContractAttachmentTest extends TestCase
         Storage::disk('local')->assertExists($contract->attachments()->first()->path);
     }
 
+    public function test_a_closed_contract_takes_no_attachment_changes(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->super());
+        $contract = $this->contract();
+        $this->postJson("/api/contracts/{$contract->id}/attachments", [
+            'files' => [UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf')],
+        ])->assertOk();
+        $attachment = $contract->attachments()->first();
+        $contract->update(['cancelled_at' => now()]);
+
+        $this->postJson("/api/contracts/{$contract->id}/attachments", [
+            'files' => [UploadedFile::fake()->create('more.pdf', 100, 'application/pdf')],
+        ])->assertUnprocessable()->assertJsonValidationErrors('contract');
+        $this->deleteJson("/api/contracts/{$contract->id}/attachments/{$attachment->id}")
+            ->assertUnprocessable()->assertJsonValidationErrors('contract');
+
+        $this->assertSame(1, $contract->attachments()->count());
+    }
+
     public function test_rejects_a_non_pdf_file(): void
     {
         Storage::fake('local');

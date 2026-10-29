@@ -143,6 +143,12 @@ class Contract extends Model
         return $enabled === [] ? null : max($enabled);
     }
 
+    /** A cancelled or expired contract is closed: its record is frozen. */
+    public function isClosed(): bool
+    {
+        return $this->cancelled_at !== null || $this->expired_at !== null;
+    }
+
     /**
      * True when the contract is still active but has crossed into its own
      * reminder window (days remaining ≤ earliest enabled threshold).

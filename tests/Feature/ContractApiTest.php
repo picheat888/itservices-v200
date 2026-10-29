@@ -654,6 +654,35 @@ class ContractApiTest extends TestCase
         ])->assertOk()->assertJsonPath('data.name', 'N2');
     }
 
+    public function test_a_closed_contract_cannot_be_edited(): void
+    {
+        $this->actingAs($this->super());
+        $payload = fn (Contract $c) => [
+            'code' => $c->code, 'vendor_id' => $c->vendor_id, 'name' => 'Renamed', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'billing_cycle' => 'monthly',
+        ];
+        $vendorId = $this->vendorId('ClosedV');
+        $make = fn (string $code, string $end) => Contract::create([
+            'code' => $code, 'vendor_id' => $vendorId, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => $end, 'value' => 100000, 'billing_cycle' => 'monthly',
+        ]);
+
+        $cancelled = $make('CT-CL-1', now()->addYear()->toDateString());
+        $this->postJson("/api/contracts/{$cancelled->id}/cancel", ['reason' => 'Done'])->assertOk();
+        $this->putJson("/api/contracts/{$cancelled->id}", $payload($cancelled))
+            ->assertUnprocessable()->assertJsonValidationErrors('contract');
+        $this->assertSame('N', $cancelled->fresh()->name);
+
+        $expired = $make('CT-CL-2', now()->subDay()->toDateString());
+        $expired->update(['expired_at' => now()]);
+        $this->putJson("/api/contracts/{$expired->id}", $payload($expired))
+            ->assertUnprocessable()->assertJsonValidationErrors('contract');
+
+        // Overdue (term ended, not closed by an admin) stays editable.
+        $overdue = $make('CT-CL-3', now()->subDay()->toDateString());
+        $this->putJson("/api/contracts/{$overdue->id}", $payload($overdue))->assertOk();
+    }
+
     public function test_value_and_total_accept_two_decimals(): void
     {
         $this->actingAs($this->super());

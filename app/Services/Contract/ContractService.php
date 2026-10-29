@@ -6,6 +6,7 @@ use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Support\Refusal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +34,10 @@ class ContractService
      */
     public function update(Contract $contract, array $data): Contract
     {
+        if ($contract->isClosed()) {
+            Refusal::fail('contract_closed', field: 'contract');
+        }
+
         $this->assertKeepsRetiredAssets($contract, $data);
         $assetIds = $this->pullAssetIds($data);
         $contract->update($this->withoutBlankCode($data));

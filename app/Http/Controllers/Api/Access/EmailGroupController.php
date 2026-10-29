@@ -93,6 +93,10 @@ class EmailGroupController extends Controller
     /** Soft-revoke a member's access to the email group. */
     public function revokeMember(EmailGroup $emailGroup, AccessMembership $membership, AccessService $svc): JsonResponse
     {
+        if ($membership->revoked_at !== null) {
+            return response()->json(['message' => 'success']);
+        }
+
         AuditLog::record('Removed member from email group', $emailGroup->name, ['employee' => $membership->employee?->name], subject: $emailGroup);
         $svc->revoke($membership);
 

@@ -103,6 +103,7 @@ export const email: Dict = {
     email_var_note_table: 'ตารางอัตโนมัติ',
     email_toggle_named: 'เปิดใช้งาน {name}',
     email_err_required: 'จำเป็นต้องกรอก',
+    email_err_body_too_long: 'เนื้อหายาวเกินกว่าจะบันทึกได้',
     email_err_fix: 'บันทึกไม่ได้ แก้ช่องที่มีกรอบสีแดงก่อน',
     email_when_ticket_created: 'เปิด Ticket ใหม่',
     email_to_ticket_created: 'ผู้แจ้ง',

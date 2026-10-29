@@ -6,6 +6,7 @@ use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Notifications\AssetRecalledNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,6 +30,7 @@ class AssetRecallNoticeTest extends TestCase
         parent::setUp();
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         Notification::fake();
+        Warehouse::firstOrCreate(['name' => 'IT Store']);
     }
 
     /** Create a non-super user holding exactly the given permissions. */

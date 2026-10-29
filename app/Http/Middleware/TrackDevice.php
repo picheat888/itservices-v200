@@ -222,7 +222,7 @@ class TrackDevice
         $token = $this->devices->rotateRememberToken($device, $user, $usedToken);
         Cookie::queue(
             Auth::guard('web')->getRecallerName(),
-            $user->getKey().'|'.$token.'|'.$user->getAuthPassword(),
+            $user->getKey().'|'.$token.'|'.Auth::guard('web')->hashPasswordForCookie($user->getAuthPassword()),
             max(1, (int) ceil(now()->diffInSeconds($expiresAt) / 60)),
         );
     }

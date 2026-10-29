@@ -16,6 +16,16 @@ class EmailTemplatePreviewTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_the_saved_preview_route_is_gone(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
+        $admin = User::factory()->create(['role' => 'super']);
+        $this->seed(EmailTemplateSeeder::class);
+        $template = EmailTemplate::firstOrFail();
+
+        $this->actingAs($admin)->getJson("/api/email-templates/{$template->id}/preview")->assertNotFound();
+    }
+
     public function test_preview_renders_branded_wrapper_with_cta_and_filled_placeholders(): void
     {
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
@@ -29,7 +39,9 @@ class EmailTemplatePreviewTest extends TestCase
             'enabled' => true,
         ]);
 
-        $res = $this->actingAs($admin)->get("/api/email-templates/{$tpl->id}/preview");
+        $res = $this->actingAs($admin)->post('/api/email-templates/render-preview', [
+            'key' => $tpl->key, 'name' => $tpl->name, 'subject' => $tpl->subject, 'body_html' => $tpl->body_html,
+        ]);
 
         $res->assertOk();
         $html = $res->getContent();
@@ -67,7 +79,9 @@ class EmailTemplatePreviewTest extends TestCase
 
         foreach ($templates as $template) {
             $html = $this->actingAs($admin)
-                ->get("/api/email-templates/{$template->id}/preview")
+                ->post('/api/email-templates/render-preview', [
+                    'key' => $template->key, 'name' => $template->name, 'subject' => $template->subject, 'body_html' => $template->body_html,
+                ])
                 ->assertOk()
                 ->getContent();
 

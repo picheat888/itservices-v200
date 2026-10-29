@@ -66,6 +66,18 @@ class WorkflowAdminTest extends TestCase
         $this->actingAs($reader)->putJson("/api/workflows/{$workflow->id}", [])->assertForbidden();
     }
 
+    public function test_an_it_staff_step_must_be_the_completion(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [
+                ['actor_type' => 'chain', 'label' => 'Boss', 'kind' => 'approval', 'position_ids' => [Position::where('title', 'Supervisor')->firstOrFail()->id]],
+                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'approval'],
+            ],
+        ])->assertUnprocessable()->assertJsonPath('errors.steps.0', 'workflow_it_staff_completion');
+    }
+
     public function test_update_replaces_steps_and_validates_the_shape(): void
     {
         $workflow = Workflow::where('request_type', 'computer')->firstOrFail();

@@ -190,7 +190,7 @@ class StockMovementController extends Controller
             'type' => ['required', Rule::in(array_keys(self::TYPE_PERMISSION))],
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
             // qty is derived from serials (serialized receive), serial_ids (serialized return) or lots (return / transfer).
-            'qty' => ['exclude_if:type,return', 'prohibited_if:type,transfer', 'required_without_all:serials,serial_ids,lot_ids', 'nullable', 'integer', 'min:1'],
+            'qty' => ['exclude_if:type,return', 'prohibited_if:type,transfer', 'required_without_all:serials,serial_ids,lot_ids', Rule::requiredIf(fn () => $request->input('type') === 'receive' && ! $this->isSerialItem($request->input('stock_item_id'))), 'nullable', 'integer', 'min:1', Rule::when($request->input('type') === 'receive', 'max:1000000')],
             'unit_cost' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'from_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:120', $knownWarehouse('from_label')],
             'to_label' => ['required_if:type,transfer', 'prohibited_if:type,return', 'nullable', 'string', 'max:120', $knownWarehouse('to_label')],
@@ -208,7 +208,7 @@ class StockMovementController extends Controller
             'stock_request_id' => ['required_if:type,return', 'exclude_unless:type,return', 'integer', 'exists:stock_requests,id'],
             'lots' => [Rule::requiredIf(fn () => $request->input('type') === 'return' && ! $this->isSerialItem($request->input('stock_item_id'))), 'exclude_unless:type,return', 'array'],
             'lots.*.lot_id' => ['required', 'integer', 'exists:stock_lots,id'],
-            'lots.*.qty' => ['required', 'integer', 'min:1'],
+            'lots.*.qty' => ['required', 'integer', 'min:1', 'max:1000000'],
         ]);
 
         abort_unless((bool) $request->user()?->hasPermission(self::TYPE_PERMISSION[$data['type']]), 403);

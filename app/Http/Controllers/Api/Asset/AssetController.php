@@ -25,6 +25,7 @@ use App\Support\SystemTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
@@ -473,7 +474,7 @@ class AssetController extends Controller
         // someone's hands (force recall's job) or quietly undo a write-off.
         abort_unless($asset->status === AssetStatus::PendingReturn, 422, 'receive_not_pending');
         $data = $request->validate([
-            'warehouse' => ['required', 'string', 'max:120'],
+            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
         ]);
         $asset = $this->service->markReceived($asset, $request->user(), $data['warehouse']);
         AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
@@ -513,7 +514,7 @@ class AssetController extends Controller
         }
 
         $data = $request->validate([
-            'warehouse' => ['required', 'string', 'max:120'],
+            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         $asset = $this->service->recall($asset, $user, $data['warehouse'], $data['reason'] ?? null);
@@ -669,7 +670,7 @@ class AssetController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:assets,id'],
-            'warehouse' => ['required', 'string', 'max:120'],
+            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -700,7 +701,7 @@ class AssetController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:assets,id'],
-            'warehouse' => ['required', 'string', 'max:120'],
+            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
         ]);
 
         $assets = Asset::whereIn('id', $data['ids'])->get();

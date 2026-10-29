@@ -42,7 +42,7 @@ class StoreAccessMembershipRequest extends FormRequest
 
         return [
             'employee_id' => ['required', 'exists:employees,id'],
-            'access_level' => $levels ? ['required', Rule::in($levels)] : ['nullable'],
+            'access_level' => $levels ? ['required', Rule::in($levels)] : ['prohibited'],
             'purpose' => ['nullable', 'string', 'max:255'],
             'granted_at' => ['nullable', 'date'],
         ];

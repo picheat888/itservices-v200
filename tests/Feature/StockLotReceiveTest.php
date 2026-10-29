@@ -66,6 +66,21 @@ class StockLotReceiveTest extends TestCase
         $this->assertStringStartsWith('LOT-20261001-', StockLot::where('stock_item_id', $item->id)->sole()->lot_no);
     }
 
+    public function test_a_non_serial_receive_needs_a_qty(): void
+    {
+        Warehouse::create(['name' => 'Main']);
+        $item = $this->item();
+
+        $this->actingAs(User::factory()->create(['role' => 'super']))
+            ->postJson('/api/stock-movements', [
+                'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['X'], 'to_label' => 'Main',
+            ])
+            ->assertUnprocessable()->assertJsonValidationErrors('qty');
+
+        $this->assertDatabaseCount('stock_movements', 0);
+        $this->assertDatabaseCount('stock_lots', 0);
+    }
+
     public function test_serial_receive_links_every_serial_to_the_lot(): void
     {
         Warehouse::create(['name' => 'Main']);

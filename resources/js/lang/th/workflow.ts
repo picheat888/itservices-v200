@@ -101,6 +101,7 @@ export const workflow: Dict = {
     wf_err_one_completion: 'มีขั้นปิดงานได้ขั้นเดียว',
     wf_err_completion_last: 'ขั้นปิดงานต้องอยู่ท้ายสุด',
     wf_err_completion_it_staff: 'ขั้นปิดงานต้องเป็นของ IT',
+    wf_err_workflow_it_staff_completion: 'ขั้นของ IT ใช้ได้เฉพาะขั้นปิดงาน',
     wf_err_approver_outside_department: 'ผู้อนุมัติทุกคนต้องอยู่ในแผนกที่ขั้นนี้กำหนด',
     wf_err_no_resource_owner: 'คำขอประเภทนี้ไม่มีเจ้าของ Resource จึงใส่ขั้นเจ้าของ Resource ไม่ได้',
 

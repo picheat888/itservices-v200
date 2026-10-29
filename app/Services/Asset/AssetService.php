@@ -479,19 +479,6 @@ class AssetService
         return $asset->fresh();
     }
 
-    /** Retire / write off a single asset — blocked while an employee still holds it. */
-    public function retire(Asset $asset, ?string $reason = null): Asset
-    {
-        abort_if($asset->heldByEmployee(), response()->json(['message' => 'writeoff_held', 'code' => $asset->asset_code], 422));
-
-        $asset->update([
-            'status' => AssetStatus::Writeoff,
-            'last_reason' => $reason,
-        ]);
-
-        return $asset->fresh();
-    }
-
     /**
      * Undo a write-off (or a return to the lessor) — restore a retired asset back to the Ready pool.
      * Refused once its contract is closed (cancelled or expired): the contract could only close

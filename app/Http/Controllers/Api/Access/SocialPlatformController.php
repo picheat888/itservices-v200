@@ -98,6 +98,10 @@ class SocialPlatformController extends Controller
     /** Soft-revoke a member's access to the social platform. */
     public function revokeMember(SocialPlatform $socialPlatform, AccessMembership $membership, AccessService $svc): JsonResponse
     {
+        if ($membership->revoked_at !== null) {
+            return response()->json(['message' => 'success']);
+        }
+
         AuditLog::record('Removed member from social platform', $socialPlatform->name, ['employee' => $membership->employee?->name], subject: $socialPlatform);
         $svc->revoke($membership);
 

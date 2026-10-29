@@ -168,6 +168,20 @@ class EmployeeCredentialsManageTest extends TestCase
         $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])->assertOk();
     }
 
+    public function test_a_refused_reset_leaves_the_username(): void
+    {
+        $role = Role::firstOrCreate(['key' => 'name_only'], ['name' => 'Name Only']);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'employees.set_credentials'], ['allowed' => true]);
+        $this->actingAs(User::factory()->create(['role' => 'name_only']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7007', 'keep_me');
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'changed_name', 'reset_password' => true])
+            ->assertForbidden();
+
+        $this->assertSame('keep_me', $employee->fresh()->user->username);
+        $this->assertSame('keep_me', $employee->fresh()->username);
+    }
+
     /**
      * Login names are English-only: they must start with a letter, end with a letter or digit,
      * and may use . _ - in between. Short shared names like "hr" stay valid.

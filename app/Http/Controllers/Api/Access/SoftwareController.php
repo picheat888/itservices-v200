@@ -122,6 +122,10 @@ class SoftwareController extends Controller
     /** Soft-revoke an employee's licence. */
     public function revokeMember(Software $software, AccessMembership $membership, AccessService $svc): JsonResponse
     {
+        if ($membership->revoked_at !== null) {
+            return response()->json(['message' => 'success']);
+        }
+
         AuditLog::record('Removed member from software', $software->name, ['employee' => $membership->employee?->name], subject: $software);
         $svc->revoke($membership);
 

@@ -100,7 +100,7 @@ class EmailTemplateController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:150'],
             'subject' => ['sometimes', 'required', 'string', 'max:255'],
-            'body_html' => ['sometimes', 'required', 'string'],
+            'body_html' => ['sometimes', 'required', 'string', fn ($attribute, $value, $fail) => strlen((string) $value) > 65535 ? $fail('body_too_long') : null],
             'enabled' => ['sometimes', 'boolean'],
         ]);
 
@@ -254,34 +254,6 @@ class EmailTemplateController extends Controller
             'message' => $ok ? 'success' : 'failed',
             'sent' => $ok,
         ]);
-    }
-
-    /**
-     * Renders the template inside the real branded email layout (emails.templated)
-     * with sample data, so the in-app preview matches exactly what recipients get —
-     * wrapper, eyebrow, and a sample Quick link button. Returns raw HTML for an iframe.
-     */
-    public function preview(Request $request, EmailTemplate $emailTemplate): Response
-    {
-        $this->gate($request);
-
-        $vars = $this->sampleVars($request);
-        $subject = $this->service->render($emailTemplate->subject, $vars);
-        $body = $this->service->render($emailTemplate->body_html, $vars);
-
-        $html = view('emails.templated', [
-            'subjectLine' => $subject,
-            'bodyHtml' => $body,
-            'eyebrow' => $emailTemplate->name,
-            'width' => EmailTemplates::widthFor($emailTemplate->key),
-            'actionUrl' => rtrim((string) config('app.url'), '/').'/',
-            'actionLabel' => 'Open in portal',
-            'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
-            'logoData' => $this->service->brandLogoDataUri(),
-            'preview' => true,
-        ])->render();
-
-        return response($html)->header('Content-Type', 'text/html');
     }
 
     /**

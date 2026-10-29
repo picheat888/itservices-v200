@@ -63,6 +63,7 @@ export const contract: Dict = {
     contract_per_month: '/เดือน',
     contract_per_quarter: '/ไตรมาส',
     contract_per_year: '/ปี',
+    contract_refusal_contract_closed: 'สัญญาที่ยกเลิกหรือหมดอายุแล้วแก้ไขไม่ได้',
     contract_refusal_too_many_files: 'แนบไฟล์ได้สูงสุด {max} ไฟล์ต่อสัญญา (เหลือ {remaining} ไฟล์)',
     contract_notify: 'แจ้งเตือนล่วงหน้า',
     contract_attachments: 'เอกสารแนบ',

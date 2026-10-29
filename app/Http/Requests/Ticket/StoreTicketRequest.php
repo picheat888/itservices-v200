@@ -5,7 +5,6 @@ namespace App\Http\Requests\Ticket;
 use App\Enums\Ticket\TicketCategory;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class StoreTicketRequest extends FormRequest
@@ -30,7 +29,6 @@ class StoreTicketRequest extends FormRequest
             'category' => ['required', new Enum(TicketCategory::class)],
             // At least 3 digits — internal extensions can be short (e.g. 123).
             'callback_phone' => ['required', 'string', 'max:60', 'regex:/(\D*\d){3,}/'],
-            'related_asset_id' => ['nullable', Rule::exists('assets', 'id')],
         ];
     }
 }

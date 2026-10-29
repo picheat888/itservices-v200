@@ -98,6 +98,7 @@ export const workflow: Dict = {
     wf_err_one_completion: 'Only one completion step is allowed.',
     wf_err_completion_last: 'The completion step must be the last step.',
     wf_err_completion_it_staff: 'The completion step must be done by IT staff.',
+    wf_err_workflow_it_staff_completion: 'An IT staff step can only be the completion step.',
     wf_err_approver_outside_department: "Every approver must be in this step's department.",
     wf_err_no_resource_owner: "This request type has no resource owner, so it can't have an Owner step.",
 

@@ -71,6 +71,11 @@ class UpdateWorkflowRequest extends FormRequest
                 }
             }
 
+            // An IT staff step is the completion step and nothing else.
+            if ($steps->contains(fn ($s) => ($s['actor_type'] ?? null) === StepActorType::ItStaff->value && ($s['kind'] ?? null) !== WorkflowStepKind::Completion->value)) {
+                $v->errors()->add('steps', 'workflow_it_staff_completion');
+            }
+
             // A step that names nobody can never resolve — the same rule refuses a request
             // at submit while its workflow still holds such a step.
             foreach ($steps->values() as $index => $step) {
