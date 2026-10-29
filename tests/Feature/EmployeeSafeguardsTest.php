@@ -127,12 +127,26 @@ class EmployeeSafeguardsTest extends TestCase
         $this->assertSame('active', $adminA->fresh()->status->value);
     }
 
-    public function test_an_unlinked_super_admin_account_counts_as_a_keeper(): void
+    public function test_an_unlinked_super_admin_account_is_no_keeper(): void
     {
-        $systemAdmin = User::factory()->create(['role' => 'super']);
+        $unlinkedAdmin = User::factory()->create(['role' => 'super']);
         $employee = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
 
-        $this->actingAs($systemAdmin)
+        $this->actingAs($unlinkedAdmin)
+            ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
+            ->assertStatus(422)
+            ->assertJson(['code' => 'last_super_admin']);
+
+        $this->assertSame('active', $employee->fresh()->status->value);
+    }
+
+    public function test_another_working_super_admin_employee_lets_the_resignation_through(): void
+    {
+        $actorAccount = User::factory()->create(['role' => 'super']);
+        $this->employeeWithAccount($actorAccount);
+        $employee = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+
+        $this->actingAs($actorAccount)
             ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
             ->assertOk();
 

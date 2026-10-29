@@ -23,9 +23,15 @@ test('the contract summary type splits the alert counts from the overview', () =
 
 test('onboarding failures and resign refusals are worded in both languages', () => {
     assert.match(read('modules/employee/components/add-employee-drawer.tsx'), /request_failed: 'emp_onboarding_request_failed'/);
+    assert.match(read('modules/employee/pages/index.tsx'), /=== 'super_account' \? t\('cancel_resign_err_super_account'\)/);
     for (const lang of ['en', 'th']) {
         const words = read(`lang/${lang}/employee.ts`);
-        for (const key of ['emp_onboarding_request_failed', 'resign_err_own_account', 'resign_err_last_super_admin']) {
+        for (const key of [
+            'emp_onboarding_request_failed',
+            'resign_err_own_account',
+            'resign_err_last_super_admin',
+            'cancel_resign_err_super_account',
+        ]) {
             assert.match(words, new RegExp(`\\b${key}: `), `${lang} misses ${key}`);
         }
     }

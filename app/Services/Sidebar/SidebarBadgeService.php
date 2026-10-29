@@ -44,7 +44,7 @@ class SidebarBadgeService
             'access' => $this->gated($user, ['access.module', 'access.overview'], fn () => $this->accessAnomalies()),
             // Same keys as the Tickets menu item (nav.ts anyOf).
             'tickets' => $this->gatedAny($user, ['tickets.module', 'tickets.create', 'tickets.my'], fn () => $this->ticketsNeedingAttention($user)),
-            // Mirrors assets/summary: its own gate (assets.view) plus the nav item's (assets.receive).
+            // assets.view plus the nav item's assets.receive.
             'assets' => $this->gated($user, ['assets.view', 'assets.receive'], fn () => $this->assetsPendingReturn()),
             'my_assets' => $this->myAssetsPendingAcceptance($user),
             'contracts' => $this->gated($user, ['contracts.view'], fn () => $this->contractsNeedingRenewal()),

@@ -202,6 +202,7 @@ export const employee: Dict = {
     resign_err_before_join_plain: 'กรุณาเลือกวันหลังวันเริ่มงาน',
     resign_err_failed: 'บันทึกการลาออกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
     resign_err_forbidden: 'คุณไม่มีสิทธิ์บันทึกการลาออก',
+    cancel_resign_err_super_account: 'การยกเลิกการลาออกของบัญชีผู้ดูแลระบบสูงสุด ทำได้เฉพาะผู้ดูแลระบบสูงสุด',
     resign_err_super_account: 'การลาออกของบัญชีผู้ดูแลระบบสูงสุด บันทึกได้เฉพาะผู้ดูแลระบบสูงสุด',
     resign_err_already_resigned: 'พนักงานคนนี้ลาออกไปแล้ว',
     resign_err_own_account: 'บันทึกการลาออกของตัวเองไม่ได้ ให้ผู้อื่นเป็นผู้บันทึก',

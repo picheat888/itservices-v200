@@ -200,7 +200,7 @@ export default function EmployeesPage() {
         });
     };
     // A cancel-resign refused on a Super admin account says why
-    const cancelResignError = (err: unknown) => (accountDeleteRefusal(err) === 'super_account' ? t('emp_admin_protected') : undefined);
+    const cancelResignError = (err: unknown) => (accountDeleteRefusal(err) === 'super_account' ? t('cancel_resign_err_super_account') : undefined);
 
     // View drawer in ?view=<id>; row clicks seed the cache for an instant open
     const qc = useQueryClient();

@@ -203,6 +203,7 @@ export const employee: Dict = {
     resign_err_before_join_plain: 'Pick a date after the start date',
     resign_err_failed: 'Could not record the resignation. Please try again.',
     resign_err_forbidden: 'You are not allowed to record resignations.',
+    cancel_resign_err_super_account: 'Only a Super admin can cancel the resignation of a Super admin account.',
     resign_err_super_account: 'Only a Super admin can record the resignation of a Super admin account.',
     resign_err_already_resigned: 'This employee has already resigned.',
     resign_err_own_account: "You can't record your own resignation. Ask someone else to record it.",

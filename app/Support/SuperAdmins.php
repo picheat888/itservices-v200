@@ -66,7 +66,7 @@ class SuperAdmins
         return $inSuperGroup->merge($withSuperAccount)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
-    /** Whether a Super admin account outside this employee's stays: one with no employee, or one whose employee has not resigned. */
+    /** Whether a Super admin account outside this employee's stays: one linked to an employee who has not resigned. */
     public static function keeperRemainsBesides(Employee $employee): bool
     {
         $roleId = self::roleId();
@@ -86,9 +86,7 @@ class SuperAdmins
         return User::query()
             ->where('role_id', $roleId)
             ->whereNotIn('id', $theirAccountIds)
-            ->where(fn ($keeper) => $keeper
-                ->whereNotExists($linkedEmployees)
-                ->orWhereExists(fn ($query) => $linkedEmployees($query)->where('employees.status', '!=', EmployeeStatus::Resigned->value)))
+            ->whereExists(fn ($query) => $linkedEmployees($query)->where('employees.status', '!=', EmployeeStatus::Resigned->value))
             ->exists();
     }
 
