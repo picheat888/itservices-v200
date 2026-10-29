@@ -790,6 +790,7 @@ export type CountReason = 'lost' | 'broken' | 'used' | 'inbound' | 'returned' | 
 export interface SerialEvent {
     event: 'received' | 'issued' | 'adjusted' | 'found' | 'transferred' | 'returned';
     occurred_at: string | null;
+    stock_movement_id: number | null;
     doc_no: string | null;
     reference: string | null;
     recorded_by: string | null;

@@ -101,6 +101,31 @@ class StockItemHistoryPdfTest extends TestCase
         $this->assertSame(2, $this->getJson("/api/stock-items/{$item->id}/history")->json('data.reconciliation.difference'));
     }
 
+    public function test_issue_pdf_rows_list_only_their_own_warehouse_serials(): void
+    {
+        $item = $this->item();
+        Warehouse::firstOrCreate(['name' => 'HQ']);
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['H-1', 'H-2'], 'to_label' => 'HQ',
+        ])->assertCreated();
+        $request = StockRequest::create([
+            'stock_item_id' => $item->id, 'requester_name' => 'Somchai', 'qty' => 4, 'reason' => 'use', 'status' => 'approved',
+        ]);
+        $this->postJson("/api/stock-requests/{$request->id}/fulfill", ['serial_ids' => $item->serials()->pluck('id')->all()])->assertOk();
+
+        $seen = new \ArrayObject;
+        View::composer('pdf.stock-history', function ($v) use ($seen) {
+            $seen->append(array_diff_key($v->getData(), ['__env' => 1, 'app' => 1, 'errors' => 1]));
+        });
+        $this->get("/pdf/stock-items/{$item->id}/history?v=issue")->assertOk();
+        $html = view('pdf.stock-history', $seen[count($seen) - 1])->render();
+
+        $this->assertMatchesRegularExpression('/SN-A, SN-B/', $html);
+        $this->assertMatchesRegularExpression('/H-1, H-2/', $html);
+        $this->assertStringNotContainsString('SN-A, SN-B, H-1', $html);
+        $this->assertStringNotContainsString('H-1, H-2, SN-A', $html);
+    }
+
     public function test_history_views_name_the_lots(): void
     {
         $this->actingAs($this->super());

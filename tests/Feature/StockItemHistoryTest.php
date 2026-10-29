@@ -115,6 +115,60 @@ class StockItemHistoryTest extends TestCase
         $this->assertDatabaseHas('stock_item_serial_events', ['stock_item_serial_id' => $missingId, 'event' => 'adjusted']);
     }
 
+    /** @return array{0: StockItem, 1: int} the item and the id of one request issued across Main and HQ */
+    private function itemIssuedAcrossTwoWarehouses(): array
+    {
+        $item = $this->serialItem('UPS-9');
+        $super = $this->super();
+        foreach (['Main' => ['M-1', 'M-2'], 'HQ' => ['H-1', 'H-2']] as $warehouse => $serials) {
+            $this->actingAs($super)->postJson('/api/stock-movements', [
+                'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => $serials, 'to_label' => $warehouse,
+            ])->assertCreated();
+        }
+        $requester = User::factory()->create(['role' => 'user']);
+        RolePermission::updateOrCreate(['role_id' => $requester->role_id, 'permission' => 'stock.request'], ['allowed' => true]);
+        $reqId = $this->actingAs($requester)->postJson('/api/stock-requests', [
+            'stock_item_id' => $item->id, 'qty' => 4, 'reason' => 'x',
+        ])->assertCreated()->json('data.id');
+        $this->actingAs($super)->postJson("/api/stock-requests/{$reqId}/approve")->assertOk();
+        $this->actingAs($super)->postJson("/api/stock-requests/{$reqId}/fulfill", [
+            'serial_ids' => $item->serials()->pluck('id')->all(),
+        ])->assertOk();
+
+        return [$item, $reqId];
+    }
+
+    public function test_history_serials_stay_with_their_own_warehouse_row(): void
+    {
+        [$item] = $this->itemIssuedAcrossTwoWarehouses();
+
+        $data = $this->actingAs($this->super())->getJson("/api/stock-items/{$item->id}/history")->assertOk()->json('data');
+        $issues = collect($data['movements'])->where('type', 'issue');
+        $this->assertCount(2, $issues);
+        $this->assertSame(1, $issues->pluck('doc_no')->unique()->count());
+
+        foreach ($issues as $movement) {
+            $serials = collect($data['serials'])
+                ->filter(fn ($s) => collect($s['events'])->contains(fn ($e) => $e['event'] === 'issued' && $e['stock_movement_id'] === $movement['id']))
+                ->pluck('serial')->sort()->values()->all();
+            $this->assertSame($movement['from_label'] === 'Main' ? ['M-1', 'M-2'] : ['H-1', 'H-2'], $serials);
+        }
+    }
+
+    public function test_events_without_a_movement_id_still_match_by_document(): void
+    {
+        [$item] = $this->itemIssuedAcrossTwoWarehouses();
+        StockItemSerialEvent::where('stock_item_id', $item->id)->update(['stock_movement_id' => null]);
+
+        $data = $this->actingAs($this->super())->getJson("/api/stock-items/{$item->id}/history")->assertOk()->json('data');
+        $issuedDocs = collect($data['serials'])->flatMap(fn ($s) => $s['events'])->where('event', 'issued');
+        $this->assertCount(4, $issuedDocs);
+        foreach ($issuedDocs as $e) {
+            $this->assertNull($e['stock_movement_id']);
+            $this->assertNotNull($e['reference']);
+        }
+    }
+
     public function test_history_endpoint_returns_movements_lots_and_serials(): void
     {
         $item = $this->serialItem('UPS-1');

@@ -108,12 +108,15 @@ export default function ItemHistoryPage() {
         );
     }
 
-    /** Serial codes touched by a movement, matched via the serial-event doc_no / reference. */
+    // Serial codes of a movement: by movement id, else by doc_no / reference for events without one
     const serialsOf = (m: Movement, events: SerialEvent['event'][]): string[] =>
         data.serials
             .filter((s) =>
                 s.events.some(
-                    (e) => events.includes(e.event) && ((m.doc_no && e.doc_no === m.doc_no) || (m.reference && e.reference === m.reference)),
+                    (e) =>
+                        events.includes(e.event) &&
+                        (e.stock_movement_id === m.id ||
+                            (e.stock_movement_id == null && ((m.doc_no && e.doc_no === m.doc_no) || (m.reference && e.reference === m.reference)))),
                 ),
             )
             .map((s) => s.serial);

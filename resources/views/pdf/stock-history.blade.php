@@ -13,7 +13,9 @@
         foreach ($history['serials'] as $s) {
             foreach ($s['events'] as $e) {
                 if (in_array($e['event'], $events, true)
-                    && ((!empty($m['doc_no']) && $e['doc_no'] === $m['doc_no']) || (!empty($m['reference']) && $e['reference'] === $m['reference']))) {
+                    && ($e['stock_movement_id'] === $m['id']
+                        || ($e['stock_movement_id'] === null
+                            && ((!empty($m['doc_no']) && $e['doc_no'] === $m['doc_no']) || (!empty($m['reference']) && $e['reference'] === $m['reference']))))) {
                     $out[] = $s['serial'];
                     break;
                 }

@@ -109,6 +109,7 @@ class StockHistoryService
                 'events' => $s->events->map(fn ($e) => [
                     'event' => $e->event,
                     'occurred_at' => $e->occurred_at?->toIso8601String(),
+                    'stock_movement_id' => $e->stock_movement_id,
                     'doc_no' => $e->movement?->doc_no,
                     'reference' => $e->reference,
                     'recorded_by' => $e->recorded_by,
