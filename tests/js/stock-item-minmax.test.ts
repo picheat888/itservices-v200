@@ -26,6 +26,10 @@ test('Save validation covers empty and a Max below 1', () => {
     assert.match(modal, /maxTooLow/);
 });
 
+test('the Max error shows for an invalid value without a touch', () => {
+    assert.match(modal, /minMaxTouched\.max \|\| maxTooLow \|\| minMaxInvalid \? maxError/);
+});
+
 test('the lang files carry the five keys in both languages', () => {
     for (const lang of ['en', 'th']) {
         const file = read(`lang/${lang}/stock.ts`);

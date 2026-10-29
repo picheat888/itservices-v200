@@ -297,7 +297,7 @@ export function StockItemModal({
                                 onChange={(e) => set('min_stock', toCount(e.target.value))}
                             />
                         </Field>
-                        <Field label={t('stock_max_stock')} required error={minMaxTouched.max || minMaxInvalid ? maxError : undefined}>
+                        <Field label={t('stock_max_stock')} required error={minMaxTouched.max || maxTooLow || minMaxInvalid ? maxError : undefined}>
                             <Input
                                 name="max_stock"
                                 inputMode="numeric"
