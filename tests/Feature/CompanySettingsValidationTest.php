@@ -29,6 +29,18 @@ class CompanySettingsValidationTest extends TestCase
         ];
     }
 
+    /** A new install shows empty company fields (the samples are placeholders), so no sample ever reaches a PDF. */
+    public function test_a_new_install_has_no_sample_company_details(): void
+    {
+        $data = $this->actingAs($this->admin())->getJson('/api/settings')->assertOk()->json('data');
+
+        foreach (['company_name', 'legal_name', 'tax_id', 'industry', 'address'] as $key) {
+            $this->assertSame('', $data[$key], $key);
+        }
+        $this->assertSame('Thailand', $data['country']);
+        $this->assertSame('THB', $data['currency']);
+    }
+
     public function test_timezone_is_not_a_setting_anymore(): void
     {
         // The app runs on local wall time fixed by .env (APP_TIMEZONE). Sent along

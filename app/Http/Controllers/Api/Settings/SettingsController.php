@@ -38,11 +38,12 @@ class SettingsController extends Controller
     private array $defaults = [
         'brand_name' => '',          // falls back to config('app.name')
         'brand_sub' => 'Service Desk',
-        'company_name' => 'ABCD Electric Company',
-        'legal_name' => 'บริษัท เอบีซีดี อิเล็กทริก จำกัด',
-        'tax_id' => '0105540087000',
-        'industry' => 'Electronics manufacturing',
-        'address' => '99/9 หมู่ 5 นิคมอุตสาหกรรมอมตะซิตี้ ต.ดอนหัวฬอ อ.เมืองชลบุรี จ.ชลบุรี 20000',
+        // Empty until saved: the Settings form shows samples as placeholders
+        'company_name' => '',
+        'legal_name' => '',
+        'tax_id' => '',
+        'industry' => '',
+        'address' => '',
         'country' => 'Thailand',
         'currency' => 'THB',
         // Display theme — system-wide (shared by all users), not per-user.
