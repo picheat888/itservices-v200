@@ -875,7 +875,7 @@ class EmployeeController extends Controller
         if ($employee->status === EmployeeStatus::Resigned) {
             return response()->json(['message' => 'already_resigned'], 422);
         }
-        if ($employee->isSuperAdmin() && ! SuperAdmins::anotherWorkingEmployeeHolds($employee)) {
+        if ($employee->isSuperAdmin() && ! SuperAdmins::keeperRemainsBesides($employee)) {
             return response()->json(['message' => 'last_super_admin', 'code' => 'last_super_admin'], 422);
         }
 

@@ -66,8 +66,8 @@ class SuperAdmins
         return $inSuperGroup->merge($withSuperAccount)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
-    /** Whether a Super admin account belongs to an employee other than this one who has not left (Employee::hasLeft()). */
-    public static function anotherWorkingEmployeeHolds(Employee $employee): bool
+    /** Whether a Super admin account outside this employee's stays: one with no employee, or one whose employee has not resigned. */
+    public static function keeperRemainsBesides(Employee $employee): bool
     {
         $roleId = self::roleId();
         if ($roleId === null) {
@@ -79,15 +79,16 @@ class SuperAdmins
             ->when($employee->username !== null, fn ($query) => $query->orWhere('username', $employee->username))
             ->pluck('id');
 
-        // Same account match as protectedEmployeeIds()
-        return DB::table('employees')
-            ->join('users', fn ($join) => $join->on('users.employee_id', '=', 'employees.id')->orOn('users.username', '=', 'employees.username'))
-            ->where('users.role_id', $roleId)
-            ->where('employees.id', '!=', $employee->id)
-            ->whereNotIn('users.id', $theirAccountIds)
-            ->where(fn ($working) => $working
-                ->where('employees.status', '!=', EmployeeStatus::Resigned->value)
-                ->orWhere(fn ($notice) => $notice->whereNotNull('employees.last_day')->where('employees.last_day', '>=', today()->toDateString())))
+        // Same account match as protectedEmployeeIds(): employee_id or username
+        $linkedEmployees = fn ($query) => $query->select(DB::raw(1))->from('employees')
+            ->where(fn ($link) => $link->whereColumn('employees.id', 'users.employee_id')->orWhereColumn('employees.username', 'users.username'));
+
+        return User::query()
+            ->where('role_id', $roleId)
+            ->whereNotIn('id', $theirAccountIds)
+            ->where(fn ($keeper) => $keeper
+                ->whereNotExists($linkedEmployees)
+                ->orWhereExists(fn ($query) => $linkedEmployees($query)->where('employees.status', '!=', EmployeeStatus::Resigned->value)))
             ->exists();
     }
 

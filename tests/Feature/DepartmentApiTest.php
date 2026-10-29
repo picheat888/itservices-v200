@@ -76,5 +76,7 @@ class DepartmentApiTest extends TestCase
             ->getJson($url)->assertOk()->assertJsonCount(1, 'data');
         $this->actingAs($this->userWith(['workflows.module', 'workflows.manage']))
             ->getJson($url)->assertOk()->assertJsonCount(1, 'data');
+        $this->actingAs($this->userWith(['workflows.module']))
+            ->getJson($url)->assertOk()->assertJsonCount(1, 'data');
     }
 }

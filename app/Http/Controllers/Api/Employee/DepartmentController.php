@@ -62,7 +62,7 @@ class DepartmentController extends Controller
     public function members(Request $request, Department $department): JsonResponse
     {
         $user = $request->user();
-        abort_unless((bool) ($user?->hasPermission('employees.view_department') || $user?->hasPermission('workflows.manage')), 403);
+        abort_unless((bool) ($user?->hasPermission('employees.view_department') || $user?->hasPermission('workflows.manage') || $user?->hasPermission('workflows.module')), 403);
 
         $members = $department->employees()->with(['department', 'position', 'section', 'user'])->orderBy('first_name')->orderBy('last_name')->get();
 

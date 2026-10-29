@@ -109,22 +109,50 @@ class EmployeeSafeguardsTest extends TestCase
 
     public function test_resigning_the_last_super_admin_is_refused(): void
     {
-        $systemAdmin = User::factory()->create(['role' => 'super']);
-        $employee = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
-        $gone = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
-        $gone->update(['status' => 'resigned', 'last_day' => now()->subDay()->toDateString()]);
+        $accountA = User::factory()->create(['role' => 'super']);
+        $accountB = User::factory()->create(['role' => 'super']);
+        $adminA = $this->employeeWithAccount($accountA);
+        $adminB = $this->employeeWithAccount($accountB);
+        $lastDay = now()->addWeek()->toDateString();
 
-        $this->actingAs($systemAdmin)
-            ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
+        $this->actingAs($accountA)
+            ->postJson("/api/employees/{$adminB->id}/resign", ['reason' => 'x', 'last_day' => $lastDay])
+            ->assertOk();
+
+        // B can still sign in until the last day, but a pending resignation keeps nobody
+        $this->actingAs($accountB)
+            ->postJson("/api/employees/{$adminA->id}/resign", ['reason' => 'x', 'last_day' => $lastDay])
             ->assertStatus(422)
             ->assertJson(['message' => 'last_super_admin', 'code' => 'last_super_admin']);
-        $this->assertSame('active', $employee->fresh()->status->value);
+        $this->assertSame('active', $adminA->fresh()->status->value);
+    }
 
-        // Another working employee with a Super admin account lets it through
-        $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+    public function test_an_unlinked_super_admin_account_counts_as_a_keeper(): void
+    {
+        $systemAdmin = User::factory()->create(['role' => 'super']);
+        $employee = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+
         $this->actingAs($systemAdmin)
             ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
             ->assertOk();
+
+        $this->assertSame('resigned', $employee->fresh()->status->value);
+    }
+
+    public function test_a_second_super_account_of_the_same_employee_is_no_keeper(): void
+    {
+        $actorAccount = User::factory()->create(['role' => 'super']);
+        $actor = $this->employeeWithAccount($actorAccount);
+        $actor->update(['status' => 'resigned', 'last_day' => now()->addWeek()->toDateString()]);
+        $target = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+        $target->update(['username' => 'target.boss']);
+        User::factory()->create(['role' => 'super', 'username' => 'target.boss', 'employee_id' => null]);
+
+        $this->actingAs($actorAccount)
+            ->postJson("/api/employees/{$target->id}/resign", ['reason' => 'x'])
+            ->assertStatus(422)
+            ->assertJson(['code' => 'last_super_admin']);
+        $this->assertSame('active', $target->fresh()->status->value);
     }
 
     public function test_resigning_someone_already_resigned_is_refused(): void
