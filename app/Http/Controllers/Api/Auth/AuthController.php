@@ -283,7 +283,6 @@ class AuthController extends Controller
         return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();
     }
 
-    /** The device that changed the password stays remembered: a new device token and cookie, on the new session id. */
     /** A copy of the old session cookie stops working: the session gets a new id, the old one is destroyed, the device follows. */
     private function moveThisDeviceToANewSessionId(Request $request, User $user, DeviceService $devices): void
     {
@@ -296,6 +295,7 @@ class AuthController extends Controller
         }
     }
 
+    /** The device that changed the password stays remembered: a new device token and cookie, on the new session id. */
     private function rememberThisDeviceAgain(Request $request, User $user, DeviceService $devices): void
     {
         $device = $devices->currentOf($user, $request);

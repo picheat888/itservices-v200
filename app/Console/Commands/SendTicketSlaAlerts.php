@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use App\Services\Ticket\TicketSlaAlertService;
 use Illuminate\Console\Command;
 
-/** Frequent sweep: bell (+ breach email) alerts for tickets nearing or past their SLA. */
+/** Frequent sweep: bell-only alerts (never email) for tickets nearing or past their SLA. */
 class SendTicketSlaAlerts extends Command
 {
     protected $signature = 'tickets:send-sla-alerts';

@@ -606,14 +606,6 @@
     }
 }
 
-/* ── SweetAlert2 above Radix dialogs ─────────────────────────────────────── */
-/* Radix modal dialogs (Sheet/Dialog) set pointer-events:none on <body> and only
-   re-enable it inside their own content. SweetAlert is portalled to <body>, so
-   without this override its buttons are unclickable while a drawer is open. */
-.swal2-container {
-    pointer-events: auto;
-}
-
 /* ── Sidebar: icon rail ⇄ menu (data-nav / data-narrow on the app shell); below 1280px it opens over the page ── */
 [data-nav] {
     --nav-dur: var(--motion-close);

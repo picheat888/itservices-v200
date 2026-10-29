@@ -26,6 +26,7 @@ export interface ContractPayload {
     billing_cycle: Contract['billing_cycle'];
     notify_150?: boolean;
     notify_120?: boolean;
+    notify_90?: boolean;
     notify_60?: boolean;
     notify_45?: boolean;
     notify_30?: boolean;

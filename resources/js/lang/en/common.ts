@@ -217,10 +217,6 @@ export const common: Dict = {
     // sidebar.tsx — labels moved from the component
     cmn_sign_out: 'Sign out',
 
-    // placeholder.tsx — labels moved from the component
-    cmn_placeholder_later: 'This module ships in a later phase',
-    cmn_placeholder_ready: 'This part is not available yet.',
-
     // app-error-dialog.tsx — error dialog
     err_server_title: 'Something went wrong',
     err_load_title: "Couldn't load data",

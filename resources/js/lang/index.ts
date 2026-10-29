@@ -1,5 +1,6 @@
 import { translate } from '@/lang/translate';
 import { useUiStore } from '@/stores/ui';
+import { useCallback } from 'react';
 
 export { dictionaries, translate } from '@/lang/translate';
 
@@ -8,5 +9,5 @@ export { dictionaries, translate } from '@/lang/translate';
  */
 export function useT() {
     const lang = useUiStore((s) => s.lang);
-    return (key: string) => translate(lang, key);
+    return useCallback((key: string) => translate(lang, key), [lang]);
 }

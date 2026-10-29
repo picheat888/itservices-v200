@@ -134,31 +134,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Check whether the user has one of the given role keys.
-     */
-    public function hasRole(string ...$keys): bool
-    {
-        return in_array($this->role?->key, $keys, true);
-    }
-
-    /**
      * Returns true when this user holds the all-access role.
      */
     public function isSuper(): bool
     {
         return UserRole::isSuperKey($this->role?->key);
-    }
-
-    // Super admin and HR can manage the employee directory.
-    public function canManageEmployees(): bool
-    {
-        return $this->hasRole(UserRole::SuperAdmin->value, UserRole::HR->value);
-    }
-
-    // Only super admin can manage positions and departments (org structure).
-    public function canManageOrg(): bool
-    {
-        return $this->isSuper();
     }
 
     /**

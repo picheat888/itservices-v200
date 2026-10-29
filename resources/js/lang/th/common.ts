@@ -217,10 +217,6 @@ export const common: Dict = {
     // sidebar.tsx — labels moved from the component
     cmn_sign_out: 'ออกจากระบบ',
 
-    // placeholder.tsx — labels moved from the component
-    cmn_placeholder_later: 'โมดูลนี้จะพัฒนาในเฟสถัดไป',
-    cmn_placeholder_ready: 'ส่วนนี้ยังไม่เปิดใช้งาน',
-
     // app-error-dialog.tsx — error dialog
     err_server_title: 'เกิดข้อผิดพลาด',
     err_load_title: 'โหลดข้อมูลไม่สำเร็จ',

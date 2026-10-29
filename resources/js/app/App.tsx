@@ -1,7 +1,6 @@
 import { AppShell } from '@/app/layout/app-shell';
 import { Toaster } from '@/app/layout/toaster';
 import NotFoundPage from '@/app/not-found';
-import PlaceholderPage from '@/app/placeholder';
 import { AccessControlPage } from '@/modules/access';
 import { AssetsPage } from '@/modules/asset';
 import { LoginPage, ProtectedRoute, RequirePermission } from '@/modules/auth';
@@ -22,14 +21,10 @@ import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { installClientErrorReporting } from '@/shared/lib/client-error-report';
 import { queryClient } from '@/shared/lib/query-client';
-import type { Role } from '@/shared/types';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
-
-// Placeholder ("coming soon") modules and how their routes are gated.
-const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [];
 
 /**
  * Send an old path to its new one without losing what came after the `?`.
@@ -197,17 +192,6 @@ function App() {
                                 </RequirePermission>
                             }
                         />
-                        {modules.map((m) => (
-                            <Route
-                                key={m.path}
-                                path={m.path}
-                                element={
-                                    <RequirePermission anyOf={m.anyOf} roles={m.roles}>
-                                        <PlaceholderPage titleKey={m.titleKey} />
-                                    </RequirePermission>
-                                }
-                            />
-                        ))}
                         {/* An unknown address says so; a signed-out reader signs in first and lands back here */}
                         <Route path="*" element={<NotFoundPage />} />
                     </Route>
