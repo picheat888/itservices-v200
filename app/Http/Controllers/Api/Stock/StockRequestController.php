@@ -11,11 +11,10 @@ use App\Services\Stock\StockIssuePdf;
 use App\Services\Stock\StockIssueService;
 use App\Services\Stock\StockLotReader;
 use App\Services\Stock\StockNotificationService;
-use App\Support\Refusal;
+use App\Services\Stock\StockRequestService;
 use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -23,6 +22,7 @@ class StockRequestController extends Controller
 {
     public function __construct(
         private readonly StockIssueService $issues,
+        private readonly StockRequestService $requests,
     ) {}
 
     /**
@@ -145,24 +145,7 @@ class StockRequestController extends Controller
             'reason' => ['required', 'string', 'max:2000'],
         ]);
 
-        // The drawer caps the quantity at "available"; the API used to take anything.
-        $available = StockItem::findOrFail($data['stock_item_id'])->availableToRequest();
-        if ($data['qty'] > $available) {
-            Refusal::fail('not_enough_stock', ['available' => $available], 'qty');
-        }
-
-        // Transaction holds the reference lock until the row is written; retried on deadlock
-        $stockRequest = DB::transaction(fn (): StockRequest => StockRequest::create([
-            'stock_item_id' => $data['stock_item_id'],
-            'user_id' => $user->id,
-            'requester_name' => $user->name,
-            'qty' => $data['qty'],
-            'reason' => $data['reason'],
-            'status' => 'pending',
-        ]), 3);
-
-        AuditLog::record('Submitted stock request', "#{$stockRequest->id} ×{$data['qty']}", subject: $stockRequest);
-        app(StockNotificationService::class)->requestCreated($stockRequest->load('item'));
+        $stockRequest = $this->requests->create($user, $data);
 
         return (new StockRequestResource($stockRequest->load('item')))->response()->setStatusCode(201);
     }
@@ -172,25 +155,8 @@ class StockRequestController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.approve'), 403);
         $this->assertNotOwn($request, $stockRequest);
-        $this->assertStatus($stockRequest, 'pending');
 
-        // Approving claims the stock, so check again: two requisitions filed while the same
-        // units were free must not both be approved against them.
-        DB::transaction(function () use ($request, $stockRequest) {
-            $this->lockInStatus($stockRequest, 'pending');
-            $available = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id)->availableToRequest();
-            if ($stockRequest->qty > $available) {
-                Refusal::fail('not_enough_stock', ['available' => $available], 'qty');
-            }
-
-            $stockRequest->update([
-                'status' => 'approved',
-                'approver_name' => $request->user()->name,
-                'approved_at' => now(),
-            ]);
-        });
-        AuditLog::record('Approved stock request', "#{$stockRequest->id}", subject: $stockRequest);
-        app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'approved');
+        $this->requests->approve($stockRequest, $request->user());
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
@@ -200,18 +166,8 @@ class StockRequestController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.approve'), 403);
         $this->assertNotOwn($request, $stockRequest);
-        $this->assertStatus($stockRequest, 'pending');
 
-        DB::transaction(function () use ($request, $stockRequest) {
-            $this->lockInStatus($stockRequest, 'pending');
-            $stockRequest->update([
-                'status' => 'rejected',
-                'approver_name' => $request->user()->name,
-                'rejected_at' => now(),
-            ]);
-        });
-        AuditLog::record('Rejected stock request', "#{$stockRequest->id}", subject: $stockRequest);
-        app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'rejected');
+        $this->requests->reject($stockRequest, $request->user());
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
@@ -220,27 +176,10 @@ class StockRequestController extends Controller
     public function cancel(Request $request, StockRequest $stockRequest): JsonResponse
     {
         $user = $request->user();
-        $this->assertCancellable($stockRequest);
+        $this->requests->assertCancellable($stockRequest);
         abort_unless($stockRequest->canBeCancelledBy($user), 403);
 
-        DB::transaction(function () use ($user, $stockRequest) {
-            $stockRequest->setRawAttributes(StockRequest::lockForUpdate()->findOrFail($stockRequest->id)->getAttributes(), true);
-            $this->assertCancellable($stockRequest);
-            // Approved meanwhile: the requester may no longer cancel
-            if (! $stockRequest->canBeCancelledBy($user)) {
-                Refusal::fail('request_not_cancellable', ['current' => $stockRequest->status], 'status');
-            }
-
-            $stockRequest->update([
-                'status' => 'cancelled',
-                'cancelled_by' => $user->name,
-                'cancelled_at' => now(),
-            ]);
-        });
-        AuditLog::record('Cancelled stock request', "#{$stockRequest->id}", subject: $stockRequest);
-        if ((int) $stockRequest->user_id !== (int) $user->id) {
-            app(StockNotificationService::class)->requestCancelled($stockRequest->load('item'));
-        }
+        $this->requests->cancel($stockRequest, $user);
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
@@ -250,7 +189,7 @@ class StockRequestController extends Controller
     {
         $user = $request->user();
         abort_unless((bool) $user?->hasPermission('stock.fulfill'), 403);
-        $this->assertStatus($stockRequest, 'approved');
+        $this->requests->assertStatus($stockRequest, 'approved');
 
         // Serial items split by the picked serials; others by `allocations` or one `from_warehouse`
         $data = $request->validate([
@@ -279,28 +218,5 @@ class StockRequestController extends Controller
     private function assertNotOwn(Request $request, StockRequest $stockRequest): void
     {
         abort_if((int) $stockRequest->user_id === (int) $request->user()?->id, 403, 'You cannot decide your own requisition.');
-    }
-
-    /** Re-read the row under lock inside the transaction so concurrent decisions cannot both pass. */
-    private function lockInStatus(StockRequest $stockRequest, string $expected): void
-    {
-        $stockRequest->setRawAttributes(StockRequest::lockForUpdate()->findOrFail($stockRequest->id)->getAttributes(), true);
-        $this->assertStatus($stockRequest, $expected);
-    }
-
-    /** Only a pending or approved request can still be cancelled. */
-    private function assertCancellable(StockRequest $stockRequest): void
-    {
-        if (! in_array($stockRequest->status, ['pending', 'approved'], true)) {
-            Refusal::fail('request_not_cancellable', ['current' => $stockRequest->status], 'status');
-        }
-    }
-
-    /** Guard a workflow transition, returning 422 when the request isn't in the expected state. */
-    private function assertStatus(StockRequest $stockRequest, string $expected): void
-    {
-        if ($stockRequest->status !== $expected) {
-            Refusal::fail('request_wrong_status', ['expected' => $expected, 'current' => $stockRequest->status], 'status');
-        }
     }
 }

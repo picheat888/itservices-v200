@@ -27,6 +27,18 @@ class StockReturnService
     ) {}
 
     /**
+     * A serialized return must pick serials; record() then checks they went out under the request.
+     *
+     * @param  array{serial_ids?: list<int>}  $data
+     */
+    public function assertSerialsPicked(StockItem $item, array $data): void
+    {
+        if ($item->track_serial && ($data['serial_ids'] ?? []) === []) {
+            Refusal::fail('return_serials_required', field: 'serial_ids');
+        }
+    }
+
+    /**
      * Record the return and refill the lots; returns the first movement row.
      *
      * @param  array{lots?: list<array{lot_id: int, qty: int}>, serial_ids?: list<int>, notes?: ?string, moved_at?: ?string}  $data

@@ -17,14 +17,12 @@ use App\Services\Stock\StockReturnService;
 use App\Services\Stock\StockTransferService;
 use App\Support\DateDisplay;
 use App\Support\DocumentName;
-use App\Support\Refusal;
 use App\Support\SearchTerms;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Picqer\Barcode\Renderers\HtmlRenderer;
 use Picqer\Barcode\Types\TypeCode128;
@@ -214,10 +212,9 @@ class StockMovementController extends Controller
         abort_unless((bool) $request->user()?->hasPermission(self::TYPE_PERMISSION[$data['type']]), 403);
 
         $item = StockItem::findOrFail($data['stock_item_id']);
-        $serials = $this->validateSerials($data, $item);
-        $this->validateReturnSerials($data, $item);
 
         if ($data['type'] === 'return') {
+            $this->returns->assertSerialsPicked($item, $data);
             $movement = $this->returns->record($item, StockRequest::findOrFail($data['stock_request_id']), $data, $request->user());
             $returned = (int) StockMovement::where('type', 'return')->where('doc_no', $movement->doc_no)->sum('qty');
             AuditLog::record('Stock return', "{$item->sku} ×{$returned}", subject: $item);
@@ -225,6 +222,7 @@ class StockMovementController extends Controller
             $movement = $this->transfers->record($item, $data['from_label'], $data['to_label'], $data['lot_ids'], $data, $request->user());
             AuditLog::record('Stock transfer', "{$item->sku} ×{$movement->qty}", subject: $item);
         } else {
+            $serials = $this->receives->serialsToReceive($item, $data);
             $movement = $this->receives->record($data, $request->user()?->name, $request->user()?->id, $serials);
         }
 
@@ -234,61 +232,7 @@ class StockMovementController extends Controller
         return (new StockMovementResource($movement->load('item')))->response()->setStatusCode(201);
     }
 
-    /**
-     * For serialized receives, normalise and validate the captured serials:
-     * each must be non-empty, unique within the batch, and not already known to
-     * the system. Returns the cleaned serial list ([] for non-serialized moves).
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<int, string>
-     */
-    private function validateSerials(array $data, StockItem $item): array
-    {
-        if ($data['type'] !== 'receive' || ! $item->track_serial) {
-            return [];
-        }
-
-        $serials = collect($data['serials'] ?? [])
-            ->map(fn ($s) => trim((string) $s))
-            ->filter()
-            ->values();
-
-        if ($serials->isEmpty()) {
-            Refusal::fail('serials_required', field: 'serials');
-        }
-
-        // Duplicates within the submitted batch (case-insensitive).
-        $dupes = $serials->map(fn ($s) => mb_strtolower($s))->duplicates()->unique();
-        if ($dupes->isNotEmpty()) {
-            Refusal::fail('serials_duplicate', ['serials' => $dupes->implode(', ')], 'serials');
-        }
-
-        // Already registered against any SKU in the system (case-insensitive).
-        $lowered = $serials->map(fn ($s) => mb_strtolower($s))->all();
-        $clash = StockItemSerial::whereIn(DB::raw('LOWER(serial)'), $lowered)->pluck('serial');
-        if ($clash->isNotEmpty()) {
-            Refusal::fail('serials_already_in_stock', ['serials' => $clash->implode(', ')], 'serials');
-        }
-
-        return $serials->all();
-    }
-
-    /**
-     * A serialized return must pick serials; StockReturnService checks they went out under the request.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function validateReturnSerials(array $data, StockItem $item): void
-    {
-        if ($data['type'] !== 'return' || ! $item->track_serial) {
-            return;
-        }
-
-        if (($data['serial_ids'] ?? []) === []) {
-            Refusal::fail('return_serials_required', field: 'serial_ids');
-        }
-    }
-
+    /** Whether the item tracks serials; feeds the qty and lots rules above. */
     private function isSerialItem(mixed $stockItemId): bool
     {
         return is_numeric($stockItemId) && (bool) StockItem::whereKey((int) $stockItemId)->value('track_serial');

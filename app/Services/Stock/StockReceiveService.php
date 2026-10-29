@@ -12,6 +12,7 @@ use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Support\DocNumber;
+use App\Support\Refusal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -97,6 +98,43 @@ class StockReceiveService
 
             return $movement;
         });
+    }
+
+    /**
+     * Clean and check a serialized receive's serials: non-empty, unique in the batch, unknown to the system.
+     *
+     * @param  array{serials?: list<?string>}  $data
+     * @return array<int, string>  [] for an item without serials
+     */
+    public function serialsToReceive(StockItem $item, array $data): array
+    {
+        if (! $item->track_serial) {
+            return [];
+        }
+
+        $serials = collect($data['serials'] ?? [])
+            ->map(fn ($s) => trim((string) $s))
+            ->filter()
+            ->values();
+
+        if ($serials->isEmpty()) {
+            Refusal::fail('serials_required', field: 'serials');
+        }
+
+        // Duplicates within the submitted batch (case-insensitive)
+        $dupes = $serials->map(fn ($s) => mb_strtolower($s))->duplicates()->unique();
+        if ($dupes->isNotEmpty()) {
+            Refusal::fail('serials_duplicate', ['serials' => $dupes->implode(', ')], 'serials');
+        }
+
+        // Already registered against any SKU (case-insensitive)
+        $lowered = $serials->map(fn ($s) => mb_strtolower($s))->all();
+        $clash = StockItemSerial::whereIn(DB::raw('LOWER(serial)'), $lowered)->pluck('serial');
+        if ($clash->isNotEmpty()) {
+            Refusal::fail('serials_already_in_stock', ['serials' => $clash->implode(', ')], 'serials');
+        }
+
+        return $serials->all();
     }
 
     /** The item's last movement day only moves forward: a backdated entry does not make it look idle. */
