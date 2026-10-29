@@ -1,10 +1,10 @@
 import { useT } from '@/lang';
-import { useLogout } from '@/modules/auth/hooks/use-auth';
 import { BlockingDialog } from '@/shared/components/blocking-dialog';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { KeyRound, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
+import { useLogout } from '../hooks/use-auth';
 import { PasswordDialogHead, PasswordForm } from './password-form';
 
 /** Change password: the expired-password wall (sign out only; `open` false plays its close), or with `onClose` the form the user asked for. */

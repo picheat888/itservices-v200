@@ -1,9 +1,9 @@
 // Login brand panel, shown only on a wide screen with a mouse: brand, tagline, a sample ticket and the grid lens.
 // Dark mode mixes the brand into a deep ground instead of filling half the screen with the light dark-mode brand.
 import { useT } from '@/lang';
-import { LoginGridLens } from '@/modules/auth/components/login-grid-lens';
-import { SampleTicketCard } from '@/modules/auth/components/sample-ticket-card';
 import { useUiStore } from '@/stores/ui';
+import { LoginGridLens } from './login-grid-lens';
+import { SampleTicketCard } from './sample-ticket-card';
 
 export function LoginBrandPanel() {
     const t = useT();

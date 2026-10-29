@@ -13,9 +13,11 @@ use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Assets step (vendors, models, assets, contracts, transfers, alert ledgers)
+#[Group('sqlite')]
 class AssetsStepTest extends TestCase
 {
     use RefreshDatabase;

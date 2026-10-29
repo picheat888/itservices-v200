@@ -13,9 +13,11 @@ use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Org step (sections, employees, users, role groups)
+#[Group('sqlite')]
 class OrgStepTest extends TestCase
 {
     use RefreshDatabase;

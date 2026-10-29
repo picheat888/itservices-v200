@@ -1,7 +1,7 @@
-import { preferencesApi } from '@/modules/auth/api/preferencesApi';
-import { useAuth } from '@/modules/auth/hooks/use-auth';
 import { useUiStore } from '@/stores/ui';
 import { useEffect, useRef } from 'react';
+import { preferencesApi } from '../api/preferencesApi';
+import { useAuth } from './use-auth';
 
 // Bridges the genuinely per-user UI preferences with the DB:
 //  - on login, applies the user's saved preferences to the UI store

@@ -347,7 +347,7 @@ class NotificationApiTest extends TestCase
 
         DB::enableQueryLog();
         $this->actingAs($user)->putJson('/api/notifications/read-all')->assertOk();
-        $updates = collect(DB::getQueryLog())->filter(fn (array $q) => str_starts_with(strtolower($q['query']), 'update "notifications"'));
+        $updates = collect(DB::getQueryLog())->filter(fn (array $q) => preg_match('/^update [`"]?notifications/i', $q['query']) === 1);
 
         $this->assertCount(1, $updates);
         $this->assertSame(0, $user->unreadNotifications()->count());

@@ -13,9 +13,11 @@ use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Access step (software, social, mail groups, file shares and memberships)
+#[Group('sqlite')]
 class AccessStepTest extends TestCase
 {
     use RefreshDatabase;

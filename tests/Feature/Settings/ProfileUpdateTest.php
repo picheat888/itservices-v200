@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileUpdateTest extends TestCase
@@ -62,5 +65,37 @@ class ProfileUpdateTest extends TestCase
             ->postJson('/api/profile', ['first_name' => 'New', 'last_name' => 'Key'])
             ->assertOk()
             ->assertJsonPath('data.name', 'New Key');
+    }
+
+    public function test_linked_employee_gets_names_and_phone(): void
+    {
+        $employee = Employee::create(['first_name' => 'Old', 'last_name' => 'Name', 'phone' => '111']);
+        $user = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+
+        $this->actingAs($user)
+            ->postJson('/api/profile', ['first_name' => 'Anan', 'last_name' => 'Dee', 'first_name_th' => 'อนันต์', 'last_name_th' => 'ดี', 'phone' => '0812345678'])
+            ->assertOk();
+
+        $employee->refresh();
+        $this->assertSame(['Anan', 'Dee', 'อนันต์', 'ดี', '0812345678'], [$employee->first_name, $employee->last_name, $employee->first_name_th, $employee->last_name_th, $employee->phone]);
+    }
+
+    public function test_new_photo_replaces_the_old_file(): void
+    {
+        Storage::fake('local');
+        $employee = Employee::create(['first_name' => 'Photo', 'last_name' => 'Owner']);
+        $user = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+        $body = fn (string $name) => ['first_name' => 'Photo', 'last_name' => 'Owner', 'photo' => UploadedFile::fake()->image($name)];
+
+        $this->actingAs($user)->post('/api/profile', $body('a.jpg'), ['Accept' => 'application/json'])->assertOk();
+        $first = $employee->refresh()->photo_path;
+        Storage::disk('local')->assertExists($first);
+
+        $this->actingAs($user)->post('/api/profile', $body('b.jpg'), ['Accept' => 'application/json'])->assertOk();
+        $second = $employee->refresh()->photo_path;
+
+        $this->assertNotSame($first, $second);
+        Storage::disk('local')->assertMissing($first);
+        Storage::disk('local')->assertExists($second);
     }
 }

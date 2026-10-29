@@ -1,9 +1,6 @@
 // The change / set password form shared by Change password, the expiry wall and Set your password,
 // with the head they open with (icon, title, one line).
 import { useT } from '@/lang';
-import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
-import { useAuth } from '@/modules/auth/hooks/use-auth';
-import { loginErrorText } from '@/modules/auth/lib/login-error';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { PasswordInput } from '@/shared/components/password-input';
@@ -21,6 +18,9 @@ import { useToastStore } from '@/stores/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
+import { authApi, type ChangePasswordPayload } from '../api/authApi';
+import { useAuth } from '../hooks/use-auth';
+import { loginErrorText } from '../lib/login-error';
 
 export function PasswordDialogHead({ icon: Icon, warn, title, desc }: { icon: LucideIcon; warn?: boolean; title: string; desc: string }) {
     return (

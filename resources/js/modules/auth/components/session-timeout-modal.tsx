@@ -1,5 +1,4 @@
 import { useT } from '@/lang';
-import { crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '@/modules/auth/lib/session-warning';
 import { BlockingDialog } from '@/shared/components/blocking-dialog';
 import { CountdownRing } from '@/shared/components/countdown-ring';
 import { SHEET_CLOSE_MS, usePresence } from '@/shared/hooks/use-presence';
@@ -10,6 +9,7 @@ import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Clock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { crossedAnnouncement, spokenTime, toneFor, type WarnTone } from '../lib/session-warning';
 
 interface Props {
     open: boolean;

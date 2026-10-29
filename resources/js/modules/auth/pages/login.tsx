@@ -1,11 +1,4 @@
 import { useT } from '@/lang';
-import type { DeviceLimitResponse } from '@/modules/auth/api/authApi';
-import { DeviceLimitDialog } from '@/modules/auth/components/device-limit-dialog';
-import { LoginBrandPanel } from '@/modules/auth/components/login-brand-panel';
-import { LoginToolbar } from '@/modules/auth/components/login-toolbar';
-import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
-import { deviceLimitOf, isPendingExpired, signedOutByLine } from '@/modules/auth/lib/device-limit';
-import { loginErrorText } from '@/modules/auth/lib/login-error';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { PasswordInput } from '@/shared/components/password-input';
 import { SaveButton } from '@/shared/components/save-button';
@@ -22,6 +15,13 @@ import { useUiStore } from '@/stores/ui';
 import { ArrowBigUpDash, Clock, Lock, LogOut, MonitorSmartphone, Shield, User, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import type { DeviceLimitResponse } from '../api/authApi';
+import { DeviceLimitDialog } from '../components/device-limit-dialog';
+import { LoginBrandPanel } from '../components/login-brand-panel';
+import { LoginToolbar } from '../components/login-toolbar';
+import { useAuth, useLogin } from '../hooks/use-auth';
+import { deviceLimitOf, isPendingExpired, signedOutByLine } from '../lib/device-limit';
+import { loginErrorText } from '../lib/login-error';
 
 // Notice shown for each reason a device was signed out
 const NOTICES: Record<SignedOutReason, { icon: LucideIcon; text: string }> = {

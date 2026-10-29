@@ -1,7 +1,5 @@
 // Sign-in dialog for an account at its device limit: sign out at least one listed device, then finish signing in.
 import { useT } from '@/lang';
-import { authApi, type DeviceLimitResponse, type UserDevice } from '@/modules/auth/api/authApi';
-import { canContinue, deviceLine, isPendingExpired, pendingMinutes, placeLine } from '@/modules/auth/lib/device-limit';
 import { SaveButton } from '@/shared/components/save-button';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { relativeTime } from '@/shared/lib/datetime';
@@ -11,6 +9,8 @@ import { Button } from '@/shared/ui/button';
 import { CenteredAlert } from '@/shared/ui/confirm-dialog';
 import { Check, Loader2, MonitorSmartphone } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { authApi, type DeviceLimitResponse, type UserDevice } from '../api/authApi';
+import { canContinue, deviceLine, isPendingExpired, pendingMinutes, placeLine } from '../lib/device-limit';
 
 export function DeviceLimitDialog({
     open,

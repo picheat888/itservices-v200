@@ -107,7 +107,7 @@ class StockCountSerialTest extends TestCase
 
         DB::enableQueryLog();
         $this->getJson("/api/stock-counts/{$count['id']}")->assertOk();
-        $serialNameQueries = collect(DB::getQueryLog())->filter(fn (array $q) => str_contains($q['query'], 'stock_item_serials') && str_contains($q['query'], '"id" in'));
+        $serialNameQueries = collect(DB::getQueryLog())->filter(fn (array $q) => str_contains($q['query'], 'stock_item_serials') && preg_match('/(?<!\w)[`"]?id[`"]? in/', $q['query']) === 1);
 
         $this->assertCount(1, $serialNameQueries);
     }

@@ -1,8 +1,5 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
-import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
-import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
-import { findHtmlIssues, htmlIssueMessage, type HtmlIssue } from '@/modules/email-templates/lib/html-issues';
 import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/notification';
 import { useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
@@ -67,6 +64,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '../api/emailTemplateApi';
+import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '../hooks/use-email-templates';
+import { findHtmlIssues, htmlIssueMessage, type HtmlIssue } from '../lib/html-issues';
 
 // Sample values for {{variables}} in the preview; mirrors EmailTemplateController::sampleVars().
 const SAMPLE_VARS: Record<string, string> = {

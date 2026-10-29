@@ -59,6 +59,14 @@ export default [
         },
     },
     {
+        // Modules are imported through their barrel only
+        files: ['resources/js/**/*.{ts,tsx}'],
+        ignores: ['resources/js/sw/**'],
+        rules: {
+            'no-restricted-imports': ['error', { patterns: [{ regex: '^@/modules/[^/]+/.+', message: 'import the module barrel' }] }],
+        },
+    },
+    {
         ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'tailwind.config.js'],
     },
     prettier, // Turn off all rules that might conflict with Prettier

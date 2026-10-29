@@ -10,9 +10,11 @@ use Database\Seeders\MasterDataSeeder;
 use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // End-to-end checks on a whole generated dataset: coverage, references, time range and repeatability
+#[Group('sqlite')]
 class PerfDatasetInvariantsTest extends TestCase
 {
     use RefreshDatabase;

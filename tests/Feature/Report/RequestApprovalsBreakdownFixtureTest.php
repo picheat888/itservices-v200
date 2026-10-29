@@ -13,6 +13,7 @@ use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Tests\Concerns\GrantsReports;
 use Tests\TestCase;
 
@@ -147,7 +148,21 @@ class RequestApprovalsBreakdownFixtureTest extends TestCase
             $out[$name] = $this->actingAs($viewer)->getJson('/api/reports/requests/approvals/breakdown'.$query)->assertOk()->json('data');
         }
 
-        return $out;
+        return $this->byReference($out);
+    }
+
+    /** Swaps request ids for references so the pin holds on any database. */
+    private function byReference(mixed $node, ?Collection $references = null): mixed
+    {
+        if (! is_array($node)) {
+            return $node;
+        }
+        $references ??= ServiceRequest::query()->pluck('reference', 'id');
+        foreach ($node as $key => $value) {
+            $node[$key] = $key === 'request_id' && is_int($value) ? $references[$value] : $this->byReference($value, $references);
+        }
+
+        return $node;
     }
 
     public function test_breakdown_cards_match_the_pinned_fixture(): void

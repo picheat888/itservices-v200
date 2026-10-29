@@ -329,7 +329,7 @@
                     "origin": "direct",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 6
@@ -338,7 +338,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 1,
+                    "id": "email_group:All staff",
                     "name": "All staff",
                     "name_th": null,
                     "count": 4
@@ -347,7 +347,7 @@
                     "origin": "direct",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 4
@@ -356,7 +356,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 12,
+                    "id": "option:cctv B",
                     "name": "cctv B",
                     "name_th": null,
                     "count": 4
@@ -365,7 +365,7 @@
                     "origin": "direct",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 3,
+                    "id": "option:hardware A",
                     "name": "hardware A",
                     "name_th": "hardware เอ",
                     "count": 4
@@ -374,7 +374,7 @@
                     "origin": "direct",
                     "type": "software",
                     "kind": "software",
-                    "id": 1,
+                    "id": "software:AutoCAD",
                     "name": "AutoCAD",
                     "name_th": null,
                     "count": 3
@@ -383,7 +383,7 @@
                     "origin": "onboarding",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 3
@@ -392,7 +392,7 @@
                     "origin": "direct",
                     "type": "software",
                     "kind": "software",
-                    "id": 2,
+                    "id": "software:Office",
                     "name": "Office",
                     "name_th": null,
                     "count": 3
@@ -401,7 +401,7 @@
                     "origin": "direct",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 3
@@ -410,7 +410,7 @@
                     "origin": "direct",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 3
@@ -419,7 +419,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 3
@@ -428,7 +428,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 3
@@ -437,7 +437,7 @@
                     "origin": "direct",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 4,
+                    "id": "option:hardware B",
                     "name": "hardware B",
                     "name_th": null,
                     "count": 3
@@ -446,7 +446,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 5,
+                    "id": "option:mobile A",
                     "name": "mobile A",
                     "name_th": "mobile เอ",
                     "count": 3
@@ -455,7 +455,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 6,
+                    "id": "option:mobile B",
                     "name": "mobile B",
                     "name_th": null,
                     "count": 3
@@ -464,7 +464,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 9,
+                    "id": "option:network A",
                     "name": "network A",
                     "name_th": "network เอ",
                     "count": 3
@@ -473,7 +473,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 10,
+                    "id": "option:network B",
                     "name": "network B",
                     "name_th": null,
                     "count": 3
@@ -482,7 +482,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 13,
+                    "id": "option:other A",
                     "name": "other A",
                     "name_th": "other เอ",
                     "count": 3
@@ -491,7 +491,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 14,
+                    "id": "option:other B",
                     "name": "other B",
                     "name_th": null,
                     "count": 3
@@ -500,7 +500,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 7,
+                    "id": "option:telephone A",
                     "name": "telephone A",
                     "name_th": "telephone เอ",
                     "count": 3
@@ -509,7 +509,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 8,
+                    "id": "option:telephone B",
                     "name": "telephone B",
                     "name_th": null,
                     "count": 3
@@ -518,7 +518,7 @@
                     "origin": "onboarding",
                     "type": "software",
                     "kind": "software",
-                    "id": 1,
+                    "id": "software:AutoCAD",
                     "name": "AutoCAD",
                     "name_th": null,
                     "count": 2
@@ -527,7 +527,7 @@
                     "origin": "onboarding",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 2
@@ -536,7 +536,7 @@
                     "origin": "onboarding",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 2,
+                    "id": "email_group:Plant",
                     "name": "Plant",
                     "name_th": null,
                     "count": 2
@@ -545,7 +545,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 2,
+                    "id": "email_group:Plant",
                     "name": "Plant",
                     "name_th": null,
                     "count": 2
@@ -554,7 +554,7 @@
                     "origin": "onboarding",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 2
@@ -563,7 +563,7 @@
                     "origin": "direct",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 2
@@ -572,7 +572,7 @@
                     "origin": "onboarding",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 11,
+                    "id": "option:cctv A",
                     "name": "cctv A",
                     "name_th": "cctv เอ",
                     "count": 2
@@ -581,7 +581,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 11,
+                    "id": "option:cctv A",
                     "name": "cctv A",
                     "name_th": "cctv เอ",
                     "count": 2
@@ -590,7 +590,7 @@
                     "origin": "onboarding",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 2
@@ -599,7 +599,7 @@
                     "origin": "onboarding",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 2
@@ -608,7 +608,7 @@
                     "origin": "onboarding",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 4,
+                    "id": "option:hardware B",
                     "name": "hardware B",
                     "name_th": null,
                     "count": 2
@@ -617,7 +617,7 @@
                     "origin": "onboarding",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 6,
+                    "id": "option:mobile B",
                     "name": "mobile B",
                     "name_th": null,
                     "count": 2
@@ -626,7 +626,7 @@
                     "origin": "onboarding",
                     "type": "network",
                     "kind": "option",
-                    "id": 9,
+                    "id": "option:network A",
                     "name": "network A",
                     "name_th": "network เอ",
                     "count": 2
@@ -635,7 +635,7 @@
                     "origin": "onboarding",
                     "type": "other",
                     "kind": "option",
-                    "id": 13,
+                    "id": "option:other A",
                     "name": "other A",
                     "name_th": "other เอ",
                     "count": 2
@@ -644,7 +644,7 @@
                     "origin": "onboarding",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 8,
+                    "id": "option:telephone B",
                     "name": "telephone B",
                     "name_th": null,
                     "count": 2
@@ -653,7 +653,7 @@
                     "origin": "onboarding",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 1,
+                    "id": "email_group:All staff",
                     "name": "All staff",
                     "name_th": null,
                     "count": 1
@@ -662,7 +662,7 @@
                     "origin": "onboarding",
                     "type": "software",
                     "kind": "software",
-                    "id": 2,
+                    "id": "software:Office",
                     "name": "Office",
                     "name_th": null,
                     "count": 1
@@ -671,7 +671,7 @@
                     "origin": "onboarding",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 1
@@ -680,7 +680,7 @@
                     "origin": "onboarding",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 1
@@ -689,7 +689,7 @@
                     "origin": "onboarding",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 12,
+                    "id": "option:cctv B",
                     "name": "cctv B",
                     "name_th": null,
                     "count": 1
@@ -698,7 +698,7 @@
                     "origin": "onboarding",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 3,
+                    "id": "option:hardware A",
                     "name": "hardware A",
                     "name_th": "hardware เอ",
                     "count": 1
@@ -707,7 +707,7 @@
                     "origin": "onboarding",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 5,
+                    "id": "option:mobile A",
                     "name": "mobile A",
                     "name_th": "mobile เอ",
                     "count": 1
@@ -716,7 +716,7 @@
                     "origin": "onboarding",
                     "type": "network",
                     "kind": "option",
-                    "id": 10,
+                    "id": "option:network B",
                     "name": "network B",
                     "name_th": null,
                     "count": 1
@@ -725,7 +725,7 @@
                     "origin": "onboarding",
                     "type": "other",
                     "kind": "option",
-                    "id": 14,
+                    "id": "option:other B",
                     "name": "other B",
                     "name_th": null,
                     "count": 1
@@ -734,7 +734,7 @@
                     "origin": "onboarding",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 7,
+                    "id": "option:telephone A",
                     "name": "telephone A",
                     "name_th": "telephone เอ",
                     "count": 1
@@ -743,7 +743,7 @@
         },
         "departments": [
             {
-                "department_id": 1,
+                "department_id": "PD",
                 "name": "Production",
                 "name_th": "ฝ่ายผลิต",
                 "total": 44,
@@ -763,7 +763,7 @@
                 "onboarding": 15
             },
             {
-                "department_id": 2,
+                "department_id": "QC",
                 "name": "Quality",
                 "name_th": "ฝ่ายควบคุมคุณภาพ",
                 "total": 26,
@@ -803,7 +803,7 @@
                 "onboarding": 8
             },
             {
-                "department_id": 3,
+                "department_id": "HR",
                 "name": "HR",
                 "name_th": null,
                 "total": 18,
@@ -933,7 +933,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 3
@@ -942,7 +942,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 3
@@ -951,7 +951,7 @@
                     "origin": "onboarding",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 2
@@ -960,7 +960,7 @@
                     "origin": "onboarding",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 2
@@ -969,7 +969,7 @@
         },
         "departments": [
             {
-                "department_id": 1,
+                "department_id": "PD",
                 "name": "Production",
                 "name_th": "ฝ่ายผลิต",
                 "total": 3,
@@ -989,7 +989,7 @@
                 "onboarding": 2
             },
             {
-                "department_id": 2,
+                "department_id": "QC",
                 "name": "Quality",
                 "name_th": "ฝ่ายควบคุมคุณภาพ",
                 "total": 3,
@@ -1029,7 +1029,7 @@
                 "onboarding": 1
             },
             {
-                "department_id": 3,
+                "department_id": "HR",
                 "name": "HR",
                 "name_th": null,
                 "total": 1,
@@ -1400,7 +1400,7 @@
                     "origin": "direct",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 3
@@ -1409,7 +1409,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 1,
+                    "id": "email_group:All staff",
                     "name": "All staff",
                     "name_th": null,
                     "count": 2
@@ -1418,7 +1418,7 @@
                     "origin": "direct",
                     "type": "software",
                     "kind": "software",
-                    "id": 1,
+                    "id": "software:AutoCAD",
                     "name": "AutoCAD",
                     "name_th": null,
                     "count": 2
@@ -1427,7 +1427,7 @@
                     "origin": "direct",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 2
@@ -1436,7 +1436,7 @@
                     "origin": "direct",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 2
@@ -1445,7 +1445,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 12,
+                    "id": "option:cctv B",
                     "name": "cctv B",
                     "name_th": null,
                     "count": 2
@@ -1454,7 +1454,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 2
@@ -1463,7 +1463,7 @@
                     "origin": "direct",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 3,
+                    "id": "option:hardware A",
                     "name": "hardware A",
                     "name_th": "hardware เอ",
                     "count": 2
@@ -1472,7 +1472,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 6,
+                    "id": "option:mobile B",
                     "name": "mobile B",
                     "name_th": null,
                     "count": 2
@@ -1481,7 +1481,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 10,
+                    "id": "option:network B",
                     "name": "network B",
                     "name_th": null,
                     "count": 2
@@ -1490,7 +1490,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 13,
+                    "id": "option:other A",
                     "name": "other A",
                     "name_th": "other เอ",
                     "count": 2
@@ -1499,7 +1499,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 8,
+                    "id": "option:telephone B",
                     "name": "telephone B",
                     "name_th": null,
                     "count": 2
@@ -1508,7 +1508,7 @@
                     "origin": "direct",
                     "type": "software",
                     "kind": "software",
-                    "id": 2,
+                    "id": "software:Office",
                     "name": "Office",
                     "name_th": null,
                     "count": 1
@@ -1517,7 +1517,7 @@
                     "origin": "direct",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 1
@@ -1526,7 +1526,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 2,
+                    "id": "email_group:Plant",
                     "name": "Plant",
                     "name_th": null,
                     "count": 1
@@ -1535,7 +1535,7 @@
                     "origin": "direct",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 1
@@ -1544,7 +1544,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 11,
+                    "id": "option:cctv A",
                     "name": "cctv A",
                     "name_th": "cctv เอ",
                     "count": 1
@@ -1553,7 +1553,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 1
@@ -1562,7 +1562,7 @@
                     "origin": "direct",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 4,
+                    "id": "option:hardware B",
                     "name": "hardware B",
                     "name_th": null,
                     "count": 1
@@ -1571,7 +1571,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 5,
+                    "id": "option:mobile A",
                     "name": "mobile A",
                     "name_th": "mobile เอ",
                     "count": 1
@@ -1580,7 +1580,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 9,
+                    "id": "option:network A",
                     "name": "network A",
                     "name_th": "network เอ",
                     "count": 1
@@ -1589,7 +1589,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 14,
+                    "id": "option:other B",
                     "name": "other B",
                     "name_th": null,
                     "count": 1
@@ -1598,7 +1598,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 7,
+                    "id": "option:telephone A",
                     "name": "telephone A",
                     "name_th": "telephone เอ",
                     "count": 1
@@ -1607,7 +1607,7 @@
         },
         "departments": [
             {
-                "department_id": 1,
+                "department_id": "PD",
                 "name": "Production",
                 "name_th": "ฝ่ายผลิต",
                 "total": 15,
@@ -1647,7 +1647,7 @@
                 "onboarding": 0
             },
             {
-                "department_id": 2,
+                "department_id": "QC",
                 "name": "Quality",
                 "name_th": "ฝ่ายควบคุมคุณภาพ",
                 "total": 8,
@@ -1667,7 +1667,7 @@
                 "onboarding": 0
             },
             {
-                "department_id": 3,
+                "department_id": "HR",
                 "name": "HR",
                 "name_th": null,
                 "total": 6,
@@ -2001,7 +2001,7 @@
                     "origin": "direct",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 2
@@ -2010,7 +2010,7 @@
                     "origin": "direct",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 2
@@ -2019,7 +2019,7 @@
                     "origin": "direct",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 2
@@ -2028,7 +2028,7 @@
                     "origin": "direct",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 3,
+                    "id": "option:hardware A",
                     "name": "hardware A",
                     "name_th": "hardware เอ",
                     "count": 2
@@ -2037,7 +2037,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 13,
+                    "id": "option:other A",
                     "name": "other A",
                     "name_th": "other เอ",
                     "count": 2
@@ -2046,7 +2046,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 7,
+                    "id": "option:telephone A",
                     "name": "telephone A",
                     "name_th": "telephone เอ",
                     "count": 2
@@ -2055,7 +2055,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 1,
+                    "id": "email_group:All staff",
                     "name": "All staff",
                     "name_th": null,
                     "count": 1
@@ -2064,7 +2064,7 @@
                     "origin": "onboarding",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 1,
+                    "id": "email_group:All staff",
                     "name": "All staff",
                     "name_th": null,
                     "count": 1
@@ -2073,7 +2073,7 @@
                     "origin": "onboarding",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 1
@@ -2082,7 +2082,7 @@
                     "origin": "onboarding",
                     "type": "software",
                     "kind": "software",
-                    "id": 2,
+                    "id": "software:Office",
                     "name": "Office",
                     "name_th": null,
                     "count": 1
@@ -2091,7 +2091,7 @@
                     "origin": "direct",
                     "type": "software",
                     "kind": "software",
-                    "id": 2,
+                    "id": "software:Office",
                     "name": "Office",
                     "name_th": null,
                     "count": 1
@@ -2100,7 +2100,7 @@
                     "origin": "onboarding",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 1
@@ -2109,7 +2109,7 @@
                     "origin": "onboarding",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 2,
+                    "id": "email_group:Plant",
                     "name": "Plant",
                     "name_th": null,
                     "count": 1
@@ -2118,7 +2118,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 2,
+                    "id": "email_group:Plant",
                     "name": "Plant",
                     "name_th": null,
                     "count": 1
@@ -2127,7 +2127,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 11,
+                    "id": "option:cctv A",
                     "name": "cctv A",
                     "name_th": "cctv เอ",
                     "count": 1
@@ -2136,7 +2136,7 @@
                     "origin": "onboarding",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 11,
+                    "id": "option:cctv A",
                     "name": "cctv A",
                     "name_th": "cctv เอ",
                     "count": 1
@@ -2145,7 +2145,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 12,
+                    "id": "option:cctv B",
                     "name": "cctv B",
                     "name_th": null,
                     "count": 1
@@ -2154,7 +2154,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 1
@@ -2163,7 +2163,7 @@
                     "origin": "onboarding",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 1
@@ -2172,7 +2172,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 1
@@ -2181,7 +2181,7 @@
                     "origin": "onboarding",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 4,
+                    "id": "option:hardware B",
                     "name": "hardware B",
                     "name_th": null,
                     "count": 1
@@ -2190,7 +2190,7 @@
                     "origin": "onboarding",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 5,
+                    "id": "option:mobile A",
                     "name": "mobile A",
                     "name_th": "mobile เอ",
                     "count": 1
@@ -2199,7 +2199,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 5,
+                    "id": "option:mobile A",
                     "name": "mobile A",
                     "name_th": "mobile เอ",
                     "count": 1
@@ -2208,7 +2208,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 6,
+                    "id": "option:mobile B",
                     "name": "mobile B",
                     "name_th": null,
                     "count": 1
@@ -2217,7 +2217,7 @@
                     "origin": "onboarding",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 6,
+                    "id": "option:mobile B",
                     "name": "mobile B",
                     "name_th": null,
                     "count": 1
@@ -2226,7 +2226,7 @@
                     "origin": "onboarding",
                     "type": "network",
                     "kind": "option",
-                    "id": 9,
+                    "id": "option:network A",
                     "name": "network A",
                     "name_th": "network เอ",
                     "count": 1
@@ -2235,7 +2235,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 9,
+                    "id": "option:network A",
                     "name": "network A",
                     "name_th": "network เอ",
                     "count": 1
@@ -2244,7 +2244,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 10,
+                    "id": "option:network B",
                     "name": "network B",
                     "name_th": null,
                     "count": 1
@@ -2253,7 +2253,7 @@
                     "origin": "onboarding",
                     "type": "other",
                     "kind": "option",
-                    "id": 13,
+                    "id": "option:other A",
                     "name": "other A",
                     "name_th": "other เอ",
                     "count": 1
@@ -2262,7 +2262,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 8,
+                    "id": "option:telephone B",
                     "name": "telephone B",
                     "name_th": null,
                     "count": 1
@@ -2271,7 +2271,7 @@
                     "origin": "onboarding",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 8,
+                    "id": "option:telephone B",
                     "name": "telephone B",
                     "name_th": null,
                     "count": 1
@@ -2280,7 +2280,7 @@
         },
         "departments": [
             {
-                "department_id": 1,
+                "department_id": "PD",
                 "name": "Production",
                 "name_th": "ฝ่ายผลิต",
                 "total": 12,
@@ -2300,7 +2300,7 @@
                 "onboarding": 3
             },
             {
-                "department_id": 2,
+                "department_id": "QC",
                 "name": "Quality",
                 "name_th": "ฝ่ายควบคุมคุณภาพ",
                 "total": 10,
@@ -2340,7 +2340,7 @@
                 "onboarding": 3
             },
             {
-                "department_id": 3,
+                "department_id": "HR",
                 "name": "HR",
                 "name_th": null,
                 "total": 8,
@@ -2703,7 +2703,7 @@
                     "origin": "onboarding",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 2
@@ -2712,7 +2712,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 1,
+                    "id": "option:computer A",
                     "name": "computer A",
                     "name_th": "computer เอ",
                     "count": 2
@@ -2721,7 +2721,7 @@
                     "origin": "direct",
                     "type": "telephone",
                     "kind": "option",
-                    "id": 8,
+                    "id": "option:telephone B",
                     "name": "telephone B",
                     "name_th": null,
                     "count": 2
@@ -2730,7 +2730,7 @@
                     "origin": "direct",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 1,
+                    "id": "email_group:All staff",
                     "name": "All staff",
                     "name_th": null,
                     "count": 1
@@ -2739,7 +2739,7 @@
                     "origin": "onboarding",
                     "type": "software",
                     "kind": "software",
-                    "id": 1,
+                    "id": "software:AutoCAD",
                     "name": "AutoCAD",
                     "name_th": null,
                     "count": 1
@@ -2748,7 +2748,7 @@
                     "origin": "direct",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 1
@@ -2757,7 +2757,7 @@
                     "origin": "onboarding",
                     "type": "social",
                     "kind": "social_platform",
-                    "id": 1,
+                    "id": "social_platform:Facebook",
                     "name": "Facebook",
                     "name_th": null,
                     "count": 1
@@ -2766,7 +2766,7 @@
                     "origin": "direct",
                     "type": "fileshare",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 1
@@ -2775,7 +2775,7 @@
                     "origin": "onboarding",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 2,
+                    "id": "file_share:PD Docs",
                     "name": "PD Docs",
                     "name_th": null,
                     "count": 1
@@ -2784,7 +2784,7 @@
                     "origin": "onboarding",
                     "type": "mailgroup",
                     "kind": "email_group",
-                    "id": 2,
+                    "id": "email_group:Plant",
                     "name": "Plant",
                     "name_th": null,
                     "count": 1
@@ -2793,7 +2793,7 @@
                     "origin": "direct",
                     "type": "recovery",
                     "kind": "file_share",
-                    "id": 1,
+                    "id": "file_share:QC Docs",
                     "name": "QC Docs",
                     "name_th": null,
                     "count": 1
@@ -2802,7 +2802,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 11,
+                    "id": "option:cctv A",
                     "name": "cctv A",
                     "name_th": "cctv เอ",
                     "count": 1
@@ -2811,7 +2811,7 @@
                     "origin": "direct",
                     "type": "cctv",
                     "kind": "option",
-                    "id": 12,
+                    "id": "option:cctv B",
                     "name": "cctv B",
                     "name_th": null,
                     "count": 1
@@ -2820,7 +2820,7 @@
                     "origin": "direct",
                     "type": "computer",
                     "kind": "option",
-                    "id": 2,
+                    "id": "option:computer B",
                     "name": "computer B",
                     "name_th": null,
                     "count": 1
@@ -2829,7 +2829,7 @@
                     "origin": "onboarding",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 3,
+                    "id": "option:hardware A",
                     "name": "hardware A",
                     "name_th": "hardware เอ",
                     "count": 1
@@ -2838,7 +2838,7 @@
                     "origin": "direct",
                     "type": "hardware",
                     "kind": "option",
-                    "id": 4,
+                    "id": "option:hardware B",
                     "name": "hardware B",
                     "name_th": null,
                     "count": 1
@@ -2847,7 +2847,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 5,
+                    "id": "option:mobile A",
                     "name": "mobile A",
                     "name_th": "mobile เอ",
                     "count": 1
@@ -2856,7 +2856,7 @@
                     "origin": "direct",
                     "type": "mobile",
                     "kind": "option",
-                    "id": 6,
+                    "id": "option:mobile B",
                     "name": "mobile B",
                     "name_th": null,
                     "count": 1
@@ -2865,7 +2865,7 @@
                     "origin": "direct",
                     "type": "network",
                     "kind": "option",
-                    "id": 10,
+                    "id": "option:network B",
                     "name": "network B",
                     "name_th": null,
                     "count": 1
@@ -2874,7 +2874,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 13,
+                    "id": "option:other A",
                     "name": "other A",
                     "name_th": "other เอ",
                     "count": 1
@@ -2883,7 +2883,7 @@
                     "origin": "direct",
                     "type": "other",
                     "kind": "option",
-                    "id": 14,
+                    "id": "option:other B",
                     "name": "other B",
                     "name_th": null,
                     "count": 1
@@ -2892,7 +2892,7 @@
         },
         "departments": [
             {
-                "department_id": 2,
+                "department_id": "QC",
                 "name": "Quality",
                 "name_th": "ฝ่ายควบคุมคุณภาพ",
                 "total": 26,

@@ -1,15 +1,10 @@
 import { useT } from '@/lang';
-import {
-    notificationApi,
-    notificationTemplateApi,
-    type NotificationsResponse,
-    type NotificationTemplatePayload,
-} from '@/modules/notification/api/notificationApi';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { notificationApi, notificationTemplateApi, type NotificationsResponse, type NotificationTemplatePayload } from '../api/notificationApi';
 
 const KEY = ['notifications'] as const;
 // Under KEY, so every invalidation of the tray reaches the tab lists too.

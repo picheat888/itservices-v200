@@ -1,6 +1,9 @@
 // Idle sign-out: polls the inactivity clock, opens the warning before sign-out, and keeps the countdown on wall-clock time.
 // Every tab of the browser shares one session cookie, so they share one activity time and sign out together.
-import { authApi } from '@/modules/auth/api/authApi';
+import { redirectToLogin, SESSION_CHANNEL } from '@/shared/lib/login-redirect';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { authApi } from '../api/authApi';
 import {
     dismissesWarning,
     heartbeatMsFor,
@@ -9,10 +12,7 @@ import {
     pingDelay,
     shouldShareActivity,
     warnSecondsFor,
-} from '@/modules/auth/lib/session-warning';
-import { redirectToLogin, SESSION_CHANNEL } from '@/shared/lib/login-redirect';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+} from '../lib/session-warning';
 
 /** Poll the idle clock every N seconds. */
 const POLL_INTERVAL_MS = 5_000;

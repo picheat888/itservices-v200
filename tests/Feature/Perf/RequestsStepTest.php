@@ -17,9 +17,11 @@ use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Requests step (service requests, approval chains, auto-ticket plans)
+#[Group('sqlite')]
 class RequestsStepTest extends TestCase
 {
     use RefreshDatabase;

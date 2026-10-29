@@ -120,7 +120,27 @@ class RequestOverviewBreakdownFixtureTest extends TestCase
         $department = Department::query()->where('tag', 'QC')->value('id');
         $out['department'] = $this->actingAs($viewer)->getJson("/api/reports/requests/overview/breakdown?department_id={$department}")->assertOk()->json('data');
 
-        return $out;
+        return $this->byCodes($out);
+    }
+
+    /** Swaps row ids for department tags and item names so the pin holds on any database. */
+    private function byCodes(mixed $node): mixed
+    {
+        if (! is_array($node)) {
+            return $node;
+        }
+        $tags = Department::query()->pluck('tag', 'id');
+        foreach ($node as $key => $value) {
+            $node[$key] = $this->byCodes($value);
+        }
+        if (array_key_exists('department_id', $node) && $node['department_id'] !== null) {
+            $node['department_id'] = $tags[$node['department_id']];
+        }
+        if (isset($node['kind'], $node['name']) && array_key_exists('id', $node)) {
+            $node['id'] = $node['kind'].':'.$node['name'];
+        }
+
+        return $node;
     }
 
     public function test_breakdown_cards_match_the_pinned_fixture(): void

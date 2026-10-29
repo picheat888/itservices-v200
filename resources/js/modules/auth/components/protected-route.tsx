@@ -1,8 +1,8 @@
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth/hooks/use-auth';
 import { usePrefetchSidebarBadges } from '@/shared/hooks/use-sidebar-badges';
 import { Loader2 } from 'lucide-react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/use-auth';
 
 export function ProtectedRoute() {
     const t = useT();

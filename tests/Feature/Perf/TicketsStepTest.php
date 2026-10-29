@@ -19,9 +19,11 @@ use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Tickets step (auto and manual tickets, updates, attachments, SLA deadlines)
+#[Group('sqlite')]
 class TicketsStepTest extends TestCase
 {
     use RefreshDatabase;

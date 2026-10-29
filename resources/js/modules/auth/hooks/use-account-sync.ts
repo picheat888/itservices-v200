@@ -1,9 +1,9 @@
 // Keeps every tab honest about the account the shared session cookie holds: a sign-in in another tab, or a
 // different account found on return to the tab, returns the account now in use so the shell can block the page.
-import { authApi } from '@/modules/auth/api/authApi';
 import { SESSION_CHANNEL } from '@/shared/lib/login-redirect';
 import type { User } from '@/shared/types';
 import { useEffect, useRef, useState } from 'react';
+import { authApi } from '../api/authApi';
 import { isOtherAccount, parseSessionMessage } from '../lib/session-warning';
 
 export function useAccountSync(user: User | null): User | null {

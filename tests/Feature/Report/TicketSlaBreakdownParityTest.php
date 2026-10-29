@@ -129,7 +129,23 @@ class TicketSlaBreakdownParityTest extends TestCase
         $out['request.assignee'] = $request->breakdown($viewer, [...$range, 'assignee' => $this->firstAssignee()]);
         $out['request.summary'] = array_map(fn ($s) => $s->toArray(), $request->summary($request->query($viewer, $range), $range));
 
-        return $out;
+        return $this->byTicketNo($out);
+    }
+
+    /** Swaps ticket ids for ticket numbers so the pin holds on any database. */
+    private function byTicketNo(mixed $node): mixed
+    {
+        if (! is_array($node)) {
+            return $node;
+        }
+        foreach ($node as $key => $value) {
+            $node[$key] = $this->byTicketNo($value);
+        }
+        if (isset($node['ticket_no']) && array_key_exists('id', $node)) {
+            $node['id'] = $node['ticket_no'];
+        }
+
+        return $node;
     }
 
     private function firstAssignee(): int

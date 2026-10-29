@@ -1,10 +1,10 @@
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth/hooks/use-auth';
 import { ErrorIcon, ErrorState } from '@/shared/components/error-state';
 import type { Role } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/use-auth';
 
 /**
  * Gates a route's content. The user passes when they are the super admin, hold at

@@ -232,7 +232,7 @@ class DeviceServiceTest extends TestCase
         UserDevice::factory()->count(4)->for($user)->sequence(fn ($sequence) => ['last_active_at' => now()->subMinutes($sequence->index)])->create();
         $tableChecks = 0;
         DB::listen(function ($query) use (&$tableChecks) {
-            if (str_contains($query->sql, 'sqlite_master')) {
+            if (preg_match('/sqlite_master|information_schema/i', $query->sql) === 1) {
                 $tableChecks++;
             }
         });

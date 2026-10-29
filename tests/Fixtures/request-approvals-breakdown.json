@@ -3,7 +3,7 @@
         "stuck": {
             "left": [
                 {
-                    "request_id": 68,
+                    "request_id": "RQ-2026-0068",
                     "reference": "RQ-2026-0068",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -20,7 +20,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 140,
+                    "request_id": "RQ-2026-0140",
                     "reference": "RQ-2026-0140",
                     "type": "software",
                     "label": "Rung 2",
@@ -37,7 +37,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 62,
+                    "request_id": "RQ-2026-0062",
                     "reference": "RQ-2026-0062",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -54,7 +54,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 56,
+                    "request_id": "RQ-2026-0056",
                     "reference": "RQ-2026-0056",
                     "type": "software",
                     "label": "",
@@ -71,7 +71,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 128,
+                    "request_id": "RQ-2026-0128",
                     "reference": "RQ-2026-0128",
                     "type": "email",
                     "label": "Rung 2",
@@ -88,7 +88,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 44,
+                    "request_id": "RQ-2026-0044",
                     "reference": "RQ-2026-0044",
                     "type": "email",
                     "label": "Rung 2",
@@ -105,7 +105,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 116,
+                    "request_id": "RQ-2026-0116",
                     "reference": "RQ-2026-0116",
                     "type": "fileshare",
                     "label": "",
@@ -122,7 +122,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 38,
+                    "request_id": "RQ-2026-0038",
                     "reference": "RQ-2026-0038",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -139,7 +139,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 110,
+                    "request_id": "RQ-2026-0110",
                     "reference": "RQ-2026-0110",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -156,7 +156,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 32,
+                    "request_id": "RQ-2026-0032",
                     "reference": "RQ-2026-0032",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -173,7 +173,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 104,
+                    "request_id": "RQ-2026-0104",
                     "reference": "RQ-2026-0104",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -190,7 +190,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 20,
+                    "request_id": "RQ-2026-0020",
                     "reference": "RQ-2026-0020",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -207,7 +207,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 14,
+                    "request_id": "RQ-2026-0014",
                     "reference": "RQ-2026-0014",
                     "type": "software",
                     "label": "Rung 2",
@@ -224,7 +224,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 86,
+                    "request_id": "RQ-2026-0086",
                     "reference": "RQ-2026-0086",
                     "type": "email",
                     "label": "",
@@ -241,7 +241,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 158,
+                    "request_id": "RQ-2026-0158",
                     "reference": "RQ-2026-0158",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -258,7 +258,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 80,
+                    "request_id": "RQ-2026-0080",
                     "reference": "RQ-2026-0080",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -275,7 +275,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 152,
+                    "request_id": "RQ-2026-0152",
                     "reference": "RQ-2026-0152",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -294,7 +294,7 @@
             ],
             "no_account": [
                 {
-                    "request_id": 122,
+                    "request_id": "RQ-2026-0122",
                     "reference": "RQ-2026-0122",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -311,7 +311,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 26,
+                    "request_id": "RQ-2026-0026",
                     "reference": "RQ-2026-0026",
                     "type": "cctv",
                     "label": "",
@@ -328,7 +328,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 98,
+                    "request_id": "RQ-2026-0098",
                     "reference": "RQ-2026-0098",
                     "type": "software",
                     "label": "Rung 2",
@@ -345,7 +345,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 2,
+                    "request_id": "RQ-2026-0002",
                     "reference": "RQ-2026-0002",
                     "type": "email",
                     "label": "Rung 2",
@@ -362,7 +362,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 74,
+                    "request_id": "RQ-2026-0074",
                     "reference": "RQ-2026-0074",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -379,7 +379,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 146,
+                    "request_id": "RQ-2026-0146",
                     "reference": "RQ-2026-0146",
                     "type": "mobile",
                     "label": "",
@@ -398,7 +398,7 @@
             ],
             "over7": [
                 {
-                    "request_id": 43,
+                    "request_id": "RQ-2026-0043",
                     "reference": "RQ-2026-0043",
                     "type": "computer",
                     "label": "Rung 1",
@@ -415,7 +415,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 115,
+                    "request_id": "RQ-2026-0115",
                     "reference": "RQ-2026-0115",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -432,7 +432,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 134,
+                    "request_id": "RQ-2026-0134",
                     "reference": "RQ-2026-0134",
                     "type": "computer",
                     "label": "Rung 2",
@@ -449,7 +449,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 37,
+                    "request_id": "RQ-2026-0037",
                     "reference": "RQ-2026-0037",
                     "type": "email",
                     "label": "Rung 1",
@@ -466,7 +466,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 109,
+                    "request_id": "RQ-2026-0109",
                     "reference": "RQ-2026-0109",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -483,7 +483,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -500,7 +500,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 31,
+                    "request_id": "RQ-2026-0031",
                     "reference": "RQ-2026-0031",
                     "type": "mailgroup",
                     "label": "",
@@ -517,7 +517,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 103,
+                    "request_id": "RQ-2026-0103",
                     "reference": "RQ-2026-0103",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -534,7 +534,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 50,
+                    "request_id": "RQ-2026-0050",
                     "reference": "RQ-2026-0050",
                     "type": "computer",
                     "label": "Rung 2",
@@ -551,7 +551,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 25,
+                    "request_id": "RQ-2026-0025",
                     "reference": "RQ-2026-0025",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -568,7 +568,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 97,
+                    "request_id": "RQ-2026-0097",
                     "reference": "RQ-2026-0097",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -585,7 +585,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 19,
+                    "request_id": "RQ-2026-0019",
                     "reference": "RQ-2026-0019",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -602,7 +602,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -619,7 +619,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 13,
+                    "request_id": "RQ-2026-0013",
                     "reference": "RQ-2026-0013",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -636,7 +636,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 85,
+                    "request_id": "RQ-2026-0085",
                     "reference": "RQ-2026-0085",
                     "type": "computer",
                     "label": "Rung 1",
@@ -653,7 +653,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 157,
+                    "request_id": "RQ-2026-0157",
                     "reference": "RQ-2026-0157",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -670,7 +670,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 1,
+                    "request_id": "RQ-2026-0001",
                     "reference": "RQ-2026-0001",
                     "type": "computer",
                     "label": "",
@@ -687,7 +687,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -704,7 +704,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 79,
+                    "request_id": "RQ-2026-0079",
                     "reference": "RQ-2026-0079",
                     "type": "email",
                     "label": "Rung 1",
@@ -721,7 +721,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 151,
+                    "request_id": "RQ-2026-0151",
                     "reference": "RQ-2026-0151",
                     "type": "fileshare",
                     "label": "",
@@ -738,7 +738,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 73,
+                    "request_id": "RQ-2026-0073",
                     "reference": "RQ-2026-0073",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -755,7 +755,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 145,
+                    "request_id": "RQ-2026-0145",
                     "reference": "RQ-2026-0145",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -772,7 +772,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 92,
+                    "request_id": "RQ-2026-0092",
                     "reference": "RQ-2026-0092",
                     "type": "computer",
                     "label": "Rung 2",
@@ -789,7 +789,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 139,
+                    "request_id": "RQ-2026-0139",
                     "reference": "RQ-2026-0139",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -806,7 +806,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 61,
+                    "request_id": "RQ-2026-0061",
                     "reference": "RQ-2026-0061",
                     "type": "cctv",
                     "label": "",
@@ -823,7 +823,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 8,
+                    "request_id": "RQ-2026-0008",
                     "reference": "RQ-2026-0008",
                     "type": "computer",
                     "label": "Rung 2",
@@ -840,7 +840,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 55,
+                    "request_id": "RQ-2026-0055",
                     "reference": "RQ-2026-0055",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -857,7 +857,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 127,
+                    "request_id": "RQ-2026-0127",
                     "reference": "RQ-2026-0127",
                     "type": "computer",
                     "label": "Rung 1",
@@ -876,7 +876,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -893,7 +893,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 121,
+                    "request_id": "RQ-2026-0121",
                     "reference": "RQ-2026-0121",
                     "type": "email",
                     "label": "",
@@ -910,7 +910,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 67,
+                    "request_id": "RQ-2026-0067",
                     "reference": "RQ-2026-0067",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -1237,7 +1237,7 @@
             },
             "rows": [
                 {
-                    "request_id": 99,
+                    "request_id": "RQ-2026-0099",
                     "reference": "RQ-2026-0099",
                     "type": "computer",
                     "outcome": "rejected",
@@ -1248,7 +1248,7 @@
                     "at": "2026-09-19 13:34"
                 },
                 {
-                    "request_id": 27,
+                    "request_id": "RQ-2026-0027",
                     "reference": "RQ-2026-0027",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -1259,7 +1259,7 @@
                     "at": "2026-09-18 15:11"
                 },
                 {
-                    "request_id": 148,
+                    "request_id": "RQ-2026-0148",
                     "reference": "RQ-2026-0148",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -1270,7 +1270,7 @@
                     "at": "2026-09-17 11:21"
                 },
                 {
-                    "request_id": 76,
+                    "request_id": "RQ-2026-0076",
                     "reference": "RQ-2026-0076",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -1281,7 +1281,7 @@
                     "at": "2026-09-16 12:58"
                 },
                 {
-                    "request_id": 4,
+                    "request_id": "RQ-2026-0004",
                     "reference": "RQ-2026-0004",
                     "type": "fileshare",
                     "outcome": "not_delivered",
@@ -1292,7 +1292,7 @@
                     "at": "2026-09-15 14:35"
                 },
                 {
-                    "request_id": 105,
+                    "request_id": "RQ-2026-0105",
                     "reference": "RQ-2026-0105",
                     "type": "software",
                     "outcome": "rejected",
@@ -1303,7 +1303,7 @@
                     "at": "2026-08-28 16:46"
                 },
                 {
-                    "request_id": 33,
+                    "request_id": "RQ-2026-0033",
                     "reference": "RQ-2026-0033",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -1314,7 +1314,7 @@
                     "at": "2026-08-27 08:23"
                 },
                 {
-                    "request_id": 154,
+                    "request_id": "RQ-2026-0154",
                     "reference": "RQ-2026-0154",
                     "type": "software",
                     "outcome": "not_delivered",
@@ -1325,7 +1325,7 @@
                     "at": "2026-08-26 14:33"
                 },
                 {
-                    "request_id": 82,
+                    "request_id": "RQ-2026-0082",
                     "reference": "RQ-2026-0082",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -1336,7 +1336,7 @@
                     "at": "2026-08-25 16:10"
                 },
                 {
-                    "request_id": 10,
+                    "request_id": "RQ-2026-0010",
                     "reference": "RQ-2026-0010",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -1347,7 +1347,7 @@
                     "at": "2026-08-24 17:47"
                 },
                 {
-                    "request_id": 111,
+                    "request_id": "RQ-2026-0111",
                     "reference": "RQ-2026-0111",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -1358,7 +1358,7 @@
                     "at": "2026-08-06 09:58"
                 },
                 {
-                    "request_id": 39,
+                    "request_id": "RQ-2026-0039",
                     "reference": "RQ-2026-0039",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -1369,7 +1369,7 @@
                     "at": "2026-08-05 11:35"
                 },
                 {
-                    "request_id": 160,
+                    "request_id": "RQ-2026-0160",
                     "reference": "RQ-2026-0160",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -1380,7 +1380,7 @@
                     "at": "2026-08-04 17:45"
                 },
                 {
-                    "request_id": 88,
+                    "request_id": "RQ-2026-0088",
                     "reference": "RQ-2026-0088",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -1391,7 +1391,7 @@
                     "at": "2026-08-03 09:22"
                 },
                 {
-                    "request_id": 16,
+                    "request_id": "RQ-2026-0016",
                     "reference": "RQ-2026-0016",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -1402,7 +1402,7 @@
                     "at": "2026-08-02 10:59"
                 },
                 {
-                    "request_id": 117,
+                    "request_id": "RQ-2026-0117",
                     "reference": "RQ-2026-0117",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -1413,7 +1413,7 @@
                     "at": "2026-07-15 13:10"
                 },
                 {
-                    "request_id": 45,
+                    "request_id": "RQ-2026-0045",
                     "reference": "RQ-2026-0045",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -1424,7 +1424,7 @@
                     "at": "2026-07-14 14:47"
                 },
                 {
-                    "request_id": 94,
+                    "request_id": "RQ-2026-0094",
                     "reference": "RQ-2026-0094",
                     "type": "mailgroup",
                     "outcome": "not_delivered",
@@ -1435,7 +1435,7 @@
                     "at": "2026-07-12 12:34"
                 },
                 {
-                    "request_id": 22,
+                    "request_id": "RQ-2026-0022",
                     "reference": "RQ-2026-0022",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -1446,7 +1446,7 @@
                     "at": "2026-07-11 14:11"
                 },
                 {
-                    "request_id": 123,
+                    "request_id": "RQ-2026-0123",
                     "reference": "RQ-2026-0123",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -1457,7 +1457,7 @@
                     "at": "2026-06-23 16:21"
                 },
                 {
-                    "request_id": 51,
+                    "request_id": "RQ-2026-0051",
                     "reference": "RQ-2026-0051",
                     "type": "email",
                     "outcome": "rejected",
@@ -1468,7 +1468,7 @@
                     "at": "2026-06-22 17:59"
                 },
                 {
-                    "request_id": 100,
+                    "request_id": "RQ-2026-0100",
                     "reference": "RQ-2026-0100",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -1479,7 +1479,7 @@
                     "at": "2026-06-20 15:46"
                 },
                 {
-                    "request_id": 28,
+                    "request_id": "RQ-2026-0028",
                     "reference": "RQ-2026-0028",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -1490,7 +1490,7 @@
                     "at": "2026-06-19 17:23"
                 },
                 {
-                    "request_id": 129,
+                    "request_id": "RQ-2026-0129",
                     "reference": "RQ-2026-0129",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -1501,7 +1501,7 @@
                     "at": "2026-06-01 09:33"
                 },
                 {
-                    "request_id": 57,
+                    "request_id": "RQ-2026-0057",
                     "reference": "RQ-2026-0057",
                     "type": "computer",
                     "outcome": "rejected",
@@ -1512,7 +1512,7 @@
                     "at": "2026-05-31 11:11"
                 },
                 {
-                    "request_id": 106,
+                    "request_id": "RQ-2026-0106",
                     "reference": "RQ-2026-0106",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -1523,7 +1523,7 @@
                     "at": "2026-05-29 08:58"
                 },
                 {
-                    "request_id": 34,
+                    "request_id": "RQ-2026-0034",
                     "reference": "RQ-2026-0034",
                     "type": "mobile",
                     "outcome": "not_delivered",
@@ -1534,7 +1534,7 @@
                     "at": "2026-05-28 10:35"
                 },
                 {
-                    "request_id": 135,
+                    "request_id": "RQ-2026-0135",
                     "reference": "RQ-2026-0135",
                     "type": "email",
                     "outcome": "rejected",
@@ -1545,7 +1545,7 @@
                     "at": "2026-05-10 12:45"
                 },
                 {
-                    "request_id": 63,
+                    "request_id": "RQ-2026-0063",
                     "reference": "RQ-2026-0063",
                     "type": "software",
                     "outcome": "rejected",
@@ -1556,7 +1556,7 @@
                     "at": "2026-05-09 14:22"
                 },
                 {
-                    "request_id": 112,
+                    "request_id": "RQ-2026-0112",
                     "reference": "RQ-2026-0112",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -1567,7 +1567,7 @@
                     "at": "2026-05-07 12:10"
                 },
                 {
-                    "request_id": 40,
+                    "request_id": "RQ-2026-0040",
                     "reference": "RQ-2026-0040",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -1578,7 +1578,7 @@
                     "at": "2026-05-06 13:47"
                 },
                 {
-                    "request_id": 141,
+                    "request_id": "RQ-2026-0141",
                     "reference": "RQ-2026-0141",
                     "type": "computer",
                     "outcome": "rejected",
@@ -1589,7 +1589,7 @@
                     "at": "2026-04-18 15:57"
                 },
                 {
-                    "request_id": 69,
+                    "request_id": "RQ-2026-0069",
                     "reference": "RQ-2026-0069",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -1600,7 +1600,7 @@
                     "at": "2026-04-17 17:34"
                 },
                 {
-                    "request_id": 118,
+                    "request_id": "RQ-2026-0118",
                     "reference": "RQ-2026-0118",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -1611,7 +1611,7 @@
                     "at": "2026-04-15 15:22"
                 },
                 {
-                    "request_id": 46,
+                    "request_id": "RQ-2026-0046",
                     "reference": "RQ-2026-0046",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -1622,7 +1622,7 @@
                     "at": "2026-04-14 16:59"
                 },
                 {
-                    "request_id": 147,
+                    "request_id": "RQ-2026-0147",
                     "reference": "RQ-2026-0147",
                     "type": "software",
                     "outcome": "rejected",
@@ -1633,7 +1633,7 @@
                     "at": "2026-03-27 09:09"
                 },
                 {
-                    "request_id": 75,
+                    "request_id": "RQ-2026-0075",
                     "reference": "RQ-2026-0075",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -1644,7 +1644,7 @@
                     "at": "2026-03-26 10:46"
                 },
                 {
-                    "request_id": 3,
+                    "request_id": "RQ-2026-0003",
                     "reference": "RQ-2026-0003",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -1655,7 +1655,7 @@
                     "at": "2026-03-25 12:23"
                 },
                 {
-                    "request_id": 124,
+                    "request_id": "RQ-2026-0124",
                     "reference": "RQ-2026-0124",
                     "type": "cctv",
                     "outcome": "not_delivered",
@@ -1666,7 +1666,7 @@
                     "at": "2026-03-24 08:33"
                 },
                 {
-                    "request_id": 52,
+                    "request_id": "RQ-2026-0052",
                     "reference": "RQ-2026-0052",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -1677,7 +1677,7 @@
                     "at": "2026-03-23 10:11"
                 },
                 {
-                    "request_id": 153,
+                    "request_id": "RQ-2026-0153",
                     "reference": "RQ-2026-0153",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -1688,7 +1688,7 @@
                     "at": "2026-03-05 12:21"
                 },
                 {
-                    "request_id": 81,
+                    "request_id": "RQ-2026-0081",
                     "reference": "RQ-2026-0081",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -1699,7 +1699,7 @@
                     "at": "2026-03-04 13:58"
                 },
                 {
-                    "request_id": 9,
+                    "request_id": "RQ-2026-0009",
                     "reference": "RQ-2026-0009",
                     "type": "email",
                     "outcome": "rejected",
@@ -1710,7 +1710,7 @@
                     "at": "2026-03-03 15:35"
                 },
                 {
-                    "request_id": 130,
+                    "request_id": "RQ-2026-0130",
                     "reference": "RQ-2026-0130",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -1721,7 +1721,7 @@
                     "at": "2026-03-02 11:45"
                 },
                 {
-                    "request_id": 58,
+                    "request_id": "RQ-2026-0058",
                     "reference": "RQ-2026-0058",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -1732,7 +1732,7 @@
                     "at": "2026-03-01 13:23"
                 },
                 {
-                    "request_id": 159,
+                    "request_id": "RQ-2026-0159",
                     "reference": "RQ-2026-0159",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -1743,7 +1743,7 @@
                     "at": "2026-02-11 15:33"
                 },
                 {
-                    "request_id": 87,
+                    "request_id": "RQ-2026-0087",
                     "reference": "RQ-2026-0087",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -1754,7 +1754,7 @@
                     "at": "2026-02-10 17:10"
                 },
                 {
-                    "request_id": 15,
+                    "request_id": "RQ-2026-0015",
                     "reference": "RQ-2026-0015",
                     "type": "computer",
                     "outcome": "rejected",
@@ -1765,7 +1765,7 @@
                     "at": "2026-02-09 08:47"
                 },
                 {
-                    "request_id": 136,
+                    "request_id": "RQ-2026-0136",
                     "reference": "RQ-2026-0136",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -1776,7 +1776,7 @@
                     "at": "2026-02-08 14:57"
                 },
                 {
-                    "request_id": 64,
+                    "request_id": "RQ-2026-0064",
                     "reference": "RQ-2026-0064",
                     "type": "computer",
                     "outcome": "not_delivered",
@@ -1787,7 +1787,7 @@
                     "at": "2026-02-07 16:34"
                 },
                 {
-                    "request_id": 93,
+                    "request_id": "RQ-2026-0093",
                     "reference": "RQ-2026-0093",
                     "type": "email",
                     "outcome": "rejected",
@@ -1798,7 +1798,7 @@
                     "at": "2026-01-19 10:22"
                 },
                 {
-                    "request_id": 21,
+                    "request_id": "RQ-2026-0021",
                     "reference": "RQ-2026-0021",
                     "type": "software",
                     "outcome": "rejected",
@@ -1809,7 +1809,7 @@
                     "at": "2026-01-18 11:59"
                 },
                 {
-                    "request_id": 142,
+                    "request_id": "RQ-2026-0142",
                     "reference": "RQ-2026-0142",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -1820,7 +1820,7 @@
                     "at": "2026-01-17 08:09"
                 },
                 {
-                    "request_id": 70,
+                    "request_id": "RQ-2026-0070",
                     "reference": "RQ-2026-0070",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -1989,7 +1989,7 @@
         "stuck": {
             "left": [
                 {
-                    "request_id": 68,
+                    "request_id": "RQ-2026-0068",
                     "reference": "RQ-2026-0068",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -2006,7 +2006,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 140,
+                    "request_id": "RQ-2026-0140",
                     "reference": "RQ-2026-0140",
                     "type": "software",
                     "label": "Rung 2",
@@ -2023,7 +2023,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 62,
+                    "request_id": "RQ-2026-0062",
                     "reference": "RQ-2026-0062",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -2040,7 +2040,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 56,
+                    "request_id": "RQ-2026-0056",
                     "reference": "RQ-2026-0056",
                     "type": "software",
                     "label": "",
@@ -2057,7 +2057,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 128,
+                    "request_id": "RQ-2026-0128",
                     "reference": "RQ-2026-0128",
                     "type": "email",
                     "label": "Rung 2",
@@ -2074,7 +2074,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 44,
+                    "request_id": "RQ-2026-0044",
                     "reference": "RQ-2026-0044",
                     "type": "email",
                     "label": "Rung 2",
@@ -2091,7 +2091,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 116,
+                    "request_id": "RQ-2026-0116",
                     "reference": "RQ-2026-0116",
                     "type": "fileshare",
                     "label": "",
@@ -2108,7 +2108,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 38,
+                    "request_id": "RQ-2026-0038",
                     "reference": "RQ-2026-0038",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -2125,7 +2125,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 110,
+                    "request_id": "RQ-2026-0110",
                     "reference": "RQ-2026-0110",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -2142,7 +2142,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 32,
+                    "request_id": "RQ-2026-0032",
                     "reference": "RQ-2026-0032",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -2159,7 +2159,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 104,
+                    "request_id": "RQ-2026-0104",
                     "reference": "RQ-2026-0104",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -2176,7 +2176,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 20,
+                    "request_id": "RQ-2026-0020",
                     "reference": "RQ-2026-0020",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -2193,7 +2193,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 14,
+                    "request_id": "RQ-2026-0014",
                     "reference": "RQ-2026-0014",
                     "type": "software",
                     "label": "Rung 2",
@@ -2210,7 +2210,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 86,
+                    "request_id": "RQ-2026-0086",
                     "reference": "RQ-2026-0086",
                     "type": "email",
                     "label": "",
@@ -2227,7 +2227,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 158,
+                    "request_id": "RQ-2026-0158",
                     "reference": "RQ-2026-0158",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -2244,7 +2244,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 80,
+                    "request_id": "RQ-2026-0080",
                     "reference": "RQ-2026-0080",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -2261,7 +2261,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 152,
+                    "request_id": "RQ-2026-0152",
                     "reference": "RQ-2026-0152",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -2280,7 +2280,7 @@
             ],
             "no_account": [
                 {
-                    "request_id": 122,
+                    "request_id": "RQ-2026-0122",
                     "reference": "RQ-2026-0122",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -2297,7 +2297,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 26,
+                    "request_id": "RQ-2026-0026",
                     "reference": "RQ-2026-0026",
                     "type": "cctv",
                     "label": "",
@@ -2314,7 +2314,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 98,
+                    "request_id": "RQ-2026-0098",
                     "reference": "RQ-2026-0098",
                     "type": "software",
                     "label": "Rung 2",
@@ -2331,7 +2331,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 2,
+                    "request_id": "RQ-2026-0002",
                     "reference": "RQ-2026-0002",
                     "type": "email",
                     "label": "Rung 2",
@@ -2348,7 +2348,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 74,
+                    "request_id": "RQ-2026-0074",
                     "reference": "RQ-2026-0074",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -2365,7 +2365,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 146,
+                    "request_id": "RQ-2026-0146",
                     "reference": "RQ-2026-0146",
                     "type": "mobile",
                     "label": "",
@@ -2384,7 +2384,7 @@
             ],
             "over7": [
                 {
-                    "request_id": 43,
+                    "request_id": "RQ-2026-0043",
                     "reference": "RQ-2026-0043",
                     "type": "computer",
                     "label": "Rung 1",
@@ -2401,7 +2401,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 115,
+                    "request_id": "RQ-2026-0115",
                     "reference": "RQ-2026-0115",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -2418,7 +2418,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 134,
+                    "request_id": "RQ-2026-0134",
                     "reference": "RQ-2026-0134",
                     "type": "computer",
                     "label": "Rung 2",
@@ -2435,7 +2435,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 37,
+                    "request_id": "RQ-2026-0037",
                     "reference": "RQ-2026-0037",
                     "type": "email",
                     "label": "Rung 1",
@@ -2452,7 +2452,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 109,
+                    "request_id": "RQ-2026-0109",
                     "reference": "RQ-2026-0109",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -2469,7 +2469,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -2486,7 +2486,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 31,
+                    "request_id": "RQ-2026-0031",
                     "reference": "RQ-2026-0031",
                     "type": "mailgroup",
                     "label": "",
@@ -2503,7 +2503,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 103,
+                    "request_id": "RQ-2026-0103",
                     "reference": "RQ-2026-0103",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -2520,7 +2520,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 50,
+                    "request_id": "RQ-2026-0050",
                     "reference": "RQ-2026-0050",
                     "type": "computer",
                     "label": "Rung 2",
@@ -2537,7 +2537,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 25,
+                    "request_id": "RQ-2026-0025",
                     "reference": "RQ-2026-0025",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -2554,7 +2554,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 97,
+                    "request_id": "RQ-2026-0097",
                     "reference": "RQ-2026-0097",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -2571,7 +2571,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 19,
+                    "request_id": "RQ-2026-0019",
                     "reference": "RQ-2026-0019",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -2588,7 +2588,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -2605,7 +2605,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 13,
+                    "request_id": "RQ-2026-0013",
                     "reference": "RQ-2026-0013",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -2622,7 +2622,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 85,
+                    "request_id": "RQ-2026-0085",
                     "reference": "RQ-2026-0085",
                     "type": "computer",
                     "label": "Rung 1",
@@ -2639,7 +2639,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 157,
+                    "request_id": "RQ-2026-0157",
                     "reference": "RQ-2026-0157",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -2656,7 +2656,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 1,
+                    "request_id": "RQ-2026-0001",
                     "reference": "RQ-2026-0001",
                     "type": "computer",
                     "label": "",
@@ -2673,7 +2673,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -2690,7 +2690,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 79,
+                    "request_id": "RQ-2026-0079",
                     "reference": "RQ-2026-0079",
                     "type": "email",
                     "label": "Rung 1",
@@ -2707,7 +2707,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 151,
+                    "request_id": "RQ-2026-0151",
                     "reference": "RQ-2026-0151",
                     "type": "fileshare",
                     "label": "",
@@ -2724,7 +2724,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 73,
+                    "request_id": "RQ-2026-0073",
                     "reference": "RQ-2026-0073",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -2741,7 +2741,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 145,
+                    "request_id": "RQ-2026-0145",
                     "reference": "RQ-2026-0145",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -2758,7 +2758,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 92,
+                    "request_id": "RQ-2026-0092",
                     "reference": "RQ-2026-0092",
                     "type": "computer",
                     "label": "Rung 2",
@@ -2775,7 +2775,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 139,
+                    "request_id": "RQ-2026-0139",
                     "reference": "RQ-2026-0139",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -2792,7 +2792,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 61,
+                    "request_id": "RQ-2026-0061",
                     "reference": "RQ-2026-0061",
                     "type": "cctv",
                     "label": "",
@@ -2809,7 +2809,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 8,
+                    "request_id": "RQ-2026-0008",
                     "reference": "RQ-2026-0008",
                     "type": "computer",
                     "label": "Rung 2",
@@ -2826,7 +2826,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 55,
+                    "request_id": "RQ-2026-0055",
                     "reference": "RQ-2026-0055",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -2843,7 +2843,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 127,
+                    "request_id": "RQ-2026-0127",
                     "reference": "RQ-2026-0127",
                     "type": "computer",
                     "label": "Rung 1",
@@ -2862,7 +2862,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -2879,7 +2879,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 121,
+                    "request_id": "RQ-2026-0121",
                     "reference": "RQ-2026-0121",
                     "type": "email",
                     "label": "",
@@ -2896,7 +2896,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 67,
+                    "request_id": "RQ-2026-0067",
                     "reference": "RQ-2026-0067",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -3223,7 +3223,7 @@
             },
             "rows": [
                 {
-                    "request_id": 99,
+                    "request_id": "RQ-2026-0099",
                     "reference": "RQ-2026-0099",
                     "type": "computer",
                     "outcome": "rejected",
@@ -3234,7 +3234,7 @@
                     "at": "2026-09-19 13:34"
                 },
                 {
-                    "request_id": 27,
+                    "request_id": "RQ-2026-0027",
                     "reference": "RQ-2026-0027",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -3245,7 +3245,7 @@
                     "at": "2026-09-18 15:11"
                 },
                 {
-                    "request_id": 148,
+                    "request_id": "RQ-2026-0148",
                     "reference": "RQ-2026-0148",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -3256,7 +3256,7 @@
                     "at": "2026-09-17 11:21"
                 },
                 {
-                    "request_id": 76,
+                    "request_id": "RQ-2026-0076",
                     "reference": "RQ-2026-0076",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -3267,7 +3267,7 @@
                     "at": "2026-09-16 12:58"
                 },
                 {
-                    "request_id": 4,
+                    "request_id": "RQ-2026-0004",
                     "reference": "RQ-2026-0004",
                     "type": "fileshare",
                     "outcome": "not_delivered",
@@ -3278,7 +3278,7 @@
                     "at": "2026-09-15 14:35"
                 },
                 {
-                    "request_id": 105,
+                    "request_id": "RQ-2026-0105",
                     "reference": "RQ-2026-0105",
                     "type": "software",
                     "outcome": "rejected",
@@ -3289,7 +3289,7 @@
                     "at": "2026-08-28 16:46"
                 },
                 {
-                    "request_id": 33,
+                    "request_id": "RQ-2026-0033",
                     "reference": "RQ-2026-0033",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -3300,7 +3300,7 @@
                     "at": "2026-08-27 08:23"
                 },
                 {
-                    "request_id": 154,
+                    "request_id": "RQ-2026-0154",
                     "reference": "RQ-2026-0154",
                     "type": "software",
                     "outcome": "not_delivered",
@@ -3311,7 +3311,7 @@
                     "at": "2026-08-26 14:33"
                 },
                 {
-                    "request_id": 82,
+                    "request_id": "RQ-2026-0082",
                     "reference": "RQ-2026-0082",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -3322,7 +3322,7 @@
                     "at": "2026-08-25 16:10"
                 },
                 {
-                    "request_id": 10,
+                    "request_id": "RQ-2026-0010",
                     "reference": "RQ-2026-0010",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -3333,7 +3333,7 @@
                     "at": "2026-08-24 17:47"
                 },
                 {
-                    "request_id": 111,
+                    "request_id": "RQ-2026-0111",
                     "reference": "RQ-2026-0111",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -3344,7 +3344,7 @@
                     "at": "2026-08-06 09:58"
                 },
                 {
-                    "request_id": 39,
+                    "request_id": "RQ-2026-0039",
                     "reference": "RQ-2026-0039",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -3355,7 +3355,7 @@
                     "at": "2026-08-05 11:35"
                 },
                 {
-                    "request_id": 160,
+                    "request_id": "RQ-2026-0160",
                     "reference": "RQ-2026-0160",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -3366,7 +3366,7 @@
                     "at": "2026-08-04 17:45"
                 },
                 {
-                    "request_id": 88,
+                    "request_id": "RQ-2026-0088",
                     "reference": "RQ-2026-0088",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -3377,7 +3377,7 @@
                     "at": "2026-08-03 09:22"
                 },
                 {
-                    "request_id": 16,
+                    "request_id": "RQ-2026-0016",
                     "reference": "RQ-2026-0016",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -3388,7 +3388,7 @@
                     "at": "2026-08-02 10:59"
                 },
                 {
-                    "request_id": 117,
+                    "request_id": "RQ-2026-0117",
                     "reference": "RQ-2026-0117",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -3399,7 +3399,7 @@
                     "at": "2026-07-15 13:10"
                 },
                 {
-                    "request_id": 45,
+                    "request_id": "RQ-2026-0045",
                     "reference": "RQ-2026-0045",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -3410,7 +3410,7 @@
                     "at": "2026-07-14 14:47"
                 },
                 {
-                    "request_id": 94,
+                    "request_id": "RQ-2026-0094",
                     "reference": "RQ-2026-0094",
                     "type": "mailgroup",
                     "outcome": "not_delivered",
@@ -3421,7 +3421,7 @@
                     "at": "2026-07-12 12:34"
                 },
                 {
-                    "request_id": 22,
+                    "request_id": "RQ-2026-0022",
                     "reference": "RQ-2026-0022",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -3432,7 +3432,7 @@
                     "at": "2026-07-11 14:11"
                 },
                 {
-                    "request_id": 123,
+                    "request_id": "RQ-2026-0123",
                     "reference": "RQ-2026-0123",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -3443,7 +3443,7 @@
                     "at": "2026-06-23 16:21"
                 },
                 {
-                    "request_id": 51,
+                    "request_id": "RQ-2026-0051",
                     "reference": "RQ-2026-0051",
                     "type": "email",
                     "outcome": "rejected",
@@ -3454,7 +3454,7 @@
                     "at": "2026-06-22 17:59"
                 },
                 {
-                    "request_id": 100,
+                    "request_id": "RQ-2026-0100",
                     "reference": "RQ-2026-0100",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -3465,7 +3465,7 @@
                     "at": "2026-06-20 15:46"
                 },
                 {
-                    "request_id": 28,
+                    "request_id": "RQ-2026-0028",
                     "reference": "RQ-2026-0028",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -3476,7 +3476,7 @@
                     "at": "2026-06-19 17:23"
                 },
                 {
-                    "request_id": 129,
+                    "request_id": "RQ-2026-0129",
                     "reference": "RQ-2026-0129",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -3487,7 +3487,7 @@
                     "at": "2026-06-01 09:33"
                 },
                 {
-                    "request_id": 57,
+                    "request_id": "RQ-2026-0057",
                     "reference": "RQ-2026-0057",
                     "type": "computer",
                     "outcome": "rejected",
@@ -3498,7 +3498,7 @@
                     "at": "2026-05-31 11:11"
                 },
                 {
-                    "request_id": 106,
+                    "request_id": "RQ-2026-0106",
                     "reference": "RQ-2026-0106",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -3509,7 +3509,7 @@
                     "at": "2026-05-29 08:58"
                 },
                 {
-                    "request_id": 34,
+                    "request_id": "RQ-2026-0034",
                     "reference": "RQ-2026-0034",
                     "type": "mobile",
                     "outcome": "not_delivered",
@@ -3520,7 +3520,7 @@
                     "at": "2026-05-28 10:35"
                 },
                 {
-                    "request_id": 135,
+                    "request_id": "RQ-2026-0135",
                     "reference": "RQ-2026-0135",
                     "type": "email",
                     "outcome": "rejected",
@@ -3531,7 +3531,7 @@
                     "at": "2026-05-10 12:45"
                 },
                 {
-                    "request_id": 63,
+                    "request_id": "RQ-2026-0063",
                     "reference": "RQ-2026-0063",
                     "type": "software",
                     "outcome": "rejected",
@@ -3542,7 +3542,7 @@
                     "at": "2026-05-09 14:22"
                 },
                 {
-                    "request_id": 112,
+                    "request_id": "RQ-2026-0112",
                     "reference": "RQ-2026-0112",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -3553,7 +3553,7 @@
                     "at": "2026-05-07 12:10"
                 },
                 {
-                    "request_id": 40,
+                    "request_id": "RQ-2026-0040",
                     "reference": "RQ-2026-0040",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -3564,7 +3564,7 @@
                     "at": "2026-05-06 13:47"
                 },
                 {
-                    "request_id": 141,
+                    "request_id": "RQ-2026-0141",
                     "reference": "RQ-2026-0141",
                     "type": "computer",
                     "outcome": "rejected",
@@ -3575,7 +3575,7 @@
                     "at": "2026-04-18 15:57"
                 },
                 {
-                    "request_id": 69,
+                    "request_id": "RQ-2026-0069",
                     "reference": "RQ-2026-0069",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -3586,7 +3586,7 @@
                     "at": "2026-04-17 17:34"
                 },
                 {
-                    "request_id": 118,
+                    "request_id": "RQ-2026-0118",
                     "reference": "RQ-2026-0118",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -3597,7 +3597,7 @@
                     "at": "2026-04-15 15:22"
                 },
                 {
-                    "request_id": 46,
+                    "request_id": "RQ-2026-0046",
                     "reference": "RQ-2026-0046",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -3608,7 +3608,7 @@
                     "at": "2026-04-14 16:59"
                 },
                 {
-                    "request_id": 147,
+                    "request_id": "RQ-2026-0147",
                     "reference": "RQ-2026-0147",
                     "type": "software",
                     "outcome": "rejected",
@@ -3619,7 +3619,7 @@
                     "at": "2026-03-27 09:09"
                 },
                 {
-                    "request_id": 75,
+                    "request_id": "RQ-2026-0075",
                     "reference": "RQ-2026-0075",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -3630,7 +3630,7 @@
                     "at": "2026-03-26 10:46"
                 },
                 {
-                    "request_id": 3,
+                    "request_id": "RQ-2026-0003",
                     "reference": "RQ-2026-0003",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -3641,7 +3641,7 @@
                     "at": "2026-03-25 12:23"
                 },
                 {
-                    "request_id": 124,
+                    "request_id": "RQ-2026-0124",
                     "reference": "RQ-2026-0124",
                     "type": "cctv",
                     "outcome": "not_delivered",
@@ -3652,7 +3652,7 @@
                     "at": "2026-03-24 08:33"
                 },
                 {
-                    "request_id": 52,
+                    "request_id": "RQ-2026-0052",
                     "reference": "RQ-2026-0052",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -3663,7 +3663,7 @@
                     "at": "2026-03-23 10:11"
                 },
                 {
-                    "request_id": 153,
+                    "request_id": "RQ-2026-0153",
                     "reference": "RQ-2026-0153",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -3674,7 +3674,7 @@
                     "at": "2026-03-05 12:21"
                 },
                 {
-                    "request_id": 81,
+                    "request_id": "RQ-2026-0081",
                     "reference": "RQ-2026-0081",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -3685,7 +3685,7 @@
                     "at": "2026-03-04 13:58"
                 },
                 {
-                    "request_id": 9,
+                    "request_id": "RQ-2026-0009",
                     "reference": "RQ-2026-0009",
                     "type": "email",
                     "outcome": "rejected",
@@ -3696,7 +3696,7 @@
                     "at": "2026-03-03 15:35"
                 },
                 {
-                    "request_id": 130,
+                    "request_id": "RQ-2026-0130",
                     "reference": "RQ-2026-0130",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -3707,7 +3707,7 @@
                     "at": "2026-03-02 11:45"
                 },
                 {
-                    "request_id": 58,
+                    "request_id": "RQ-2026-0058",
                     "reference": "RQ-2026-0058",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -3718,7 +3718,7 @@
                     "at": "2026-03-01 13:23"
                 },
                 {
-                    "request_id": 159,
+                    "request_id": "RQ-2026-0159",
                     "reference": "RQ-2026-0159",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -3729,7 +3729,7 @@
                     "at": "2026-02-11 15:33"
                 },
                 {
-                    "request_id": 87,
+                    "request_id": "RQ-2026-0087",
                     "reference": "RQ-2026-0087",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -3740,7 +3740,7 @@
                     "at": "2026-02-10 17:10"
                 },
                 {
-                    "request_id": 15,
+                    "request_id": "RQ-2026-0015",
                     "reference": "RQ-2026-0015",
                     "type": "computer",
                     "outcome": "rejected",
@@ -3751,7 +3751,7 @@
                     "at": "2026-02-09 08:47"
                 },
                 {
-                    "request_id": 136,
+                    "request_id": "RQ-2026-0136",
                     "reference": "RQ-2026-0136",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -3762,7 +3762,7 @@
                     "at": "2026-02-08 14:57"
                 },
                 {
-                    "request_id": 64,
+                    "request_id": "RQ-2026-0064",
                     "reference": "RQ-2026-0064",
                     "type": "computer",
                     "outcome": "not_delivered",
@@ -3773,7 +3773,7 @@
                     "at": "2026-02-07 16:34"
                 },
                 {
-                    "request_id": 93,
+                    "request_id": "RQ-2026-0093",
                     "reference": "RQ-2026-0093",
                     "type": "email",
                     "outcome": "rejected",
@@ -3784,7 +3784,7 @@
                     "at": "2026-01-19 10:22"
                 },
                 {
-                    "request_id": 21,
+                    "request_id": "RQ-2026-0021",
                     "reference": "RQ-2026-0021",
                     "type": "software",
                     "outcome": "rejected",
@@ -3795,7 +3795,7 @@
                     "at": "2026-01-18 11:59"
                 },
                 {
-                    "request_id": 142,
+                    "request_id": "RQ-2026-0142",
                     "reference": "RQ-2026-0142",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -3806,7 +3806,7 @@
                     "at": "2026-01-17 08:09"
                 },
                 {
-                    "request_id": 70,
+                    "request_id": "RQ-2026-0070",
                     "reference": "RQ-2026-0070",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -3977,7 +3977,7 @@
             "no_account": [],
             "over7": [
                 {
-                    "request_id": 43,
+                    "request_id": "RQ-2026-0043",
                     "reference": "RQ-2026-0043",
                     "type": "computer",
                     "label": "Rung 1",
@@ -3994,7 +3994,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 134,
+                    "request_id": "RQ-2026-0134",
                     "reference": "RQ-2026-0134",
                     "type": "computer",
                     "label": "Rung 2",
@@ -4011,7 +4011,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 50,
+                    "request_id": "RQ-2026-0050",
                     "reference": "RQ-2026-0050",
                     "type": "computer",
                     "label": "Rung 2",
@@ -4028,7 +4028,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 85,
+                    "request_id": "RQ-2026-0085",
                     "reference": "RQ-2026-0085",
                     "type": "computer",
                     "label": "Rung 1",
@@ -4045,7 +4045,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 1,
+                    "request_id": "RQ-2026-0001",
                     "reference": "RQ-2026-0001",
                     "type": "computer",
                     "label": "",
@@ -4062,7 +4062,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 92,
+                    "request_id": "RQ-2026-0092",
                     "reference": "RQ-2026-0092",
                     "type": "computer",
                     "label": "Rung 2",
@@ -4079,7 +4079,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 8,
+                    "request_id": "RQ-2026-0008",
                     "reference": "RQ-2026-0008",
                     "type": "computer",
                     "label": "Rung 2",
@@ -4096,7 +4096,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 127,
+                    "request_id": "RQ-2026-0127",
                     "reference": "RQ-2026-0127",
                     "type": "computer",
                     "label": "Rung 1",
@@ -4220,7 +4220,7 @@
             },
             "rows": [
                 {
-                    "request_id": 99,
+                    "request_id": "RQ-2026-0099",
                     "reference": "RQ-2026-0099",
                     "type": "computer",
                     "outcome": "rejected",
@@ -4231,7 +4231,7 @@
                     "at": "2026-09-19 13:34"
                 },
                 {
-                    "request_id": 148,
+                    "request_id": "RQ-2026-0148",
                     "reference": "RQ-2026-0148",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -4242,7 +4242,7 @@
                     "at": "2026-09-17 11:21"
                 },
                 {
-                    "request_id": 22,
+                    "request_id": "RQ-2026-0022",
                     "reference": "RQ-2026-0022",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -4253,7 +4253,7 @@
                     "at": "2026-07-11 14:11"
                 },
                 {
-                    "request_id": 57,
+                    "request_id": "RQ-2026-0057",
                     "reference": "RQ-2026-0057",
                     "type": "computer",
                     "outcome": "rejected",
@@ -4264,7 +4264,7 @@
                     "at": "2026-05-31 11:11"
                 },
                 {
-                    "request_id": 106,
+                    "request_id": "RQ-2026-0106",
                     "reference": "RQ-2026-0106",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -4275,7 +4275,7 @@
                     "at": "2026-05-29 08:58"
                 },
                 {
-                    "request_id": 141,
+                    "request_id": "RQ-2026-0141",
                     "reference": "RQ-2026-0141",
                     "type": "computer",
                     "outcome": "rejected",
@@ -4286,7 +4286,7 @@
                     "at": "2026-04-18 15:57"
                 },
                 {
-                    "request_id": 15,
+                    "request_id": "RQ-2026-0015",
                     "reference": "RQ-2026-0015",
                     "type": "computer",
                     "outcome": "rejected",
@@ -4297,7 +4297,7 @@
                     "at": "2026-02-09 08:47"
                 },
                 {
-                    "request_id": 64,
+                    "request_id": "RQ-2026-0064",
                     "reference": "RQ-2026-0064",
                     "type": "computer",
                     "outcome": "not_delivered",
@@ -4432,7 +4432,7 @@
         "stuck": {
             "left": [
                 {
-                    "request_id": 38,
+                    "request_id": "RQ-2026-0038",
                     "reference": "RQ-2026-0038",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -4449,7 +4449,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 80,
+                    "request_id": "RQ-2026-0080",
                     "reference": "RQ-2026-0080",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -4468,7 +4468,7 @@
             ],
             "no_account": [
                 {
-                    "request_id": 122,
+                    "request_id": "RQ-2026-0122",
                     "reference": "RQ-2026-0122",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -4487,7 +4487,7 @@
             ],
             "over7": [
                 {
-                    "request_id": 115,
+                    "request_id": "RQ-2026-0115",
                     "reference": "RQ-2026-0115",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -4504,7 +4504,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 31,
+                    "request_id": "RQ-2026-0031",
                     "reference": "RQ-2026-0031",
                     "type": "mailgroup",
                     "label": "",
@@ -4521,7 +4521,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 157,
+                    "request_id": "RQ-2026-0157",
                     "reference": "RQ-2026-0157",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -4538,7 +4538,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 73,
+                    "request_id": "RQ-2026-0073",
                     "reference": "RQ-2026-0073",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -4749,7 +4749,7 @@
             },
             "rows": [
                 {
-                    "request_id": 10,
+                    "request_id": "RQ-2026-0010",
                     "reference": "RQ-2026-0010",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -4760,7 +4760,7 @@
                     "at": "2026-08-24 17:47"
                 },
                 {
-                    "request_id": 45,
+                    "request_id": "RQ-2026-0045",
                     "reference": "RQ-2026-0045",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -4771,7 +4771,7 @@
                     "at": "2026-07-14 14:47"
                 },
                 {
-                    "request_id": 94,
+                    "request_id": "RQ-2026-0094",
                     "reference": "RQ-2026-0094",
                     "type": "mailgroup",
                     "outcome": "not_delivered",
@@ -4782,7 +4782,7 @@
                     "at": "2026-07-12 12:34"
                 },
                 {
-                    "request_id": 129,
+                    "request_id": "RQ-2026-0129",
                     "reference": "RQ-2026-0129",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -4793,7 +4793,7 @@
                     "at": "2026-06-01 09:33"
                 },
                 {
-                    "request_id": 3,
+                    "request_id": "RQ-2026-0003",
                     "reference": "RQ-2026-0003",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -4804,7 +4804,7 @@
                     "at": "2026-03-25 12:23"
                 },
                 {
-                    "request_id": 52,
+                    "request_id": "RQ-2026-0052",
                     "reference": "RQ-2026-0052",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -4815,7 +4815,7 @@
                     "at": "2026-03-23 10:11"
                 },
                 {
-                    "request_id": 87,
+                    "request_id": "RQ-2026-0087",
                     "reference": "RQ-2026-0087",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -4826,7 +4826,7 @@
                     "at": "2026-02-10 17:10"
                 },
                 {
-                    "request_id": 136,
+                    "request_id": "RQ-2026-0136",
                     "reference": "RQ-2026-0136",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -4952,7 +4952,7 @@
         "stuck": {
             "left": [
                 {
-                    "request_id": 68,
+                    "request_id": "RQ-2026-0068",
                     "reference": "RQ-2026-0068",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -4969,7 +4969,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 140,
+                    "request_id": "RQ-2026-0140",
                     "reference": "RQ-2026-0140",
                     "type": "software",
                     "label": "Rung 2",
@@ -4986,7 +4986,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 62,
+                    "request_id": "RQ-2026-0062",
                     "reference": "RQ-2026-0062",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -5003,7 +5003,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 56,
+                    "request_id": "RQ-2026-0056",
                     "reference": "RQ-2026-0056",
                     "type": "software",
                     "label": "",
@@ -5020,7 +5020,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 128,
+                    "request_id": "RQ-2026-0128",
                     "reference": "RQ-2026-0128",
                     "type": "email",
                     "label": "Rung 2",
@@ -5037,7 +5037,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 44,
+                    "request_id": "RQ-2026-0044",
                     "reference": "RQ-2026-0044",
                     "type": "email",
                     "label": "Rung 2",
@@ -5054,7 +5054,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 116,
+                    "request_id": "RQ-2026-0116",
                     "reference": "RQ-2026-0116",
                     "type": "fileshare",
                     "label": "",
@@ -5071,7 +5071,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 38,
+                    "request_id": "RQ-2026-0038",
                     "reference": "RQ-2026-0038",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -5088,7 +5088,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 110,
+                    "request_id": "RQ-2026-0110",
                     "reference": "RQ-2026-0110",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -5105,7 +5105,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 32,
+                    "request_id": "RQ-2026-0032",
                     "reference": "RQ-2026-0032",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -5122,7 +5122,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 104,
+                    "request_id": "RQ-2026-0104",
                     "reference": "RQ-2026-0104",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -5139,7 +5139,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 20,
+                    "request_id": "RQ-2026-0020",
                     "reference": "RQ-2026-0020",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -5156,7 +5156,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 14,
+                    "request_id": "RQ-2026-0014",
                     "reference": "RQ-2026-0014",
                     "type": "software",
                     "label": "Rung 2",
@@ -5173,7 +5173,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 86,
+                    "request_id": "RQ-2026-0086",
                     "reference": "RQ-2026-0086",
                     "type": "email",
                     "label": "",
@@ -5190,7 +5190,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 158,
+                    "request_id": "RQ-2026-0158",
                     "reference": "RQ-2026-0158",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -5207,7 +5207,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 80,
+                    "request_id": "RQ-2026-0080",
                     "reference": "RQ-2026-0080",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -5224,7 +5224,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 152,
+                    "request_id": "RQ-2026-0152",
                     "reference": "RQ-2026-0152",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -5243,7 +5243,7 @@
             ],
             "no_account": [
                 {
-                    "request_id": 122,
+                    "request_id": "RQ-2026-0122",
                     "reference": "RQ-2026-0122",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -5260,7 +5260,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 26,
+                    "request_id": "RQ-2026-0026",
                     "reference": "RQ-2026-0026",
                     "type": "cctv",
                     "label": "",
@@ -5277,7 +5277,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 98,
+                    "request_id": "RQ-2026-0098",
                     "reference": "RQ-2026-0098",
                     "type": "software",
                     "label": "Rung 2",
@@ -5294,7 +5294,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 2,
+                    "request_id": "RQ-2026-0002",
                     "reference": "RQ-2026-0002",
                     "type": "email",
                     "label": "Rung 2",
@@ -5311,7 +5311,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 74,
+                    "request_id": "RQ-2026-0074",
                     "reference": "RQ-2026-0074",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -5328,7 +5328,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 146,
+                    "request_id": "RQ-2026-0146",
                     "reference": "RQ-2026-0146",
                     "type": "mobile",
                     "label": "",
@@ -5347,7 +5347,7 @@
             ],
             "over7": [
                 {
-                    "request_id": 43,
+                    "request_id": "RQ-2026-0043",
                     "reference": "RQ-2026-0043",
                     "type": "computer",
                     "label": "Rung 1",
@@ -5364,7 +5364,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 115,
+                    "request_id": "RQ-2026-0115",
                     "reference": "RQ-2026-0115",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -5381,7 +5381,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 134,
+                    "request_id": "RQ-2026-0134",
                     "reference": "RQ-2026-0134",
                     "type": "computer",
                     "label": "Rung 2",
@@ -5398,7 +5398,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 37,
+                    "request_id": "RQ-2026-0037",
                     "reference": "RQ-2026-0037",
                     "type": "email",
                     "label": "Rung 1",
@@ -5415,7 +5415,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 109,
+                    "request_id": "RQ-2026-0109",
                     "reference": "RQ-2026-0109",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -5432,7 +5432,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -5449,7 +5449,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 31,
+                    "request_id": "RQ-2026-0031",
                     "reference": "RQ-2026-0031",
                     "type": "mailgroup",
                     "label": "",
@@ -5466,7 +5466,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 103,
+                    "request_id": "RQ-2026-0103",
                     "reference": "RQ-2026-0103",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -5483,7 +5483,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 50,
+                    "request_id": "RQ-2026-0050",
                     "reference": "RQ-2026-0050",
                     "type": "computer",
                     "label": "Rung 2",
@@ -5500,7 +5500,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 25,
+                    "request_id": "RQ-2026-0025",
                     "reference": "RQ-2026-0025",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -5517,7 +5517,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 97,
+                    "request_id": "RQ-2026-0097",
                     "reference": "RQ-2026-0097",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -5534,7 +5534,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 19,
+                    "request_id": "RQ-2026-0019",
                     "reference": "RQ-2026-0019",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -5551,7 +5551,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -5568,7 +5568,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 13,
+                    "request_id": "RQ-2026-0013",
                     "reference": "RQ-2026-0013",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -5585,7 +5585,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 85,
+                    "request_id": "RQ-2026-0085",
                     "reference": "RQ-2026-0085",
                     "type": "computer",
                     "label": "Rung 1",
@@ -5602,7 +5602,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 157,
+                    "request_id": "RQ-2026-0157",
                     "reference": "RQ-2026-0157",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -5619,7 +5619,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 1,
+                    "request_id": "RQ-2026-0001",
                     "reference": "RQ-2026-0001",
                     "type": "computer",
                     "label": "",
@@ -5636,7 +5636,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -5653,7 +5653,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 79,
+                    "request_id": "RQ-2026-0079",
                     "reference": "RQ-2026-0079",
                     "type": "email",
                     "label": "Rung 1",
@@ -5670,7 +5670,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 151,
+                    "request_id": "RQ-2026-0151",
                     "reference": "RQ-2026-0151",
                     "type": "fileshare",
                     "label": "",
@@ -5687,7 +5687,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 73,
+                    "request_id": "RQ-2026-0073",
                     "reference": "RQ-2026-0073",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -5704,7 +5704,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 145,
+                    "request_id": "RQ-2026-0145",
                     "reference": "RQ-2026-0145",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -5721,7 +5721,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 92,
+                    "request_id": "RQ-2026-0092",
                     "reference": "RQ-2026-0092",
                     "type": "computer",
                     "label": "Rung 2",
@@ -5738,7 +5738,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 139,
+                    "request_id": "RQ-2026-0139",
                     "reference": "RQ-2026-0139",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -5755,7 +5755,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 61,
+                    "request_id": "RQ-2026-0061",
                     "reference": "RQ-2026-0061",
                     "type": "cctv",
                     "label": "",
@@ -5772,7 +5772,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 8,
+                    "request_id": "RQ-2026-0008",
                     "reference": "RQ-2026-0008",
                     "type": "computer",
                     "label": "Rung 2",
@@ -5789,7 +5789,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 55,
+                    "request_id": "RQ-2026-0055",
                     "reference": "RQ-2026-0055",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -5806,7 +5806,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 127,
+                    "request_id": "RQ-2026-0127",
                     "reference": "RQ-2026-0127",
                     "type": "computer",
                     "label": "Rung 1",
@@ -5825,7 +5825,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -5842,7 +5842,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 121,
+                    "request_id": "RQ-2026-0121",
                     "reference": "RQ-2026-0121",
                     "type": "email",
                     "label": "",
@@ -5859,7 +5859,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 67,
+                    "request_id": "RQ-2026-0067",
                     "reference": "RQ-2026-0067",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -6186,7 +6186,7 @@
             },
             "rows": [
                 {
-                    "request_id": 57,
+                    "request_id": "RQ-2026-0057",
                     "reference": "RQ-2026-0057",
                     "type": "computer",
                     "outcome": "rejected",
@@ -6197,7 +6197,7 @@
                     "at": "2026-05-31 11:11"
                 },
                 {
-                    "request_id": 106,
+                    "request_id": "RQ-2026-0106",
                     "reference": "RQ-2026-0106",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -6208,7 +6208,7 @@
                     "at": "2026-05-29 08:58"
                 },
                 {
-                    "request_id": 34,
+                    "request_id": "RQ-2026-0034",
                     "reference": "RQ-2026-0034",
                     "type": "mobile",
                     "outcome": "not_delivered",
@@ -6219,7 +6219,7 @@
                     "at": "2026-05-28 10:35"
                 },
                 {
-                    "request_id": 135,
+                    "request_id": "RQ-2026-0135",
                     "reference": "RQ-2026-0135",
                     "type": "email",
                     "outcome": "rejected",
@@ -6230,7 +6230,7 @@
                     "at": "2026-05-10 12:45"
                 },
                 {
-                    "request_id": 63,
+                    "request_id": "RQ-2026-0063",
                     "reference": "RQ-2026-0063",
                     "type": "software",
                     "outcome": "rejected",
@@ -6241,7 +6241,7 @@
                     "at": "2026-05-09 14:22"
                 },
                 {
-                    "request_id": 112,
+                    "request_id": "RQ-2026-0112",
                     "reference": "RQ-2026-0112",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -6252,7 +6252,7 @@
                     "at": "2026-05-07 12:10"
                 },
                 {
-                    "request_id": 40,
+                    "request_id": "RQ-2026-0040",
                     "reference": "RQ-2026-0040",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -6263,7 +6263,7 @@
                     "at": "2026-05-06 13:47"
                 },
                 {
-                    "request_id": 141,
+                    "request_id": "RQ-2026-0141",
                     "reference": "RQ-2026-0141",
                     "type": "computer",
                     "outcome": "rejected",
@@ -6274,7 +6274,7 @@
                     "at": "2026-04-18 15:57"
                 },
                 {
-                    "request_id": 69,
+                    "request_id": "RQ-2026-0069",
                     "reference": "RQ-2026-0069",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -6285,7 +6285,7 @@
                     "at": "2026-04-17 17:34"
                 },
                 {
-                    "request_id": 118,
+                    "request_id": "RQ-2026-0118",
                     "reference": "RQ-2026-0118",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -6296,7 +6296,7 @@
                     "at": "2026-04-15 15:22"
                 },
                 {
-                    "request_id": 46,
+                    "request_id": "RQ-2026-0046",
                     "reference": "RQ-2026-0046",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -6307,7 +6307,7 @@
                     "at": "2026-04-14 16:59"
                 },
                 {
-                    "request_id": 147,
+                    "request_id": "RQ-2026-0147",
                     "reference": "RQ-2026-0147",
                     "type": "software",
                     "outcome": "rejected",
@@ -6318,7 +6318,7 @@
                     "at": "2026-03-27 09:09"
                 },
                 {
-                    "request_id": 75,
+                    "request_id": "RQ-2026-0075",
                     "reference": "RQ-2026-0075",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -6329,7 +6329,7 @@
                     "at": "2026-03-26 10:46"
                 },
                 {
-                    "request_id": 3,
+                    "request_id": "RQ-2026-0003",
                     "reference": "RQ-2026-0003",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -6340,7 +6340,7 @@
                     "at": "2026-03-25 12:23"
                 },
                 {
-                    "request_id": 124,
+                    "request_id": "RQ-2026-0124",
                     "reference": "RQ-2026-0124",
                     "type": "cctv",
                     "outcome": "not_delivered",
@@ -6351,7 +6351,7 @@
                     "at": "2026-03-24 08:33"
                 },
                 {
-                    "request_id": 52,
+                    "request_id": "RQ-2026-0052",
                     "reference": "RQ-2026-0052",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -6362,7 +6362,7 @@
                     "at": "2026-03-23 10:11"
                 },
                 {
-                    "request_id": 153,
+                    "request_id": "RQ-2026-0153",
                     "reference": "RQ-2026-0153",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -6373,7 +6373,7 @@
                     "at": "2026-03-05 12:21"
                 },
                 {
-                    "request_id": 81,
+                    "request_id": "RQ-2026-0081",
                     "reference": "RQ-2026-0081",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -6384,7 +6384,7 @@
                     "at": "2026-03-04 13:58"
                 },
                 {
-                    "request_id": 9,
+                    "request_id": "RQ-2026-0009",
                     "reference": "RQ-2026-0009",
                     "type": "email",
                     "outcome": "rejected",
@@ -6395,7 +6395,7 @@
                     "at": "2026-03-03 15:35"
                 },
                 {
-                    "request_id": 130,
+                    "request_id": "RQ-2026-0130",
                     "reference": "RQ-2026-0130",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -6406,7 +6406,7 @@
                     "at": "2026-03-02 11:45"
                 },
                 {
-                    "request_id": 58,
+                    "request_id": "RQ-2026-0058",
                     "reference": "RQ-2026-0058",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -6546,7 +6546,7 @@
         "stuck": {
             "left": [
                 {
-                    "request_id": 68,
+                    "request_id": "RQ-2026-0068",
                     "reference": "RQ-2026-0068",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -6563,7 +6563,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 140,
+                    "request_id": "RQ-2026-0140",
                     "reference": "RQ-2026-0140",
                     "type": "software",
                     "label": "Rung 2",
@@ -6580,7 +6580,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 62,
+                    "request_id": "RQ-2026-0062",
                     "reference": "RQ-2026-0062",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -6597,7 +6597,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 56,
+                    "request_id": "RQ-2026-0056",
                     "reference": "RQ-2026-0056",
                     "type": "software",
                     "label": "",
@@ -6614,7 +6614,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 128,
+                    "request_id": "RQ-2026-0128",
                     "reference": "RQ-2026-0128",
                     "type": "email",
                     "label": "Rung 2",
@@ -6631,7 +6631,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 44,
+                    "request_id": "RQ-2026-0044",
                     "reference": "RQ-2026-0044",
                     "type": "email",
                     "label": "Rung 2",
@@ -6648,7 +6648,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 116,
+                    "request_id": "RQ-2026-0116",
                     "reference": "RQ-2026-0116",
                     "type": "fileshare",
                     "label": "",
@@ -6665,7 +6665,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 38,
+                    "request_id": "RQ-2026-0038",
                     "reference": "RQ-2026-0038",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -6682,7 +6682,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 110,
+                    "request_id": "RQ-2026-0110",
                     "reference": "RQ-2026-0110",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -6699,7 +6699,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 32,
+                    "request_id": "RQ-2026-0032",
                     "reference": "RQ-2026-0032",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -6716,7 +6716,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 104,
+                    "request_id": "RQ-2026-0104",
                     "reference": "RQ-2026-0104",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -6733,7 +6733,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 20,
+                    "request_id": "RQ-2026-0020",
                     "reference": "RQ-2026-0020",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -6750,7 +6750,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 14,
+                    "request_id": "RQ-2026-0014",
                     "reference": "RQ-2026-0014",
                     "type": "software",
                     "label": "Rung 2",
@@ -6767,7 +6767,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 86,
+                    "request_id": "RQ-2026-0086",
                     "reference": "RQ-2026-0086",
                     "type": "email",
                     "label": "",
@@ -6784,7 +6784,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 158,
+                    "request_id": "RQ-2026-0158",
                     "reference": "RQ-2026-0158",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -6801,7 +6801,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 80,
+                    "request_id": "RQ-2026-0080",
                     "reference": "RQ-2026-0080",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -6818,7 +6818,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 152,
+                    "request_id": "RQ-2026-0152",
                     "reference": "RQ-2026-0152",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -6837,7 +6837,7 @@
             ],
             "no_account": [
                 {
-                    "request_id": 122,
+                    "request_id": "RQ-2026-0122",
                     "reference": "RQ-2026-0122",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -6854,7 +6854,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 26,
+                    "request_id": "RQ-2026-0026",
                     "reference": "RQ-2026-0026",
                     "type": "cctv",
                     "label": "",
@@ -6871,7 +6871,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 98,
+                    "request_id": "RQ-2026-0098",
                     "reference": "RQ-2026-0098",
                     "type": "software",
                     "label": "Rung 2",
@@ -6888,7 +6888,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 2,
+                    "request_id": "RQ-2026-0002",
                     "reference": "RQ-2026-0002",
                     "type": "email",
                     "label": "Rung 2",
@@ -6905,7 +6905,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 74,
+                    "request_id": "RQ-2026-0074",
                     "reference": "RQ-2026-0074",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -6922,7 +6922,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 146,
+                    "request_id": "RQ-2026-0146",
                     "reference": "RQ-2026-0146",
                     "type": "mobile",
                     "label": "",
@@ -6941,7 +6941,7 @@
             ],
             "over7": [
                 {
-                    "request_id": 43,
+                    "request_id": "RQ-2026-0043",
                     "reference": "RQ-2026-0043",
                     "type": "computer",
                     "label": "Rung 1",
@@ -6958,7 +6958,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 115,
+                    "request_id": "RQ-2026-0115",
                     "reference": "RQ-2026-0115",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -6975,7 +6975,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 134,
+                    "request_id": "RQ-2026-0134",
                     "reference": "RQ-2026-0134",
                     "type": "computer",
                     "label": "Rung 2",
@@ -6992,7 +6992,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 37,
+                    "request_id": "RQ-2026-0037",
                     "reference": "RQ-2026-0037",
                     "type": "email",
                     "label": "Rung 1",
@@ -7009,7 +7009,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 109,
+                    "request_id": "RQ-2026-0109",
                     "reference": "RQ-2026-0109",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -7026,7 +7026,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -7043,7 +7043,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 31,
+                    "request_id": "RQ-2026-0031",
                     "reference": "RQ-2026-0031",
                     "type": "mailgroup",
                     "label": "",
@@ -7060,7 +7060,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 103,
+                    "request_id": "RQ-2026-0103",
                     "reference": "RQ-2026-0103",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -7077,7 +7077,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 50,
+                    "request_id": "RQ-2026-0050",
                     "reference": "RQ-2026-0050",
                     "type": "computer",
                     "label": "Rung 2",
@@ -7094,7 +7094,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 25,
+                    "request_id": "RQ-2026-0025",
                     "reference": "RQ-2026-0025",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -7111,7 +7111,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 97,
+                    "request_id": "RQ-2026-0097",
                     "reference": "RQ-2026-0097",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -7128,7 +7128,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 19,
+                    "request_id": "RQ-2026-0019",
                     "reference": "RQ-2026-0019",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -7145,7 +7145,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -7162,7 +7162,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 13,
+                    "request_id": "RQ-2026-0013",
                     "reference": "RQ-2026-0013",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -7179,7 +7179,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 85,
+                    "request_id": "RQ-2026-0085",
                     "reference": "RQ-2026-0085",
                     "type": "computer",
                     "label": "Rung 1",
@@ -7196,7 +7196,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 157,
+                    "request_id": "RQ-2026-0157",
                     "reference": "RQ-2026-0157",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -7213,7 +7213,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 1,
+                    "request_id": "RQ-2026-0001",
                     "reference": "RQ-2026-0001",
                     "type": "computer",
                     "label": "",
@@ -7230,7 +7230,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -7247,7 +7247,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 79,
+                    "request_id": "RQ-2026-0079",
                     "reference": "RQ-2026-0079",
                     "type": "email",
                     "label": "Rung 1",
@@ -7264,7 +7264,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 151,
+                    "request_id": "RQ-2026-0151",
                     "reference": "RQ-2026-0151",
                     "type": "fileshare",
                     "label": "",
@@ -7281,7 +7281,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 73,
+                    "request_id": "RQ-2026-0073",
                     "reference": "RQ-2026-0073",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -7298,7 +7298,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 145,
+                    "request_id": "RQ-2026-0145",
                     "reference": "RQ-2026-0145",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -7315,7 +7315,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 92,
+                    "request_id": "RQ-2026-0092",
                     "reference": "RQ-2026-0092",
                     "type": "computer",
                     "label": "Rung 2",
@@ -7332,7 +7332,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 139,
+                    "request_id": "RQ-2026-0139",
                     "reference": "RQ-2026-0139",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -7349,7 +7349,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 61,
+                    "request_id": "RQ-2026-0061",
                     "reference": "RQ-2026-0061",
                     "type": "cctv",
                     "label": "",
@@ -7366,7 +7366,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 8,
+                    "request_id": "RQ-2026-0008",
                     "reference": "RQ-2026-0008",
                     "type": "computer",
                     "label": "Rung 2",
@@ -7383,7 +7383,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 55,
+                    "request_id": "RQ-2026-0055",
                     "reference": "RQ-2026-0055",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -7400,7 +7400,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 127,
+                    "request_id": "RQ-2026-0127",
                     "reference": "RQ-2026-0127",
                     "type": "computer",
                     "label": "Rung 1",
@@ -7419,7 +7419,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -7436,7 +7436,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 121,
+                    "request_id": "RQ-2026-0121",
                     "reference": "RQ-2026-0121",
                     "type": "email",
                     "label": "",
@@ -7453,7 +7453,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 67,
+                    "request_id": "RQ-2026-0067",
                     "reference": "RQ-2026-0067",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -7561,7 +7561,7 @@
         "stuck": {
             "left": [
                 {
-                    "request_id": 68,
+                    "request_id": "RQ-2026-0068",
                     "reference": "RQ-2026-0068",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -7578,7 +7578,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 140,
+                    "request_id": "RQ-2026-0140",
                     "reference": "RQ-2026-0140",
                     "type": "software",
                     "label": "Rung 2",
@@ -7595,7 +7595,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 62,
+                    "request_id": "RQ-2026-0062",
                     "reference": "RQ-2026-0062",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -7612,7 +7612,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 56,
+                    "request_id": "RQ-2026-0056",
                     "reference": "RQ-2026-0056",
                     "type": "software",
                     "label": "",
@@ -7629,7 +7629,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 128,
+                    "request_id": "RQ-2026-0128",
                     "reference": "RQ-2026-0128",
                     "type": "email",
                     "label": "Rung 2",
@@ -7646,7 +7646,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 44,
+                    "request_id": "RQ-2026-0044",
                     "reference": "RQ-2026-0044",
                     "type": "email",
                     "label": "Rung 2",
@@ -7663,7 +7663,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 116,
+                    "request_id": "RQ-2026-0116",
                     "reference": "RQ-2026-0116",
                     "type": "fileshare",
                     "label": "",
@@ -7680,7 +7680,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 38,
+                    "request_id": "RQ-2026-0038",
                     "reference": "RQ-2026-0038",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -7697,7 +7697,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 110,
+                    "request_id": "RQ-2026-0110",
                     "reference": "RQ-2026-0110",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -7714,7 +7714,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 32,
+                    "request_id": "RQ-2026-0032",
                     "reference": "RQ-2026-0032",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -7731,7 +7731,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 104,
+                    "request_id": "RQ-2026-0104",
                     "reference": "RQ-2026-0104",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -7748,7 +7748,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 20,
+                    "request_id": "RQ-2026-0020",
                     "reference": "RQ-2026-0020",
                     "type": "mobile",
                     "label": "Rung 2",
@@ -7765,7 +7765,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 14,
+                    "request_id": "RQ-2026-0014",
                     "reference": "RQ-2026-0014",
                     "type": "software",
                     "label": "Rung 2",
@@ -7782,7 +7782,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 86,
+                    "request_id": "RQ-2026-0086",
                     "reference": "RQ-2026-0086",
                     "type": "email",
                     "label": "",
@@ -7799,7 +7799,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 158,
+                    "request_id": "RQ-2026-0158",
                     "reference": "RQ-2026-0158",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -7816,7 +7816,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 80,
+                    "request_id": "RQ-2026-0080",
                     "reference": "RQ-2026-0080",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -7833,7 +7833,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 152,
+                    "request_id": "RQ-2026-0152",
                     "reference": "RQ-2026-0152",
                     "type": "cctv",
                     "label": "Rung 2",
@@ -7852,7 +7852,7 @@
             ],
             "no_account": [
                 {
-                    "request_id": 122,
+                    "request_id": "RQ-2026-0122",
                     "reference": "RQ-2026-0122",
                     "type": "mailgroup",
                     "label": "Rung 2",
@@ -7869,7 +7869,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 26,
+                    "request_id": "RQ-2026-0026",
                     "reference": "RQ-2026-0026",
                     "type": "cctv",
                     "label": "",
@@ -7886,7 +7886,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 98,
+                    "request_id": "RQ-2026-0098",
                     "reference": "RQ-2026-0098",
                     "type": "software",
                     "label": "Rung 2",
@@ -7903,7 +7903,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 2,
+                    "request_id": "RQ-2026-0002",
                     "reference": "RQ-2026-0002",
                     "type": "email",
                     "label": "Rung 2",
@@ -7920,7 +7920,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 74,
+                    "request_id": "RQ-2026-0074",
                     "reference": "RQ-2026-0074",
                     "type": "fileshare",
                     "label": "Rung 2",
@@ -7937,7 +7937,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 146,
+                    "request_id": "RQ-2026-0146",
                     "reference": "RQ-2026-0146",
                     "type": "mobile",
                     "label": "",
@@ -7956,7 +7956,7 @@
             ],
             "over7": [
                 {
-                    "request_id": 43,
+                    "request_id": "RQ-2026-0043",
                     "reference": "RQ-2026-0043",
                     "type": "computer",
                     "label": "Rung 1",
@@ -7973,7 +7973,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 115,
+                    "request_id": "RQ-2026-0115",
                     "reference": "RQ-2026-0115",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -7990,7 +7990,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 134,
+                    "request_id": "RQ-2026-0134",
                     "reference": "RQ-2026-0134",
                     "type": "computer",
                     "label": "Rung 2",
@@ -8007,7 +8007,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 37,
+                    "request_id": "RQ-2026-0037",
                     "reference": "RQ-2026-0037",
                     "type": "email",
                     "label": "Rung 1",
@@ -8024,7 +8024,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 109,
+                    "request_id": "RQ-2026-0109",
                     "reference": "RQ-2026-0109",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -8041,7 +8041,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -8058,7 +8058,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 31,
+                    "request_id": "RQ-2026-0031",
                     "reference": "RQ-2026-0031",
                     "type": "mailgroup",
                     "label": "",
@@ -8075,7 +8075,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 103,
+                    "request_id": "RQ-2026-0103",
                     "reference": "RQ-2026-0103",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -8092,7 +8092,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 50,
+                    "request_id": "RQ-2026-0050",
                     "reference": "RQ-2026-0050",
                     "type": "computer",
                     "label": "Rung 2",
@@ -8109,7 +8109,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 25,
+                    "request_id": "RQ-2026-0025",
                     "reference": "RQ-2026-0025",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -8126,7 +8126,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 97,
+                    "request_id": "RQ-2026-0097",
                     "reference": "RQ-2026-0097",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -8143,7 +8143,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 19,
+                    "request_id": "RQ-2026-0019",
                     "reference": "RQ-2026-0019",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -8160,7 +8160,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -8177,7 +8177,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 13,
+                    "request_id": "RQ-2026-0013",
                     "reference": "RQ-2026-0013",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -8194,7 +8194,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 85,
+                    "request_id": "RQ-2026-0085",
                     "reference": "RQ-2026-0085",
                     "type": "computer",
                     "label": "Rung 1",
@@ -8211,7 +8211,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 157,
+                    "request_id": "RQ-2026-0157",
                     "reference": "RQ-2026-0157",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -8228,7 +8228,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 1,
+                    "request_id": "RQ-2026-0001",
                     "reference": "RQ-2026-0001",
                     "type": "computer",
                     "label": "",
@@ -8245,7 +8245,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -8262,7 +8262,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 79,
+                    "request_id": "RQ-2026-0079",
                     "reference": "RQ-2026-0079",
                     "type": "email",
                     "label": "Rung 1",
@@ -8279,7 +8279,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 151,
+                    "request_id": "RQ-2026-0151",
                     "reference": "RQ-2026-0151",
                     "type": "fileshare",
                     "label": "",
@@ -8296,7 +8296,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 73,
+                    "request_id": "RQ-2026-0073",
                     "reference": "RQ-2026-0073",
                     "type": "mailgroup",
                     "label": "Rung 1",
@@ -8313,7 +8313,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 145,
+                    "request_id": "RQ-2026-0145",
                     "reference": "RQ-2026-0145",
                     "type": "cctv",
                     "label": "Rung 1",
@@ -8330,7 +8330,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 92,
+                    "request_id": "RQ-2026-0092",
                     "reference": "RQ-2026-0092",
                     "type": "computer",
                     "label": "Rung 2",
@@ -8347,7 +8347,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 139,
+                    "request_id": "RQ-2026-0139",
                     "reference": "RQ-2026-0139",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -8364,7 +8364,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 61,
+                    "request_id": "RQ-2026-0061",
                     "reference": "RQ-2026-0061",
                     "type": "cctv",
                     "label": "",
@@ -8381,7 +8381,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 8,
+                    "request_id": "RQ-2026-0008",
                     "reference": "RQ-2026-0008",
                     "type": "computer",
                     "label": "Rung 2",
@@ -8398,7 +8398,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 55,
+                    "request_id": "RQ-2026-0055",
                     "reference": "RQ-2026-0055",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -8415,7 +8415,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 127,
+                    "request_id": "RQ-2026-0127",
                     "reference": "RQ-2026-0127",
                     "type": "computer",
                     "label": "Rung 1",
@@ -8434,7 +8434,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -8451,7 +8451,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 121,
+                    "request_id": "RQ-2026-0121",
                     "reference": "RQ-2026-0121",
                     "type": "email",
                     "label": "",
@@ -8468,7 +8468,7 @@
                     "age_band": "days_4_7"
                 },
                 {
-                    "request_id": 67,
+                    "request_id": "RQ-2026-0067",
                     "reference": "RQ-2026-0067",
                     "type": "fileshare",
                     "label": "Rung 1",
@@ -8774,7 +8774,7 @@
             },
             "rows": [
                 {
-                    "request_id": 99,
+                    "request_id": "RQ-2026-0099",
                     "reference": "RQ-2026-0099",
                     "type": "computer",
                     "outcome": "rejected",
@@ -8785,7 +8785,7 @@
                     "at": "2026-09-19 13:34"
                 },
                 {
-                    "request_id": 27,
+                    "request_id": "RQ-2026-0027",
                     "reference": "RQ-2026-0027",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -8796,7 +8796,7 @@
                     "at": "2026-09-18 15:11"
                 },
                 {
-                    "request_id": 148,
+                    "request_id": "RQ-2026-0148",
                     "reference": "RQ-2026-0148",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -8807,7 +8807,7 @@
                     "at": "2026-09-17 11:21"
                 },
                 {
-                    "request_id": 76,
+                    "request_id": "RQ-2026-0076",
                     "reference": "RQ-2026-0076",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -8818,7 +8818,7 @@
                     "at": "2026-09-16 12:58"
                 },
                 {
-                    "request_id": 4,
+                    "request_id": "RQ-2026-0004",
                     "reference": "RQ-2026-0004",
                     "type": "fileshare",
                     "outcome": "not_delivered",
@@ -8829,7 +8829,7 @@
                     "at": "2026-09-15 14:35"
                 },
                 {
-                    "request_id": 105,
+                    "request_id": "RQ-2026-0105",
                     "reference": "RQ-2026-0105",
                     "type": "software",
                     "outcome": "rejected",
@@ -8840,7 +8840,7 @@
                     "at": "2026-08-28 16:46"
                 },
                 {
-                    "request_id": 33,
+                    "request_id": "RQ-2026-0033",
                     "reference": "RQ-2026-0033",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -8851,7 +8851,7 @@
                     "at": "2026-08-27 08:23"
                 },
                 {
-                    "request_id": 154,
+                    "request_id": "RQ-2026-0154",
                     "reference": "RQ-2026-0154",
                     "type": "software",
                     "outcome": "not_delivered",
@@ -8862,7 +8862,7 @@
                     "at": "2026-08-26 14:33"
                 },
                 {
-                    "request_id": 82,
+                    "request_id": "RQ-2026-0082",
                     "reference": "RQ-2026-0082",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -8873,7 +8873,7 @@
                     "at": "2026-08-25 16:10"
                 },
                 {
-                    "request_id": 10,
+                    "request_id": "RQ-2026-0010",
                     "reference": "RQ-2026-0010",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -8884,7 +8884,7 @@
                     "at": "2026-08-24 17:47"
                 },
                 {
-                    "request_id": 111,
+                    "request_id": "RQ-2026-0111",
                     "reference": "RQ-2026-0111",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -8895,7 +8895,7 @@
                     "at": "2026-08-06 09:58"
                 },
                 {
-                    "request_id": 39,
+                    "request_id": "RQ-2026-0039",
                     "reference": "RQ-2026-0039",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -8906,7 +8906,7 @@
                     "at": "2026-08-05 11:35"
                 },
                 {
-                    "request_id": 160,
+                    "request_id": "RQ-2026-0160",
                     "reference": "RQ-2026-0160",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -8917,7 +8917,7 @@
                     "at": "2026-08-04 17:45"
                 },
                 {
-                    "request_id": 88,
+                    "request_id": "RQ-2026-0088",
                     "reference": "RQ-2026-0088",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -8928,7 +8928,7 @@
                     "at": "2026-08-03 09:22"
                 },
                 {
-                    "request_id": 16,
+                    "request_id": "RQ-2026-0016",
                     "reference": "RQ-2026-0016",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -8939,7 +8939,7 @@
                     "at": "2026-08-02 10:59"
                 },
                 {
-                    "request_id": 117,
+                    "request_id": "RQ-2026-0117",
                     "reference": "RQ-2026-0117",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -8950,7 +8950,7 @@
                     "at": "2026-07-15 13:10"
                 },
                 {
-                    "request_id": 45,
+                    "request_id": "RQ-2026-0045",
                     "reference": "RQ-2026-0045",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -8961,7 +8961,7 @@
                     "at": "2026-07-14 14:47"
                 },
                 {
-                    "request_id": 94,
+                    "request_id": "RQ-2026-0094",
                     "reference": "RQ-2026-0094",
                     "type": "mailgroup",
                     "outcome": "not_delivered",
@@ -8972,7 +8972,7 @@
                     "at": "2026-07-12 12:34"
                 },
                 {
-                    "request_id": 22,
+                    "request_id": "RQ-2026-0022",
                     "reference": "RQ-2026-0022",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -8983,7 +8983,7 @@
                     "at": "2026-07-11 14:11"
                 },
                 {
-                    "request_id": 123,
+                    "request_id": "RQ-2026-0123",
                     "reference": "RQ-2026-0123",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -8994,7 +8994,7 @@
                     "at": "2026-06-23 16:21"
                 },
                 {
-                    "request_id": 51,
+                    "request_id": "RQ-2026-0051",
                     "reference": "RQ-2026-0051",
                     "type": "email",
                     "outcome": "rejected",
@@ -9005,7 +9005,7 @@
                     "at": "2026-06-22 17:59"
                 },
                 {
-                    "request_id": 100,
+                    "request_id": "RQ-2026-0100",
                     "reference": "RQ-2026-0100",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -9016,7 +9016,7 @@
                     "at": "2026-06-20 15:46"
                 },
                 {
-                    "request_id": 28,
+                    "request_id": "RQ-2026-0028",
                     "reference": "RQ-2026-0028",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -9027,7 +9027,7 @@
                     "at": "2026-06-19 17:23"
                 },
                 {
-                    "request_id": 129,
+                    "request_id": "RQ-2026-0129",
                     "reference": "RQ-2026-0129",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -9189,7 +9189,7 @@
             "no_account": [],
             "over7": [
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -9206,7 +9206,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -9223,7 +9223,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -9242,7 +9242,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -9306,7 +9306,7 @@
             },
             "rows": [
                 {
-                    "request_id": 28,
+                    "request_id": "RQ-2026-0028",
                     "reference": "RQ-2026-0028",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -9317,7 +9317,7 @@
                     "at": "2026-06-19 17:23"
                 },
                 {
-                    "request_id": 112,
+                    "request_id": "RQ-2026-0112",
                     "reference": "RQ-2026-0112",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -9328,7 +9328,7 @@
                     "at": "2026-05-07 12:10"
                 },
                 {
-                    "request_id": 70,
+                    "request_id": "RQ-2026-0070",
                     "reference": "RQ-2026-0070",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -9499,7 +9499,7 @@
             "no_account": [],
             "over7": [
                 {
-                    "request_id": 37,
+                    "request_id": "RQ-2026-0037",
                     "reference": "RQ-2026-0037",
                     "type": "email",
                     "label": "Rung 1",
@@ -9516,7 +9516,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 79,
+                    "request_id": "RQ-2026-0079",
                     "reference": "RQ-2026-0079",
                     "type": "email",
                     "label": "Rung 1",
@@ -9535,7 +9535,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 121,
+                    "request_id": "RQ-2026-0121",
                     "reference": "RQ-2026-0121",
                     "type": "email",
                     "label": "",
@@ -9599,7 +9599,7 @@
             },
             "rows": [
                 {
-                    "request_id": 16,
+                    "request_id": "RQ-2026-0016",
                     "reference": "RQ-2026-0016",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -9610,7 +9610,7 @@
                     "at": "2026-08-02 10:59"
                 },
                 {
-                    "request_id": 100,
+                    "request_id": "RQ-2026-0100",
                     "reference": "RQ-2026-0100",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -9621,7 +9621,7 @@
                     "at": "2026-06-20 15:46"
                 },
                 {
-                    "request_id": 58,
+                    "request_id": "RQ-2026-0058",
                     "reference": "RQ-2026-0058",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -9632,7 +9632,7 @@
                     "at": "2026-03-01 13:23"
                 },
                 {
-                    "request_id": 142,
+                    "request_id": "RQ-2026-0142",
                     "reference": "RQ-2026-0142",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -9803,7 +9803,7 @@
             "no_account": [],
             "over7": [
                 {
-                    "request_id": 97,
+                    "request_id": "RQ-2026-0097",
                     "reference": "RQ-2026-0097",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -9820,7 +9820,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 13,
+                    "request_id": "RQ-2026-0013",
                     "reference": "RQ-2026-0013",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -9837,7 +9837,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 139,
+                    "request_id": "RQ-2026-0139",
                     "reference": "RQ-2026-0139",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -9854,7 +9854,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 55,
+                    "request_id": "RQ-2026-0055",
                     "reference": "RQ-2026-0055",
                     "type": "mobile",
                     "label": "Rung 1",
@@ -9915,7 +9915,7 @@
             },
             "rows": [
                 {
-                    "request_id": 76,
+                    "request_id": "RQ-2026-0076",
                     "reference": "RQ-2026-0076",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -9926,7 +9926,7 @@
                     "at": "2026-09-16 12:58"
                 },
                 {
-                    "request_id": 160,
+                    "request_id": "RQ-2026-0160",
                     "reference": "RQ-2026-0160",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -9937,7 +9937,7 @@
                     "at": "2026-08-04 17:45"
                 },
                 {
-                    "request_id": 118,
+                    "request_id": "RQ-2026-0118",
                     "reference": "RQ-2026-0118",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -10108,7 +10108,7 @@
             "no_account": [],
             "over7": [
                 {
-                    "request_id": 133,
+                    "request_id": "RQ-2026-0133",
                     "reference": "RQ-2026-0133",
                     "type": "software",
                     "label": "Rung 1",
@@ -10125,7 +10125,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 91,
+                    "request_id": "RQ-2026-0091",
                     "reference": "RQ-2026-0091",
                     "type": "software",
                     "label": "",
@@ -10142,7 +10142,7 @@
                     "age_band": "over_7"
                 },
                 {
-                    "request_id": 7,
+                    "request_id": "RQ-2026-0007",
                     "reference": "RQ-2026-0007",
                     "type": "software",
                     "label": "Rung 1",
@@ -10161,7 +10161,7 @@
             ],
             "upto7": [
                 {
-                    "request_id": 49,
+                    "request_id": "RQ-2026-0049",
                     "reference": "RQ-2026-0049",
                     "type": "software",
                     "label": "Rung 1",
@@ -10225,7 +10225,7 @@
             },
             "rows": [
                 {
-                    "request_id": 112,
+                    "request_id": "RQ-2026-0112",
                     "reference": "RQ-2026-0112",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -10494,7 +10494,7 @@
             },
             "rows": [
                 {
-                    "request_id": 99,
+                    "request_id": "RQ-2026-0099",
                     "reference": "RQ-2026-0099",
                     "type": "computer",
                     "outcome": "rejected",
@@ -10505,7 +10505,7 @@
                     "at": "2026-09-19 13:34"
                 },
                 {
-                    "request_id": 27,
+                    "request_id": "RQ-2026-0027",
                     "reference": "RQ-2026-0027",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -10516,7 +10516,7 @@
                     "at": "2026-09-18 15:11"
                 },
                 {
-                    "request_id": 148,
+                    "request_id": "RQ-2026-0148",
                     "reference": "RQ-2026-0148",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -10527,7 +10527,7 @@
                     "at": "2026-09-17 11:21"
                 },
                 {
-                    "request_id": 76,
+                    "request_id": "RQ-2026-0076",
                     "reference": "RQ-2026-0076",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -10538,7 +10538,7 @@
                     "at": "2026-09-16 12:58"
                 },
                 {
-                    "request_id": 4,
+                    "request_id": "RQ-2026-0004",
                     "reference": "RQ-2026-0004",
                     "type": "fileshare",
                     "outcome": "not_delivered",
@@ -10549,7 +10549,7 @@
                     "at": "2026-09-15 14:35"
                 },
                 {
-                    "request_id": 105,
+                    "request_id": "RQ-2026-0105",
                     "reference": "RQ-2026-0105",
                     "type": "software",
                     "outcome": "rejected",
@@ -10560,7 +10560,7 @@
                     "at": "2026-08-28 16:46"
                 },
                 {
-                    "request_id": 33,
+                    "request_id": "RQ-2026-0033",
                     "reference": "RQ-2026-0033",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -10571,7 +10571,7 @@
                     "at": "2026-08-27 08:23"
                 },
                 {
-                    "request_id": 111,
+                    "request_id": "RQ-2026-0111",
                     "reference": "RQ-2026-0111",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -10582,7 +10582,7 @@
                     "at": "2026-08-06 09:58"
                 },
                 {
-                    "request_id": 39,
+                    "request_id": "RQ-2026-0039",
                     "reference": "RQ-2026-0039",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -10593,7 +10593,7 @@
                     "at": "2026-08-05 11:35"
                 },
                 {
-                    "request_id": 160,
+                    "request_id": "RQ-2026-0160",
                     "reference": "RQ-2026-0160",
                     "type": "mobile",
                     "outcome": "withdrawn",
@@ -10604,7 +10604,7 @@
                     "at": "2026-08-04 17:45"
                 },
                 {
-                    "request_id": 88,
+                    "request_id": "RQ-2026-0088",
                     "reference": "RQ-2026-0088",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -10615,7 +10615,7 @@
                     "at": "2026-08-03 09:22"
                 },
                 {
-                    "request_id": 16,
+                    "request_id": "RQ-2026-0016",
                     "reference": "RQ-2026-0016",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -10626,7 +10626,7 @@
                     "at": "2026-08-02 10:59"
                 },
                 {
-                    "request_id": 117,
+                    "request_id": "RQ-2026-0117",
                     "reference": "RQ-2026-0117",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -10637,7 +10637,7 @@
                     "at": "2026-07-15 13:10"
                 },
                 {
-                    "request_id": 45,
+                    "request_id": "RQ-2026-0045",
                     "reference": "RQ-2026-0045",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -10648,7 +10648,7 @@
                     "at": "2026-07-14 14:47"
                 },
                 {
-                    "request_id": 94,
+                    "request_id": "RQ-2026-0094",
                     "reference": "RQ-2026-0094",
                     "type": "mailgroup",
                     "outcome": "not_delivered",
@@ -10659,7 +10659,7 @@
                     "at": "2026-07-12 12:34"
                 },
                 {
-                    "request_id": 22,
+                    "request_id": "RQ-2026-0022",
                     "reference": "RQ-2026-0022",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -10670,7 +10670,7 @@
                     "at": "2026-07-11 14:11"
                 },
                 {
-                    "request_id": 123,
+                    "request_id": "RQ-2026-0123",
                     "reference": "RQ-2026-0123",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -10681,7 +10681,7 @@
                     "at": "2026-06-23 16:21"
                 },
                 {
-                    "request_id": 51,
+                    "request_id": "RQ-2026-0051",
                     "reference": "RQ-2026-0051",
                     "type": "email",
                     "outcome": "rejected",
@@ -10692,7 +10692,7 @@
                     "at": "2026-06-22 17:59"
                 },
                 {
-                    "request_id": 129,
+                    "request_id": "RQ-2026-0129",
                     "reference": "RQ-2026-0129",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -10703,7 +10703,7 @@
                     "at": "2026-06-01 09:33"
                 },
                 {
-                    "request_id": 57,
+                    "request_id": "RQ-2026-0057",
                     "reference": "RQ-2026-0057",
                     "type": "computer",
                     "outcome": "rejected",
@@ -10714,7 +10714,7 @@
                     "at": "2026-05-31 11:11"
                 },
                 {
-                    "request_id": 106,
+                    "request_id": "RQ-2026-0106",
                     "reference": "RQ-2026-0106",
                     "type": "computer",
                     "outcome": "withdrawn",
@@ -10725,7 +10725,7 @@
                     "at": "2026-05-29 08:58"
                 },
                 {
-                    "request_id": 34,
+                    "request_id": "RQ-2026-0034",
                     "reference": "RQ-2026-0034",
                     "type": "mobile",
                     "outcome": "not_delivered",
@@ -10736,7 +10736,7 @@
                     "at": "2026-05-28 10:35"
                 },
                 {
-                    "request_id": 135,
+                    "request_id": "RQ-2026-0135",
                     "reference": "RQ-2026-0135",
                     "type": "email",
                     "outcome": "rejected",
@@ -10747,7 +10747,7 @@
                     "at": "2026-05-10 12:45"
                 },
                 {
-                    "request_id": 63,
+                    "request_id": "RQ-2026-0063",
                     "reference": "RQ-2026-0063",
                     "type": "software",
                     "outcome": "rejected",
@@ -10758,7 +10758,7 @@
                     "at": "2026-05-09 14:22"
                 },
                 {
-                    "request_id": 112,
+                    "request_id": "RQ-2026-0112",
                     "reference": "RQ-2026-0112",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -10769,7 +10769,7 @@
                     "at": "2026-05-07 12:10"
                 },
                 {
-                    "request_id": 40,
+                    "request_id": "RQ-2026-0040",
                     "reference": "RQ-2026-0040",
                     "type": "cctv",
                     "outcome": "withdrawn",
@@ -10780,7 +10780,7 @@
                     "at": "2026-05-06 13:47"
                 },
                 {
-                    "request_id": 141,
+                    "request_id": "RQ-2026-0141",
                     "reference": "RQ-2026-0141",
                     "type": "computer",
                     "outcome": "rejected",
@@ -10791,7 +10791,7 @@
                     "at": "2026-04-18 15:57"
                 },
                 {
-                    "request_id": 69,
+                    "request_id": "RQ-2026-0069",
                     "reference": "RQ-2026-0069",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -10802,7 +10802,7 @@
                     "at": "2026-04-17 17:34"
                 },
                 {
-                    "request_id": 147,
+                    "request_id": "RQ-2026-0147",
                     "reference": "RQ-2026-0147",
                     "type": "software",
                     "outcome": "rejected",
@@ -10813,7 +10813,7 @@
                     "at": "2026-03-27 09:09"
                 },
                 {
-                    "request_id": 75,
+                    "request_id": "RQ-2026-0075",
                     "reference": "RQ-2026-0075",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -10824,7 +10824,7 @@
                     "at": "2026-03-26 10:46"
                 },
                 {
-                    "request_id": 3,
+                    "request_id": "RQ-2026-0003",
                     "reference": "RQ-2026-0003",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -10835,7 +10835,7 @@
                     "at": "2026-03-25 12:23"
                 },
                 {
-                    "request_id": 124,
+                    "request_id": "RQ-2026-0124",
                     "reference": "RQ-2026-0124",
                     "type": "cctv",
                     "outcome": "not_delivered",
@@ -10846,7 +10846,7 @@
                     "at": "2026-03-24 08:33"
                 },
                 {
-                    "request_id": 52,
+                    "request_id": "RQ-2026-0052",
                     "reference": "RQ-2026-0052",
                     "type": "mailgroup",
                     "outcome": "withdrawn",
@@ -10857,7 +10857,7 @@
                     "at": "2026-03-23 10:11"
                 },
                 {
-                    "request_id": 153,
+                    "request_id": "RQ-2026-0153",
                     "reference": "RQ-2026-0153",
                     "type": "mobile",
                     "outcome": "rejected",
@@ -10868,7 +10868,7 @@
                     "at": "2026-03-05 12:21"
                 },
                 {
-                    "request_id": 81,
+                    "request_id": "RQ-2026-0081",
                     "reference": "RQ-2026-0081",
                     "type": "fileshare",
                     "outcome": "rejected",
@@ -10879,7 +10879,7 @@
                     "at": "2026-03-04 13:58"
                 },
                 {
-                    "request_id": 9,
+                    "request_id": "RQ-2026-0009",
                     "reference": "RQ-2026-0009",
                     "type": "email",
                     "outcome": "rejected",
@@ -10890,7 +10890,7 @@
                     "at": "2026-03-03 15:35"
                 },
                 {
-                    "request_id": 130,
+                    "request_id": "RQ-2026-0130",
                     "reference": "RQ-2026-0130",
                     "type": "fileshare",
                     "outcome": "withdrawn",
@@ -10901,7 +10901,7 @@
                     "at": "2026-03-02 11:45"
                 },
                 {
-                    "request_id": 58,
+                    "request_id": "RQ-2026-0058",
                     "reference": "RQ-2026-0058",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -10912,7 +10912,7 @@
                     "at": "2026-03-01 13:23"
                 },
                 {
-                    "request_id": 159,
+                    "request_id": "RQ-2026-0159",
                     "reference": "RQ-2026-0159",
                     "type": "cctv",
                     "outcome": "rejected",
@@ -10923,7 +10923,7 @@
                     "at": "2026-02-11 15:33"
                 },
                 {
-                    "request_id": 87,
+                    "request_id": "RQ-2026-0087",
                     "reference": "RQ-2026-0087",
                     "type": "mailgroup",
                     "outcome": "rejected",
@@ -10934,7 +10934,7 @@
                     "at": "2026-02-10 17:10"
                 },
                 {
-                    "request_id": 15,
+                    "request_id": "RQ-2026-0015",
                     "reference": "RQ-2026-0015",
                     "type": "computer",
                     "outcome": "rejected",
@@ -10945,7 +10945,7 @@
                     "at": "2026-02-09 08:47"
                 },
                 {
-                    "request_id": 93,
+                    "request_id": "RQ-2026-0093",
                     "reference": "RQ-2026-0093",
                     "type": "email",
                     "outcome": "rejected",
@@ -10956,7 +10956,7 @@
                     "at": "2026-01-19 10:22"
                 },
                 {
-                    "request_id": 21,
+                    "request_id": "RQ-2026-0021",
                     "reference": "RQ-2026-0021",
                     "type": "software",
                     "outcome": "rejected",
@@ -10967,7 +10967,7 @@
                     "at": "2026-01-18 11:59"
                 },
                 {
-                    "request_id": 142,
+                    "request_id": "RQ-2026-0142",
                     "reference": "RQ-2026-0142",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -10978,7 +10978,7 @@
                     "at": "2026-01-17 08:09"
                 },
                 {
-                    "request_id": 70,
+                    "request_id": "RQ-2026-0070",
                     "reference": "RQ-2026-0070",
                     "type": "software",
                     "outcome": "withdrawn",
@@ -11168,7 +11168,7 @@
             },
             "rows": [
                 {
-                    "request_id": 16,
+                    "request_id": "RQ-2026-0016",
                     "reference": "RQ-2026-0016",
                     "type": "email",
                     "outcome": "withdrawn",
@@ -11179,7 +11179,7 @@
                     "at": "2026-08-02 10:59"
                 },
                 {
-                    "request_id": 51,
+                    "request_id": "RQ-2026-0051",
                     "reference": "RQ-2026-0051",
                     "type": "email",
                     "outcome": "rejected",
@@ -11190,7 +11190,7 @@
                     "at": "2026-06-22 17:59"
                 },
                 {
-                    "request_id": 135,
+                    "request_id": "RQ-2026-0135",
                     "reference": "RQ-2026-0135",
                     "type": "email",
                     "outcome": "rejected",
@@ -11201,7 +11201,7 @@
                     "at": "2026-05-10 12:45"
                 },
                 {
-                    "request_id": 9,
+                    "request_id": "RQ-2026-0009",
                     "reference": "RQ-2026-0009",
                     "type": "email",
                     "outcome": "rejected",
@@ -11212,7 +11212,7 @@
                     "at": "2026-03-03 15:35"
                 },
                 {
-                    "request_id": 58,
+                    "request_id": "RQ-2026-0058",
                     "reference": "RQ-2026-0058",
                     "type": "email",
                     "outcome": "withdrawn",

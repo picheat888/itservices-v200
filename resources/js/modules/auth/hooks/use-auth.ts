@@ -1,4 +1,3 @@
-import { authApi, type LoginPayload } from '@/modules/auth/api/authApi';
 import { disablePush } from '@/modules/notification';
 import { httpStatus } from '@/shared/lib/http-errors';
 import { announceSignIn } from '@/shared/lib/login-redirect';
@@ -6,6 +5,7 @@ import { ME_KEY } from '@/shared/lib/query-client';
 import { SUPER_ROLE, type User } from '@/shared/types';
 import { clearNewRows } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { authApi, type LoginPayload } from '../api/authApi';
 
 export function useAuth() {
     const query = useQuery<User | null>({

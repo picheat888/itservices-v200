@@ -1,6 +1,6 @@
 // Pure helpers for the device-limit sign-in dialog and the "signed out by" notice; no React, so node tests load it as is.
-import type { DeviceLimitResponse, UserDevice } from '@/modules/auth/api/authApi';
 import type { SignedOutBy } from '@/shared/lib/login-redirect';
+import type { DeviceLimitResponse, UserDevice } from '../api/authApi';
 
 type Translate = (key: string) => string;
 

@@ -13,9 +13,11 @@ use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Database\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Stock step (items, movements, lots, balances, requests, counts, serials, alerts)
+#[Group('sqlite')]
 class StockStepTest extends TestCase
 {
     use RefreshDatabase;

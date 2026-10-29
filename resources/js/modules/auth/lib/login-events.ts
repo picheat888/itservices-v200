@@ -1,5 +1,5 @@
 // Words for one login-log row: its event, the one reason line under it, and whether it is a failure; no React, so node tests load it as is.
-import type { LoginEventRow } from '@/modules/auth/api/authApi';
+import type { LoginEventRow } from '../api/authApi';
 
 type Translate = (key: string) => string;
 

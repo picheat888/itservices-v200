@@ -1,7 +1,7 @@
 // Whether the signed-in account is still remembered; re-renders when the remember period ends, so the idle timeout starts then as the server's does.
-import { stillRemembered } from '@/modules/auth/lib/session-warning';
 import type { User } from '@/shared/types';
 import { useEffect, useState } from 'react';
+import { stillRemembered } from '../lib/session-warning';
 
 // setTimeout's longest delay; a remember period is 7 days, far below it
 const MAX_TIMER_MS = 2_147_483_647;

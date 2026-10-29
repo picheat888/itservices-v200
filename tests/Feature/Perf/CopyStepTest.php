@@ -13,9 +13,11 @@ use Database\Seeders\EmployeeSectionSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 // Feature tests for the perf Copy step (configuration and master data from the source database)
+#[Group('sqlite')]
 class CopyStepTest extends TestCase
 {
     use RefreshDatabase;

@@ -78,7 +78,7 @@
         },
         "open": [
             {
-                "id": 86,
+                "id": "TKT-SW-260925-043",
                 "ticket_no": "TKT-SW-260925-043",
                 "category": "software",
                 "assignee": null,
@@ -88,7 +88,7 @@
                 "over_hours": 534.4
             },
             {
-                "id": 122,
+                "id": "TKT-OTH-260925-017",
                 "ticket_no": "TKT-OTH-260925-017",
                 "category": "other",
                 "assignee": "Ant",
@@ -98,7 +98,7 @@
                 "over_hours": 410.3
             },
             {
-                "id": 36,
+                "id": "TKT-OTH-260925-005",
                 "ticket_no": "TKT-OTH-260925-005",
                 "category": "other",
                 "assignee": null,
@@ -108,7 +108,7 @@
                 "over_hours": 350.2
             },
             {
-                "id": 83,
+                "id": "TKT-SW-260925-041",
                 "ticket_no": "TKT-SW-260925-041",
                 "category": "software",
                 "assignee": "Ant",
@@ -118,7 +118,7 @@
                 "over_hours": 323.3
             },
             {
-                "id": 1,
+                "id": "TKT-SW-260925-001",
                 "ticket_no": "TKT-SW-260925-001",
                 "category": "software",
                 "assignee": "Som",
@@ -128,7 +128,7 @@
                 "over_hours": 286.2
             },
             {
-                "id": 143,
+                "id": "TKT-OTH-260925-024",
                 "ticket_no": "TKT-OTH-260925-024",
                 "category": "other",
                 "assignee": "Kan",
@@ -138,7 +138,7 @@
                 "over_hours": 281.8
             },
             {
-                "id": 125,
+                "id": "TKT-OTH-260925-019",
                 "ticket_no": "TKT-OTH-260925-019",
                 "category": "other",
                 "assignee": "Ant",
@@ -148,7 +148,7 @@
                 "over_hours": 230.8
             },
             {
-                "id": 227,
+                "id": "TKT-SW-260925-112",
                 "ticket_no": "TKT-SW-260925-112",
                 "category": "software",
                 "assignee": "Kan",
@@ -158,7 +158,7 @@
                 "over_hours": 220.6
             },
             {
-                "id": 153,
+                "id": "TKT-SW-260925-078",
                 "ticket_no": "TKT-SW-260925-078",
                 "category": "software",
                 "assignee": "Som",
@@ -168,7 +168,7 @@
                 "over_hours": 208.9
             },
             {
-                "id": 100,
+                "id": "TKT-SW-260925-051",
                 "ticket_no": "TKT-SW-260925-051",
                 "category": "software",
                 "assignee": null,
@@ -178,7 +178,7 @@
                 "over_hours": 197.6
             },
             {
-                "id": 37,
+                "id": "TKT-SW-260925-021",
                 "ticket_no": "TKT-SW-260925-021",
                 "category": "software",
                 "assignee": "Kan",
@@ -188,7 +188,7 @@
                 "over_hours": 152.5
             },
             {
-                "id": 146,
+                "id": "TKT-SW-260925-072",
                 "ticket_no": "TKT-SW-260925-072",
                 "category": "software",
                 "assignee": "Ant",
@@ -198,7 +198,7 @@
                 "over_hours": 140.1
             },
             {
-                "id": 11,
+                "id": "TKT-SW-260925-005",
                 "ticket_no": "TKT-SW-260925-005",
                 "category": "software",
                 "assignee": "Ant",
@@ -208,7 +208,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 22,
+                "id": "TKT-SW-260925-011",
                 "ticket_no": "TKT-SW-260925-011",
                 "category": "software",
                 "assignee": "Kan",
@@ -218,7 +218,7 @@
                 "over_hours": null
             },
             {
-                "id": 34,
+                "id": "TKT-SW-260925-019",
                 "ticket_no": "TKT-SW-260925-019",
                 "category": "software",
                 "assignee": "Kan",
@@ -228,7 +228,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 67,
+                "id": "TKT-SW-260925-033",
                 "ticket_no": "TKT-SW-260925-033",
                 "category": "software",
                 "assignee": null,
@@ -238,7 +238,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 73,
+                "id": "TKT-HW-260925-009",
                 "ticket_no": "TKT-HW-260925-009",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -248,7 +248,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 74,
+                "id": "TKT-SW-260925-037",
                 "ticket_no": "TKT-SW-260925-037",
                 "category": "software",
                 "assignee": "Som",
@@ -258,7 +258,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 87,
+                "id": "TKT-OTH-260925-011",
                 "ticket_no": "TKT-OTH-260925-011",
                 "category": "other",
                 "assignee": "Som",
@@ -268,7 +268,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 92,
+                "id": "TKT-SW-260925-047",
                 "ticket_no": "TKT-SW-260925-047",
                 "category": "software",
                 "assignee": "Som",
@@ -278,7 +278,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 96,
+                "id": "TKT-HW-260925-014",
                 "ticket_no": "TKT-HW-260925-014",
                 "category": "hardware",
                 "assignee": null,
@@ -288,7 +288,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 108,
+                "id": "TKT-SW-260925-055",
                 "ticket_no": "TKT-SW-260925-055",
                 "category": "software",
                 "assignee": "Kan",
@@ -298,7 +298,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 109,
+                "id": "TKT-SW-260925-056",
                 "ticket_no": "TKT-SW-260925-056",
                 "category": "software",
                 "assignee": "Ant",
@@ -308,7 +308,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 112,
+                "id": "TKT-SW-260925-058",
                 "ticket_no": "TKT-SW-260925-058",
                 "category": "software",
                 "assignee": "Ant",
@@ -318,7 +318,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 117,
+                "id": "TKT-SW-260925-061",
                 "ticket_no": "TKT-SW-260925-061",
                 "category": "software",
                 "assignee": "Ant",
@@ -328,7 +328,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 123,
+                "id": "TKT-OTH-260925-018",
                 "ticket_no": "TKT-OTH-260925-018",
                 "category": "other",
                 "assignee": "Ant",
@@ -338,7 +338,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 134,
+                "id": "TKT-OTH-260925-021",
                 "ticket_no": "TKT-OTH-260925-021",
                 "category": "other",
                 "assignee": null,
@@ -348,7 +348,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 137,
+                "id": "TKT-SW-260925-070",
                 "ticket_no": "TKT-SW-260925-070",
                 "category": "software",
                 "assignee": "Som",
@@ -358,7 +358,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 145,
+                "id": "TKT-OTH-260925-025",
                 "ticket_no": "TKT-OTH-260925-025",
                 "category": "other",
                 "assignee": "Som",
@@ -368,7 +368,7 @@
                 "over_hours": null
             },
             {
-                "id": 149,
+                "id": "TKT-HW-260925-022",
                 "ticket_no": "TKT-HW-260925-022",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -378,7 +378,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 157,
+                "id": "TKT-SW-260925-079",
                 "ticket_no": "TKT-SW-260925-079",
                 "category": "software",
                 "assignee": null,
@@ -388,7 +388,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 163,
+                "id": "TKT-HW-260925-026",
                 "ticket_no": "TKT-HW-260925-026",
                 "category": "hardware",
                 "assignee": "Som",
@@ -398,7 +398,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 166,
+                "id": "TKT-SW-260925-085",
                 "ticket_no": "TKT-SW-260925-085",
                 "category": "software",
                 "assignee": "Som",
@@ -408,7 +408,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 184,
+                "id": "TKT-HW-260925-031",
                 "ticket_no": "TKT-HW-260925-031",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -418,7 +418,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -428,7 +428,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 188,
+                "id": "TKT-OTH-260925-028",
                 "ticket_no": "TKT-OTH-260925-028",
                 "category": "other",
                 "assignee": null,
@@ -438,7 +438,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 196,
+                "id": "TKT-SW-260925-099",
                 "ticket_no": "TKT-SW-260925-099",
                 "category": "software",
                 "assignee": "Som",
@@ -448,7 +448,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 209,
+                "id": "TKT-SW-260925-106",
                 "ticket_no": "TKT-SW-260925-106",
                 "category": "software",
                 "assignee": "Kan",
@@ -458,7 +458,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 212,
+                "id": "TKT-SW-260925-108",
                 "ticket_no": "TKT-SW-260925-108",
                 "category": "software",
                 "assignee": "Ant",
@@ -468,7 +468,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 216,
+                "id": "TKT-OTH-260925-032",
                 "ticket_no": "TKT-OTH-260925-032",
                 "category": "other",
                 "assignee": null,
@@ -478,7 +478,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 225,
+                "id": "TKT-SW-260925-111",
                 "ticket_no": "TKT-SW-260925-111",
                 "category": "software",
                 "assignee": "Som",
@@ -488,7 +488,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 235,
+                "id": "TKT-SW-260925-116",
                 "ticket_no": "TKT-SW-260925-116",
                 "category": "software",
                 "assignee": null,
@@ -498,7 +498,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 241,
+                "id": "TKT-SW-260925-119",
                 "ticket_no": "TKT-SW-260925-119",
                 "category": "software",
                 "assignee": "Ant",
@@ -765,7 +765,7 @@
         },
         "open": [
             {
-                "id": 86,
+                "id": "TKT-SW-260925-043",
                 "ticket_no": "TKT-SW-260925-043",
                 "category": "software",
                 "assignee": null,
@@ -775,7 +775,7 @@
                 "over_hours": 534.4
             },
             {
-                "id": 122,
+                "id": "TKT-OTH-260925-017",
                 "ticket_no": "TKT-OTH-260925-017",
                 "category": "other",
                 "assignee": "Ant",
@@ -785,7 +785,7 @@
                 "over_hours": 410.3
             },
             {
-                "id": 36,
+                "id": "TKT-OTH-260925-005",
                 "ticket_no": "TKT-OTH-260925-005",
                 "category": "other",
                 "assignee": null,
@@ -795,7 +795,7 @@
                 "over_hours": 350.2
             },
             {
-                "id": 83,
+                "id": "TKT-SW-260925-041",
                 "ticket_no": "TKT-SW-260925-041",
                 "category": "software",
                 "assignee": "Ant",
@@ -805,7 +805,7 @@
                 "over_hours": 323.3
             },
             {
-                "id": 1,
+                "id": "TKT-SW-260925-001",
                 "ticket_no": "TKT-SW-260925-001",
                 "category": "software",
                 "assignee": "Som",
@@ -815,7 +815,7 @@
                 "over_hours": 286.2
             },
             {
-                "id": 143,
+                "id": "TKT-OTH-260925-024",
                 "ticket_no": "TKT-OTH-260925-024",
                 "category": "other",
                 "assignee": "Kan",
@@ -825,7 +825,7 @@
                 "over_hours": 281.8
             },
             {
-                "id": 125,
+                "id": "TKT-OTH-260925-019",
                 "ticket_no": "TKT-OTH-260925-019",
                 "category": "other",
                 "assignee": "Ant",
@@ -835,7 +835,7 @@
                 "over_hours": 230.8
             },
             {
-                "id": 227,
+                "id": "TKT-SW-260925-112",
                 "ticket_no": "TKT-SW-260925-112",
                 "category": "software",
                 "assignee": "Kan",
@@ -845,7 +845,7 @@
                 "over_hours": 220.6
             },
             {
-                "id": 153,
+                "id": "TKT-SW-260925-078",
                 "ticket_no": "TKT-SW-260925-078",
                 "category": "software",
                 "assignee": "Som",
@@ -855,7 +855,7 @@
                 "over_hours": 208.9
             },
             {
-                "id": 100,
+                "id": "TKT-SW-260925-051",
                 "ticket_no": "TKT-SW-260925-051",
                 "category": "software",
                 "assignee": null,
@@ -865,7 +865,7 @@
                 "over_hours": 197.6
             },
             {
-                "id": 37,
+                "id": "TKT-SW-260925-021",
                 "ticket_no": "TKT-SW-260925-021",
                 "category": "software",
                 "assignee": "Kan",
@@ -875,7 +875,7 @@
                 "over_hours": 152.5
             },
             {
-                "id": 146,
+                "id": "TKT-SW-260925-072",
                 "ticket_no": "TKT-SW-260925-072",
                 "category": "software",
                 "assignee": "Ant",
@@ -885,7 +885,7 @@
                 "over_hours": 140.1
             },
             {
-                "id": 11,
+                "id": "TKT-SW-260925-005",
                 "ticket_no": "TKT-SW-260925-005",
                 "category": "software",
                 "assignee": "Ant",
@@ -895,7 +895,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 22,
+                "id": "TKT-SW-260925-011",
                 "ticket_no": "TKT-SW-260925-011",
                 "category": "software",
                 "assignee": "Kan",
@@ -905,7 +905,7 @@
                 "over_hours": null
             },
             {
-                "id": 34,
+                "id": "TKT-SW-260925-019",
                 "ticket_no": "TKT-SW-260925-019",
                 "category": "software",
                 "assignee": "Kan",
@@ -915,7 +915,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 67,
+                "id": "TKT-SW-260925-033",
                 "ticket_no": "TKT-SW-260925-033",
                 "category": "software",
                 "assignee": null,
@@ -925,7 +925,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 73,
+                "id": "TKT-HW-260925-009",
                 "ticket_no": "TKT-HW-260925-009",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -935,7 +935,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 74,
+                "id": "TKT-SW-260925-037",
                 "ticket_no": "TKT-SW-260925-037",
                 "category": "software",
                 "assignee": "Som",
@@ -945,7 +945,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 87,
+                "id": "TKT-OTH-260925-011",
                 "ticket_no": "TKT-OTH-260925-011",
                 "category": "other",
                 "assignee": "Som",
@@ -955,7 +955,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 92,
+                "id": "TKT-SW-260925-047",
                 "ticket_no": "TKT-SW-260925-047",
                 "category": "software",
                 "assignee": "Som",
@@ -965,7 +965,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 96,
+                "id": "TKT-HW-260925-014",
                 "ticket_no": "TKT-HW-260925-014",
                 "category": "hardware",
                 "assignee": null,
@@ -975,7 +975,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 108,
+                "id": "TKT-SW-260925-055",
                 "ticket_no": "TKT-SW-260925-055",
                 "category": "software",
                 "assignee": "Kan",
@@ -985,7 +985,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 109,
+                "id": "TKT-SW-260925-056",
                 "ticket_no": "TKT-SW-260925-056",
                 "category": "software",
                 "assignee": "Ant",
@@ -995,7 +995,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 112,
+                "id": "TKT-SW-260925-058",
                 "ticket_no": "TKT-SW-260925-058",
                 "category": "software",
                 "assignee": "Ant",
@@ -1005,7 +1005,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 117,
+                "id": "TKT-SW-260925-061",
                 "ticket_no": "TKT-SW-260925-061",
                 "category": "software",
                 "assignee": "Ant",
@@ -1015,7 +1015,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 123,
+                "id": "TKT-OTH-260925-018",
                 "ticket_no": "TKT-OTH-260925-018",
                 "category": "other",
                 "assignee": "Ant",
@@ -1025,7 +1025,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 134,
+                "id": "TKT-OTH-260925-021",
                 "ticket_no": "TKT-OTH-260925-021",
                 "category": "other",
                 "assignee": null,
@@ -1035,7 +1035,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 137,
+                "id": "TKT-SW-260925-070",
                 "ticket_no": "TKT-SW-260925-070",
                 "category": "software",
                 "assignee": "Som",
@@ -1045,7 +1045,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 145,
+                "id": "TKT-OTH-260925-025",
                 "ticket_no": "TKT-OTH-260925-025",
                 "category": "other",
                 "assignee": "Som",
@@ -1055,7 +1055,7 @@
                 "over_hours": null
             },
             {
-                "id": 149,
+                "id": "TKT-HW-260925-022",
                 "ticket_no": "TKT-HW-260925-022",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -1065,7 +1065,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 157,
+                "id": "TKT-SW-260925-079",
                 "ticket_no": "TKT-SW-260925-079",
                 "category": "software",
                 "assignee": null,
@@ -1075,7 +1075,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 163,
+                "id": "TKT-HW-260925-026",
                 "ticket_no": "TKT-HW-260925-026",
                 "category": "hardware",
                 "assignee": "Som",
@@ -1085,7 +1085,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 166,
+                "id": "TKT-SW-260925-085",
                 "ticket_no": "TKT-SW-260925-085",
                 "category": "software",
                 "assignee": "Som",
@@ -1095,7 +1095,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 184,
+                "id": "TKT-HW-260925-031",
                 "ticket_no": "TKT-HW-260925-031",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -1105,7 +1105,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -1115,7 +1115,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 188,
+                "id": "TKT-OTH-260925-028",
                 "ticket_no": "TKT-OTH-260925-028",
                 "category": "other",
                 "assignee": null,
@@ -1125,7 +1125,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 196,
+                "id": "TKT-SW-260925-099",
                 "ticket_no": "TKT-SW-260925-099",
                 "category": "software",
                 "assignee": "Som",
@@ -1135,7 +1135,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 209,
+                "id": "TKT-SW-260925-106",
                 "ticket_no": "TKT-SW-260925-106",
                 "category": "software",
                 "assignee": "Kan",
@@ -1145,7 +1145,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 212,
+                "id": "TKT-SW-260925-108",
                 "ticket_no": "TKT-SW-260925-108",
                 "category": "software",
                 "assignee": "Ant",
@@ -1155,7 +1155,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 216,
+                "id": "TKT-OTH-260925-032",
                 "ticket_no": "TKT-OTH-260925-032",
                 "category": "other",
                 "assignee": null,
@@ -1165,7 +1165,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 225,
+                "id": "TKT-SW-260925-111",
                 "ticket_no": "TKT-SW-260925-111",
                 "category": "software",
                 "assignee": "Som",
@@ -1175,7 +1175,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 235,
+                "id": "TKT-SW-260925-116",
                 "ticket_no": "TKT-SW-260925-116",
                 "category": "software",
                 "assignee": null,
@@ -1185,7 +1185,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 241,
+                "id": "TKT-SW-260925-119",
                 "ticket_no": "TKT-SW-260925-119",
                 "category": "software",
                 "assignee": "Ant",
@@ -1440,7 +1440,7 @@
         },
         "open": [
             {
-                "id": 86,
+                "id": "TKT-SW-260925-043",
                 "ticket_no": "TKT-SW-260925-043",
                 "category": "software",
                 "assignee": null,
@@ -1450,7 +1450,7 @@
                 "over_hours": 534.4
             },
             {
-                "id": 122,
+                "id": "TKT-OTH-260925-017",
                 "ticket_no": "TKT-OTH-260925-017",
                 "category": "other",
                 "assignee": "Ant",
@@ -1460,7 +1460,7 @@
                 "over_hours": 410.3
             },
             {
-                "id": 36,
+                "id": "TKT-OTH-260925-005",
                 "ticket_no": "TKT-OTH-260925-005",
                 "category": "other",
                 "assignee": null,
@@ -1470,7 +1470,7 @@
                 "over_hours": 350.2
             },
             {
-                "id": 83,
+                "id": "TKT-SW-260925-041",
                 "ticket_no": "TKT-SW-260925-041",
                 "category": "software",
                 "assignee": "Ant",
@@ -1480,7 +1480,7 @@
                 "over_hours": 323.3
             },
             {
-                "id": 1,
+                "id": "TKT-SW-260925-001",
                 "ticket_no": "TKT-SW-260925-001",
                 "category": "software",
                 "assignee": "Som",
@@ -1490,7 +1490,7 @@
                 "over_hours": 286.2
             },
             {
-                "id": 143,
+                "id": "TKT-OTH-260925-024",
                 "ticket_no": "TKT-OTH-260925-024",
                 "category": "other",
                 "assignee": "Kan",
@@ -1500,7 +1500,7 @@
                 "over_hours": 281.8
             },
             {
-                "id": 125,
+                "id": "TKT-OTH-260925-019",
                 "ticket_no": "TKT-OTH-260925-019",
                 "category": "other",
                 "assignee": "Ant",
@@ -1510,7 +1510,7 @@
                 "over_hours": 230.8
             },
             {
-                "id": 227,
+                "id": "TKT-SW-260925-112",
                 "ticket_no": "TKT-SW-260925-112",
                 "category": "software",
                 "assignee": "Kan",
@@ -1520,7 +1520,7 @@
                 "over_hours": 220.6
             },
             {
-                "id": 153,
+                "id": "TKT-SW-260925-078",
                 "ticket_no": "TKT-SW-260925-078",
                 "category": "software",
                 "assignee": "Som",
@@ -1530,7 +1530,7 @@
                 "over_hours": 208.9
             },
             {
-                "id": 100,
+                "id": "TKT-SW-260925-051",
                 "ticket_no": "TKT-SW-260925-051",
                 "category": "software",
                 "assignee": null,
@@ -1540,7 +1540,7 @@
                 "over_hours": 197.6
             },
             {
-                "id": 37,
+                "id": "TKT-SW-260925-021",
                 "ticket_no": "TKT-SW-260925-021",
                 "category": "software",
                 "assignee": "Kan",
@@ -1550,7 +1550,7 @@
                 "over_hours": 152.5
             },
             {
-                "id": 146,
+                "id": "TKT-SW-260925-072",
                 "ticket_no": "TKT-SW-260925-072",
                 "category": "software",
                 "assignee": "Ant",
@@ -1560,7 +1560,7 @@
                 "over_hours": 140.1
             },
             {
-                "id": 11,
+                "id": "TKT-SW-260925-005",
                 "ticket_no": "TKT-SW-260925-005",
                 "category": "software",
                 "assignee": "Ant",
@@ -1570,7 +1570,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 22,
+                "id": "TKT-SW-260925-011",
                 "ticket_no": "TKT-SW-260925-011",
                 "category": "software",
                 "assignee": "Kan",
@@ -1580,7 +1580,7 @@
                 "over_hours": null
             },
             {
-                "id": 34,
+                "id": "TKT-SW-260925-019",
                 "ticket_no": "TKT-SW-260925-019",
                 "category": "software",
                 "assignee": "Kan",
@@ -1590,7 +1590,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 67,
+                "id": "TKT-SW-260925-033",
                 "ticket_no": "TKT-SW-260925-033",
                 "category": "software",
                 "assignee": null,
@@ -1600,7 +1600,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 73,
+                "id": "TKT-HW-260925-009",
                 "ticket_no": "TKT-HW-260925-009",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -1610,7 +1610,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 74,
+                "id": "TKT-SW-260925-037",
                 "ticket_no": "TKT-SW-260925-037",
                 "category": "software",
                 "assignee": "Som",
@@ -1620,7 +1620,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 87,
+                "id": "TKT-OTH-260925-011",
                 "ticket_no": "TKT-OTH-260925-011",
                 "category": "other",
                 "assignee": "Som",
@@ -1630,7 +1630,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 92,
+                "id": "TKT-SW-260925-047",
                 "ticket_no": "TKT-SW-260925-047",
                 "category": "software",
                 "assignee": "Som",
@@ -1640,7 +1640,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 96,
+                "id": "TKT-HW-260925-014",
                 "ticket_no": "TKT-HW-260925-014",
                 "category": "hardware",
                 "assignee": null,
@@ -1650,7 +1650,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 108,
+                "id": "TKT-SW-260925-055",
                 "ticket_no": "TKT-SW-260925-055",
                 "category": "software",
                 "assignee": "Kan",
@@ -1660,7 +1660,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 109,
+                "id": "TKT-SW-260925-056",
                 "ticket_no": "TKT-SW-260925-056",
                 "category": "software",
                 "assignee": "Ant",
@@ -1670,7 +1670,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 112,
+                "id": "TKT-SW-260925-058",
                 "ticket_no": "TKT-SW-260925-058",
                 "category": "software",
                 "assignee": "Ant",
@@ -1680,7 +1680,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 117,
+                "id": "TKT-SW-260925-061",
                 "ticket_no": "TKT-SW-260925-061",
                 "category": "software",
                 "assignee": "Ant",
@@ -1690,7 +1690,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 123,
+                "id": "TKT-OTH-260925-018",
                 "ticket_no": "TKT-OTH-260925-018",
                 "category": "other",
                 "assignee": "Ant",
@@ -1700,7 +1700,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 134,
+                "id": "TKT-OTH-260925-021",
                 "ticket_no": "TKT-OTH-260925-021",
                 "category": "other",
                 "assignee": null,
@@ -1710,7 +1710,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 137,
+                "id": "TKT-SW-260925-070",
                 "ticket_no": "TKT-SW-260925-070",
                 "category": "software",
                 "assignee": "Som",
@@ -1720,7 +1720,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 145,
+                "id": "TKT-OTH-260925-025",
                 "ticket_no": "TKT-OTH-260925-025",
                 "category": "other",
                 "assignee": "Som",
@@ -1730,7 +1730,7 @@
                 "over_hours": null
             },
             {
-                "id": 149,
+                "id": "TKT-HW-260925-022",
                 "ticket_no": "TKT-HW-260925-022",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -1740,7 +1740,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 157,
+                "id": "TKT-SW-260925-079",
                 "ticket_no": "TKT-SW-260925-079",
                 "category": "software",
                 "assignee": null,
@@ -1750,7 +1750,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 163,
+                "id": "TKT-HW-260925-026",
                 "ticket_no": "TKT-HW-260925-026",
                 "category": "hardware",
                 "assignee": "Som",
@@ -1760,7 +1760,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 166,
+                "id": "TKT-SW-260925-085",
                 "ticket_no": "TKT-SW-260925-085",
                 "category": "software",
                 "assignee": "Som",
@@ -1770,7 +1770,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 184,
+                "id": "TKT-HW-260925-031",
                 "ticket_no": "TKT-HW-260925-031",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -1780,7 +1780,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -1790,7 +1790,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 188,
+                "id": "TKT-OTH-260925-028",
                 "ticket_no": "TKT-OTH-260925-028",
                 "category": "other",
                 "assignee": null,
@@ -1800,7 +1800,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 196,
+                "id": "TKT-SW-260925-099",
                 "ticket_no": "TKT-SW-260925-099",
                 "category": "software",
                 "assignee": "Som",
@@ -1810,7 +1810,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 209,
+                "id": "TKT-SW-260925-106",
                 "ticket_no": "TKT-SW-260925-106",
                 "category": "software",
                 "assignee": "Kan",
@@ -1820,7 +1820,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 212,
+                "id": "TKT-SW-260925-108",
                 "ticket_no": "TKT-SW-260925-108",
                 "category": "software",
                 "assignee": "Ant",
@@ -1830,7 +1830,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 216,
+                "id": "TKT-OTH-260925-032",
                 "ticket_no": "TKT-OTH-260925-032",
                 "category": "other",
                 "assignee": null,
@@ -1840,7 +1840,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 225,
+                "id": "TKT-SW-260925-111",
                 "ticket_no": "TKT-SW-260925-111",
                 "category": "software",
                 "assignee": "Som",
@@ -1850,7 +1850,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 235,
+                "id": "TKT-SW-260925-116",
                 "ticket_no": "TKT-SW-260925-116",
                 "category": "software",
                 "assignee": null,
@@ -1860,7 +1860,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 241,
+                "id": "TKT-SW-260925-119",
                 "ticket_no": "TKT-SW-260925-119",
                 "category": "software",
                 "assignee": "Ant",
@@ -2108,7 +2108,7 @@
         },
         "open": [
             {
-                "id": 86,
+                "id": "TKT-SW-260925-043",
                 "ticket_no": "TKT-SW-260925-043",
                 "category": "software",
                 "assignee": null,
@@ -2118,7 +2118,7 @@
                 "over_hours": 534.4
             },
             {
-                "id": 122,
+                "id": "TKT-OTH-260925-017",
                 "ticket_no": "TKT-OTH-260925-017",
                 "category": "other",
                 "assignee": "Ant",
@@ -2128,7 +2128,7 @@
                 "over_hours": 410.3
             },
             {
-                "id": 36,
+                "id": "TKT-OTH-260925-005",
                 "ticket_no": "TKT-OTH-260925-005",
                 "category": "other",
                 "assignee": null,
@@ -2138,7 +2138,7 @@
                 "over_hours": 350.2
             },
             {
-                "id": 83,
+                "id": "TKT-SW-260925-041",
                 "ticket_no": "TKT-SW-260925-041",
                 "category": "software",
                 "assignee": "Ant",
@@ -2148,7 +2148,7 @@
                 "over_hours": 323.3
             },
             {
-                "id": 1,
+                "id": "TKT-SW-260925-001",
                 "ticket_no": "TKT-SW-260925-001",
                 "category": "software",
                 "assignee": "Som",
@@ -2158,7 +2158,7 @@
                 "over_hours": 286.2
             },
             {
-                "id": 143,
+                "id": "TKT-OTH-260925-024",
                 "ticket_no": "TKT-OTH-260925-024",
                 "category": "other",
                 "assignee": "Kan",
@@ -2168,7 +2168,7 @@
                 "over_hours": 281.8
             },
             {
-                "id": 125,
+                "id": "TKT-OTH-260925-019",
                 "ticket_no": "TKT-OTH-260925-019",
                 "category": "other",
                 "assignee": "Ant",
@@ -2178,7 +2178,7 @@
                 "over_hours": 230.8
             },
             {
-                "id": 227,
+                "id": "TKT-SW-260925-112",
                 "ticket_no": "TKT-SW-260925-112",
                 "category": "software",
                 "assignee": "Kan",
@@ -2188,7 +2188,7 @@
                 "over_hours": 220.6
             },
             {
-                "id": 153,
+                "id": "TKT-SW-260925-078",
                 "ticket_no": "TKT-SW-260925-078",
                 "category": "software",
                 "assignee": "Som",
@@ -2198,7 +2198,7 @@
                 "over_hours": 208.9
             },
             {
-                "id": 100,
+                "id": "TKT-SW-260925-051",
                 "ticket_no": "TKT-SW-260925-051",
                 "category": "software",
                 "assignee": null,
@@ -2208,7 +2208,7 @@
                 "over_hours": 197.6
             },
             {
-                "id": 37,
+                "id": "TKT-SW-260925-021",
                 "ticket_no": "TKT-SW-260925-021",
                 "category": "software",
                 "assignee": "Kan",
@@ -2218,7 +2218,7 @@
                 "over_hours": 152.5
             },
             {
-                "id": 146,
+                "id": "TKT-SW-260925-072",
                 "ticket_no": "TKT-SW-260925-072",
                 "category": "software",
                 "assignee": "Ant",
@@ -2228,7 +2228,7 @@
                 "over_hours": 140.1
             },
             {
-                "id": 11,
+                "id": "TKT-SW-260925-005",
                 "ticket_no": "TKT-SW-260925-005",
                 "category": "software",
                 "assignee": "Ant",
@@ -2238,7 +2238,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 22,
+                "id": "TKT-SW-260925-011",
                 "ticket_no": "TKT-SW-260925-011",
                 "category": "software",
                 "assignee": "Kan",
@@ -2248,7 +2248,7 @@
                 "over_hours": null
             },
             {
-                "id": 34,
+                "id": "TKT-SW-260925-019",
                 "ticket_no": "TKT-SW-260925-019",
                 "category": "software",
                 "assignee": "Kan",
@@ -2258,7 +2258,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 67,
+                "id": "TKT-SW-260925-033",
                 "ticket_no": "TKT-SW-260925-033",
                 "category": "software",
                 "assignee": null,
@@ -2268,7 +2268,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 73,
+                "id": "TKT-HW-260925-009",
                 "ticket_no": "TKT-HW-260925-009",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -2278,7 +2278,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 74,
+                "id": "TKT-SW-260925-037",
                 "ticket_no": "TKT-SW-260925-037",
                 "category": "software",
                 "assignee": "Som",
@@ -2288,7 +2288,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 87,
+                "id": "TKT-OTH-260925-011",
                 "ticket_no": "TKT-OTH-260925-011",
                 "category": "other",
                 "assignee": "Som",
@@ -2298,7 +2298,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 92,
+                "id": "TKT-SW-260925-047",
                 "ticket_no": "TKT-SW-260925-047",
                 "category": "software",
                 "assignee": "Som",
@@ -2308,7 +2308,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 96,
+                "id": "TKT-HW-260925-014",
                 "ticket_no": "TKT-HW-260925-014",
                 "category": "hardware",
                 "assignee": null,
@@ -2318,7 +2318,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 108,
+                "id": "TKT-SW-260925-055",
                 "ticket_no": "TKT-SW-260925-055",
                 "category": "software",
                 "assignee": "Kan",
@@ -2328,7 +2328,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 109,
+                "id": "TKT-SW-260925-056",
                 "ticket_no": "TKT-SW-260925-056",
                 "category": "software",
                 "assignee": "Ant",
@@ -2338,7 +2338,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 112,
+                "id": "TKT-SW-260925-058",
                 "ticket_no": "TKT-SW-260925-058",
                 "category": "software",
                 "assignee": "Ant",
@@ -2348,7 +2348,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 117,
+                "id": "TKT-SW-260925-061",
                 "ticket_no": "TKT-SW-260925-061",
                 "category": "software",
                 "assignee": "Ant",
@@ -2358,7 +2358,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 123,
+                "id": "TKT-OTH-260925-018",
                 "ticket_no": "TKT-OTH-260925-018",
                 "category": "other",
                 "assignee": "Ant",
@@ -2368,7 +2368,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 134,
+                "id": "TKT-OTH-260925-021",
                 "ticket_no": "TKT-OTH-260925-021",
                 "category": "other",
                 "assignee": null,
@@ -2378,7 +2378,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 137,
+                "id": "TKT-SW-260925-070",
                 "ticket_no": "TKT-SW-260925-070",
                 "category": "software",
                 "assignee": "Som",
@@ -2388,7 +2388,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 145,
+                "id": "TKT-OTH-260925-025",
                 "ticket_no": "TKT-OTH-260925-025",
                 "category": "other",
                 "assignee": "Som",
@@ -2398,7 +2398,7 @@
                 "over_hours": null
             },
             {
-                "id": 149,
+                "id": "TKT-HW-260925-022",
                 "ticket_no": "TKT-HW-260925-022",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -2408,7 +2408,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 157,
+                "id": "TKT-SW-260925-079",
                 "ticket_no": "TKT-SW-260925-079",
                 "category": "software",
                 "assignee": null,
@@ -2418,7 +2418,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 163,
+                "id": "TKT-HW-260925-026",
                 "ticket_no": "TKT-HW-260925-026",
                 "category": "hardware",
                 "assignee": "Som",
@@ -2428,7 +2428,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 166,
+                "id": "TKT-SW-260925-085",
                 "ticket_no": "TKT-SW-260925-085",
                 "category": "software",
                 "assignee": "Som",
@@ -2438,7 +2438,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 184,
+                "id": "TKT-HW-260925-031",
                 "ticket_no": "TKT-HW-260925-031",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -2448,7 +2448,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -2458,7 +2458,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 188,
+                "id": "TKT-OTH-260925-028",
                 "ticket_no": "TKT-OTH-260925-028",
                 "category": "other",
                 "assignee": null,
@@ -2468,7 +2468,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 196,
+                "id": "TKT-SW-260925-099",
                 "ticket_no": "TKT-SW-260925-099",
                 "category": "software",
                 "assignee": "Som",
@@ -2478,7 +2478,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 209,
+                "id": "TKT-SW-260925-106",
                 "ticket_no": "TKT-SW-260925-106",
                 "category": "software",
                 "assignee": "Kan",
@@ -2488,7 +2488,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 212,
+                "id": "TKT-SW-260925-108",
                 "ticket_no": "TKT-SW-260925-108",
                 "category": "software",
                 "assignee": "Ant",
@@ -2498,7 +2498,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 216,
+                "id": "TKT-OTH-260925-032",
                 "ticket_no": "TKT-OTH-260925-032",
                 "category": "other",
                 "assignee": null,
@@ -2508,7 +2508,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 225,
+                "id": "TKT-SW-260925-111",
                 "ticket_no": "TKT-SW-260925-111",
                 "category": "software",
                 "assignee": "Som",
@@ -2518,7 +2518,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 235,
+                "id": "TKT-SW-260925-116",
                 "ticket_no": "TKT-SW-260925-116",
                 "category": "software",
                 "assignee": null,
@@ -2528,7 +2528,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 241,
+                "id": "TKT-SW-260925-119",
                 "ticket_no": "TKT-SW-260925-119",
                 "category": "software",
                 "assignee": "Ant",
@@ -2770,7 +2770,7 @@
         },
         "open": [
             {
-                "id": 86,
+                "id": "TKT-SW-260925-043",
                 "ticket_no": "TKT-SW-260925-043",
                 "category": "software",
                 "assignee": null,
@@ -2780,7 +2780,7 @@
                 "over_hours": 534.4
             },
             {
-                "id": 122,
+                "id": "TKT-OTH-260925-017",
                 "ticket_no": "TKT-OTH-260925-017",
                 "category": "other",
                 "assignee": "Ant",
@@ -2790,7 +2790,7 @@
                 "over_hours": 410.3
             },
             {
-                "id": 36,
+                "id": "TKT-OTH-260925-005",
                 "ticket_no": "TKT-OTH-260925-005",
                 "category": "other",
                 "assignee": null,
@@ -2800,7 +2800,7 @@
                 "over_hours": 350.2
             },
             {
-                "id": 83,
+                "id": "TKT-SW-260925-041",
                 "ticket_no": "TKT-SW-260925-041",
                 "category": "software",
                 "assignee": "Ant",
@@ -2810,7 +2810,7 @@
                 "over_hours": 323.3
             },
             {
-                "id": 1,
+                "id": "TKT-SW-260925-001",
                 "ticket_no": "TKT-SW-260925-001",
                 "category": "software",
                 "assignee": "Som",
@@ -2820,7 +2820,7 @@
                 "over_hours": 286.2
             },
             {
-                "id": 143,
+                "id": "TKT-OTH-260925-024",
                 "ticket_no": "TKT-OTH-260925-024",
                 "category": "other",
                 "assignee": "Kan",
@@ -2830,7 +2830,7 @@
                 "over_hours": 281.8
             },
             {
-                "id": 125,
+                "id": "TKT-OTH-260925-019",
                 "ticket_no": "TKT-OTH-260925-019",
                 "category": "other",
                 "assignee": "Ant",
@@ -2840,7 +2840,7 @@
                 "over_hours": 230.8
             },
             {
-                "id": 227,
+                "id": "TKT-SW-260925-112",
                 "ticket_no": "TKT-SW-260925-112",
                 "category": "software",
                 "assignee": "Kan",
@@ -2850,7 +2850,7 @@
                 "over_hours": 220.6
             },
             {
-                "id": 153,
+                "id": "TKT-SW-260925-078",
                 "ticket_no": "TKT-SW-260925-078",
                 "category": "software",
                 "assignee": "Som",
@@ -2860,7 +2860,7 @@
                 "over_hours": 208.9
             },
             {
-                "id": 100,
+                "id": "TKT-SW-260925-051",
                 "ticket_no": "TKT-SW-260925-051",
                 "category": "software",
                 "assignee": null,
@@ -2870,7 +2870,7 @@
                 "over_hours": 197.6
             },
             {
-                "id": 37,
+                "id": "TKT-SW-260925-021",
                 "ticket_no": "TKT-SW-260925-021",
                 "category": "software",
                 "assignee": "Kan",
@@ -2880,7 +2880,7 @@
                 "over_hours": 152.5
             },
             {
-                "id": 146,
+                "id": "TKT-SW-260925-072",
                 "ticket_no": "TKT-SW-260925-072",
                 "category": "software",
                 "assignee": "Ant",
@@ -2890,7 +2890,7 @@
                 "over_hours": 140.1
             },
             {
-                "id": 11,
+                "id": "TKT-SW-260925-005",
                 "ticket_no": "TKT-SW-260925-005",
                 "category": "software",
                 "assignee": "Ant",
@@ -2900,7 +2900,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 22,
+                "id": "TKT-SW-260925-011",
                 "ticket_no": "TKT-SW-260925-011",
                 "category": "software",
                 "assignee": "Kan",
@@ -2910,7 +2910,7 @@
                 "over_hours": null
             },
             {
-                "id": 34,
+                "id": "TKT-SW-260925-019",
                 "ticket_no": "TKT-SW-260925-019",
                 "category": "software",
                 "assignee": "Kan",
@@ -2920,7 +2920,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 67,
+                "id": "TKT-SW-260925-033",
                 "ticket_no": "TKT-SW-260925-033",
                 "category": "software",
                 "assignee": null,
@@ -2930,7 +2930,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 73,
+                "id": "TKT-HW-260925-009",
                 "ticket_no": "TKT-HW-260925-009",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -2940,7 +2940,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 74,
+                "id": "TKT-SW-260925-037",
                 "ticket_no": "TKT-SW-260925-037",
                 "category": "software",
                 "assignee": "Som",
@@ -2950,7 +2950,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 87,
+                "id": "TKT-OTH-260925-011",
                 "ticket_no": "TKT-OTH-260925-011",
                 "category": "other",
                 "assignee": "Som",
@@ -2960,7 +2960,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 92,
+                "id": "TKT-SW-260925-047",
                 "ticket_no": "TKT-SW-260925-047",
                 "category": "software",
                 "assignee": "Som",
@@ -2970,7 +2970,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 96,
+                "id": "TKT-HW-260925-014",
                 "ticket_no": "TKT-HW-260925-014",
                 "category": "hardware",
                 "assignee": null,
@@ -2980,7 +2980,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 108,
+                "id": "TKT-SW-260925-055",
                 "ticket_no": "TKT-SW-260925-055",
                 "category": "software",
                 "assignee": "Kan",
@@ -2990,7 +2990,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 109,
+                "id": "TKT-SW-260925-056",
                 "ticket_no": "TKT-SW-260925-056",
                 "category": "software",
                 "assignee": "Ant",
@@ -3000,7 +3000,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 112,
+                "id": "TKT-SW-260925-058",
                 "ticket_no": "TKT-SW-260925-058",
                 "category": "software",
                 "assignee": "Ant",
@@ -3010,7 +3010,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 117,
+                "id": "TKT-SW-260925-061",
                 "ticket_no": "TKT-SW-260925-061",
                 "category": "software",
                 "assignee": "Ant",
@@ -3020,7 +3020,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 123,
+                "id": "TKT-OTH-260925-018",
                 "ticket_no": "TKT-OTH-260925-018",
                 "category": "other",
                 "assignee": "Ant",
@@ -3030,7 +3030,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 134,
+                "id": "TKT-OTH-260925-021",
                 "ticket_no": "TKT-OTH-260925-021",
                 "category": "other",
                 "assignee": null,
@@ -3040,7 +3040,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 137,
+                "id": "TKT-SW-260925-070",
                 "ticket_no": "TKT-SW-260925-070",
                 "category": "software",
                 "assignee": "Som",
@@ -3050,7 +3050,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 145,
+                "id": "TKT-OTH-260925-025",
                 "ticket_no": "TKT-OTH-260925-025",
                 "category": "other",
                 "assignee": "Som",
@@ -3060,7 +3060,7 @@
                 "over_hours": null
             },
             {
-                "id": 149,
+                "id": "TKT-HW-260925-022",
                 "ticket_no": "TKT-HW-260925-022",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -3070,7 +3070,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 157,
+                "id": "TKT-SW-260925-079",
                 "ticket_no": "TKT-SW-260925-079",
                 "category": "software",
                 "assignee": null,
@@ -3080,7 +3080,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 163,
+                "id": "TKT-HW-260925-026",
                 "ticket_no": "TKT-HW-260925-026",
                 "category": "hardware",
                 "assignee": "Som",
@@ -3090,7 +3090,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 166,
+                "id": "TKT-SW-260925-085",
                 "ticket_no": "TKT-SW-260925-085",
                 "category": "software",
                 "assignee": "Som",
@@ -3100,7 +3100,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 184,
+                "id": "TKT-HW-260925-031",
                 "ticket_no": "TKT-HW-260925-031",
                 "category": "hardware",
                 "assignee": "Ant",
@@ -3110,7 +3110,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -3120,7 +3120,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 188,
+                "id": "TKT-OTH-260925-028",
                 "ticket_no": "TKT-OTH-260925-028",
                 "category": "other",
                 "assignee": null,
@@ -3130,7 +3130,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 196,
+                "id": "TKT-SW-260925-099",
                 "ticket_no": "TKT-SW-260925-099",
                 "category": "software",
                 "assignee": "Som",
@@ -3140,7 +3140,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 209,
+                "id": "TKT-SW-260925-106",
                 "ticket_no": "TKT-SW-260925-106",
                 "category": "software",
                 "assignee": "Kan",
@@ -3150,7 +3150,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 212,
+                "id": "TKT-SW-260925-108",
                 "ticket_no": "TKT-SW-260925-108",
                 "category": "software",
                 "assignee": "Ant",
@@ -3160,7 +3160,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 216,
+                "id": "TKT-OTH-260925-032",
                 "ticket_no": "TKT-OTH-260925-032",
                 "category": "other",
                 "assignee": null,
@@ -3170,7 +3170,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 225,
+                "id": "TKT-SW-260925-111",
                 "ticket_no": "TKT-SW-260925-111",
                 "category": "software",
                 "assignee": "Som",
@@ -3180,7 +3180,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 235,
+                "id": "TKT-SW-260925-116",
                 "ticket_no": "TKT-SW-260925-116",
                 "category": "software",
                 "assignee": null,
@@ -3190,7 +3190,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 241,
+                "id": "TKT-SW-260925-119",
                 "ticket_no": "TKT-SW-260925-119",
                 "category": "software",
                 "assignee": "Ant",
@@ -3457,7 +3457,7 @@
         },
         "open": [
             {
-                "id": 1,
+                "id": "TKT-SW-260925-001",
                 "ticket_no": "TKT-SW-260925-001",
                 "category": "software",
                 "assignee": "Som",
@@ -3467,7 +3467,7 @@
                 "over_hours": 286.2
             },
             {
-                "id": 153,
+                "id": "TKT-SW-260925-078",
                 "ticket_no": "TKT-SW-260925-078",
                 "category": "software",
                 "assignee": "Som",
@@ -3477,7 +3477,7 @@
                 "over_hours": 208.9
             },
             {
-                "id": 22,
+                "id": "TKT-SW-260925-011",
                 "ticket_no": "TKT-SW-260925-011",
                 "category": "software",
                 "assignee": "Kan",
@@ -3487,7 +3487,7 @@
                 "over_hours": null
             },
             {
-                "id": 92,
+                "id": "TKT-SW-260925-047",
                 "ticket_no": "TKT-SW-260925-047",
                 "category": "software",
                 "assignee": "Som",
@@ -3497,7 +3497,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 108,
+                "id": "TKT-SW-260925-055",
                 "ticket_no": "TKT-SW-260925-055",
                 "category": "software",
                 "assignee": "Kan",
@@ -3507,7 +3507,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 137,
+                "id": "TKT-SW-260925-070",
                 "ticket_no": "TKT-SW-260925-070",
                 "category": "software",
                 "assignee": "Som",
@@ -3517,7 +3517,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -3655,7 +3655,7 @@
         },
         "open": [
             {
-                "id": 96,
+                "id": "TKT-HW-260925-014",
                 "ticket_no": "TKT-HW-260925-014",
                 "category": "hardware",
                 "assignee": null,
@@ -3665,7 +3665,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 157,
+                "id": "TKT-SW-260925-079",
                 "ticket_no": "TKT-SW-260925-079",
                 "category": "software",
                 "assignee": null,
@@ -3675,7 +3675,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 185,
+                "id": "TKT-SW-260925-093",
                 "ticket_no": "TKT-SW-260925-093",
                 "category": "software",
                 "assignee": null,
@@ -4234,7 +4234,7 @@
         "empty_types": [],
         "open": [
             {
-                "id": 44,
+                "id": "TKT-SW-260925-024",
                 "ticket_no": "TKT-SW-260925-024",
                 "request_type": "computer",
                 "due_kind": "response",
@@ -4242,7 +4242,7 @@
                 "over_hours": 495.3
             },
             {
-                "id": 60,
+                "id": "TKT-OTH-260925-008",
                 "ticket_no": "TKT-OTH-260925-008",
                 "request_type": "email",
                 "due_kind": "response",
@@ -4250,7 +4250,7 @@
                 "over_hours": 472.7
             },
             {
-                "id": 91,
+                "id": "TKT-SW-260925-046",
                 "ticket_no": "TKT-SW-260925-046",
                 "request_type": "other",
                 "due_kind": "resolve",
@@ -4258,7 +4258,7 @@
                 "over_hours": 440.8
             },
             {
-                "id": 260,
+                "id": "TKT-SW-260925-123",
                 "ticket_no": "TKT-SW-260925-123",
                 "request_type": "mailgroup",
                 "due_kind": "resolve",
@@ -4266,7 +4266,7 @@
                 "over_hours": 426.3
             },
             {
-                "id": 14,
+                "id": "TKT-HW-260925-002",
                 "ticket_no": "TKT-HW-260925-002",
                 "request_type": "recovery",
                 "due_kind": "resolve",
@@ -4274,7 +4274,7 @@
                 "over_hours": 382.3
             },
             {
-                "id": 12,
+                "id": "TKT-OTH-260925-002",
                 "ticket_no": "TKT-OTH-260925-002",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -4282,7 +4282,7 @@
                 "over_hours": 335.1
             },
             {
-                "id": 64,
+                "id": "TKT-OTH-260925-009",
                 "ticket_no": "TKT-OTH-260925-009",
                 "request_type": "telephone",
                 "due_kind": "response",
@@ -4290,7 +4290,7 @@
                 "over_hours": 172.0
             },
             {
-                "id": 89,
+                "id": "TKT-SW-260925-044",
                 "ticket_no": "TKT-SW-260925-044",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -4298,7 +4298,7 @@
                 "over_hours": 138.6
             },
             {
-                "id": 120,
+                "id": "TKT-HW-260925-020",
                 "ticket_no": "TKT-HW-260925-020",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -4306,7 +4306,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 197,
+                "id": "TKT-SW-260925-100",
                 "ticket_no": "TKT-SW-260925-100",
                 "request_type": "fileshare",
                 "due_kind": "resolve",
@@ -4314,7 +4314,7 @@
                 "over_hours": null
             },
             {
-                "id": 203,
+                "id": "TKT-SW-260925-104",
                 "ticket_no": "TKT-SW-260925-104",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -4322,7 +4322,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 139,
+                "id": "TKT-OTH-260925-022",
                 "ticket_no": "TKT-OTH-260925-022",
                 "request_type": "fileshare",
                 "due_kind": "resolve",
@@ -4330,7 +4330,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 130,
+                "id": "TKT-SW-260925-066",
                 "ticket_no": "TKT-SW-260925-066",
                 "request_type": "network",
                 "due_kind": "resolve",
@@ -4338,7 +4338,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 78,
+                "id": "TKT-OTH-260925-010",
                 "ticket_no": "TKT-OTH-260925-010",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -4346,7 +4346,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 19,
+                "id": "TKT-SW-260925-009",
                 "ticket_no": "TKT-SW-260925-009",
                 "request_type": "software",
                 "due_kind": "resolve",
@@ -4354,7 +4354,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 84,
+                "id": "TKT-HW-260925-013",
                 "ticket_no": "TKT-HW-260925-013",
                 "request_type": "telephone",
                 "due_kind": "resolve",
@@ -4362,7 +4362,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 57,
+                "id": "TKT-SW-260925-031",
                 "ticket_no": "TKT-SW-260925-031",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -4370,7 +4370,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 160,
+                "id": "TKT-SW-260925-081",
                 "ticket_no": "TKT-SW-260925-081",
                 "request_type": "fileshare",
                 "due_kind": "resolve",
@@ -4378,7 +4378,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 17,
+                "id": "TKT-HW-260925-003",
                 "ticket_no": "TKT-HW-260925-003",
                 "request_type": "recovery",
                 "due_kind": "resolve",
@@ -4386,7 +4386,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 6,
+                "id": "TKT-SW-260925-002",
                 "ticket_no": "TKT-SW-260925-002",
                 "request_type": "computer",
                 "due_kind": "resolve",
@@ -4897,7 +4897,7 @@
         "empty_types": [],
         "open": [
             {
-                "id": 44,
+                "id": "TKT-SW-260925-024",
                 "ticket_no": "TKT-SW-260925-024",
                 "request_type": "computer",
                 "due_kind": "response",
@@ -4905,7 +4905,7 @@
                 "over_hours": 495.3
             },
             {
-                "id": 60,
+                "id": "TKT-OTH-260925-008",
                 "ticket_no": "TKT-OTH-260925-008",
                 "request_type": "email",
                 "due_kind": "response",
@@ -4913,7 +4913,7 @@
                 "over_hours": 472.7
             },
             {
-                "id": 91,
+                "id": "TKT-SW-260925-046",
                 "ticket_no": "TKT-SW-260925-046",
                 "request_type": "other",
                 "due_kind": "resolve",
@@ -4921,7 +4921,7 @@
                 "over_hours": 440.8
             },
             {
-                "id": 260,
+                "id": "TKT-SW-260925-123",
                 "ticket_no": "TKT-SW-260925-123",
                 "request_type": "mailgroup",
                 "due_kind": "resolve",
@@ -4929,7 +4929,7 @@
                 "over_hours": 426.3
             },
             {
-                "id": 14,
+                "id": "TKT-HW-260925-002",
                 "ticket_no": "TKT-HW-260925-002",
                 "request_type": "recovery",
                 "due_kind": "resolve",
@@ -4937,7 +4937,7 @@
                 "over_hours": 382.3
             },
             {
-                "id": 12,
+                "id": "TKT-OTH-260925-002",
                 "ticket_no": "TKT-OTH-260925-002",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -4945,7 +4945,7 @@
                 "over_hours": 335.1
             },
             {
-                "id": 64,
+                "id": "TKT-OTH-260925-009",
                 "ticket_no": "TKT-OTH-260925-009",
                 "request_type": "telephone",
                 "due_kind": "response",
@@ -4953,7 +4953,7 @@
                 "over_hours": 172.0
             },
             {
-                "id": 89,
+                "id": "TKT-SW-260925-044",
                 "ticket_no": "TKT-SW-260925-044",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -4961,7 +4961,7 @@
                 "over_hours": 138.6
             },
             {
-                "id": 120,
+                "id": "TKT-HW-260925-020",
                 "ticket_no": "TKT-HW-260925-020",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -4969,7 +4969,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 197,
+                "id": "TKT-SW-260925-100",
                 "ticket_no": "TKT-SW-260925-100",
                 "request_type": "fileshare",
                 "due_kind": "resolve",
@@ -4977,7 +4977,7 @@
                 "over_hours": null
             },
             {
-                "id": 203,
+                "id": "TKT-SW-260925-104",
                 "ticket_no": "TKT-SW-260925-104",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -4985,7 +4985,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 139,
+                "id": "TKT-OTH-260925-022",
                 "ticket_no": "TKT-OTH-260925-022",
                 "request_type": "fileshare",
                 "due_kind": "resolve",
@@ -4993,7 +4993,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 130,
+                "id": "TKT-SW-260925-066",
                 "ticket_no": "TKT-SW-260925-066",
                 "request_type": "network",
                 "due_kind": "resolve",
@@ -5001,7 +5001,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 78,
+                "id": "TKT-OTH-260925-010",
                 "ticket_no": "TKT-OTH-260925-010",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -5009,7 +5009,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 19,
+                "id": "TKT-SW-260925-009",
                 "ticket_no": "TKT-SW-260925-009",
                 "request_type": "software",
                 "due_kind": "resolve",
@@ -5017,7 +5017,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 84,
+                "id": "TKT-HW-260925-013",
                 "ticket_no": "TKT-HW-260925-013",
                 "request_type": "telephone",
                 "due_kind": "resolve",
@@ -5025,7 +5025,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 57,
+                "id": "TKT-SW-260925-031",
                 "ticket_no": "TKT-SW-260925-031",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -5033,7 +5033,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 160,
+                "id": "TKT-SW-260925-081",
                 "ticket_no": "TKT-SW-260925-081",
                 "request_type": "fileshare",
                 "due_kind": "resolve",
@@ -5041,7 +5041,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 17,
+                "id": "TKT-HW-260925-003",
                 "ticket_no": "TKT-HW-260925-003",
                 "request_type": "recovery",
                 "due_kind": "resolve",
@@ -5049,7 +5049,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 6,
+                "id": "TKT-SW-260925-002",
                 "ticket_no": "TKT-SW-260925-002",
                 "request_type": "computer",
                 "due_kind": "resolve",
@@ -5299,7 +5299,7 @@
         ],
         "open": [
             {
-                "id": 60,
+                "id": "TKT-OTH-260925-008",
                 "ticket_no": "TKT-OTH-260925-008",
                 "request_type": "email",
                 "due_kind": "response",
@@ -5307,7 +5307,7 @@
                 "over_hours": 472.7
             },
             {
-                "id": 64,
+                "id": "TKT-OTH-260925-009",
                 "ticket_no": "TKT-OTH-260925-009",
                 "request_type": "telephone",
                 "due_kind": "response",
@@ -5315,7 +5315,7 @@
                 "over_hours": 172.0
             },
             {
-                "id": 120,
+                "id": "TKT-HW-260925-020",
                 "ticket_no": "TKT-HW-260925-020",
                 "request_type": "mobile",
                 "due_kind": "resolve",
@@ -5323,7 +5323,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 130,
+                "id": "TKT-SW-260925-066",
                 "ticket_no": "TKT-SW-260925-066",
                 "request_type": "network",
                 "due_kind": "resolve",
@@ -5331,7 +5331,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 78,
+                "id": "TKT-OTH-260925-010",
                 "ticket_no": "TKT-OTH-260925-010",
                 "request_type": null,
                 "due_kind": "resolve",
@@ -5339,7 +5339,7 @@
                 "over_hours": 0.0
             },
             {
-                "id": 84,
+                "id": "TKT-HW-260925-013",
                 "ticket_no": "TKT-HW-260925-013",
                 "request_type": "telephone",
                 "due_kind": "resolve",
