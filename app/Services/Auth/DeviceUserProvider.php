@@ -23,9 +23,8 @@ class DeviceUserProvider extends EloquentUserProvider
             ->where('remember_token_hash', $hash)
             ->first() ?? $this->rotatedAway($identifier, $hash);
 
-        // Legacy cookie from before devices: matches users.remember_token only
         if ($device === null) {
-            return parent::retrieveByToken($identifier, $token);
+            return null;
         }
 
         $user = $this->retrieveById($identifier);

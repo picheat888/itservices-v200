@@ -141,7 +141,6 @@ class AuthController extends Controller
         }
 
         Auth::guard('web')->logout();
-        $devices->retireLegacyRememberToken($user);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

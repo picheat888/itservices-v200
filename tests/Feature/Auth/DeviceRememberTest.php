@@ -85,8 +85,7 @@ class DeviceRememberTest extends TestCase
 
         $this->meWithCookie($this->cookieFor($user, 'laptop-token'))->assertUnauthorized();
         $this->meWithCookie($this->cookieFor($user, 'phone-token'))->assertOk();
-        // Ending a device also retires the cookie from before devices; a device token never lands there
-        $this->assertNotContains($user->fresh()->getRememberToken(), [$usersToken, 'laptop-token', 'phone-token']);
+        $this->assertSame($usersToken, $user->fresh()->getRememberToken());
     }
 
     public function test_an_ended_device_cookie_never_signs_in_again(): void
@@ -109,19 +108,13 @@ class DeviceRememberTest extends TestCase
         $this->assertSame(0, UserDevice::active()->where('user_id', $user->id)->count());
     }
 
-    public function test_a_legacy_user_token_cookie_still_signs_in_once(): void
+    public function test_a_cookie_matching_only_the_users_table_token_does_not_sign_in(): void
     {
         $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
 
-        $this->meWithCookie($this->cookieFor($user, 'token-from-before-devices'))
-            ->assertOk()
-            ->assertJsonPath('data.remembered', true);
-
-        $this->assertNotNull(UserDevice::query()->sole()->remember_token_hash);
-        $this->assertNotSame('token-from-before-devices', $user->fresh()->getRememberToken());
-
         $this->meWithCookie($this->cookieFor($user, 'token-from-before-devices'))->assertUnauthorized();
-        $this->meWithCookie($this->cookieFor($user, 'a-guessed-token'))->assertUnauthorized();
+
+        $this->assertSame(0, UserDevice::count());
     }
 
     public function test_logout_clears_only_this_devices_token(): void
@@ -136,7 +129,7 @@ class DeviceRememberTest extends TestCase
         $this->assertNull($laptop->fresh()->remember_token_hash);
         $this->assertSame(DeviceEndReason::SignedOut, $laptop->fresh()->end_reason);
         $this->assertSame(hash('sha256', 'phone-token'), $phone->fresh()->remember_token_hash);
-        $this->assertNotContains($user->fresh()->getRememberToken(), [$usersToken, 'laptop-token', 'phone-token']);
+        $this->assertSame($usersToken, $user->fresh()->getRememberToken());
 
         $this->meWithCookie($this->cookieFor($user, 'laptop-token'))->assertUnauthorized();
         $this->meWithCookie($this->cookieFor($user, 'phone-token'))->assertOk();
@@ -176,7 +169,7 @@ class DeviceRememberTest extends TestCase
 
         $this->meWithCookie($this->cookieFor($user, $token))->assertUnauthorized();
         $this->assertSame($deviceCount, UserDevice::count());
-        $this->assertNotContains($user->fresh()->remember_token, [$usersToken, $token]);
+        $this->assertSame($usersToken, $user->fresh()->remember_token);
     }
 
     public function test_signing_in_with_remember_never_writes_the_users_token(): void
@@ -299,17 +292,5 @@ class DeviceRememberTest extends TestCase
         $this->assertSame($device->id, UserDevice::query()->whereNull('ended_at')->sole()->id);
         $this->assertSame(hash('sha256', explode('|', $me->getCookie($recaller)->getValue())[1]), $device->fresh()->remember_token_hash);
         $this->assertSame(1, LoginEvent::query()->where('event', 'signed_in')->count());
-    }
-
-    public function test_logout_retires_a_cookie_from_before_devices(): void
-    {
-        $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
-        $legacy = $this->cookieFor($user, 'token-from-before-devices');
-
-        $this->withRememberCookie($legacy)->postJson('/api/logout')->assertOk();
-
-        $this->meWithCookie($legacy)->assertUnauthorized();
-        $this->assertNotNull($user->fresh()->getRememberToken());
-        $this->assertNotSame('token-from-before-devices', $user->fresh()->getRememberToken());
     }
 }

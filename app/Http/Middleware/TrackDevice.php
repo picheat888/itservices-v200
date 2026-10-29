@@ -190,12 +190,12 @@ class TrackDevice
             });
     }
 
-    /** A sign-in restored from the remember cookie: its device moves to this session, or an old cookie gets a device. */
+    /** A sign-in restored from the remember cookie: its device moves to this session. */
     private function restored(User $user, Request $request): UserDevice
     {
         $device = $this->current->get();
         if ($device === null) {
-            return $this->movedLegacyCookie($user, $request);
+            return $this->startedForSession($user, $request);
         }
 
         // Requests fired together after a wake-up record one sign-in; the others, and a cookie already replaced, join the same device
@@ -231,37 +231,6 @@ class TrackDevice
     private static function isClosed(User $user): bool
     {
         return $user->employee?->hasLeft() === true;
-    }
-
-    /** A remember cookie from before devices: this browser gets a device with its own cookie, and the old cookie stops working. */
-    private function movedLegacyCookie(User $user, Request $request): UserDevice
-    {
-        $movedKey = 'device-legacy-moved:'.$user->getKey().':'.hash('sha256', (string) $user->getRememberToken());
-
-        return Cache::lock('device-legacy:'.$user->getKey(), self::LOCK_SECONDS)
-            ->block(self::LOCK_WAIT_SECONDS, function () use ($user, $request, $movedKey): UserDevice {
-                // Requests that passed the same old cookie's check together share the device the first one made
-                $movedId = Cache::get($movedKey);
-                $moved = $movedId === null ? null : UserDevice::query()->whereNull('ended_at')->find($movedId);
-                if ($moved !== null) {
-                    $request->session()->put(DeviceService::SESSION_KEY, $moved->getKey());
-                    $this->current->set($moved);
-
-                    return $moved;
-                }
-
-                $token = $this->devices->issueRememberToken($user);
-                $device = $this->devices->start($user, $request, $token, recordEvent: ! self::isClosed($user));
-                Cookie::queue(
-                    Auth::guard('web')->getRecallerName(),
-                    $user->getKey().'|'.$token.'|'.$user->getAuthPassword(),
-                    (int) config('auth.guards.web.remember'),
-                );
-                $this->devices->retireLegacyRememberToken($user);
-                Cache::put($movedKey, $device->getKey(), self::RESTORE_WINDOW_SECONDS);
-
-                return $device;
-            });
     }
 
     /**

@@ -179,12 +179,6 @@ class DeviceService
         return $device;
     }
 
-    /** users.remember_token gets a fresh value no cookie carries, so every cookie from before devices stops working. */
-    public function retireLegacyRememberToken(User $user): void
-    {
-        $this->holdRememberTokenInMemory($user, $this->retireLegacyRememberTokenOf((int) $user->getKey()));
-    }
-
     /**
      * Ends the device once: its session row, cached state and remember token go; later calls do nothing.
      *
@@ -213,10 +207,6 @@ class DeviceService
 
         $device->refresh();
         $signedOut = $reason === DeviceEndReason::SignedOut;
-        if (! $signedOut) {
-            // A cookie from before devices could otherwise sign this browser straight back in
-            $this->retireLegacyRememberTokenOf((int) $device->user_id);
-        }
         $why = ['reason' => $reason->value, 'by' => $endedBy];
         if (! $signedOut && $rememberHash !== null && $rememberExpiresAt?->isFuture()) {
             // The remember cookie outlives the session note below
@@ -294,14 +284,6 @@ class DeviceService
             ->orderByDesc('last_active_at')
             ->orderByDesc('id')
             ->get();
-    }
-
-    private function retireLegacyRememberTokenOf(int $userId): string
-    {
-        $token = Str::random(self::REMEMBER_TOKEN_LENGTH);
-        User::query()->whereKey($userId)->toBase()->update([(new User)->getRememberTokenName() => $token]);
-
-        return $token;
     }
 
     private function rememberExpiry(): CarbonInterface

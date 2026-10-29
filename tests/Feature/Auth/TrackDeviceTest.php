@@ -372,20 +372,6 @@ class TrackDeviceTest extends TestCase
         $this->assertSame(0, UserDevice::query()->active()->count());
     }
 
-    public function test_an_old_remember_cookie_stops_working_once_a_device_of_its_account_is_ended(): void
-    {
-        $user = User::factory()->create();
-        $this->signInOnDatabaseSessions($user);
-        User::query()->whereKey($user->id)->update(['remember_token' => 'token-from-before-devices']);
-        $this->devices()->end(UserDevice::query()->sole(), DeviceEndReason::ThirdDevice);
-
-        $this->travel(3)->hours();
-        $this->meWithRememberCookie($this->cookieFor($user, 'token-from-before-devices'))->assertUnauthorized();
-
-        $this->assertSame(1, UserDevice::count());
-        $this->assertSame(0, UserDevice::query()->active()->count());
-    }
-
     /** The same browser also holds the cookie of an older remembered device, which signs it in again on the way. */
     public function test_a_file_link_restored_by_another_remember_cookie_leaves_a_signed_out_session(): void
     {
@@ -544,45 +530,6 @@ class TrackDeviceTest extends TestCase
         $this->assertSame($device->id, session(DeviceService::SESSION_KEY));
         $this->assertSame(1, UserDevice::count());
         $this->assertSame(1, LoginEvent::query()->where('event', 'signed_in')->count());
-    }
-
-    public function test_a_cookie_from_before_devices_moves_to_a_device_token_once(): void
-    {
-        $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
-        $legacy = $this->cookieFor($user, 'token-from-before-devices');
-        $recaller = Auth::guard('web')->getRecallerName();
-
-        $response = $this->meWithRememberCookie($legacy)->assertOk()->assertJsonPath('data.remembered', true);
-
-        $device = UserDevice::query()->sole();
-        [$userId, $token] = explode('|', $response->getCookie($recaller)->getValue(), 3);
-        $this->assertSame((string) $user->id, $userId);
-        $this->assertSame(hash('sha256', $token), $device->remember_token_hash);
-        $this->assertNotNull($device->remember_expires_at);
-        $this->assertSame(session()->getId(), $device->session_id);
-        $days = ($response->getCookie($recaller, false)->getExpiresTime() - time()) / 86400;
-        $this->assertEqualsWithDelta(7, $days, 0.01);
-        $this->assertDatabaseHas('login_events', ['event' => 'signed_in', 'remembered' => true, 'device_id' => $device->id]);
-        $this->assertNotContains($user->fresh()->getRememberToken(), ['token-from-before-devices', $token]);
-
-        $this->meWithRememberCookie($legacy)->assertUnauthorized();
-        $this->meWithRememberCookie($this->cookieFor($user, $token))->assertOk();
-        $this->assertSame(1, UserDevice::count());
-    }
-
-    /** A request that passed the old cookie's check before the first one retired it joins that device instead of making another. */
-    public function test_requests_fired_together_with_an_old_cookie_share_one_device(): void
-    {
-        $user = User::factory()->create(['remember_token' => 'token-from-before-devices']);
-        $legacy = $this->cookieFor($user, 'token-from-before-devices');
-        $this->meWithRememberCookie($legacy)->assertOk();
-        $device = UserDevice::query()->sole();
-        User::query()->whereKey($user->id)->update(['remember_token' => 'token-from-before-devices']);
-
-        $this->meWithRememberCookie($legacy)->assertOk();
-
-        $this->assertSame(1, UserDevice::count());
-        $this->assertSame($device->id, session(DeviceService::SESSION_KEY));
     }
 
     public function test_a_remembered_device_past_its_remember_period_carries_on_as_a_session_device(): void
