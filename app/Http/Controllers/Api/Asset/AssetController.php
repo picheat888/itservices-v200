@@ -164,7 +164,7 @@ class AssetController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
-        $this->gateView($request);
+        abort_unless((bool) $request->user()?->hasPermission('assets.view_dashboard'), 403);
 
         // Eager-load location + category: top_value builds AssetResource (location?->name)
         // and the by-type breakdown groups on the category name. contract.vendor feeds the

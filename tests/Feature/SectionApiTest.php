@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Section;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,6 +18,17 @@ class SectionApiTest extends TestCase
     private function super(): User
     {
         return User::factory()->create(['role' => 'super']);
+    }
+
+    /** @param list<string> $permissions */
+    private function userWith(array $permissions): User
+    {
+        $role = Role::create(['key' => 'r_'.uniqid(), 'name' => 'Role '.uniqid(), 'is_system' => false]);
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return User::factory()->create(['role' => $role->key]);
     }
 
     public function test_section_belongs_to_department_and_has_employees(): void
@@ -94,5 +107,18 @@ class SectionApiTest extends TestCase
     public function test_section_endpoints_require_authentication(): void
     {
         $this->getJson('/api/sections')->assertUnauthorized();
+    }
+
+    public function test_section_members_need_the_section_view(): void
+    {
+        $dept = Department::create(['name' => 'IT']);
+        $section = Section::create(['department_id' => $dept->id, 'name' => 'Network']);
+        Employee::create(['first_name' => 'A', 'last_name' => 'Member', 'department_id' => $dept->id, 'section_id' => $section->id]);
+        $url = "/api/sections/{$section->id}/members";
+
+        $this->actingAs($this->userWith(['employees.module', 'employees.view', 'employees.view_department', 'employees.view_position', 'workflows.manage']))
+            ->getJson($url)->assertForbidden();
+        $this->actingAs($this->userWith(['employees.module', 'employees.view_section']))
+            ->getJson($url)->assertOk()->assertJsonCount(1, 'data');
     }
 }

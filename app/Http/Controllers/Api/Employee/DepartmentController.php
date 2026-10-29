@@ -58,9 +58,12 @@ class DepartmentController extends Controller
         return response()->json(['message' => 'success']);
     }
 
-    // Members of a department (for the "view members" drawer).
-    public function members(Department $department): JsonResponse
+    /** Members of a department, for the Departments tab and the workflow editor's department step. */
+    public function members(Request $request, Department $department): JsonResponse
     {
+        $user = $request->user();
+        abort_unless((bool) ($user?->hasPermission('employees.view_department') || $user?->hasPermission('workflows.manage')), 403);
+
         $members = $department->employees()->with(['department', 'position', 'section', 'user'])->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();

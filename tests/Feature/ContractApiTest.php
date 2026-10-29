@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Vendor;
@@ -144,6 +146,41 @@ class ContractApiTest extends TestCase
         $codes = collect($this->getJson('/api/contracts/summary')->assertOk()->json('timeline'))->pluck('code')->sort()->values()->all();
 
         $this->assertSame(['FIRST', 'LAST'], $codes);
+    }
+
+    /** @param list<string> $permissions */
+    private function userWith(array $permissions): User
+    {
+        $role = Role::create(['key' => 'r_'.uniqid(), 'name' => 'Role '.uniqid(), 'is_system' => false]);
+        foreach ($permissions as $permission) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+        }
+
+        return User::factory()->create(['role' => $role->key]);
+    }
+
+    public function test_summary_without_the_dashboard_permission_holds_only_the_alert_counts(): void
+    {
+        Contract::create(['vendor' => 'B', 'name' => 'Expiring', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(20), 'value' => 10000, 'billing_cycle' => 'monthly', 'notify_30' => true]);
+        Contract::create(['vendor' => 'C', 'name' => 'Overdue', 'type' => 'connectivity', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 50000, 'billing_cycle' => 'yearly']);
+
+        $alertsOnly = $this->actingAs($this->userWith(['contracts.module', 'contracts.view']))
+            ->getJson('/api/contracts/summary')
+            ->assertOk()
+            ->json();
+        $this->assertSame(['expiring' => 1, 'overdue' => 1], $alertsOnly);
+
+        $this->actingAs($this->userWith(['contracts.module', 'contracts.view', 'contracts.view_dashboard']))
+            ->getJson('/api/contracts/summary')
+            ->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonPath('expiring', 1)
+            ->assertJsonPath('overdue', 1)
+            ->assertJsonStructure(['total', 'active', 'expiring', 'overdue', 'expired', 'cancelled', 'annual_value', 'top_vendors', 'timeline', 'action_queue']);
+
+        $this->actingAs($this->userWith(['contracts.module', 'contracts.view_dashboard']))
+            ->getJson('/api/contracts/summary')
+            ->assertForbidden();
     }
 
     public function test_summary_reports_status_counts(): void

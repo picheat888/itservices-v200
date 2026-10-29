@@ -33,7 +33,7 @@ import { searchLabel } from '@/shared/lib/search-words';
 import { styleVars } from '@/shared/lib/style-vars';
 import { CARD_HEADING } from '@/shared/lib/surface';
 import { cn, toRecordId } from '@/shared/lib/utils';
-import type { Contract, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
+import type { Contract, ContractAlertCounts, ContractStatus, ContractSummary, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
@@ -68,6 +68,9 @@ const TAB_IDS = ['overview', 'all'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isContractTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+/** The full Overview figures; a viewer without contracts.view_dashboard gets only the alert counts. */
+const isOverviewSummary = (summary: ContractAlertCounts | ContractSummary | undefined): summary is ContractSummary =>
+    summary !== undefined && 'total' in summary;
 
 const CONTRACT_TYPES: ContractType[] = ['software', 'hardware', 'service', 'connectivity', 'other'];
 type StatusFilter = '' | 'expiring' | 'expired';
@@ -99,9 +102,16 @@ export default function ContractsPage() {
     const canCancel = can('contracts.cancel');
     const canExpire = can('contracts.expire');
     const canReactivate = can('contracts.reactivate');
+    const canViewOverview = can('contracts.view_dashboard');
 
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
-    const [tab, setTab] = useTabParam(isContractTab, 'overview');
+    const [tab, setTab] = useTabParam(isContractTab, canViewOverview ? 'overview' : 'all');
+    // No Overview without contracts.view_dashboard; replace, so Back never returns to it
+    useEffect(() => {
+        if (tab === 'overview' && !canViewOverview) {
+            setTab('all', { replace: true });
+        }
+    }, [tab, canViewOverview]); // eslint-disable-line react-hooks/exhaustive-deps
     // All-tab search, filters, sort and page live in the URL (?search, type, status, sort, page, per).
     const list = useListParams();
     const { page, perPage } = list;
@@ -258,7 +268,8 @@ export default function ContractsPage() {
     /** Called by ContractFormDrawer after a new contract is saved. */
     const handleCreated = (contract: Contract) => setJustCreated(contract);
 
-    const maxVendor = summary?.top_vendors?.[0]?.amount ?? 1;
+    const overviewSummary = isOverviewSummary(summary) ? summary : undefined;
+    const maxVendor = overviewSummary?.top_vendors?.[0]?.amount ?? 1;
 
     // Set filters (type/status/sort ≠ default) — drives the FilterPopover count badge.
     const activeFilterCount = (typeFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
@@ -310,9 +321,9 @@ export default function ContractsPage() {
             <Card className="overflow-clip">
                 <PageTabs<Tab>
                     tabs={[
-                        { id: 'overview', label: t('sub_overview'), refresh: marks.overview },
-                        { id: 'all', label: t('all_contracts'), refresh: marks.all },
-                    ]}
+                        { id: 'overview' as Tab, label: t('sub_overview'), refresh: marks.overview },
+                        { id: 'all' as Tab, label: t('all_contracts'), refresh: marks.all },
+                    ].filter((tb) => tb.id !== 'overview' || canViewOverview)}
                     active={tab}
                     onChange={changeTab}
                 />
@@ -321,7 +332,7 @@ export default function ContractsPage() {
                     !summary && summaryFailed ? (
                         <LoadFailedPanel onRetry={() => refetchSummary()} />
                     ) : (
-                        <OverviewTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
+                        <OverviewTab summary={overviewSummary} maxVendor={maxVendor} onSelect={setSelectedId} />
                     )
                 ) : (
                     <div className="space-y-3 p-5">
@@ -635,15 +646,7 @@ function ContractStatusBadge({ status, days }: { status: ContractStatus; days: n
     return <StatusBadge tone="green">{t('contract_active')}</StatusBadge>;
 }
 
-function OverviewTab({
-    summary,
-    maxVendor,
-    onSelect,
-}: {
-    summary: ReturnType<typeof useContractSummary>['data'];
-    maxVendor: number;
-    onSelect: (id: number) => void;
-}) {
+function OverviewTab({ summary, maxVendor, onSelect }: { summary: ContractSummary | undefined; maxVendor: number; onSelect: (id: number) => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
     const fmt = useDateFormat();

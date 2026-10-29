@@ -106,6 +106,7 @@ class ContractController extends Controller
     /**
      * Dashboard aggregates: status counts, normalised annual spend, the top
      * vendors by spend, the 12-month expiry timeline, and the action queue.
+     * Without contracts.view_dashboard only the expiring and overdue counts.
      */
     public function summary(Request $request): JsonResponse
     {
@@ -117,6 +118,15 @@ class ContractController extends Controller
         $live = $contracts->reject($terminal);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
         $overdue = $live->filter(fn ($c) => $c->daysRemaining() <= 0);
+
+        // The header alert buttons need only these two; the rest is the Overview tab's
+        if (! $request->user()->hasPermission('contracts.view_dashboard')) {
+            return response()->json([
+                'expiring' => $expiring->count(),
+                'overdue' => $overdue->count(),
+            ]);
+        }
+
         // "Active" = healthy contracts only — exclude those already inside their
         // reminder window so active/expiring/overdue stay mutually exclusive.
         $active = $live->filter(fn ($c) => $c->daysRemaining() > 0 && ! $c->isInReminder());

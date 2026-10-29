@@ -75,6 +75,58 @@ class EmployeeSafeguardsTest extends TestCase
         $this->assertNotSame('renamed', $admin->fresh()->username);
     }
 
+    public function test_a_non_administrator_cannot_cancel_an_administrators_resignation(): void
+    {
+        $hr = $this->userWith(['employees.cancel_resign']);
+        $admin = User::factory()->create(['role' => 'super']);
+        $employee = $this->employeeWithAccount($admin);
+        $employee->update(['status' => 'resigned']);
+
+        $this->actingAs($hr)
+            ->postJson("/api/employees/{$employee->id}/cancel-resign")
+            ->assertForbidden()
+            ->assertJson(['message' => 'super_account']);
+        $this->assertSame('resigned', $employee->fresh()->status->value);
+
+        $this->actingAs(User::factory()->create(['role' => 'super']))
+            ->postJson("/api/employees/{$employee->id}/cancel-resign")
+            ->assertOk();
+        $this->assertSame('active', $employee->fresh()->status->value);
+    }
+
+    public function test_resigning_yourself_is_refused(): void
+    {
+        $hr = $this->userWith(['employees.resign', 'employees.view']);
+        $employee = $this->employeeWithAccount($hr);
+
+        $this->actingAs($hr)
+            ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
+            ->assertForbidden()
+            ->assertJson(['message' => 'own_account', 'code' => 'own_account_resign']);
+
+        $this->assertSame('active', $employee->fresh()->status->value);
+    }
+
+    public function test_resigning_the_last_super_admin_is_refused(): void
+    {
+        $systemAdmin = User::factory()->create(['role' => 'super']);
+        $employee = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+        $gone = $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+        $gone->update(['status' => 'resigned', 'last_day' => now()->subDay()->toDateString()]);
+
+        $this->actingAs($systemAdmin)
+            ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
+            ->assertStatus(422)
+            ->assertJson(['message' => 'last_super_admin', 'code' => 'last_super_admin']);
+        $this->assertSame('active', $employee->fresh()->status->value);
+
+        // Another working employee with a Super admin account lets it through
+        $this->employeeWithAccount(User::factory()->create(['role' => 'super']));
+        $this->actingAs($systemAdmin)
+            ->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'x'])
+            ->assertOk();
+    }
+
     public function test_resigning_someone_already_resigned_is_refused(): void
     {
         $hr = $this->userWith(['employees.resign', 'employees.view']);

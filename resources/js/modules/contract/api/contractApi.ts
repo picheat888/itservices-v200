@@ -1,5 +1,5 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope, Contract, ContractSummary } from '@/shared/types';
+import type { ApiEnvelope, Contract, ContractAlertCounts, ContractSummary } from '@/shared/types';
 
 export interface ContractPageMeta {
     total: number;
@@ -45,7 +45,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 export const contractApi = {
     list: (params: { page: number; per_page: number; search?: string; tab?: string; type?: string; sort?: string }) =>
         http.get<ContractPageResponse>('/contracts', { params }).then((r) => r.data),
-    summary: () => http.get<ContractSummary>('/contracts/summary').then((r) => r.data),
+    summary: () => http.get<ContractAlertCounts | ContractSummary>('/contracts/summary').then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<Contract>>(`/contracts/${id}`).then((r) => r.data.data),
     create: (payload: ContractPayload) => mutate<Contract>('post', '/contracts', payload),
     update: (id: number, payload: ContractPayload) => mutate<Contract>('put', `/contracts/${id}`, payload),

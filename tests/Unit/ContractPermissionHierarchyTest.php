@@ -34,6 +34,21 @@ class ContractPermissionHierarchyTest extends TestCase
         $this->assertNotContains('contracts.cancel', $out);
     }
 
+    public function test_alerts_dropped_when_view_absent(): void
+    {
+        $this->assertNotContains('contracts.alerts', Permissions::normalizeContracts(['contracts.module', 'contracts.alerts']));
+        $this->assertContains('contracts.alerts', Permissions::normalizeContracts(['contracts.module', 'contracts.view', 'contracts.alerts']));
+    }
+
+    public function test_no_default_role_holds_alerts_without_view(): void
+    {
+        foreach (Permissions::defaults() as $role => $granted) {
+            if (in_array('contracts.alerts', $granted, true)) {
+                $this->assertContains('contracts.view', $granted, "{$role} holds contracts.alerts without contracts.view");
+            }
+        }
+    }
+
     public function test_normalize_drops_all_contracts_when_master_is_off(): void
     {
         $in = ['contracts.view', 'contracts.create', 'contracts.cancel', 'tickets.create'];

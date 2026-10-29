@@ -7,6 +7,7 @@ use App\Models\Asset\AssetTransfer;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
+use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\AssetModel;
@@ -808,6 +809,21 @@ class AssetApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.warehouse', 'Central IT');
+    }
+
+    public function test_summary_needs_the_dashboard_permission(): void
+    {
+        $userWith = function (array $permissions): User {
+            $role = Role::create(['key' => 'r_'.uniqid(), 'name' => 'Role '.uniqid(), 'is_system' => false]);
+            foreach ($permissions as $permission) {
+                RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+            }
+
+            return User::factory()->create(['role' => $role->key]);
+        };
+
+        $this->actingAs($userWith(['assets.module', 'assets.view']))->getJson('/api/assets/summary')->assertForbidden();
+        $this->actingAs($userWith(['assets.module', 'assets.view_dashboard']))->getJson('/api/assets/summary')->assertOk();
     }
 
     public function test_summary_reports_status_counts(): void

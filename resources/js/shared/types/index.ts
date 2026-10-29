@@ -257,12 +257,16 @@ export interface Contract {
     cancelled_by_name?: string | null;
 }
 
-export interface ContractSummary {
+/** The header alert counts: all a viewer without contracts.view_dashboard receives. */
+export interface ContractAlertCounts {
+    expiring: number;
+    overdue: number;
+}
+
+export type ContractSummary = ContractAlertCounts & {
     total: number;
     active: number;
-    expiring: number;
     expired: number;
-    overdue: number;
     cancelled: number;
     annual_value: string;
     top_vendors: { vendor: string; vendor_th?: string | null; amount: number }[];
@@ -277,7 +281,7 @@ export interface ContractSummary {
         in_reminder: boolean;
     }[];
     action_queue: { id: number; code: string; name: string; vendor: string; vendor_th?: string | null; days: number }[];
-}
+};
 
 // Assets Management module
 // Asset type is a free Master Data category (managed under Settings → Master Data).

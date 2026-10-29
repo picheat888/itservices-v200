@@ -866,11 +866,17 @@ class EmployeeController extends Controller
     public function resign(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.resign'), 403);
+        if (in_array($employee->id, $request->user()->linkedEmployeeIds(), true)) {
+            return response()->json(['message' => 'own_account', 'code' => 'own_account_resign'], 403);
+        }
         if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
             return response()->json(['message' => 'super_account'], 403);
         }
         if ($employee->status === EmployeeStatus::Resigned) {
             return response()->json(['message' => 'already_resigned'], 422);
+        }
+        if ($employee->isSuperAdmin() && ! SuperAdmins::anotherWorkingEmployeeHolds($employee)) {
+            return response()->json(['message' => 'last_super_admin', 'code' => 'last_super_admin'], 422);
         }
 
         $data = $request->validate([
@@ -914,13 +920,13 @@ class EmployeeController extends Controller
         return response()->json(['message' => 'success']);
     }
 
-    /**
-     * Cancels a resignation by reverting the employee's status back to Active.
-     * Requires the employees.cancel_resign permission.
-     */
+    /** Cancels a resignation by reverting the employee's status back to Active. */
     public function cancelResign(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.cancel_resign'), 403);
+        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
+            return response()->json(['message' => 'super_account'], 403);
+        }
         abort_unless($employee->status->value === 'resigned', 422, 'Employee is not resigned.');
 
         $employee = $this->service->cancelResign($employee);

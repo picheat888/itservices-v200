@@ -29,8 +29,10 @@ class SectionController extends Controller
     }
 
     /** Employees assigned to a section (for the "view members" dialog). */
-    public function members(Section $section): JsonResponse
+    public function members(Request $request, Section $section): JsonResponse
     {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view_section'), 403);
+
         $members = $section->employees()->with(['department', 'position', 'section', 'user'])
             ->orderBy('first_name')->orderBy('last_name')->get();
 

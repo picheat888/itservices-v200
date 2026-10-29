@@ -66,10 +66,10 @@ class AuthController extends Controller
             throw LoginRequest::pendingExpired();
         }
 
-        $this->endThisBrowsersSignIn($request, $devices);
-
+        // This browser's own seat for the same account is ended below, so it never counts
+        $browserDevice = $this->thisBrowsersDevice($request);
         $limit = $devices->limit();
-        $active = $devices->active($user);
+        $active = $devices->active($user)->reject(fn (UserDevice $device) => $device->id === $browserDevice?->id)->values();
         if ($limit > 0 && $active->count() >= $limit) {
             return response()->json([
                 'message' => 'device_limit',
@@ -79,6 +79,8 @@ class AuthController extends Controller
                 'devices' => UserDeviceResource::collection($active)->resolve($request),
             ], 409);
         }
+
+        $this->endThisBrowsersSignIn($request, $browserDevice, $devices);
 
         $remember = $request->boolean('remember');
         $rememberToken = $remember ? $devices->issueRememberToken($user) : null;
@@ -96,11 +98,17 @@ class AuthController extends Controller
         return null;
     }
 
-    /** A sign-in from a login tab left open in a signed-in browser ends that browser's device first: its seat frees and its remember cookie goes. */
-    private function endThisBrowsersSignIn(Request $request, DeviceService $devices): void
+    /** The device this browser is still signed in on, if any. */
+    private function thisBrowsersDevice(Request $request): ?UserDevice
     {
         $deviceId = $request->hasSession() ? $request->session()->get(DeviceService::SESSION_KEY) : null;
-        $device = $deviceId === null ? null : UserDevice::query()->whereNull('ended_at')->find($deviceId);
+
+        return $deviceId === null ? null : UserDevice::query()->whereNull('ended_at')->find($deviceId);
+    }
+
+    /** A sign-in from a login tab left open in a signed-in browser ends that browser's device: its seat frees and its remember cookie goes. */
+    private function endThisBrowsersSignIn(Request $request, ?UserDevice $device, DeviceService $devices): void
+    {
         if ($device !== null) {
             $devices->end($device, DeviceEndReason::SignedOut);
         }

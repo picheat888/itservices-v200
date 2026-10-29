@@ -641,6 +641,48 @@ class LoginDeviceLimitTest extends TestCase
         $this->assertSame(1, $this->activeCount($user));
     }
 
+    public function test_a_409_keeps_the_previous_accounts_session_in_this_browser(): void
+    {
+        $previous = User::factory()->create();
+        $previousDevice = UserDevice::factory()->for($previous)->remembered()->create();
+        [$full, $older] = $this->fullAccount();
+        $recaller = Auth::guard('web')->getRecallerName();
+
+        $response = $this->browser(self::BROWSER_A)
+            ->withSession([DeviceService::SESSION_KEY => $previousDevice->id])
+            ->withCookie($recaller, 'the-previous-accounts-cookie')
+            ->postJson('/api/login', ['login' => $full->email, 'password' => 'password'])
+            ->assertStatus(409);
+
+        $this->assertNull($previousDevice->fresh()->ended_at);
+        $this->assertNull($response->getCookie($recaller, false));
+        $pending = $response->json('pending');
+
+        $this->signOutDevice($older->id, $pending)->assertOk();
+        $this->browser(self::BROWSER_A)
+            ->withSession([DeviceService::SESSION_KEY => $previousDevice->id])
+            ->postJson('/api/login', ['pending' => $pending])
+            ->assertOk()
+            ->assertJsonPath('data.id', $full->id);
+
+        $this->assertNotNull($previousDevice->fresh()->ended_at);
+    }
+
+    public function test_signing_in_again_in_the_same_browser_at_the_limit_needs_no_409(): void
+    {
+        $user = User::factory()->create();
+        $earlier = UserDevice::factory()->for($user)->create();
+        UserDevice::factory()->for($user)->create();
+
+        $this->browser(self::BROWSER_A)
+            ->withSession([DeviceService::SESSION_KEY => $earlier->id])
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertOk();
+
+        $this->assertNotNull($earlier->fresh()->ended_at);
+        $this->assertSame(2, $this->activeCount($user));
+    }
+
     public function test_a_remembered_sign_in_tells_the_spa_when_remembering_ends(): void
     {
         $user = User::factory()->create();

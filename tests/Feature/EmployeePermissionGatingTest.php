@@ -123,6 +123,18 @@ class EmployeePermissionGatingTest extends TestCase
         $this->actingAs($picker)->getJson('/api/sections')->assertOk();
     }
 
+    public function test_position_members_need_the_position_view(): void
+    {
+        $position = Position::create(['title' => 'Analyst']);
+        Employee::create(['first_name' => 'A', 'last_name' => 'Member', 'position_id' => $position->id]);
+        $url = "/api/positions/{$position->id}/members";
+
+        $this->actingAs($this->userWith(['employees.module', 'employees.view', 'employees.view_department', 'employees.view_section', 'workflows.manage']))
+            ->getJson($url)->assertForbidden();
+        $this->actingAs($this->userWith(['employees.module', 'employees.view_position']))
+            ->getJson($url)->assertOk()->assertJsonCount(1, 'data');
+    }
+
     public function test_summary_requires_view_dashboard(): void
     {
         $blocked = $this->userWith(['employees.module', 'employees.view']);

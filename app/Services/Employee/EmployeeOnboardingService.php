@@ -11,17 +11,8 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Files the day-one service requests ticked on the Add Employee form.
- *
- * One request per service, each owned by the new employee (so it climbs THEIR
- * reporting line) and stamped with the account that filed it. The services are
- * limited to the three a new hire needs before anything else exists for them.
- *
- * Nothing here may cost us the employee: a service whose workflow is closed, or
- * that fails for any other reason, is reported back and skipped — the person has
- * already been hired by the time this runs, and a closed workflow is not a reason
- * to undo that. The caller surfaces the failures so nobody assumes a request went
- * out when it did not.
+ * Files the day-one service requests ticked on the Add Employee form, one per service, owned by the new employee.
+ * A service that fails is reported back and skipped, never undoing the hire.
  */
 class EmployeeOnboardingService
 {
@@ -53,10 +44,7 @@ class EmployeeOnboardingService
                 $request = $this->requests->submitFor($employee, $actor, [
                     'type' => $type->value,
                     'reason' => $this->reason($employee, $note),
-                    // The detail this service asks for — device type, mailbox address —
-                    // collected on Step 3 and validated against the same schema the
-                    // Request form uses. It used to be sent empty, which left IT with a
-                    // request that did not say which kind of machine it was for.
+                    // Step 3's detail, validated against the Request form's schema
                     'fields' => (array) $fields,
                 ], RequestOrigin::Onboarding);
 
@@ -65,33 +53,18 @@ class EmployeeOnboardingService
                 $failed[] = ['service' => $service, 'message' => collect($e->errors())->flatten()->first() ?? $e->getMessage()];
             } catch (Throwable $e) {
                 report($e);
-                $failed[] = ['service' => $service, 'message' => $e->getMessage()];
+                $failed[] = ['service' => $service, 'message' => 'request_failed'];
             }
         }
 
         return ['created' => $created, 'failed' => $failed];
     }
 
-    // The title ("Computer for Somchai Jaidee") is composed by
-    // RequestService::canonicalTitle() from the type and the origin — one rule for every
-    // request, whoever files it.
-
-    /**
-     * Why the request exists, plus whatever HR added.
-     *
-     * The generated line always stays: it carries the first day, which is the one fact
-     * an approver needs and the one nobody retypes. The note is appended on its own line
-     * behind `**` so an approver can see at a glance which half a person wrote — it used
-     * to REPLACE this text, so writing a note silently deleted the start date.
-     */
+    /** Why the request exists (with the first day), then HR's note on its own line behind `**`. */
     private function reason(Employee $employee, ?string $note): string
     {
         $start = $employee->joined_at?->format('Y-m-d');
-        // Two short lines rather than one long one: the first day is the fact an approver
-        // acts on, and on its own line it is read rather than scanned past. The detail
-        // view renders the reason with whitespace-pre-wrap, so the break survives.
-        //
-        // No date means no second line at all — never a dangling "first day ."
+        // No date means no second line
         $generated = $start === null
             ? 'Onboarding request with the new employee.'
             : "Onboarding request with the new employee,\nfirst day {$start}.";

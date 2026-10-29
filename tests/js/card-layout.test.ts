@@ -121,8 +121,7 @@ const SPECS: Record<string, CountSpec> = {
         master: 'contracts.module',
         groups: [
             { view: 'contracts.view_dashboard', children: [] },
-            { view: 'contracts.alerts', children: [] },
-            { view: 'contracts.view', children: ['contracts.create', 'contracts.edit', 'contracts.delete'] },
+            { view: 'contracts.view', children: ['contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.alerts'] },
             { view: 'contracts.view_lifecycle', children: ['contracts.cancel', 'contracts.expire', 'contracts.reactivate'] },
         ],
     },

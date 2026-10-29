@@ -199,6 +199,8 @@ export default function EmployeesPage() {
             },
         });
     };
+    // A cancel-resign refused on a Super admin account says why
+    const cancelResignError = (err: unknown) => (accountDeleteRefusal(err) === 'super_account' ? t('emp_admin_protected') : undefined);
 
     // View drawer in ?view=<id>; row clicks seed the cache for an instant open
     const qc = useQueryClient();
@@ -609,6 +611,7 @@ export default function EmployeesPage() {
                                     variant: 'warn',
                                     description: t('cancel_resign_confirm'),
                                     action: () => employeeMut.cancelResign.mutateAsync(e.id),
+                                    errorMessage: cancelResignError,
                                 });
                             }}
                             onResetPassword={setResetPwEmp}
@@ -726,6 +729,7 @@ export default function EmployeesPage() {
                             await employeeMut.cancelResign.mutateAsync(e.id);
                             closeEmp();
                         },
+                        errorMessage: cancelResignError,
                     });
                 }}
                 onDelete={askDeleteEmployee}

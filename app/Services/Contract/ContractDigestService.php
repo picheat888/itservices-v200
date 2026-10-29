@@ -66,7 +66,7 @@ class ContractDigestService
             return ['recipients' => 0, 'expiring' => 0, 'overdue' => 0];
         }
 
-        $recipients = User::holdingPermission('contracts.alerts')->orderBy('id')->get();
+        $recipients = User::holdingPermission('contracts.alerts')->holdingPermission('contracts.view')->orderBy('id')->get();
 
         foreach ($recipients as $recipient) {
             $this->email->sendTemplate('contract.weekly_digest', $recipient->email, [

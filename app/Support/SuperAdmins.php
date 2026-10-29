@@ -4,6 +4,7 @@
 
 namespace App\Support;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\UserRole;
 use App\Models\Employee\Employee;
 use App\Models\Settings\AppSetting;
@@ -63,6 +64,31 @@ class SuperAdmins
             ->pluck('employees.id');
 
         return $inSuperGroup->merge($withSuperAccount)->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /** Whether a Super admin account belongs to an employee other than this one who has not left (Employee::hasLeft()). */
+    public static function anotherWorkingEmployeeHolds(Employee $employee): bool
+    {
+        $roleId = self::roleId();
+        if ($roleId === null) {
+            return false;
+        }
+
+        $theirAccountIds = User::query()
+            ->where('employee_id', $employee->id)
+            ->when($employee->username !== null, fn ($query) => $query->orWhere('username', $employee->username))
+            ->pluck('id');
+
+        // Same account match as protectedEmployeeIds()
+        return DB::table('employees')
+            ->join('users', fn ($join) => $join->on('users.employee_id', '=', 'employees.id')->orOn('users.username', '=', 'employees.username'))
+            ->where('users.role_id', $roleId)
+            ->where('employees.id', '!=', $employee->id)
+            ->whereNotIn('users.id', $theirAccountIds)
+            ->where(fn ($working) => $working
+                ->where('employees.status', '!=', EmployeeStatus::Resigned->value)
+                ->orWhere(fn ($notice) => $notice->whereNotNull('employees.last_day')->where('employees.last_day', '>=', today()->toDateString())))
+            ->exists();
     }
 
     /** Locks the super accounts and says whether any is left; a locking read sees a concurrent removal's commit. */

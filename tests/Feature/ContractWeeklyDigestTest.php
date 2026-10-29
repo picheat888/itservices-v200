@@ -38,6 +38,7 @@ class ContractWeeklyDigestTest extends TestCase
     private function alertedUser(string $email = 'it@inaba.co.th'): User
     {
         $roleId = Role::firstOrCreate(['key' => 'itrole'], ['name' => 'IT', 'is_system' => false])->id;
+        RolePermission::firstOrCreate(['role_id' => $roleId, 'permission' => 'contracts.view'], ['allowed' => true]);
         RolePermission::firstOrCreate(['role_id' => $roleId, 'permission' => 'contracts.alerts'], ['allowed' => true]);
 
         return User::factory()->create(['role' => 'itrole', 'email' => $email, 'name' => 'Anong Wattana']);
@@ -182,6 +183,18 @@ class ContractWeeklyDigestTest extends TestCase
     {
         Bus::fake();
         User::factory()->create(['email' => 'sales@inaba.co.th']);
+        $this->contract('CT-2026-014', 20, [30]);
+
+        $this->assertSame(0, $this->send()['recipients']);
+        Bus::assertNothingDispatched();
+    }
+
+    public function test_nothing_is_sent_to_alerts_without_contract_view(): void
+    {
+        Bus::fake();
+        $roleId = Role::firstOrCreate(['key' => 'alertsonly'], ['name' => 'Alerts only', 'is_system' => false])->id;
+        RolePermission::firstOrCreate(['role_id' => $roleId, 'permission' => 'contracts.alerts'], ['allowed' => true]);
+        User::factory()->create(['role' => 'alertsonly', 'email' => 'alerts-only@inaba.co.th']);
         $this->contract('CT-2026-014', 20, [30]);
 
         $this->assertSame(0, $this->send()['recipients']);

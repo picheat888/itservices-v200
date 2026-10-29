@@ -575,6 +575,26 @@ class AccessControlTest extends TestCase
         Storage::disk('local')->assertMissing('software-logos/sw.png');
     }
 
+    public function test_logos_are_visible_to_any_signed_in_user(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('social-logos/sm.png', 'bytes');
+        Storage::disk('local')->put('software-logos/sw.png', 'bytes');
+        $platform = SocialPlatform::create(['name' => 'LINE', 'logo_path' => 'social-logos/sm.png']);
+        $software = Software::create(['name' => 'Acrobat', 'license_type' => 'perpetual', 'logo_path' => 'software-logos/sw.png']);
+        $urls = [route('files.social-logo', $platform), route('files.software-logo', $software)];
+
+        foreach ($urls as $url) {
+            $this->assertContains($this->getJson($url)->status(), [401, 403]);
+        }
+
+        $staff = User::factory()->create(['role' => 'user']);
+        $this->assertFalse($staff->hasPermission('access.module'));
+        foreach ($urls as $url) {
+            $this->actingAs($staff)->get($url)->assertOk();
+        }
+    }
+
     /**
      * Both logo routes are one fixed URL per record and their responses are cached,
      * so a replaced logo has to come back under a different URL or the browser keeps

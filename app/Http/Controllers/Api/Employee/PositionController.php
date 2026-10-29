@@ -26,8 +26,10 @@ class PositionController extends Controller
     }
 
     /** Employees holding a position (for the "view members" dialog). */
-    public function members(Position $position): JsonResponse
+    public function members(Request $request, Position $position): JsonResponse
     {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view_position'), 403);
+
         $members = $position->employees()->with(['department', 'position', 'section', 'user'])
             ->orderBy('first_name')->orderBy('last_name')->get();
 

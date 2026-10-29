@@ -36,9 +36,10 @@ class ContractExpiryAlertTest extends TestCase
         RolePermission::firstOrCreate(['role_id' => $roleId, 'permission' => $permission], ['allowed' => true]);
     }
 
-    /** A user whose role grants contracts.alerts. */
+    /** A user whose role grants contracts.view and contracts.alerts. */
     private function alertedUser(string $email = 'it@inaba.co.th'): User
     {
+        $this->grant('itrole', 'contracts.view');
         $this->grant('itrole', 'contracts.alerts');
 
         return User::factory()->create(['role' => 'itrole', 'email' => $email]);
@@ -258,6 +259,19 @@ class ContractExpiryAlertTest extends TestCase
         // otherwise enabling the permission later would never deliver them.
         $this->assertSame(0, ContractBellLog::count());
         $this->assertSame(0, ContractAlertLog::count());
+    }
+
+    public function test_alerts_without_contract_view_are_not_notified(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->grant('alertsonly', 'contracts.alerts');
+        User::factory()->create(['role' => 'alertsonly', 'email' => 'alerts-only@inaba.co.th']);
+        $this->contractExpiringIn(30, [30]);
+
+        $this->assertSame(0, $this->service()->run());
+        Notification::assertNothingSent();
+        Bus::assertNotDispatched(SendTemplatedEmail::class);
     }
 
     public function test_reset_clears_both_ledgers(): void

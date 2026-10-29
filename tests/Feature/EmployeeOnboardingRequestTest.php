@@ -19,12 +19,15 @@ use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Employee\EmployeeService;
+use App\Services\Request\RequestService;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Testing\TestResponse;
+use Mockery\MockInterface;
+use RuntimeException;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -488,6 +491,19 @@ class EmployeeOnboardingRequestTest extends TestCase
         // …and the response says plainly which service could not be filed.
         $this->assertSame(['computer'], $response->json('onboarding.failed.*.service'));
         $this->assertCount(1, $response->json('onboarding.created'));
+    }
+
+    public function test_an_unexpected_failure_returns_a_code_not_the_exception_text(): void
+    {
+        $this->mock(RequestService::class, fn (MockInterface $mock) => $mock
+            ->shouldReceive('submitFor')
+            ->andThrow(new RuntimeException('SQLSTATE[HY000]: General error: table service_requests is locked')));
+
+        $response = $this->addEmployee(['computer'])->assertCreated();
+
+        $this->assertSame('computer', $response->json('onboarding.failed.0.service'));
+        $this->assertSame('request_failed', $response->json('onboarding.failed.0.message'));
+        $this->assertStringNotContainsString('SQLSTATE', $response->getContent());
     }
 
     public function test_the_api_tells_approvers_the_request_is_for_a_new_employee(): void

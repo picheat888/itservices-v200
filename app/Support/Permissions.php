@@ -344,9 +344,8 @@ class Permissions
             'master' => 'contracts.module',
             'groups' => [
                 'contracts.view_dashboard' => [],
-                'contracts.view' => ['contracts.create', 'contracts.edit', 'contracts.delete'],
+                'contracts.view' => ['contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.alerts'],
                 'contracts.view_lifecycle' => ['contracts.cancel', 'contracts.expire', 'contracts.reactivate'],
-                'contracts.alerts' => [],
             ],
         ];
     }

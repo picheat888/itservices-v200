@@ -374,8 +374,7 @@
             {
                 "kind": "general",
                 "keys": [
-                    "contracts.view_dashboard",
-                    "contracts.alerts"
+                    "contracts.view_dashboard"
                 ]
             },
             {
@@ -384,7 +383,8 @@
                 "children": [
                     "contracts.create",
                     "contracts.edit",
-                    "contracts.delete"
+                    "contracts.delete",
+                    "contracts.alerts"
                 ],
                 "chip": true,
                 "outside_master": false,
