@@ -137,6 +137,17 @@ class StockReturnTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('serial_ids');
     }
 
+    public function test_serialized_return_without_serials_is_refused(): void
+    {
+        [$item, $req] = $this->serializedWithOneIssued();
+
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'stock_request_id' => $req->id,
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'return_serials_required')
+            ->assertJsonValidationErrors('serial_ids');
+    }
+
     public function test_return_requires_stock_return_permission(): void
     {
         [$item, $req] = $this->serializedWithOneIssued(); // set up as super inside helper

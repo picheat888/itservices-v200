@@ -102,7 +102,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: t('stock_counted_by'),
             minWidth: '11rem',
             className: 'whitespace-nowrap',
-            render: (s) => <TruncText text={s.counted_by} className="text-sm" />,
+            render: (s) => <TruncText text={localPair(s.counted_by, s.counted_by_th, lang)} className="text-sm" />,
         },
         {
             key: 'note',

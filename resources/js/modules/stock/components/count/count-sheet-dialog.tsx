@@ -9,6 +9,7 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { searchLabel } from '@/shared/lib/search-words';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { CountReason, StockCount, StockCountLine } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -16,6 +17,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogBody, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { ClipboardCheck, Loader2, Lock, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LinePatch } from '../../api/stockApi';
@@ -80,6 +82,7 @@ export function CountSheetDialog({
     onRefetch: () => Promise<{ isError: boolean; error: unknown }>;
 }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const fmtN = useNumberFormat();
     const confirm = useConfirm();
@@ -293,7 +296,7 @@ export function CountSheetDialog({
                             <CountFacts
                                 items={[
                                     { label: t('stock_warehouse'), value: warehouse },
-                                    { label: t('stock_count_opened_by'), value: shown.counted_by || '—' },
+                                    { label: t('stock_count_opened_by'), value: localPair(shown.counted_by, shown.counted_by_th, lang) || '—' },
                                     { label: t('stock_count_opened_at'), value: shown.created_at ? fmt.dateTime(shown.created_at) : '—' },
                                     {
                                         label: t('stock_count_fact_progress'),

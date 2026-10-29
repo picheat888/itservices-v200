@@ -875,6 +875,8 @@ export interface StockCount {
     note: string | null;
     counted_by?: string | null;
     committed_by?: string | null;
+    counted_by_th?: string | null;
+    committed_by_th?: string | null;
     recount_of?: { id: number; reference: string } | null;
     committed_at: string | null;
     created_at: string | null;

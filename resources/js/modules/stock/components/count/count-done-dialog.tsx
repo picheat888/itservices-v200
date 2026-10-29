@@ -6,12 +6,14 @@ import { ScrollTable } from '@/shared/components/scroll-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { StockCount } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Dialog, DialogBody, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { ClipboardCheck, Loader2, Printer } from 'lucide-react';
 import { useState } from 'react';
 import { stockCountApi } from '../../api/stockApi';
@@ -56,6 +58,7 @@ export function CountDoneDialog({
     onOpenCount: (id: number) => void;
 }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const fmt = useDateFormat();
     const fmtN = useNumberFormat();
     const { recount } = useStockCountMutations();
@@ -121,9 +124,9 @@ export function CountDoneDialog({
                             <CountFacts
                                 items={[
                                     { label: t('stock_warehouse'), value: shown.warehouse || '—' },
-                                    { label: t('stock_count_opened_by'), value: shown.counted_by || '—' },
+                                    { label: t('stock_count_opened_by'), value: localPair(shown.counted_by, shown.counted_by_th, lang) || '—' },
                                     { label: t('stock_count_opened_at'), value: stamp(shown.created_at) },
-                                    { label: t('stock_count_committed_by'), value: shown.committed_by || '—' },
+                                    { label: t('stock_count_committed_by'), value: localPair(shown.committed_by, shown.committed_by_th, lang) || '—' },
                                     { label: t('stock_count_committed_at'), value: stamp(shown.committed_at) },
                                 ]}
                             />

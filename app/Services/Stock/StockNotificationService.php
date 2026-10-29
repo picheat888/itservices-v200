@@ -246,7 +246,7 @@ class StockNotificationService
         });
 
         // Waiting — refresh each request's bell.
-        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with('item')->get();
+        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with(['item', 'user.employee'])->get();
         $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r));
 
         // Counting — bell-only reminder per draft session.
@@ -279,7 +279,7 @@ class StockNotificationService
             ], $this->stockUrl('items'), 'View stock items');
         }
 
-        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with('item')->get();
+        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with(['item', 'user.employee'])->get();
         if ($waiting->isNotEmpty()) {
             $this->emailRequestDigest($waiting);
         }

@@ -212,8 +212,8 @@ class Stock implements PerfStep
             $this->ctx->sql->insert('stock_requests', $this->fill('stock_requests', [
                 'id' => $id, 'reference' => $reference, 'stock_item_id' => $d['item'], 'user_id' => $who['user_id'], 'requester_name' => $who['name'],
                 'qty' => $qty, 'reason' => $rng->pick(self::REASONS), 'status' => $outcome,
-                'approver_name' => $outcome === 'pending' ? null : $approver, 'approved_at' => $approvedAt, 'fulfilled_at' => $fulfilledAt,
-                'fulfilled_by' => $fulfilledAt ? $request['fulfiller'][1] : null, 'rejected_at' => $rejectedAt,
+                'approver_id' => $outcome === 'pending' ? null : $approverId, 'approver_name' => $outcome === 'pending' ? null : $approver, 'approved_at' => $approvedAt, 'fulfilled_at' => $fulfilledAt,
+                'fulfilled_by_id' => $fulfilledAt ? $request['fulfiller'][0] : null, 'fulfilled_by' => $fulfilledAt ? $request['fulfiller'][1] : null, 'rejected_at' => $rejectedAt,
                 'created_at' => $at, 'updated_at' => $fulfilledAt ?? $approvedAt ?? $rejectedAt ?? $at,
             ]));
 

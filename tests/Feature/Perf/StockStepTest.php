@@ -114,6 +114,10 @@ class StockStepTest extends TestCase
         sort($issueRefs);
         $this->assertSame($fulfilled, $issueRefs);
 
+        foreach ($this->db->table('stock_requests')->get() as $r) {
+            $this->assertSame($r->approver_name !== null, $r->approver_id !== null, "{$r->reference} approver id");
+            $this->assertSame($r->fulfilled_by !== null, $r->fulfilled_by_id !== null, "{$r->reference} fulfiller id");
+        }
         $refs = $this->db->table('stock_requests')->pluck('reference');
         foreach ($refs as $ref) {
             $this->assertMatchesRegularExpression('/^REQ-\d{4}-\d{4}$/', $ref);

@@ -215,3 +215,15 @@ test('approve is the shared green in both the row and the request detail', () =>
     assert.match(tab, /className=\{REQUEST_APPROVE_BUTTON\}/);
     assert.doesNotMatch(tab, /bg-emerald-700 text-white/);
 });
+
+test('count screens show the opener and confirmer in the reader language', () => {
+    const files = [
+        'resources/js/modules/stock/pages/tabs/counting-tab.tsx',
+        'resources/js/modules/stock/components/count/count-sheet-dialog.tsx',
+        'resources/js/modules/stock/components/count/count-done-dialog.tsx',
+    ].map(read);
+    for (const src of files) {
+        assert.match(src, /counted_by_th/);
+    }
+    assert.match(files[2], /committed_by_th/);
+});
