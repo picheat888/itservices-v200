@@ -94,6 +94,8 @@ test('messages between tabs are checked before they are trusted', () => {
     assert.equal(parseSessionMessage({ type: 'login', userId: '7' }), null);
     assert.equal(parseSessionMessage({ type: 'login', userId: 1.5 }), null);
     assert.equal(parseSessionMessage({ type: 'activity' }), null);
+    assert.deepEqual(parseSessionMessage({ type: 'password', userId: 7 }), { type: 'password', userId: 7 });
+    assert.equal(parseSessionMessage({ type: 'password' }), null);
     assert.equal(parseSessionMessage({ type: 'other', at: 1 }), null);
     assert.equal(parseSessionMessage('logout'), null);
     assert.equal(parseSessionMessage(null), null);

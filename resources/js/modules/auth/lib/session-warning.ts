@@ -40,7 +40,11 @@ export function crossedAnnouncement(previous: number, current: number): number |
 /** A tab writes its activity for the others at most this often. */
 export const ACTIVITY_SHARE_MS = 5_000;
 
-export type SessionMessage = { type: 'activity'; at: number } | { type: 'logout' } | { type: 'login'; userId: number };
+export type SessionMessage =
+    | { type: 'activity'; at: number }
+    | { type: 'logout' }
+    | { type: 'login'; userId: number }
+    | { type: 'password'; userId: number };
 
 /** The later of this tab's activity and one read from another tab (localStorage text or a message). */
 export function newerActivity(current: number, incoming: unknown): number {
@@ -68,8 +72,8 @@ export function parseSessionMessage(data: unknown): SessionMessage | null {
     if (typeof data !== 'object' || data === null) return null;
     const message = data as { type?: unknown; at?: unknown; userId?: unknown };
     if (message.type === 'logout') return { type: 'logout' };
-    if (message.type === 'login' && typeof message.userId === 'number' && Number.isInteger(message.userId)) {
-        return { type: 'login', userId: message.userId };
+    if ((message.type === 'login' || message.type === 'password') && typeof message.userId === 'number' && Number.isInteger(message.userId)) {
+        return { type: message.type, userId: message.userId };
     }
     if (message.type === 'activity' && typeof message.at === 'number' && Number.isFinite(message.at)) {
         return { type: 'activity', at: message.at };

@@ -43,6 +43,14 @@ export function announceSignIn(userId: number): void {
     channel.close();
 }
 
+/** Tells the other tabs this account just saved a password, so a password wall still up there closes (see PasswordWall). */
+export function announcePasswordSaved(userId: number): void {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(SESSION_CHANNEL);
+    channel.postMessage({ type: 'password', userId });
+    channel.close();
+}
+
 let shared: ReturnType<typeof createLoginRedirect> | null = null;
 
 /** The app's one redirect, shared by the http client and the idle timer. */

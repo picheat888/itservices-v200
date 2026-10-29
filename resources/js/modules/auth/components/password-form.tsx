@@ -7,6 +7,7 @@ import { PasswordInput } from '@/shared/components/password-input';
 import { SaveButton } from '@/shared/components/save-button';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formFailureText } from '@/shared/lib/http-errors';
+import { announcePasswordSaved } from '@/shared/lib/login-redirect';
 import { isValidPassword } from '@/shared/lib/password-policy';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { focusFirstError } from '@/shared/lib/utils';
@@ -21,6 +22,7 @@ import { useEffect, useId, useState } from 'react';
 import { authApi, type ChangePasswordPayload } from '../api/authApi';
 import { useAuth } from '../hooks/use-auth';
 import { loginErrorText } from '../lib/login-error';
+import { splitPasswordErrors } from '../lib/password-errors';
 
 export function PasswordDialogHead({ icon: Icon, warn, title, desc }: { icon: LucideIcon; warn?: boolean; title: string; desc: string }) {
     return (
@@ -71,6 +73,7 @@ export function PasswordForm({
         // The flag that raised a wall turns false here, which unmounts it
         onSuccess: (fresh) => {
             qc.setQueryData<User | null>(ME_KEY, fresh);
+            announcePasswordSaved(fresh.id);
             // Reads the server refused while the wall was up (403 password_expired) load again
             void qc.invalidateQueries({ predicate: (query) => query.state.status === 'error' });
             pushToast(t('pwd_saved_toast'), 'success');
@@ -108,11 +111,14 @@ export function PasswordForm({
             onSuccess: () => onDone?.(),
             onError: (e: unknown) => {
                 const response = (e as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } })?.response;
-                const data = response?.data;
-                const server: Partial<Record<FieldKey, string>> = {};
-                if (data?.errors?.current_password?.[0]) server.current = data.errors.current_password[0];
-                if (data?.errors?.password?.[0]) server.next = data.errors.password[0];
-                if (Object.keys(server).length) {
+                const { fields: server, banner } = splitPasswordErrors(response?.data?.errors, needsCurrent);
+                if (banner) {
+                    // A field this form lacks, e.g. the password was set in another tab: say it, and reload the account so a wall that is done closes
+                    setErrors(server);
+                    setFormError(banner);
+                    setFormErrorCount((n) => n + 1);
+                    void qc.invalidateQueries({ queryKey: ME_KEY });
+                } else if (Object.keys(server).length) {
                     showErrors(server);
                 } else {
                     // Locked after too many wrong passwords: the sign-in wording with the wait, in place of the last field error

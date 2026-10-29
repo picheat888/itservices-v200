@@ -3,6 +3,7 @@
 import { SHEET_CLOSE_MS, usePresence } from '@/shared/hooks/use-presence';
 import type { User } from '@/shared/types';
 import { useState } from 'react';
+import { usePasswordWallSync } from '../hooks/use-password-wall-sync';
 import { ChangePasswordDialog } from './change-password-dialog';
 import { SetPasswordDialog } from './set-password-dialog';
 
@@ -11,6 +12,7 @@ type Wall = 'set' | 'expired';
 export function PasswordWall({ user }: { user: User | null | undefined }) {
     const wall: Wall | null = user?.must_change_password ? 'set' : user?.password_expired ? 'expired' : null;
     const { mounted } = usePresence(wall !== null, SHEET_CLOSE_MS);
+    usePasswordWallSync(user?.id, wall !== null);
 
     // The dialog on screen, kept once the flag clears so the closing one is the one that was open
     const [shown, setShown] = useState(wall);
