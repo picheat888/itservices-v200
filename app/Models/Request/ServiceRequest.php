@@ -16,6 +16,7 @@ use App\Models\Settings\RequestOption;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use App\Support\DocSequence;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,24 +44,13 @@ class ServiceRequest extends Model
         'cancel_reason', 'cancelled_by_user_id', 'cancelled_by_name',
     ];
 
-    /**
-     * Auto-assign RQ-<YEAR>-<NNNN> when no reference was supplied, counted per
-     * year. Reads the max existing reference for the year to find the next
-     * sequence (row-locked so concurrent submits cannot collide).
-     */
+    /** Auto-assign RQ-<YEAR>-<NNNN> from the per-year document sequence when no reference was supplied. */
     protected static function booted(): void
     {
         static::creating(function (ServiceRequest $request) {
             if (blank($request->reference)) {
-                $prefix = 'RQ-'.now()->year.'-';
-                // Longest first, then by string: numeric order once the sequence passes 9999.
-                $last = static::where('reference', 'like', "{$prefix}%")
-                    ->orderByRaw('LENGTH(reference) DESC')
-                    ->orderByDesc('reference')
-                    ->lockForUpdate()
-                    ->value('reference');
-                $seq = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-                $request->reference = $prefix.sprintf('%04d', $seq);
+                $year = now()->year;
+                $request->reference = sprintf('RQ-%d-%04d', $year, DocSequence::next('RQ', $year));
             }
         });
     }

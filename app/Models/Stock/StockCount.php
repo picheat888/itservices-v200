@@ -5,6 +5,7 @@ namespace App\Models\Stock;
 use App\Enums\Stock\StockCountAdjustMode;
 use App\Enums\Stock\StockCountStatus;
 use App\Models\User;
+use App\Support\DocNumber;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,22 +24,13 @@ class StockCount extends Model
         ];
     }
 
-    /**
-     * Auto-assign SC-<YEAR>-<NNN> when no reference was supplied, counted per year.
-     * Reads the max existing reference for the year to determine the next sequence.
-     */
+    /** Auto-assign SC-<YEAR>-<NNN> when no reference was supplied, counted per year. */
     protected static function booted(): void
     {
         static::creating(function (StockCount $count) {
             $count->warehouse_id ??= Warehouse::idOf($count->warehouse);
             if (blank($count->reference)) {
-                $year = now()->year;
-                $last = static::where('reference', 'like', "SC-{$year}-%")
-                    ->orderByDesc('reference')
-                    ->lockForUpdate()
-                    ->value('reference');
-                $seq = $last ? ((int) substr($last, -3)) + 1 : 1;
-                $count->reference = sprintf('SC-%d-%03d', $year, $seq);
+                $count->reference = DocNumber::nextIn(static::query(), 'reference', 'SC-'.now()->year.'-', 3);
             }
         });
     }

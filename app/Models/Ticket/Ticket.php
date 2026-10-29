@@ -77,19 +77,14 @@ class Ticket extends Model
         });
     }
 
-    /**
-     * Build the ticket number as TKT-<CAT>-YYMMDD-NNN: the TKT prefix, the category
-     * short code (SW / HW / NW / OTH), today's date (YYMMDD), and a 3-digit running
-     * number that restarts for each category+day. Only numbers already matching that
-     * exact prefix feed the sequence, so other formats never collide. Computed in PHP
-     * (not SQL) to stay portable across MySQL and SQLite.
-     */
+    /** TKT-<CAT>-YYMMDD-NNN: running number per category and day, taken under a row lock (call inside a transaction). */
     public static function generateTicketNo(?TicketCategory $category = null): string
     {
         $cat = ($category ?? TicketCategory::Other)->shortCode();
         $prefix = sprintf('TKT-%s-%s-', $cat, now()->format('ymd'));
 
         $last = static::where('ticket_no', 'like', $prefix.'%')
+            ->lockForUpdate()
             ->pluck('ticket_no')
             ->map(fn (string $no): int => (int) substr($no, strlen($prefix)))
             ->max() ?? 0;

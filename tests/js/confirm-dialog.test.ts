@@ -132,9 +132,15 @@ test('delete focuses Cancel, the window locks while working, failures and replac
     assert.match(src, /initialFocus=/);
     assert.match(src, /busy=\{loading \|\| done\}/);
     assert.match(src, /opts\.errorMessage\?\.\(e\) \?\? t\('cd_error'\)/);
-    assert.match(src, /setTimeout\(\(\) => settle\(true\), 850\)/);
     assert.match(src, /closest[^(]*\('\[role="dialog"\]'\)/);
     assert.match(read(FILE), /resolver\.current\?\.\(false\)/);
+});
+
+test('the success timer only closes the prompt it belongs to', () => {
+    const src = provider();
+    assert.match(src, /const mine = resolver\.current/);
+    assert.match(src, /resolver\.current === mine\) settle\(true\)/);
+    assert.match(src, /}, 850\)/);
 });
 
 test('permission save alerts keep the save button in full colour while saving and saved', () => {

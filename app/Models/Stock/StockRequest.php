@@ -3,6 +3,7 @@
 namespace App\Models\Stock;
 
 use App\Models\User;
+use App\Support\DocNumber;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,21 +17,12 @@ class StockRequest extends Model
         'cancelled_by', 'cancelled_at',
     ];
 
-    /**
-     * Auto-assign REQ-<YEAR>-<NNNN> when no reference was supplied, counted per year.
-     * Reads the max existing reference for the year to determine the next sequence.
-     */
+    /** Auto-assign REQ-<YEAR>-<NNNN> when no reference was supplied, counted per year. */
     protected static function booted(): void
     {
         static::creating(function (StockRequest $request) {
             if (blank($request->reference)) {
-                $year = now()->year;
-                $last = static::where('reference', 'like', "REQ-{$year}-%")
-                    ->orderByDesc('reference')
-                    ->lockForUpdate()
-                    ->value('reference');
-                $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
-                $request->reference = sprintf('REQ-%d-%04d', $year, $seq);
+                $request->reference = DocNumber::nextIn(static::query(), 'reference', 'REQ-'.now()->year.'-', 4);
             }
         });
     }

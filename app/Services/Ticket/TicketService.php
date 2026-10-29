@@ -34,28 +34,31 @@ class TicketService
      */
     public function create(array $data, Employee $requester): Ticket
     {
-        $ticket = Ticket::create([
-            'subject' => $data['subject'],
-            'description' => $data['description'],
-            'category' => $data['category'],
-            'callback_phone' => $data['callback_phone'] ?? null,
-            // Requester may optionally point at the device the issue is about; IT can
-            // still (re)link one when taking the case.
-            'related_asset_id' => $data['related_asset_id'] ?? null,
-            'priority' => null,
-            'status' => TicketStatus::Open,
-            // Only the auto-ticket step passes this; a form's validated input never carries it.
-            'source' => $data['source'] ?? TicketSource::Manual,
-            'requester_id' => $requester->id,
-            'assignee_id' => null,
-        ]);
+        // Number lock held until the row is written; retried on deadlock
+        $ticket = DB::transaction(function () use ($data, $requester): Ticket {
+            $ticket = Ticket::create([
+                'subject' => $data['subject'],
+                'description' => $data['description'],
+                'category' => $data['category'],
+                'callback_phone' => $data['callback_phone'] ?? null,
+                // Optional device the issue is about; IT can (re)link one when taking the case
+                'related_asset_id' => $data['related_asset_id'] ?? null,
+                'priority' => null,
+                'status' => TicketStatus::Open,
+                // Only the auto-ticket step passes this; a form's validated input never carries it.
+                'source' => $data['source'] ?? TicketSource::Manual,
+                'requester_id' => $requester->id,
+                'assignee_id' => null,
+            ]);
 
-        // Persist both SLA deadlines so the list can sort/filter by urgency in SQL.
-        // Resolution runs on the medium fallback until a priority is set at take/assign.
-        $ticket->update([
-            'sla_response_due_at' => TicketSla::responseDueAt($ticket),
-            'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
-        ]);
+            // SLA deadlines stored for SQL sorting; resolution uses the medium fallback until a priority is set
+            $ticket->update([
+                'sla_response_due_at' => TicketSla::responseDueAt($ticket),
+                'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
+            ]);
+
+            return $ticket;
+        }, 3);
 
         // Bell the staff who could take this case — never the requester themselves (they can't take it anyway).
         $takers = $this->takersFor($ticket)

@@ -8,6 +8,8 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use ReflectionMethod;
 use Tests\TestCase;
 
 class TicketApiTest extends TestCase
@@ -75,6 +77,35 @@ class TicketApiTest extends TestCase
         $this->assertSame("TKT-NW-{$date}-001", $nw1);
         $this->assertSame("TKT-NW-{$date}-002", $nw2);
         $this->assertSame("TKT-SW-{$date}-001", $sw1); // separate category → its own sequence
+    }
+
+    public function test_ticket_numbers_stay_sequential_per_category_and_day(): void
+    {
+        $this->actingAs($this->userWithEmployee());
+        $date = now()->format('ymd');
+
+        // The number is taken inside the create transaction
+        $outside = DB::transactionLevel();
+        $levels = [];
+        Ticket::creating(function () use (&$levels): void {
+            $levels[] = DB::transactionLevel();
+        });
+
+        $numbers = [];
+        foreach (['hardware', 'hardware', 'hardware', 'software'] as $category) {
+            $numbers[] = $this->postJson('/api/tickets', $this->payload(['category' => $category]))->assertCreated()->json('data.ticket_no');
+        }
+
+        $this->assertSame(["TKT-HW-{$date}-001", "TKT-HW-{$date}-002", "TKT-HW-{$date}-003", "TKT-SW-{$date}-001"], $numbers);
+        $this->assertCount(4, $levels);
+        foreach ($levels as $level) {
+            $this->assertGreaterThan($outside, $level);
+        }
+
+        // sqlite ignores the lock, so the source carries the proof
+        $method = new ReflectionMethod(Ticket::class, 'generateTicketNo');
+        $source = implode('', array_slice((array) file((string) $method->getFileName()), $method->getStartLine() - 1, $method->getEndLine() - $method->getStartLine() + 1));
+        $this->assertStringContainsString('lockForUpdate()', $source);
     }
 
     public function test_create_validates_subject_and_description(): void

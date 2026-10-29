@@ -151,14 +151,15 @@ class StockRequestController extends Controller
             Refusal::fail('not_enough_stock', ['available' => $available], 'qty');
         }
 
-        $stockRequest = StockRequest::create([
+        // Transaction holds the reference lock until the row is written; retried on deadlock
+        $stockRequest = DB::transaction(fn (): StockRequest => StockRequest::create([
             'stock_item_id' => $data['stock_item_id'],
             'user_id' => $user->id,
             'requester_name' => $user->name,
             'qty' => $data['qty'],
             'reason' => $data['reason'],
             'status' => 'pending',
-        ]);
+        ]), 3);
 
         AuditLog::record('Submitted stock request', "#{$stockRequest->id} ×{$data['qty']}", subject: $stockRequest);
         app(StockNotificationService::class)->requestCreated($stockRequest->load('item'));

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Stock\StockMovement;
+use Illuminate\Database\Eloquent\Builder;
 
 /** Running stock document numbers <PREFIX>-<YEAR>-<NNN>, counted per prefix and year inside the movement transaction. */
 class DocNumber
@@ -29,5 +30,17 @@ class DocNumber
             ->max() ?? 0;
 
         return sprintf('%s%03d', $stem, $last + 1);
+    }
+
+    /** Next number after the numeric max of `$column` values starting with `$stem`, padded to at least `$pad` digits. */
+    public static function nextIn(Builder $query, string $column, string $stem, int $pad): string
+    {
+        $last = $query->where($column, 'like', $stem.'%')
+            ->lockForUpdate()
+            ->pluck($column)
+            ->map(fn (string $no): int => (int) substr($no, strlen($stem)))
+            ->max() ?? 0;
+
+        return $stem.str_pad((string) ($last + 1), $pad, '0', STR_PAD_LEFT);
     }
 }

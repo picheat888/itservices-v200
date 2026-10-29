@@ -320,6 +320,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             settle(true);
             return;
         }
+        const mine = resolver.current;
         try {
             setError(null);
             setLoading(true);
@@ -333,7 +334,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         // Flash the success check, then close.
         setLoading(false);
         setDone(true);
-        setTimeout(() => settle(true), 850);
+        setTimeout(() => {
+            if (resolver.current === mine) settle(true);
+        }, 850);
     };
 
     return (
