@@ -197,3 +197,15 @@ test('each step says its state to screen readers; a request with no ISS has no i
     assert.match(dialog, /STATE\[s\.state\] && <span className="sr-only">/);
     assert.match(dialog, /r\.status === 'fulfilled' && r\.issue_doc_no &&/);
 });
+
+test('requests tab: the three name columns are wide enough for a full name', () => {
+    const col = (key: string) => tab.match(new RegExp(`key: '${key}',[\\s\\S]*?width: '(\\d+)px'`))?.[1];
+    assert.equal(col('requester'), '180');
+    assert.equal(col('decided'), '176');
+    assert.equal(col('fulfilled'), '176');
+    assert.equal(col('qty'), '64');
+    assert.equal(col('unit'), '80');
+    assert.equal(col('status'), '96');
+    assert.match(tab, /key: 'item',[^}]*minWidth: '11rem'/);
+    assert.match(tab, /key: 'reason', header: t\('stock_reason'\), minWidth: '9rem'/);
+});

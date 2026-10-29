@@ -274,13 +274,13 @@ export function RequestsTab({
         {
             key: 'requester',
             header: t('stock_requester'),
-            width: '120px',
+            width: '180px',
             render: (r) => <TruncText text={pairOf(r.requester_name, r.requester_name_th)} className="text-sm font-medium" />,
         },
         {
             key: 'item',
             header: t('stock_item'),
-            minWidth: '12rem',
+            minWidth: '11rem',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={r.sku} className="text-xs" />
@@ -292,7 +292,7 @@ export function RequestsTab({
             key: 'qty',
             header: t('stock_qty'),
             align: 'right',
-            width: '72px',
+            width: '64px',
             render: (r) => <span className="font-bold tabular-nums">{fmtN(r.qty)}</span>,
         },
         {
@@ -301,11 +301,11 @@ export function RequestsTab({
             width: '80px',
             render: (r) => <TruncText text={r.unit} className="text-muted-foreground text-xs lowercase" />,
         },
-        { key: 'reason', header: t('stock_reason'), minWidth: '14rem', render: (r) => <TruncText text={r.reason} className="text-sm" /> },
+        { key: 'reason', header: t('stock_reason'), minWidth: '9rem', render: (r) => <TruncText text={r.reason} className="text-sm" /> },
         {
             key: 'status',
             header: t('status'),
-            width: '104px',
+            width: '96px',
             className: 'whitespace-nowrap',
             render: (r) => (
                 <div className="min-w-0">
@@ -322,7 +322,7 @@ export function RequestsTab({
         {
             key: 'decided',
             header: t('stock_approver'),
-            width: '150px',
+            width: '176px',
             render: (r) => {
                 const decidedAt = r.approved_at ?? r.rejected_at;
                 return (
@@ -336,7 +336,7 @@ export function RequestsTab({
         {
             key: 'fulfilled',
             header: t('stock_fulfilled_by'),
-            width: '150px',
+            width: '176px',
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={pairOf(r.fulfilled_by, r.fulfilled_by_th)} className="text-sm" />
