@@ -56,6 +56,8 @@ interface DataTableProps<T> {
     searchPlaceholder?: string;
     rowKey: (row: T) => string | number;
     onRowClick?: (row: T) => void;
+    /** With onRowClick: the row is about to open (mouse rests on it, a finger or pen touches it, or it takes focus), e.g. to read its detail early. */
+    onRowIntent?: (row: T) => void;
     /** With onRowClick: which rows open on click (default all); the rest are plain rows. */
     isRowClickable?: (row: T) => boolean;
     /** Extra classes for a single row — for marking rows that need to stand out (e.g. a left accent). */
@@ -127,6 +129,9 @@ interface DataTableProps<T> {
     };
 }
 
+/** How long the mouse rests on a row before onRowIntent fires. */
+export const ROW_INTENT_MS = 120;
+
 /** Rows-per-page choices; the first is the default. */
 export const PAGE_SIZES = [10, 25, 50, 100];
 
@@ -137,6 +142,7 @@ export function DataTable<T>({
     searchPlaceholder,
     rowKey,
     onRowClick,
+    onRowIntent,
     isRowClickable,
     rowClassName,
     pinned,
@@ -248,6 +254,25 @@ export function DataTable<T>({
     const flexFloorLg = floorOf(columns.filter((c) => c.hideBelow !== 'xl' && c.hideBelow !== '2xl'));
     const flexFloorXl = floorOf(columns.filter((c) => c.hideBelow !== '2xl'));
     const flexFloor2xl = floorOf(columns);
+
+    // A mouse passing over the list is not intent: the row must hold the pointer for ROW_INTENT_MS
+    const intentTimer = useRef<number | undefined>(undefined);
+    const rowIntentProps = (row: T) =>
+        onRowIntent
+            ? {
+                  onPointerEnter: (e: React.PointerEvent) => {
+                      if (e.pointerType !== 'mouse') return;
+                      window.clearTimeout(intentTimer.current);
+                      intentTimer.current = window.setTimeout(() => onRowIntent(row), ROW_INTENT_MS);
+                  },
+                  onPointerLeave: () => window.clearTimeout(intentTimer.current),
+                  onPointerDown: () => onRowIntent(row),
+                  onFocus: (e: React.FocusEvent) => {
+                      if (e.target === e.currentTarget) onRowIntent(row);
+                  },
+              }
+            : {};
+    useEffect(() => () => window.clearTimeout(intentTimer.current), []);
 
     // Keys pressed on a control inside the row (a menu, a switch) stay with that control.
     const onRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: T) => {
@@ -373,6 +398,7 @@ export function DataTable<T>({
                                         // Clickable rows are reachable by Tab and open on Enter / Space.
                                         tabIndex={rowStop ? 0 : undefined}
                                         onKeyDown={rowStop ? (e) => onRowKeyDown(e, row) : undefined}
+                                        {...(clickable ? rowIntentProps(row) : {})}
                                         className={cn(
                                             // last:border-b-0, never border-0 (keeps a rowClassName left accent)
                                             'border-border/60 border-b last:border-b-0',

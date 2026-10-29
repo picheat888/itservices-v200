@@ -35,7 +35,7 @@ import { FulfilDone } from '../../components/fulfil-done';
 import { LotPickBox } from '../../components/lot-pick-box';
 import { RequestDetailDialog } from '../../components/request-detail-dialog';
 import { RequestRowMenu } from '../../components/request-row-menu';
-import { NEW_REQUEST_DETAIL, useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
+import { NEW_REQUEST_DETAIL, useStockItem, useStockPrefetch, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 import { countLockFor } from '../../lib/count-lock';
 import { allocKey, greedyAlloc, prunePicks, refillAlloc } from '../../lib/fulfil-alloc';
 import { toPickableLots, type PickableLot } from '../../lib/lot-pick';
@@ -97,6 +97,7 @@ export function RequestsTab({
         waiting: requestsFetching,
     });
     const { approve, reject, cancel, fulfill } = useStockRequestActions();
+    const prefetch = useStockPrefetch();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     // Open state is separate from the data so the dialog content stays mounted during the close animation.
     const [fulfillOpen, setFulfillOpen] = useState(false);
@@ -524,6 +525,7 @@ export function RequestsTab({
                 rowKey={(r) => r.id}
                 rowClassName={(r) => (newReqs.isNew(r) ? NEW_ROW_CLASS : undefined)}
                 onRowClick={(r) => openDetail(r)}
+                onRowIntent={(r) => prefetch.request(r, can('view'))}
                 loading={requestsLoading || (requestsFetching && requestsPlaceholder)}
                 server={{ ...list.table.paging, total: requestsPage?.meta.total ?? 0 }}
                 empty={

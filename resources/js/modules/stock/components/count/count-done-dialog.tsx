@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import type { StockCount } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar, largeDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooterBar, largeDialogContentClass, topAnchoredDialogClass } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
 import { ClipboardCheck, Loader2, Printer } from 'lucide-react';
 import { useState } from 'react';
@@ -29,6 +29,7 @@ export function CountDoneDialog({
     missing,
     failed,
     onRetry,
+    listed,
     canRecount,
     onClose,
     onOpenCount,
@@ -38,6 +39,8 @@ export function CountDoneDialog({
     missing: boolean;
     failed: boolean;
     onRetry: () => void;
+    /** The list row it opened from, shown in the header while the record loads. */
+    listed?: Pick<StockCount, 'reference' | 'status'>;
     canRecount: boolean;
     onClose: () => void;
     /** Opens another count (the recount just made). */
@@ -81,9 +84,9 @@ export function CountDoneDialog({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className={cn(largeDialogContentClass, !shown && pendingFrameClass(missing))}>
+            <DialogContent className={cn(largeDialogContentClass, !missing && topAnchoredDialogClass, !shown && pendingFrameClass(missing))}>
                 {!shown ? (
-                    <CountDialogPending missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} />
+                    <CountDialogPending missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
                 ) : (
                     <>
                         <FocusDialogHeader
@@ -105,7 +108,7 @@ export function CountDoneDialog({
                                 ) : undefined
                             }
                         />
-                        <DialogBody className="flex flex-col gap-3.5 space-y-0 overflow-hidden py-4">
+                        <DialogBody className="motion-content-in flex flex-col gap-3.5 space-y-0 overflow-hidden py-4">
                             <CountFacts
                                 items={[
                                     { label: t('stock_warehouse'), value: shown.warehouse || '—' },

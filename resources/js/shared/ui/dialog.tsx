@@ -73,6 +73,10 @@ const mediumDialogContentClass = '!flex max-h-[min(860px,calc(100dvh-72px))] w-[
 // Small form dialogs: 560 wide, height capped, the body scrolls between header and footer bar
 const formDialogContentClass = '!flex max-h-[calc(100dvh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-visible p-0';
 
+// Detail dialogs whose content arrives after they open: the top edge stays put and the dialog grows downward only
+const topAnchoredDialogClass =
+    'top-[max(36px,calc((100dvh_-_860px)/2))] max-h-[min(860px,calc(100dvh_-_max(36px,calc((100dvh_-_860px)/2))_-_36px))] translate-y-0 origin-top';
+
 const FormDialogContent = React.forwardRef<React.ElementRef<typeof DialogContent>, React.ComponentPropsWithoutRef<typeof DialogContent>>(
     ({ className, ...props }, ref) => <DialogContent ref={ref} className={cn(formDialogContentClass, className)} {...props} />,
 );
@@ -136,4 +140,5 @@ export {
     formDialogContentClass,
     largeDialogContentClass,
     mediumDialogContentClass,
+    topAnchoredDialogClass,
 };

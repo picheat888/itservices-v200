@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/utils';
 import type { LotState } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Printer } from 'lucide-react';
 import { useId, useState } from 'react';
 import { lotLabelsPdfUrl, lotQrUrl } from '../api/stockApi';
@@ -25,6 +26,39 @@ interface LotCardProps {
 }
 
 const LABEL = 'text-muted-foreground text-xs';
+
+/** The receive event's Lot card before its read arrives: the same frame and rows, bars in place of the values. */
+export function LotCardSkeleton() {
+    return (
+        <div className="border-border rounded-xl border p-3.5" aria-hidden>
+            <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="my-0.5 h-6 w-48" />
+                        <Skeleton className="ml-auto h-5 w-14 rounded-full" />
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {[0, 1].map((i) => (
+                            <div key={i}>
+                                <Skeleton className="my-0.5 h-3 w-20" />
+                                <Skeleton className="mt-1 h-4 w-16" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <Skeleton className="h-18 w-18 shrink-0" />
+            </div>
+            <div className="border-border mt-3 flex items-end gap-3 border-t pt-3">
+                <div className="flex flex-col gap-1">
+                    <Skeleton className="my-0.5 h-3 w-24" />
+                    <Skeleton className="h-9 w-20" />
+                </div>
+                <Skeleton className="ml-auto h-9 w-40" />
+            </div>
+            <Skeleton className="mt-2.5 h-3 w-3/4" />
+        </div>
+    );
+}
 
 export function LotCard({ lotNo, warehouse, qty, remaining, unitCost, state, unit, printable }: LotCardProps) {
     const t = useT();

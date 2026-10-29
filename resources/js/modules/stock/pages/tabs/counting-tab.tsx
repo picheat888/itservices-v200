@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import { CountDoneDialog } from '../../components/count/count-done-dialog';
 import { CountOpenDialog } from '../../components/count/count-open-dialog';
 import { CountSheetDialog } from '../../components/count/count-sheet-dialog';
-import { useStockCount, useStockCountMutations, useStockCounts } from '../../hooks/use-stock';
+import { useStockCount, useStockCountMutations, useStockCounts, useStockPrefetch } from '../../hooks/use-stock';
 import { stockRefusalText } from '../../lib/refusal';
 
 const statusTone = (s: StockCount['status']) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
@@ -40,6 +40,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     } = useStockCounts({ page, per_page: perPage }, can('view_count'));
     const sessions = sessionsPage?.data ?? [];
     const { cancel } = useStockCountMutations();
+    const prefetch = useStockPrefetch();
     const [creating, setCreating] = useState(false);
 
     // The open count sheet is in the URL (?count=<id>) so a reload or a shared link reopens it
@@ -61,10 +62,11 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const swapSheet = (id: number) => dialogs.replace((p) => p.set('count', String(id)));
 
     // A confirmed sheet opens in its own dialog; before the record arrives the list row says which one
-    const status = session?.id === shownId ? session.status : sessions.find((s) => s.id === shownId)?.status;
+    const listed = sessions.find((s) => s.id === shownId);
+    const status = session?.id === shownId ? session.status : listed?.status;
     const done = status === 'committed';
     const shownCount = session?.id === shownId ? session : undefined;
-    const pending = { missing: sessionMissing, failed: sessionFailed, onRetry: () => void refetchSession() };
+    const pending = { missing: sessionMissing, failed: sessionFailed, onRetry: () => void refetchSession(), listed };
 
     const sessionColumns: Column<StockCount>[] = [
         {
@@ -187,6 +189,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 rows={sessions}
                 rowKey={(s) => s.id}
                 onRowClick={(s) => openSheet(s.id)}
+                onRowIntent={(s) => prefetch.count(s.id)}
                 loading={sessionsLoading || (sessionsFetching && sessionsPlaceholder)}
                 server={{ ...list.table.paging, total: sessionsPage?.meta.total ?? 0 }}
                 empty={{

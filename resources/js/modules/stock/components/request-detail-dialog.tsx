@@ -13,7 +13,15 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { RequestTrail, StockItem, StockRequest } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
+import {
+    Dialog,
+    DialogBody,
+    DialogContent,
+    DialogFooterBar,
+    focusDialogOnOpen,
+    mediumDialogContentClass,
+    topAnchoredDialogClass,
+} from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { ArrowUpFromLine, Ban, Check, ClipboardList, Printer, RotateCcw, TriangleAlert, X } from 'lucide-react';
 import { useId } from 'react';
@@ -73,7 +81,11 @@ export function RequestDetailDialog({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className={mediumDialogContentClass} onOpenAutoFocus={focusDialogOnOpen} onCloseAutoFocus={onCloseAutoFocus}>
+            <DialogContent
+                className={cn(mediumDialogContentClass, topAnchoredDialogClass)}
+                onOpenAutoFocus={focusDialogOnOpen}
+                onCloseAutoFocus={onCloseAutoFocus}
+            >
                 {r && (
                     <>
                         <FocusDialogHeader
@@ -88,11 +100,10 @@ export function RequestDetailDialog({
                             <ItemCard request={r} />
                             <RequestFacts request={r} />
                             {readsStock && r.status === 'pending' && <StockNow query={itemQuery} />}
+                            {/* Approved: the Lot preview until the item says it is serial-tracked */}
                             {readsStock &&
                                 r.status === 'approved' &&
-                                (!itemQuery.data ? (
-                                    <ItemState query={itemQuery}>{null}</ItemState>
-                                ) : itemQuery.data.track_serial ? (
+                                (itemQuery.data?.track_serial ? (
                                     <StockNow query={itemQuery} note={t('stock_rq_serial_lot_note')} />
                                 ) : (
                                     <PickPreview query={itemQuery} qty={r.qty} />
@@ -101,9 +112,11 @@ export function RequestDetailDialog({
                                 (trailQuery.isError ? (
                                     <LoadFailedPanel onRetry={() => trailQuery.refetch()} />
                                 ) : trailQuery.data ? (
-                                    <IssueTrail trail={trailQuery.data} />
+                                    <div className="motion-content-in space-y-4">
+                                        <IssueTrail trail={trailQuery.data} />
+                                    </div>
                                 ) : (
-                                    <Skeleton className="h-40 w-full" />
+                                    <TrailSkeleton />
                                 ))}
                         </DialogBody>
                         <DetailFooter request={r} trail={trailQuery.data} onClose={onClose} {...actions} />
@@ -239,7 +252,7 @@ function StockNow({ query, note }: { query: ItemQuery; note?: string }) {
             <h3 id={titleId} className={H3}>
                 {t('stock_rq_stock_now')}
             </h3>
-            <ItemState query={query}>
+            <ItemState query={query} skeleton={<SkeletonTable heads={[t('stock_warehouse'), t('stock_lots_in_stock')]} right={[1]} rows={3} />}>
                 {balances.length === 0 ? (
                     <div className="border-border rounded-lg border">
                         <EmptyState
@@ -276,8 +289,8 @@ function StockNow({ query, note }: { query: ItemQuery; note?: string }) {
                         </table>
                     </div>
                 )}
-                {note && <p className={cn(LABEL, 'mt-1.5')}>{note}</p>}
             </ItemState>
+            {note && <p className={cn(LABEL, 'mt-1.5')}>{note}</p>}
         </section>
     );
 }
@@ -296,7 +309,22 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
             <h3 id={titleId} className={H3}>
                 {t('stock_rq_lots_to_pick')}
             </h3>
-            <ItemState query={query}>
+            <ItemState
+                query={query}
+                skeleton={
+                    <SkeletonTable
+                        heads={[
+                            t('stock_warehouse'),
+                            t('stock_lot_word'),
+                            t('stock_lots_col_received'),
+                            t('stock_fulfil_col_left_in_lot'),
+                            t('stock_fulfil_col_pick'),
+                        ]}
+                        right={[3, 4]}
+                        rows={2}
+                    />
+                }
+            >
                 {available < qty && (
                     <p className="mb-2 flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-400">
                         <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -348,17 +376,86 @@ function PickPreview({ query, qty }: { query: ItemQuery; qty: number }) {
                         </table>
                     </div>
                 )}
-                <p className={cn(LABEL, 'mt-1.5')}>{t('stock_rq_pick_note')}</p>
             </ItemState>
+            <p className={cn(LABEL, 'mt-1.5')}>{t('stock_rq_pick_note')}</p>
         </section>
     );
 }
 
-// The item read behind the stock and preview sections: skeleton, retry, then the content
-function ItemState({ query, children }: { query: ItemQuery; children: React.ReactNode }) {
+// The item read behind the stock and preview sections: a skeleton shaped like the content, retry, then the content
+function ItemState({ query, skeleton, children }: { query: ItemQuery; skeleton: React.ReactNode; children: React.ReactNode }) {
+    const t = useT();
     if (query.isError) return <LoadFailedPanel onRetry={() => query.refetch()} />;
-    if (!query.data) return <Skeleton className="h-24 w-full" />;
-    return <>{children}</>;
+    if (!query.data) {
+        return (
+            <div role="status">
+                <div className="border-border overflow-hidden rounded-lg border">{skeleton}</div>
+                <span className="sr-only">{t('loading')}</span>
+            </div>
+        );
+    }
+    return <div className="motion-content-in">{children}</div>;
+}
+
+// A detail table before its read arrives: the real header row, bars in place of the cells
+function SkeletonTable({ heads, right, rows }: { heads: string[]; right: number[]; rows: number }) {
+    return (
+        <table className="w-full table-fixed border-separate border-spacing-0 text-sm" aria-hidden>
+            <thead className={TABLE_HEAD}>
+                <tr className="text-muted-foreground text-left text-xs">
+                    {heads.map((h, i) => (
+                        <th key={h} scope="col" className={cn(TH, right.includes(i) && 'text-right')}>
+                            {h}
+                        </th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {Array.from({ length: rows }, (_, row) => (
+                    <tr key={row} className="group">
+                        {heads.map((h, i) => (
+                            <td key={h} className={TD}>
+                                <Skeleton className={cn('my-0.5 h-4', right.includes(i) ? 'ml-auto w-8' : 'w-3/4')} />
+                            </td>
+                        ))}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+// Fulfilled, before the trail arrives: the issue sheet card with bars where its facts and Lots go
+function TrailSkeleton() {
+    const t = useT();
+    return (
+        <section role="status">
+            <h3 className={H3}>{t('stock_rq_issue_sheet')}</h3>
+            <div className="border-border overflow-hidden rounded-lg border">
+                <div className="border-border grid grid-cols-3 gap-4 border-b px-3.5 py-3" aria-hidden>
+                    {[0, 1, 2].map((i) => (
+                        <div key={i}>
+                            <Skeleton className="my-0.5 h-3 w-16" />
+                            <Skeleton className="mt-1.5 h-4 w-24" />
+                        </div>
+                    ))}
+                </div>
+                <SkeletonTable
+                    heads={[
+                        t('stock_warehouse'),
+                        t('stock_lot_word'),
+                        t('stock_unit_cost_short'),
+                        t('stock_issue_col_issued'),
+                        t('stock_issue_col_returned'),
+                    ]}
+                    right={[2, 3, 4]}
+                    rows={1}
+                />
+            </div>
+            <Skeleton className="mt-2 h-3 w-28" aria-hidden />
+            <span className="sr-only">{t('loading')}</span>
+        </section>
+    );
 }
 
 // Fulfilled: the ISS with its Lots, then the returns against it

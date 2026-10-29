@@ -53,6 +53,7 @@ export function CountSheetDialog({
     missing,
     failed,
     onRetry,
+    listed,
     canEdit,
     onClose,
     onRefetch,
@@ -62,6 +63,8 @@ export function CountSheetDialog({
     missing: boolean;
     failed: boolean;
     onRetry: () => void;
+    /** The list row it opened from, shown in the header while the record loads. */
+    listed?: Pick<StockCount, 'reference' | 'status'>;
     canEdit: boolean;
     onClose: () => void;
     /** Resolves once the open count has been read again (after a save or the commit). */
@@ -260,7 +263,7 @@ export function CountSheetDialog({
         <Dialog open={open} onOpenChange={(o) => !o && guardClose(onClose)}>
             <DialogContent className={cn(focusDialogContentClass, !shown && pendingFrameClass(missing))}>
                 {!shown ? (
-                    <CountDialogPending missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} />
+                    <CountDialogPending missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
                 ) : (
                     <>
                         <FocusDialogHeader
@@ -277,7 +280,7 @@ export function CountSheetDialog({
                                 ) : undefined
                             }
                         />
-                        <DialogBody className="flex flex-col gap-3 space-y-0 overflow-hidden py-4">
+                        <DialogBody className="motion-content-in flex flex-col gap-3 space-y-0 overflow-hidden py-4">
                             <CountFacts
                                 items={[
                                     { label: t('stock_warehouse'), value: warehouse },

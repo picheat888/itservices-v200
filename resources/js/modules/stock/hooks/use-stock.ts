@@ -1,6 +1,7 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
-import { FRESH_LIST, FRESH_VIEW } from '@/shared/lib/freshness';
+import { FRESH_LIST, FRESH_MS, FRESH_VIEW } from '@/shared/lib/freshness';
 import type { RowId } from '@/shared/lib/new-rows';
+import type { StockMovement, StockRequest } from '@/shared/types';
 import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -225,6 +226,26 @@ export const useStockCounts = (params: { page?: number; per_page?: number } = {}
 /** A single count session with its lines (for the count sheet). */
 export const useStockCount = (id: number | null, enabled = true) =>
     useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null && enabled, ...FRESH_VIEW });
+
+/** Reads what a detail dialog shows while its row is only pointed at, so the dialog opens filled; fresh data is not asked again. */
+export function useStockPrefetch() {
+    const qc = useQueryClient();
+    const read = (queryKey: readonly unknown[], queryFn: () => Promise<unknown>) => void qc.prefetchQuery({ queryKey, queryFn, staleTime: FRESH_MS });
+    return {
+        request: (r: Pick<StockRequest, 'id' | 'status' | 'stock_item_id'>, canViewStock: boolean) => {
+            read(NEW_REQUEST_DETAIL.key(r.id), () => stockRequestApi.get(r.id));
+            if (r.status === 'fulfilled') read([...REQUESTS, 'trail', r.id], () => getRequestTrail(r.id));
+            if (canViewStock && (r.status === 'pending' || r.status === 'approved')) {
+                read([...ITEMS, 'detail', r.stock_item_id], () => stockApi.get(r.stock_item_id));
+            }
+        },
+        movement: (m: Pick<StockMovement, 'id' | 'type'>) => {
+            read([...MOVEMENTS, 'serials', m.id], () => stockMovementApi.serials(m.id));
+            if (m.type === 'receive' || m.type === 'issue' || m.type === 'return') read([...MOVEMENTS, 'lots', m.id], () => getMovementLots(m.id));
+        },
+        count: (id: number) => read([...COUNTS, id], () => stockCountApi.get(id)),
+    };
+}
 
 /** Count-session mutations (open / save / commit / recount / cancel); refresh counts, items, movements, summary. */
 export function useStockCountMutations() {

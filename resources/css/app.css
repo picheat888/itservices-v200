@@ -828,6 +828,10 @@
         animation: pulse 1.4s ease-in-out 3;
     }
 }
+/* Dialog content that arrives after its skeleton fades in instead of popping */
+.motion-content-in {
+    animation: fade-in-only 160ms var(--ease-enter);
+}
 /* Hand-built pop-ups (FilterPopover, SearchSelect, SearchableSelect) with usePresence */
 .motion-pop-in {
     animation: pop-in var(--motion-pop-in) var(--ease-enter);

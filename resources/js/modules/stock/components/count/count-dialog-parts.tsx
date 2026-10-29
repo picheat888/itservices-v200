@@ -3,12 +3,16 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
+import type { StockCount } from '@/shared/types';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { ClipboardCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const FACT_COLS = { 4: 'grid-cols-4', 5: 'grid-cols-5' } as const;
+
+const PENDING_TONE: Record<StockCount['status'], 'green' | 'gray' | 'amber'> = { committed: 'green', canceled: 'gray', draft: 'amber' };
 
 export function CountFacts({ items }: { items: { label: string; value: ReactNode }[] }) {
     return (
@@ -32,18 +36,27 @@ export function CountDialogPending({
     failed,
     onRetry,
     onClose,
+    listed,
 }: {
     missing: boolean;
     failed: boolean;
     onRetry: () => void;
     onClose: () => void;
+    /** The list row the sheet opened from: its header already shows the reference and status the record will. */
+    listed?: Pick<StockCount, 'reference' | 'status'>;
 }) {
     const t = useT();
     if (missing) return <RecordMissing onClose={onClose} />;
     return (
         <>
             {/* Radix requires a DialogTitle while the record loads */}
-            <FocusDialogHeader icon={ClipboardCheck} eyebrow={t('stock')} title={t('stock_count_sheet')} srDescription={t('loading')} />
+            <FocusDialogHeader
+                icon={ClipboardCheck}
+                eyebrow={listed?.reference ?? t('stock')}
+                title={t('stock_count_sheet')}
+                srDescription={t('loading')}
+                titleSuffix={listed ? <StatusBadge tone={PENDING_TONE[listed.status]}>{t(`stock_count_${listed.status}`)}</StatusBadge> : undefined}
+            />
             <div className="border-t px-6 py-6">
                 {failed ? (
                     <LoadFailedPanel onRetry={onRetry} />

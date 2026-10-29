@@ -19,14 +19,13 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
-import { Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, FormDialogContent, topAnchoredDialogClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Skeleton } from '@/shared/ui/skeleton';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
-import { LotCard } from '../../components/lot-card';
-import { LotsDrawnCard } from '../../components/lots-drawn-card';
-import { NEW_MOVEMENT_DETAIL, useMovementLots, useMovementSerials, useStockMovements } from '../../hooks/use-stock';
+import { LotCard, LotCardSkeleton } from '../../components/lot-card';
+import { LotsDrawnCard, LotsDrawnSkeleton } from '../../components/lots-drawn-card';
+import { NEW_MOVEMENT_DETAIL, useMovementLots, useMovementSerials, useStockMovements, useStockPrefetch } from '../../hooks/use-stock';
 import { movementNote } from '../../lib/movement-note';
 import { MV_META, MV_TONE_HEX } from '../shared';
 
@@ -70,6 +69,7 @@ export function MovementsTab() {
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
     // Open state is separate from the data so the detail stays mounted during the close animation.
     const [moveOpen, setMoveOpen] = useState(false);
+    const prefetch = useStockPrefetch();
     // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
     const moveSerialsQuery = useMovementSerials(viewMove?.id ?? null, moveOpen);
     const moveSerials = useMemo(() => moveSerialsQuery.data ?? [], [moveSerialsQuery.data]);
@@ -225,6 +225,7 @@ export function MovementsTab() {
                     setViewMove(m);
                     setMoveOpen(true);
                 }}
+                onRowIntent={prefetch.movement}
                 loading={movementsLoading || (movementsFetching && movementsPlaceholder)}
                 server={{ ...list.table.paging, total: movementsPage?.meta.total ?? 0 }}
                 empty={
@@ -236,7 +237,7 @@ export function MovementsTab() {
 
             {/* Movement detail — the per-entry audit-log view. */}
             <Dialog open={moveOpen} onOpenChange={(o) => !o && setMoveOpen(false)}>
-                <FormDialogContent>
+                <FormDialogContent className={topAnchoredDialogClass}>
                     {viewMove &&
                         (() => {
                             const meta = MV_META[viewMove.type];
@@ -326,13 +327,25 @@ export function MovementsTab() {
                                             </div>
                                         )}
 
-                                        {/* Lots: skeleton while reading, retry if the read failed */}
-                                        {lotsPending && <Skeleton className="h-32 w-full rounded-xl" />}
+                                        {/* Lots: a skeleton shaped like the card while reading, retry if the read failed */}
+                                        {lotsPending && (
+                                            <div role="status">
+                                                {viewMove.type === 'receive' ? (
+                                                    <>
+                                                        <div className={cn(EYEBROW, 'mb-1')}>{t('stock_recv_lots_title')}</div>
+                                                        <LotCardSkeleton />
+                                                    </>
+                                                ) : (
+                                                    <LotsDrawnSkeleton kind={viewMove.type === 'issue' ? 'issue' : 'return'} />
+                                                )}
+                                                <span className="sr-only">{t('loading')}</span>
+                                            </div>
+                                        )}
                                         {showsLots && moveLotsQuery.isError && <LoadFailedPanel onRetry={() => moveLotsQuery.refetch()} />}
 
                                         {/* Lot of this receive */}
                                         {!lotsPending && viewMove.type === 'receive' && receiveLot?.lot_no && (
-                                            <div>
+                                            <div className="motion-content-in">
                                                 <div className={cn(EYEBROW, 'mb-1')}>{t('stock_recv_lots_title')}</div>
                                                 <LotCard
                                                     lotNo={receiveLot.lot_no}
@@ -351,7 +364,11 @@ export function MovementsTab() {
                                         {!lotsPending &&
                                             (viewMove.type === 'issue' || viewMove.type === 'return') &&
                                             moveLotsQuery.data &&
-                                            moveLotsQuery.data.lots.length > 0 && <LotsDrawnCard data={moveLotsQuery.data} kind={viewMove.type} />}
+                                            moveLotsQuery.data.lots.length > 0 && (
+                                                <div className="motion-content-in">
+                                                    <LotsDrawnCard data={moveLotsQuery.data} kind={viewMove.type} />
+                                                </div>
+                                            )}
 
                                         {/* Serial list + reprint labels (retroactive, e.g. for a Receive) */}
                                         {moveSerials.length > 0 && (
