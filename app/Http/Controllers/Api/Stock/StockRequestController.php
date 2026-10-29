@@ -35,7 +35,7 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
         // Actionable first (await approval → await fulfillment → done), newest within each group.
-        $query = StockRequest::with(['item.unit', 'user.employee', 'issueMovements'])
+        $query = StockRequest::with(['item.unit', 'user.employee', 'approver.employee', 'fulfiller.employee', 'issueMovements'])
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 
@@ -82,7 +82,7 @@ class StockRequestController extends Controller
 
         abort_unless($stockRequest->isVisibleTo($user), 404);
 
-        return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee', 'issueMovements'])))->response();
+        return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee', 'approver.employee', 'fulfiller.employee', 'issueMovements'])))->response();
     }
 
     /** A request's issue and returns with their lots, behind the same gate and visibility as show. */
@@ -158,7 +158,7 @@ class StockRequestController extends Controller
 
         $this->requests->approve($stockRequest, $request->user());
 
-        return (new StockRequestResource($stockRequest->load('item')))->response();
+        return (new StockRequestResource($stockRequest->load(['item', 'approver.employee', 'fulfiller.employee'])))->response();
     }
 
     /** Reject a pending request. */
@@ -169,7 +169,7 @@ class StockRequestController extends Controller
 
         $this->requests->reject($stockRequest, $request->user());
 
-        return (new StockRequestResource($stockRequest->load('item')))->response();
+        return (new StockRequestResource($stockRequest->load(['item', 'approver.employee', 'fulfiller.employee'])))->response();
     }
 
     /** Cancel a pending or approved request; an approved one's reserved stock is free again once it leaves "approved". */
@@ -181,7 +181,7 @@ class StockRequestController extends Controller
 
         $this->requests->cancel($stockRequest, $user);
 
-        return (new StockRequestResource($stockRequest->load('item')))->response();
+        return (new StockRequestResource($stockRequest->load(['item', 'approver.employee', 'fulfiller.employee'])))->response();
     }
 
     /** Fulfill an approved request: issue stock to the requester and decrement on-hand. */
@@ -209,7 +209,7 @@ class StockRequestController extends Controller
         AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}", subject: $stockRequest);
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'fulfilled');
 
-        return (new StockRequestResource($stockRequest->load(['item', 'issueMovements'])))
+        return (new StockRequestResource($stockRequest->load(['item', 'approver.employee', 'fulfiller.employee', 'issueMovements'])))
             ->additional(['issue' => $this->issues->summary($stockRequest)])
             ->response();
     }

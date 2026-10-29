@@ -13,7 +13,7 @@ class StockRequest extends Model
 {
     protected $fillable = [
         'reference', 'stock_item_id', 'user_id', 'requester_name', 'qty', 'reason',
-        'status', 'approver_name', 'approved_at', 'fulfilled_at', 'fulfilled_by', 'rejected_at',
+        'status', 'approver_name', 'approver_id', 'approved_at', 'fulfilled_at', 'fulfilled_by', 'fulfilled_by_id', 'rejected_at',
         'cancelled_by', 'cancelled_at',
     ];
 
@@ -82,6 +82,18 @@ class StockRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function fulfiller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'fulfilled_by_id');
     }
 
     /** @return HasMany<StockMovement, $this> */

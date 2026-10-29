@@ -39,7 +39,7 @@ class StockCountController extends Controller
         $this->gateView($request);
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $paginator = StockCount::with('countedBy')
+        $paginator = StockCount::with('countedBy.employee')
             ->withCount([
                 'lines',
                 'lines as counted_lines_count' => fn ($q) => $q->whereNotNull('counted_qty'),
@@ -72,7 +72,7 @@ class StockCountController extends Controller
 
         $count = $this->service->open(Warehouse::findOrFail($data['warehouse_id']), $data['stock_item_ids'], $request->user());
 
-        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy.employee', 'committedBy.employee', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -81,8 +81,8 @@ class StockCountController extends Controller
         $this->gateView($request);
 
         return (new StockCountResource($stockCount->load([
-            'countedBy',
-            'committedBy',
+            'countedBy.employee',
+            'committedBy.employee',
             'recountOf',
             'lines.item.serials' => fn ($q) => $q->where('status', 'in_stock')->where('warehouse_id', $stockCount->warehouse_id),
         ])))->response();
@@ -127,7 +127,7 @@ class StockCountController extends Controller
 
         $count = $this->service->saveLines($stockCount, $byLineId);
 
-        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy.employee', 'committedBy.employee', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -146,7 +146,7 @@ class StockCountController extends Controller
             }
         }
 
-        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy.employee', 'committedBy.employee', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -156,7 +156,7 @@ class StockCountController extends Controller
 
         $count = $this->service->recount($stockCount, $request->user());
 
-        return (new StockCountResource($count->load(['countedBy', 'committedBy', 'recountOf', 'lines.item'])))
+        return (new StockCountResource($count->load(['countedBy.employee', 'committedBy.employee', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 

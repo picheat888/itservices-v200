@@ -61,6 +61,7 @@ class StockRequestService
             $stockRequest->update([
                 'status' => 'approved',
                 'approver_name' => $actor->name,
+                'approver_id' => $actor->id,
                 'approved_at' => now(),
             ]);
         });
@@ -84,6 +85,7 @@ class StockRequestService
             $stockRequest->update([
                 'status' => 'rejected',
                 'approver_name' => $actor->name,
+                'approver_id' => $actor->id,
                 'rejected_at' => now(),
             ]);
         });

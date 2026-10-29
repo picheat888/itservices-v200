@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Stock;
 
+use App\Models\Settings\Category;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\StockItemSerial;
 use Illuminate\Http\Request;
@@ -21,12 +22,14 @@ class StockCountResource extends JsonResource
             'warehouse' => $this->warehouse,
             'warehouse_id' => $this->warehouse_id,
             'category' => $this->category,
-            'category_th' => null,
+            'category_th' => $this->categoryThai($request),
             'status' => $this->status?->value,
             'adjust_mode' => $this->adjust_mode?->value,
             'note' => $this->note,
             'counted_by' => $this->whenLoaded('countedBy', fn () => $this->countedBy?->name),
+            'counted_by_th' => $this->whenLoaded('countedBy', fn () => $this->countedBy?->name_th ?: $this->countedBy?->name),
             'committed_by' => $this->whenLoaded('committedBy', fn () => $this->committedBy?->name),
+            'committed_by_th' => $this->whenLoaded('committedBy', fn () => $this->committedBy?->name_th ?: $this->committedBy?->name),
             'recount_of' => $this->whenLoaded('recountOf', fn () => $this->recountOf
                 ? ['id' => $this->recountOf->id, 'reference' => $this->recountOf->reference]
                 : null),
@@ -64,6 +67,21 @@ class StockCountResource extends JsonResource
             // Counted lines off the system figure: how tall a confirmed sheet's table is before it loads
             'differing_lines' => $this->differing_lines_count ?? $this->whenLoaded('lines', fn () => $this->lines->filter(fn ($l) => ($l->variance() ?? 0) !== 0)->count()),
         ];
+    }
+
+    /** Thai name of the stored category name, English when it has none; one lookup per request. */
+    private function categoryThai(Request $request): ?string
+    {
+        if ($this->category === null) {
+            return null;
+        }
+        $names = $request->attributes->get('stock_category_th');
+        if ($names === null) {
+            $names = Category::whereNotNull('name_th')->where('name_th', '!=', '')->pluck('name_th', 'name');
+            $request->attributes->set('stock_category_th', $names);
+        }
+
+        return $names[$this->category] ?? $this->category;
     }
 
     /**

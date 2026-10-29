@@ -90,6 +90,7 @@ class StockIssueService
                 'status' => 'fulfilled',
                 'fulfilled_at' => now(),
                 'fulfilled_by' => $user->name,
+                'fulfilled_by_id' => $user->id,
             ]);
 
             return $docNo;
