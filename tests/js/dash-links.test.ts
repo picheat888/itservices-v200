@@ -76,7 +76,9 @@ test('awaiting IT opens the IT queue for completers, the approved list for overs
     assert.equal(dashLinks((p) => p === 'requests.view_all', false).awaitingIt, '/requests?tab=all&status=approved');
 });
 
-test('the over-SLA badge opens exactly the over-SLA tickets', () => {
-    assert.equal(dashLinks((p) => p === 'tickets.view_all', false).overSla, '/tickets?tab=all&sla=over_sla');
+test('the over-SLA badge opens exactly the over-SLA tickets, for those the list filters them for', () => {
+    assert.equal(dashLinks((p) => p === 'tickets.view_all' || p === 'tickets.resolve', false).overSla, '/tickets?tab=all&sla=over_sla');
+    // The list applies ?sla= only for tickets.resolve; without it the badge is a plain count.
+    assert.equal(dashLinks((p) => p === 'tickets.view_all', false).overSla, null);
     assert.equal(dashLinks(() => false, false).overSla, null);
 });

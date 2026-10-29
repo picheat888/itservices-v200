@@ -31,7 +31,8 @@ export function dashLinks(can: Can, linkedEmployee: boolean) {
         request: (id: number) => (requests ? `/requests?view=${id}` : null),
         ticketsHome: tickets ? '/tickets' : null,
         ticketsAll: desk ? '/tickets?tab=all' : null,
-        overSla: desk ? '/tickets?tab=all&sla=over_sla' : null,
+        // The list filters by SLA only for tickets.resolve (TicketResource::showsDeskInternals)
+        overSla: desk && can('tickets.resolve') ? '/tickets?tab=all&sla=over_sla' : null,
         // The overview report on the window the SLA tiles count
         slaReport: (from: string, to: string) =>
             can('reports.module') && can('reports.tickets') ? `/reports/tickets-overview?from=${from}&to=${to}` : null,

@@ -7,13 +7,16 @@ use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Report\TicketMetrics;
 use App\Services\Report\TicketOverviewReportService;
+use App\Support\Permissions;
 use App\Support\TicketSla;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * The Dashboard's IT section: the live queue, two weeks of flow, and the overview report's SLA figures.
+ * The Dashboard's IT section: the live queue, two weeks of flow, and the overview report's SLA figures,
+ * over the categories of the viewer's Ticket Levels only, as the lists and the report it opens count.
  */
 class ItBlock
 {
@@ -21,26 +24,36 @@ class ItBlock
 
     private const WINDOW_DAYS = 30;
 
+    /** @var list<string> */
+    private array $categories = [];
+
     public function __construct(private readonly TicketOverviewReportService $overview) {}
+
+    /** @return Builder<Ticket> */
+    private function tickets(): Builder
+    {
+        return Ticket::query()->whereIn('category', $this->categories);
+    }
 
     /**
      * @return array<string, mixed>
      */
-    public function build(): array
+    public function build(User $viewer): array
     {
+        $this->categories = Permissions::ticketLevelsFor($viewer);
         $now = now();
-        $live = Ticket::whereIn('status', TicketStatus::liveValues())
+        $live = $this->tickets()->whereIn('status', TicketStatus::liveValues())
             ->get(['id', 'status', 'assignee_id', 'created_at', 'responded_at', 'sla_response_due_at', 'sla_resolve_due_at']);
         $open = $live->filter(fn (Ticket $t) => $t->status === TicketStatus::Open);
         $inProgress = $live->filter(fn (Ticket $t) => $t->status === TicketStatus::InProgress);
 
-        $opened = DailySeries::count(Ticket::query(), 'created_at', self::SERIES_DAYS);
-        $closed = DailySeries::values(DailySeries::count(Ticket::where('status', TicketStatus::Completed->value), 'resolved_at', self::SERIES_DAYS));
+        $opened = DailySeries::count($this->tickets(), 'created_at', self::SERIES_DAYS);
+        $closed = DailySeries::values(DailySeries::count($this->tickets()->where('status', TicketStatus::Completed->value), 'resolved_at', self::SERIES_DAYS));
         [$openingLevel, $backlog] = $this->backlogSeries(DailySeries::values($opened));
 
         $to = CarbonImmutable::now()->endOfDay();
         $from = $to->subDays(self::WINDOW_DAYS - 1)->startOfDay();
-        $kpis = $this->overview->kpisForAll($from, $to);
+        $kpis = $this->overview->kpisFor($this->categories, $from, $to);
 
         return [
             'waiting' => ['count' => $open->count(), 'oldest_days' => $this->daysSince($open->min('created_at'), $now)],
@@ -86,8 +99,8 @@ class ItBlock
     private function backlogSeries(array $opened): array
     {
         $start = now()->startOfDay()->subDays(self::SERIES_DAYS - 1);
-        $resolved = DailySeries::values(DailySeries::count(Ticket::whereNotNull('resolved_at'), 'resolved_at', self::SERIES_DAYS));
-        $level = Ticket::where('created_at', '<', $start)
+        $resolved = DailySeries::values(DailySeries::count($this->tickets()->whereNotNull('resolved_at'), 'resolved_at', self::SERIES_DAYS));
+        $level = $this->tickets()->where('created_at', '<', $start)
             ->where(fn ($q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>=', $start))
             ->count();
 

@@ -26,7 +26,7 @@ class DashboardSummaryService
         $blocks = ['mine' => $this->mine->build($user)];
 
         if ($user->hasPermission('dashboard.view_it')) {
-            $blocks['it'] = $this->it->build();
+            $blocks['it'] = $this->it->build($user);
         }
         if ($user->hasPermission('dashboard.view_requests')) {
             $blocks['requests'] = $this->requests->build();

@@ -4,6 +4,7 @@ namespace Tests\Feature\Dashboard;
 
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Dashboard\ItBlock;
@@ -19,11 +20,13 @@ class ItBlockTest extends TestCase
     {
         parent::setUp();
         $this->freezeTime();
+        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
     }
 
-    private function it(): array
+    /** The section as a viewer sees it; by default one who holds every Ticket Level. */
+    private function it(?User $viewer = null): array
     {
-        return app(ItBlock::class)->build();
+        return app(ItBlock::class)->build($viewer ?? User::factory()->create(['role' => 'super']));
     }
 
     public function test_the_live_queue_counts_open_cases_flags_past_sla_and_names_who_holds_what(): void
@@ -89,7 +92,6 @@ class ItBlockTest extends TestCase
 
     public function test_sla_rate_and_resolve_time_match_the_ticket_overview_report(): void
     {
-        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         $super = User::factory()->create(['role' => 'super']);
         $closed = fn (int $daysAgo, int $hours, bool $late) => Ticket::factory()->create([
             'status' => 'completed',
@@ -106,7 +108,7 @@ class ItBlockTest extends TestCase
         $report = $this->actingAs($super)->getJson('/api/reports/tickets/overview?'.http_build_query([
             'from' => now()->subDays(29)->toDateString(), 'to' => now()->toDateString(),
         ]))->assertOk()->json('data.kpi');
-        $it = $this->it();
+        $it = $this->it($super);
 
         $this->assertEquals($report['sla_rate'], $it['sla']['rate']);
         $this->assertEquals($report['avg_resolve_hours'], $it['avg_resolve_hours']);
@@ -114,6 +116,36 @@ class ItBlockTest extends TestCase
         $this->assertSame(3, $it['sla']['measured']);
         // Taken 1h after opening: (3 + 29 + 7) / 3, the wait left out.
         $this->assertSame(13.0, $it['avg_resolve_hours']);
+    }
+
+    /** Every figure counts only the categories of the viewer's Ticket Levels, as the lists and report it opens do. */
+    public function test_a_viewer_sees_only_the_categories_of_their_ticket_levels(): void
+    {
+        $role = Role::create(['key' => 'hw_desk', 'name' => 'Hardware desk', 'is_system' => false]);
+        RolePermission::create(['role_id' => $role->id, 'permission' => 'tickets.level_hardware', 'allowed' => true]);
+        $viewer = User::factory()->create(['role' => $role->key]);
+        $tech = User::factory()->create();
+        foreach (['hardware', 'network'] as $category) {
+            Ticket::factory()->create(['category' => $category, 'status' => 'open', 'created_at' => now()->subDays(20), 'sla_response_due_at' => now()->subHour()]);
+            Ticket::factory()->create(['category' => $category, 'status' => 'in_progress', 'assignee_id' => $tech->id, 'created_at' => now()->subDay()]);
+            Ticket::factory()->create([
+                'category' => $category, 'status' => 'completed', 'created_at' => now()->subDays(2), 'responded_at' => now()->subDays(2),
+                'resolved_at' => now()->subDay(), 'sla_resolve_due_at' => $category === 'hardware' ? now() : now()->subDays(2),
+            ]);
+        }
+
+        $it = $this->it($viewer);
+
+        $this->assertSame(1, $it['waiting']['count']);
+        $this->assertSame(['open' => 1, 'in_progress' => 1, 'over_sla' => 1], array_intersect_key($it['backlog'], array_flip(['open', 'in_progress', 'over_sla'])));
+        $this->assertSame(2, $it['opened']['total']);
+        $this->assertSame(1, $it['closed']['total']);
+        $this->assertSame(2, $it['backlog']['series'][13]);
+        $this->assertSame(100.0, $it['sla']['rate']);
+        $this->assertSame(1, $it['sla']['measured']);
+        $this->assertSame(1, $it['workload'][0]['open']);
+        // Someone holding every level sees both categories.
+        $this->assertSame(2, $this->it()['waiting']['count']);
     }
 
     public function test_an_empty_desk_returns_zeros_and_nulls_not_errors(): void
