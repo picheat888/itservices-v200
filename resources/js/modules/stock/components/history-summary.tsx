@@ -56,7 +56,7 @@ export function StockSummary({ data, t, formatMoney }: { data: StockItemHistory;
     const effect = (sign: number, qty: number) => (sign === 0 ? t('stock_hist_between') : qty === 0 ? '0' : `${sign > 0 ? '+' : '−'}${fmtN(qty)}`);
 
     return (
-        <div className="mb-6 grid gap-6">
+        <div className="mb-6 grid grid-cols-1 gap-6">
             <Section title={t('stock_hist_reconcile')}>
                 <SimpleTable
                     headers={[t('stock_mv_type'), t('stock_hist_entries'), t('stock_qty'), t('stock_hist_effect')]}
