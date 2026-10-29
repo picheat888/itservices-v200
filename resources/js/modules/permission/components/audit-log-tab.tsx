@@ -26,7 +26,7 @@ import { auditEventLabel } from '../lib/audit-words';
 import { actionLabel, moduleLabel } from '../lib/permission-labels';
 import { AuditMemberChanges } from './audit-member-changes';
 
-const AUDIT_CATEGORIES = ['created', 'updated', 'deleted', 'workflow', 'auth'];
+const AUDIT_CATEGORIES = ['auth', 'created', 'updated', 'deleted', 'access', 'requests', 'tickets', 'assets', 'other'];
 
 const detailRowId = (entry: AuditEntry) => `audit-detail-${entry.id}`;
 
@@ -199,11 +199,7 @@ export function AuditLogTab() {
 
     const categoryOptions = [
         { value: 'all', label: translate(lang, 'perm_ui_all_actions') },
-        { value: 'created', label: translate(lang, 'perm_ui_log_created') },
-        { value: 'updated', label: translate(lang, 'perm_ui_log_updated') },
-        { value: 'deleted', label: translate(lang, 'perm_ui_log_deleted') },
-        { value: 'workflow', label: translate(lang, 'perm_ui_log_workflow') },
-        { value: 'auth', label: translate(lang, 'perm_ui_log_auth') },
+        ...AUDIT_CATEGORIES.map((value) => ({ value, label: translate(lang, `perm_ui_log_${value}`) })),
     ].map((o) => ({ ...o, search: o.label }));
     const userOptions = [
         { value: 'all', label: translate(lang, 'perm_ui_all_users'), search: '' },
@@ -314,29 +310,33 @@ export function AuditLogTab() {
                 }}
                 filters={
                     <>
-                        <div className="w-44">
-                            <label htmlFor="audit-filter-category" className="sr-only">
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="audit-filter-category" className="text-muted-foreground text-sm whitespace-nowrap">
                                 {t('perm_audit_filter_category')}
                             </label>
-                            <SearchableSelect
-                                id="audit-filter-category"
-                                active={category !== 'all'}
-                                value={category}
-                                onChange={(v) => setFilter('category', v)}
-                                options={categoryOptions}
-                            />
+                            <div className="w-52">
+                                <SearchableSelect
+                                    id="audit-filter-category"
+                                    active={category !== 'all'}
+                                    value={category}
+                                    onChange={(v) => setFilter('category', v)}
+                                    options={categoryOptions}
+                                />
+                            </div>
                         </div>
-                        <div className="w-44">
-                            <label htmlFor="audit-filter-user" className="sr-only">
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="audit-filter-user" className="text-muted-foreground text-sm whitespace-nowrap">
                                 {t('audit_user')}
                             </label>
-                            <SearchableSelect
-                                id="audit-filter-user"
-                                active={user !== 'all'}
-                                value={user}
-                                onChange={(v) => setFilter('user', v)}
-                                options={userOptions}
-                            />
+                            <div className="w-44">
+                                <SearchableSelect
+                                    id="audit-filter-user"
+                                    active={user !== 'all'}
+                                    value={user}
+                                    onChange={(v) => setFilter('user', v)}
+                                    options={userOptions}
+                                />
+                            </div>
                         </div>
                     </>
                 }

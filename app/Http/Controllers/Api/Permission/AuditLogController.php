@@ -13,33 +13,49 @@ use Illuminate\Validation\Rule;
 
 class AuditLogController extends Controller
 {
-    /** Action verb prefixes per category, matched in this order: an action belongs to the first category it matches. */
-    private const CATEGORY_VERBS = [
-        'auth' => ['Signed', 'Changed own', 'Updated own'],
-        'created' => ['Created', 'Duplicated', 'Registered', 'Submitted', 'Opened', 'Uploaded', 'Imported'],
-        'updated' => ['Updated', 'Renewed', 'Set', 'Changed', 'Reset', 'Recorded', 'Transferred', 'Took', 'Assigned', 'Cancelled'],
-        'deleted' => ['Deleted', 'Removed'],
-        'workflow' => ['Approved', 'Rejected', 'Accepted', 'Received', 'Committed', 'Fulfilled', 'Completed', 'Resolved', 'Stock'],
+    /**
+     * LIKE patterns per category, matched in this order: an action belongs to the first category it
+     * matches, and to "other" when it matches none.
+     */
+    private const CATEGORY_PATTERNS = [
+        'auth' => ['Signed%', 'Changed own%', 'Updated own%'],
+        'access' => ['Added member%', 'Removed member%', 'Changed % owner'],
+        'requests' => [
+            'Submitted%', 'Approved%', 'Rejected%', 'Completed%', 'Fulfilled%', 'Filed%',
+            'Cancelled service request%', 'Cancelled stock request%', 'Cancelled request%',
+        ],
+        'tickets' => ['Took%', 'Assigned%', 'Forwarded%', 'Resolved%', 'Classified%', 'Auto-ticket%'],
+        'assets' => [
+            'Transferred%', 'Received%', 'Accepted%', 'Requested asset%', 'Recalled%', 'Force-recalled%',
+            'Wrote off%', 'Bulk asset%', 'Returned asset%', 'Cancelled asset%', 'Stock %', 'Opened stock%', 'Committed stock%',
+        ],
+        'created' => ['Created%', 'Duplicated%', 'Registered%', 'Imported%', 'Uploaded%'],
+        'updated' => ['Updated%', 'Changed%', 'Set%', 'Reset%', 'Reordered%', 'Reactivated%', 'Recorded%', 'Cancelled%', 'Resumed%', 'Paused%'],
+        'deleted' => ['Deleted%', 'Removed%'],
     ];
 
-    /** Keeps actions that start with one of the category's verbs and with none of an earlier category's. */
+    private const OTHER = 'other';
+
+    /** Keeps actions that match one of the category's patterns and none of an earlier category's ("other": none at all). */
     private function whereCategory(Builder $query, string $category): void
     {
-        $earlierVerbs = [];
-        foreach (self::CATEGORY_VERBS as $key => $verbs) {
+        $earlierPatterns = [];
+        foreach (self::CATEGORY_PATTERNS as $key => $patterns) {
             if ($key === $category) {
                 break;
             }
-            $earlierVerbs = [...$earlierVerbs, ...$verbs];
+            $earlierPatterns = [...$earlierPatterns, ...$patterns];
         }
 
-        $query->where(function (Builder $w) use ($category) {
-            foreach (self::CATEGORY_VERBS[$category] as $verb) {
-                $w->orWhere('action', 'like', "{$verb}%");
-            }
-        });
-        foreach ($earlierVerbs as $verb) {
-            $query->where('action', 'not like', "{$verb}%");
+        if ($category !== self::OTHER) {
+            $query->where(function (Builder $w) use ($category) {
+                foreach (self::CATEGORY_PATTERNS[$category] as $pattern) {
+                    $w->orWhere('action', 'like', $pattern);
+                }
+            });
+        }
+        foreach ($earlierPatterns as $pattern) {
+            $query->where('action', 'not like', $pattern);
         }
     }
 
@@ -49,7 +65,7 @@ class AuditLogController extends Controller
 
         $filters = $request->validate([
             'search' => ['nullable', 'string'],
-            'category' => ['nullable', 'string', Rule::in(array_keys(self::CATEGORY_VERBS))],
+            'category' => ['nullable', 'string', Rule::in([...array_keys(self::CATEGORY_PATTERNS), self::OTHER])],
             'user' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
