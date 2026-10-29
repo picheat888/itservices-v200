@@ -185,7 +185,8 @@ test('the counting tab is the list and its wiring only', () => {
 test('each count dialog keeps its standard size', () => {
     assert.ok(src(`${COUNT_DIR}count-sheet-dialog.tsx`).includes('focusDialogContentClass'));
     assert.ok(src(`${COUNT_DIR}count-review-dialog.tsx`).includes('<FormDialogContent'));
-    assert.ok(src(`${COUNT_DIR}count-done-dialog.tsx`).includes('largeDialogContentClass'));
+    // Confirmed sheet: the draft's fixed height
+    assert.ok(src(`${COUNT_DIR}count-done-dialog.tsx`).includes('focusDialogContentClass'));
 });
 
 test('the sheet asks for reasons the agreed way', () => {

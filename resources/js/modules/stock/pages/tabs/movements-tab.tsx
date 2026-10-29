@@ -19,7 +19,7 @@ import { TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { StockMovementType } from '@/shared/types';
 import { buttonVariants } from '@/shared/ui/button';
-import { Dialog, DialogBody, FormDialogContent, topAnchoredDialogClass } from '@/shared/ui/dialog';
+import { detailDialogHeightClass, Dialog, DialogBody, FormDialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { ArrowRight, Filter, Printer, Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
@@ -237,7 +237,7 @@ export function MovementsTab() {
 
             {/* Movement detail — the per-entry audit-log view. */}
             <Dialog open={moveOpen} onOpenChange={(o) => !o && setMoveOpen(false)}>
-                <FormDialogContent className={topAnchoredDialogClass}>
+                <FormDialogContent className={detailDialogHeightClass}>
                     {viewMove &&
                         (() => {
                             const meta = MV_META[viewMove.type];

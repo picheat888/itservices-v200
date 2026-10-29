@@ -1,4 +1,4 @@
-// Stock detail dialogs open smoothly: the top edge stays put, skeletons match the content, late content fades in, rows read ahead.
+// Stock detail dialogs open smoothly: one fixed centered height, skeletons shaped like the content, late content fades in, rows read ahead.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -16,19 +16,18 @@ const countDone = read('resources/js/modules/stock/components/count/count-done-d
 const countSheet = read('resources/js/modules/stock/components/count/count-sheet-dialog.tsx');
 const countParts = read('resources/js/modules/stock/components/count/count-dialog-parts.tsx');
 
-test('the top-anchored class pins the top edge where a full-height dialog would sit and grows downward', () => {
-    const cls = dialogUi.match(/const topAnchoredDialogClass =\s*'([^']+)'/)?.[1] ?? '';
-    assert.match(cls, /top-\[max\(36px,calc\(\(100dvh_-_860px\)\/2\)\)\]/);
-    assert.match(cls, /translate-y-0/);
-    assert.match(cls, /origin-top/);
-    assert.match(cls, /max-h-\[min\(860px,/);
+test('detail dialogs keep one fixed height and stay centered, so arriving data never moves them', () => {
+    assert.match(dialogUi, /const detailDialogHeightClass = 'h-\[min\(720px,calc\(100dvh-72px\)\)\]';/);
+    assert.doesNotMatch(dialogUi, /topAnchoredDialogClass/);
+    assert.match(dialogUi, /top-\[50%\] left-\[50%\]/);
 });
 
-test('the request, movement and confirmed-count details are top-anchored; the fixed-height count sheet is not', () => {
-    assert.match(requestDetail, /className=\{cn\(mediumDialogContentClass, topAnchoredDialogClass\)\}/);
-    assert.match(movements, /<FormDialogContent className=\{topAnchoredDialogClass\}>/);
-    assert.match(countDone, /cn\(largeDialogContentClass, !missing && topAnchoredDialogClass, /);
-    assert.doesNotMatch(countSheet, /topAnchoredDialogClass/);
+test('request and movement details are 720 high; both count sheets share the fixed 860 focus frame', () => {
+    assert.match(requestDetail, /className=\{cn\(mediumDialogContentClass, detailDialogHeightClass\)\}/);
+    assert.match(movements, /<FormDialogContent className=\{detailDialogHeightClass\}>/);
+    assert.match(countDone, /cn\(focusDialogContentClass, !shown && pendingFrameClass\(missing\)\)/);
+    assert.match(countSheet, /cn\(focusDialogContentClass, !shown && pendingFrameClass\(missing\)\)/);
+    assert.doesNotMatch(countDone, /largeDialogContentClass/);
 });
 
 test('skeletons have the shape of what replaces them, not one grey block', () => {

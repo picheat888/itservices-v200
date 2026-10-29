@@ -14,13 +14,13 @@ import { cn } from '@/shared/lib/utils';
 import type { RequestTrail, StockItem, StockRequest } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import {
+    detailDialogHeightClass,
     Dialog,
     DialogBody,
     DialogContent,
     DialogFooterBar,
     focusDialogOnOpen,
     mediumDialogContentClass,
-    topAnchoredDialogClass,
 } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { ArrowUpFromLine, Ban, Check, ClipboardList, Printer, RotateCcw, TriangleAlert, X } from 'lucide-react';
@@ -82,7 +82,7 @@ export function RequestDetailDialog({
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent
-                className={cn(mediumDialogContentClass, topAnchoredDialogClass)}
+                className={cn(mediumDialogContentClass, detailDialogHeightClass)}
                 onOpenAutoFocus={focusDialogOnOpen}
                 onCloseAutoFocus={onCloseAutoFocus}
             >

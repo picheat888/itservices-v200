@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/utils';
 import type { StockCount } from '@/shared/types';
 import { Button, buttonVariants } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
-import { Dialog, DialogBody, DialogContent, DialogFooterBar, largeDialogContentClass, topAnchoredDialogClass } from '@/shared/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
 import { ClipboardCheck, Loader2, Printer } from 'lucide-react';
 import { useState } from 'react';
@@ -84,7 +84,7 @@ export function CountDoneDialog({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className={cn(largeDialogContentClass, !missing && topAnchoredDialogClass, !shown && pendingFrameClass(missing))}>
+            <DialogContent className={cn(focusDialogContentClass, !shown && pendingFrameClass(missing))}>
                 {!shown ? (
                     <CountDialogPending kind="done" missing={missing} failed={failed} onRetry={onRetry} onClose={onClose} listed={listed} />
                 ) : (

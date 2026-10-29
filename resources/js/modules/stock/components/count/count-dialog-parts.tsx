@@ -124,7 +124,7 @@ export function CountDialogPending({
                                     ))}
                                 </div>
                             )}
-                            <div className={cn('border-border min-h-0 overflow-hidden rounded-lg border', done ? 'shrink' : 'flex-1')}>
+                            <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
                                 <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                                     <colgroup>
                                         {COLS[kind].map((w, i) => (
