@@ -1,4 +1,4 @@
-// STK-8 browser eye-check fixes: Thai words keep a space before a warehouse name, and the SKU history tables stay inside a 768 screen.
+// STK-8 browser eye-check fixes: Thai warehouse words, the SKU history width at 768, and focus after a request leaves the list.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -17,4 +17,10 @@ test('Thai "อยู่ที่" is followed by a space before the warehouse n
 test('the SKU history summary grid lets its wide tables scroll instead of widening the page', () => {
     const summary = read('resources/js/modules/stock/components/history-summary.tsx');
     assert.match(summary, /className="mb-6 grid grid-cols-1 gap-6"/);
+});
+
+test('closing a request dialog chain follows the row when it leaves the filtered list', () => {
+    const tab = read('resources/js/modules/stock/pages/tabs/requests-tab.tsx');
+    assert.match(tab, /originSpotRef\.current = rowSpotOf\(from\)/);
+    assert.match(tab, /if \(origin && originSpotRef\.current\) followRowOnRemoval\(origin, originSpotRef\.current\)/);
 });

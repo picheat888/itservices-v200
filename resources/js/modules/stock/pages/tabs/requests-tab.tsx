@@ -17,6 +17,7 @@ import { useNewRows } from '@/shared/hooks/use-new-rows';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
+import { followRowOnRemoval, rowSpotOf, type RowSpot } from '@/shared/lib/menu-return-focus';
 import { digitsOnly } from '@/shared/lib/number';
 import { searchLabel } from '@/shared/lib/search-words';
 import { CARD_HEADING } from '@/shared/lib/surface';
@@ -203,15 +204,22 @@ export function RequestsTab({
 
     // The row (or its menu button) a dialog chain started from: detail, fulfil and the return drawer hand focus back to it
     const originRef = useRef<HTMLElement | null>(null);
+    const originSpotRef = useRef<RowSpot | null>(null);
     const rememberOrigin = (el?: HTMLElement | null) => {
         const from = el ?? (document.activeElement as HTMLElement | null);
-        if (from && from !== document.body && !from.closest('[role="dialog"], [role="menu"]')) originRef.current = from;
+        if (from && from !== document.body && !from.closest('[role="dialog"], [role="menu"]')) {
+            originRef.current = from;
+            originSpotRef.current = rowSpotOf(from);
+        }
     };
     const returnFocus = (e: Event) => {
         e.preventDefault();
         // The next dialog of the chain is already open and holds focus
         if (document.querySelector('[role="dialog"][data-state="open"]')) return;
-        if (originRef.current?.isConnected) originRef.current.focus();
+        const origin = originRef.current;
+        if (origin?.isConnected) origin.focus();
+        // A fulfilled or cancelled row can leave the filtered list: focus moves to the row now in its place
+        if (origin && originSpotRef.current) followRowOnRemoval(origin, originSpotRef.current);
     };
 
     const openDetail = (r: StockRequest, readAt = requestsReadAt) => {
