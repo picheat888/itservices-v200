@@ -514,8 +514,8 @@ export default function StockPage() {
                 : t('stock_alert_button_all').replace('{n}', fmtN(total));
         return { label, tone: (summary.out_count > 0 || summary.low_count > 0 ? 'red' : 'amber') as AlertTone };
     })();
-    // Items-tab badge: total stock alerts (out of stock + below min + overstock).
-    const itemAlerts = summary ? summary.out_count + summary.low_count + summary.over_count : 0;
+    // Items-tab badge
+    const itemAlerts = summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : 0;
 
     const allTabs = [
         { id: 'overview' as const, label: t('sub_overview'), view: 'view_dashboard' },
