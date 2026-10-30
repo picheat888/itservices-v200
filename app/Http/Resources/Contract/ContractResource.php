@@ -36,7 +36,7 @@ class ContractResource extends JsonResource
             'value_display' => $this->valueDisplay(),
             'total_value' => $this->total_value !== null ? (float) $this->total_value : null,
             'total_value_display' => $this->total_value !== null
-                ? AppSetting::currencySymbol().number_format((float) $this->total_value, 2)
+                ? AppSetting::money((float) $this->total_value)
                 : null,
             'billing_cycle' => $this->billing_cycle,
             'status' => $this->status,
@@ -92,6 +92,6 @@ class ContractResource extends JsonResource
     /** The amount of one billing cycle, "฿2,140,000.00" (symbol per Settings currency); the page adds the cycle. */
     private function valueDisplay(): string
     {
-        return AppSetting::currencySymbol().number_format((float) $this->value, 2);
+        return AppSetting::money((float) $this->value);
     }
 }

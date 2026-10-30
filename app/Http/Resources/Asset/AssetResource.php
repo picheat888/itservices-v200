@@ -62,7 +62,7 @@ class AssetResource extends JsonResource
             'warehouse' => $this->warehouse?->name,
             'warehouse_id' => $this->warehouse_id,
             'value' => $value,
-            'value_display' => AppSetting::currencySymbol().number_format($value, 2),
+            'value_display' => AppSetting::money($value),
             // A rented asset's fee is per its contract's billing cycle; the page words it (/mo, /qtr, /yr)
             'value_cycle' => $this->source === AssetSource::Rented ? ($this->contract?->billing_cycle ?? 'monthly') : null,
             'supplier' => $vendor?->name,

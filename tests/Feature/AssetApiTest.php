@@ -267,6 +267,8 @@ class AssetApiTest extends TestCase
         $rows = $this->getJson('/api/assets/summary')->assertOk()->json('top_rented');
 
         $this->assertSame(['Quarterly Co', 'Monthly Co'], array_column($rows, 'vendor'));
+        // The vendor's Thai name rides along for the Thai screen (null when none)
+        $this->assertSame([null, null], array_column($rows, 'vendor_th'));
         $this->assertSame([$quarterly->code, $monthly->code], array_column($rows, 'code'));
         $this->assertSame([1, 2], array_column($rows, 'assets_count'));
         $this->assertSame(['quarterly', 'monthly'], array_column($rows, 'billing_cycle'));

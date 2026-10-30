@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Asset;
 
-use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Asset\AssetTransferKind;
 use App\Enums\Contract\ContractType;
@@ -16,18 +15,17 @@ use App\Models\Asset\AssetTransfer;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
-use App\Models\Settings\AppSetting;
 use App\Models\Settings\Location;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
 use App\Services\Asset\AssetService;
+use App\Services\Asset\AssetTopValueService;
 use App\Support\OverviewPeriod;
 use App\Support\SearchTerms;
 use App\Support\SystemTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
@@ -47,7 +45,10 @@ class AssetController extends Controller
         AssetStatus::PendingReturn,
     ];
 
-    public function __construct(private readonly AssetService $service) {}
+    public function __construct(
+        private readonly AssetService $service,
+        private readonly AssetTopValueService $topValue,
+    ) {}
 
     /** Gate read access to the assets.view permission (super bypasses). */
     private function gateView(Request $request): void
@@ -196,51 +197,10 @@ class AssetController extends Controller
             'writeoff' => $assets->where('status', AssetStatus::Writeoff)->count(),
             'total_value' => round($assets->sum(fn (Asset $a) => $a->annualValue()), 2),
             'by_type' => $byType,
-            'top_purchased' => AssetResource::collection($this->topPurchased($inService)),
-            'top_rented' => $this->topRented($inService),
+            'top_purchased' => AssetResource::collection($this->topValue->topPurchased($inService)),
+            'top_rented' => $this->topValue->topRented($inService),
             'activity' => $this->activity(OverviewPeriod::fromRequest($request)),
         ]);
-    }
-
-    /**
-     * The five dearest bought assets still in service, by purchase price.
-     *
-     * @param  Collection<int, Asset>  $inService
-     * @return Collection<int, Asset>
-     */
-    private function topPurchased(Collection $inService): Collection
-    {
-        return $inService->where('source', AssetSource::Purchased)
-            ->sortByDesc(fn (Asset $a) => (float) $a->value)
-            ->take(5)
-            ->values();
-    }
-
-    /**
-     * The five open leases with the highest yearly rent that still cover an asset in service.
-     *
-     * @param  Collection<int, Asset>  $inService
-     * @return list<array{contract_id: int, asset_id: int, code: string, vendor: ?string, assets_count: int, value_display: string, billing_cycle: string}>
-     */
-    private function topRented(Collection $inService): array
-    {
-        return $inService->where('source', AssetSource::Rented)
-            ->filter(fn (Asset $a) => $a->contract !== null && ! $a->contract->isClosed())
-            ->groupBy('contract_id')
-            ->map(fn (Collection $leased) => ['contract' => $leased->first()->contract, 'assets' => $leased])
-            ->sortByDesc(fn (array $lease) => $lease['contract']->annualValue())
-            ->take(5)
-            ->map(fn (array $lease) => [
-                'contract_id' => $lease['contract']->id,
-                'asset_id' => $lease['assets']->first()->id,
-                'code' => $lease['contract']->code,
-                'vendor' => $lease['contract']->vendor?->name,
-                'assets_count' => $lease['assets']->count(),
-                'value_display' => AppSetting::currencySymbol().number_format((float) $lease['contract']->value, 2),
-                'billing_cycle' => $lease['contract']->billing_cycle,
-            ])
-            ->values()
-            ->all();
     }
 
     /**

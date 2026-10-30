@@ -103,4 +103,10 @@ class AppSetting extends Model
 
         return ['THB' => '฿', 'USD' => '$'][$code] ?? (string) $code;
     }
+
+    /** An amount as the screens show it, e.g. "฿4,310,000.00". */
+    public static function money(float $amount): string
+    {
+        return static::currencySymbol().number_format($amount, 2);
+    }
 }

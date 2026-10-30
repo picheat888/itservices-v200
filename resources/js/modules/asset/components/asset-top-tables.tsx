@@ -3,10 +3,12 @@ import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { perCycle } from '@/shared/lib/currency';
+import { localPair } from '@/shared/lib/local-name';
 import { CARD_HEADING, TABLE_HEAD } from '@/shared/lib/surface';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetTopLease } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import { FileText, TrendingUp, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ContractPeekDialog } from './contract-peek-dialog';
@@ -64,7 +66,7 @@ export function TopPurchasedCard({ assets, onOpen }: { assets: Asset[]; onOpen: 
                                         </button>
                                     </td>
                                     <td className="px-3 py-2 font-medium">{a.model}</td>
-                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{a.value_display}</td>
+                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap tabular-nums">{a.value_display}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -78,6 +80,7 @@ export function TopPurchasedCard({ assets, onOpen }: { assets: Asset[]; onOpen: 
 export function TopRentedCard({ leases }: { leases: AssetTopLease[] }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const lang = useUiStore((s) => s.lang);
     const [peekAssetId, setPeekAssetId] = useState<number | null>(null);
 
     return (
@@ -116,11 +119,11 @@ export function TopRentedCard({ leases }: { leases: AssetTopLease[] }) {
                                             {lease.code}
                                         </button>
                                     </td>
-                                    <td className="px-3 py-2 font-medium">{lease.vendor ?? '—'}</td>
-                                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                                    <td className="px-3 py-2 font-medium">{localPair(lease.vendor, lease.vendor_th, lang) ?? '—'}</td>
+                                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
                                         {t('asset_top_rented_units').replace('{n}', fmtN(lease.assets_count))}
                                     </td>
-                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">
+                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap tabular-nums">
                                         {perCycle(lease.value_display, lease.billing_cycle, t)}
                                     </td>
                                 </tr>

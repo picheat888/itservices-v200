@@ -294,6 +294,6 @@ class ContractController extends Controller
     /** Formats an amount as "฿4,310,000.00" (symbol per Settings currency). */
     private function formatMoney(float $amount): string
     {
-        return AppSetting::currencySymbol().number_format($amount, 2);
+        return AppSetting::money($amount);
     }
 }
