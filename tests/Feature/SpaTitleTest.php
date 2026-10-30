@@ -73,6 +73,7 @@ class SpaTitleTest extends TestCase
 
         $this->get('/login')
             ->assertOk()
-            ->assertDontSee('<script>', false);
+            ->assertDontSee('A & B <script>', false)
+            ->assertSee('<title>A &amp; B &lt;script&gt;</title>', false);
     }
 }
