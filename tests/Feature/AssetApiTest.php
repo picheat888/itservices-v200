@@ -700,10 +700,15 @@ class AssetApiTest extends TestCase
         AssetTransfer::forceCreate(['asset_id' => $deployed->id, 'asset_tag' => $deployed->asset_code, 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7201', 'created_at' => '2026-10-13 09:15:00']);
         AssetTransfer::forceCreate(['asset_id' => $deployed->id, 'asset_tag' => $deployed->asset_code, 'asset_model' => 'M', 'kind' => 'relocate', 'from_owner' => 'A', 'to_owner' => 'B', 'created_at' => '2026-10-20 16:00:00']);
 
+        // Handed over once, since recalled into the pool: the old hand-over no longer applies.
+        $backInPool = Asset::factory()->create(['status' => 'ready']);
+        AssetTransfer::forceCreate(['asset_id' => $backInPool->id, 'asset_tag' => $backInPool->asset_code, 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7202', 'created_at' => '2026-03-01 10:00:00']);
+
         $rows = collect($this->getJson('/api/assets?per_page=100')->assertOk()->json('data'))->keyBy('id');
 
         $this->assertSame('2026-10-13 09:15', $rows[$deployed->id]['handed_over_at']);
         $this->assertNull($rows[$neverHanded->id]['handed_over_at']);
+        $this->assertNull($rows[$backInPool->id]['handed_over_at']);
     }
 
     public function test_only_the_recipient_employee_can_accept_a_handover(): void

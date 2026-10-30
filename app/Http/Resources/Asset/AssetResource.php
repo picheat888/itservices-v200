@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Asset;
 
 use App\Enums\Asset\AssetSource;
+use App\Enums\Asset\AssetStatus;
 use App\Http\Resources\Ticket\TicketResource;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
@@ -81,7 +82,10 @@ class AssetResource extends JsonResource
             // the acquisition/purchase origin lives in purchase_date.
             'registered_date' => SystemTime::date($this->created_at),
             'owned_since' => $this->owned_since?->toDateString(),
-            'handed_over_at' => $this->relationLoaded('latestHandover') && $this->latestHandover ? SystemTime::dateTime($this->latestHandover->created_at) : null,
+            // Only while the asset is still out of the pool; once back in a warehouse the old hand-over no longer applies
+            'handed_over_at' => $this->relationLoaded('latestHandover') && $this->latestHandover && ! in_array($this->status, [AssetStatus::Ready, AssetStatus::Writeoff], true)
+                ? SystemTime::dateTime($this->latestHandover->created_at)
+                : null,
             'notes' => $this->notes,
             'last_reason' => $this->last_reason,
             // Why it was written off (Settings → Assets); last_reason above is the free-text note.

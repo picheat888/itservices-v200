@@ -402,18 +402,9 @@ class AssetController extends Controller
     {
         $this->guard->canDelete($request->user(), $asset)->authorize();
 
-        // An asset that has been handed out even once owns a custody trail. The FK is
-        // restrictOnDelete, so the database would refuse the delete anyway; refusing here
-        // is what turns that refusal into a reason the dialog can show.
-        $transfers = $asset->transfers()->count();
-        if ($transfers > 0) {
-            return response()->json(['message' => 'has_history', 'transfers_count' => $transfers], 422);
-        }
-
-        // A ticket's link would be nulled by the FK and its repair history lost without a word.
-        $tickets = $asset->tickets()->count();
-        if ($tickets > 0) {
-            return response()->json(['message' => 'has_tickets', 'tickets_count' => $tickets], 422);
+        $blocker = $this->service->deletionBlocker($asset);
+        if ($blocker !== null) {
+            return response()->json($blocker, 422);
         }
 
         AuditLog::recordDeleted('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}", $asset);
@@ -542,11 +533,7 @@ class AssetController extends Controller
         $data = $request->validated();
         $assets = $request->assets();
         $location = Location::findOrFail($data['location_id']);
-        // An asset already there has nothing to move and gets no "A → A" history.
-        $assets = $assets->reject(fn (Asset $a) => $a->location_id === $location->id)->values();
-        foreach ($assets as $asset) {
-            $this->service->relocate($asset, $location, $request->user(), $data['note'] ?? null);
-        }
+        $assets = $this->service->relocateMany($assets, $location, $request->user(), $data['note'] ?? null);
         // One entry per asset, so each asset's own history carries the move.
         foreach ($assets as $asset) {
             AuditLog::record('Updated asset location', "{$asset->asset_code} → {$location->name}", subject: $asset);

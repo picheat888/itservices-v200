@@ -4,12 +4,17 @@ namespace Tests\Feature;
 
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
+use App\Models\Email\EmailTemplate;
 use App\Models\Employee\Employee;
+use App\Models\Notification\NotificationTemplate;
 use App\Models\Permission\Role;
 use App\Models\Settings\Location;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use App\Support\NotificationCatalogue;
 use Database\Seeders\EmailTemplateSeeder;
+use Database\Seeders\NotificationTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use ReflectionObject;
@@ -115,6 +120,50 @@ class AssetBulkNoticeTest extends TestCase
         $byRecipient = collect($this->mails())->groupBy('to')->map(fn ($mails) => $mails->pluck('key')->all());
         $this->assertSame(['asset.recalled_many'], $byRecipient['emp-b3@inaba.co.th']);
         $this->assertSame(['asset.recalled'], $byRecipient['emp-b4@inaba.co.th']);
+    }
+
+    public function test_a_bulk_hand_over_that_fails_part_way_moves_nothing_and_tells_nobody(): void
+    {
+        Bus::fake();
+        [$employee, $user] = $this->person('EMP-B6');
+        [$first, $second] = [
+            Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]),
+            Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]),
+        ];
+        $location = Location::create(['name' => 'HQ']);
+        Asset::updating(function (Asset $asset) use ($second) {
+            if ($asset->id === $second->id) {
+                throw new \RuntimeException('disk full');
+            }
+        });
+
+        $this->postJson('/api/assets/bulk-transfer', ['ids' => [$first->id, $second->id], 'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id])
+            ->assertServerError();
+
+        $this->assertSame('ready', $first->fresh()->status->value);
+        $this->assertNull($first->fresh()->owner_employee_id);
+        $this->assertSame(0, AssetTransfer::count());
+        $this->assertSame(0, $user->notifications()->count());
+        $this->assertSame([], $this->mails());
+    }
+
+    public function test_switching_off_the_single_hand_over_bell_and_mail_silences_the_bulk_ones(): void
+    {
+        Bus::fake();
+        $this->seed(NotificationTemplateSeeder::class);
+        NotificationTemplate::where('key', 'notif_asset_assigned')->update(['enabled' => false]);
+        EmailTemplate::where('key', 'asset.assigned')->update(['enabled' => false]);
+        NotificationCatalogue::forgetSwitches();
+        [$employee, $user] = $this->person('EMP-B7');
+        $assets = Asset::factory()->count(2)->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]);
+        $location = Location::create(['name' => 'HQ']);
+
+        $this->postJson('/api/assets/bulk-transfer', ['ids' => $assets->pluck('id')->all(), 'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id])
+            ->assertOk();
+
+        $this->assertSame(0, $user->notifications()->count());
+        $this->assertSame([], $this->mails());
+        NotificationCatalogue::forgetSwitches();
     }
 
     public function test_a_refused_bulk_hand_over_tells_nobody(): void

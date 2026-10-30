@@ -551,16 +551,12 @@ export default function AssetsPage() {
 
     const toggleAllOnPage = (on: boolean) => {
         if (!eligibleStatus) return;
-        const next = toggleGroup(
-            selectedIds,
-            groupRows.map((a) => a.id),
-            on,
-            selectionStatus,
-            eligibleStatus,
-        );
-        setSelectedIds(next.ids);
+        const groupIds = groupRows.map((a) => a.id);
+        const groupStatus = eligibleStatus;
+        // From the latest ticks, not this render's; the lock clears in the effect above once nothing is ticked
+        setSelectedIds((prev) => toggleGroup(prev, groupIds, on, null, groupStatus).ids);
         if (on) setSelectedSource((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, a.source])) }));
-        setSelectionStatus(next.status);
+        if (on) setSelectionStatus((locked) => locked ?? groupStatus);
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
 

@@ -214,7 +214,7 @@ export function EditEmployeeDialog({
     const { data: knownManagers = [] } = useEmployeesByIds([form.managerId ? Number(form.managerId) : null, employee?.manager_id]);
     const chosenManager = knownManagers.find((e) => String(e.id) === form.managerId);
     const chosenManagerOption = chosenManager ? managerOption(chosenManager) : undefined;
-    const managerLeft = managerHasLeft(chosenManager, employee?.status);
+    const managerLeftError = managerHasLeft(chosenManager, employee?.status) ? t('emp_err_manager_resigned') : undefined;
 
     /** Human label for a position id, or "(none)" when unset. */
     const positionLabel = (id: string) => positions.find((p) => String(p.id) === id)?.title ?? t('emp_org_change_none');
@@ -275,7 +275,7 @@ export function EditEmployeeDialog({
         if (!form.sectionId && !posIsSpecial) e.sectionId = t('emp_err_section');
         if (!form.positionId) e.positionId = t('emp_err_pos');
         if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
-        else if (managerLeft) e.managerId = t('emp_err_manager_resigned');
+        else if (managerLeftError) e.managerId = managerLeftError;
         if (!form.joinedAt) e.joinedAt = t('emp_err_start');
         else if (employee?.last_day && form.joinedAt >= employee.last_day)
             e.joinedAt = t('emp_err_start_after_last_day').replace('{date}', fmt.date(employee.last_day));
@@ -549,7 +549,7 @@ export function EditEmployeeDialog({
             help={t('emp_manager_help')}
             required={!posIsSpecial}
             name="managerId"
-            error={errors.managerId ?? (managerLeft ? t('emp_err_manager_resigned') : undefined)}
+            error={errors.managerId ?? managerLeftError}
         >
             <SearchableSelect
                 value={form.managerId}

@@ -133,11 +133,9 @@ class AssetActionGuard
     /** @param  Collection<int, Asset>  $assets */
     public function canBulkRecall(User $user, Collection $assets): Response
     {
-        $canForce = $user->hasPermission('assets.force_recall');
-        $blocked = $assets->contains(fn (Asset $a) => ! $this->isNormalRecall($a)
-            && ! ($canForce && ! in_array($a->status, [AssetStatus::Ready, AssetStatus::Writeoff], true)));
-
-        return $blocked ? $this->refused('recall_some_blocked') : Response::allow();
+        return $assets->contains(fn (Asset $a) => $this->canRecall($user, $a)->denied())
+            ? $this->refused('recall_some_blocked')
+            : Response::allow();
     }
 
     /** A recall assets.transfer could make alone; any other is a force recall in the audit log. */

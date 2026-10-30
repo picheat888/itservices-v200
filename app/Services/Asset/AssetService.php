@@ -7,6 +7,7 @@ use App\Enums\Asset\AssetStatus;
 use App\Enums\Asset\AssetTransferKind;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
+use App\Models\Email\EmailTemplate;
 use App\Models\Employee\Employee;
 use App\Models\Settings\Location;
 use App\Models\Stock\Warehouse;
@@ -20,8 +21,10 @@ use App\Notifications\AssetsRecalledNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\DateDisplay;
 use App\Support\EmailTable;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 class AssetService
@@ -36,8 +39,8 @@ class AssetService
     public function __construct(private readonly EmailNotificationService $email) {}
 
     /**
-     * Runs a bulk action and sends each person one bell and one mail for all their assets,
-     * instead of one per asset. Nothing is sent when the action throws.
+     * Runs a bulk action in one transaction and then sends each person one bell and one mail
+     * for all their assets, instead of one per asset. A failure part-way moves nothing and tells nobody.
      *
      * @template T
      *
@@ -48,7 +51,7 @@ class AssetService
     {
         $this->held = ['assigned' => [], 'recalled' => []];
         try {
-            $result = $work();
+            $result = DB::transaction($work);
             $held = $this->held;
         } finally {
             $this->held = null;
@@ -386,7 +389,10 @@ class AssetService
         $user = User::where('employee_id', $assets->first()->owner_employee_id)->first();
         if ($user) {
             $user->notify(new AssetsAssignedNotification($assets));
-            $this->emailEach([$user], 'asset.assigned_many', $this->manyVars($assets), '/?dialog=profile&section=assets', 'Accept the hand-over');
+            // A single hand-over's mail switched off silences the bulk one too
+            if ($this->templateOn('asset.assigned')) {
+                $this->emailEach([$user], 'asset.assigned_many', $this->manyVars($assets), '/?dialog=profile&section=assets', 'Accept the hand-over');
+            }
         }
     }
 
@@ -423,7 +429,9 @@ class AssetService
             $assets = $notices->pluck('asset');
             $subtype = $notices->contains('subtype', 'taken_back') ? 'taken_back' : 'cancelled';
             $user->notify(new AssetsRecalledNotification($assets, $subtype));
-            $this->emailEach([$user], 'asset.recalled_many', $this->manyVars($assets), '/?dialog=profile&section=assets', 'Open My Profile');
+            if ($this->templateOn('asset.recalled')) {
+                $this->emailEach([$user], 'asset.recalled_many', $this->manyVars($assets), '/?dialog=profile&section=assets', 'Open My Profile');
+            }
         }
     }
 
@@ -435,7 +443,7 @@ class AssetService
      */
     private function manyVars(Collection $assets): array
     {
-        $assets->each->loadMissing(['model', 'category']);
+        EloquentCollection::make($assets->all())->loadMissing(['model', 'category']);
 
         return [
             'asset.count' => (string) $assets->count(),
@@ -452,6 +460,44 @@ class AssetService
                 [2],
             ),
         ];
+    }
+
+    private function templateOn(string $key): bool
+    {
+        return EmailTemplate::where('key', $key)->where('enabled', true)->exists();
+    }
+
+    /**
+     * Moves the picked assets to a place, skipping any already there so none gets an "A → A" row.
+     *
+     * @param  Collection<int, Asset>  $assets
+     * @return Collection<int, Asset> the ones that moved
+     */
+    public function relocateMany(Collection $assets, Location $location, ?User $performedBy = null, ?string $note = null): Collection
+    {
+        $moving = $assets->reject(fn (Asset $a) => $a->location_id === $location->id)->values();
+        foreach ($moving as $asset) {
+            $this->relocate($asset, $location, $performedBy, $note);
+        }
+
+        return $moving;
+    }
+
+    /**
+     * Why an asset cannot be deleted though its status allows it, with how many records hold it.
+     * A custody trail is restrictOnDelete; a ticket's link would be nulled and its repair history lost.
+     *
+     * @return array{message: string, transfers_count?: int, tickets_count?: int}|null
+     */
+    public function deletionBlocker(Asset $asset): ?array
+    {
+        $transfers = $asset->transfers()->count();
+        if ($transfers > 0) {
+            return ['message' => 'has_history', 'transfers_count' => $transfers];
+        }
+        $tickets = $asset->tickets()->count();
+
+        return $tickets > 0 ? ['message' => 'has_tickets', 'tickets_count' => $tickets] : null;
     }
 
     /** Recipient confirms receipt: pending acceptance → deployed, stamping the possession date. */
