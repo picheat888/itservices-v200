@@ -8,9 +8,11 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { refusalText } from '@/shared/lib/api-errors';
+import { localName, nameSearch } from '@/shared/lib/local-name';
 import type { Ticket, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { Check, Info, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
@@ -19,6 +21,7 @@ import { PriorityPicker } from './priority-picker';
 // A dispatcher assigns an open case to another IT staff, with a priority unless it came from a request.
 export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { assign } = useTicketMutations();
     // Retained copy so the content doesn't blank during the exit animation
     const [shown, setShown] = useState<Ticket | null>(null);
@@ -43,8 +46,8 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
             staff
                 .filter((s) => s.id !== me?.id)
                 .filter((s) => s.employee_id == null || s.employee_id !== view?.requester_id)
-                .map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
-        [staff, me, view],
+                .map((s) => ({ value: String(s.id), label: localName(s, lang), search: nameSearch(s) })),
+        [staff, me, view, lang],
     );
 
     useEffect(() => {

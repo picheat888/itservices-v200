@@ -143,6 +143,31 @@ class TicketStaffNotificationTest extends TestCase
         $this->assertStringContainsString('raised by Chaiwat', $jobs[0]->html);
     }
 
+    public function test_moving_a_waiting_case_to_another_category_tells_that_categorys_staff(): void
+    {
+        Queue::fake();
+        $this->template('ticket.new_case', '<p>{{ticket.id}}</p>');
+        $network = $this->accountWith([...self::BASE, 'tickets.level_network'], 'NetworkOnly');
+        $hardware = $this->accountWith([...self::BASE, 'tickets.level_hardware'], 'HardwareOnly');
+        $both = $this->accountWith([...self::BASE, 'tickets.level_network', 'tickets.level_hardware'], 'Both');
+        $requester = $this->accountWith(['tickets.module', 'tickets.create', 'tickets.edit_own'], 'Requester');
+        $ticket = Ticket::factory()->create(['category' => 'network', 'status' => 'open', 'requester_id' => $requester->employee_id]);
+
+        $edit = ['subject' => 'Printer jams', 'description' => 'Tray 2 jams every page.', 'category' => 'hardware', 'callback_phone' => '1234'];
+        $this->actingAs($requester)->putJson("/api/tickets/{$ticket->id}", $edit)->assertOk();
+
+        $jobs = $this->pushedFor('ticket.new_case');
+        $this->assertSame([$hardware->email], array_map(fn (SendTemplatedEmail $job) => $job->toEmail, $jobs));
+        $this->assertSame(1, $hardware->notifications()->count());
+        // Already told when the case was filed under a Level they hold
+        $this->assertSame(0, $both->notifications()->count());
+        $this->assertSame(0, $network->notifications()->count());
+
+        // Saving again without a category change tells nobody
+        $this->actingAs($requester)->putJson("/api/tickets/{$ticket->id}", [...$edit, 'subject' => 'Printer jams on tray 2'])->assertOk();
+        $this->assertCount(1, $this->pushedFor('ticket.new_case'));
+    }
+
     public function test_the_weekly_digest_lists_untaken_and_unfinished_cases(): void
     {
         Queue::fake();

@@ -7,9 +7,11 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormError } from '@/shared/hooks/use-form-error';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { refusalText } from '@/shared/lib/api-errors';
+import { localName, nameSearch } from '@/shared/lib/local-name';
 import type { Ticket } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { ArrowRightLeft, Check, Info } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
@@ -17,6 +19,7 @@ import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
 // Forward an in-progress case to another IT staff; priority and SLA deadlines stay put.
 export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { forward } = useTicketMutations();
     // Retained copy so the content doesn't blank during the exit animation
     const [shown, setShown] = useState<Ticket | null>(null);
@@ -38,8 +41,8 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
             staff
                 .filter((s) => s.id !== view?.assignee_id)
                 .filter((s) => s.employee_id == null || s.employee_id !== view?.requester_id)
-                .map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
-        [staff, view],
+                .map((s) => ({ value: String(s.id), label: localName(s, lang), search: nameSearch(s) })),
+        [staff, view, lang],
     );
 
     useEffect(() => {

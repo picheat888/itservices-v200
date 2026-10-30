@@ -1,4 +1,4 @@
-// The Overview period: what a URL means, the Ticket page's year and 365-day rules, and the words KPI footers use for it.
+// The Overview period: what a URL means, the Ticket page's year and 366-day rules, and the words KPI footers use for it.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { common as enCommon } from '../../resources/js/lang/en/common.ts';
@@ -11,7 +11,7 @@ import {
     type PeriodOptions,
 } from '../../resources/js/shared/lib/overview-period-core.ts';
 
-const TICKET: PeriodOptions = { allowAll: false, year: true, fallback: 30, maxDays: 365 };
+const TICKET: PeriodOptions = { allowAll: false, year: true, fallback: 30, maxDays: 366 };
 
 test('other modules keep all time as the default and never see "year"', () => {
     assert.equal(readOverviewPeriod('', '', ''), 'all');
@@ -27,11 +27,12 @@ test('the Ticket page falls back to 30 days and knows this year', () => {
     assert.equal(readOverviewPeriod('7', '', '', TICKET), 7);
 });
 
-test('a custom range counts both ends and stops at 365 days', () => {
+test('a custom range counts both ends and stops at 366 days, a whole leap year', () => {
     assert.equal(spanDays('2026-10-17', '2026-10-17'), 1);
     assert.equal(spanDays('2025-10-18', '2026-10-17'), 365);
-    assert.deepEqual(readOverviewPeriod('custom', '2025-10-18', '2026-10-17', TICKET), { from: '2025-10-18', to: '2026-10-17' });
-    assert.equal(readOverviewPeriod('custom', '2025-10-17', '2026-10-17', TICKET), 30);
+    assert.equal(spanDays('2028-01-01', '2028-12-31'), 366);
+    assert.deepEqual(readOverviewPeriod('custom', '2028-01-01', '2028-12-31', TICKET), { from: '2028-01-01', to: '2028-12-31' });
+    assert.equal(readOverviewPeriod('custom', '2025-10-16', '2026-10-17', TICKET), 30);
     assert.equal(readOverviewPeriod('custom', '2026-10-17', '2026-10-01', TICKET), 30);
 });
 

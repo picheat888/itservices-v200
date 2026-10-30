@@ -63,7 +63,7 @@ import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 
 // This year and 30 days by default; no all-time view, and a custom range is at most a year
-const TICKET_PERIOD: PeriodOptions = { allowAll: false, year: true, fallback: 30, maxDays: 365 };
+const TICKET_PERIOD: PeriodOptions = { allowAll: false, year: true, fallback: 30, maxDays: 366 };
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'all', 'mine', 'my'] as const;
@@ -527,8 +527,9 @@ export default function TicketsPage() {
                                         summary={summary}
                                         period={summaryPeriod}
                                         canOpenReport={has('reports.module') && has('reports.tickets')}
-                                        onOpenOverSla={() => changeTab('all', { sla: 'over_sla' })}
-                                        onOpenWaiting={() => changeTab('all', { status: 'open' })}
+                                        // The All list filters by SLA only for desk staff (tickets.resolve)
+                                        onOpenOverSla={isIT && canTake ? () => changeTab('all', { sla: 'over_sla' }) : undefined}
+                                        onOpenWaiting={isIT ? () => changeTab('all', { status: 'open' }) : undefined}
                                     />
                                 )}
                                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">

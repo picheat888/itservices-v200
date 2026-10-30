@@ -248,8 +248,8 @@ class TicketController extends Controller
             ]);
             $curEnd = Carbon::parse($request->query('to'))->endOfDay();
             $curStart = Carbon::parse($request->query('from'))->startOfDay();
-            // At most 365 days, counting both ends; longer is refused rather than quietly cut
-            if (round($curStart->diffInDays($curEnd)) > 365) {
+            // At most 366 days counting both ends, so a whole leap year fits; longer is refused
+            if (round($curStart->diffInDays($curEnd)) > 366) {
                 throw ValidationException::withMessages(['to' => ['range_too_long']]);
             }
             $days = (int) round($curStart->diffInDays($curEnd));
@@ -371,7 +371,7 @@ class TicketController extends Controller
         $category = $request->query('category');
         $staff = $this->service->staff(is_string($category) ? $category : null)
             // employee_id lets the pickers drop the case's own requester (assign/forward reject them)
-            ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'employee_id' => $u->employee_id]);
+            ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'name_th' => $u->name_th, 'employee_id' => $u->employee_id]);
 
         return response()->json(['data' => $staff]);
     }
@@ -459,7 +459,8 @@ class TicketController extends Controller
             $request->user(),
             isset($data['priority']) ? TicketPriority::from($data['priority']) : null,
             $data['note'] ?? null,
-            $data['related_asset_id'] ?? null,
+            // Left out = keep the asset already linked; null = unlink it
+            array_key_exists('related_asset_id', $data) ? $data['related_asset_id'] : $ticket->related_asset_id,
         );
         AuditLog::record('Took ticket', "{$ticket->ticket_no} → {$request->user()?->name}", subject: $ticket);
 

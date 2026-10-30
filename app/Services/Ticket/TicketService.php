@@ -60,27 +60,7 @@ class TicketService
             return $ticket;
         }, 3);
 
-        // Bell the staff who could take this case — never the requester themselves (they can't take it anyway).
-        $takers = $this->takersFor($ticket)
-            ->reject(fn (User $u) => $u->employee_id === $ticket->requester_id)
-            ->values();
-        Notification::send($takers, new TicketCreatedNotification($ticket));
-
-        // The same people, by mail. A bell is only seen by somebody already looking at the
-        // portal, and a case nobody has picked up is exactly the thing nobody is looking at.
-        foreach ($takers as $taker) {
-            $this->email->sendTemplate(
-                'ticket.new_case',
-                $taker->email,
-                ['user.first_name' => e(strtok((string) $taker->name, ' '))] + $this->staffVars($ticket),
-                // ?tab=all as well as ?view=: the drawer opens either way, but closing it
-                // on the default tab leaves the reader looking at the dashboard instead of
-                // the case they just came from.
-                url("/tickets?tab=all&view={$ticket->id}"),
-                'Open the case',
-                $taker->name,
-            );
-        }
+        $this->announceToTakers($ticket, $this->takersFor($ticket));
 
         // Email the requester a confirmation carrying the case number for reference. A
         // requester with no address anywhere is logged as skipped, not dropped in silence.
@@ -105,12 +85,19 @@ class TicketService
      */
     public function update(Ticket $ticket, array $data): Ticket
     {
+        $alreadyTold = $this->takersFor($ticket)->pluck('id');
+
         $ticket->update([
             'subject' => $data['subject'],
             'description' => $data['description'],
             'category' => $data['category'],
             'callback_phone' => $data['callback_phone'],
         ]);
+
+        // A new category reaches other staff Levels: they hear about the waiting case as if it were new
+        if ($ticket->wasChanged('category') && $ticket->status === TicketStatus::Open && $ticket->isUnassigned()) {
+            $this->announceToTakers($ticket, $this->takersFor($ticket)->whereNotIn('id', $alreadyTold)->values());
+        }
 
         return $ticket->fresh();
     }
@@ -415,6 +402,7 @@ class TicketService
     public function staff(?string $category = null): Collection
     {
         return User::holdingPermission('tickets.resolve')
+            ->with('employee')
             ->stillWorking()
             ->when($category !== null && $category !== '', fn ($q) => $q->holdingPermission("tickets.level_{$category}"))
             ->get()
@@ -423,13 +411,39 @@ class TicketService
     }
 
     /**
-     * Staff able to take this specific case: tickets.resolve + the matching Level.
+     * Staff able to take this specific case: tickets.resolve + the matching Level, never the
+     * requester (a case can't be handled by the person who filed it).
      *
      * @return Collection<int, User>
      */
     public function takersFor(Ticket $ticket): Collection
     {
-        return $this->staff($ticket->category->value);
+        return $this->staff($ticket->category->value)
+            ->reject(fn (User $u) => $u->employee_id !== null && $u->employee_id === $ticket->requester_id)
+            ->values();
+    }
+
+    /**
+     * Bell and mail to the staff who could pick up a waiting case. A bell is only seen by somebody
+     * already in the portal, and a case nobody has picked up is exactly the thing nobody is looking at.
+     *
+     * @param  Collection<int, User>  $takers
+     */
+    private function announceToTakers(Ticket $ticket, Collection $takers): void
+    {
+        Notification::send($takers, new TicketCreatedNotification($ticket));
+
+        foreach ($takers as $taker) {
+            $this->email->sendTemplate(
+                'ticket.new_case',
+                $taker->email,
+                ['user.first_name' => e(strtok((string) $taker->name, ' '))] + $this->staffVars($ticket),
+                // ?tab=all too, so closing the drawer leaves the reader on the list, not the dashboard
+                $this->staffUrl($ticket),
+                'Open the case',
+                $taker->name,
+            );
+        }
     }
 
     /**

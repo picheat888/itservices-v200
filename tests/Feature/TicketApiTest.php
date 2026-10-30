@@ -333,6 +333,49 @@ class TicketApiTest extends TestCase
             ->assertJsonPath('message', 'not_assignee');
     }
 
+    public function test_a_closed_case_cannot_be_closed_again_through_the_api(): void
+    {
+        $staff = $this->userWithEmployee('super');
+        $this->actingAs($staff);
+
+        foreach (['completed', 'canceled'] as $status) {
+            $ticket = Ticket::factory()->create(['assignee_id' => $staff->id, 'status' => $status, 'resolution' => 'Done the first time.']);
+
+            $this->postJson("/api/tickets/{$ticket->id}/resolve", ['mode' => 'complete', 'resolution' => 'Closing it a second time.'])
+                ->assertStatus(422)
+                ->assertJsonPath('message', 'not_in_progress');
+            $this->assertSame('Done the first time.', $ticket->fresh()->resolution);
+        }
+    }
+
+    public function test_taking_a_case_keeps_its_linked_asset_unless_told_otherwise(): void
+    {
+        $asset = Asset::factory()->create();
+        $this->actingAs($this->userWithEmployee('super'));
+
+        $kept = Ticket::factory()->create(['related_asset_id' => $asset->id]);
+        $this->postJson("/api/tickets/{$kept->id}/take", ['priority' => 'medium'])
+            ->assertOk()
+            ->assertJsonPath('data.related_asset_id', $asset->id);
+
+        $cleared = Ticket::factory()->create(['related_asset_id' => $asset->id]);
+        $this->postJson("/api/tickets/{$cleared->id}/take", ['priority' => 'medium', 'related_asset_id' => null])
+            ->assertOk()
+            ->assertJsonPath('data.related_asset_id', null);
+    }
+
+    public function test_the_staff_picker_carries_thai_names(): void
+    {
+        $staff = User::factory()->create([
+            'role' => 'super',
+            'employee_id' => Employee::create(['first_name' => 'Anong', 'last_name' => 'Test', 'first_name_th' => 'อนงค์', 'last_name_th' => 'ทดสอบ', 'status' => 'active'])->id,
+        ]);
+        $this->actingAs($this->userWithEmployee('super'));
+
+        $row = collect($this->getJson('/api/tickets/staff')->assertOk()->json('data'))->firstWhere('id', $staff->id);
+        $this->assertSame('อนงค์ ทดสอบ', $row['name_th']);
+    }
+
     public function test_requester_sees_only_their_own_tickets(): void
     {
         $me = $this->userWithEmployee('user');

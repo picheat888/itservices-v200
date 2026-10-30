@@ -67,6 +67,18 @@ class TicketSlaAlertTest extends TestCase
         $this->assertSame(1, $staff->notifications()->count());
     }
 
+    public function test_staff_who_filed_the_case_get_no_alert_for_a_case_they_cannot_take(): void
+    {
+        $taker = $this->staff('Taker');
+        $filer = $this->staff('Filer');
+        Ticket::factory()->create(['status' => 'open', 'requester_id' => $filer->employee_id, 'created_at' => '2026-01-13 08:00:00']);
+
+        $this->sweep();
+
+        $this->assertSame(1, $taker->notifications()->count());
+        $this->assertSame(0, $filer->notifications()->count());
+    }
+
     public function test_near_due_in_progress_ticket_nudges_only_the_assignee(): void
     {
         $assignee = $this->staff('Assignee');

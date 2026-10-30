@@ -80,8 +80,9 @@ export function TicketOverviewTiles({
     summary: TicketSummary;
     period: OverviewPeriod;
     canOpenReport: boolean;
-    onOpenOverSla: () => void;
-    onOpenWaiting: () => void;
+    /** Left out when the reader's list cannot show the same cases; the tile is then plain */
+    onOpenOverSla?: () => void;
+    onOpenWaiting?: () => void;
 }) {
     const t = useT();
     const fmtN = useNumberFormat();

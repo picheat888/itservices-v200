@@ -63,7 +63,9 @@ export const ticketApi = {
     summary: (range: OverviewPeriod) => http.get<TicketSummary>('/tickets/summary', { params: overviewPeriodParams(range) }).then((r) => r.data),
     staff: (category?: string) =>
         http
-            .get<{ data: { id: number; name: string; employee_id: number | null }[] }>('/tickets/staff', { params: { category } })
+            .get<{
+                data: { id: number; name: string; name_th: string | null; employee_id: number | null }[];
+            }>('/tickets/staff', { params: { category } })
             .then((r) => r.data.data),
     badge: () => http.get<{ count: number }>('/tickets/badge').then((r) => r.data.count),
     requesterAssets: (id: number) =>

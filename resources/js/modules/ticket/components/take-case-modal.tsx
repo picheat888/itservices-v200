@@ -72,15 +72,26 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
         setPickedAsset(assetOptions.find((o) => o.value === value) ?? null);
     };
 
+    // Starts on the asset already linked to the case, so taking it does not unlink it
+    const linkedAssetId = ticket?.related_asset_id != null ? String(ticket.related_asset_id) : '';
     useEffect(() => {
         if (ticket) {
             setPriority('medium');
             setNote('');
-            setAssetId('');
-            setPickedAsset(null);
+            setAssetId(linkedAssetId);
+            setPickedAsset(
+                linkedAssetId && ticket.related_asset_tag
+                    ? {
+                          value: linkedAssetId,
+                          label: ticket.related_asset_tag,
+                          hint: ticket.related_asset_model ?? undefined,
+                          search: ticket.related_asset_tag,
+                      }
+                    : null,
+            );
             clearFormError();
         }
-    }, [ticket, clearFormError]);
+    }, [ticket, linkedAssetId, clearFormError]);
 
     const submit = async () => {
         if (!ticket) return;
@@ -100,7 +111,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     };
 
     const pending = take.isPending;
-    const isDirty = (!fromRequest && priority !== 'medium') || note.trim() !== '' || assetId !== '';
+    const isDirty = (!fromRequest && priority !== 'medium') || note.trim() !== '' || assetId !== linkedAssetId;
     const guardClose = useDiscardGuard(!!ticket && isDirty);
 
     return (

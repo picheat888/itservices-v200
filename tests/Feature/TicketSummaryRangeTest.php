@@ -9,7 +9,7 @@ use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-// Ticket overview windows: this year, and a custom range of at most 365 days
+// Ticket overview windows: this year, and a custom range of at most 366 days
 class TicketSummaryRangeTest extends TestCase
 {
     use RefreshDatabase;
@@ -42,9 +42,15 @@ class TicketSummaryRangeTest extends TestCase
             ->assertJsonPath('range_days', 365);
     }
 
-    public function test_a_custom_range_over_365_days_is_refused_with_a_message_on_to(): void
+    public function test_a_whole_leap_year_of_366_days_is_accepted(): void
     {
-        $this->getJson('/api/tickets/summary?from=2025-10-17&to=2026-10-17')
+        $this->getJson('/api/tickets/summary?from=2028-01-01&to=2028-12-31')->assertOk()
+            ->assertJsonPath('range_days', 366);
+    }
+
+    public function test_a_custom_range_over_366_days_is_refused_with_a_message_on_to(): void
+    {
+        $this->getJson('/api/tickets/summary?from=2025-10-16&to=2026-10-17')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['to']);
     }
