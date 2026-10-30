@@ -11,30 +11,12 @@ import type {
     SocialPlatform,
     Software,
 } from '@/shared/types';
+import { hasFile, toFormData } from '../lib/form-data';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
     const { data } = await http.request<ApiEnvelope<T>>({ method, url, data: body });
     return (data as ApiEnvelope<T>)?.data;
-}
-
-/** True when a payload carries a File (e.g. a software logo) and must go multipart. */
-function hasFile(payload: Record<string, unknown>): boolean {
-    return Object.values(payload).some((v) => v instanceof File);
-}
-
-/** Build multipart FormData from a flat payload, skipping null/undefined values. */
-function toFormData(payload: Record<string, unknown>): FormData {
-    const fd = new FormData();
-    Object.entries(payload).forEach(([k, v]) => {
-        if (v === null || v === undefined) return;
-        if (typeof v === 'boolean') {
-            fd.append(k, v ? '1' : '0');
-        } else {
-            fd.append(k, v as string | Blob);
-        }
-    });
-    return fd;
 }
 
 export const accessApi = {

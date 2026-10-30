@@ -556,6 +556,23 @@ class AccessControlTest extends TestCase
         Storage::disk('local')->assertExists($path);
     }
 
+    /** Editing with a new logo goes multipart; a field cleared in the form arrives empty and is saved as null (PRM-5). */
+    public function test_a_multipart_edit_with_a_new_logo_clears_an_emptied_field(): void
+    {
+        Storage::fake('local');
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $platform = SocialPlatform::create(['name' => 'LINE', 'url' => 'https://line.me/company']);
+
+        $this->post("/api/social-platforms/{$platform->id}", [
+            '_method' => 'PUT', 'name' => 'LINE', 'url' => '', 'logo' => UploadedFile::fake()->image('line.png', 128, 128),
+        ], ['Accept' => 'application/json'])->assertOk();
+
+        $platform->refresh();
+        $this->assertNull($platform->url);
+        $this->assertNotNull($platform->logo_path);
+    }
+
     /** Deleting a software / platform record takes its logo off the disk with it. */
     public function test_deleting_a_resource_removes_its_logo(): void
     {
