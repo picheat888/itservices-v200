@@ -14,8 +14,9 @@ import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { useUiStore } from '@/stores/ui';
 import { CalendarRange } from 'lucide-react';
 import { SNAPSHOT_PRESETS } from '../hooks/use-snapshot-range';
+import { periodRange } from '../lib/period-range';
 import type { SnapshotRange } from '../types';
-import { compactRange, periodRange } from './report-scope';
+import { compactRange } from './report-scope';
 
 const SEGMENT =
     'focus-visible:ring-brand inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none';

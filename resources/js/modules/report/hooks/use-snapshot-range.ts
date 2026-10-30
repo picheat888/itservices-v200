@@ -6,7 +6,7 @@
  * nearest preset, so a returning reader never sends the API a period it refuses.
  */
 import { useEffect, useState } from 'react';
-import { isoDate } from '../components/report-scope';
+import { isoDate } from '../lib/period-range';
 import type { SnapshotPreset, SnapshotRange } from '../types';
 
 const STORAGE_KEY = 'reports.snapshot.period';

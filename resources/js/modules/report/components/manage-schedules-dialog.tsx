@@ -23,6 +23,7 @@ import { useUiStore } from '@/stores/ui';
 import { CalendarClock, Filter, Mail, Pause, Play, Trash2, UserMinus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useManagedSchedules, useManageSchedule } from '../hooks/use-reports';
+import { narrowedFilterCount } from '../lib/filter-scope';
 import type { ManagedScheduleItem } from '../types';
 import { reportStem } from './report-catalogue';
 import { hourLabel } from './schedule-report-dialog';
@@ -74,7 +75,8 @@ function ScheduleDetailPanel({ item, onClose }: { item: ManagedScheduleItem | nu
 
     if (!item) return null;
     const title = labels.report(item);
-    const filterCount = Object.keys(item.filters ?? {}).length;
+    // Dates, view settings and empty values narrow nothing
+    const filterCount = narrowedFilterCount(item.filters ?? {});
     const lastOne = item.recipient_list.length === 1;
 
     const onToggle = () =>

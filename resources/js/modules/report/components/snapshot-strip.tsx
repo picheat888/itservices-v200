@@ -20,11 +20,11 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useReportCatalogue, useReportSnapshot } from '../hooks/use-reports';
+import { periodRange } from '../lib/period-range';
 import { withParams } from '../lib/with-params';
 import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
 import { Sparkline } from './chart-parts';
 import { reportRoute } from './report-catalogue';
-import { periodRange } from './report-scope';
 import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 /** Tiles whose main number is counted over the chosen period rather than as of now. */

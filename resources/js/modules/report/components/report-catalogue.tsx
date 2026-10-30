@@ -14,9 +14,9 @@ import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehous
 import { Link } from 'react-router-dom';
 import { useReportRights } from '../hooks/use-report-rights';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
+import { periodRange } from '../lib/period-range';
 import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
-import { periodRange } from './report-scope';
 
 /**
  * A report's page address: its key with every "." and "_" made a "-" — "assets.warranty_expiring"
