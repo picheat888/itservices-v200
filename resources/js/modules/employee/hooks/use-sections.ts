@@ -2,7 +2,7 @@ import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshne
 import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { sectionApi } from '../api/sectionApi';
-import { EMP } from './query-keys';
+import { DEPT, EMP } from './query-keys';
 
 export function useSections(departmentId?: number | null, opts: LookupOptions = {}) {
     return useQuery({
@@ -27,6 +27,8 @@ export function useSectionMutations() {
     const qc = useQueryClient();
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: ['sections'] });
+        // Departments count their sections, and that count decides whether one can be deleted
+        qc.invalidateQueries({ queryKey: DEPT });
         qc.invalidateQueries({ queryKey: EMP });
         qc.invalidateQueries({ queryKey: ['employees-directory'] });
     };

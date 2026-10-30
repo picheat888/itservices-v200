@@ -161,11 +161,27 @@ class EmployeeService
      */
     public function update(Employee $employee, array $data): Employee
     {
-        $employee->update($data);
+        DB::transaction(function () use ($employee, $data) {
+            $oldCode = $employee->code;
+            $employee->update($data);
+            $this->carryTransferHistory($oldCode, $employee->code);
+        });
 
         $this->syncAccountEmail($employee);
 
         return $employee->load(['department', 'position']);
+    }
+
+    /** The asset transfer trail names employees by code, so a changed code moves it along. */
+    private function carryTransferHistory(?string $oldCode, ?string $newCode): void
+    {
+        if (blank($oldCode) || blank($newCode) || $oldCode === $newCode) {
+            return;
+        }
+
+        // toBase(): the trail rows keep their own timestamps
+        AssetTransfer::where('from_owner', $oldCode)->toBase()->update(['from_owner' => $newCode]);
+        AssetTransfer::where('to_owner', $oldCode)->toBase()->update(['to_owner' => $newCode]);
     }
 
     /**

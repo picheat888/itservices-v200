@@ -2,7 +2,7 @@ import { FRESH_LIST, FRESH_VIEW, type LookupOptions } from '@/shared/lib/freshne
 import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { positionApi } from '../api/positionApi';
-import { POS } from './query-keys';
+import { EMP, POS } from './query-keys';
 
 export const usePositions = (opts: LookupOptions = {}) => useQuery({ queryKey: POS, queryFn: positionApi.list, ...FRESH_LIST, ...opts });
 
@@ -18,7 +18,13 @@ export function usePositionMembers(id: number | null, enabled = true) {
 
 export function usePositionMutations() {
     const qc = useQueryClient();
-    const invalidate = () => qc.invalidateQueries({ queryKey: POS });
+    // A position's title also shows on the employee rows and the org chart
+    const invalidate = () => {
+        qc.invalidateQueries({ queryKey: POS });
+        qc.invalidateQueries({ queryKey: EMP });
+        qc.invalidateQueries({ queryKey: ['employees-directory'] });
+        qc.invalidateQueries({ queryKey: ['org-chart'] });
+    };
     return {
         create: useMutation({
             mutationFn: (p: { title: string; allow_special_position?: boolean }) => positionApi.create(p),

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
@@ -44,6 +45,32 @@ class EmployeeApiTest extends TestCase
             $this->assertCount(1, $bells, "no credentials bell for user {$recipient->id}");
             $this->assertSame('Needs Account', $bells->first()->data['employee_name']);
         }
+    }
+
+    public function test_changing_a_code_moves_the_asset_transfer_trail_along_and_keeps_its_times(): void
+    {
+        $this->actingAs($this->super());
+        $e = Employee::create(['first_name' => 'Code', 'last_name' => 'Move', 'code' => 'EMP-7001']);
+        $asset = Asset::factory()->create();
+        $in = AssetTransfer::forceCreate(['asset_id' => $asset->id, 'asset_tag' => 'T', 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7001', 'created_at' => '2026-09-01 10:00:00', 'updated_at' => '2026-09-01 10:00:00']);
+        $out = AssetTransfer::forceCreate(['asset_id' => $asset->id, 'asset_tag' => 'T', 'asset_model' => 'M', 'kind' => 'recall', 'from_owner' => 'EMP-7001', 'to_owner' => 'WH-01', 'created_at' => '2026-09-02 10:00:00', 'updated_at' => '2026-09-02 10:00:00']);
+        $other = AssetTransfer::forceCreate(['asset_id' => $asset->id, 'asset_tag' => 'T', 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7002', 'created_at' => '2026-09-03 10:00:00']);
+
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Code', 'last_name' => 'Move', 'code' => 'EMP-7100'])->assertOk();
+
+        $this->assertSame('EMP-7100', $in->fresh()->to_owner);
+        $this->assertSame('EMP-7100', $out->fresh()->from_owner);
+        $this->assertSame('EMP-7002', $other->fresh()->to_owner);
+        $this->assertSame('2026-09-01 10:00:00', $in->fresh()->updated_at->format('Y-m-d H:i:s'));
+
+        // Leaving the code out keeps it; an empty code is a field error, not a database failure
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Code', 'last_name' => 'Kept'])->assertOk();
+        $this->assertSame('EMP-7100', $e->fresh()->code);
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Code', 'last_name' => 'Cleared', 'code' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('code');
+        $this->assertSame('EMP-7100', $e->fresh()->code);
+        $this->assertSame('Kept', $e->fresh()->last_name);
     }
 
     public function test_editing_employee_email_mirrors_onto_linked_account(): void

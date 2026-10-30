@@ -3,7 +3,7 @@ import type { Department } from '@/shared/types';
 import { dropNew, markNew } from '@/stores/new-rows';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { departmentApi } from '../api/departmentApi';
-import { DEPT } from './query-keys';
+import { DEPT, EMP } from './query-keys';
 
 export const useDepartments = (opts: LookupOptions = {}) => useQuery({ queryKey: DEPT, queryFn: departmentApi.list, ...FRESH_LIST, ...opts });
 
@@ -19,7 +19,14 @@ export function useDepartmentMembers(id: number | null, enabled = true) {
 
 export function useDepartmentMutations() {
     const qc = useQueryClient();
-    const invalidate = () => qc.invalidateQueries({ queryKey: DEPT });
+    // A department's name also shows on its sections, the employee rows and the org chart
+    const invalidate = () => {
+        qc.invalidateQueries({ queryKey: DEPT });
+        qc.invalidateQueries({ queryKey: ['sections'] });
+        qc.invalidateQueries({ queryKey: EMP });
+        qc.invalidateQueries({ queryKey: ['employees-directory'] });
+        qc.invalidateQueries({ queryKey: ['org-chart'] });
+    };
     return {
         create: useMutation({
             mutationFn: (p: Partial<Department>) => departmentApi.create(p),

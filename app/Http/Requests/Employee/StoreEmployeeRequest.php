@@ -90,7 +90,11 @@ class StoreEmployeeRequest extends FormRequest
             // arrived through bulk import (a different path, where the column is optional)
             // must not become uneditable because of a date nobody recorded then.
             'joined_at' => [$this->route('employee') ? 'nullable' : 'required', 'date', ...$this->notAfterLastDay()],
-            'code' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId)],
+            // Blank on create lets the system assign one; an edit may leave it out but never empty it
+            'code' => [
+                ...($this->route('employee') ? ['sometimes', 'required'] : ['nullable']),
+                'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId),
+            ],
             'photo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             // Day-one services to request for a new hire, as service => its submitted
             // fields. Only meaningful on create; EmployeeController files one service
