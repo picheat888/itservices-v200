@@ -116,6 +116,14 @@ class RequestOptionTest extends TestCase
             'field_key' => 'ram_size',
             'label_en' => '32 GB',
         ])->assertUnprocessable()->assertJsonValidationErrors('field_key');
+
+        // Each half is declared somewhere, but no list is declared under the pair (SET-10).
+        $this->actingAs($this->admin)->postJson('/api/request-options', [
+            'request_type' => 'computer',
+            'field_key' => 'device_type_id',
+            'label_en' => 'Desk phone',
+        ])->assertUnprocessable()->assertJsonPath('errors.field_key.0', 'request_option_list_unknown');
+        $this->assertDatabaseMissing('request_options', ['label_en' => 'Desk phone']);
     }
 
     public function test_the_form_offers_the_stored_rows_by_id_and_hiding_one_withdraws_it(): void

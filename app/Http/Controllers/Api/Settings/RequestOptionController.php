@@ -155,6 +155,11 @@ class RequestOptionController extends Controller
             'active' => ['nullable', 'boolean'],
         ]);
 
+        // Type and field are checked as the pair a list is declared under, not one by one
+        if (! $lists->contains(fn (array $list) => $list['request_type'] === $data['request_type'] && $list['field_key'] === $data['field_key'])) {
+            throw ValidationException::withMessages(['field_key' => 'request_option_list_unknown']);
+        }
+
         // The label is the identity people see, so it has to be unique per list.
         // Checked after the list itself is known to be valid.
         $request->validate([
