@@ -7,7 +7,17 @@ use App\Enums\Asset\AssetTransferKind;
 use App\Enums\Contract\ContractType;
 use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Asset\BulkRecallAssetRequest;
+use App\Http\Requests\Asset\BulkReceiveAssetRequest;
+use App\Http\Requests\Asset\BulkTransferAssetRequest;
+use App\Http\Requests\Asset\BulkWriteoffAssetRequest;
+use App\Http\Requests\Asset\RecallAssetRequest;
+use App\Http\Requests\Asset\ReceiveAssetRequest;
+use App\Http\Requests\Asset\RelocateAssetsRequest;
+use App\Http\Requests\Asset\ReturnAssetRequest;
+use App\Http\Requests\Asset\ReturnToVendorRequest;
 use App\Http\Requests\Asset\StoreAssetRequest;
+use App\Http\Requests\Asset\TransferAssetRequest;
 use App\Http\Resources\Asset\AssetResource;
 use App\Http\Resources\Contract\ContractResource;
 use App\Models\Asset\Asset;
@@ -18,6 +28,7 @@ use App\Models\Employee\Employee;
 use App\Models\Settings\Location;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
+use App\Services\Asset\AssetActionGuard;
 use App\Services\Asset\AssetService;
 use App\Services\Asset\AssetTopValueService;
 use App\Support\OverviewPeriod;
@@ -26,7 +37,6 @@ use App\Support\SystemTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
@@ -48,12 +58,13 @@ class AssetController extends Controller
     public function __construct(
         private readonly AssetService $service,
         private readonly AssetTopValueService $topValue,
+        private readonly AssetActionGuard $guard,
     ) {}
 
     /** Gate read access to the assets.view permission (super bypasses). */
     private function gateView(Request $request): void
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.view'), 403);
+        $this->guard->canView($request->user())->authorize();
     }
 
     /**
@@ -94,7 +105,7 @@ class AssetController extends Controller
     public function contractOptions(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless((bool) ($user?->hasPermission('assets.register') || $user?->hasPermission('assets.edit')), 403);
+        $this->guard->canPickContract($user)->authorize();
 
         // Only hardware contracts may hold assets, so only they are offered here.
         $contracts = Contract::query()
@@ -168,7 +179,7 @@ class AssetController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.view_dashboard'), 403);
+        $this->guard->canViewOverview($request->user())->authorize();
 
         // Eager loads for AssetResource, the by-type groups and the lease table
         $assets = Asset::with(['location', 'category', 'vendor', 'contract.vendor'])->get();
@@ -238,7 +249,7 @@ class AssetController extends Controller
     /** Active employees who cannot accept a hand-over because they have no linked account, as id → 'no_account'. */
     public function recipientReadiness(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
+        $this->guard->canTransferAny($request->user())->authorize();
 
         $blocked = Employee::where('status', EmployeeStatus::Active->value)
             ->whereNotIn('id', User::whereNotNull('employee_id')->select('employee_id'))
@@ -351,8 +362,7 @@ class AssetController extends Controller
 
     public function update(StoreAssetRequest $request, Asset $asset): JsonResponse
     {
-        // A written-off asset is retired — its record is frozen until the write-off is cancelled.
-        abort_if($asset->status === AssetStatus::Writeoff, 422, 'writeoff_locked');
+        $this->guard->canUpdate($asset)->authorize();
 
         $before = $asset->getOriginal();
         $asset = $this->service->update($asset, $request->validated());
@@ -368,8 +378,7 @@ class AssetController extends Controller
      */
     public function cancelWriteoff(Request $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.cancel_writeoff'), 403);
-        abort_unless($asset->status === AssetStatus::Writeoff, 422, 'not_writeoff');
+        $this->guard->canCancelWriteoff($request->user(), $asset)->authorize();
 
         $wasReturned = $asset->returnedToVendor();
         $asset = $this->service->cancelWriteoff($asset);
@@ -391,9 +400,7 @@ class AssetController extends Controller
      */
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.delete'), 403);
-        abort_unless($asset->status === AssetStatus::Ready, 422, 'delete_not_ready');
-        abort_if($asset->contract_id !== null, 422, 'delete_on_contract');
+        $this->guard->canDelete($request->user(), $asset)->authorize();
 
         // An asset that has been handed out even once owns a custody trail. The FK is
         // restrictOnDelete, so the database would refuse the delete anyway; refusing here
@@ -415,37 +422,10 @@ class AssetController extends Controller
         return response()->json(['message' => 'success']);
     }
 
-    /** A hand-over recipient must not have resigned, even before their last day: their kit is already being recalled. */
-    private function stillEmployed(): \Closure
-    {
-        return function (string $attribute, mixed $value, \Closure $fail): void {
-            if (Employee::whereKey($value)->where('status', EmployeeStatus::Resigned)->exists()) {
-                $fail('recipient_resigned');
-            }
-        };
-    }
-
     /** Transfer an asset to a new owner — an employee (pending acceptance) or a shared label (deployed). */
-    public function transfer(Request $request, Asset $asset): JsonResponse
+    public function transfer(TransferAssetRequest $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
-        $data = $request->validate([
-            'mode' => ['required', 'in:employee,shared'],
-            // Employee mode: pick a real employee. Shared mode: a short free-text label.
-            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id', $this->stillEmployed()],
-            'owner_label' => ['required_if:mode,shared', 'string', 'max:200'],
-            // IT must record where the asset will physically go when handed over.
-            'location_id' => ['required', 'integer', 'exists:locations,id'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
-        // Already out of the pool (employee-deployed or shared/common) — recall or return it first.
-        abort_if($asset->isDeployed() || $asset->status === AssetStatus::Common, 422, 'in_use_return_first');
-        // Anything else that is not in the pool is mid-move or retired: a hand-over waiting
-        // on its recipient, a return waiting on IT, a write-off. The screen only offers
-        // Transfer on a Ready asset; the API now agrees.
-        abort_unless($asset->status === AssetStatus::Ready, 422, 'handover_not_ready');
-
-        $asset = $this->service->transfer($asset, $data, $request->user());
+        $asset = $this->service->transfer($asset, $request->validated(), $request->user());
         AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -454,12 +434,7 @@ class AssetController extends Controller
     /** Recipient accepts a pending-acceptance asset (only the employee who holds it). */
     public function accept(Request $request, Asset $asset): JsonResponse
     {
-        // Only the recipient may confirm receipt — IT can hand over but not accept on their behalf.
-        $employeeId = $request->user()?->linkedEmployee()?->id;
-        abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id, 403);
-        // Accepting confirms a hand-over; on anything else (a return under way above all) it
-        // would flip the asset back to in use behind IT's back.
-        abort_unless($asset->status === AssetStatus::PendingAcceptance, 422, 'accept_not_pending');
+        $this->guard->canAccept($request->user(), $asset)->authorize();
         $asset = $this->service->accept($asset);
         AuditLog::record('Accepted asset', $asset->asset_code, subject: $asset);
 
@@ -470,14 +445,9 @@ class AssetController extends Controller
      * Holder requests to return an asset they currently hold: deployed → pending return.
      * Only the current holder (matched by owner_employee_id) may request it.
      */
-    public function requestReturn(Request $request, Asset $asset): JsonResponse
+    public function requestReturn(ReturnAssetRequest $request, Asset $asset): JsonResponse
     {
-        // Returning one's own asset is the My Profile right profile.return_assets.
-        abort_unless((bool) $request->user()?->hasPermission('profile.return_assets'), 403);
-        $employeeId = $request->user()?->linkedEmployee()?->id;
-        abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id && $asset->status === AssetStatus::Deployed, 403);
-        $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
-        $asset = $this->service->requestReturn($asset, $data['reason'] ?? null);
+        $asset = $this->service->requestReturn($asset, $request->validated('reason'));
         AuditLog::record('Requested asset return', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -487,16 +457,9 @@ class AssetController extends Controller
      * Mark a returned asset as received back into the pool (requires assets.transfer).
      * A destination warehouse is required so a pooled asset's physical location is always known.
      */
-    public function markReceived(Request $request, Asset $asset): JsonResponse
+    public function markReceived(ReceiveAssetRequest $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.receive'), 403);
-        // Same rule as bulk receive. Receiving anything else would pull a held asset out of
-        // someone's hands (force recall's job) or quietly undo a write-off.
-        abort_unless($asset->status === AssetStatus::PendingReturn, 422, 'receive_not_pending');
-        $data = $request->validate([
-            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
-        ]);
-        $asset = $this->service->markReceived($asset, $request->user(), $data['warehouse']);
+        $asset = $this->service->markReceived($asset, $request->user(), $request->validated('warehouse'));
         AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -512,32 +475,10 @@ class AssetController extends Controller
      * own Request-return flow. Gated by assets.transfer; a destination warehouse is required so
      * the pooled asset's location stays known.
      */
-    public function recall(Request $request, Asset $asset): JsonResponse
+    public function recall(RecallAssetRequest $request, Asset $asset): JsonResponse
     {
-        $user = $request->user();
-        // Ordinary recall (assets.transfer) only pulls back a pending hand-over or a shared
-        // (owner-less) deployed asset. Force recall (super / assets.force_recall) is the
-        // special-case override: it can pull back ANY out asset — including one an employee
-        // still holds — regardless of state (only a written-off / already-pooled asset has
-        // nothing to recall).
-        $canForce = (bool) $user?->hasPermission('assets.force_recall');
-        abort_unless((bool) $user?->hasPermission('assets.transfer') || $canForce, 403);
-
-        $normallyRecallable = $asset->status === AssetStatus::PendingAcceptance
-            || $asset->status === AssetStatus::Common;
-
-        if ($canForce) {
-            abort_if($asset->status === AssetStatus::Writeoff, 422, 'recall_writeoff');
-            abort_if($asset->status === AssetStatus::Ready, 422, 'recall_already_ready');
-        } else {
-            abort_unless($normallyRecallable, 422, 'recall_not_allowed');
-        }
-
-        $data = $request->validate([
-            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
-        $asset = $this->service->recall($asset, $user, $data['warehouse'], $data['reason'] ?? null);
+        $normallyRecallable = $this->guard->isNormalRecall($asset);
+        $asset = $this->service->recall($asset, $request->user(), $request->validated('warehouse'), $request->validated('reason'));
         AuditLog::record($normallyRecallable ? 'Recalled asset' : 'Force-recalled asset', $asset->asset_code, subject: $asset);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -548,16 +489,9 @@ class AssetController extends Controller
      * the list in Settings → Assets (discarded, sold for scrap, donated, lease ended…) so the
      * write-off report can count by it; the note adds the details and is optional.
      */
-    public function bulk(Request $request): JsonResponse
+    public function bulk(BulkWriteoffAssetRequest $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:assets,id'],
-            'op' => ['required', 'in:writeoff'],
-            'writeoff_reason_id' => ['required', 'integer', 'exists:writeoff_reasons,id'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
+        $data = $request->validated();
 
         $count = $this->service->bulkSetStatus($data['ids'], AssetStatus::Writeoff, $data['reason'] ?? null, (int) $data['writeoff_reason_id']);
         $reasonName = WriteoffReason::whereKey($data['writeoff_reason_id'])->value('name');
@@ -575,14 +509,9 @@ class AssetController extends Controller
      * return is its own fact (returned_to_vendor_at), which the write-off report counts on.
      * Undone like a write-off, through cancel-writeoff (assets.cancel_writeoff).
      */
-    public function bulkReturnToVendor(Request $request): JsonResponse
+    public function bulkReturnToVendor(ReturnToVendorRequest $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:assets,id'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
+        $data = $request->validated();
 
         $count = $this->service->returnToVendor($data['ids'], $data['reason'] ?? null);
         // One entry per asset, so each asset's own history shows the return and who made it.
@@ -608,24 +537,10 @@ class AssetController extends Controller
      * one awaiting acceptance has not arrived anywhere yet, and one on its way back or
      * written off is not sitting anywhere worth correcting.
      */
-    public function bulkLocation(Request $request): JsonResponse
+    public function bulkLocation(RelocateAssetsRequest $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.edit'), 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:assets,id'],
-            'location_id' => ['required', 'integer', 'exists:locations,id'],
-            'note' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $assets = Asset::whereIn('id', $data['ids'])->get();
-        $relocatable = [AssetStatus::Deployed, AssetStatus::Common];
-        abort_if(
-            $assets->contains(fn (Asset $a) => ! in_array($a->status, $relocatable, true)),
-            422,
-            'relocate_not_in_use',
-        );
-
+        $data = $request->validated();
+        $assets = $request->assets();
         $location = Location::findOrFail($data['location_id']);
         // An asset already there has nothing to move and gets no "A → A" history.
         $assets = $assets->reject(fn (Asset $a) => $a->location_id === $location->id)->values();
@@ -641,28 +556,10 @@ class AssetController extends Controller
     }
 
     /** Bulk-transfer many Ready assets to one employee (requires assets.transfer). */
-    public function bulkTransfer(Request $request): JsonResponse
+    public function bulkTransfer(BulkTransferAssetRequest $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:assets,id'],
-            'mode' => ['required', 'in:employee,shared'],
-            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id', $this->stillEmployed()],
-            'owner_label' => ['required_if:mode,shared', 'string', 'max:200'],
-            'location_id' => ['required', 'integer', 'exists:locations,id'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        // Ready (pooled) or Common (shared) assets can be handed out directly — a Common
-        // asset is simply re-assigned (to a person, or to a different shared label).
-        $assets = Asset::whereIn('id', $data['ids'])->get();
-        $transferable = [AssetStatus::Ready, AssetStatus::Common];
-        abort_if(
-            $assets->contains(fn (Asset $a) => ! in_array($a->status, $transferable, true)),
-            422,
-            'transfer_not_transferable',
-        );
+        $data = $request->validated();
+        $assets = $request->assets();
 
         // One bell and one mail for the recipient, not one per asset.
         $this->service->batchNotices(function () use ($assets, $data, $request) {
@@ -687,29 +584,12 @@ class AssetController extends Controller
      * Bulk-recall many assets to a warehouse. Common (shared) assets need assets.transfer;
      * any other out state (an employee-held asset, etc.) needs assets.force_recall.
      */
-    public function bulkRecall(Request $request): JsonResponse
+    public function bulkRecall(BulkRecallAssetRequest $request): JsonResponse
     {
         $user = $request->user();
-        $canForce = (bool) $user?->hasPermission('assets.force_recall');
-        abort_unless((bool) $user?->hasPermission('assets.transfer') || $canForce, 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:assets,id'],
-            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $assets = Asset::whereIn('id', $data['ids'])->get();
-        $normalStatuses = [AssetStatus::PendingAcceptance, AssetStatus::Common];
-        $forcedIds = [];
-        foreach ($assets as $asset) {
-            $normal = in_array($asset->status, $normalStatuses, true);
-            $forceable = $canForce && ! in_array($asset->status, [AssetStatus::Ready, AssetStatus::Writeoff], true);
-            abort_unless($normal || $forceable, 422, 'recall_some_blocked');
-            if (! $normal) {
-                $forcedIds[] = $asset->id;
-            }
-        }
+        $data = $request->validated();
+        $assets = $request->assets();
+        $forcedIds = $assets->reject(fn (Asset $a) => $this->guard->isNormalRecall($a))->pluck('id')->all();
         // One bell and one mail per person recalled from, not one per asset.
         $this->service->batchNotices(function () use ($assets, $user, $data, $forcedIds) {
             foreach ($assets as $asset) {
@@ -723,17 +603,10 @@ class AssetController extends Controller
     }
 
     /** Bulk-receive many pending-return assets back into a warehouse (requires assets.receive). */
-    public function bulkReceive(Request $request): JsonResponse
+    public function bulkReceive(BulkReceiveAssetRequest $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.receive'), 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:assets,id'],
-            'warehouse' => ['required', 'string', 'max:120', Rule::exists('warehouses', 'name')],
-        ]);
-
-        $assets = Asset::whereIn('id', $data['ids'])->get();
-        abort_if($assets->contains(fn (Asset $a) => $a->status !== AssetStatus::PendingReturn), 422, 'receive_not_pending');
+        $data = $request->validated();
+        $assets = $request->assets();
 
         foreach ($assets as $asset) {
             $this->service->markReceived($asset, $request->user(), $data['warehouse']);
