@@ -7631,3 +7631,15 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - เทสต์ `tests/js/shared-round1.test.ts` 6 ข้อ (รันสคริปต์ธีมจริงกับ localStorage จำลอง) เทสต์ JS ทั้งชุดผ่าน 1,052 ข้อ tsc 0 ESLint 0
 - ยังไม่ได้ลองบน iPad จริง (Chrome บนเครื่องนี้จำลองจอสัมผัสไม่ได้ และไม่ได้ล็อกอิน) ไม่มี migration
 - รอบ 2 (UI-1 ตัวกรองในหน้าต่าง, UI-8 ตัวเลือกในหน้าตั้งค่า) กับรอบ 3 (UI-2 แยกไฟล์ JS ตาม route) รอผู้ใช้สั่ง UI-8 ต้องรอ session TKT-14 ที่แก้ `tickets-sla-tab.tsx` อยู่ CR-7 กับ UI-13 ผู้ใช้ตัดออกแล้วเมื่อ 29 ต.ค.
+
+## วันหยุดใน SLA (TKT-14) และปุ่มบน iPad (TKT-18) (2026-10-30)
+
+- ตาม design `docs/superpowers/specs/2026-10-30-sla-holidays-design.md`, หน้าลองกดแบบ ก ที่ผู้ใช้อนุมัติ https://claude.ai/artifact/8dL5kZPw7fkCet9aMBr2zR และแผน `docs/superpowers/plans/2026-10-30-sla-holidays-and-ipad-taps.md` commit `3e9f56ab`..`057ce9ba` ยังไม่ได้ push
+- ตาราง `sla_holidays` (date unique, name) วันที่อยู่ในรายการไม่นับเป็นเวลาทำการทั้งวัน ทั้งทาง Carbon และทางเร็วใน `TicketSla` ใช้กับ Ticket ทุกเคสรวมเคสจากคำขอ เป้าหมายที่นับต่อเนื่องไม่สนวันหยุด เพดานวนหาวันทำงานจาก 8 เป็น 400 วัน
+- `TicketDeadlineService::recomputeOpen()` ย้ายมาจาก `SettingsController::saveSla()` ใช้ร่วมกับการบันทึกวันหยุด เคสที่ปิดแล้วไม่ขยับ เคสที่ยังเปิดคำนวณใหม่ และล้างระดับแจ้งเตือนเฉพาะเคสที่กำหนดเวลาเลื่อน
+- API `GET /settings/sla-holidays` และ `PUT /settings/sla-holidays/{year}` (สิทธิ์ `settings.sla`) บันทึกทีละปีแบบแทนทั้งรายการ บันทึกกับคำนวณใหม่อยู่ในธุรกรรมเดียว ลง audit ว่าเพิ่ม ลบ แก้ชื่อวันไหน
+- กระดิ่ง `tickets:remind-sla-holidays` วันที่ 1 และ 15 ธ.ค. กับ 2 ม.ค. 08:00 ถึงผู้มีสิทธิ์ `settings.sla` ที่ยังทำงานอยู่ เมื่อปีนั้นยังไม่มีวันหยุด กดแล้วเปิด `/settings?tab=tickets&holidays={year}`
+- หน้าตั้งค่า Ticket & SLA หัวข้อ "วันหยุด" ต่อจากวันและเวลาทำการ สรุปรายเดือน หน้าต่างแก้ไข 768 บันทึกแยก หน้าต่างวางรายการจากประกาศ (รับ พ.ศ. ชื่อเดือนไทย และช่วงวัน "13-15 เมษายน") การ์ดสรุปมีบรรทัดวันหยุดและเตือนปีหน้า
+- TKT-18 ปุ่มความสำคัญกับชิปอุปกรณ์ในหน้าต่างรับเคสสูง 40px เฉพาะจอสัมผัส (`touch:`) คอมพิวเตอร์เหมือนเดิม
+- ตรวจ task ละครั้ง ตรวจรวมทั้งชุด และ security review ไม่พบปัญหาร้ายแรง เทสต์ PHP ทั้งชุดผ่าน 3,262 ข้อ ไม่ผ่าน 2 ข้อที่ไม่เกี่ยวกับงานนี้ (`SpaTitleTest` ชนกับสคริปต์ธีมของ UI-5 จากอีก session) JS 1,057 ข้อ
+- ต้องรันกับฐาน demo `php artisan migrate` และ `php artisan db:seed --class=NotificationTemplateSeeder` ยังไม่ได้เปิดดูใน Chrome และบน iPad
