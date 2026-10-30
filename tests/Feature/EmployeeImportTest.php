@@ -271,6 +271,18 @@ class EmployeeImportTest extends TestCase
         $this->assertSame(['report_to_not_found:report_to_employee_code:EMP-9999'], $this->issues($result['errors'][0]['issues']));
     }
 
+    public function test_report_to_pointing_at_a_resigned_employee_is_reported(): void
+    {
+        Employee::create(['code' => 'EMP-1006', 'first_name' => 'Gone', 'last_name' => 'Boss', 'status' => EmployeeStatus::Resigned]);
+
+        $result = $this->service->importRows([
+            $this->row(['report_to_employee_code' => 'emp-1006']),
+        ]);
+
+        $this->assertSame(0, $result['imported']);
+        $this->assertSame(['report_to_resigned:report_to_employee_code:emp-1006'], $this->issues($result['errors'][0]['issues']));
+    }
+
     public function test_a_reporting_loop_inside_the_file_is_reported(): void
     {
         $result = $this->service->importRows([

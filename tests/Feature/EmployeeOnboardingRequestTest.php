@@ -277,15 +277,23 @@ class EmployeeOnboardingRequestTest extends TestCase
 
     public function test_the_precheck_and_the_save_agree_on_a_broken_line(): void
     {
-        $this->itManager->update(['status' => EmployeeStatus::Resigned]);
+        // The direct manager still works here; the director the Email route reaches has left.
         $this->director->update(['status' => EmployeeStatus::Resigned]);
 
-        $this->precheck()->assertJsonPath('can_request', false);
+        $this->precheck()->assertJsonPath('can_request', false)->assertJsonPath('blocked_services', ['mobile', 'email']);
 
         // The preview would be worse than nothing if Save disagreed with it.
-        $response = $this->addEmployee(['computer'])->assertCreated();
-        $this->assertSame(['computer'], $response->json('onboarding.failed.*.service'));
+        $response = $this->addEmployee(['email'])->assertCreated();
+        $this->assertSame(['email'], $response->json('onboarding.failed.*.service'));
         $this->assertSame(0, ServiceRequest::count());
+    }
+
+    public function test_a_resigned_direct_manager_stops_the_save_itself(): void
+    {
+        $this->itManager->update(['status' => EmployeeStatus::Resigned]);
+
+        $this->addEmployee(['computer'])->assertStatus(422)->assertJsonPath('errors.manager_id.0', 'manager_resigned');
+        $this->assertFalse(Employee::where('first_name', 'Somchai')->exists());
     }
 
     public function test_each_ticked_service_becomes_its_own_request(): void

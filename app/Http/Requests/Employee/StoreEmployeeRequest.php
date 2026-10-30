@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Employee;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\RequestType;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
@@ -156,9 +157,17 @@ class StoreEmployeeRequest extends FormRequest
     }
 
     /**
-     * A manager may not be the employee itself, nor anyone who already reports
-     * (directly or indirectly) to it — either would create a cycle in the tree.
-     * Also validates that the chosen section belongs to the employee's department.
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['manager_id.exists' => 'manager_not_found'];
+    }
+
+    /**
+     * A manager must still work here (unless the edited employee has left too), and may not
+     * be the employee itself nor anyone below it in the tree. Also validates that the chosen
+     * section belongs to the employee's department.
      */
     public function withValidator(Validator $validator): void
     {
@@ -172,19 +181,22 @@ class StoreEmployeeRequest extends FormRequest
                 }
             }
 
-            $employee = $this->route('employee');
             $managerId = $this->input('manager_id');
-            if (! $employee || blank($managerId)) {
+            $manager = filled($managerId) ? Employee::find($managerId) : null;
+            if (! $manager) {
                 return;
             }
-            if ((int) $managerId === $employee->id) {
-                $v->errors()->add('manager_id', 'An employee cannot be their own manager.');
+
+            $employee = $this->route('employee');
+            if ($employee && ($manager->id === $employee->id || $employee->isAncestorOf($manager))) {
+                $v->errors()->add('manager_id', 'manager_loop');
 
                 return;
             }
-            $manager = Employee::find($managerId);
-            if ($manager && $employee->isAncestorOf($manager)) {
-                $v->errors()->add('manager_id', 'That person reports to this employee - it would create a loop.');
+
+            $employeeIsActive = ! $employee || $employee->status !== EmployeeStatus::Resigned;
+            if ($employeeIsActive && $manager->status === EmployeeStatus::Resigned) {
+                $v->errors()->add('manager_id', 'manager_resigned');
             }
         });
     }

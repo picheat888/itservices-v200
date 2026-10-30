@@ -40,6 +40,7 @@ import { useOnboardingPrecheck } from '../hooks/use-onboarding-precheck';
 import { useOnboardingServices } from '../hooks/use-onboarding-services';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
+import { MANAGER_REFUSAL_KEY, managerRefusal } from '../lib/manager-refusal';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
 const empty = {
@@ -119,7 +120,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const refreshPositions = useSelectRefresh(positionsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
-    const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position' });
+    const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position', status: 'active' });
     const { create } = useEmployeeMutations();
     const pushToast = useToastStore((s) => s.push);
     const stepHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -396,6 +397,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 }
                 mapped[key.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())] = msgs[0] ?? '';
             }
+            const refusal = managerRefusal(fieldErrors.manager_id?.[0]);
+            if (refusal && refusal !== 'loop') mapped.managerId = t(MANAGER_REFUSAL_KEY[refusal]);
             setErrors((prev) => ({ ...prev, ...mapped }));
             const firstKey = Object.keys(mapped)[0];
             const targetStep = firstKey ? (STEP_OF_FIELD[firstKey] ?? LAST_STEP) : fieldErrors.photo ? 1 : step;

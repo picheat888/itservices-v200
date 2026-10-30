@@ -26,6 +26,7 @@ import { useEmployeePicker, useEmployeesByIds } from '../hooks/use-employee-pick
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
+import { MANAGER_REFUSAL_KEY, managerHasLeft, managerRefusal } from '../lib/manager-refusal';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
 const empty = {
@@ -85,7 +86,11 @@ export function EditEmployeeDialog({
     const refreshPositions = useSelectRefresh(positionsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
     const positions = useMemo(() => positionsQuery.data ?? [], [positionsQuery.data]);
-    const { employees, pickerProps: managerPickerProps } = useEmployeePicker({ match: 'position', exclude: employee ? [employee.id] : undefined });
+    const { employees, pickerProps: managerPickerProps } = useEmployeePicker({
+        match: 'position',
+        status: 'active',
+        exclude: employee ? [employee.id] : undefined,
+    });
     const { update } = useEmployeeMutations();
 
     const [form, setForm] = useState(empty);
@@ -202,13 +207,14 @@ export function EditEmployeeDialog({
         label: localName(e, lang),
         hint: e.position ?? undefined,
         avatar: e.photo_url,
-        sub: e.code,
+        sub: e.status === 'resigned' ? `${e.code} ${t('emp_manager_left')}` : e.code,
         search: '',
     });
     const managerOptions = employees.map(managerOption);
     const { data: knownManagers = [] } = useEmployeesByIds([form.managerId ? Number(form.managerId) : null, employee?.manager_id]);
     const chosenManager = knownManagers.find((e) => String(e.id) === form.managerId);
     const chosenManagerOption = chosenManager ? managerOption(chosenManager) : undefined;
+    const managerLeft = managerHasLeft(chosenManager, employee?.status);
 
     /** Human label for a position id, or "(none)" when unset. */
     const positionLabel = (id: string) => positions.find((p) => String(p.id) === id)?.title ?? t('emp_org_change_none');
@@ -269,6 +275,7 @@ export function EditEmployeeDialog({
         if (!form.sectionId && !posIsSpecial) e.sectionId = t('emp_err_section');
         if (!form.positionId) e.positionId = t('emp_err_pos');
         if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
+        else if (managerLeft) e.managerId = t('emp_err_manager_resigned');
         if (!form.joinedAt) e.joinedAt = t('emp_err_start');
         else if (employee?.last_day && form.joinedAt >= employee.last_day)
             e.joinedAt = t('emp_err_start_after_last_day').replace('{date}', fmt.date(employee.last_day));
@@ -318,10 +325,11 @@ export function EditEmployeeDialog({
             setSaved(true);
             window.setTimeout(onSaved ?? onClose, 1200);
         } catch (err) {
-            // manager_id = reporting-tree loop; other field errors land under their inputs
+            // A manager loop opens its panel; other field errors land under their inputs
             const fieldErrors = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;
             setOrgConfirm(false);
-            if (fieldErrors?.manager_id) {
+            const refusal = managerRefusal(fieldErrors?.manager_id?.[0]);
+            if (refusal === 'loop') {
                 setManagerLoop(true);
                 focusFirstError({ managerId: t('emp_manager_loop_title') });
                 return;
@@ -337,6 +345,7 @@ export function EditEmployeeDialog({
                     }
                     mapped[key.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())] = msgs[0] ?? '';
                 }
+                if (refusal) mapped.managerId = t(MANAGER_REFUSAL_KEY[refusal]);
                 setErrors((prev) => ({ ...prev, ...mapped }));
                 focusFirstError(mapped);
             }
@@ -535,7 +544,13 @@ export function EditEmployeeDialog({
     );
 
     const managerField = (
-        <Field label={t('emp_manager')} help={t('emp_manager_help')} required={!posIsSpecial} name="managerId" error={errors.managerId}>
+        <Field
+            label={t('emp_manager')}
+            help={t('emp_manager_help')}
+            required={!posIsSpecial}
+            name="managerId"
+            error={errors.managerId ?? (managerLeft ? t('emp_err_manager_resigned') : undefined)}
+        >
             <SearchableSelect
                 value={form.managerId}
                 onChange={(v) => set('managerId', v)}

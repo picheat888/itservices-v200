@@ -156,6 +156,59 @@ class EmployeeApiTest extends TestCase
             ->assertJsonValidationErrors('manager_id');
     }
 
+    public function test_manager_refusals_name_their_cause(): void
+    {
+        $this->actingAs($this->super());
+        $boss = Employee::create(['first_name' => 'Boss', 'last_name' => 'Test']);
+        $staff = Employee::create(['first_name' => 'Staff', 'last_name' => 'Test', 'manager_id' => $boss->id]);
+
+        $this->putJson("/api/employees/{$boss->id}", ['first_name' => 'Boss', 'last_name' => 'Test', 'manager_id' => $staff->id])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.manager_id.0', 'manager_loop');
+        $this->putJson("/api/employees/{$staff->id}", ['first_name' => 'Staff', 'last_name' => 'Test', 'manager_id' => 999999])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.manager_id.0', 'manager_not_found');
+    }
+
+    public function test_a_resigned_manager_is_refused_when_adding_an_employee(): void
+    {
+        $this->actingAs($this->super());
+        $gone = Employee::create(['first_name' => 'Gone', 'last_name' => 'Boss', 'status' => EmployeeStatus::Resigned]);
+
+        $this->postJson('/api/employees', ['first_name' => 'New', 'last_name' => 'Hire', 'joined_at' => '2026-10-01', 'manager_id' => $gone->id])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.manager_id.0', 'manager_resigned');
+        $this->assertFalse(Employee::where('first_name', 'New')->exists());
+    }
+
+    public function test_an_employee_whose_manager_resigned_cannot_be_saved_until_the_manager_changes(): void
+    {
+        $this->actingAs($this->super());
+        $gone = Employee::create(['first_name' => 'Gone', 'last_name' => 'Boss', 'status' => EmployeeStatus::Resigned]);
+        $active = Employee::create(['first_name' => 'Still', 'last_name' => 'Boss']);
+        $staff = Employee::create(['first_name' => 'Staff', 'last_name' => 'Test', 'manager_id' => $gone->id]);
+
+        // Only the phone changes; the saved manager has left, so the save is refused.
+        $this->putJson("/api/employees/{$staff->id}", ['first_name' => 'Staff', 'last_name' => 'Test', 'phone' => '1305', 'manager_id' => $gone->id])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.manager_id.0', 'manager_resigned');
+        $this->assertNull($staff->fresh()->phone);
+
+        $this->putJson("/api/employees/{$staff->id}", ['first_name' => 'Staff', 'last_name' => 'Test', 'phone' => '1305', 'manager_id' => $active->id])
+            ->assertOk();
+        $this->assertSame($active->id, $staff->fresh()->manager_id);
+    }
+
+    public function test_a_resigned_employee_may_keep_a_resigned_manager(): void
+    {
+        $this->actingAs($this->super());
+        $gone = Employee::create(['first_name' => 'Gone', 'last_name' => 'Boss', 'status' => EmployeeStatus::Resigned]);
+        $leaver = Employee::create(['first_name' => 'Left', 'last_name' => 'Too', 'manager_id' => $gone->id, 'status' => EmployeeStatus::Resigned]);
+
+        $this->putJson("/api/employees/{$leaver->id}", ['first_name' => 'Left', 'last_name' => 'Too', 'phone' => '1305', 'manager_id' => $gone->id])
+            ->assertOk();
+    }
+
     public function test_normal_position_requires_department_section_and_report_to(): void
     {
         $this->actingAs($this->super());

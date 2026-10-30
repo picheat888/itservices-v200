@@ -110,6 +110,8 @@ class EmployeeImportService
 
         $existingIdByCode = Employee::whereNotNull('code')->pluck('id', 'code')
             ->mapWithKeys(fn ($id, $code) => [strtoupper($code) => $id]);
+        $resignedCodes = Employee::whereNotNull('code')->where('status', EmployeeStatus::Resigned)->pluck('code')
+            ->mapWithKeys(fn ($code) => [strtoupper($code) => true]);
         $existingEmails = Employee::whereNotNull('email')->pluck('email')
             ->mapWithKeys(fn ($email) => [strtolower($email) => true]);
         // Imported rows never own a login account yet, so ANY user email is a conflict.
@@ -233,6 +235,8 @@ class EmployeeImportService
                     $rowErrors[] = self::issue('report_to_self', 'report_to_employee_code', $reportTo);
                 } elseif (! isset($existingIdByCode[$key]) && ! isset($codesInFile[$key])) {
                     $rowErrors[] = self::issue('report_to_not_found', 'report_to_employee_code', $reportTo);
+                } elseif (isset($resignedCodes[$key])) {
+                    $rowErrors[] = self::issue('report_to_resigned', 'report_to_employee_code', $reportTo);
                 }
             }
 
