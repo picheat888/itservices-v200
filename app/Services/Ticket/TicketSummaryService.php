@@ -27,9 +27,7 @@ class TicketSummaryService
     public function __construct(private readonly TicketOverviewReportService $report) {}
 
     /**
-     * The overview answer for [start, end] against the equal-length window just before it:
-     * inbound and closed flow, backlog, SLA percentages, average response and category mix.
-     * SLA KPI (priority targets) and repair KPI (work-class targets) stay separate figures.
+     * The overview answer for [start, end] against the equal-length window just before it.
      *
      * @return array<string, mixed>
      */

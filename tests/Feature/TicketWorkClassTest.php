@@ -17,13 +17,7 @@ use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * งานซ่อมยาว (เดินสาย / ส่ง vendor) ไม่ควรถูกบันทึกว่าหลุด SLA ทั้งที่ไม่มีอะไรผิดพลาด
- *
- * `work_class` ตอบว่า "งานชิ้นนี้ยาวแค่ไหน" ซึ่งเป็นคนละคำถามกับ priority ("ด่วนแค่ไหน")
- * และคนละคำถามกับ request_type ("ขออะไร") เทสต์ชุดนี้ตรึงลำดับ
- * work_class → request_type → priority → defaults() และผลที่ตามมาจากลำดับนั้น
- */
+/** ลักษณะงาน (work_class) และลำดับเป้าหมาย work_class → request_type → priority → defaults() */
 class TicketWorkClassTest extends TestCase
 {
     use RefreshDatabase;
@@ -66,13 +60,7 @@ class TicketWorkClassTest extends TestCase
         return $target;
     }
 
-    /**
-     * A repair target for one (ticket type, who does the work) pair.
-     *
-     * Every fixture below pins the category explicitly: the factory picks one at random, and a
-     * repair rule only matches the pair, so a test that let the category float would pass or
-     * fail depending on the draw.
-     */
+    /** A repair target for one (category, work class) pair; fixtures pin the category. */
     private function workRule(string $category, string $workClass, int $hours): SlaTarget
     {
         return $this->rule(SlaScope::WorkClass, TicketSla::workClassKey($category, $workClass), $hours);
@@ -81,8 +69,7 @@ class TicketWorkClassTest extends TestCase
     /** เคสที่มีคำขอผูกอยู่ แบบเดียวกับเคสที่เปิดอัตโนมัติจากคำขอ */
     private function ticketFromRequest(string $type, array $overrides = []): Ticket
     {
-        // Pinned like every other fixture here: a repair rule matches a (category, class) pair,
-        // so a floating category would make the assertion depend on the factory's draw.
+        // Category pinned: a repair rule matches the pair
         $ticket = Ticket::factory()->create($overrides + ['category' => 'hardware']);
         $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Test', 'status' => 'active']);
         ServiceRequest::create([
@@ -116,8 +103,7 @@ class TicketWorkClassTest extends TestCase
 
     public function test_a_work_class_rule_beats_a_request_type_rule(): void
     {
-        // ประเภทคำขอถูกเลือกโดยคนกรอกฟอร์มก่อนมีใครไปดูของจริง ลักษณะงานถูกเลือกโดยคนที่เห็นงานแล้ว
-        // ข้อมูลที่ใหม่กว่าและแม่นกว่าต้องชนะ
+        // ลักษณะงานที่ช่างเลือกหลังเห็นงานชนะประเภทคำขอ
         $this->workRule('hardware', 'repair_vendor', 360);
         $this->rule(SlaScope::RequestType, 'hardware', 72);
         $ticket = $this->ticketFromRequest('hardware', ['work_class' => TicketWorkClass::RepairVendor]);
@@ -164,7 +150,7 @@ class TicketWorkClassTest extends TestCase
         // "เดินสายใช้เวลา 30 วัน" ไม่ได้เลิกเป็นความจริงเพราะช่างที่กดรับติ๊กว่าด่วน
         $this->workRule('hardware', 'repair_internal', 240);
         $ticket = Ticket::factory()->create(['category' => 'hardware', 'work_class' => TicketWorkClass::RepairInternal]);
-        // ตั้งเดดไลน์เสมือนว่าบันทึกมันตั้งแต่สร้าง (สำหรับเทสต์: factory ไม่ทำเช่นนั้น service::create() ทำ)
+        // ตั้งเดดไลน์แบบที่ service::create() ทำ (factory ไม่ทำ)
         $ticket->update(['sla_resolve_due_at' => TicketSla::resolveDueAt($ticket)]);
         $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Test', 'status' => 'active']);
         $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
@@ -216,8 +202,7 @@ class TicketWorkClassTest extends TestCase
         $this->assertTrue(
             $ticket->sla_resolve_due_at->equalTo(TicketSla::addBusinessMinutes($ticket->created_at, 360 * 60)),
         );
-        // The guard rail the spec calls for: classifying is an audited action, not a silent
-        // field flip — see TicketController::updateWorkClass().
+        // Classifying is an audited action
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'Classified ticket work',
             'target' => "{$ticket->ticket_no} - standard → repair_vendor",
@@ -277,10 +262,7 @@ class TicketWorkClassTest extends TestCase
         ])->assertStatus(403);
     }
 
-    /**
-     * ประตูสถานะพิสูจน์แยกจากประตูเจ้าของเคส: คนที่ทดสอบต้องเป็น assignee และมีสิทธิ์ครบ
-     * เพื่อให้ 422 ที่ได้มาจากสถานะเท่านั้น ไม่ใช่จากประตูอื่นที่ปฏิเสธไปก่อนแล้ว
-     */
+    /** ผู้ทดสอบเป็น assignee ที่มีสิทธิ์ครบ 422 จึงมาจากสถานะเท่านั้น */
     public function test_a_closed_case_cannot_be_classified(): void
     {
         $ticket = Ticket::factory()->create(['category' => 'hardware']);
@@ -314,10 +296,7 @@ class TicketWorkClassTest extends TestCase
         $this->assertTrue($ticket->sla_resolve_due_at->equalTo($expected));
     }
 
-    /**
-     * บัญชี IT staff ล้วน ๆ สำหรับเรียก endpoint — ไม่ผูกกับ ticket ไหนเลย ต่างจาก
-     * assigneeOf() ซึ่งตั้งเคสที่ส่งเข้ามาเป็น in-progress (จึงห้ามใช้กับเคสที่แค่ยืมมาเป็นผู้ใช้)
-     */
+    /** บัญชี IT staff ที่ไม่ผูกกับเคสไหน ต่างจาก assigneeOf() ที่ตั้งเคสเป็น in-progress */
     private function itStaff(): User
     {
         $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Viewer', 'status' => 'active']);
@@ -330,9 +309,7 @@ class TicketWorkClassTest extends TestCase
         $this->workRule('hardware', 'repair_internal', 240);
         $staff = $this->itStaff();
 
-        // งานปกติที่ปิดทันเวลา — slaMetPct() ตัดสินจากเดดไลน์ที่คำนวณสดผ่าน
-        // TicketSla::resolveDueAt() (นาฬิกาเวลาทำการ) ไม่ได้อ่านคอลัมน์ sla_resolve_due_at
-        // ที่บันทึกไว้ ฉะนั้นฟิกซ์เจอร์ต้องตั้ง created_at/resolved_at เทียบกับเดดไลน์จริง
+        // งานปกติที่ปิดทันเวลา เทียบกับเดดไลน์ที่คำนวณสด ไม่ใช่คอลัมน์ที่เก็บไว้
         $standard = Ticket::factory()->create(['category' => 'hardware',
             'status' => TicketStatus::Completed,
             'priority' => TicketPriority::Low,
@@ -365,17 +342,11 @@ class TicketWorkClassTest extends TestCase
         $this->assertNull($body['repair_kpi_met_pct']);
     }
 
-    /**
-     * The guard rail Task 11 builds: the dialog shows a predicted deadline before the technician
-     * confirms, and that prediction must equal what classifying the case actually produces —
-     * otherwise the dialog is showing a guess dressed up as a fact.
-     */
+    /** The dialog's predicted deadline equals what classifying actually produces. */
     public function test_the_forecast_deadline_for_a_class_matches_what_classifying_it_actually_produces(): void
     {
         $this->workRule('hardware', 'repair_vendor', 360);
-        // created_at a few days back, not "now": a forecast bug that started the clock at now()
-        // instead of created_at would land within a second of correct and this equality could
-        // pass by accident. Days back forces the comparison to walk real business-hour windows.
+        // Days back, so a clock started at now() could not pass by accident
         $ticket = Ticket::factory()->create(['category' => 'hardware', 'priority' => TicketPriority::High, 'created_at' => now()->subDays(5)]);
         $staff = $this->assigneeOf($ticket);
 
@@ -392,15 +363,10 @@ class TicketWorkClassTest extends TestCase
         $this->assertSame($ticket->sla_resolve_due_at->toIso8601String(), $forecast['due_at']);
     }
 
-    /**
-     * A repair class with no configured rule must fall through to priority honestly — the dialog
-     * must be able to say the deadline will NOT move, not imply a change that will not happen.
-     */
+    /** A repair class with no configured rule falls through to priority. */
     public function test_the_forecast_leaves_out_a_repair_class_with_no_rule_for_this_type(): void
     {
-        // A class with no priced pair for this kind of case is not offered at all. Showing it
-        // would let a technician pick an option that silently falls back to the priority target
-        // — the short deadline these cases breach on, which is the problem being solved.
+        // A class with no priced pair for this kind of case is not offered
         $this->workRule('network', 'repair_vendor', 720);
         $ticket = Ticket::factory()->create(['category' => 'hardware', 'priority' => TicketPriority::Medium]);
         $staff = $this->assigneeOf($ticket);
@@ -442,12 +408,7 @@ class TicketWorkClassTest extends TestCase
         $this->assertSame(TicketSla::resolveHours('low'), $standard['hours']);
     }
 
-    /**
-     * The forecast walks the business clock 3 times over (targetFor() + resolveDueAt() per class,
-     * a real addMinutesOn() window walk — not a cheap array lookup like sla_target). The list has
-     * nowhere to show it, so it must never be computed for a row there — only the single-ticket
-     * read (relationLoaded('updates'), same signal the 'updates' field already uses) pays for it.
-     */
+    /** The forecast is computed on the single-ticket read only, never for list rows. */
     public function test_the_forecast_is_left_out_of_the_list_response(): void
     {
         $ticket = Ticket::factory()->create(['category' => 'hardware']);
@@ -460,11 +421,7 @@ class TicketWorkClassTest extends TestCase
         $this->assertArrayNotHasKey('work_class_forecast', $row);
     }
 
-    /**
-     * SLA does not apply to a canceled case at all (TicketSla::forTicket() already returns null
-     * for it) — the forecast must say the same rather than asserting a deadline for a case that
-     * has none, or crashing resolveDueAt() on undefined behaviour.
-     */
+    /** A canceled case has no SLA, so no forecast either. */
     public function test_the_forecast_is_null_for_a_canceled_case(): void
     {
         $ticket = Ticket::factory()->create(['category' => 'hardware', 'status' => TicketStatus::Canceled]);
@@ -476,14 +433,7 @@ class TicketWorkClassTest extends TestCase
         $this->assertNull($body['work_class_forecast']);
     }
 
-    /**
-     * The KPI card's visibility depends on `repair_backlog > 0` — a repair case classified
-     * before an admin configured any target is real, open work, and it must not go invisible
-     * from both figures (excluded from sla_met_pct AND missing from a card gated on
-     * has_repair_rules alone). If the filter at TicketController::summary() regressed — say it
-     * lost the live() check and started counting closed repairs too — nothing here would go red
-     * without this test.
-     */
+    /** repair_backlog counts open repair work only (TicketSummaryService). */
     public function test_the_summary_counts_only_open_repair_cases_in_the_backlog(): void
     {
         $staff = $this->itStaff();
@@ -514,8 +464,7 @@ class TicketWorkClassTest extends TestCase
 
     public function test_the_summary_says_whether_repair_rules_exist_at_all(): void
     {
-        // หน้าจอใช้ค่านี้ตัดสินว่าจะโชว์การ์ด KPI ไหม — องค์กรที่ไม่ได้ใช้ฟีเจอร์นี้
-        // ไม่ควรเห็นการ์ดที่ขึ้น "—" ตลอดกาล
+        // หน้าจอใช้ค่านี้ตัดสินว่าจะโชว์การ์ด KPI ไหม
         $staff = $this->itStaff();
 
         $before = $this->actingAs($staff)->getJson('/api/tickets/summary')->json();
@@ -529,8 +478,7 @@ class TicketWorkClassTest extends TestCase
 
     public function test_a_request_born_case_cannot_be_classified(): void
     {
-        // Its target was settled by what was asked for. Classifying it would stack a third rule
-        // on an answer the case already has — refused outright, not merely hidden on screen.
+        // A request-born case is refused outright, not merely hidden on screen
         $this->workRule('hardware', 'repair_vendor', 360);
         $ticket = $this->ticketFromRequest('hardware');
         $staff = $this->assigneeOf($ticket);
