@@ -5,7 +5,6 @@
 namespace App\Http\Requests\Ticket;
 
 use App\Enums\Ticket\TicketPriority;
-use App\Models\User;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
@@ -13,8 +12,6 @@ use Illuminate\Validation\Rules\Enum;
 
 class AssignTicketRequest extends TicketActionRequest
 {
-    private ?User $assignee = null;
-
     public function authorize(): Response
     {
         return $this->guard()->canAssign($this->user(), $this->ticket());
@@ -35,11 +32,6 @@ class AssignTicketRequest extends TicketActionRequest
     protected function passedValidation(): void
     {
         $this->guard()->canAssignTo($this->user(), $this->assignee(), $this->ticket())->authorize();
-    }
-
-    public function assignee(): User
-    {
-        return $this->assignee ??= User::findOrFail($this->validated('assignee_id'));
     }
 
     public function priority(): ?TicketPriority

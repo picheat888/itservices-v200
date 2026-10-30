@@ -5,6 +5,7 @@
 namespace Tests\Feature;
 
 use App\Models\Employee\Employee;
+use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Ticket\TicketActionGuard;
@@ -113,6 +114,44 @@ class TicketActionOrderTest extends TestCase
             ->assertJsonPath('meta.my_jobs_count', 1)
             ->assertJsonPath('meta.my_tickets_count', 2);
         $this->assertSame(1, $badgeQueries);
+    }
+
+    public function test_a_requester_sees_badges_for_their_own_tickets_only(): void
+    {
+        $requester = $this->userWithEmployee('user');
+        Ticket::factory()->count(2)->create(['requester_id' => $requester->employee_id]);
+        Ticket::factory()->create(['requester_id' => $requester->employee_id, 'status' => 'completed']);
+        Ticket::factory()->count(3)->create();
+        $this->actingAs($requester);
+
+        $this->getJson('/api/tickets')->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('meta.open_count', 2)
+            ->assertJsonPath('meta.my_jobs_count', 0)
+            ->assertJsonPath('meta.my_tickets_count', 2);
+    }
+
+    public function test_staff_with_no_level_count_no_open_cases(): void
+    {
+        $staff = $this->userWithEmployee('admin');
+        RolePermission::firstOrCreate(['role_id' => $staff->role_id, 'permission' => 'tickets.view_all'], ['allowed' => true]);
+        Ticket::factory()->count(2)->create();
+        $this->actingAs($staff);
+
+        $this->getJson('/api/tickets')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.open_count', 0);
+    }
+
+    public function test_an_account_without_an_employee_files_and_sees_no_tickets(): void
+    {
+        $account = User::factory()->create(['role' => 'user', 'employee_id' => null]);
+        Ticket::factory()->count(2)->create();
+        $this->actingAs($account);
+
+        $this->getJson('/api/tickets')->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('meta.open_count', 0)
+            ->assertJsonPath('meta.my_tickets_count', 0);
+        $this->assertTrue(app(TicketActionGuard::class)->canView($account, Ticket::first())->denied());
     }
 
     public function test_a_custom_summary_range_is_validated_as_before(): void

@@ -9,6 +9,7 @@ use App\Models\Contract\ContractAttachment;
 use App\Models\Employee\Employee;
 use App\Models\Request\RequestAttachment;
 use App\Models\Ticket\TicketAttachment;
+use App\Services\Ticket\TicketActionGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -17,14 +18,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class FileController extends Controller
 {
     /** A ticket attachment — the ticket's requester or any IT staff (tickets.view_all). */
-    public function ticketAttachment(Request $request, TicketAttachment $attachment): StreamedResponse
+    public function ticketAttachment(Request $request, TicketAttachment $attachment, TicketActionGuard $guard): StreamedResponse
     {
-        $user = $request->user();
-        $ticket = $attachment->ticket;
-        abort_unless(
-            $user !== null && ($user->hasPermission('tickets.view_all') || $ticket?->requester_id === $user->employee_id),
-            403,
-        );
+        abort_if($attachment->ticket === null, 403);
+        $guard->canView($request->user(), $attachment->ticket)->authorize();
 
         return $this->stream($attachment->path, $attachment->original_name, $attachment->mime);
     }

@@ -41,7 +41,7 @@ class TicketListService
         $query = Ticket::query()->with(['requester', 'assignee.employee', 'relatedAsset.category', 'relatedAsset.brand', 'relatedAsset.model', 'attachments', 'serviceRequest']);
 
         if ($filters['requested']) {
-            $query->where('requester_id', $viewer->employee_id);
+            $this->filedBy($query, $viewer);
         }
 
         if ($filters['mine']) {
@@ -58,7 +58,7 @@ class TicketListService
         }
 
         if ($levels === null) {
-            $query->where('requester_id', $viewer->employee_id);
+            $this->filedBy($query, $viewer);
         } elseif (! $filters['mine'] && ! $filters['requested']) {
             // The all-tickets tab is scoped to the viewer's Levels; own assignments and requests never are
             $query->whereIn('category', $levels);
@@ -115,14 +115,19 @@ class TicketListService
         ];
     }
 
+    /** Tickets the viewer filed; an account without an employee filed none. */
+    private function filedBy(Builder $query, User $viewer): void
+    {
+        [$sql, $bindings] = $this->requestedBy($viewer);
+        $query->whereRaw($sql, $bindings);
+    }
+
     /**
-     * Tickets the viewer filed; an account without an employee matches requester-less tickets, as where() did.
-     *
      * @return array{0: string, 1: list<int>}
      */
     private function requestedBy(User $viewer): array
     {
-        return $viewer->employee_id === null ? ['requester_id IS NULL', []] : ['requester_id = ?', [$viewer->employee_id]];
+        return $viewer->employee_id === null ? ['0 = 1', []] : ['requester_id = ?', [$viewer->employee_id]];
     }
 
     /**

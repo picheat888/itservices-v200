@@ -23,7 +23,7 @@ class TicketActionGuard
 
     public function canView(?User $user, Ticket $ticket): Response
     {
-        return $this->seesAllTickets($user) || $ticket->requester_id === $user?->employee_id
+        return $this->seesAllTickets($user) || $this->isRequester($user, $ticket)
             ? Response::allow()
             : $this->forbidden();
     }
@@ -96,23 +96,26 @@ class TicketActionGuard
     /** A repair class needs its own key and a target priced for the case's category. */
     public function canReclassify(User $user, Ticket $ticket, TicketWorkClass $class): Response
     {
-        $priced = $ticket->category !== null
-            && isset(TicketSla::rules()[SlaScope::WorkClass->value][TicketSla::workClassKey($ticket->category->value, $class->value)]);
-
         return match (true) {
             ! $user->hasPermission('tickets.set_work_class') => $this->forbidden(),
-            $class->isRepair() && ! $priced => $this->refused('no_work_class_target'),
+            $class->isRepair() && ! $this->isPriced($ticket, $class) => $this->refused('no_work_class_target'),
             default => Response::allow(),
         };
     }
 
-    /** Whoever filed a case does not decide who works it, tickets.assign or not. */
-    private function isRequester(User $user, Ticket $ticket): bool
+    private function isPriced(Ticket $ticket, TicketWorkClass $class): bool
     {
-        return $user->employee_id !== null && $user->employee_id === $ticket->requester_id;
+        return $ticket->category !== null
+            && isset(TicketSla::rules()[SlaScope::WorkClass->value][TicketSla::workClassKey($ticket->category->value, $class->value)]);
     }
 
-    /** 403; an empty code answers like abort(403). */
+    /** An account without an employee never counts as a ticket's requester. */
+    private function isRequester(?User $user, Ticket $ticket): bool
+    {
+        return $user?->employee_id !== null && $user->employee_id === $ticket->requester_id;
+    }
+
+    /** 403 with the code; an empty code is a bare 403. */
     private function forbidden(string $code = ''): Response
     {
         return Response::deny($code);

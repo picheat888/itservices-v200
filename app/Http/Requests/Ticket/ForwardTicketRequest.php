@@ -4,15 +4,12 @@
 
 namespace App\Http\Requests\Ticket;
 
-use App\Models\User;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
 class ForwardTicketRequest extends TicketActionRequest
 {
-    private ?User $assignee = null;
-
     public function authorize(): Response
     {
         return $this->guard()->canForward($this->user(), $this->ticket());
@@ -32,10 +29,5 @@ class ForwardTicketRequest extends TicketActionRequest
     protected function passedValidation(): void
     {
         $this->guard()->canReceive($this->assignee(), $this->ticket())->authorize();
-    }
-
-    public function assignee(): User
-    {
-        return $this->assignee ??= User::findOrFail($this->validated('assignee_id'));
     }
 }
