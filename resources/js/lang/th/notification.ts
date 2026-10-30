@@ -17,7 +17,7 @@ export const notification: Dict = {
     notif_password_expiring: 'รหัสผ่านจะหมดอายุในอีก {days} วัน เปลี่ยนก่อนเข้าระบบไม่ได้',
     notif_sla_holidays_title: 'ยังไม่มีวันหยุดปี {year}',
     notif_sla_holidays_missing: 'เพิ่มตามประกาศวันหยุดของบริษัทก่อน 1 ม.ค. {year} ไม่อย่างนั้นวันหยุดจะถูกนับเป็นวันทำการ',
-    notif_sla_holidays_started: 'ปี {year} เริ่มแล้ว วันหยุดยังถูกนับเป็นวันทำการ เพิ่มตามประกาศวันหยุดของบริษัท',
+    notif_sla_holidays_started: 'ปี {year} เริ่มแล้วแต่ยังไม่มีวันหยุด เพิ่มตามประกาศของบริษัท',
     notif_report_export_ready: 'ไฟล์ {format} พร้อมแล้ว ดาวน์โหลดได้ที่ "ไฟล์ส่งออกของฉัน"',
     notif_report_export_failed: 'สร้างไฟล์ {format} ไม่สำเร็จ ลองใหม่ได้ที่ "ไฟล์ส่งออกของฉัน"',
     notif_report_schedule_failed: 'ส่งรายงานตามเวลาไม่สำเร็จ ตรวจสอบได้ที่หน้ารายงาน',

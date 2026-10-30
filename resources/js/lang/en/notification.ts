@@ -17,7 +17,7 @@ export const notification: Dict = {
     notif_password_expiring: 'Your password expires in {days} days. Change it before you are locked out.',
     notif_sla_holidays_title: 'No holidays set for {year}',
     notif_sla_holidays_missing: 'Add the company holidays before 1 Jan {year}, or they will be counted as working days.',
-    notif_sla_holidays_started: '{year} has started and holidays still count as working days. Add the company holiday list.',
+    notif_sla_holidays_started: '{year} has started but has no holidays yet. Add them from the company announcement.',
     notif_report_export_ready: 'Your {format} file is ready. Download it from "My exports".',
     notif_report_export_failed: 'The {format} file could not be created. Try again from "My exports".',
     notif_report_schedule_failed: 'The scheduled report was not sent. Check it on the Reports page.',
