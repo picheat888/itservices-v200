@@ -532,26 +532,28 @@ class SettingsController extends Controller
         ]);
     }
 
-    /** Updates the SMTP settings. A blank password leaves the stored one intact. */
+    /** Updates the SMTP settings. A blank password leaves the stored one intact; a blank username means no sign-in. */
     public function updateMailSettings(Request $request): JsonResponse
     {
         $s = MailSetting::current();
-        // Password is required only on first setup; once one is stored, leaving the
-        // field blank keeps the existing password.
-        $hasPassword = filled($s->password);
+        // Password is required only when signing in for the first time; once one is stored, blank keeps it
+        $needsPassword = filled($request->input('username')) && blank($s->password);
 
         $data = $request->validate([
             'host' => ['required', 'string', 'max:255'],
             'port' => ['required', 'integer', 'min:1', 'max:65535'],
-            'username' => ['required', 'string', 'max:255'],
-            'password' => [$hasPassword ? 'nullable' : 'required', 'string', 'max:255'],
+            'username' => ['nullable', 'string', 'max:255'],
+            'password' => [$needsPassword ? 'required' : 'nullable', 'string', 'max:255'],
             'encryption' => ['nullable', 'in:tls,ssl'],
             'from_address' => ['required', 'email', 'max:255'],
             'from_name' => ['required', 'string', 'max:255'],
         ]);
 
-        // Only overwrite the password when a new one is provided.
-        if (($data['password'] ?? '') === '') {
+        // A relay that takes mail without signing in: no username, and no password kept for it
+        if (blank($data['username'] ?? null)) {
+            $data['username'] = null;
+            $data['password'] = null;
+        } elseif (($data['password'] ?? '') === '') {
             unset($data['password']);
         }
 

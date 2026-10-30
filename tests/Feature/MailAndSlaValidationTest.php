@@ -45,13 +45,30 @@ class MailAndSlaValidationTest extends TestCase
             ->putJson('/api/settings/mail', [
                 'host' => '',
                 'port' => 70000,            // out of range
-                'username' => '',
-                'password' => '',           // required on first setup (no existing password)
+                'username' => 'mailer',
+                'password' => '',           // required on first sign-in setup (no existing password)
                 'from_address' => 'not-an-email',
                 'from_name' => '',
             ])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['host', 'port', 'username', 'password', 'from_address', 'from_name']);
+            ->assertJsonValidationErrors(['host', 'port', 'password', 'from_address', 'from_name']);
+    }
+
+    /** A relay that takes mail without signing in saves with no username, and drops a stored password (SET-7). */
+    public function test_a_relay_without_sign_in_saves_with_no_username_or_password(): void
+    {
+        MailSetting::current()->update(['username' => 'old-user', 'password' => 'existing-pass']);
+
+        $this->actingAs($this->admin())
+            ->putJson('/api/settings/mail', array_merge($this->validMail(), ['host' => 'relay.company.local', 'port' => 25, 'encryption' => null, 'username' => '', 'password' => '']))
+            ->assertOk()
+            ->assertJsonPath('data.username', null)
+            ->assertJsonPath('data.has_password', false);
+
+        $saved = MailSetting::current();
+        $this->assertNull($saved->username);
+        $this->assertNull($saved->password);
+        $this->assertTrue($saved->isConfigured());
     }
 
     public function test_mail_password_optional_once_one_is_stored(): void

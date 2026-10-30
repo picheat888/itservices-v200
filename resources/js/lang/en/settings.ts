@@ -100,6 +100,8 @@ export const settings: Dict = {
     set_email_username: 'Username',
     set_email_password: 'Password',
     set_email_password_hint: 'Leave blank to keep the current password',
+    set_email_password_off: 'Used when a username is entered',
+    set_email_username_help: "Leave blank if the server doesn't need a sign-in",
     set_email_password_ph: 'Enter SMTP password',
     set_email_err_address: 'Enter a valid email address',
     set_email_err_port: 'Port must be between 1 and 65535',

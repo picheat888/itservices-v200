@@ -99,6 +99,8 @@ export const settings: Dict = {
     set_email_username: 'ชื่อผู้ใช้',
     set_email_password: 'รหัสผ่าน',
     set_email_password_hint: 'เว้นว่างไว้เพื่อใช้รหัสผ่านเดิม',
+    set_email_password_off: 'ใช้เมื่อกรอกชื่อผู้ใช้',
+    set_email_username_help: 'เว้นว่างได้ ถ้าเซิร์ฟเวอร์ไม่ต้องล็อกอิน',
     set_email_password_ph: 'กรอกรหัสผ่าน SMTP',
     set_email_err_address: 'รูปแบบอีเมลไม่ถูกต้อง',
     set_email_err_port: 'พอร์ตต้องอยู่ระหว่าง 1–65535',

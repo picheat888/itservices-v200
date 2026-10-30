@@ -1000,7 +1000,8 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         if (errors[k as MailErrorKey]) setErrors((e) => ({ ...e, [k]: undefined }));
     };
 
-    // Password is required only until one is stored; blank then keeps it
+    // No username = a relay that needs no sign-in; with one, the password is required until one is stored
+    const signsIn = !!form.username?.trim();
     const handleSave = async () => {
         const next: Partial<Record<MailErrorKey, string>> = {};
         if (!form.host?.trim()) next.host = t('set_err_required');
@@ -1009,8 +1010,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
         } else if (!Number.isInteger(form.port) || form.port < 1 || form.port > 65535) {
             next.port = t('set_email_err_port');
         }
-        if (!form.username?.trim()) next.username = t('set_err_required');
-        if (!hasPassword && !form.password?.trim()) next.password = t('set_err_required');
+        if (signsIn && !hasPassword && !form.password?.trim()) next.password = t('set_err_required');
         if (!form.from_address?.trim()) {
             next.from_address = t('set_err_required');
         } else if (!isEmail(form.from_address)) {
@@ -1099,7 +1099,7 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                     </div>
 
                     <div className={FIELD_ROW}>
-                        <Field label={t('set_email_username')} name="username" required error={errors.username}>
+                        <Field label={t('set_email_username')} name="username" error={errors.username} help={t('set_email_username_help')}>
                             <Input
                                 value={form.username ?? ''}
                                 onChange={(e) => set('username', e.target.value)}
@@ -1117,15 +1117,16 @@ function EmailTab({ onDirtyChange }: { onDirtyChange: OnDirtyChange }) {
                         <Field
                             label={t('set_email_password')}
                             name="password"
-                            required={!hasPassword}
+                            required={signsIn && !hasPassword}
                             error={errors.password}
-                            help={hasPassword ? t('set_email_password_hint') : undefined}
+                            help={!signsIn ? t('set_email_password_off') : hasPassword ? t('set_email_password_hint') : undefined}
                         >
                             <Input
                                 type="password"
-                                value={form.password ?? ''}
+                                value={signsIn ? (form.password ?? '') : ''}
                                 onChange={(e) => set('password', e.target.value)}
-                                placeholder={hasPassword ? '••••••••' : t('set_email_password_ph')}
+                                disabled={!signsIn}
+                                placeholder={!signsIn ? '' : hasPassword ? '••••••••' : t('set_email_password_ph')}
                                 name="smtp_password"
                                 autoComplete="new-password"
                                 autoCapitalize="none"
