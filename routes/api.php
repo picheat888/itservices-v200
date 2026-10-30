@@ -63,6 +63,7 @@ use App\Http\Controllers\Api\Settings\LocationController;
 use App\Http\Controllers\Api\Settings\NetworkNameController;
 use App\Http\Controllers\Api\Settings\RequestOptionController;
 use App\Http\Controllers\Api\Settings\SettingsController;
+use App\Http\Controllers\Api\Settings\SlaHolidayController;
 use App\Http\Controllers\Api\Settings\UnitController;
 use App\Http\Controllers\Api\Settings\VendorController;
 use App\Http\Controllers\Api\Settings\WarrantyTypeController;
@@ -203,6 +204,10 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         ->middleware('permission:settings.assets')->name('api.settings.assets');
     Route::put('settings/sla', [SettingsController::class, 'updateSla'])
         ->middleware('permission:settings.sla')->name('api.settings.sla');
+    Route::get('settings/sla-holidays', [SlaHolidayController::class, 'index'])
+        ->middleware('permission:settings.sla')->name('api.settings.sla-holidays');
+    Route::put('settings/sla-holidays/{year}', [SlaHolidayController::class, 'update'])->whereNumber('year')
+        ->middleware('permission:settings.sla')->name('api.settings.sla-holidays.update');
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])
         ->middleware('permission:settings.system')->name('api.settings.logo');
     Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])
