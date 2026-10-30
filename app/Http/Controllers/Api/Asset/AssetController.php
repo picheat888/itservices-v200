@@ -408,6 +408,16 @@ class AssetController extends Controller
         return response()->json(['message' => 'success']);
     }
 
+    /** A hand-over recipient must not have resigned, even before their last day: their kit is already being recalled. */
+    private function stillEmployed(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            if (Employee::whereKey($value)->where('status', EmployeeStatus::Resigned)->exists()) {
+                $fail('recipient_resigned');
+            }
+        };
+    }
+
     /** Transfer an asset to a new owner — an employee (pending acceptance) or a shared label (deployed). */
     public function transfer(Request $request, Asset $asset): JsonResponse
     {
@@ -415,7 +425,7 @@ class AssetController extends Controller
         $data = $request->validate([
             'mode' => ['required', 'in:employee,shared'],
             // Employee mode: pick a real employee. Shared mode: a short free-text label.
-            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id'],
+            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id', $this->stillEmployed()],
             'owner_label' => ['required_if:mode,shared', 'string', 'max:200'],
             // IT must record where the asset will physically go when handed over.
             'location_id' => ['required', 'integer', 'exists:locations,id'],
@@ -629,7 +639,7 @@ class AssetController extends Controller
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:assets,id'],
             'mode' => ['required', 'in:employee,shared'],
-            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id'],
+            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id', $this->stillEmployed()],
             'owner_label' => ['required_if:mode,shared', 'string', 'max:200'],
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'reason' => ['nullable', 'string', 'max:500'],

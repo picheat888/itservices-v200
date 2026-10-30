@@ -200,6 +200,7 @@ export const asset: Dict = {
     transfer_shared_label_ph: 'e.g. Rack 2, HR shared printer',
     asset_transfer_failed: 'Transfer failed',
     asset_err_required: 'Required',
+    asset_err_recipient_resigned: 'This employee has resigned. Choose another recipient.',
     transfer_location_ph: 'Select destination location',
     asset_transfer_reason_ph: 'e.g. New hire onboarding',
 

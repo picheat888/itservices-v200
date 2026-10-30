@@ -50,7 +50,7 @@ export function AssetTransferDialog({
     const locationsQuery = useLocations();
     const refreshLocations = useSelectRefresh(locationsQuery);
     const locations = useMemo(() => locationsQuery.data ?? [], [locationsQuery.data]);
-    const { employees, pickerProps } = useEmployeePicker();
+    const { employees, pickerProps } = useEmployeePicker({ status: 'active' });
 
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
@@ -132,6 +132,11 @@ export function AssetTransferDialog({
             }
             (onDone ?? onClose)();
         } catch (error) {
+            const fieldErrors = (error as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;
+            if (fieldErrors?.owner_employee_id?.[0] === 'recipient_resigned') {
+                setErr({ employee: t('asset_err_recipient_resigned') });
+                return;
+            }
             formError.show(serverMessage(error, t, 'asset_refusal_') ?? t('asset_transfer_failed'));
         }
     };

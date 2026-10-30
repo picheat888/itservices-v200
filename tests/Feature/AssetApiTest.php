@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Contract\Contract;
@@ -586,6 +587,33 @@ class AssetApiTest extends TestCase
 
         $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'shared', 'location_id' => $location->id])
             ->assertStatus(422)->assertJsonValidationErrors('owner_label');
+    }
+
+    public function test_a_resigned_employee_cannot_receive_an_asset(): void
+    {
+        // Resigned with the last day still ahead: they can sign in, but their kit is already being recalled.
+        $leaver = Employee::create(['code' => 'EMP-2010', 'first_name' => 'On', 'last_name' => 'Notice', 'status' => EmployeeStatus::Resigned, 'last_day' => now()->addWeek()->toDateString()]);
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT', 'owner_employee_id' => null]);
+        $location = Location::create(['name' => 'HQ Floor 3']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $leaver->id, 'location_id' => $location->id])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.owner_employee_id.0', 'recipient_resigned');
+        $this->assertSame('ready', $asset->fresh()->status->value);
+    }
+
+    public function test_a_bulk_hand_over_to_a_resigned_employee_moves_nothing(): void
+    {
+        $leaver = Employee::create(['code' => 'EMP-2011', 'first_name' => 'Gone', 'last_name' => 'Away', 'status' => EmployeeStatus::Resigned]);
+        $this->actingAs($this->super());
+        $assets = Asset::factory()->count(2)->create(['status' => 'ready', 'owner' => 'Pool — IT', 'owner_employee_id' => null]);
+        $location = Location::create(['name' => 'HQ Floor 3']);
+
+        $this->postJson('/api/assets/bulk-transfer', ['ids' => $assets->pluck('id')->all(), 'mode' => 'employee', 'owner_employee_id' => $leaver->id, 'location_id' => $location->id])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.owner_employee_id.0', 'recipient_resigned');
+        $this->assertSame(2, Asset::whereIn('id', $assets->pluck('id'))->where('status', 'ready')->count());
     }
 
     public function test_transfer_moves_asset_to_pending_acceptance(): void
