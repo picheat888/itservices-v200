@@ -86,6 +86,8 @@ export function AssetLocationDialog({
     });
 
     const isDirty = location !== base.location || note !== '';
+    // One asset still on its current place has nothing to move
+    const samePlace = !isBulk && liveLocation !== '' && location === liveLocation;
     const guardClose = useDiscardGuard(isOpen && isDirty);
 
     const submit = async () => {
@@ -149,7 +151,7 @@ export function AssetLocationDialog({
                     <Button variant="outline" onClick={() => guardClose(onClose)}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton onClick={submit} loading={updateLocation.isPending}>
+                    <SaveButton onClick={submit} loading={updateLocation.isPending} disabled={samePlace}>
                         <MapPin className="h-4 w-4" />
                         {t('asset_location_save')}
                     </SaveButton>

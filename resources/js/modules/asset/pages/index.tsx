@@ -89,6 +89,7 @@ import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnButton } from '../components/pending-return-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
+import { coverDaysLeft } from '../lib/cover-days';
 import { bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
@@ -224,8 +225,9 @@ function AssetCoverCell({ asset }: { asset: Asset }) {
     const fmt = useDateFormat();
     if (asset.source !== 'rented' && asset.warranty_lifetime) return <span className="text-xs">{t('asset_warranty_lifetime')}</span>;
     if (!asset.cover_end) return <span className="text-muted-foreground">—</span>;
-    const days = Math.ceil((Date.parse(asset.cover_end) - Date.now()) / 86_400_000);
+    const days = coverDaysLeft(asset.cover_end);
     if (days < 0) return <StatusBadge tone="gray">{t('asset_cover_ended')}</StatusBadge>;
+    if (days === 0) return <StatusBadge tone="amber">{t('asset_cover_ends_today')}</StatusBadge>;
     if (days <= 90) return <StatusBadge tone="amber">{t('asset_cover_days_left').replace('{n}', fmtN(days))}</StatusBadge>;
     return <span className="text-xs">{fmt.date(asset.cover_end)}</span>;
 }

@@ -627,6 +627,8 @@ class AssetController extends Controller
         );
 
         $location = Location::findOrFail($data['location_id']);
+        // An asset already there has nothing to move and gets no "A → A" history.
+        $assets = $assets->reject(fn (Asset $a) => $a->location_id === $location->id)->values();
         foreach ($assets as $asset) {
             $this->service->relocate($asset, $location, $request->user(), $data['note'] ?? null);
         }

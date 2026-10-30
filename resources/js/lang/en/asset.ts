@@ -159,6 +159,7 @@ export const asset: Dict = {
     asset_col_handed_over: 'Issued',
     asset_col_purchased: 'Purchased',
     asset_cover_ended: 'Ended',
+    asset_cover_ends_today: 'Ends today',
     asset_cover_days_left: '{n} days left',
     asset_place_warehouse: 'Warehouse',
     asset_place_location: 'Place',

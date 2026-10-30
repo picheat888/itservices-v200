@@ -158,6 +158,7 @@ export const asset: Dict = {
     asset_col_handed_over: 'ส่งมอบเมื่อ',
     asset_col_purchased: 'วันที่ซื้อ',
     asset_cover_ended: 'หมดแล้ว',
+    asset_cover_ends_today: 'หมดวันนี้',
     asset_cover_days_left: 'เหลือ {n} วัน',
     asset_place_warehouse: 'คลัง',
     asset_place_location: 'สถานที่',

@@ -85,6 +85,24 @@ class AssetRelocateTest extends TestCase
         ]);
     }
 
+    public function test_an_asset_already_at_the_place_is_skipped_without_history(): void
+    {
+        $this->actingAs($this->super());
+        $here = $this->location('HQ - 3rd floor');
+        $there = $this->location('INK4 - Packing');
+        $staying = $this->deployedAsset($here, 'EMP-RL2');
+        $moving = $this->deployedAsset($there, 'EMP-RL3');
+
+        $this->postJson('/api/assets/bulk-location', ['ids' => [$staying->id, $moving->id], 'location_id' => $here->id])
+            ->assertOk()
+            ->assertJsonPath('updated', 1);
+
+        $this->assertDatabaseMissing('asset_transfers', ['asset_id' => $staying->id, 'kind' => 'relocate']);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'Updated asset location', 'target' => "{$staying->asset_code} → HQ - 3rd floor"]);
+        $this->assertDatabaseHas('asset_transfers', ['asset_id' => $moving->id, 'kind' => 'relocate', 'to_owner' => 'HQ - 3rd floor']);
+        $this->assertSame($here->id, $moving->fresh()->location_id);
+    }
+
     public function test_the_move_is_recorded_as_place_to_place_on_the_asset_history(): void
     {
         $this->actingAs($this->super());
