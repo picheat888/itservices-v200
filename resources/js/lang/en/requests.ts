@@ -217,6 +217,7 @@ export const requests: Dict = {
     req_refusal_ticket_still_open:
         "You can't close this request yet. Ticket {ticket} is still open, and the request completes when that case is closed.",
     req_refusal_wrong_status: 'This request has changed. Reload and try again.',
+    req_refusal_step_moved: 'This step has already been decided. Reload and try again.',
     req_refusal_no_step_waiting: 'No step on this request is waiting for approval.',
     req_refusal_not_your_turn: 'It is not your turn to act on this request.',
 

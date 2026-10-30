@@ -20,6 +20,7 @@ use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -29,6 +30,7 @@ use Tests\TestCase;
  */
 class RequestBlockedApproverTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -121,7 +123,7 @@ class RequestBlockedApproverTest extends TestCase
         $mgrUser = User::factory()->create(['role' => 'user', 'employee_id' => $this->mgr->id]);
         $this->resign($this->mgr);
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $bells = $this->bells($this->itLead, 'blocked_left');
         $this->assertCount(1, $bells);
@@ -137,7 +139,7 @@ class RequestBlockedApproverTest extends TestCase
         $this->managerRungAsGroup($request, [$this->mgr->id]);
         $this->resign($this->mgr);
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->assertCount(1, $this->bells($this->itLead, 'blocked_left'));
     }
@@ -150,7 +152,7 @@ class RequestBlockedApproverTest extends TestCase
         $this->managerRungAsGroup($request, [$this->mgr->id, $other->id]);
         $this->resign($this->mgr);
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->assertCount(0, $this->bells($this->itLead, 'blocked_left'));
         $this->assertCount(1, $this->bells($deputy, 'waiting'));
@@ -234,7 +236,7 @@ class RequestBlockedApproverTest extends TestCase
     public function test_the_approvals_report_flags_a_stuck_group_step(): void
     {
         $request = $this->submitComputer();
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         $this->managerRungAsGroup($request, [$this->mgr->id]);
         $this->resign($this->mgr);
 

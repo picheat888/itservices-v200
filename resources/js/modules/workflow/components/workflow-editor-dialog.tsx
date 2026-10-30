@@ -379,7 +379,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                     list={s.actor_type === 'chain' ? 'wf-chain-labels' : undefined}
                                                     aria-label={t('wf_step_label')}
                                                 />
-                                                <div className="flex shrink-0 items-center">
+                                                <div className="touch:gap-1 flex shrink-0 items-center">
                                                     <IconBtn
                                                         disabled={i === 0}
                                                         onClick={() => moveStep(i, -1)}
@@ -720,7 +720,7 @@ function DepartmentStepFields({
                                 type="button"
                                 aria-label={`${t('wf_step_person_remove')} ${localName(m, lang)}`}
                                 onClick={() => onChange({ approver_employee_ids: step.approver_employee_ids.filter((id) => id !== m.id) })}
-                                className="hover:text-destructive"
+                                className="hover:text-destructive touch:size-8 flex items-center justify-center rounded-full"
                             >
                                 <X className="h-3 w-3" />
                             </button>
@@ -814,7 +814,7 @@ function IconBtn({
             disabled={disabled}
             onClick={onClick}
             className={cn(
-                'press-icon text-muted-foreground hover:bg-muted hover:text-foreground flex h-6 w-7 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40',
+                'press-icon text-muted-foreground hover:bg-muted hover:text-foreground touch:size-10 flex h-6 w-7 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40',
                 className,
             )}
         >

@@ -213,6 +213,7 @@ export const requests: Dict = {
     req_refusal_type_closed: 'ตอนนี้ยังยื่นคำขอประเภทนี้ไม่ได้',
     req_refusal_ticket_still_open: 'ยังปิดคำขอนี้ไม่ได้ เพราะ Ticket {ticket} ยังไม่ปิด คำขอจะเสร็จเองเมื่อปิดเคสนั้น',
     req_refusal_wrong_status: 'คำขอนี้เปลี่ยนสถานะไปแล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง',
+    req_refusal_step_moved: 'ขั้นนี้มีการตัดสินไปแล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง',
     req_refusal_no_step_waiting: 'คำขอนี้ไม่มีขั้นที่รออนุมัติแล้ว',
     req_refusal_not_your_turn: 'ยังไม่ถึงคิวคุณอนุมัติคำขอนี้',
 

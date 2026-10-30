@@ -26,6 +26,7 @@ use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -36,6 +37,7 @@ use Tests\TestCase;
  */
 class RequestWorkflowTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -146,6 +148,43 @@ class RequestWorkflowTest extends TestCase
         $this->assertSame('it_staff', (string) $steps->last()->actor_type->value);
     }
 
+    /** The chain is frozen at submit: a reporting line changed afterwards does not move the waiting step. */
+    public function test_a_reporting_line_changed_after_submit_leaves_the_chain_as_filed(): void
+    {
+        $request = $this->submitComputer();
+        $newSup = Employee::create(['first_name' => 'NewSup', 'position_id' => $this->positionId('Supervisor')]);
+        $newSupUser = $this->makeUser('user', [], $newSup);
+        $this->staff->update(['manager_id' => $newSup->id]);
+
+        $this->assertSame($this->sup->id, $request->approvals()->where('status', 'current')->value('approver_employee_id'));
+        $this->actingAs($newSupUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
+    }
+
+    /** A dialog left open on a step somebody already decided does not sign the next one (REQ-7). */
+    public function test_a_decision_on_a_step_that_has_moved_on_is_refused(): void
+    {
+        $request = $this->submitComputer();
+        $stale = $this->decision($request);
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $stale)->assertOk();
+
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $stale + ['note' => 'Meant for step one'])
+            ->assertUnprocessable()->assertJsonPath('message', 'step_moved');
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/reject", $stale + ['note' => 'Meant for step one'])
+            ->assertUnprocessable()->assertJsonPath('message', 'step_moved');
+
+        $current = $request->approvals()->where('status', 'current')->firstOrFail();
+        $this->assertSame($this->mgr->id, $current->approver_employee_id);
+        $this->assertNull($current->note);
+    }
+
+    public function test_a_decision_must_say_which_step_it_is_for(): void
+    {
+        $request = $this->submitComputer();
+
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable()->assertJsonValidationErrors('step_id');
+    }
+
     /** A network request opens its ticket under the network category, not hardware. */
     public function test_a_network_request_opens_a_network_ticket(): void
     {
@@ -228,7 +267,7 @@ class RequestWorkflowTest extends TestCase
         // One rung signed on the older request puts it back on top — and the row now names
         // who moved it, not who filed it.
         $this->travel(1)->minutes();
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$older->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$older->id}/approve", $this->decision($older))->assertOk();
 
         $this->actingAs($this->requester)->getJson('/api/service-requests?sort=activity')
             ->assertJsonPath('data.0.reference', $older->reference)
@@ -394,26 +433,26 @@ class RequestWorkflowTest extends TestCase
         $request = $this->submitComputer();
 
         // The requester, the NEXT approver, and even a super admin all get 403.
-        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden()->assertJsonPath('message', 'not_your_turn');
+        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden()->assertJsonPath('message', 'not_your_turn');
         $super = User::factory()->create(['role' => 'super']);
-        $this->actingAs($super)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+        $this->actingAs($super)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
 
         // The resolved approver of the current step passes.
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
     }
 
     public function test_approve_advances_and_final_approval_flips_the_request(): void
     {
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", ['note' => 'ok'])->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request, ['note' => 'ok']))->assertOk();
 
         $request->refresh();
         $this->assertSame(RequestStatus::Pending, $request->status);
         $this->assertSame($this->mgr->id, $request->currentApproval()->approver_employee_id);
 
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $request->refresh();
         $this->assertSame(RequestStatus::Approved, $request->status);
@@ -426,11 +465,11 @@ class RequestWorkflowTest extends TestCase
     {
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/reject")
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/reject", $this->decision($request))
             ->assertUnprocessable()->assertJsonValidationErrors('note');
 
         $this->actingAs($this->supUser)
-            ->postJson("/api/service-requests/{$request->id}/reject", ['note' => 'Budget frozen this quarter'])
+            ->postJson("/api/service-requests/{$request->id}/reject", $this->decision($request, ['note' => 'Budget frozen this quarter']))
             ->assertOk();
 
         $request->refresh();
@@ -445,13 +484,13 @@ class RequestWorkflowTest extends TestCase
     {
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         // Sup already decided; it is Mgr's turn now.
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
 
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         // Fully approved: no further decision is possible for anyone.
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable()->assertJsonPath('message', 'wrong_status');
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertUnprocessable()->assertJsonPath('message', 'wrong_status');
     }
 
     public function test_complete_requires_permission_and_approved_status(): void
@@ -465,8 +504,8 @@ class RequestWorkflowTest extends TestCase
 
         $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/complete")->assertUnprocessable()->assertJsonPath('message', 'wrong_status');
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve");
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve");
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request));
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request));
 
         $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/complete")->assertForbidden();
         $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/complete")->assertOk();
@@ -483,7 +522,7 @@ class RequestWorkflowTest extends TestCase
         $this->assertSame(RequestStatus::Cancelled, $request->fresh()->status);
 
         // Nothing further can happen to a cancelled request.
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertUnprocessable();
     }
 
     public function test_cancel_needs_a_reason_and_keeps_it_with_who_cancelled(): void
@@ -545,7 +584,7 @@ class RequestWorkflowTest extends TestCase
 
         // The in-flight request still runs on its frozen chain — and stays approvable.
         $this->assertSame($before, $request->fresh()->approvals->pluck('approver_employee_id', 'position')->all());
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
     }
 
     public function test_meta_period_counts_requests_filed_in_the_period(): void

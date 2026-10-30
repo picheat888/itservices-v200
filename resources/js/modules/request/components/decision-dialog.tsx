@@ -65,6 +65,8 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     // "Step 2 of 3": by position among the approval rungs (skipped ones included), as the row's progress ticks count.
     const rungs = (ctx.request.approvals ?? []).filter((a) => a.kind === 'approval');
     const stepIndex = rungs.findIndex((a) => a.status === 'current') + 1;
+    // The step this dialog was opened on; the server refuses if it has moved on since
+    const stepId = rungs[stepIndex - 1]?.id ?? 0;
     const step = stepIndex > 0 ? t('req_decide_step').replace('{n}', fmtN(stepIndex)).replace('{total}', fmtN(rungs.length)) : null;
 
     const meta = REQUEST_TYPE_META[ctx.request.type];
@@ -77,8 +79,8 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
         }
         formError.clear();
         try {
-            if (rejecting) await reject.mutateAsync({ id: ctx.request.id, note: note.trim() });
-            else await approve.mutateAsync({ id: ctx.request.id, note: note.trim() || undefined });
+            if (rejecting) await reject.mutateAsync({ id: ctx.request.id, stepId, note: note.trim() });
+            else await approve.mutateAsync({ id: ctx.request.id, stepId, note: note.trim() || undefined });
             onClose();
         } catch (e) {
             formError.show(serverMessage(e, t, 'req_refusal_') ?? t('cd_error'));

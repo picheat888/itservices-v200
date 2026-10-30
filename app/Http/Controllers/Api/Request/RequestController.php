@@ -204,8 +204,8 @@ class RequestController extends Controller
     /** Approve the current step (note optional). */
     public function approve(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        $data = $request->validate(['note' => ['nullable', 'string', 'max:2000']]);
-        $serviceRequest = $this->service->approve($serviceRequest, $request->user(), $data['note'] ?? null);
+        $data = $request->validate(['step_id' => ['required', 'integer'], 'note' => ['nullable', 'string', 'max:2000']]);
+        $serviceRequest = $this->service->approve($serviceRequest, $request->user(), (int) $data['step_id'], $data['note'] ?? null);
 
         AuditLog::record('Approved service request step', $serviceRequest->reference, subject: $serviceRequest);
 
@@ -215,8 +215,8 @@ class RequestController extends Controller
     /** Reject the current step — a remark is always required. */
     public function reject(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        $data = $request->validate(['note' => ['required', 'string', 'max:2000']]);
-        $serviceRequest = $this->service->reject($serviceRequest, $request->user(), $data['note']);
+        $data = $request->validate(['step_id' => ['required', 'integer'], 'note' => ['required', 'string', 'max:2000']]);
+        $serviceRequest = $this->service->reject($serviceRequest, $request->user(), (int) $data['step_id'], $data['note']);
 
         AuditLog::record('Rejected service request', $serviceRequest->reference, subject: $serviceRequest);
 

@@ -186,6 +186,8 @@ class RequestStalledReminderTest extends TestCase
         $html = (string) $job->html;
 
         $this->assertSame('sup@example.com', $job->toEmail);
+        // The button opens the approvals tab (REQ-3)
+        $this->assertStringEndsWith('/requests?tab=approvals', (string) $job->actionUrl);
         // The count, not the casing: an administrator rewording the subject is not a bug.
         $this->assertStringContainsString('2', $job->subject);
         $this->assertStringContainsStringIgnoringCase('request(s) still waiting', $job->subject);
@@ -194,6 +196,28 @@ class RequestStalledReminderTest extends TestCase
         // Longest wait first: the older request opens the table.
         $this->assertLessThan(strpos($html, $second->reference), strpos($html, $first->reference));
         $this->assertStringContainsString('>10</td>', $html);
+    }
+
+    /** A step open to a group lists in the digest of everybody who could sign it. */
+    public function test_the_weekly_digest_reaches_every_member_of_a_group_step(): void
+    {
+        Queue::fake();
+        $this->grantToApprover('requests.notify_stalled');
+        $deputy = Employee::create(['first_name' => 'Deputy']);
+        User::factory()->create(['role' => 'user', 'employee_id' => $deputy->id, 'email' => 'deputy@example.com']);
+
+        $request = $this->submitComputer();
+        $row = $this->ageCurrentRung($request, 9);
+        $row->forceFill(['approver_employee_id' => null, 'approver_employee_ids' => [$row->approver_employee_id, $deputy->id]])->saveQuietly();
+
+        $this->artisan('requests:send-stalled-digest')
+            ->expectsOutputToContain('recipients: 2, requests listed: 2')
+            ->assertSuccessful();
+
+        $to = Queue::pushed(SendTemplatedEmail::class)
+            ->filter(fn (SendTemplatedEmail $job) => $job->templateKey === 'request.stalled_digest')
+            ->pluck('toEmail')->sort()->values()->all();
+        $this->assertSame(['deputy@example.com', 'sup@example.com'], $to);
     }
 
     /** No permission, no mail — the daily bell is what everybody gets. */

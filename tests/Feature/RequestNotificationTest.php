@@ -17,6 +17,7 @@ use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -27,6 +28,7 @@ use Tests\TestCase;
  */
 class RequestNotificationTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -139,8 +141,8 @@ class RequestNotificationTest extends TestCase
         $accountAdmin = $this->makeUserWith('employees.set_credentials');
 
         $request = $this->submitComputer();
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         // The completion row names no person at all: it is a queue, not somebody
         // waiting for an account.
@@ -160,7 +162,7 @@ class RequestNotificationTest extends TestCase
     {
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->assertCount(1, $this->bells($this->mgrUser, 'waiting'));
         $this->assertCount(1, $this->bells($this->requester, 'approved_step'));
@@ -174,8 +176,8 @@ class RequestNotificationTest extends TestCase
         Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->assertCount(1, $this->bells($this->requester, 'approved_final'));
 
@@ -200,8 +202,8 @@ class RequestNotificationTest extends TestCase
     {
         $request = $this->submitComputer();
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $ticket = $request->fresh()->ticket;
         $this->assertNotNull($ticket, 'the computer workflow is the auto_ticket one');
@@ -218,7 +220,7 @@ class RequestNotificationTest extends TestCase
         $request = $this->submitComputer();
 
         $this->actingAs($this->supUser)
-            ->postJson("/api/service-requests/{$request->id}/reject", ['note' => 'Not in this budget cycle'])
+            ->postJson("/api/service-requests/{$request->id}/reject", $this->decision($request, ['note' => 'Not in this budget cycle']))
             ->assertOk();
 
         $bells = $this->bells($this->requester, 'rejected');

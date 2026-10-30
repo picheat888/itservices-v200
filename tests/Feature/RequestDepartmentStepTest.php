@@ -19,6 +19,7 @@ use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 class RequestDepartmentStepTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -142,10 +144,10 @@ class RequestDepartmentStepTest extends TestCase
 
         // Clear the supervisor rung so the QC step becomes the current one.
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->actingAs(User::where('employee_id', $qcAsst->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $row = $request->approvals()->where('position', 2)->firstOrFail();
         $this->assertSame(ApprovalStatus::Approved, $row->status);
@@ -172,7 +174,7 @@ class RequestDepartmentStepTest extends TestCase
         $request = $this->submitCctv();
 
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->actingAs(User::where('employee_id', $qcManager->id)->firstOrFail());
         $tab = $this->getJson('/api/service-requests?scope=approvals')->assertOk();
@@ -190,10 +192,10 @@ class RequestDepartmentStepTest extends TestCase
         $request = $this->submitCctv();
 
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->actingAs(User::where('employee_id', $outsider->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
     }
 
     public function test_the_wrong_position_in_the_right_department_is_refused(): void
@@ -205,10 +207,10 @@ class RequestDepartmentStepTest extends TestCase
         $request = $this->submitCctv();
 
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->actingAs(User::where('employee_id', $tooJunior->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
     }
 
     public function test_once_one_of_the_group_has_signed_the_others_cannot(): void
@@ -219,13 +221,13 @@ class RequestDepartmentStepTest extends TestCase
         $request = $this->submitCctv();
 
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         $this->actingAs(User::where('employee_id', $first->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         // The step has moved on to Safety, so the second QC manager has nothing to sign.
         $this->actingAs(User::where('employee_id', $second->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
     }
 
     public function test_a_department_with_nobody_at_those_positions_is_skipped_with_a_reason(): void
@@ -265,16 +267,16 @@ class RequestDepartmentStepTest extends TestCase
         $this->staffIn($this->safety, 'Supervisor', 'SeSup');
         $request = $this->submitCctv();
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $row = $request->approvals()->where('position', 2)->firstOrFail();
         $this->assertTrue($row->isOpenToDepartment());
         $this->assertSame(ApprovalStatus::Current, $row->status);
 
         $this->actingAs($this->requesterUser)
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
         $this->actingAs($this->requesterUser)
-            ->postJson("/api/service-requests/{$request->id}/reject", ['note' => 'I would rather not wait.'])->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/reject", $this->decision($request, ['note' => 'I would rather not wait.']))->assertForbidden();
         $this->assertSame([], array_column(
             $this->actingAs($this->requesterUser)->getJson('/api/service-requests?scope=approvals')->assertOk()->json('data'), 'id'));
         $this->assertFalse($this->actingAs($this->requesterUser)->getJson("/api/service-requests/{$request->id}")->assertOk()->json('data.can_approve'));
@@ -286,7 +288,7 @@ class RequestDepartmentStepTest extends TestCase
 
         // The colleague still can.
         $this->actingAs(User::where('employee_id', $colleague->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
     }
 
     /** Cancelling a request that waits on a group tells the whole group, as the wait did. */
@@ -297,7 +299,7 @@ class RequestDepartmentStepTest extends TestCase
         $this->staffIn($this->safety, 'Supervisor', 'SeSup');
         $request = $this->submitCctv();
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->actingAs($this->requesterUser)->postJson("/api/service-requests/{$request->id}/cancel", ['reason' => 'No longer needed.'])->assertOk();
 

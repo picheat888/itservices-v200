@@ -631,7 +631,7 @@ class RequestNotificationService
             'user.first_name' => e(explode(' ', (string) $recipient->name)[0] ?: 'there'),
             'digest.count' => number_format($items->count()),
             'digest.table' => $this->digestTable($items),
-        ], rtrim((string) config('app.url'), '/').'/requests?tab=mine', 'Open my approvals', $recipient->name);
+        ], rtrim((string) config('app.url'), '/').'/requests?tab=approvals', 'Open my approvals', $recipient->name);
     }
 
     /**

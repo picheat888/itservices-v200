@@ -127,8 +127,9 @@ export const requestApi = {
         });
         return data.data;
     },
-    approve: (id: number, note?: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/approve`, { note: note || null }),
-    reject: (id: number, note: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/reject`, { note }),
+    approve: (id: number, stepId: number, note?: string) =>
+        mutate<ServiceRequest>('post', `/service-requests/${id}/approve`, { step_id: stepId, note: note || null }),
+    reject: (id: number, stepId: number, note: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/reject`, { step_id: stepId, note }),
     complete: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/complete`),
     cancel: (id: number, reason: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/cancel`, { reason }),
 };

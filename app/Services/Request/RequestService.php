@@ -200,13 +200,13 @@ class RequestService
         return $request;
     }
 
-    /** Approve the current step as its resolved approver. */
-    public function approve(ServiceRequest $request, User $actor, ?string $note): ServiceRequest
+    /** Approve the current step as its resolved approver; $stepId is the step the approver was looking at. */
+    public function approve(ServiceRequest $request, User $actor, int $stepId, ?string $note): ServiceRequest
     {
-        [$request, $decided, $isFinal, $wasGroup] = DB::transaction(function () use ($request, $actor, $note) {
+        [$request, $decided, $isFinal, $wasGroup] = DB::transaction(function () use ($request, $actor, $stepId, $note) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Pending);
-            $row = $this->currentActionableRow($fresh);
+            $row = $this->currentActionableRow($fresh, $stepId);
             $this->assertActorIsApprover($actor, $row);
             $wasGroup = $row->isOpenToGroup();
             $this->claimForActor($actor, $row);
@@ -243,12 +243,12 @@ class RequestService
     }
 
     /** Reject the current step (remark required — enforced at the HTTP layer). */
-    public function reject(ServiceRequest $request, User $actor, string $note): ServiceRequest
+    public function reject(ServiceRequest $request, User $actor, int $stepId, string $note): ServiceRequest
     {
-        [$request, $row, $wasGroup] = DB::transaction(function () use ($request, $actor, $note) {
+        [$request, $row, $wasGroup] = DB::transaction(function () use ($request, $actor, $stepId, $note) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Pending);
-            $row = $this->currentActionableRow($fresh);
+            $row = $this->currentActionableRow($fresh, $stepId);
             $this->assertActorIsApprover($actor, $row);
             $wasGroup = $row->isOpenToGroup();
             $this->claimForActor($actor, $row);
@@ -707,13 +707,18 @@ class RequestService
         }
     }
 
-    /** The current approval-kind row, 422 when the request waits on completion instead. */
-    private function currentActionableRow(ServiceRequest $request): RequestApproval
+    /** The current approval-kind row, 422 when the request waits on completion instead or the decider was looking at another step. */
+    private function currentActionableRow(ServiceRequest $request, int $stepId): RequestApproval
     {
         $row = $request->currentApproval();
         if ($row === null || $row->kind !== WorkflowStepKind::Approval) {
             throw ValidationException::withMessages([
                 'status' => 'no_step_waiting',
+            ]);
+        }
+        if ((int) $row->id !== $stepId) {
+            throw ValidationException::withMessages([
+                'status' => 'step_moved',
             ]);
         }
 

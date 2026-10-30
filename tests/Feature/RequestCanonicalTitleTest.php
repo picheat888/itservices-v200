@@ -15,6 +15,7 @@ use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -33,6 +34,7 @@ use Tests\TestCase;
  */
 class RequestCanonicalTitleTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -112,8 +114,8 @@ class RequestCanonicalTitleTest extends TestCase
     {
         $request = $this->submit(['title' => 'คำขอ: คอมพิวเตอร์']);
 
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
-        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $ticket = $request->fresh()->ticket;
         $this->assertNotNull($ticket);

@@ -17,6 +17,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 class RequestTicketFileBridgeTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -98,7 +100,7 @@ class RequestTicketFileBridgeTest extends TestCase
     private function approvedRequestWithOneFile(): ServiceRequest
     {
         $request = $this->submitComputer([UploadedFile::fake()->create('quote.pdf', 80, 'application/pdf')]);
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         return $request->refresh();
     }
@@ -111,7 +113,7 @@ class RequestTicketFileBridgeTest extends TestCase
         ]);
         $filesOnDisk = count(Storage::disk('local')->allFiles());
 
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $ticket = $request->refresh()->ticket;
         $this->assertNotNull($ticket, 'the request opened a case');
@@ -134,7 +136,7 @@ class RequestTicketFileBridgeTest extends TestCase
     public function test_a_case_that_came_from_no_request_still_opens_with_no_files(): void
     {
         $request = $this->submitComputer([]);
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->assertSame(0, $request->refresh()->ticket->attachments()->count());
     }

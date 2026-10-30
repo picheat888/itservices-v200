@@ -85,46 +85,59 @@ class RequestStalledService
     }
 
     /**
-     * The weekly digest: one mail per person, listing their own steps older than
-     * DIGEST_AFTER_DAYS. Only people holding requests.notify_stalled receive it — the daily
-     * bell is what everybody gets, and mail is opt-in through the Permissions screen.
+     * The weekly digest: one mail per person, listing the steps waiting on them (group steps
+     * included) older than DIGEST_AFTER_DAYS. Only people holding requests.notify_stalled
+     * receive it — the daily bell is what everybody gets, and mail is opt-in through the
+     * Permissions screen.
      *
      * @return array{recipients: int, requests: int}
      */
     public function digest(): array
     {
         $rows = $this->stalledRows(self::DIGEST_AFTER_DAYS)
-            ->filter(fn (RequestApproval $row) => $row->approver_employee_id !== null && $row->approver?->hasLeft() !== true);
+            ->filter(fn (RequestApproval $row) => $row->kind === WorkflowStepKind::Approval);
+        RequestApproval::preloadGroupCandidates($rows);
 
-        $byEmployee = $rows->groupBy('approver_employee_id');
-        if ($byEmployee->isEmpty()) {
-            return ['recipients' => 0, 'requests' => 0];
+        $users = [];
+        $itemsByUser = [];
+        foreach ($rows as $row) {
+            foreach ($this->holders($row) as $user) {
+                $users[$user->id] = $user;
+                $itemsByUser[$user->id][] = ['request' => $row->request, 'days' => $this->daysWaiting($row)];
+            }
         }
-
-        $users = User::whereIn('employee_id', $byEmployee->keys())->get();
+        ksort($users);
 
         $sent = ['recipients' => 0, 'requests' => 0];
-        foreach ($users as $user) {
+        foreach ($users as $userId => $user) {
             if (! $user->hasPermission('requests.notify_stalled')) {
                 continue;
             }
 
-            $items = $byEmployee->get($user->employee_id, collect())
-                ->map(fn (RequestApproval $row) => [
-                    'request' => $row->request,
-                    'days' => $this->daysWaiting($row),
-                ]);
-
-            if ($items->isEmpty()) {
-                continue;
-            }
-
+            $items = collect($itemsByUser[$userId]);
             $this->notifications->stalledDigest($user, $items);
             $sent['recipients']++;
             $sent['requests'] += $items->count();
         }
 
         return $sent;
+    }
+
+    /**
+     * Logins that may act on a step: every member of a group step, else its approver unless they have left.
+     *
+     * @return Collection<int, User>
+     */
+    private function holders(RequestApproval $row): Collection
+    {
+        if ($row->isOpenToGroup()) {
+            return User::whereIn('employee_id', $row->groupCandidates()->pluck('id'))->get();
+        }
+        if ($row->approver_employee_id === null || $row->approver?->hasLeft()) {
+            return collect();
+        }
+
+        return User::where('employee_id', $row->approver_employee_id)->get();
     }
 
     /**

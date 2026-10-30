@@ -148,16 +148,17 @@ final class DemoRequests implements DemoStep
             $clock->at($last);
             $signer = $this->signer($ctx, $row);
             $ctx->actAs($signer);
-            $this->requests->approve($request->fresh(), $signer, 'Approved');
+            $this->requests->approve($request->fresh(), $signer, $row->id, 'Approved');
             $ctx->audit('Approved service request step', $request->reference);
         }
         $lastDay = (int) max(0, $clock->base()->copy()->startOfDay()->diffInDays($last->copy()->startOfDay(), true));
 
         if ($kind === 'rejected') {
             $clock->at($clock->after($last, max(0, $lastDay - 1), 16));
-            $signer = $this->signer($ctx, $this->currentApproval($request));
+            $row = $this->currentApproval($request);
+            $signer = $this->signer($ctx, $row);
             $ctx->actAs($signer);
-            $this->requests->reject($request->fresh(), $signer, 'Not a business need at this time.');
+            $this->requests->reject($request->fresh(), $signer, $row->id, 'Not a business need at this time.');
             $ctx->audit('Rejected service request', $request->reference);
 
             return;

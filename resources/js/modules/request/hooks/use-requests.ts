@@ -73,8 +73,14 @@ export function useRequestMutations() {
                 invalidate();
             },
         }),
-        approve: useMutation({ mutationFn: (v: { id: number; note?: string }) => requestApi.approve(v.id, v.note), onSuccess: invalidate }),
-        reject: useMutation({ mutationFn: (v: { id: number; note: string }) => requestApi.reject(v.id, v.note), onSuccess: invalidate }),
+        approve: useMutation({
+            mutationFn: (v: { id: number; stepId: number; note?: string }) => requestApi.approve(v.id, v.stepId, v.note),
+            onSuccess: invalidate,
+        }),
+        reject: useMutation({
+            mutationFn: (v: { id: number; stepId: number; note: string }) => requestApi.reject(v.id, v.stepId, v.note),
+            onSuccess: invalidate,
+        }),
         complete: useMutation({ mutationFn: (id: number) => requestApi.complete(id), onSuccess: invalidate }),
         cancel: useMutation({ mutationFn: (v: { id: number; reason: string }) => requestApi.cancel(v.id, v.reason), onSuccess: invalidate }),
     };

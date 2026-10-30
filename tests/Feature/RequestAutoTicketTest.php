@@ -25,6 +25,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use ReflectionObject;
 use RuntimeException;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -35,6 +36,7 @@ use Tests\TestCase;
  */
 class RequestAutoTicketTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -92,7 +94,7 @@ class RequestAutoTicketTest extends TestCase
         $request = $this->submitComputer();
 
         // Boss covers both chain steps (merged) — one approval finishes the chain.
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $request->refresh();
         $this->assertSame(RequestStatus::Approved, $request->status);
@@ -142,7 +144,7 @@ class RequestAutoTicketTest extends TestCase
             'fields' => ['device_id' => $this->deviceOptionId()],
         ]);
 
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $ticket = $request->fresh()->ticket;
         $this->assertNotNull($ticket);
@@ -176,7 +178,7 @@ class RequestAutoTicketTest extends TestCase
     private function approveAndAssignTicket(): array
     {
         $request = $this->submitComputer();
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         $request->refresh();
 
         $itEmployee = Employee::create(['first_name' => 'Tech']);
@@ -200,7 +202,7 @@ class RequestAutoTicketTest extends TestCase
     public function test_a_case_opened_from_a_request_is_assigned_without_a_priority(): void
     {
         $request = $this->submitComputer();
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         $request->refresh();
 
         $role = Role::firstOrCreate(['key' => 'admin'], ['name' => 'IT', 'color' => '#0284c7', 'is_system' => false]);
@@ -234,7 +236,7 @@ class RequestAutoTicketTest extends TestCase
     public function test_the_requester_cannot_rewrite_the_case_their_request_opened(): void
     {
         $request = $this->submitComputer();
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         RolePermission::updateOrCreate(
             ['role_id' => $this->requester->role_id, 'permission' => 'tickets.edit_own'],
@@ -463,7 +465,7 @@ class RequestAutoTicketTest extends TestCase
     public function test_complete_is_refused_while_the_linked_case_waits_to_be_picked_up(): void
     {
         $request = $this->submitComputer();
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
         // Nobody has taken it: the delivery has not started, let alone finished.
         $this->assertSame(TicketStatus::Open, $request->refresh()->ticket->status);
 
@@ -489,7 +491,7 @@ class RequestAutoTicketTest extends TestCase
     {
         Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         // With no case to close, the manual queue is the whole delivery record — this is
         // what the permission is still for after the rule above.
@@ -503,7 +505,7 @@ class RequestAutoTicketTest extends TestCase
         Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
 
-        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $request->refresh();
         $this->assertSame(RequestStatus::Approved, $request->status);
@@ -519,7 +521,7 @@ class RequestAutoTicketTest extends TestCase
             ->andThrow(new RuntimeException('ticket store offline'));
 
         $this->actingAs($this->bossUser)
-            ->postJson("/api/service-requests/{$request->id}/approve")
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))
             ->assertStatus(500);
 
         $request->refresh();

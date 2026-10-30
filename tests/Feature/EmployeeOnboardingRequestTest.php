@@ -28,6 +28,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Testing\TestResponse;
 use Mockery\MockInterface;
 use RuntimeException;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -38,6 +39,7 @@ use Tests\TestCase;
  */
 class EmployeeOnboardingRequestTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -569,7 +571,7 @@ class EmployeeOnboardingRequestTest extends TestCase
         // Account provisioned afterwards through the normal set-credentials flow.
         $managerUser = $this->makeUser('user', [], $this->itManager);
 
-        $this->actingAs($managerUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($managerUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $this->assertSame(
             ApprovalStatus::Approved,
@@ -633,7 +635,7 @@ class EmployeeOnboardingRequestTest extends TestCase
         $own = $this->makeUser('user', [], $employee);
 
         $manager = User::where('employee_id', $this->itManager->id)->firstOrFail();
-        $this->actingAs($manager)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($manager)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         // The person it is for now has somewhere to be told, and the person who filed it
         // still needs to know — onboarding is their errand to finish.

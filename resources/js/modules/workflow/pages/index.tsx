@@ -1,4 +1,5 @@
 import { translate, useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailed } from '@/shared/components/load-failed';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
@@ -41,6 +42,7 @@ export default function WorkflowsPage() {
     // closes it; view → edit swaps in place, so closing the editor returns to the list
     const [searchParams] = useSearchParams();
     const dialogs = usePageDialogs();
+    const { can } = useAuth();
     const open = (mode: 'view' | 'edit' | null, id?: number) => {
         if (!mode || id == null) {
             dialogs.close(['view', 'edit']);
@@ -64,8 +66,10 @@ export default function WorkflowsPage() {
     const editingId = toRecordId(searchParams.get('edit'));
     // Resolved from the list (no show endpoint; a dozen rows)
     const byId = (id: number | null) => (id == null ? null : (workflows.find((w) => w.id === id) ?? null));
-    const viewing = byId(viewingId);
-    const editing = byId(editingId);
+    // Without workflows.manage an ?edit= link opens the read-only view
+    const canManage = can('workflows.manage');
+    const viewing = byId(viewingId ?? (canManage ? null : editingId));
+    const editing = canManage ? byId(editingId) : null;
     // Only once the list has arrived; a refetch must not flag the link as dead
     const missing = data != null && (viewingId != null || editingId != null) && !viewing && !editing;
     // Both dialogs read the workflow from this list, so opening one asks for it again
@@ -228,10 +232,12 @@ export default function WorkflowsPage() {
                                             <Eye className="h-3.5 w-3.5" />
                                             {t('wf_view')}
                                         </Button>
-                                        <Button variant="outline" size="sm" onClick={() => open('edit', wf.id)}>
-                                            <Pencil className="h-3.5 w-3.5" />
-                                            {t('wf_edit')}
-                                        </Button>
+                                        {canManage && (
+                                            <Button variant="outline" size="sm" onClick={() => open('edit', wf.id)}>
+                                                <Pencil className="h-3.5 w-3.5" />
+                                                {t('wf_edit')}
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                                 <WorkflowStrip steps={wf.steps} />
@@ -243,7 +249,12 @@ export default function WorkflowsPage() {
 
             {/* A ?view= / ?edit= id that matches nothing */}
             <RecordMissingDialog open={missing} onClose={() => open(null)} />
-            <WorkflowViewDialog workflow={viewing} measureDays={measureDays} onClose={() => open(null)} onEdit={(w) => open('edit', w.id)} />
+            <WorkflowViewDialog
+                workflow={viewing}
+                measureDays={measureDays}
+                onClose={() => open(null)}
+                onEdit={canManage ? (w) => open('edit', w.id) : undefined}
+            />
             <WorkflowEditorDialog workflow={editing} onClose={() => open(null)} />
         </div>
     );

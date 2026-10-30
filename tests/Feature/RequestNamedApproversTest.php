@@ -20,6 +20,7 @@ use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\DecidesRequests;
 use Tests\Concerns\GrantsRequestFiling;
 use Tests\TestCase;
 
@@ -38,6 +39,7 @@ use Tests\TestCase;
  */
 class RequestNamedApproversTest extends TestCase
 {
+    use DecidesRequests;
     use GrantsRequestFiling;
     use RefreshDatabase;
 
@@ -129,7 +131,7 @@ class RequestNamedApproversTest extends TestCase
     private function passTheSupervisorRung(ServiceRequest $request): void
     {
         $this->actingAs($this->userFor($this->sup))
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
     }
 
     private function qcRow(ServiceRequest $request)
@@ -163,7 +165,7 @@ class RequestNamedApproversTest extends TestCase
         // The deputy is second on the list and signs anyway — they are an alternate, not a
         // later step.
         $this->actingAs(User::where('employee_id', $deputy->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         $row = $this->qcRow($request);
         $this->assertSame(ApprovalStatus::Approved, $row->status);
@@ -182,11 +184,11 @@ class RequestNamedApproversTest extends TestCase
         $this->passTheSupervisorRung($request);
 
         $this->actingAs(User::where('employee_id', $boss->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         // The request has moved on to Safety; the deputy has nothing left to sign here.
         $this->actingAs(User::where('employee_id', $deputy->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
     }
 
     public function test_somebody_the_step_does_not_name_is_refused_even_from_the_same_department(): void
@@ -201,7 +203,7 @@ class RequestNamedApproversTest extends TestCase
         $this->passTheSupervisorRung($request);
 
         $this->actingAs(User::where('employee_id', $unnamed->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
     }
 
     public function test_naming_one_person_still_resolves_to_a_plain_single_approver_row(): void
@@ -341,7 +343,7 @@ class RequestNamedApproversTest extends TestCase
         $this->assertContains('waiting', $this->bellSubtypes($deputyUser, $request));
 
         $this->actingAs(User::where('employee_id', $boss->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
         // Only the waiting bell goes; other kinds for the same request stay.
         $this->assertSame(['approved_step'], $this->bellSubtypes($deputyUser, $request));
@@ -356,7 +358,7 @@ class RequestNamedApproversTest extends TestCase
         $this->passTheSupervisorRung($request);
 
         $this->actingAs(User::where('employee_id', $deputy->id)->firstOrFail())
-            ->postJson("/api/service-requests/{$request->id}/reject", ['note' => 'Not this quarter.'])->assertOk();
+            ->postJson("/api/service-requests/{$request->id}/reject", $this->decision($request, ['note' => 'Not this quarter.']))->assertOk();
 
         $this->assertNotContains('waiting', $this->bellSubtypes(User::where('employee_id', $boss->id)->firstOrFail(), $request));
     }
@@ -404,6 +406,6 @@ class RequestNamedApproversTest extends TestCase
         $this->assertFalse($row->acceptsEmployee($boss->fresh()));
         $this->assertFalse($row->newQuery()->whereKey($row->id)->actionableBy($boss->fresh())->exists());
         $this->actingAs($bossUser)
-            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+            ->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertForbidden();
     }
 }

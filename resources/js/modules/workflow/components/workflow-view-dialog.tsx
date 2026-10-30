@@ -28,7 +28,8 @@ export function WorkflowViewDialog({
     /** How far back the measured figure looks — the API decides it, so the label quotes it. */
     measureDays: number;
     onClose: () => void;
-    onEdit: (w: Workflow) => void;
+    /** Absent for readers without workflows.manage: no Edit button. */
+    onEdit?: (w: Workflow) => void;
 }) {
     const t = useT();
     const fmtN = useNumberFormat();
@@ -42,6 +43,8 @@ export function WorkflowViewDialog({
     if (!wf) return null;
 
     const approvals = wf.steps.filter((s) => s.kind === 'approval').length;
+    const hasCompletion = wf.steps.some((s) => s.kind === 'completion');
+    const stepsValue = `${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')}`;
 
     return (
         <Dialog open={!!workflow} onOpenChange={(o) => !o && onClose()}>
@@ -78,10 +81,7 @@ export function WorkflowViewDialog({
                 <div className="border-border/60 flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                         <InfoCell label={t('wf_applies_to')} value={t(REQUEST_TYPE_META[wf.request_type].labelKey)} />
-                        <InfoCell
-                            label={t('wf_steps')}
-                            value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_completion_role')}`}
-                        />
+                        <InfoCell label={t('wf_steps')} value={hasCompletion ? `${stepsValue} + ${t('wf_completion_role')}` : stepsValue} />
                         {/* Measured, not configured — and absent rather than zero when this
                             route decided nothing inside the window. The label carries the window
                             because the value is already in days: two day-figures side by side
@@ -147,10 +147,12 @@ export function WorkflowViewDialog({
                     <Button variant="outline" onClick={onClose}>
                         {t('close')}
                     </Button>
-                    <Button onClick={() => onEdit(wf)}>
-                        <Pencil className="h-4 w-4" />
-                        {t('wf_edit')}
-                    </Button>
+                    {onEdit && (
+                        <Button onClick={() => onEdit(wf)}>
+                            <Pencil className="h-4 w-4" />
+                            {t('wf_edit')}
+                        </Button>
+                    )}
                 </DialogFooterBar>
             </DialogContent>
         </Dialog>
