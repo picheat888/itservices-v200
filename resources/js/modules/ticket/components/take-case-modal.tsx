@@ -162,7 +162,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                                         aria-pressed={selected}
                                                         onClick={() => setAssetId(selected ? '' : String(a.id))}
                                                         className={cn(
-                                                            'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                                                            'touch:px-3.5 touch:py-2.5 touch:text-sm inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
                                                             selected
                                                                 ? 'border-brand bg-brand/10 text-brand'
                                                                 : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',

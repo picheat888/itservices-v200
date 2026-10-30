@@ -17,7 +17,7 @@ export function PriorityPicker({ value, onChange, label }: { value: TicketPriori
                     aria-pressed={value === p}
                     onClick={() => onChange(p)}
                     className={cn(
-                        'focus-visible:ring-ring rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                        'focus-visible:ring-ring touch:px-4 touch:py-2.5 rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
                         value === p ? 'bg-brand text-brand-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
                     )}
                 >
