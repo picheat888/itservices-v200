@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Settings\MailSetting;
+use App\Services\Email\EmailNotificationService;
 use App\Services\Settings\MailConfigService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -64,6 +65,21 @@ class MailConfigTimeoutTest extends TestCase
 
         $this->assertFalse(MailSetting::current()->isConfigured());
         $this->assertSame((float) MailConfigService::SMTP_TIMEOUT_SECONDS, $this->smtpStreamTimeout());
+    }
+
+    /** The Settings test button waits 10 seconds; queued mail keeps 30 (SET-14). */
+    public function test_the_test_button_waits_less_than_queued_mail(): void
+    {
+        Mail::fake();
+        MailSetting::current()->update(['host' => 'smtp.example.com', 'port' => 587, 'from_address' => 'it@example.com']);
+        $mail = app(EmailNotificationService::class);
+
+        $mail->sendTest('somchai@example.com');
+        $this->assertSame(MailConfigService::TEST_TIMEOUT_SECONDS, config('mail.mailers.smtp.timeout'));
+        $this->assertSame(10, MailConfigService::TEST_TIMEOUT_SECONDS);
+
+        $mail->deliver('somchai@example.com', 'Ticket', '<p>Body</p>', null);
+        $this->assertSame(MailConfigService::SMTP_TIMEOUT_SECONDS, config('mail.mailers.smtp.timeout'));
     }
 
     /** The timeout the SMTP mailer's socket is actually built with. */

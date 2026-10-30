@@ -12,11 +12,14 @@ class MailConfigService
     /** Seconds an SMTP connection may sit silent before the send fails, so the worker never hangs. */
     public const SMTP_TIMEOUT_SECONDS = 30;
 
+    /** The Settings test button waits less: a right server answers in seconds, and the request holds the page meanwhile. */
+    public const TEST_TIMEOUT_SECONDS = 10;
+
     /** Overrides config('mail.*') from mail_settings when configured. */
-    public function apply(): void
+    public function apply(int $timeoutSeconds = self::SMTP_TIMEOUT_SECONDS): void
     {
         // Applies to the .env fallback as well, so no send can hang the worker.
-        Config::set('mail.mailers.smtp.timeout', self::SMTP_TIMEOUT_SECONDS);
+        Config::set('mail.mailers.smtp.timeout', $timeoutSeconds);
 
         $settings = MailSetting::current();
 

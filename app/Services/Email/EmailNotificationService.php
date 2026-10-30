@@ -201,7 +201,7 @@ class EmailNotificationService
         $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
         $subject = $this->brandedSubject($subject);
 
-        $this->mailConfig->apply();
+        $this->mailConfig->apply($isTest ? MailConfigService::TEST_TIMEOUT_SECONDS : MailConfigService::SMTP_TIMEOUT_SECONDS);
         // No SMTP in Settings and the .env fallback only writes to a log file
         $logOnly = config('mail.mailers.'.config('mail.default').'.transport') === 'log';
 
