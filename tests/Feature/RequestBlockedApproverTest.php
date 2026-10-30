@@ -125,7 +125,7 @@ class RequestBlockedApproverTest extends TestCase
 
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
-        $bells = $this->bells($this->itLead, 'blocked_left');
+        $bells = $this->bells($this->itLead, 'blocked_no_approver');
         $this->assertCount(1, $bells);
         $this->assertSame($request->reference, $bells[0]->data['reference']);
         $this->assertSame($this->currentRung($request)->label, $bells[0]->data['step_label']);
@@ -141,7 +141,22 @@ class RequestBlockedApproverTest extends TestCase
 
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
-        $this->assertCount(1, $this->bells($this->itLead, 'blocked_left'));
+        $this->assertCount(1, $this->bells($this->itLead, 'blocked_no_approver'));
+    }
+
+    /** A group nobody resigned from, but that matches nobody besides the requester, is vacant, not "left". */
+    public function test_a_group_step_that_matches_nobody_else_is_vacant(): void
+    {
+        $request = $this->submitComputer();
+        $this->managerRungAsGroup($request, [$this->requester->employee_id]);
+
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
+
+        $this->assertCount(1, $this->bells($this->itLead, 'blocked_no_approver'));
+        $this->assertSame('vacant', $this->approvalRow($request, 2)['blocked']);
+        // The approvals report has no group for it yet; it is not counted as a resignation
+        $steps = ApprovalFacts::waitingSteps([], now()->subMonth(), now());
+        $this->assertNull(ApprovalFacts::blockedBecause($steps->first()));
     }
 
     public function test_a_group_step_with_somebody_left_to_sign_is_not_blocked(): void
@@ -154,7 +169,7 @@ class RequestBlockedApproverTest extends TestCase
 
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve", $this->decision($request))->assertOk();
 
-        $this->assertCount(0, $this->bells($this->itLead, 'blocked_left'));
+        $this->assertCount(0, $this->bells($this->itLead, 'blocked_no_approver'));
         $this->assertCount(1, $this->bells($deputy, 'waiting'));
         $this->assertNull($this->approvalRow($request, 2)['blocked']);
     }
@@ -169,7 +184,7 @@ class RequestBlockedApproverTest extends TestCase
             ->expectsOutputToContain('approver left: 1')
             ->assertSuccessful();
 
-        $this->assertCount(1, $this->bells($this->itLead, 'blocked_left'));
+        $this->assertCount(1, $this->bells($this->itLead, 'blocked_no_approver'));
         $this->assertCount(0, $this->bells($this->supUser, 'stalled'));
     }
 
@@ -181,7 +196,7 @@ class RequestBlockedApproverTest extends TestCase
 
         $this->artisan('requests:send-stalled-reminders')->assertSuccessful();
 
-        $this->assertCount(0, $this->bells($this->itLead, 'blocked_left'));
+        $this->assertCount(0, $this->bells($this->itLead, 'blocked_no_approver'));
     }
 
     public function test_the_reminder_resends_rather_than_piling_up(): void
@@ -193,7 +208,7 @@ class RequestBlockedApproverTest extends TestCase
         $this->artisan('requests:send-stalled-reminders')->assertSuccessful();
         $this->artisan('requests:send-stalled-reminders')->assertSuccessful();
 
-        $this->assertCount(1, $this->bells($this->itLead, 'blocked_left'));
+        $this->assertCount(1, $this->bells($this->itLead, 'blocked_no_approver'));
     }
 
     public function test_the_weekly_digest_skips_an_approver_who_has_left(): void

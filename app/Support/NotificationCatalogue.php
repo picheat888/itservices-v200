@@ -333,13 +333,13 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
-                'key' => 'notif_request_blocked_left',
+                'key' => 'notif_request_blocked_no_approver',
                 'module' => 'requests',
-                'name' => 'Approver has left',
-                'trigger' => 'A request cannot move because everyone who could approve its step has left. Sent again each morning while it waits',
+                'name' => 'Nobody left to approve',
+                'trigger' => 'A request cannot move because nobody is left to approve its step. Sent again each morning while it waits',
                 'audience' => 'Whoever hears about stuck requests',
-                'message_en' => 'Waiting on {step}, but its approver has left',
-                'message_th' => 'รอขั้น {step} อนุมัติ แต่ผู้อนุมัติลาออกแล้ว',
+                'message_en' => 'Waiting on {step}, but nobody is left to approve it',
+                'message_th' => 'รอขั้น {step} อนุมัติ แต่ไม่เหลือผู้อนุมัติแล้ว',
                 'enabled' => true,
             ],
             [

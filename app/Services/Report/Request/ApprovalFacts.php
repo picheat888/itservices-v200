@@ -316,24 +316,16 @@ final class ApprovalFacts
 
     private static function computeBlocked(RequestApproval $step): ?string
     {
-        if ($step->isOpenToGroup()) {
-            return $step->blockedReason();
-        }
+        $reason = $step->blockedReason();
 
-        return $step->approver_employee_id === null ? null : self::blockedOf($step->approver);
+        // The report has no group for a vacant step yet; it reads as an ordinary wait
+        return $reason === 'vacant' ? null : $reason;
     }
 
     /** Why nobody can act for this approver: they have left, or have no login; null when they can, or there is no one. */
     public static function blockedOf(?Employee $approver): ?string
     {
-        if ($approver === null) {
-            return null;
-        }
-        if ($approver->hasLeft()) {
-            return 'left';
-        }
-
-        return $approver->user === null ? 'no_account' : null;
+        return $approver?->approvalBlock();
     }
 
     /**

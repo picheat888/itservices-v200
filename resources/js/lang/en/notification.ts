@@ -49,7 +49,7 @@ export const notification: Dict = {
     notif_request_cancelled: 'Cancelled by the requester',
     notif_request_cancelled_for_owner: 'Cancelled by {actor} for the requester',
     notif_request_blocked_no_account: 'Waiting on {actor}, who has no login yet. Create one to move the request on.',
-    notif_request_blocked_left: 'Waiting on {step}, but its approver has left',
+    notif_request_blocked_no_approver: 'Waiting on {step}, but nobody is left to approve it',
     notif_asset_assigned: 'IT handed you an asset. Accept it in My Profile.',
     notif_asset_return_requested: 'An asset is being returned. Check it in.',
     notif_asset_recalled_cancelled: 'The asset transfer was cancelled',
@@ -209,10 +209,10 @@ export const notification: Dict = {
     notification_name_request_blocked_no_account: 'Approver has no login',
     notification_when_request_blocked_no_account: 'A request cannot move because its approver has no account',
     notification_who_request_blocked_no_account: 'Whoever can set credentials',
-    notification_name_request_blocked_left: 'Approver has left',
-    notification_when_request_blocked_left:
-        'A request cannot move because everyone who could approve its step has left. Sent again each morning while it waits',
-    notification_who_request_blocked_left: 'Whoever hears about stuck requests',
+    notification_name_request_blocked_no_approver: 'Nobody left to approve',
+    notification_when_request_blocked_no_approver:
+        'A request cannot move because nobody is left to approve its step. Sent again each morning while it waits',
+    notification_who_request_blocked_no_approver: 'Whoever hears about stuck requests',
     notification_name_asset_assigned: 'Asset handed over to you',
     notification_when_asset_assigned: 'IT transfers an asset to an employee',
     notification_who_asset_assigned: 'The recipient',

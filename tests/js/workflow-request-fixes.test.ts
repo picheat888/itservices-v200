@@ -31,7 +31,9 @@ test('editor buttons grow on touch screens only', () => {
 
 test('a decision sends the step it was opened on, and the refusal reads in both languages', () => {
     const dialog = read('resources/js/modules/request/components/decision-dialog.tsx');
-    assert.match(dialog, /const stepId = rungs\[stepIndex - 1\]\?\.id \?\? 0;/);
+    // Kept from the moment the dialog opened, so a refetch cannot move it on to the next step
+    assert.match(dialog, /setOpened\(\(kept\) => \(kept\?\.key === openKey \? kept : \{ key: openKey, stepId: currentStepId \}\)\)/);
+    assert.match(dialog, /const stepId = opened\?\.stepId \?\? currentStepId;/);
     assert.match(read('resources/js/modules/request/api/requestApi.ts'), /\{ step_id: stepId, note: note \|\| null \}/);
     assert.equal(th.req_refusal_step_moved, 'ขั้นนี้มีการตัดสินไปแล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง');
     assert.equal(en.req_refusal_step_moved, 'This step has already been decided. Reload and try again.');

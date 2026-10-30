@@ -420,6 +420,7 @@ export interface AssetTopLease {
     asset_id: number;
     code: string;
     vendor: string | null;
+    vendor_th: string | null;
     assets_count: number;
     value_display: string;
     billing_cycle: string;
@@ -1337,7 +1338,7 @@ export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' 
  * viewer's language instead of the language it was submitted in.
  */
 export type ApprovalSkipReason = 'no_manager' | 'no_matching_position' | 'no_resource_owner' | 'requester_is_owner' | 'no_department_approver';
-export type ApprovalBlock = 'left' | 'no_account';
+export type ApprovalBlock = 'left' | 'vacant' | 'no_account';
 export type WorkflowActorType = 'chain' | 'owner' | 'it_staff' | 'department';
 export type WorkflowStepKind = 'approval' | 'completion';
 

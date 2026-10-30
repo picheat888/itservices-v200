@@ -144,11 +144,13 @@ export const requests: Dict = {
     req_await_left: 'ผู้อนุมัติคนนี้ลาออกแล้ว',
     req_await_group_left: 'ผู้อนุมัติขั้นนี้ลาออกหมดแล้ว',
     req_await_group_no_account: 'ผู้อนุมัติขั้นนี้ยังไม่มีบัญชีเข้าใช้งานสักคน',
+    req_await_group_vacant: 'ขั้นนี้ไม่เหลือผู้อนุมัติแล้ว',
     req_stuck_title: 'ยังไม่มีใครอนุมัติคำขอนี้ได้',
     req_stuck_left: 'ผู้อนุมัติขั้น "{step}" ลาออกแล้ว ติดต่อ IT',
     req_stuck_no_account: 'ผู้อนุมัติขั้น "{step}" ยังไม่มีบัญชีเข้าใช้งาน ติดต่อ IT',
     req_stuck_group_left: 'ผู้อนุมัติขั้น "{step}" ลาออกหมดแล้ว ติดต่อ IT',
     req_stuck_group_no_account: 'ผู้อนุมัติขั้น "{step}" ยังไม่มีบัญชีเข้าใช้งานสักคน ติดต่อ IT',
+    req_stuck_group_vacant: 'ขั้น "{step}" ไม่เหลือผู้อนุมัติแล้ว ติดต่อ IT',
     req_onboarding_title: 'คำขอสำหรับพนักงานใหม่',
     req_onboarding_desc: 'ยื่นให้ตอนเพิ่มข้อมูลพนักงานใหม่ ก่อนที่เจ้าตัวจะมีบัญชีเข้าใช้งาน',
 

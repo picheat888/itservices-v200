@@ -3,14 +3,15 @@ import type { ApprovalBlock, RequestApproval, ServiceRequest } from '@/shared/ty
 
 type BlockedRow = Pick<RequestApproval, 'approver_employee_id' | 'blocked'>;
 
+// Only a group step can be vacant; a named approver who leaves is 'left'
 const TRAIL_NOTE: Record<'person' | 'group', Record<ApprovalBlock, string>> = {
-    person: { left: 'req_await_left', no_account: 'req_await_account' },
-    group: { left: 'req_await_group_left', no_account: 'req_await_group_no_account' },
+    person: { left: 'req_await_left', vacant: 'req_await_group_vacant', no_account: 'req_await_account' },
+    group: { left: 'req_await_group_left', vacant: 'req_await_group_vacant', no_account: 'req_await_group_no_account' },
 };
 
 const STRIP_LINE: Record<'person' | 'group', Record<ApprovalBlock, string>> = {
-    person: { left: 'req_stuck_left', no_account: 'req_stuck_no_account' },
-    group: { left: 'req_stuck_group_left', no_account: 'req_stuck_group_no_account' },
+    person: { left: 'req_stuck_left', vacant: 'req_stuck_group_vacant', no_account: 'req_stuck_no_account' },
+    group: { left: 'req_stuck_group_left', vacant: 'req_stuck_group_vacant', no_account: 'req_stuck_group_no_account' },
 };
 
 /** An untaken group step names nobody; every other open step names its one approver. */

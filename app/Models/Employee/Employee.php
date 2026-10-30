@@ -204,6 +204,16 @@ class Employee extends Model
             && ($this->last_day === null || $this->last_day->isBefore(today()));
     }
 
+    /** Why this employee cannot sign an approval step: 'left', 'no_account', or null when they can. */
+    public function approvalBlock(): ?string
+    {
+        if ($this->hasLeft()) {
+            return 'left';
+        }
+
+        return $this->user === null ? 'no_account' : null;
+    }
+
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);

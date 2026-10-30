@@ -56,6 +56,19 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     const isOpen = !!request && !!action;
     const guardClose = useDiscardGuard(isOpen && note.trim() !== '');
 
+    // The step this dialog was opened on, kept while it stays open: a refetch must not move it on to the next step
+    const currentStepId = request?.approvals?.find((a) => a.kind === 'approval' && a.status === 'current')?.id ?? 0;
+    const openKey = request && action ? `${request.id}:${action}` : null;
+    const [opened, setOpened] = useState<{ key: string; stepId: number } | null>(null);
+    useEffect(() => {
+        if (openKey === null) {
+            setOpened(null);
+            return;
+        }
+        setOpened((kept) => (kept?.key === openKey ? kept : { key: openKey, stepId: currentStepId }));
+    }, [openKey, currentStepId]);
+    const stepId = opened?.stepId ?? currentStepId;
+
     if (!ctx) return null;
     const rejecting = ctx.action === 'reject';
     const remainingApprovals = (ctx.request.approvals ?? []).filter((a) => a.kind === 'approval' && a.status === 'waiting');
@@ -65,8 +78,6 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     // "Step 2 of 3": by position among the approval rungs (skipped ones included), as the row's progress ticks count.
     const rungs = (ctx.request.approvals ?? []).filter((a) => a.kind === 'approval');
     const stepIndex = rungs.findIndex((a) => a.status === 'current') + 1;
-    // The step this dialog was opened on; the server refuses if it has moved on since
-    const stepId = rungs[stepIndex - 1]?.id ?? 0;
     const step = stepIndex > 0 ? t('req_decide_step').replace('{n}', fmtN(stepIndex)).replace('{total}', fmtN(rungs.length)) : null;
 
     const meta = REQUEST_TYPE_META[ctx.request.type];

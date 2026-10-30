@@ -48,9 +48,9 @@ class RequestStalledService
         foreach ($this->stalledRows(self::NUDGE_AFTER_DAYS) as $row) {
             $days = $this->daysWaiting($row);
 
-            // Its approver, or the whole group, has left: IT hears instead of the leavers
-            if ($row->blockedReason() === 'left') {
-                $this->notifications->blockedLeft($row->request, $row);
+            // Nobody is left to sign it: IT hears instead of the leavers
+            if (in_array($row->blockedReason(), ['left', 'vacant'], true)) {
+                $this->notifications->blockedNoApprover($row->request, $row);
                 $sent['blocked']++;
 
                 continue;
@@ -96,7 +96,6 @@ class RequestStalledService
     {
         $rows = $this->stalledRows(self::DIGEST_AFTER_DAYS)
             ->filter(fn (RequestApproval $row) => $row->kind === WorkflowStepKind::Approval);
-        RequestApproval::preloadGroupCandidates($rows);
 
         $users = [];
         $itemsByUser = [];
@@ -131,13 +130,13 @@ class RequestStalledService
     private function holders(RequestApproval $row): Collection
     {
         if ($row->isOpenToGroup()) {
-            return User::whereIn('employee_id', $row->groupCandidates()->pluck('id'))->get();
+            return $row->groupCandidates()->pluck('user')->filter()->values();
         }
-        if ($row->approver_employee_id === null || $row->approver?->hasLeft()) {
+        if ($row->approver === null || $row->approver->hasLeft()) {
             return collect();
         }
 
-        return User::where('employee_id', $row->approver_employee_id)->get();
+        return collect([$row->approver->user])->filter();
     }
 
     /**
@@ -157,7 +156,7 @@ class RequestStalledService
     {
         $live = [RequestStatus::Pending, RequestStatus::Approved];
 
-        return RequestApproval::with(['request'])
+        $rows = RequestApproval::with(['request', 'approver.user'])
             ->where('status', ApprovalStatus::Current->value)
             ->whereIn('kind', [WorkflowStepKind::Approval->value, WorkflowStepKind::Completion->value])
             ->whereNotNull('became_current_at')
@@ -165,6 +164,9 @@ class RequestStalledService
             ->get()
             ->filter(fn (RequestApproval $row) => in_array($row->request?->status, $live, true))
             ->values();
+        RequestApproval::preloadGroupCandidates($rows);
+
+        return $rows;
     }
 
     /**

@@ -173,8 +173,8 @@ class RequestNotificationService
     private function notifyApprover(ServiceRequest $request, RequestApproval $row): void
     {
         // Nobody left to sign it
-        if ($row->blockedReason() === 'left') {
-            $this->blockedLeft($request, $row);
+        if (in_array($row->blockedReason(), ['left', 'vacant'], true)) {
+            $this->blockedNoApprover($request, $row);
 
             return;
         }
@@ -279,13 +279,13 @@ class RequestNotificationService
         return $delivered;
     }
 
-    /** The step's approver, or its whole group, has left: holders of requests.notify_blocked hear, on arrival and each morning after. */
-    public function blockedLeft(ServiceRequest $request, RequestApproval $row): void
+    /** Nobody is left to sign the step: holders of requests.notify_blocked hear, on arrival and each morning after. */
+    public function blockedNoApprover(ServiceRequest $request, RequestApproval $row): void
     {
         $this->sendBell(
             $this->recipients('requests.notify_blocked'),
-            new RequestWorkflowNotification($request, 'blocked_left', $row->label),
-            ['service_request_id' => $request->id, 'subtype' => 'blocked_left'],
+            new RequestWorkflowNotification($request, 'blocked_no_approver', $row->label),
+            ['service_request_id' => $request->id, 'subtype' => 'blocked_no_approver'],
         );
     }
 
@@ -330,7 +330,7 @@ class RequestNotificationService
             return collect();
         }
 
-        return User::whereIn('employee_id', $row->groupCandidates()->pluck('id'))->get();
+        return $row->groupCandidates()->pluck('user')->filter()->values();
     }
 
     /** The login account behind an approval row, or null for queue/skipped rows. */

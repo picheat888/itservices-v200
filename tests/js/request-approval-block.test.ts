@@ -17,6 +17,8 @@ test('each blocked case has its own trail note and strip line', () => {
     assert.equal(blockedNoteKey(row({ blocked: 'left', approver_employee_id: null })), 'req_await_group_left');
     assert.equal(blockedNoteKey(row({ blocked: 'no_account', approver_employee_id: null })), 'req_await_group_no_account');
     assert.equal(blockedNoteKey(row({})), null);
+    assert.equal(blockedNoteKey(row({ blocked: 'vacant', approver_employee_id: null })), 'req_await_group_vacant');
+    assert.equal(stuckLineKey(row({ blocked: 'vacant', approver_employee_id: null })), 'req_stuck_group_vacant');
 
     assert.equal(stuckLineKey(row({ blocked: 'left' })), 'req_stuck_left');
     assert.equal(stuckLineKey(row({ blocked: 'no_account', approver_employee_id: null })), 'req_stuck_group_no_account');
@@ -40,6 +42,8 @@ test('every key exists in both languages and the strip names the step', () => {
         'req_stuck_no_account',
         'req_stuck_group_left',
         'req_stuck_group_no_account',
+        'req_await_group_vacant',
+        'req_stuck_group_vacant',
     ]) {
         assert.ok((en as Record<string, string>)[key], `en ${key}`);
         assert.ok((th as Record<string, string>)[key], `th ${key}`);
@@ -55,4 +59,8 @@ test('the detail shows the strip and the trail reads the live flag', () => {
     const trail = read('resources/js/modules/request/components/request-trail.tsx');
     assert.match(trail, /blockedNoteKey\(row\)/);
     assert.doesNotMatch(trail, /awaiting_account/);
+    // A static strip, not a live region; its icon is decoration
+    const strip = read('resources/js/modules/request/components/request-stuck-strip.tsx');
+    assert.doesNotMatch(strip, /role="status"/);
+    assert.match(strip, /<TriangleAlert[^>]*aria-hidden="true"/);
 });

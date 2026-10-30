@@ -99,7 +99,7 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone
     if (n.data.type === 'request') {
         // Service requests: action needed = amber, progress = blue, good end = green, bad end = red
         if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, ...TONE.amber };
-        if (n.data.subtype === 'blocked_left') return { Icon: UserX, ...TONE.amber };
+        if (n.data.subtype === 'blocked_no_approver') return { Icon: UserX, ...TONE.amber };
         if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled') return { Icon: XCircle, ...TONE.red };
         if (n.data.subtype === 'approved_final' || n.data.subtype === 'completed') return { Icon: CheckCircle2, ...TONE.emerald };
         if (n.data.subtype === 'waiting') return { Icon: Inbox, ...TONE.amber };

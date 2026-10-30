@@ -147,11 +147,13 @@ export const requests: Dict = {
     req_await_left: 'This approver has left the company',
     req_await_group_left: 'Everyone at this step has left the company',
     req_await_group_no_account: 'Nobody at this step has a login yet',
+    req_await_group_vacant: 'Nobody is left at this step',
     req_stuck_title: 'Nobody can approve this request yet',
     req_stuck_left: 'The approver at "{step}" has left the company. Contact IT.',
     req_stuck_no_account: 'The approver at "{step}" doesn\'t have a login yet. Contact IT.',
     req_stuck_group_left: 'Everyone at "{step}" has left the company. Contact IT.',
     req_stuck_group_no_account: 'Nobody at "{step}" has a login yet. Contact IT.',
+    req_stuck_group_vacant: 'Nobody is left to approve "{step}". Contact IT.',
     req_onboarding_title: 'Request for a new employee',
     req_onboarding_desc: 'Submitted while adding the new employee, before they had an account.',
 
