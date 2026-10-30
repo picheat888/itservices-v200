@@ -212,7 +212,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         ->middleware('permission:settings.system')->name('api.settings.logo');
     Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])
         ->middleware('permission:settings.system')->name('api.settings.logo.delete');
-    Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
+    Route::get('settings/security', [SettingsController::class, 'security'])
+        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])
         ->middleware('permission:settings.security')->name('api.settings.security.update');
     // Network names — what a sign-in IP is called in the Login log

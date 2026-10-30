@@ -2,156 +2,47 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
-use App\Enums\Auth\DeviceEndReason;
 use App\Http\Controllers\Controller;
-use App\Http\Middleware\CheckSessionTimeout;
+use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\UpdatePreferencesRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\Auth\UserDeviceResource;
 use App\Http\Resources\Auth\UserResource;
-use App\Models\AuditLog;
-use App\Models\Auth\UserDevice;
-use App\Models\User;
-use App\Notifications\PasswordExpiringNotification;
-use App\Services\Auth\DeviceService;
+use App\Services\Auth\PasswordChangeService;
 use App\Services\Auth\PendingLogin;
-use Closure;
+use App\Services\Auth\ProfileService;
+use App\Services\Auth\SignInService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-    private const DEVICE_LOCK_SECONDS = 10;
+    public function __construct(private SignInService $signIn, private ProfileService $profiles) {}
 
-    private const DEVICE_LOCK_WAIT_SECONDS = 5;
-
-    /** Preferences the login screen can set, so they save while a password change is owed. */
-    private const WALL_PREFERENCES = ['dark', 'lang', 'sidebar'];
-
-    public function login(LoginRequest $request, DeviceService $devices, PendingLogin $pendingLogins): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
         $user = $request->resolveUser();
-        $pending = $request->pendingToken();
 
-        $refusal = Cache::lock("device-limit:{$user->id}", self::DEVICE_LOCK_SECONDS)
-            ->block(self::DEVICE_LOCK_WAIT_SECONDS, fn () => $this->signInWithinLimit($request, $user, $pending, $devices, $pendingLogins));
+        $refusal = $this->signIn->signIn($request, $user, $request->pendingToken());
         if ($refusal !== null) {
-            return $refusal;
+            return response()->json([
+                'message' => 'device_limit',
+                'limit' => $refusal['limit'],
+                'expires_in' => PendingLogin::TTL_SECONDS,
+                'pending' => $refusal['pending'],
+                'devices' => UserDeviceResource::collection($refusal['devices'])->resolve($request),
+            ], 409);
         }
-
-        // Legacy accounts: the expiry clock starts at this sign-in, not "never"
-        if ($user->password_changed_at === null) {
-            $user->forceFill(['password_changed_at' => now()])->saveQuietly();
-        }
-
-        AuditLog::record('Signed in');
-        $this->warnAboutPasswordExpiry($user);
 
         return (new UserResource($user))
             ->additional(['message' => 'success'])
             ->response();
     }
 
-    /** Signs in and starts the device when the account has room; otherwise the 409 device list. */
-    private function signInWithinLimit(LoginRequest $request, User $user, ?string $pending, DeviceService $devices, PendingLogin $pendingLogins): ?JsonResponse
+    public function logout(Request $request): JsonResponse
     {
-        if ($pending !== null && $pendingLogins->user($pending, $request) === null) {
-            throw LoginRequest::pendingExpired();
-        }
-
-        // This browser's own seat for the same account is ended below, so it never counts
-        $browserDevice = $this->thisBrowsersDevice($request);
-        $limit = $devices->limit();
-        $active = $devices->active($user)->reject(fn (UserDevice $device) => $device->id === $browserDevice?->id)->values();
-        if ($limit > 0 && $active->count() >= $limit) {
-            return response()->json([
-                'message' => 'device_limit',
-                'limit' => $limit,
-                'expires_in' => PendingLogin::TTL_SECONDS,
-                'pending' => $pending ?? $pendingLogins->issue($user, $request),
-                'devices' => UserDeviceResource::collection($active)->resolve($request),
-            ], 409);
-        }
-
-        $this->endThisBrowsersSignIn($request, $browserDevice, $devices);
-
-        $remember = $request->boolean('remember');
-        $rememberToken = $remember ? $devices->issueRememberToken($user) : null;
-
-        Auth::guard('web')->login($user, $remember);
-        $request->session()->regenerate();
-        // Remembered sign-ins are exempt from the idle timeout (CheckSessionTimeout)
-        $request->session()->put(CheckSessionTimeout::REMEMBERED, $remember);
-        $devices->start($user, $request, $rememberToken);
-
-        if ($pending !== null) {
-            $pendingLogins->forget($pending);
-        }
-
-        return null;
-    }
-
-    /** The device this browser is still signed in on, if any. */
-    private function thisBrowsersDevice(Request $request): ?UserDevice
-    {
-        $deviceId = $request->hasSession() ? $request->session()->get(DeviceService::SESSION_KEY) : null;
-
-        return $deviceId === null ? null : UserDevice::query()->whereNull('ended_at')->find($deviceId);
-    }
-
-    /** A sign-in from a login tab left open in a signed-in browser ends that browser's device: its seat frees and its remember cookie goes. */
-    private function endThisBrowsersSignIn(Request $request, ?UserDevice $device, DeviceService $devices): void
-    {
-        if ($device !== null) {
-            $devices->end($device, DeviceEndReason::SignedOut);
-        }
-
-        $recaller = Auth::guard('web')->getRecallerName();
-        if ($request->cookies->has($recaller)) {
-            Cookie::queue(Cookie::forget($recaller));
-        }
-    }
-
-    /** At each sign-in near the expiry, one tray notice with today's day count; none once a password change is already owed. */
-    private function warnAboutPasswordExpiry(User $user): void
-    {
-        if ($user->must_change_password || $user->isPasswordExpired()) {
-            return;
-        }
-
-        $remaining = $user->passwordDaysRemaining();
-        if ($remaining === null || $remaining > User::PASSWORD_EXPIRY_WARNING_DAYS) {
-            return;
-        }
-
-        $user->notifications()
-            ->where('type', PasswordExpiringNotification::class)
-            ->delete();
-
-        $user->notify(new PasswordExpiringNotification($remaining));
-    }
-
-    public function logout(Request $request, DeviceService $devices): JsonResponse
-    {
-        AuditLog::record('Signed out');
-
-        $user = $request->user();
-        $device = $devices->currentOf($user, $request);
-        if ($device !== null) {
-            $devices->end($device, DeviceEndReason::SignedOut);
-        }
-
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->signIn->signOut($request);
 
         return response()->json(['message' => 'success']);
     }
@@ -163,160 +54,26 @@ class AuthController extends Controller
             ->response();
     }
 
-    public function updatePreferences(Request $request): JsonResponse
+    public function updatePreferences(UpdatePreferencesRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'dark' => ['sometimes', 'boolean'],
-            'lang' => ['sometimes', 'in:en,th'],
-            'density' => ['sometimes', 'in:compact,normal,cozy'],
-            'radius' => ['sometimes', 'integer', 'min:0', 'max:20'],
-            'sidebar' => ['sometimes', 'in:labeled,icons'],
-            'accent' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ]);
-
-        $user = $request->user();
-        // Behind the password wall only what the login screen can change gets through
-        $owesPassword = $user->must_change_password || $user->isPasswordExpired();
-        abort_if($owesPassword && array_diff(array_keys($data), self::WALL_PREFERENCES) !== [], response()->json(['message' => 'password_expired'], 403));
-
-        $user->preferences = array_merge($user->resolvedPreferences(), $data);
-        $user->save();
+        $user = $this->profiles->updatePreferences($request->user(), $request->validated());
 
         return (new UserResource($user))->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Lets a user edit their OWN profile (name / Thai name / phone / photo).
-     * Gated by profile.edit. Writes to the linked Employee record and
-     * mirrors the display name onto the User account.
-     */
-    public function updateProfile(Request $request): JsonResponse
+    /** The signed-in account edits its own profile (profile.edit). */
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        $user = $request->user();
-        abort_unless((bool) $user->hasPermission('profile.edit'), 403);
+        $user = $this->profiles->updateProfile($request->user(), $request->safe()->except('photo'), $request->file('photo'));
 
-        $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'first_name_th' => ['nullable', 'string', 'max:255'],
-            'last_name_th' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'photo' => ['nullable', 'image', 'max:2048'],
-        ]);
-
-        $employee = $user->linkedEmployee();
-        if ($employee) {
-            $payload = [
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'first_name_th' => $data['first_name_th'] ?? null,
-                'last_name_th' => $data['last_name_th'] ?? null,
-                'phone' => $data['phone'] ?? null,
-            ];
-            if ($request->hasFile('photo')) {
-                if ($employee->photo_path) {
-                    Storage::disk('local')->delete($employee->photo_path);
-                }
-                $payload['photo_path'] = $request->file('photo')->store('employees', 'local');
-            }
-            $employee->update($payload);
-        }
-
-        // Keep the login account's display name in sync with the profile.
-        $user->update(['name' => trim($data['first_name'].' '.$data['last_name'])]);
-        AuditLog::record('Updated own profile', $user->name);
-
-        return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();
+        return (new UserResource($user))->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Self-service password change. Verifies the current password, stores the
-     * new one, and stamps password_changed_at so the expiry policy resets.
-     * Used both voluntarily and by the forced change-password flow.
-     */
-    public function changePassword(Request $request, DeviceService $devices): JsonResponse
+    /** Self-service password change, used both voluntarily and by the forced change-password flow. */
+    public function changePassword(ChangePasswordRequest $request, PasswordChangeService $passwords): JsonResponse
     {
-        // A forced change waives the current password: the person just signed in with it
-        $forced = (bool) $request->user()?->must_change_password;
+        $user = $passwords->change($request, $request->user(), $request->validated('password'), $request->accountThrottleKey());
 
-        // Wrong current passwords count toward the account's sign-in lockout, so a stolen session cannot guess on here
-        $accountKey = LoginRequest::accountThrottleKey($request->user());
-        if (! $forced && RateLimiter::tooManyAttempts($accountKey, LoginRequest::MAX_ATTEMPTS_PER_LOGIN)) {
-            $seconds = RateLimiter::availableIn($accountKey);
-
-            return response()->json(['message' => 'too_many_attempts', 'retry_after' => $seconds], 429, ['Retry-After' => $seconds]);
-        }
-
-        $data = $request->validate([
-            'current_password' => $forced ? ['nullable'] : [
-                'bail', 'required', 'string',
-                function (string $attribute, mixed $value, Closure $fail) use ($request, $accountKey): void {
-                    if (! Hash::check($value, $request->user()->password)) {
-                        LoginRequest::countLoginFailure($accountKey);
-                        Log::warning('Wrong current password on a password change', ['user_id' => $request->user()->id, 'ip' => $request->ip()]);
-                        $fail('validation.current_password')->translate();
-                    }
-                },
-            ],
-            'password' => [
-                'required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols(),
-                // Reusing the current password would reset the expiry clock or keep the handed-over one
-                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
-                    if (is_string($value) && Hash::check($value, $request->user()->password)) {
-                        $fail('validation.password_reused')->translate();
-                    }
-                },
-            ],
-        ]);
-
-        $user = $request->user();
-        $user->forceFill([
-            'password' => Hash::make($data['password']),
-            'password_changed_at' => now(),
-            'must_change_password' => false,
-        ])->save();
-        RateLimiter::clear($accountKey);
-
-        // Every other device is signed out; a token client has no session to keep
-        $session = $request->hasSession() ? $request->session() : null;
-        $user->signOutEverywhere($session?->getId());
-        if ($session?->get(CheckSessionTimeout::REMEMBERED) === true) {
-            $this->rememberThisDeviceAgain($request, $user, $devices);
-        } elseif ($session !== null) {
-            $this->moveThisDeviceToANewSessionId($request, $user, $devices);
-        }
-
-        AuditLog::record('Changed own password');
-
-        return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();
-    }
-
-    /** A copy of the old session cookie stops working: the session gets a new id, the old one is destroyed, the device follows. */
-    private function moveThisDeviceToANewSessionId(Request $request, User $user, DeviceService $devices): void
-    {
-        $device = $devices->currentOf($user, $request);
-        // migrate(), not regenerate(): the CSRF token stays, so requests already in flight are not refused with 419
-        $request->session()->migrate(true);
-
-        if ($device !== null) {
-            $devices->moveToSession($device, $request->session()->getId());
-        }
-    }
-
-    /** The device that changed the password stays remembered: a new device token and cookie, on the new session id. */
-    private function rememberThisDeviceAgain(Request $request, User $user, DeviceService $devices): void
-    {
-        $device = $devices->currentOf($user, $request);
-        $token = $devices->issueRememberToken($user);
-
-        Auth::guard('web')->login($user, true);
-
-        if ($device === null) {
-            $devices->start($user, $request, $token, recordEvent: false);
-
-            return;
-        }
-
-        $devices->rememberAgain($device, $token, $request->session()->getId());
+        return (new UserResource($user))->additional(['message' => 'success'])->response();
     }
 }

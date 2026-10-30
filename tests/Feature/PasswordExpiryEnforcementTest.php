@@ -24,7 +24,7 @@ class PasswordExpiryEnforcementTest extends TestCase
     use RefreshDatabase;
 
     /** A route inside the authenticated group that needs no extra permission. */
-    private const GUARDED_ROUTE = '/api/settings/security';
+    private const GUARDED_ROUTE = '/api/notifications';
 
     private function user(array $attributes = []): User
     {
@@ -61,6 +61,17 @@ class PasswordExpiryEnforcementTest extends TestCase
             ->withHeader('Origin', 'http://localhost:8000')
             ->postJson('/api/logout')
             ->assertOk();
+    }
+
+    public function test_it_can_still_read_the_idle_timeout(): void
+    {
+        $user = $this->user(['must_change_password' => true]);
+        AppSetting::put('session_timeout_minutes', '30');
+
+        // The wall still warns before the idle timeout signs it out
+        $this->actingAs($user)->getJson('/api/settings/security')
+            ->assertOk()
+            ->assertJsonPath('data.session_timeout_minutes', 30);
     }
 
     public function test_it_can_still_reach_the_session_heartbeat(): void

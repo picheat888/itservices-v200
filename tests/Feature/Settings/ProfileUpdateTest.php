@@ -98,4 +98,32 @@ class ProfileUpdateTest extends TestCase
         Storage::disk('local')->assertMissing($first);
         Storage::disk('local')->assertExists($second);
     }
+
+    public function test_an_unlinked_account_cannot_send_employee_fields(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create(['role' => 'super', 'employee_id' => null, 'name' => 'Admin Old']);
+
+        $this->actingAs($user)
+            ->post('/api/profile', [
+                'first_name' => 'Admin', 'last_name' => 'New',
+                'first_name_th' => 'แอดมิน', 'last_name_th' => 'ใหม่', 'phone' => '0812345678',
+                'photo' => UploadedFile::fake()->image('a.jpg'),
+            ], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['first_name_th', 'last_name_th', 'phone', 'photo']);
+
+        $this->assertSame('Admin Old', $user->refresh()->name);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_an_unlinked_account_saves_its_name_with_the_employee_fields_left_empty(): void
+    {
+        $user = User::factory()->create(['role' => 'super', 'employee_id' => null]);
+
+        $this->actingAs($user)
+            ->postJson('/api/profile', ['first_name' => 'Admin', 'last_name' => 'New', 'first_name_th' => '', 'last_name_th' => null, 'phone' => ''])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Admin New');
+    }
 }
