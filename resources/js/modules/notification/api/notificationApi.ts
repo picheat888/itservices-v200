@@ -14,6 +14,8 @@ export interface NotificationData {
     contract_vendor_th?: string | null;
     contract_name?: string;
     days_remaining?: number;
+    // A year with no company holidays (sla_holidays) - subtype: upcoming | started
+    year?: number;
     // Stock alert notifications (stock_alert)
     stock_item_id?: number;
     sku?: string;

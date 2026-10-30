@@ -39,6 +39,11 @@ Schedule::command('requests:send-stalled-digest')->weeklyOn(1, '12:00');
 // ticket, deduped by the alert-level columns).
 Schedule::command('tickets:send-sla-alerts')->everyTenMinutes();
 
+// Company holidays are keyed in by hand once a year; these bells nudge the SLA settings owners while a year is still empty.
+Schedule::command('tickets:remind-sla-holidays')->cron('0 8 1,15 12 *');
+
+Schedule::command('tickets:remind-sla-holidays')->cron('0 8 2 1 *');
+
 // The team's board on Monday morning, ahead of the working day: what nobody has
 // taken, and what is taken but still open. Weekly for the same reason as the
 // approvals digest — a daily copy of the same list stops being read.

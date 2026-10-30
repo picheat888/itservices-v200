@@ -22,7 +22,7 @@ export function moduleOf(type: string, module?: string): string {
     if (type.startsWith('contract')) return 'contracts';
     if (type.startsWith('access')) return 'access';
     // Notices about the account itself
-    if (type === 'password_expiring' || type === 'report_export' || type === 'report_schedule') return 'system';
+    if (type === 'password_expiring' || type === 'sla_holidays' || type === 'report_export' || type === 'report_schedule') return 'system';
     return 'employees'; // new_employee + employee.*
 }
 
@@ -59,6 +59,7 @@ export function notificationTitle(n: AppNotification, t: Translate, lang: Lang):
         return `${n.data.asset_model} (${n.data.asset_tag})`;
     // Nothing to name but the reader's own account
     if (n.data.type === 'password_expiring') return t('notif_password_title');
+    if (n.data.type === 'sla_holidays') return t('notif_sla_holidays_title').replaceAll('{year}', () => String(n.data.year ?? ''));
     // Named by the report, as the Report Center lists it (rep_<stem>_title)
     if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return t(`rep_${(n.data.report_key ?? '').replace('.', '_')}_title`);
     return `${n.data.employee_name} (${n.data.employee_code})`;
@@ -93,6 +94,10 @@ export function notificationMessage(n: AppNotification, t: Translate, lang: Lang
             : t('notif_contract_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
     }
     if (n.data.type === 'password_expiring') return t('notif_password_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
+    if (n.data.type === 'sla_holidays')
+        return t(n.data.subtype === 'started' ? 'notif_sla_holidays_started' : 'notif_sla_holidays_missing').replaceAll('{year}', () =>
+            String(n.data.year ?? ''),
+        );
     if (n.data.type === 'report_schedule') return t('notif_report_schedule_failed');
     if (n.data.type === 'report_export')
         return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replaceAll('{format}', () =>
@@ -168,6 +173,8 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'access_offboarding') return '/access';
     // The file waits in "ไฟล์ส่งออกของฉัน" on the Report Center
     if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return '/reports';
+    // The holiday list of the missing year, in Settings
+    if (n.data.type === 'sla_holidays') return `/settings?tab=tickets&holidays=${n.data.year}`;
     const mod = moduleOf(n.data.type, n.data.module);
     // The stuck-request bell opens the person who needs an account
     if (n.data.subtype === 'blocked_no_account' && n.data.employee_id) return `/employees?highlight=${n.data.employee_id}`;

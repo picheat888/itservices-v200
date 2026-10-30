@@ -22,6 +22,8 @@ class ScheduleTimesTest extends TestCase
             'stalled request digest' => ['requests:send-stalled-digest', '0 12 * * 1'],
             'ticket sla alerts' => ['tickets:send-sla-alerts', '*/10 * * * *'],
             'ticket weekly digest' => ['tickets:send-weekly-digest', '30 8 * * 1'],
+            'sla holiday reminder december' => ['tickets:remind-sla-holidays', '0 8 1,15 12 *'],
+            'sla holiday reminder january' => ['tickets:remind-sla-holidays', '0 8 2 1 *'],
             'log retention' => ['logs:prune', '0 2 * * *'],
             'report export retention' => ['reports:prune-exports', '15 2 * * *'],
             'cache prune' => ['cache:prune-expired', '30 2 * * *'],
@@ -35,12 +37,13 @@ class ScheduleTimesTest extends TestCase
     #[DataProvider('entries')]
     public function test_every_scheduled_command_runs_at_its_time(string $command, string $expression): void
     {
+        // A command may run on several lines (the holiday reminder), so each line is matched by its time too
         $events = collect(app(Schedule::class)->events())->filter(
-            fn ($event) => str_contains((string) $event->command, $command) || $event->description === $command
+            fn ($event) => (str_contains((string) $event->command, $command) || $event->description === $command)
+                && $event->expression === $expression
         );
 
         $this->assertCount(1, $events);
-        $this->assertSame($expression, $events->first()->expression);
     }
 
     public function test_no_scheduled_entry_is_left_unpinned(): void

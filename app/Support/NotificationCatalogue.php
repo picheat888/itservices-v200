@@ -535,6 +535,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_sla_holidays_missing',
+                'module' => 'system',
+                'name' => 'SLA holidays missing',
+                'trigger' => '1 and 15 Dec, and 2 Jan, while that year has no holidays',
+                'audience' => 'People who can change Ticket & SLA settings',
+                'message_en' => 'Add the company holidays before 1 Jan {year}, or they will be counted as working days.',
+                'message_th' => 'เพิ่มตามประกาศวันหยุดของบริษัทก่อน 1 ม.ค. {year} ไม่อย่างนั้นวันหยุดจะถูกนับเป็นวันทำการ',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_report_export_ready',
                 'module' => 'system',
                 'name' => 'Report file ready',
