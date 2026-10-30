@@ -720,6 +720,7 @@ export default function EmployeesPage() {
                 canCancelResign={canCancelResign}
                 canSetCredentials={canSetCredentials}
                 canDelete={canDelete}
+                canViewOrg={canViewOrg}
                 onResign={(e) => setResignEmp(e)}
                 onCancelResign={async (e) => {
                     await confirm({

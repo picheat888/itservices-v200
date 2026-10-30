@@ -604,7 +604,10 @@ class EmployeeController extends Controller
             403,
         );
 
-        return (new EmployeeResource($employee->load(['department', 'position', 'section', 'manager', 'creator.employee', 'updater.employee'])))->response();
+        $employee->load(['department', 'position', 'section', 'manager', 'creator.employee', 'updater.employee'])
+            ->loadCount(['subordinates as direct_reports_count' => fn ($q) => $q->where('status', EmployeeStatus::Active)]);
+
+        return (new EmployeeResource($employee))->response();
     }
 
     /**

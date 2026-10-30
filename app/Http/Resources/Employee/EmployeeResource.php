@@ -64,6 +64,8 @@ class EmployeeResource extends JsonResource
             'manager_id' => $this->manager_id,
             'manager_name' => $this->whenLoaded('manager', fn () => $this->manager?->name),
             'manager_name_th' => $this->whenLoaded('manager', fn () => $this->manager?->name_th),
+            // Active direct reports, the same count as the org chart; single-employee endpoint only
+            'direct_reports_count' => $this->whenCounted('direct_reports'),
             'department' => $this->whenLoaded('department', fn () => $this->department?->name),
             'department_th' => $this->whenLoaded('department', fn () => $this->department?->name_th),
             'section_id' => $this->section_id,

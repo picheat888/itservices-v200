@@ -6,6 +6,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -105,5 +106,22 @@ class OrgChartTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'user']));
         $this->getJson('/api/employees/org-chart')->assertForbidden();
+    }
+
+    public function test_one_employee_carries_its_active_direct_reports_for_a_viewer_without_the_org_chart(): void
+    {
+        $viewer = User::factory()->create(['role' => 'user']);
+        foreach (['employees.module', 'employees.view'] as $permission) {
+            RolePermission::firstOrCreate(['role_id' => $viewer->role_id, 'permission' => $permission], ['allowed' => true]);
+        }
+        $boss = Employee::create(['first_name' => 'Boss']);
+        Employee::create(['first_name' => 'Staff', 'last_name' => 'A', 'manager_id' => $boss->id]);
+        Employee::create(['first_name' => 'Staff', 'last_name' => 'B', 'manager_id' => $boss->id]);
+        Employee::create(['first_name' => 'Gone', 'manager_id' => $boss->id, 'status' => 'resigned']);
+
+        $this->actingAs($viewer);
+        $this->getJson('/api/employees/org-chart')->assertForbidden();
+        $this->getJson("/api/employees/{$boss->id}")->assertOk()->assertJsonPath('data.direct_reports_count', 2);
+        $this->assertArrayNotHasKey('direct_reports_count', $this->getJson('/api/employees')->json('data.0'));
     }
 }

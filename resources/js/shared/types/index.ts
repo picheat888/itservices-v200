@@ -145,6 +145,8 @@ export interface Employee {
     manager_id: number | null;
     manager_name?: string | null;
     manager_name_th?: string | null;
+    /** Active direct reports — only on the single-employee endpoint. */
+    direct_reports_count?: number;
     department: string | null;
     department_th: string | null;
     section_id: number | null;

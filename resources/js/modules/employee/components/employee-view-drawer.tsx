@@ -80,6 +80,7 @@ export function EmployeeViewDrawer({
     canCancelResign,
     canSetCredentials,
     canDelete,
+    canViewOrg,
     onResign,
     onCancelResign,
     onResetPassword,
@@ -98,6 +99,8 @@ export function EmployeeViewDrawer({
     canSetCredentials: boolean;
     /** Offer Delete in the footer — true only for viewers who hold employees.delete. */
     canDelete: boolean;
+    /** Holds employees.view_org: the org chart is fetched and the Organization tab shown. */
+    canViewOrg: boolean;
     onResign: (e: Employee) => void;
     onCancelResign: (e: Employee) => void;
     onResetPassword: (e: Employee) => void;
@@ -129,7 +132,7 @@ export function EmployeeViewDrawer({
     const open = !!employee;
     const current = employee ?? shown;
     const chainQuery = useApprovalChain(current?.id ?? null, open);
-    const orgQuery = useOrgChart(open);
+    const orgQuery = useOrgChart(open && canViewOrg);
     const accessQuery = useEmployeeAccess(current?.id ?? null, open);
     const assetsQuery = useEmployeeAssets(current?.id ?? null, open);
     const ticketsQuery = useEmployeeTickets(current?.id ?? null, open);
@@ -178,6 +181,8 @@ export function EmployeeViewDrawer({
     const managerName = manager ? localName(manager, lang) : null;
 
     const accentCode = nodeById.get(emp.id)?.department_code ?? null;
+    // The server's count once the single-employee fetch lands; the org list until then
+    const reportsCount = emp.direct_reports_count ?? (canViewOrg ? directReports.length : null);
 
     const showCredentials = canSetCredentials && !emp.has_account && !resigned;
 
@@ -194,7 +199,7 @@ export function EmployeeViewDrawer({
 
     const tabs: DialogTab<DrawerTab>[] = [
         { id: 'overview', label: t('nav_overview'), icon: LayoutDashboard, refresh: marks.overview },
-        { id: 'org', label: t('emp_v_tab_org'), icon: Users, refresh: marks.org },
+        ...(canViewOrg ? [{ id: 'org' as const, label: t('emp_v_tab_org'), icon: Users, refresh: marks.org }] : []),
         // No count until this person's own list is known
         { id: 'assets', label: t('emp_v_tab_assets'), icon: Laptop, count: assetsLoading ? undefined : heldAssets.length, refresh: marks.assets },
         {
@@ -278,7 +283,7 @@ export function EmployeeViewDrawer({
                             lbl={t('emp_v_tenure')}
                         />
                         <div className="bg-border h-7 w-px" />
-                        <Kpi val={fmtN(directReports.length)} lbl={t('emp_v_reports')} />
+                        <Kpi val={reportsCount === null ? '—' : fmtN(reportsCount)} lbl={t('emp_v_reports')} />
                         <div className="bg-border h-7 w-px" />
                         <Kpi val={fmtN(approvalChain.length)} lbl={t('emp_v_approval')} />
                     </div>
@@ -385,9 +390,7 @@ export function EmployeeViewDrawer({
                                       : 'overflow-y-auto p-4 xl:p-5',
                             )}
                         >
-                            {tab === 'overview' && (
-                                <OverviewPane emp={emp} tenure={tenure} reports={directReports.length} steps={approvalChain.length} />
-                            )}
+                            {tab === 'overview' && <OverviewPane emp={emp} tenure={tenure} reports={reportsCount} steps={approvalChain.length} />}
                             {tab === 'org' && (
                                 <OrgPane
                                     orgNodes={orgNodes}
@@ -476,7 +479,7 @@ export function EmployeeViewDrawer({
 }
 
 /** Overview tab — summary cards. */
-function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: { y: number; m: number }; reports: number; steps: number }) {
+function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: { y: number; m: number }; reports: number | null; steps: number }) {
     const t = useT();
     const fmtN = useNumberFormat();
     const cards = [
@@ -485,7 +488,7 @@ function OverviewPane({ emp, tenure, reports, steps }: { emp: Employee; tenure: 
             val: `${tenure.y}${t('emp_v_y')} ${tenure.m}${t('emp_v_m')}`,
             lbl: t('emp_v_tenure'),
         },
-        { icon: <Users className="h-[17px] w-[17px]" />, val: fmtN(reports), lbl: t('emp_v_direct_reports') },
+        { icon: <Users className="h-[17px] w-[17px]" />, val: reports === null ? '—' : fmtN(reports), lbl: t('emp_v_direct_reports') },
         { icon: <Crown className="h-[17px] w-[17px]" />, val: fmtN(steps), lbl: t('emp_v_approval_steps') },
         { icon: <ShieldCheck className="h-[17px] w-[17px]" />, val: emp.has_account ? '✓' : '—', lbl: t('emp_v_account') },
     ];
