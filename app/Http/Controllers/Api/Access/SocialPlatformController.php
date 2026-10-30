@@ -11,47 +11,23 @@ use App\Models\Access\AccessMembership;
 use App\Models\Access\SocialPlatform;
 use App\Models\AuditLog;
 use App\Services\Access\AccessService;
+use App\Services\Access\ResourceLogoService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SocialPlatformController extends Controller
 {
+    public function __construct(private ResourceLogoService $logos) {}
+
     /** List all social/internet platforms. */
     public function index(): JsonResponse
     {
         return SocialPlatformResource::collection(SocialPlatform::with(['memberships' => fn ($q) => $q->active()->with('employee')->orderBy('id')->limit(SocialPlatformResource::PREVIEW_MEMBERS), 'creator.employee', 'updater.employee'])->withCount(['memberships as members_count' => fn ($q) => $q->active()])->orderBy('code')->get())->response();
     }
 
-    /**
-     * Pull the uploaded logo (if any) out of the validated data and replace it
-     * with a stored path, deleting the previous file when replaced or removed.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function handleLogo(Request $request, array $data, ?string $oldPath = null): array
-    {
-        $remove = (bool) ($data['remove_logo'] ?? false);
-        unset($data['logo'], $data['remove_logo']);
-
-        if ($request->hasFile('logo')) {
-            if ($oldPath) {
-                Storage::disk('local')->delete($oldPath);
-            }
-            $data['logo_path'] = $request->file('logo')->store('social-logos', 'local');
-        } elseif ($remove && $oldPath) {
-            Storage::disk('local')->delete($oldPath);
-            $data['logo_path'] = null;
-        }
-
-        return $data;
-    }
-
     /** Create a new social platform. */
     public function store(StoreSocialPlatformRequest $request): JsonResponse
     {
-        $sp = SocialPlatform::create($this->handleLogo($request, $request->validated()));
+        $sp = SocialPlatform::create($this->logos->apply($request->validated(), $request->file('logo'), 'social-logos'));
         AuditLog::record('Created social platform', $sp->name, subject: $sp);
 
         return (new SocialPlatformResource($sp))->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -61,7 +37,7 @@ class SocialPlatformController extends Controller
     public function update(StoreSocialPlatformRequest $request, SocialPlatform $socialPlatform): JsonResponse
     {
         $before = $socialPlatform->getOriginal();
-        $socialPlatform->update($this->handleLogo($request, $request->validated(), $socialPlatform->logo_path));
+        $socialPlatform->update($this->logos->apply($request->validated(), $request->file('logo'), 'social-logos', $socialPlatform->logo_path));
         AuditLog::record('Updated social platform', $socialPlatform->name, AuditLog::changes($before, $socialPlatform), subject: $socialPlatform);
 
         return (new SocialPlatformResource($socialPlatform))->additional(['message' => 'success'])->response();

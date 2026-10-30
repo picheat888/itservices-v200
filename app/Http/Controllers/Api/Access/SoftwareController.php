@@ -11,13 +11,14 @@ use App\Models\Access\AccessMembership;
 use App\Models\Access\Software;
 use App\Models\AuditLog;
 use App\Services\Access\AccessService;
+use App\Services\Access\ResourceLogoService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class SoftwareController extends Controller
 {
+    public function __construct(private ResourceLogoService $logos) {}
+
     /** List all software with the first few active members and the seat count. */
     public function index(): JsonResponse
     {
@@ -27,35 +28,10 @@ class SoftwareController extends Controller
         )->response();
     }
 
-    /**
-     * Pull the uploaded logo (if any) out of the validated data and replace it
-     * with a stored path, deleting the previous file when replaced or removed.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function handleLogo(Request $request, array $data, ?string $oldPath = null): array
-    {
-        $remove = (bool) ($data['remove_logo'] ?? false);
-        unset($data['logo'], $data['remove_logo']);
-
-        if ($request->hasFile('logo')) {
-            if ($oldPath) {
-                Storage::disk('local')->delete($oldPath);
-            }
-            $data['logo_path'] = $request->file('logo')->store('software-logos', 'local');
-        } elseif ($remove && $oldPath) {
-            Storage::disk('local')->delete($oldPath);
-            $data['logo_path'] = null;
-        }
-
-        return $data;
-    }
-
     /** Create a new software entry. */
     public function store(StoreSoftwareRequest $request): JsonResponse
     {
-        $sw = Software::create($this->handleLogo($request, $request->safe()->except('seats_unlimited')));
+        $sw = Software::create($this->logos->apply($request->safe()->except('seats_unlimited'), $request->file('logo'), 'software-logos'));
         AuditLog::record('Created software', $sw->name, subject: $sw);
 
         return (new SoftwareResource($sw))->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -67,7 +43,7 @@ class SoftwareController extends Controller
         $before = $software->getOriginal();
         DB::transaction(function () use ($request, $software, $svc): void {
             $svc->guardSeatCount($software, $request->validated('seats'));
-            $software->update($this->handleLogo($request, $request->safe()->except('seats_unlimited'), $software->logo_path));
+            $software->update($this->logos->apply($request->safe()->except('seats_unlimited'), $request->file('logo'), 'software-logos', $software->logo_path));
         });
         AuditLog::record('Updated software', $software->name, $this->auditChanges($before, $software), subject: $software);
 
