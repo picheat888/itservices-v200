@@ -29,7 +29,6 @@ import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
 import { useTableFitsWidth } from '@/shared/hooks/use-table-fits-width';
 import { DARK_GROUND, LIGHT_GROUND, readableInk } from '@/shared/lib/contrast';
-import { perCycle } from '@/shared/lib/currency';
 import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { splitPinned } from '@/shared/lib/new-rows';
@@ -67,7 +66,6 @@ import {
     Search,
     Share2,
     Tag,
-    TrendingUp,
     Undo2,
     Warehouse,
     X,
@@ -86,6 +84,7 @@ import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetReturnToVendorDialog } from '../components/asset-return-to-vendor-dialog';
 import { AssetRowMenu } from '../components/asset-row-menu';
 import { AssetTagBadge } from '../components/asset-tag-badge';
+import { TopPurchasedCard, TopRentedCard } from '../components/asset-top-tables';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnButton } from '../components/pending-return-button';
@@ -837,65 +836,10 @@ export default function AssetsPage() {
                             />
                         </div>
 
-                        <Card className="overflow-hidden">
-                            <div className={cn(CARD_HEADING, 'border-border flex items-center gap-2 border-b px-5 py-3.5')}>
-                                <TrendingUp className="text-muted-foreground h-4 w-4" aria-hidden="true" />
-                                <span id="asset-top-value-title" className="text-sm font-semibold">
-                                    {t('asset_top_value')}
-                                </span>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm" aria-labelledby="asset-top-value-title">
-                                    <thead>
-                                        <tr
-                                            className={cn(
-                                                TABLE_HEAD,
-                                                'border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase',
-                                            )}
-                                        >
-                                            <th className="px-3 py-2">{t('asset_tag')}</th>
-                                            <th className="px-3 py-2">{t('asset_model')}</th>
-                                            <th className="px-3 py-2">{t('asset_owner')}</th>
-                                            <th className="px-3 py-2">{t('asset_status')}</th>
-                                            <th className="px-3 py-2 text-right">{t('asset_value')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(summary?.top_value ?? []).map((a) => (
-                                            <tr
-                                                key={a.id}
-                                                className="row-hover border-border/60 cursor-pointer border-b last:border-0"
-                                                onClick={() => openAsset(a)}
-                                            >
-                                                {/* The row click is mouse-only; the code is the keyboard / screen-reader way in
-                                                    (same as the inventory table). */}
-                                                <td className="px-3 py-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openAsset(a);
-                                                        }}
-                                                        aria-label={`${t('asset_open_detail')} ${a.asset_code}`}
-                                                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
-                                                    >
-                                                        {a.asset_code}
-                                                    </button>
-                                                </td>
-                                                <td className="px-3 py-2 font-medium">{a.model}</td>
-                                                <td className="px-3 py-2">{localPair(a.owner_name, a.owner_name_th, lang)}</td>
-                                                <td className="px-3 py-2">
-                                                    <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
-                                                </td>
-                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">
-                                                    {perCycle(a.value_display, a.value_cycle, t)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            <TopPurchasedCard assets={summary?.top_purchased ?? []} onOpen={openAsset} />
+                            <TopRentedCard leases={summary?.top_rented ?? []} />
+                        </div>
                     </div>
                 )}
 

@@ -414,6 +414,17 @@ export interface AssetTransferLog {
     performed_by_th?: string | null;
 }
 
+/** One open lease on the asset overview; `asset_id` is one of its assets, the way into the contract peek. */
+export interface AssetTopLease {
+    contract_id: number;
+    asset_id: number;
+    code: string;
+    vendor: string | null;
+    assets_count: number;
+    value_display: string;
+    billing_cycle: string;
+}
+
 export interface AssetSummary {
     total: number;
     deployed: number;
@@ -428,7 +439,8 @@ export interface AssetSummary {
      * acceptance and a return awaiting receipt are both still out of the pool.
      */
     by_type: { type: AssetType; count: number; ready: number; used: number; writeoff: number }[];
-    top_value: Asset[];
+    top_purchased: Asset[];
+    top_rented: AssetTopLease[];
     /**
      * Custody activity per month for the rolling 12-month window, oldest first. Every month
      * is present even when nothing happened in it, so the bars keep their place on the axis.

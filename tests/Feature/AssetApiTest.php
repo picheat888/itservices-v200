@@ -219,6 +219,61 @@ class AssetApiTest extends TestCase
         $this->getJson('/api/assets/summary')->assertOk()->assertJsonPath('total_value', 36000);
     }
 
+    public function test_summary_top_purchased_ranks_bought_assets_by_price_without_rentals_or_writeoffs(): void
+    {
+        $this->actingAs($this->super());
+        $lease = Contract::create([
+            'vendor_id' => $this->vendorId('Lease Co'), 'name' => 'Big lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 900000, 'billing_cycle' => 'monthly',
+        ]);
+        Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease->id, 'value' => 0, 'vendor_id' => null]);
+        $cheap = Asset::factory()->create(['source' => 'purchased', 'value' => 1000, 'status' => 'ready']);
+        $dear = Asset::factory()->create(['source' => 'purchased', 'value' => 50000, 'status' => 'deployed']);
+        Asset::factory()->create(['source' => 'purchased', 'value' => 99000, 'status' => 'writeoff']);
+        foreach (range(1, 4) as $i) {
+            Asset::factory()->create(['source' => 'purchased', 'value' => 2000 + $i, 'status' => 'ready']);
+        }
+
+        $codes = collect($this->getJson('/api/assets/summary')->assertOk()->json('top_purchased'))->pluck('asset_code');
+
+        $this->assertCount(5, $codes);
+        $this->assertSame($dear->asset_code, $codes->first());
+        $this->assertNotContains($cheap->asset_code, $codes);
+    }
+
+    public function test_summary_top_rented_ranks_open_contracts_by_yearly_rent(): void
+    {
+        $this->actingAs($this->super());
+        $lease = fn (string $name, int $value, string $cycle, array $extra = []) => Contract::create([
+            'vendor_id' => $this->vendorId("{$name} Co"), 'name' => $name, 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => $value, 'billing_cycle' => $cycle,
+            ...$extra,
+        ]);
+        $rent = fn (Contract $contract, string $status = 'deployed') => Asset::factory()->create([
+            'source' => 'rented', 'contract_id' => $contract->id, 'value' => 0, 'vendor_id' => null, 'status' => $status,
+        ]);
+
+        // 90,000 a quarter (360,000 a year) outranks 10,000 a month (120,000 a year)
+        $monthly = $lease('Monthly', 10000, 'monthly');
+        $quarterly = $lease('Quarterly', 90000, 'quarterly');
+        $rent($monthly);
+        $rent($monthly);
+        $rent($monthly, 'writeoff');
+        $firstQuarterly = $rent($quarterly);
+        $rent($lease('Cancelled', 500000, 'monthly', ['cancelled_at' => now()]));
+        $rent($lease('Expired', 500000, 'monthly', ['expired_at' => now()]));
+        $rent($lease('Returned', 500000, 'monthly'), 'writeoff');
+
+        $rows = $this->getJson('/api/assets/summary')->assertOk()->json('top_rented');
+
+        $this->assertSame(['Quarterly Co', 'Monthly Co'], array_column($rows, 'vendor'));
+        $this->assertSame([$quarterly->code, $monthly->code], array_column($rows, 'code'));
+        $this->assertSame([1, 2], array_column($rows, 'assets_count'));
+        $this->assertSame(['quarterly', 'monthly'], array_column($rows, 'billing_cycle'));
+        $this->assertSame('฿90,000.00', $rows[0]['value_display']);
+        $this->assertSame($firstQuarterly->id, $rows[0]['asset_id']);
+    }
+
     /**
      * The dashboard's "By type" card draws one stacked bar per type, so every type row carries
      * its own Ready / in-use / write-off split. The two pending states count as in use — the
