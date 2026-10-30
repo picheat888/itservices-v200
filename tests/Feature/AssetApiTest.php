@@ -1761,6 +1761,21 @@ class AssetApiTest extends TestCase
      * both checks above — and its custody trail used to cascade away with it. The refusal,
      * and the restrictOnDelete FK behind it, is what keeps that history.
      */
+    public function test_delete_blocked_when_a_ticket_refers_to_the_asset(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'source' => 'purchased', 'contract_id' => null]);
+        $tickets = Ticket::factory()->count(2)->create(['related_asset_id' => $asset->id]);
+
+        $this->deleteJson("/api/assets/{$asset->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'has_tickets')
+            ->assertJsonPath('tickets_count', 2);
+
+        $this->assertDatabaseHas('assets', ['id' => $asset->id]);
+        $this->assertSame([$asset->id, $asset->id], $tickets->map(fn (Ticket $t) => $t->fresh()->related_asset_id)->all());
+    }
+
     public function test_delete_blocked_when_asset_has_a_custody_trail(): void
     {
         $this->actingAs($this->super());

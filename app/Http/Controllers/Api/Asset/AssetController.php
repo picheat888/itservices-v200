@@ -386,7 +386,8 @@ class AssetController extends Controller
      * deployed / pending / written-off asset must be recalled or its write-off
      * cancelled first, and a contract-linked (rented) asset must be unlinked so
      * deleting it can never orphan a live contract line. An asset that has ever been
-     * handed over is refused too — its custody trail must not go with it.
+     * handed over is refused too — its custody trail must not go with it — and so is
+     * one a ticket refers to.
      */
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
@@ -400,6 +401,12 @@ class AssetController extends Controller
         $transfers = $asset->transfers()->count();
         if ($transfers > 0) {
             return response()->json(['message' => 'has_history', 'transfers_count' => $transfers], 422);
+        }
+
+        // A ticket's link would be nulled by the FK and its repair history lost without a word.
+        $tickets = $asset->tickets()->count();
+        if ($tickets > 0) {
+            return response()->json(['message' => 'has_tickets', 'tickets_count' => $tickets], 422);
         }
 
         AuditLog::recordDeleted('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}", $asset);
@@ -616,7 +623,7 @@ class AssetController extends Controller
         abort_if(
             $assets->contains(fn (Asset $a) => ! in_array($a->status, $relocatable, true)),
             422,
-            'Only assets in use can have their location updated.',
+            'relocate_not_in_use',
         );
 
         $location = Location::findOrFail($data['location_id']);
@@ -652,7 +659,7 @@ class AssetController extends Controller
         abort_if(
             $assets->contains(fn (Asset $a) => ! in_array($a->status, $transferable, true)),
             422,
-            'Only assets that are Ready or Common can be transferred.',
+            'transfer_not_transferable',
         );
 
         foreach ($assets as $asset) {

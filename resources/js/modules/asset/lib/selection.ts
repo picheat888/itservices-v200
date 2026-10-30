@@ -1,0 +1,44 @@
+// Multi-select rules of the asset list: which bulk action a status offers, and the status group a selection is locked to.
+import type { AssetStatus } from '@/shared/types';
+
+export type BulkAction = 'transfer' | 'recall' | 'force_recall' | 'receive' | 'relocate' | 'writeoff';
+
+export interface BulkPermissions {
+    transfer: boolean;
+    receive: boolean;
+    forceRecall: boolean;
+    edit: boolean;
+    retire: boolean;
+}
+
+/** The bulk action a status offers this viewer; null when its rows cannot be ticked at all. */
+export function bulkActionFor(status: AssetStatus | null, can: BulkPermissions): BulkAction | null {
+    switch (status) {
+        case 'ready':
+            return can.transfer ? 'transfer' : can.retire ? 'writeoff' : null;
+        case 'pending_acceptance':
+            return can.transfer || can.forceRecall ? 'recall' : null;
+        // An asset in use can always have its location corrected (assets.edit) when it cannot be recalled.
+        case 'common':
+            return can.transfer || can.forceRecall ? 'recall' : can.edit ? 'relocate' : null;
+        case 'deployed':
+            return can.forceRecall ? 'force_recall' : can.edit ? 'relocate' : null;
+        case 'pending_return':
+            return can.receive ? 'receive' : null;
+        default:
+            return null;
+    }
+}
+
+/** Ticks or unticks a page's rows of one status group; the lock stays while any ticked row remains. */
+export function toggleGroup(
+    selectedIds: readonly number[],
+    groupIds: readonly number[],
+    on: boolean,
+    lockedStatus: AssetStatus | null,
+    groupStatus: AssetStatus,
+): { ids: number[]; status: AssetStatus | null } {
+    if (on) return { ids: [...new Set([...selectedIds, ...groupIds])], status: lockedStatus ?? groupStatus };
+    const ids = selectedIds.filter((id) => !groupIds.includes(id));
+    return { ids, status: ids.length > 0 ? lockedStatus : null };
+}

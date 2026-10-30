@@ -122,6 +122,7 @@ export const asset: Dict = {
     asset_delete_confirm:
         'Permanently delete this asset? This cannot be undone. Only allowed while it is Ready to deploy and not linked to a contract.',
     asset_delete_has_history: 'This asset has {count} transfer records. Its custody trail must stay, so it cannot be deleted.',
+    asset_delete_has_tickets: '{count} tickets refer to this asset. Their repair history must stay, so it cannot be deleted.',
     asset_recall_sub: 'Cancel this not-yet-accepted hand-over and return the asset to the pool.',
     asset_recall_hint: 'Pick which warehouse to store the asset back into.',
     asset_tab_tickets: 'Repair tickets',
@@ -269,6 +270,8 @@ export const asset: Dict = {
     asset_refusal_lessor_not_rented: 'Only rented assets can go back to the lessor. Write these off instead: {codes}',
     asset_refusal_lessor_not_ready: 'Only assets that are Ready to deploy can go back to the lessor. Recall or return these first: {codes}',
     asset_refusal_writeoff_not_ready: 'Only assets that are Ready to deploy can be written off. Recall or return these first: {codes}',
+    asset_refusal_relocate_not_in_use: 'Only assets in use can have their location updated.',
+    asset_refusal_transfer_not_transferable: 'Only assets that are Ready or Common can be transferred.',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล
     asset_empty_overview_by_type: 'No assets yet',

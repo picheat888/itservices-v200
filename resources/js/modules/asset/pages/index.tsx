@@ -89,6 +89,7 @@ import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnButton } from '../components/pending-return-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
+import { bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -511,25 +512,9 @@ export default function AssetsPage() {
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
     const bulkActionFor = useCallback(
-        (status: AssetStatus | null): 'transfer' | 'recall' | 'force_recall' | 'receive' | 'relocate' | null => {
-            switch (status) {
-                case 'ready':
-                    return canTransfer ? 'transfer' : null;
-                case 'pending_acceptance':
-                    return canTransfer || canForceRecall ? 'recall' : null;
-                // An asset in use can always have its location corrected (assets.edit) — that is
-                // the fallback when the viewer cannot recall it, so the rows stay tickable.
-                case 'common':
-                    return canTransfer || canForceRecall ? 'recall' : canEdit ? 'relocate' : null;
-                case 'deployed':
-                    return canForceRecall ? 'force_recall' : canEdit ? 'relocate' : null;
-                case 'pending_return':
-                    return canReceive ? 'receive' : null;
-                default:
-                    return null;
-            }
-        },
-        [canTransfer, canReceive, canForceRecall, canEdit],
+        (status: AssetStatus | null) =>
+            assetBulkAction(status, { transfer: canTransfer, receive: canReceive, forceRecall: canForceRecall, edit: canEdit, retire: canRetire }),
+        [canTransfer, canReceive, canForceRecall, canEdit, canRetire],
     );
 
     const clearSelection = () => {
@@ -564,10 +549,16 @@ export default function AssetsPage() {
 
     const toggleAllOnPage = (on: boolean) => {
         if (!eligibleStatus) return;
-        const groupIds = groupRows.map((a) => a.id);
-        setSelectedIds((prev) => (on ? [...new Set([...prev, ...groupIds])] : prev.filter((id) => !groupIds.includes(id))));
+        const next = toggleGroup(
+            selectedIds,
+            groupRows.map((a) => a.id),
+            on,
+            selectionStatus,
+            eligibleStatus,
+        );
+        setSelectedIds(next.ids);
         if (on) setSelectedSource((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, a.source])) }));
-        setSelectionStatus(on ? eligibleStatus : null);
+        setSelectionStatus(next.status);
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
 

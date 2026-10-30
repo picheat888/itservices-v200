@@ -162,8 +162,11 @@ export function AssetDetailDrawer({
             },
             errorMessage: (e) => {
                 const refusal = refusalReason(e);
-                if (refusal?.reason !== 'has_history') return serverMessage(e, t, 'asset_refusal_');
-                return t('asset_delete_has_history').replace('{count}', fmtN(Number(refusal.body.transfers_count ?? 0)));
+                if (refusal?.reason === 'has_history')
+                    return t('asset_delete_has_history').replace('{count}', fmtN(Number(refusal.body.transfers_count ?? 0)));
+                if (refusal?.reason === 'has_tickets')
+                    return t('asset_delete_has_tickets').replace('{count}', fmtN(Number(refusal.body.tickets_count ?? 0)));
+                return serverMessage(e, t, 'asset_refusal_');
             },
         });
     };
