@@ -30,6 +30,18 @@ class TicketLiveSlaStateTest extends TestCase
         $this->assertSame('no_due', TicketMetrics::liveSlaState($none, $now));
     }
 
+    /** A case a couple of minutes past its deadline is over SLA, as the list says, not "due soon" (REP-7). */
+    public function test_a_case_minutes_past_its_deadline_is_over(): void
+    {
+        $this->freezeTime();
+        $now = now();
+        $justLate = Ticket::factory()->make(['status' => 'in_progress', 'responded_at' => $now, 'sla_resolve_due_at' => $now->copy()->subMinutes(2)]);
+        $justInTime = Ticket::factory()->make(['status' => 'in_progress', 'responded_at' => $now, 'sla_resolve_due_at' => $now->copy()->addMinutes(2)]);
+
+        $this->assertSame('over_sla', TicketMetrics::liveSlaState($justLate, $now));
+        $this->assertSame('due_soon', TicketMetrics::liveSlaState($justInTime, $now));
+    }
+
     public function test_the_daily_series_has_one_point_per_day_with_today_last(): void
     {
         $this->freezeTime();

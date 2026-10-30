@@ -117,11 +117,12 @@ final class TicketMetrics
             return 'no_due';
         }
 
-        $hours = round($now->diffInMinutes($due, false) / 60, 1);
+        // Whole minutes, not rounded hours: a case two minutes late is over, as the list says
+        $minutes = $now->diffInMinutes($due, false);
 
         return match (true) {
-            $hours < 0 => 'over_sla',
-            $hours <= self::SOON_HOURS => 'due_soon',
+            $minutes < 0 => 'over_sla',
+            $minutes <= self::SOON_HOURS * 60 => 'due_soon',
             default => 'on_track',
         };
     }

@@ -17,6 +17,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketUpdate;
 use App\Models\User;
+use App\Services\Report\TicketHistory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
@@ -305,6 +306,26 @@ class TicketOverviewExportTest extends TestCase
                 "{$logged->ticket_no} | 2026-09-05 12:00 | ปิดเคส | Tech Two | สถานะ: เสร็จสิ้น",
             ];
         });
+    }
+
+    /** The history reads only these tickets' log rows, yet keeps rows that name the ticket in their text alone (REP-14). */
+    public function test_the_history_reads_these_tickets_rows_and_the_text_only_ones(): void
+    {
+        $mine = Ticket::factory()->create(['created_at' => '2026-09-05 08:00']);
+        $other = Ticket::factory()->create(['created_at' => '2026-09-05 08:00']);
+        $ticketType = AuditLog::subjectType(new Ticket);
+
+        AuditLog::create(['user_name' => 'A', 'action' => 'Took ticket', 'target' => "{$mine->ticket_no} → A", 'subject_type' => $ticketType, 'subject_id' => $mine->id]);
+        AuditLog::create(['user_name' => 'B', 'action' => 'Took ticket', 'target' => "{$other->ticket_no} → B", 'subject_type' => $ticketType, 'subject_id' => $other->id]);
+        // Logged against the attachment, not the ticket: found by the number in its text
+        AuditLog::create(['user_name' => 'A', 'action' => 'Deleted ticket attachment', 'target' => "photo.jpg - {$mine->ticket_no}", 'subject_type' => 'ticket_attachment', 'subject_id' => 99]);
+        // From before log rows carried their record
+        AuditLog::create(['user_name' => 'A', 'action' => 'Resolved ticket', 'target' => "{$mine->ticket_no} → completed"]);
+
+        $events = app(TicketHistory::class)->for(collect([$mine]));
+
+        $this->assertSame([$mine->ticket_no], $events->pluck('ticket_no')->unique()->values()->all());
+        $this->assertEqualsCanonicalizing(['รับเคส', 'ลบไฟล์แนบ', 'ปิดเคส'], $events->pluck('event')->reject(fn ($e) => $e === 'เปิด Ticket')->values()->all());
     }
 
     /** Every raw and history column is explained on the "คำอธิบายคอลัมน์" sheet. */

@@ -25,12 +25,26 @@ class ReportScheduleAdminService
     public function listAll(): Collection
     {
         $schedules = ReportSchedule::query()
-            ->with(['user:id,name,employee_id', 'user.employee:id,department_id', 'user.employee.department:id,name,name_th'])
+            ->with(self::OWNER)
             ->orderByRaw('last_run_at IS NULL')
             ->orderByDesc('last_run_at')
             ->orderByDesc('id')
             ->get();
 
+        return $this->withRecipientAccounts($schedules);
+    }
+
+    /** The owner and their department, as the list shows them. */
+    private const OWNER = ['user:id,name,employee_id', 'user.employee:id,department_id', 'user.employee.department:id,name,name_th'];
+
+    /**
+     * Sets `recipient_accounts` on each schedule: its recipients (lower-cased) that belong to an account.
+     *
+     * @param  Collection<int, ReportSchedule>  $schedules
+     * @return Collection<int, ReportSchedule>
+     */
+    private function withRecipientAccounts(Collection $schedules): Collection
+    {
         $accounts = $this->accountEmails($schedules->flatMap(fn (ReportSchedule $s) => $s->recipients ?? [])->all());
         foreach ($schedules as $schedule) {
             $schedule->setAttribute('recipient_accounts', array_values(array_filter(
@@ -42,12 +56,18 @@ class ReportScheduleAdminService
         return $schedules;
     }
 
+    /** One schedule as the list shows it, for the answer to an edit. */
+    private function asListed(ReportSchedule $schedule): ReportSchedule
+    {
+        return $this->withRecipientAccounts(new Collection([$schedule->load(self::OWNER)]))->first();
+    }
+
     public function setActive(ReportSchedule $schedule, bool $active): ReportSchedule
     {
         $schedule = $this->schedules->update($schedule, ['active' => $active]);
         AuditLog::record($active ? 'Resumed scheduled report' : 'Paused scheduled report', $this->target($schedule), $this->details($schedule), $schedule);
 
-        return $schedule;
+        return $this->asListed($schedule);
     }
 
     public function delete(ReportSchedule $schedule): void
@@ -72,7 +92,7 @@ class ReportScheduleAdminService
         $schedule->update(['recipients' => $kept]);
         AuditLog::record('Removed scheduled report recipient', $this->target($schedule), $this->details($schedule, ['recipient' => $email]), $schedule);
 
-        return $schedule;
+        return $this->asListed($schedule);
     }
 
     /**

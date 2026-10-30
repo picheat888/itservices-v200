@@ -36,6 +36,9 @@ class TicketHistory
         'Cancelled request via ticket' => 'ยกเลิกคำขอที่เปิด Ticket นี้',
     ];
 
+    /** Actions logged against something other than the ticket (an attachment, a request); matched by the ticket number in their text. */
+    private const TEXT_ONLY_ACTIONS = ['Uploaded ticket attachment', 'Deleted ticket attachment', 'Completed request via ticket', 'Cancelled request via ticket'];
+
     /**
      * @param  Collection<int, Ticket>  $tickets  in the order the workbook lists them
      * @return Collection<int, array{ticket_no: string, at: ?CarbonInterface, event: string, actor: ?string, detail: ?string}>
@@ -106,9 +109,17 @@ class TicketHistory
      */
     private function fromAudit(Collection $byNo, ?CarbonInterface $since): Collection
     {
+        $ticketIds = $byNo->map(fn (Ticket $ticket) => $ticket->getKey())->values()->all();
+
         return AuditLog::query()
             ->whereIn('action', array_keys(self::AUDIT_EVENTS))
             ->when($since, fn ($q) => $q->where('created_at', '>=', $since))
+            // Only these tickets' own rows, plus the rows that name a ticket in their text alone:
+            // logged against an attachment or a request, or before log rows carried their record
+            ->where(fn ($q) => $q
+                ->where(fn ($own) => $own->where('subject_type', AuditLog::subjectType(new Ticket))->whereIn('subject_id', $ticketIds))
+                ->orWhereNull('subject_id')
+                ->orWhereIn('action', self::TEXT_ONLY_ACTIONS))
             ->orderBy('id')
             ->get()
             ->map(fn (AuditLog $log) => $this->auditRow($log))

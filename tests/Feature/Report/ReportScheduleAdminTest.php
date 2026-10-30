@@ -88,6 +88,27 @@ class ReportScheduleAdminTest extends TestCase
         ], $row['recipient_list']);
     }
 
+    /** The answer to a pause or a recipient taken off reads the same as the list: owner's department, who has an account (CR-6). */
+    public function test_an_edit_answers_with_the_same_owner_and_account_details_as_the_list(): void
+    {
+        $department = Department::create(['code' => 'D-AC', 'name' => 'Accounting', 'name_th' => 'ฝ่ายบัญชี']);
+        $employee = Employee::create(['code' => 'EMP-1', 'first_name' => 'Wanna', 'last_name' => 'Sri', 'department_id' => $department->id]);
+        $owner = $this->userWith([...$this->reportRights('assets')], ['name' => 'Wanna Sri', 'employee_id' => $employee->id]);
+        $this->userWith([], ['email' => 'Finance@Inaba.test']);
+        $schedule = $this->schedule($owner, ['finance@inaba.test', 'auditor@partner.co.th', 'extra@partner.co.th']);
+        $this->actingAs($this->admin());
+
+        foreach ([
+            $this->patchJson("/api/reports/schedules/{$schedule->id}/manage", ['active' => false]),
+            $this->deleteJson("/api/reports/schedules/{$schedule->id}/recipients?email=extra@partner.co.th"),
+        ] as $response) {
+            $response->assertOk()
+                ->assertJsonPath('data.owner.department', ['name' => 'Accounting', 'name_th' => 'ฝ่ายบัญชี'])
+                ->assertJsonPath('data.recipient_list.0', ['email' => 'finance@inaba.test', 'has_account' => true])
+                ->assertJsonPath('data.recipient_list.1', ['email' => 'auditor@partner.co.th', 'has_account' => false]);
+        }
+    }
+
     public function test_the_admin_pauses_and_resumes_and_it_is_audit_logged_without_belling_the_owner(): void
     {
         $owner = $this->userWith([...$this->reportRights('assets')]);

@@ -182,7 +182,7 @@ class ReportScheduleService
                 return;
             }
 
-            $export = $this->keepRun($schedule, $owner, $file, $size, $expires, array_keys($accounts));
+            $export = $this->keepRun($schedule, $owner, $period, $file, $size, $expires, array_keys($accounts));
             if ($tooLarge) {
                 $owner->notify(new ReportExportNotification($export, ReportExportNotification::READY));
             }
@@ -321,18 +321,19 @@ class ReportScheduleService
 
     /**
      * Every run's file stays 30 days as an export of the owner ("ไฟล์ส่งออกของฉัน"); the recipients
-     * with an account ($sharedWith) may open it from the emailed link too.
+     * with an account ($sharedWith) may open it from the emailed link too. It keeps the run's own dates.
      *
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable}  $period
      * @param  array{name: string, path: string, rows: int}  $file
      * @param  list<string>  $sharedWith  lower-cased account emails
      */
-    private function keepRun(ReportSchedule $schedule, User $owner, array $file, int $size, CarbonInterface $expires, array $sharedWith): ReportExport
+    private function keepRun(ReportSchedule $schedule, User $owner, array $period, array $file, int $size, CarbonInterface $expires, array $sharedWith): ReportExport
     {
         $export = ReportExport::create([
             'user_id' => $owner->id,
             'report_key' => $schedule->report_key,
             'format' => $schedule->format,
-            'filters' => $schedule->filters,
+            'filters' => $this->filtersFor($schedule, $period),
             'columns' => $schedule->columns,
             'shared_with' => $sharedWith,
             'status' => ReportExport::READY,

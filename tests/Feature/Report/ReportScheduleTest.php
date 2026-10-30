@@ -122,6 +122,23 @@ class ReportScheduleTest extends TestCase
         $this->assertSame(['from' => '2026-09-27', 'to' => '2026-10-03', 'kind' => 'handover'], $filters);
     }
 
+    /** "My exports" shows the dates the run's file covers, not the ones on screen when the schedule was made (REP-6). */
+    public function test_the_kept_export_carries_the_runs_own_dates(): void
+    {
+        $owner = $this->userWith([...$this->reportRights('assets')]);
+        $schedule = $this->schedule($owner, [
+            'report_key' => 'assets.transfer_history',
+            'filters' => ['from' => '2026-01-01', 'to' => '2026-01-31', 'kind' => 'handover'],
+            'next_run_at' => '2026-09-30 07:00:00',
+        ]);
+        $expected = app(ReportScheduleService::class)->filtersFor($schedule, $schedule->periodFor(CarbonImmutable::parse('2026-09-30 07:00')));
+
+        $this->artisan('reports:send-scheduled')->assertSuccessful();
+
+        $this->assertNotSame('2026-01-01', $expected['from']);
+        $this->assertSame($expected, ReportExport::sole()->filters);
+    }
+
     /** The mail names what a run covers: a range, a point in time, or the state at send time. */
     public function test_the_mail_names_the_period_the_way_the_report_counts_it(): void
     {
