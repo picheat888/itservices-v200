@@ -192,7 +192,8 @@ class TicketController extends Controller
             $query->where('priority', $request->query('priority'));
         }
 
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        // Floor 5, not 10: the overview's "Latest" card asks for five rows
+        $perPage = max(5, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);
 
         // Tab badges, deliberately ignoring the tab filters so the counts never

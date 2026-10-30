@@ -333,6 +333,15 @@ class TicketApiTest extends TestCase
             ->assertJsonPath('message', 'not_assignee');
     }
 
+    public function test_the_list_returns_five_rows_for_the_latest_card(): void
+    {
+        Ticket::factory()->count(7)->create();
+        $this->actingAs($this->userWithEmployee('super'));
+
+        $this->getJson('/api/tickets?per_page=5')->assertOk()->assertJsonCount(5, 'data')->assertJsonPath('meta.per_page', 5);
+        $this->getJson('/api/tickets?per_page=1')->assertOk()->assertJsonCount(5, 'data');
+    }
+
     public function test_a_closed_case_cannot_be_closed_again_through_the_api(): void
     {
         $staff = $this->userWithEmployee('super');
