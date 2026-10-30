@@ -67,6 +67,16 @@ export default [
         },
     },
     {
+        // shared and stores sit below the app and its modules
+        files: ['resources/js/shared/**/*.{ts,tsx}', 'resources/js/stores/**/*.{ts,tsx}'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                { patterns: [{ regex: '^@/(modules|app)(/|$)', message: 'shared and stores must not depend on modules or app' }] },
+            ],
+        },
+    },
+    {
         ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'tailwind.config.js'],
     },
     prettier, // Turn off all rules that might conflict with Prettier

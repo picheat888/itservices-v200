@@ -1,3 +1,4 @@
+import { findNavItem } from '@/app/nav';
 import { useT } from '@/lang';
 import {
     AccountSwitchedDialog,
@@ -33,7 +34,8 @@ const SHELL_DIALOGS = ['profile', 'password'] as const;
 const SHELL_DIALOG_COMPANIONS = [PROFILE_SECTION_PARAM];
 
 export function AppShell() {
-    useDocumentTitle();
+    const { pathname } = useLocation();
+    useDocumentTitle(undefined, undefined, findNavItem(pathname)?.label);
     useUserPreferences();
     useNavigationGuardHost();
     const t = useT();
@@ -42,7 +44,6 @@ export function AppShell() {
     const menuOpen = narrow && !iconsOnly;
     const { user } = useAuth();
     const switchedTo = useAccountSync(user);
-    const { pathname } = useLocation();
 
     // Same query key as SecurityTab.
     const { data: security } = useQuery({

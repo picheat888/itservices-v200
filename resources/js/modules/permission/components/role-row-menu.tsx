@@ -30,7 +30,7 @@ export function RoleRowMenu({
                     <button
                         type="button"
                         aria-label={`${t('actions')} ${role.label}`}
-                        className="hover:bg-accent focus-visible:ring-ring data-[state=open]:bg-accent flex h-8 w-8 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none max-lg:h-10 max-lg:w-10"
+                        className="touch-hit hover:bg-accent focus-visible:ring-ring data-[state=open]:bg-accent flex h-8 w-8 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none max-lg:h-10 max-lg:w-10"
                     >
                         <MoreVertical className="h-4 w-4" aria-hidden />
                     </button>

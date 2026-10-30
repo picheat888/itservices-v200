@@ -9,6 +9,22 @@
 @custom-variant split (@media (min-width: 80rem) and (pointer: fine));
 @custom-variant touch (@media (pointer: coarse));
 
+/* Touch screens: a 40px tap area centred on a small button; the button keeps its look */
+@utility touch-hit {
+    position: relative;
+    @media (pointer: coarse) {
+        &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: max(100%, 40px);
+            height: max(100%, 40px);
+            transform: translate(-50%, -50%);
+        }
+    }
+}
+
 @theme {
     --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 

@@ -12,6 +12,8 @@ export const SUPER_ROLE: Role = 'super';
 export type Lang = 'en' | 'th';
 export type Density = 'compact' | 'normal' | 'cozy';
 export type SidebarStyle = 'labeled' | 'icons';
+// Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
+export type AssetStatusColors = Record<string, string>;
 
 export interface UserPreferences {
     dark: boolean;

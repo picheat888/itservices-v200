@@ -1,6 +1,8 @@
 import type { DateEra, DateFormat, TimeFormat } from '@/shared/lib/datetime';
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope, TicketCategory } from '@/shared/types';
+import type { ApiEnvelope, AssetStatusColors, TicketCategory } from '@/shared/types';
+
+export type { AssetStatusColors };
 
 export interface SettingsData {
     brand_name: string;
@@ -40,9 +42,6 @@ export interface SettingsData {
     /** Public VAPID key a browser subscribes to push with (signed-in only). */
     vapid_public_key?: string;
 }
-
-// Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
-export type AssetStatusColors = Record<string, string>;
 
 // Per-priority resolution (close) targets in hours, plus which clock counts them. First
 // response is a single system-wide target in minutes (ticket_sla_response) — priority is

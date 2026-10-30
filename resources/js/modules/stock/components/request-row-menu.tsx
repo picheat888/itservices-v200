@@ -31,7 +31,7 @@ export function RequestRowMenu({
                     type="button"
                     onClick={keepFromRow}
                     aria-label={`${t('actions')} ${requestNo}`}
-                    className="hover:bg-accent focus-visible:ring-ring data-[state=open]:bg-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
+                    className="touch-hit hover:bg-accent focus-visible:ring-ring data-[state=open]:bg-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9"
                 >
                     <MoreVertical className="h-4 w-4" aria-hidden />
                 </button>

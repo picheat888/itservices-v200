@@ -209,7 +209,7 @@ export function DataTable<T>({
     const pageSize = server ? server.pageSize : fillHeight ? autoSize : (paging?.pageSize ?? clientPageSize);
     const total = server ? server.total : filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
-    const safePage = server ? server.page : Math.min(paging?.page ?? clientPage, pageCount);
+    const safePage = Math.max(1, server ? server.page : Math.min(paging?.page ?? clientPage, pageCount));
     // A server page past the end (an old link, a shrunk list) moves to the last page.
     useEffect(() => {
         if (server && !loading && server.total > 0 && server.page > pageCount) server.onPageChange(pageCount);
@@ -461,7 +461,7 @@ export function DataTable<T>({
                                     ))}
                                 </tr>
                             ))}
-                        {!loading && pageRows.length === 0 && (
+                        {!loading && drawnRows.length === 0 && (
                             <tr>
                                 <td colSpan={columns.length} className={cn('text-muted-foreground px-0 text-center', emptyState ? 'py-10' : 'py-0')}>
                                     {/* Empty content: pinned to the visible scroller width */}
@@ -506,7 +506,7 @@ export function DataTable<T>({
                                         if (!server) setPage(1);
                                     }}
                                 >
-                                    <SelectTrigger className="h-8 w-[72px]">
+                                    <SelectTrigger className="touch-hit h-8 w-[72px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -531,7 +531,7 @@ export function DataTable<T>({
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 disabled={safePage <= 1}
                                 aria-label={t('page_prev')}
-                                className="press-icon border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <ChevronLeft aria-hidden className="h-4 w-4" />
                             </button>
@@ -542,7 +542,7 @@ export function DataTable<T>({
                                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}
                                 disabled={safePage >= pageCount}
                                 aria-label={t('page_next')}
-                                className="press-icon border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <ChevronRight aria-hidden className="h-4 w-4" />
                             </button>
