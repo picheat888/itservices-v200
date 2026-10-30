@@ -16,8 +16,12 @@ const FOCUSABLE =
 // Room kept between the panel and the edge of the window or dialog.
 const EDGE = 8;
 
-// Focus is in a select's open menu or on its open trigger, which closes on Escape by itself
-const inOpenMenu = (el: Element) => !!el.closest('[role="combobox"][aria-expanded="true"]') || !!el.querySelector('[role="listbox"]');
+// Least height a panel in a dialog is squeezed to before its body scrolls.
+const MIN_PANEL = 160;
+
+// Focus is in a select's open menu or on its open trigger (never the panel itself), which closes on Escape by itself
+const inOpenMenu = (el: Element, panel: HTMLElement | null) =>
+    el !== panel && (!!el.closest('[role="combobox"][aria-expanded="true"]') || !!el.querySelector('[role="listbox"]'));
 
 /**
  * "Filters" trigger with a count badge and a floating panel (a labelled group, not a dialog); `children` gets `close`.
@@ -57,10 +61,11 @@ export function FilterPopover({
     const fmtN = useNumberFormat();
     const [open, setOpen] = useState(false);
     const { mounted, closing } = usePresence(open);
-    const [pos, setPos] = useState<{ top: number; left: number; maxHeight: number }>({ top: 0, left: 0, maxHeight: 0 });
+    // maxHeight only inside a dialog; on a page the panel keeps its natural height
+    const [pos, setPos] = useState<{ top: number; left: number; maxHeight?: number }>({ top: 0, left: 0 });
     // The dialog the trigger sits in, if any: the panel portals into it
     const [host, setHost] = useState<HTMLElement | null>(null);
-    // Set when the panel is taller than the room below, so its body scrolls
+    // Set when a panel in a dialog is taller than the room below, so its body scrolls
     const [scrolls, setScrolls] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -89,7 +94,7 @@ export function FilterPopover({
         if (!open || !host) return;
         const onKey = (e: globalThis.KeyboardEvent) => {
             const target = e.target as Element;
-            if (e.key !== 'Escape' || !panelRef.current?.contains(target) || inOpenMenu(target)) return;
+            if (e.key !== 'Escape' || !panelRef.current?.contains(target) || inOpenMenu(target, panelRef.current)) return;
             e.stopPropagation();
             e.preventDefault();
             close();
@@ -130,13 +135,26 @@ export function FilterPopover({
         const left = Math.max(box.left + EDGE, Math.min(wanted, box.right - width - EDGE));
         const top = r.bottom + 4;
         setHost(dialog);
-        setPos({ top: top - box.top, left: left - box.left, maxHeight: box.bottom - top - EDGE });
+        setPos({
+            top: top - box.top,
+            left: left - box.left,
+            maxHeight: dialog ? Math.max(MIN_PANEL, box.bottom - top - EDGE) : undefined,
+        });
     };
 
-    // A panel taller than the room below scrolls its body instead of running off the screen
+    // In a dialog, a panel taller than the room below scrolls its body; measured from the content, scrolling or not
     useLayoutEffect(() => {
-        if (!open) return;
-        setScrolls((panelRef.current?.scrollHeight ?? 0) > pos.maxHeight);
+        const panel = panelRef.current;
+        if (!open || !panel || pos.maxHeight === undefined) {
+            setScrolls(false);
+            return;
+        }
+        const body = panel.children[1];
+        const natural = Array.from(panel.children).reduce(
+            (sum, part) => sum + (part === body ? part.scrollHeight : (part as HTMLElement).offsetHeight),
+            2,
+        );
+        setScrolls(natural > pos.maxHeight);
     }, [open, pos.maxHeight]);
 
     const toggle = () => {
@@ -221,16 +239,10 @@ export function FilterPopover({
                         onMouseDown={() => {
                             pressedInside.current = true;
                         }}
-                        style={{
-                            position: host ? 'absolute' : 'fixed',
-                            top: pos.top,
-                            left: pos.left,
-                            width,
-                            maxHeight: pos.maxHeight,
-                            zIndex: host ? 50 : 9999,
-                        }}
+                        style={{ top: pos.top, left: pos.left, width, maxHeight: pos.maxHeight }}
                         className={cn(
-                            'border-border bg-popover flex flex-col rounded-lg border shadow-md',
+                            'border-border bg-popover rounded-lg border shadow-md',
+                            host ? 'absolute z-50 flex flex-col' : 'fixed z-[9999]',
                             closing ? 'motion-pop-out' : 'motion-pop-in',
                         )}
                     >

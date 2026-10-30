@@ -94,9 +94,13 @@ test('a filter panel inside a dialog opens in that dialog, fits the room below a
     const popover = read('js/shared/components/filter-popover.tsx');
     assert.match(popover, /const dialog = trigger\.closest<HTMLElement>\('\[role="dialog"\]'\);/);
     assert.match(popover, /host \?\? document\.body,/);
-    assert.match(popover, /position: host \? 'absolute' : 'fixed'/);
-    assert.match(popover, /maxHeight: box\.bottom - top - EDGE/);
+    assert.match(popover, /host \? 'absolute z-50 flex flex-col' : 'fixed z-\[9999\]'/);
+    assert.doesNotMatch(popover, /position: host|zIndex/, 'placement classes, not inline style');
+    assert.match(popover, /maxHeight: dialog \? Math\.max\(MIN_PANEL, box\.bottom - top - EDGE\) : undefined/);
     assert.match(popover, /scrolls && 'min-h-0 overflow-y-auto'/);
+    // Measured from the content, so a panel that already scrolls still counts as tall on the next open
+    assert.match(popover, /part === body \? part\.scrollHeight : \(part as HTMLElement\)\.offsetHeight/);
+    assert.match(popover, /el !== panel && /);
     assert.match(popover, /if \(!open \|\| !host\) return;[\s\S]*?window\.addEventListener\('keydown', onKey, true\)/);
     assert.match(popover, /panelRef\.current\?\.contains\(target\) \|\| pressedInside\.current/);
 });
