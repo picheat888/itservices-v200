@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -89,6 +91,25 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.linked_assets.0.asset_code', 'INB-SV-01')
             ->assertJsonPath('data.linked_assets.0.name', 'Dell PowerEdge R750')
             ->assertJsonPath('data.linked_assets.0.status', 'deployed');
+    }
+
+    public function test_linked_assets_name_their_category_and_holder(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create([
+            'code' => 'CT-LINK-2', 'vendor' => 'Dell', 'name' => 'Laptop lease', 'type' => 'hardware',
+            'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100000, 'billing_cycle' => 'yearly',
+        ]);
+        $laptop = Category::create(['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
+        $holder = Employee::create(['code' => 'EMP-8101', 'first_name' => 'Somchai', 'last_name' => 'Jaidee', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี']);
+        $held = Asset::create(['asset_code' => 'INB-LT-02', 'category_id' => $laptop->id, 'status' => 'deployed', 'owner_employee_id' => $holder->id, 'contract_id' => $contract->id]);
+        $shared = Asset::create(['asset_code' => 'INB-LT-03', 'category_id' => $laptop->id, 'status' => 'common', 'owner' => 'Meeting room 2', 'contract_id' => $contract->id]);
+
+        $rows = collect($this->getJson("/api/contracts/{$contract->id}")->assertOk()->json('data.linked_assets'))->keyBy('id');
+
+        $this->assertSame(['Laptop', 'แล็ปท็อป'], [$rows[$held->id]['type'], $rows[$held->id]['type_th']]);
+        $this->assertSame(['Somchai Jaidee', 'สมชาย ใจดี'], [$rows[$held->id]['owner'], $rows[$held->id]['owner_th']]);
+        $this->assertSame(['Meeting room 2', null], [$rows[$shared->id]['owner'], $rows[$shared->id]['owner_th']]);
     }
 
     /** The list shows no assets or attachments, only how many assets are linked. */

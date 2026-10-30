@@ -198,7 +198,9 @@ export interface ContractLinkedAsset {
     status: string | null;
     /** Went back to the lessor rather than written off for a reason. */
     returned_to_vendor?: boolean;
+    /** Holder's name (a shared label for a common asset); owner_th is the employee's Thai name. */
     owner: string | null;
+    owner_th?: string | null;
 }
 
 /** Asset offered by the contract form's link picker (free assets + the ones already linked here). */

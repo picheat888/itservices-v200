@@ -11,12 +11,13 @@ import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { perCycle } from '@/shared/lib/currency';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
-import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
+import { type AssetStatus, type ContractLinkedAsset, type ContractType } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Clock, Cog, FileText, Laptop, Loader2, type LucideIcon, Package, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAssetContract } from '../hooks/use-assets';
+import { AssetStatusBadge } from './asset-meta';
 
 /** Icon per contract type — mirrors the Contract detail drawer. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -25,15 +26,6 @@ const TYPE_ICON: Record<ContractType, LucideIcon> = {
     service: Cog,
     connectivity: Wifi,
     other: Package,
-};
-
-/** Asset status → StatusBadge tone for the linked-assets table. */
-const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
-    deployed: 'blue',
-    ready: 'green',
-    pending_acceptance: 'amber',
-    pending_return: 'amber',
-    writeoff: 'red',
 };
 
 type TabId = 'overview' | 'assets';
@@ -150,11 +142,11 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
         { key: 'name', header: t('asset_owner_name'), render: (a) => <span className="font-medium">{a.name}</span> },
         { key: 'type', header: t('asset_type'), render: (a) => localPair(a.type, a.type_th, lang) ?? '—' },
         { key: 'serial', header: t('contract_asset_col_serial'), render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
-        { key: 'owner', header: t('asset_peek_owner'), render: (a) => a.owner ?? '—' },
+        { key: 'owner', header: t('asset_peek_owner'), render: (a) => localPair(a.owner, a.owner_th, lang) ?? '—' },
         {
             key: 'status',
             header: t('asset_status'),
-            render: (a) => (a.status ? <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge> : '—'),
+            render: (a) => (a.status ? <AssetStatusBadge status={a.status as AssetStatus} t={t} returned={a.returned_to_vendor} /> : '—'),
         },
     ];
 

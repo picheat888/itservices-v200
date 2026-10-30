@@ -32,7 +32,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
         { key: 'name', header: t('contract_asset_col_name'), render: (a) => <span className="font-medium">{a.name}</span> },
         { key: 'type', header: t('contract_label_type'), render: (a) => localPair(a.type, a.type_th, lang) ?? '—' },
         { key: 'serial', header: t('contract_asset_col_serial'), render: (a) => <span className="text-xs">{a.serial ?? '—'}</span> },
-        { key: 'owner', header: t('contract_asset_col_owner'), render: (a) => a.owner ?? '—' },
+        { key: 'owner', header: t('contract_asset_col_owner'), render: (a) => localPair(a.owner, a.owner_th, lang) ?? '—' },
         {
             key: 'status',
             header: t('contract_label_status'),

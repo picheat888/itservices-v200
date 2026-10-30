@@ -67,13 +67,15 @@ class ContractResource extends JsonResource
                 'id' => $a->id,
                 'asset_code' => $a->asset_code,
                 'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->category?->name,
-                'type' => $a->type,
+                'type' => $a->category?->name,
                 'type_th' => $a->category?->name_th,
                 'serial' => $a->serial,
                 'status' => $a->status?->value,
                 // Went back to the lessor (a kind of write-off) rather than written off for a reason.
                 'returned_to_vendor' => $a->returned_to_vendor_at !== null,
-                'owner' => $a->owner,
+                // The holder's name in both languages; a shared asset keeps its label.
+                'owner' => $a->owner_employee_id ? $a->ownerEmployee?->name : $a->owner,
+                'owner_th' => $a->owner_employee_id ? $a->ownerEmployee?->name_th : null,
             ])->all(), []),
             'cancelled_at' => SystemTime::date($this->cancelled_at),
             'expired_at' => SystemTime::date($this->expired_at),

@@ -343,7 +343,7 @@ class AssetController extends Controller
         abort_unless($asset->contract_id, 404);
 
         $contract = $asset->contract()
-            ->with(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category'])
+            ->with(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category', 'assets.ownerEmployee'])
             ->firstOrFail();
 
         return (new ContractResource($contract))->response();
