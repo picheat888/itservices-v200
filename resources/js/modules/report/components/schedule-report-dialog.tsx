@@ -303,7 +303,7 @@ export function ScheduleReportDialog({
                                     <span
                                         key={r}
                                         className={cn(
-                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
+                                            'touch:min-h-8 touch:pr-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
                                             badIndexes.has(i) ? 'bg-destructive/10 dark:text-destructive text-red-700' : 'bg-muted',
                                         )}
                                     >
@@ -312,9 +312,9 @@ export function ScheduleReportDialog({
                                             type="button"
                                             onClick={() => setRecipients(recipients.filter((x) => x !== r))}
                                             aria-label={t('rep_schedule_recipient_remove').replace('{email}', r)}
-                                            className="hover:text-foreground text-muted-foreground"
+                                            className="hover:text-foreground text-muted-foreground touch:size-6 flex items-center justify-center rounded-full"
                                         >
-                                            <X className="h-3 w-3" />
+                                            <X className="h-3 w-3" aria-hidden />
                                         </button>
                                     </span>
                                 ))}
