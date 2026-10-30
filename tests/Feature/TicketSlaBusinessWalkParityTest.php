@@ -19,7 +19,7 @@ class TicketSlaBusinessWalkParityTest extends TestCase
         parent::tearDown();
     }
 
-    /** @return array<string, array{0: array<string, mixed>, 1: string}> */
+    /** @return array<string, array{0: array<string, mixed>, 1: string, 2: list<string>}> */
     public static function configs(): array
     {
         $lunch = ['days' => [1, 2, 3, 4, 5], 'start' => '08:00', 'end' => '17:00', 'break_start' => '12:00', 'break_end' => '13:00'];
@@ -27,22 +27,46 @@ class TicketSlaBusinessWalkParityTest extends TestCase
         $sixDays = ['days' => [1, 2, 3, 4, 5, 6], 'start' => '08:30', 'end' => '16:45', 'break_start' => '12:15', 'break_end' => '13:00'];
         $sunday = ['days' => [7], 'start' => '08:00', 'end' => '17:00', 'break_start' => '12:00', 'break_end' => '13:00'];
 
+        $holidays = [];
+        $longRuns = [];
+        foreach (range(2021, 2026) as $year) {
+            array_push($holidays, "{$year}-04-13", "{$year}-04-14", "{$year}-04-15", "{$year}-05-01", "{$year}-05-04");
+            foreach (range(10, 21) as $day) {
+                $longRuns[] = "{$year}-04-{$day}";
+            }
+        }
+
         return [
-            'lunch Bangkok' => [$lunch, 'Asia/Bangkok'],
-            'no break Bangkok' => [$noBreak, 'Asia/Bangkok'],
-            'six days Bangkok' => [$sixDays, 'Asia/Bangkok'],
-            'sunday only UTC' => [$sunday, 'UTC'],
-            'lunch New York (clock changes)' => [$lunch, 'America/New_York'],
+            'lunch Bangkok' => [$lunch, 'Asia/Bangkok', []],
+            'no break Bangkok' => [$noBreak, 'Asia/Bangkok', []],
+            'six days Bangkok' => [$sixDays, 'Asia/Bangkok', []],
+            'sunday only UTC' => [$sunday, 'UTC', []],
+            'lunch New York (clock changes)' => [$lunch, 'America/New_York', []],
+            'lunch Bangkok with holidays' => [$lunch, 'Asia/Bangkok', $holidays],
+            'long run Bangkok' => [$lunch, 'Asia/Bangkok', $longRuns],
         ];
     }
 
-    /** @param array<string, mixed> $hours */
-    #[DataProvider('configs')]
-    public function test_fast_path_matches_the_carbon_walk(array $hours, string $zone): void
+    /**
+     * @param  array<string, mixed>  $hours
+     * @param  list<string>  $holidays
+     */
+    private function useCalendar(array $hours, array $holidays): void
     {
         TicketSla::flush();
-        $memo = (new ReflectionClass(TicketSla::class))->getProperty('hoursMemo');
-        $memo->setValue(null, $hours);
+        $sla = new ReflectionClass(TicketSla::class);
+        $sla->getProperty('hoursMemo')->setValue(null, $hours);
+        $sla->getProperty('holidayMemo')->setValue(null, array_fill_keys($holidays, true));
+    }
+
+    /**
+     * @param  array<string, mixed>  $hours
+     * @param  list<string>  $holidays
+     */
+    #[DataProvider('configs')]
+    public function test_fast_path_matches_the_carbon_walk(array $hours, string $zone, array $holidays): void
+    {
+        $this->useCalendar($hours, $holidays);
         $walk = (new ReflectionClass(TicketSla::class))->getMethod('addBusinessMinutesWalk');
 
         $this->seedRandom(20261017);
@@ -58,12 +82,14 @@ class TicketSlaBusinessWalkParityTest extends TestCase
         }
     }
 
-    /** @param array<string, mixed> $hours */
+    /**
+     * @param  array<string, mixed>  $hours
+     * @param  list<string>  $holidays
+     */
     #[DataProvider('configs')]
-    public function test_timestamp_variant_matches_add_minutes_on_on_both_clocks(array $hours, string $zone): void
+    public function test_timestamp_variant_matches_add_minutes_on_on_both_clocks(array $hours, string $zone, array $holidays): void
     {
-        TicketSla::flush();
-        (new ReflectionClass(TicketSla::class))->getProperty('hoursMemo')->setValue(null, $hours);
+        $this->useCalendar($hours, $holidays);
         $previous = date_default_timezone_get();
         date_default_timezone_set($zone);
 

@@ -7,6 +7,7 @@ use App\Enums\Ticket\TicketSlaClock;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\SlaHoliday;
 use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use BackedEnum;
@@ -174,12 +175,35 @@ class TicketSla
         return is_string($value) && preg_match('/^\d{2}:\d{2}$/', $value) ? $value : null;
     }
 
+    /** Per-request memo of the listed company holidays. */
+    private static ?array $holidayMemo = null;
+
+    /**
+     * Listed company holidays, keyed by local date.
+     *
+     * @return array<string, true>
+     */
+    public static function holidays(): array
+    {
+        if (self::$holidayMemo !== null) {
+            return self::$holidayMemo;
+        }
+
+        $holidays = [];
+        foreach (SlaHoliday::query()->get(['date']) as $holiday) {
+            $holidays[$holiday->date->toDateString()] = true;
+        }
+
+        return self::$holidayMemo = $holidays;
+    }
+
     /** Drop the memoized targets/window — call after saving new values (and between tests). */
     public static function flush(): void
     {
         self::$memo = null;
         self::$responseMemo = null;
         self::$hoursMemo = null;
+        self::$holidayMemo = null;
         self::$rulesMemo = null;
         self::$planMemo = null;
     }
@@ -324,10 +348,14 @@ class TicketSla
      */
     private const NEAR_DUE_PCT = 80;
 
-    /** True when the instant's date falls on a configured working day. */
+    /** Bound on days skipped while looking for the next working day; only a broken config reaches it. */
+    private const MAX_SKIPPED_DAYS = 400;
+
+    /** True when the instant's date falls on a configured working day that is not a listed holiday. */
     private static function isWorkDay(Carbon $at): bool
     {
-        return in_array($at->isoWeekday(), self::hours()['days'], true);
+        return in_array($at->isoWeekday(), self::hours()['days'], true)
+            && ! isset(self::holidays()[$at->toDateString()]);
     }
 
     /**
@@ -360,8 +388,7 @@ class TicketSla
     private static function nextWorkOpen(Carbon $at): Carbon
     {
         $cursor = $at->copy();
-        // 8 iterations always reach the next working day (7-day week + same-day check).
-        for ($i = 0; $i < 8; $i++) {
+        for ($i = 0; $i < self::MAX_SKIPPED_DAYS; $i++) {
             if (self::isWorkDay($cursor)) {
                 foreach (self::windowsOf($cursor) as [$start, $end]) {
                     if ($cursor->lessThan($end)) {
@@ -372,7 +399,7 @@ class TicketSla
             $cursor = $cursor->addDay()->startOfDay();
         }
 
-        return $cursor; // unreachable — hours() guarantees at least one working day
+        return $cursor;
     }
 
     /** End of the sub-window containing $at ($at must come from nextWorkOpen). */
@@ -416,7 +443,7 @@ class TicketSla
         return $cursor;
     }
 
-    /** @var array{days: array<int, true>, windows: list<array{0: int, 1: int}>}|null */
+    /** @var array{days: array<int, true>, holidays: array<int, true>, windows: list<array{0: int, 1: int}>}|null */
     private static ?array $planMemo = null;
 
     /** @var array<string, bool> */
@@ -430,7 +457,7 @@ class TicketSla
         return self::$fixedOffsetZones[$name] ??= count($zone->getTransitions(946684800, 4102444800)) === 1;
     }
 
-    /** The working window as seconds-of-day pairs, for the arithmetic walk. */
+    /** The working window as seconds-of-day pairs and holidays as local day numbers, for the arithmetic walk. */
     private static function businessPlan(): array
     {
         if (self::$planMemo !== null) {
@@ -443,17 +470,22 @@ class TicketSla
             ? [[$secs($hours['start']), $secs($hours['end'])]]
             : [[$secs($hours['start']), $secs($hours['break_start'])], [$secs($hours['break_end']), $secs($hours['end'])]];
 
-        return self::$planMemo = ['days' => array_fill_keys($hours['days'], true), 'windows' => $windows];
+        $holidays = [];
+        foreach (array_keys(self::holidays()) as $date) {
+            $holidays[intdiv(strtotime($date.' 00:00:00 UTC'), 86400)] = true;
+        }
+
+        return self::$planMemo = ['days' => array_fill_keys($hours['days'], true), 'holidays' => $holidays, 'windows' => $windows];
     }
 
     /** Local-clock seconds of the first working instant at or after $at (mirrors nextWorkOpen). */
     private static function openAtOrAfter(int $at, array $plan): int
     {
         $cursor = $at;
-        for ($i = 0; $i < 8; $i++) {
+        for ($i = 0; $i < self::MAX_SKIPPED_DAYS; $i++) {
             $day = intdiv($cursor, 86400);
             $secondOfDay = $cursor - $day * 86400;
-            if (isset($plan['days'][($day + 3) % 7 + 1])) {
+            if (isset($plan['days'][($day + 3) % 7 + 1]) && ! isset($plan['holidays'][$day])) {
                 foreach ($plan['windows'] as [$start, $end]) {
                     if ($secondOfDay < $end) {
                         return $day * 86400 + max($secondOfDay, $start);
