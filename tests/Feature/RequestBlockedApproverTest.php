@@ -181,7 +181,7 @@ class RequestBlockedApproverTest extends TestCase
         $this->currentRung($request)->forceFill(['became_current_at' => now()->subDays(4)])->saveQuietly();
 
         $this->artisan('requests:send-stalled-reminders')
-            ->expectsOutputToContain('approver left: 1')
+            ->expectsOutputToContain('nobody left to approve: 1')
             ->assertSuccessful();
 
         $this->assertCount(1, $this->bells($this->itLead, 'blocked_no_approver'));

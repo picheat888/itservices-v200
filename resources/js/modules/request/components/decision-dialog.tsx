@@ -31,6 +31,9 @@ function SlipRow({ label, children }: { label: string; children: React.ReactNode
     );
 }
 
+/** The approval step a request is waiting on, if its steps are loaded. */
+const currentStepOf = (request: ServiceRequest) => request.approvals?.find((a) => a.kind === 'approval' && a.status === 'current');
+
 /** Approve / reject modal: a remark is required to reject, optional to approve; the footer names who is notified next. */
 export function DecisionDialog({ request, action, onClose }: { request: ServiceRequest | null; action: DecisionAction | null; onClose: () => void }) {
     const t = useT();
@@ -38,11 +41,19 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     const lang = useUiStore((s) => s.lang);
     const { approve, reject } = useRequestMutations();
 
-    const [shown, setShown] = useState<{ request: ServiceRequest; action: DecisionAction } | null>(null);
+    // The request as it stood when the dialog opened, kept while it stays open (and through the exit animation):
+    // a refetch must not move the dialog on to the next step. Taken again only if it opened before its steps loaded.
+    const openKey = request && action ? `${request.id}:${action}` : null;
+    const [shown, setShown] = useState<{ key: string; request: ServiceRequest; action: DecisionAction } | null>(null);
     useEffect(() => {
-        if (request && action) setShown({ request, action });
-    }, [request, action]);
-    const ctx = request && action ? { request, action } : shown;
+        if (!openKey || !request || !action) {
+            // Closed: keep the copy for the exit animation, but a later open takes a fresh one
+            setShown((kept) => (kept ? { ...kept, key: '' } : kept));
+            return;
+        }
+        setShown((kept) => (kept?.key === openKey && currentStepOf(kept.request) ? kept : { key: openKey, request, action }));
+    }, [openKey, request, action]);
+    const ctx = request && action ? (shown?.key === openKey ? shown : { request, action }) : shown;
 
     const [note, setNote] = useState('');
     const [noteErr, setNoteErr] = useState('');
@@ -56,20 +67,8 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
     const isOpen = !!request && !!action;
     const guardClose = useDiscardGuard(isOpen && note.trim() !== '');
 
-    // The step this dialog was opened on, kept while it stays open: a refetch must not move it on to the next step
-    const currentStepId = request?.approvals?.find((a) => a.kind === 'approval' && a.status === 'current')?.id ?? 0;
-    const openKey = request && action ? `${request.id}:${action}` : null;
-    const [opened, setOpened] = useState<{ key: string; stepId: number } | null>(null);
-    useEffect(() => {
-        if (openKey === null) {
-            setOpened(null);
-            return;
-        }
-        setOpened((kept) => (kept?.key === openKey ? kept : { key: openKey, stepId: currentStepId }));
-    }, [openKey, currentStepId]);
-    const stepId = opened?.stepId ?? currentStepId;
-
     if (!ctx) return null;
+    const stepId = currentStepOf(ctx.request)?.id ?? 0;
     const rejecting = ctx.action === 'reject';
     const remainingApprovals = (ctx.request.approvals ?? []).filter((a) => a.kind === 'approval' && a.status === 'waiting');
     const isFinal = remainingApprovals.length === 0;

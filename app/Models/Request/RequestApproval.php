@@ -38,9 +38,6 @@ class RequestApproval extends Model
     /** @var Collection<int, Employee>|null */
     protected ?Collection $preloadedCandidates = null;
 
-    /** Whether the group's criteria match anybody who has resigned; null until asked. */
-    protected ?bool $preloadedHasLeavers = null;
-
     protected function casts(): array
     {
         return [
@@ -162,13 +159,7 @@ class RequestApproval extends Model
      */
     public function acceptsEmployee(?Employee $employee): bool
     {
-        return $employee !== null && $employee->status !== EmployeeStatus::Resigned && $this->groupMatches($employee);
-    }
-
-    /** Whether the group step's criteria name this employee, whatever their status; never the requester. */
-    private function groupMatches(Employee $employee): bool
-    {
-        if ($this->isRequestOf($employee)) {
+        if ($employee === null || $employee->status === EmployeeStatus::Resigned || $this->isRequestOf($employee)) {
             return false;
         }
 
@@ -280,8 +271,8 @@ class RequestApproval extends Model
         $departmentIds = $departmentRows->pluck('approver_department_id')->unique()->values();
         $positionIds = $departmentRows->flatMap(fn (self $row) => array_map('intval', $row->approver_position_ids))->unique()->values();
 
-        // Leavers come too: a group with none left still needs to know whether anybody resigned from it
         $employees = Employee::with('user')
+            ->where('status', '!=', EmployeeStatus::Resigned->value)
             ->where(fn (Builder $q) => $q->whereIn('id', $namedIds)
                 ->orWhere(fn (Builder $d) => $d->whereIn('department_id', $departmentIds)->whereIn('position_id', $positionIds)))
             ->orderBy('id')
@@ -290,7 +281,6 @@ class RequestApproval extends Model
         foreach ($rows as $row) {
             $accepted = $employees->filter(fn (Employee $employee) => $row->acceptsEmployee($employee))->values();
             $row->preloadedCandidates = self::inNamedOrder($accepted, $row->namedApproverIds());
-            $row->preloadedHasLeavers = $employees->contains(fn (Employee $employee) => $employee->status === EmployeeStatus::Resigned && $row->groupMatches($employee));
         }
     }
 
@@ -309,8 +299,8 @@ class RequestApproval extends Model
     }
 
     /**
-     * Why nobody can act on this open approval step: 'left' when its approver (or every member of its group) has
-     * resigned, 'vacant' when a group step matches nobody else (moved away, never filled, or only the requester),
+     * Why nobody can act on this open approval step: 'left' when its approver (or everybody a named group lists) has
+     * resigned, 'vacant' when a department rung is held by nobody else or a named group lists only the requester,
      * 'no_account' when nobody who could act has a login; null when somebody can.
      */
     public function blockedReason(): ?string
@@ -325,12 +315,20 @@ class RequestApproval extends Model
 
         $candidates = $this->groupCandidates();
         if ($candidates->isEmpty()) {
-            $hasLeavers = $this->preloadedHasLeavers ?? $this->groupCandidates(onlyActive: false)->isNotEmpty();
+            // A named group whose people have all resigned has 'left'; a department rung nobody holds now is 'vacant'
+            $ownerId = $this->request?->employee_id;
+            $namedOthers = array_filter($this->namedApproverIds(), fn (int $id) => $ownerId === null || $id !== (int) $ownerId);
 
-            return $hasLeavers ? 'left' : 'vacant';
+            return $namedOthers !== [] ? 'left' : 'vacant';
         }
 
         return $candidates->contains(fn (Employee $employee) => $employee->user !== null) ? null : 'no_account';
+    }
+
+    /** Nobody is left who could sign this open step, as opposed to somebody who cannot sign in yet. */
+    public function hasNobodyToSign(): bool
+    {
+        return in_array($this->blockedReason(), ['left', 'vacant'], true);
     }
 
     /** True when this row belongs to a request filed for this employee. */

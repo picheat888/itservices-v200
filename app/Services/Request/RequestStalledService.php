@@ -49,7 +49,7 @@ class RequestStalledService
             $days = $this->daysWaiting($row);
 
             // Nobody is left to sign it: IT hears instead of the leavers
-            if (in_array($row->blockedReason(), ['left', 'vacant'], true)) {
+            if ($row->hasNobodyToSign()) {
                 $this->notifications->blockedNoApprover($row->request, $row);
                 $sent['blocked']++;
 

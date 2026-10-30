@@ -173,7 +173,7 @@ class RequestNotificationService
     private function notifyApprover(ServiceRequest $request, RequestApproval $row): void
     {
         // Nobody left to sign it
-        if (in_array($row->blockedReason(), ['left', 'vacant'], true)) {
+        if ($row->hasNobodyToSign()) {
             $this->blockedNoApprover($request, $row);
 
             return;
