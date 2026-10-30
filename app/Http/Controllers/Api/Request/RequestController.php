@@ -151,6 +151,7 @@ class RequestController extends Controller
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);
         RequestApproval::preloadGroupNames($paginator->getCollection()->flatMap->approvals);
+        RequestApproval::preloadGroupCandidates($paginator->getCollection()->flatMap->approvals);
 
         return response()->json([
             'data' => ServiceRequestResource::collection($paginator->items()),
@@ -252,6 +253,7 @@ class RequestController extends Controller
     {
         $serviceRequest->load([...self::approvalsWithParent(), ...self::DETAIL_RELATIONS]);
         RequestApproval::preloadGroupNames($serviceRequest->approvals);
+        RequestApproval::preloadGroupCandidates($serviceRequest->approvals);
 
         return new ServiceRequestResource($serviceRequest);
     }

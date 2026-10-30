@@ -549,7 +549,7 @@ class EmployeeOnboardingRequestTest extends TestCase
 
         $this->actingAs($viewer)->getJson("/api/service-requests/{$request->id}")
             ->assertOk()
-            ->assertJsonPath("data.approvals.{$rungIndex}.awaiting_account", true);
+            ->assertJsonPath("data.approvals.{$rungIndex}.blocked", 'no_account');
 
         // Reported live, not snapshotted: provisioning the account clears it without
         // anything rewriting the frozen approval row.
@@ -557,7 +557,7 @@ class EmployeeOnboardingRequestTest extends TestCase
 
         $this->actingAs($viewer)->getJson("/api/service-requests/{$request->id}")
             ->assertOk()
-            ->assertJsonPath("data.approvals.{$rungIndex}.awaiting_account", false);
+            ->assertJsonPath("data.approvals.{$rungIndex}.blocked", null);
     }
 
     public function test_that_manager_can_approve_as_soon_as_their_account_exists(): void

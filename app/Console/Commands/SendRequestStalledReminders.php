@@ -15,7 +15,7 @@ class SendRequestStalledReminders extends Command
     public function handle(RequestStalledService $service): int
     {
         $sent = $service->nudge();
-        $this->info("Stalled request reminders — approvers: {$sent['approvers']}, IT queue: {$sent['queue']}");
+        $this->info("Stalled request reminders — approvers: {$sent['approvers']}, IT queue: {$sent['queue']}, approver left: {$sent['blocked']}");
 
         return self::SUCCESS;
     }

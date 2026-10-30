@@ -222,7 +222,8 @@
                 "hint": "perm_ui_request_notify_hint",
                 "keys": [
                     "requests.notify_approved",
-                    "requests.notify_stalled"
+                    "requests.notify_stalled",
+                    "requests.notify_blocked"
                 ]
             }
         ]

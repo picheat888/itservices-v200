@@ -251,6 +251,9 @@ export const permission: Dict = {
     'perm_act_requests.notify_stalled': 'รับแจ้งเตือนสรุปงานค้างรายสัปดาห์',
     'perm_desc_requests.notify_stalled':
         'รับอีเมลทุกเช้าวันจันทร์ สรุปคำขอที่รอการตัดสินของคนนี้เกินหนึ่งสัปดาห์ ไม่มีสิทธิ์นี้ก็ยังได้กระดิ่งเตือนรายวันในระบบตามปกติ',
+    'perm_act_requests.notify_blocked': 'รับแจ้งเตือนคำขอที่ติดผู้อนุมัติ',
+    'perm_desc_requests.notify_blocked':
+        'รับกระดิ่งเมื่อคำขอติดเพราะผู้อนุมัติลาออก และเตือนทุกเช้าระหว่างที่ยังค้าง ควรให้คู่กับสิทธิ์ยกเลิกคำขอของผู้อื่น เพราะคำขอที่ติดแก้ได้ด้วยการยกเลิกแล้วยื่นใหม่',
     perm_mod_workflows: 'Workflows',
     'perm_act_workflows.module': 'การเข้าถึง Workflow',
     'perm_desc_workflows.module': 'เปิดหน้า Workflow และดูสายอนุมัติของคำขอแต่ละประเภทได้ การแก้ไขต้องเปิดสวิตช์ด้านล่างเพิ่ม',

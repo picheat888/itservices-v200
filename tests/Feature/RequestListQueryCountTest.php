@@ -53,7 +53,7 @@ class RequestListQueryCountTest extends TestCase
         return Position::where('title', $title)->firstOrFail()->id;
     }
 
-    /** A person with a login, so the trail's awaiting_account has an account to find. */
+    /** A person with a login, so the trail's blocked flag has an account to find. */
     private function person(string $name, bool $withAccount = true): Employee
     {
         $employee = Employee::create(['first_name' => $name, 'department_id' => $this->qc->id]);
@@ -217,7 +217,7 @@ class RequestListQueryCountTest extends TestCase
         $approved = $list['Request 3'];
         $this->assertFalse($approved['can_approve']);
         $this->assertTrue($approved['can_complete']);
-        $this->assertFalse($approved['approvals'][0]['awaiting_account']);
+        $this->assertNull($approved['approvals'][0]['blocked']);
 
         // The detail endpoint renders the same rows the same way.
         $detail = $this->actingAs($this->viewer)->getJson("/api/service-requests/{$named['id']}")->assertOk()->json('data');

@@ -21,7 +21,7 @@ final class ApprovalFacts
     // The step columns the report reads
     private const STEP_COLUMNS = [
         'id', 'service_request_id', 'position', 'kind', 'label', 'approver_employee_id', 'approver_name', 'approver_department_id',
-        'approver_position_ids', 'status', 'note', 'skip_reason', 'acted_by_user_id', 'acted_by_name', 'became_current_at', 'acted_at',
+        'approver_position_ids', 'approver_employee_ids', 'status', 'note', 'skip_reason', 'acted_by_user_id', 'acted_by_name', 'became_current_at', 'acted_at',
     ];
 
     /**
@@ -32,7 +32,7 @@ final class ApprovalFacts
      */
     public static function steps(array $filters, Carbon $since, Carbon $to): Collection
     {
-        return self::withPeople(self::universe($filters, $since, $to))->get();
+        return self::withPeople(self::universe($filters, $since, $to))->get()->tap(RequestApproval::preloadGroupCandidates(...));
     }
 
     /**
@@ -97,7 +97,8 @@ final class ApprovalFacts
     {
         return self::withPeople(self::inScope($filters)
             ->where('kind', 'approval')->where('status', 'current')
-            ->whereHas('request', fn (Builder $r) => $r->where('status', 'pending')))->get();
+            ->whereHas('request', fn (Builder $r) => $r->where('status', 'pending')))->get()
+            ->tap(RequestApproval::preloadGroupCandidates(...));
     }
 
     /**
@@ -307,7 +308,7 @@ final class ApprovalFacts
         return self::facts($step)['waiting'];
     }
 
-    /** Why nobody can act on a waiting step — its named approver has left, or has no login — or null. */
+    /** Why nobody can act on a waiting step — its approver or whole group has left, or nobody has a login — or null. */
     public static function blockedBecause(RequestApproval $step): ?string
     {
         return self::once($step, 'blocked', fn () => self::computeBlocked($step));
@@ -315,6 +316,10 @@ final class ApprovalFacts
 
     private static function computeBlocked(RequestApproval $step): ?string
     {
+        if ($step->isOpenToGroup()) {
+            return $step->blockedReason();
+        }
+
         return $step->approver_employee_id === null ? null : self::blockedOf($step->approver);
     }
 

@@ -3,9 +3,10 @@ import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { REQUEST_SKIP_REASON_LABEL } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
-import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
+import type { ApprovalBlock, ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
-import { Ban, Bell, Check, Flag, KeyRound, SkipForward, X } from 'lucide-react';
+import { Ban, Bell, Check, Flag, KeyRound, SkipForward, UserX, X } from 'lucide-react';
+import { blockedNoteKey } from '../lib/approval-block';
 
 /** `cancelled` = withdrawn by the requester, or the IT step closed without delivery (muted, not the red of a refusal). */
 type TrailTone = 'done' | 'current' | 'rejected' | 'cancelled' | 'skipped' | 'queued';
@@ -18,8 +19,9 @@ interface TrailItem {
     /** When the step was decided — its own span after the meta, spaced rather than joined. */
     metaTime?: string | null;
     note?: string | null;
-    /** Step is open but its approver cannot sign in yet — said in the reader's language. */
-    awaitingAccount?: boolean;
+    /** Why nobody can act on this open step, and the lang key that says so. */
+    blocked?: ApprovalBlock | null;
+    blockedNote?: string | null;
     /** Why the engine skipped the step, if it did — also written in the reader's language. */
     skipReason?: ApprovalSkipReason | null;
 }
@@ -139,7 +141,8 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // Decided or closed steps say when; open, queued and skipped steps have no time.
             metaTime: row.status === 'approved' || row.status === 'rejected' ? fmt.dateTime(row.acted_at) : null,
             note: row.note,
-            awaitingAccount: row.awaiting_account,
+            blocked: row.blocked,
+            blockedNote: blockedNoteKey(row),
             skipReason: row.skip_reason,
         });
     }
@@ -212,10 +215,10 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                                 {t(REQUEST_SKIP_REASON_LABEL[item.skipReason])}
                             </div>
                         )}
-                        {item.awaitingAccount && (
+                        {item.blockedNote && (
                             <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
-                                <KeyRound className="h-3.5 w-3.5 shrink-0" />
-                                {t('req_await_account')}
+                                {item.blocked === 'left' ? <UserX className="h-3.5 w-3.5 shrink-0" /> : <KeyRound className="h-3.5 w-3.5 shrink-0" />}
+                                {t(item.blockedNote)}
                             </div>
                         )}
                         {item.note && (

@@ -96,7 +96,7 @@ const SPECS: Record<string, CountSpec> = {
             },
             { view: 'requests.view_all', children: ['requests.cancel_any'] },
         ],
-        gated: ['requests.notify_approved', 'requests.notify_stalled'],
+        gated: ['requests.notify_approved', 'requests.notify_stalled', 'requests.notify_blocked'],
     },
     access: {
         master: 'access.module',

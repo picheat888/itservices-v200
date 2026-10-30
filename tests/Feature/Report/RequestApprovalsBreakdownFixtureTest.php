@@ -119,6 +119,10 @@ class RequestApprovalsBreakdownFixtureTest extends TestCase
                     'status' => 'rejected', 'acted_by_name' => 'Kan', 'note' => 'Covered', 'became_current_at' => $at($i, 1), 'acted_at' => $at($i, 3)]);
             }
         }
+
+        // Safety's manager, so the Mgr Dept. steps have somebody to sign them.
+        $seManager = $person('E7', $safety, ['position_id' => $manager->id]);
+        User::factory()->create(['name' => 'E7', 'employee_id' => $seManager->id]);
     }
 
     private function viewer(): User

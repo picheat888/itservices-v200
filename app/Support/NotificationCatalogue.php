@@ -333,6 +333,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_request_blocked_left',
+                'module' => 'requests',
+                'name' => 'Approver has left',
+                'trigger' => 'A request cannot move because everyone who could approve its step has left. Sent again each morning while it waits',
+                'audience' => 'Whoever hears about stuck requests',
+                'message_en' => 'Waiting on {step}, but its approver has left',
+                'message_th' => 'รอขั้น {step} อนุมัติ แต่ผู้อนุมัติลาออกแล้ว',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_asset_assigned',
                 'module' => 'assets',
                 'name' => 'Asset handed over to you',

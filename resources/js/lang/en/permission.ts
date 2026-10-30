@@ -255,6 +255,9 @@ export const permission: Dict = {
     'perm_act_requests.notify_stalled': 'Weekly summary of waiting approvals',
     'perm_desc_requests.notify_stalled':
         "Receive a Monday email listing the requests that have waited more than a week for this person's decision. Without it they still get the daily notification in the app.",
+    'perm_act_requests.notify_blocked': 'Hear about stuck requests',
+    'perm_desc_requests.notify_blocked':
+        "Receive a notification when a request is stuck because its approver has left, and a reminder each morning while it waits. Give it together with Cancel others' requests, since a stuck request is fixed by cancelling it and filing it again.",
     perm_mod_workflows: 'Workflows',
     'perm_act_workflows.module': 'Workflows access',
     'perm_desc_workflows.module': 'Open the Workflows screen and read the approval chain of each request type. Changing one needs the switch below.',

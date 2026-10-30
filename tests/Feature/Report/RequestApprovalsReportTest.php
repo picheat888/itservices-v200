@@ -93,6 +93,9 @@ class RequestApprovalsReportTest extends TestCase
         // Never given a login.
         $porn = $person('EMP-3', 'Porn', ['department_id' => $safety->id]);
         $noManager = $person('EMP-9', 'Mongkol');
+        // Safety's manager, so the SE Dept. step has somebody to sign it.
+        $seManager = $person('EMP-4', 'Suda', ['department_id' => $safety->id, 'position_id' => $manager->id]);
+        User::factory()->create(['name' => 'Suda', 'employee_id' => $seManager->id]);
         $admin = User::factory()->create(['name' => 'Administrator']);
         $byAnan = fn (string $became, string $acted, array $extra = []) => [
             'approver_employee_id' => $anan->id, 'approver_name' => 'Anan Test', 'acted_by_user_id' => $ananUser->id, 'acted_by_name' => 'Anan',

@@ -1325,6 +1325,7 @@ export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' 
  * viewer's language instead of the language it was submitted in.
  */
 export type ApprovalSkipReason = 'no_manager' | 'no_matching_position' | 'no_resource_owner' | 'requester_is_owner' | 'no_department_approver';
+export type ApprovalBlock = 'left' | 'no_account';
 export type WorkflowActorType = 'chain' | 'owner' | 'it_staff' | 'department';
 export type WorkflowStepKind = 'approval' | 'completion';
 
@@ -1357,8 +1358,8 @@ export interface RequestApproval {
     acted_by_name_th?: string | null;
     became_current_at: string | null;
     acted_at: string | null;
-    /** Step is open and its approver has no login account yet — reported live, not snapshotted. */
-    awaiting_account: boolean;
+    /** Why nobody can act on this open step — its approver (or whole group) has left, or nobody has a login; reported live. */
+    blocked: ApprovalBlock | null;
 }
 
 /** An IT service request as the API returns it. */

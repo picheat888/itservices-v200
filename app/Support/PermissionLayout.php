@@ -53,7 +53,7 @@ class PermissionLayout
                     'fill_on_grant' => true,
                 ]),
                 self::group('requests.view_all', $requests['requests.view_all'], ['chip' => false]),
-                self::set('perm_ui_notifications', 'perm_ui_request_notify_hint', ['requests.notify_approved', 'requests.notify_stalled']),
+                self::set('perm_ui_notifications', 'perm_ui_request_notify_hint', ['requests.notify_approved', 'requests.notify_stalled', 'requests.notify_blocked']),
             ]),
             self::treeCard('access', Permissions::accessHierarchy()),
             self::treeCard('assets', Permissions::assetHierarchy(), ['assets.manage', 'assets.special']),

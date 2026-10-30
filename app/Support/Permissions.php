@@ -39,7 +39,7 @@ class Permissions
                 'module',
                 'submit', ...self::requestTypeKeys(),
                 'view_all', 'cancel_any',
-                'complete', 'notify_approved', 'notify_stalled',
+                'complete', 'notify_approved', 'notify_stalled', 'notify_blocked',
             ],
             // The master opens the screen; `manage` is the right to change a chain.
             'workflows' => ['module', 'manage'],
@@ -223,7 +223,7 @@ class Permissions
             ],
         ];
 
-        // Every submitter files every type; cancel_any is for the IT leads only.
+        // Every submitter files every type; cancel_any and notify_blocked are for the IT leads only.
         $typeKeys = array_map(fn (string $action) => "requests.{$action}", self::requestTypeKeys());
         foreach ($roles as $role => $keys) {
             if (in_array('requests.submit', $keys, true)) {
@@ -232,6 +232,7 @@ class Permissions
         }
         foreach (['admin', 'it_supervisorleader'] as $role) {
             $roles[$role][] = 'requests.cancel_any';
+            $roles[$role][] = 'requests.notify_blocked';
         }
 
         return $roles;
@@ -472,6 +473,7 @@ class Permissions
                 'requests.complete' => [],
                 'requests.notify_approved' => [],
                 'requests.notify_stalled' => [],
+                'requests.notify_blocked' => [],
             ],
         ];
     }

@@ -2,7 +2,6 @@
 
 namespace App\Services\Request;
 
-use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\WorkflowStepKind;
 use App\Models\Employee\Employee;
@@ -173,13 +172,20 @@ class RequestNotificationService
     /** Bell + email one resolved approver that a step waits on them. */
     private function notifyApprover(ServiceRequest $request, RequestApproval $row): void
     {
+        // Nobody left to sign it
+        if ($row->blockedReason() === 'left') {
+            $this->blockedLeft($request, $row);
+
+            return;
+        }
+
         // A step open to a group has no single approver: everybody who could
         // act is told, and whoever gets there first takes it. Belling one of them would
         // leave the rest waiting on a request they are equally responsible for.
         if ($row->isOpenToGroup()) {
             $group = $this->groupApprovers($row);
             if ($group->isEmpty()) {
-                $this->notifyCredentialSettersOfBlock($request, $row, $this->groupCandidates($row)->first());
+                $this->notifyCredentialSettersOfBlock($request, $row, $row->groupCandidates()->first());
 
                 return;
             }
@@ -222,7 +228,7 @@ class RequestNotificationService
     /** A member took a group step: withdraw the others' waiting/stalled bells, which would now open a 403. */
     public function groupStepTaken(ServiceRequest $request, RequestApproval $decided, User $actor): void
     {
-        $others = User::whereIn('employee_id', $this->groupCandidates($decided, onlyActive: false)->pluck('id'))
+        $others = User::whereIn('employee_id', $decided->groupCandidates(onlyActive: false)->pluck('id'))
             ->where('id', '!=', $actor->id)
             ->get();
 
@@ -273,6 +279,16 @@ class RequestNotificationService
         return $delivered;
     }
 
+    /** The step's approver, or its whole group, has left: holders of requests.notify_blocked hear, on arrival and each morning after. */
+    public function blockedLeft(ServiceRequest $request, RequestApproval $row): void
+    {
+        $this->sendBell(
+            $this->recipients('requests.notify_blocked'),
+            new RequestWorkflowNotification($request, 'blocked_left', $row->label),
+            ['service_request_id' => $request->id, 'subtype' => 'blocked_left'],
+        );
+    }
+
     /**
      * The request waits on somebody who cannot sign in yet. Nobody involved can move
      * it, and the approver has no inbox to be told about it — so the bell goes to the
@@ -314,37 +330,7 @@ class RequestNotificationService
             return collect();
         }
 
-        return User::whereIn('employee_id', $this->groupCandidates($row)->pluck('id'))->get();
-    }
-
-    /**
-     * Employees a group step accepts (read from its criteria, even once taken); never the requester, no resigned unless $onlyActive is false.
-     *
-     * @return Collection<int, Employee>
-     */
-    private function groupCandidates(RequestApproval $row, bool $onlyActive = true): Collection
-    {
-        $namedIds = array_map('intval', array_values($row->approver_employee_ids ?? []));
-        $positionIds = array_map('intval', array_values($row->approver_position_ids ?? []));
-
-        if ($namedIds !== []) {
-            $query = Employee::whereIn('id', $namedIds);
-        } elseif ($row->approver_department_id !== null && $positionIds !== []) {
-            $query = Employee::where('department_id', $row->approver_department_id)->whereIn('position_id', $positionIds);
-        } else {
-            return collect();
-        }
-
-        $candidates = $query
-            ->when($onlyActive, fn ($q) => $q->where('status', '!=', EmployeeStatus::Resigned->value))
-            ->when($row->request?->employee_id, fn ($q, $ownerId) => $q->where('id', '!=', $ownerId))
-            ->orderBy('id')
-            ->get();
-
-        // Named steps keep the workflow's order: the first name is who the route means to ask.
-        return $namedIds !== []
-            ? $candidates->sortBy(fn (Employee $e) => array_search((int) $e->id, $namedIds, true))->values()
-            : $candidates;
+        return User::whereIn('employee_id', $row->groupCandidates()->pluck('id'))->get();
     }
 
     /** The login account behind an approval row, or null for queue/skipped rows. */

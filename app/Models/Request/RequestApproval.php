@@ -14,6 +14,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 
 /**
  * One frozen step of a service request's resolved approval chain. Created at
@@ -33,6 +34,9 @@ class RequestApproval extends Model
 
     /** @var array{department: string|null, department_th: string|null, positions: list<string>, candidates: list<string>, candidates_th: list<string|null>}|null */
     protected ?array $preloadedGroupNames = null;
+
+    /** @var Collection<int, Employee>|null */
+    protected ?Collection $preloadedCandidates = null;
 
     protected function casts(): array
     {
@@ -209,6 +213,113 @@ class RequestApproval extends Model
                     ->whereJsonContains('approver_position_ids', (int) $employee->position_id));
             }
         });
+    }
+
+    /**
+     * Employees a group step accepts (read from its criteria, even once taken); never the requester, no resigned unless $onlyActive is false.
+     *
+     * @return Collection<int, Employee>
+     */
+    public function groupCandidates(bool $onlyActive = true): Collection
+    {
+        if ($onlyActive && $this->preloadedCandidates !== null) {
+            return $this->preloadedCandidates;
+        }
+
+        $namedIds = array_map('intval', array_values($this->approver_employee_ids ?? []));
+        $positionIds = array_map('intval', array_values($this->approver_position_ids ?? []));
+
+        if ($namedIds !== []) {
+            $query = Employee::whereIn('id', $namedIds);
+        } elseif ($this->approver_department_id !== null && $positionIds !== []) {
+            $query = Employee::where('department_id', $this->approver_department_id)->whereIn('position_id', $positionIds);
+        } else {
+            return collect();
+        }
+
+        $candidates = $query
+            ->with('user')
+            ->when($onlyActive, fn ($q) => $q->where('status', '!=', EmployeeStatus::Resigned->value))
+            ->when($this->request?->employee_id, fn ($q, $ownerId) => $q->where('id', '!=', $ownerId))
+            ->orderBy('id')
+            ->get();
+
+        return self::inNamedOrder($candidates, $namedIds);
+    }
+
+    /**
+     * Fills groupCandidates() for the open group steps among many rows: one employee query instead of one per row.
+     *
+     * @param  iterable<RequestApproval>  $approvals
+     */
+    public static function preloadGroupCandidates(iterable $approvals): void
+    {
+        $rows = collect($approvals)->filter(fn (self $row) => $row->isOpenToGroup()
+            && in_array($row->status, [ApprovalStatus::Waiting, ApprovalStatus::Current], true));
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $departmentRows = $rows->filter(fn (self $row) => $row->isOpenToDepartment());
+        $namedIds = $rows->flatMap(fn (self $row) => $row->namedApproverIds())->unique()->values();
+        $departmentIds = $departmentRows->pluck('approver_department_id')->unique()->values();
+        $positionIds = $departmentRows->flatMap(fn (self $row) => array_map('intval', $row->approver_position_ids))->unique()->values();
+
+        $employees = Employee::with('user')
+            ->where('status', '!=', EmployeeStatus::Resigned->value)
+            ->where(fn (Builder $q) => $q->whereIn('id', $namedIds)
+                ->orWhere(fn (Builder $d) => $d->whereIn('department_id', $departmentIds)->whereIn('position_id', $positionIds)))
+            ->orderBy('id')
+            ->get();
+
+        foreach ($rows as $row) {
+            $accepted = $employees->filter(fn (Employee $employee) => $row->acceptsEmployee($employee))->values();
+            $row->preloadedCandidates = self::inNamedOrder($accepted, $row->namedApproverIds());
+        }
+    }
+
+    /**
+     * Named steps keep the workflow's order: the first name is who the route means to ask.
+     *
+     * @param  Collection<int, Employee>  $candidates
+     * @param  list<int>  $namedIds
+     * @return Collection<int, Employee>
+     */
+    private static function inNamedOrder(Collection $candidates, array $namedIds): Collection
+    {
+        return $namedIds !== []
+            ? $candidates->sortBy(fn (Employee $e) => array_search((int) $e->id, $namedIds, true))->values()
+            : $candidates;
+    }
+
+    /**
+     * Why nobody can act on this open approval step: 'left' when its approver (or every member of its group) has gone,
+     * 'no_account' when nobody who could act has a login; null when somebody can.
+     */
+    public function blockedReason(): ?string
+    {
+        if ($this->kind !== WorkflowStepKind::Approval || ! in_array($this->status, [ApprovalStatus::Waiting, ApprovalStatus::Current], true)) {
+            return null;
+        }
+
+        if ($this->isOpenToGroup()) {
+            $candidates = $this->groupCandidates();
+            if ($candidates->isEmpty()) {
+                return 'left';
+            }
+
+            return $candidates->contains(fn (Employee $employee) => $employee->user !== null) ? null : 'no_account';
+        }
+
+        $approver = $this->approver;
+        if ($approver === null) {
+            return null;
+        }
+        if ($approver->hasLeft()) {
+            return 'left';
+        }
+
+        return $approver->user === null ? 'no_account' : null;
     }
 
     /** True when this row belongs to a request filed for this employee. */

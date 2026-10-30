@@ -39,14 +39,22 @@ class RequestStalledService
     /**
      * Daily bells for steps waiting longer than NUDGE_AFTER_DAYS.
      *
-     * @return array{approvers: int, queue: int} how many bells each path sent
+     * @return array{approvers: int, queue: int, blocked: int} how many bells each path sent
      */
     public function nudge(): array
     {
-        $sent = ['approvers' => 0, 'queue' => 0];
+        $sent = ['approvers' => 0, 'queue' => 0, 'blocked' => 0];
 
         foreach ($this->stalledRows(self::NUDGE_AFTER_DAYS) as $row) {
             $days = $this->daysWaiting($row);
+
+            // Its approver, or the whole group, has left: IT hears instead of the leavers
+            if ($row->blockedReason() === 'left') {
+                $this->notifications->blockedLeft($row->request, $row);
+                $sent['blocked']++;
+
+                continue;
+            }
 
             // A step open to a group carries no single approver either, but it is not the
             // queue: everybody who could sign it is reminded.
@@ -86,7 +94,7 @@ class RequestStalledService
     public function digest(): array
     {
         $rows = $this->stalledRows(self::DIGEST_AFTER_DAYS)
-            ->filter(fn (RequestApproval $row) => $row->approver_employee_id !== null);
+            ->filter(fn (RequestApproval $row) => $row->approver_employee_id !== null && $row->approver?->hasLeft() !== true);
 
         $byEmployee = $rows->groupBy('approver_employee_id');
         if ($byEmployee->isEmpty()) {

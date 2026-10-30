@@ -33,6 +33,7 @@ import { Link } from 'react-router-dom';
 import { useRequest, useRequestMutations } from '../hooks/use-requests';
 import { CancelRequestDialog } from './cancel-request-dialog';
 import { DecisionDialog, type DecisionAction } from './decision-dialog';
+import { RequestStuckStrip } from './request-stuck-strip';
 import { RequestTrail } from './request-trail';
 
 /**
@@ -219,6 +220,9 @@ function RequestDetailBody({
                     </div>
                 </div>
             )}
+
+            {/* Nobody left who can approve the current step */}
+            <RequestStuckStrip request={request} />
 
             <div className="border-border/60 grid flex-1 scroll-py-2 content-start gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
                 {/* Left — summary + typed fields */}

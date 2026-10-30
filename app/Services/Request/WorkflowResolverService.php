@@ -471,7 +471,7 @@ class WorkflowResolverService
     // NOTE: "this approver has no login yet" is deliberately NOT written onto the
     // row. The row is a snapshot and that fact is not: the moment HR provisions the
     // account, a frozen note would be a lie. RequestApprovalResource reports it live
-    // as `awaiting_account` instead.
+    // as `blocked` instead.
 
     /** The owner of the Access resource referenced by the submitted fields, if usable. */
     private function resolveOwner(RequestType $type, array $fields): ?Employee

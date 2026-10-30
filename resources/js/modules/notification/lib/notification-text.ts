@@ -78,6 +78,7 @@ const REQUEST_MESSAGE_KEY: Record<string, string> = {
     cancelled: 'notif_request_cancelled',
     cancelled_for_owner: 'notif_request_cancelled_for_owner',
     blocked_no_account: 'notif_request_blocked_no_account',
+    blocked_left: 'notif_request_blocked_left',
 };
 
 /** Secondary descriptive line for a notification, already localised. */
