@@ -468,10 +468,7 @@ class WorkflowResolverService
         return $employee !== null && $employee->status === EmployeeStatus::Active;
     }
 
-    // NOTE: "this approver has no login yet" is deliberately NOT written onto the
-    // row. The row is a snapshot and that fact is not: the moment HR provisions the
-    // account, a frozen note would be a lie. RequestApprovalResource reports it live
-    // as `blocked` instead.
+    // "No login yet" is never stored on the row; RequestApprovalResource reports it live as `blocked`
 
     /** The owner of the Access resource referenced by the submitted fields, if usable. */
     private function resolveOwner(RequestType $type, array $fields): ?Employee

@@ -108,14 +108,7 @@ class TicketService
     }
 
     /**
-     * An IT staff takes an open case for themselves: assigns it, optionally records an
-     * initial note and the related asset, and moves it to InProgress.
-     *
-     * A case opened automatically from an approved request gets NO priority — its target
-     * comes from what was asked for, which was settled before anybody looked at it. Passing
-     * one would be recording a judgement nobody made.
-     *
-     * $keepLinkedAsset leaves the asset the requester linked in place; otherwise $relatedAssetId replaces it (null unlinks).
+     * An IT staff takes an open case: assigns it, records the note and asset, moves it to InProgress; request cases get no priority.
      */
     public function take(Ticket $ticket, User $staff, ?TicketPriority $priority, ?string $note, ?int $relatedAssetId, bool $keepLinkedAsset = false): Ticket
     {
@@ -418,8 +411,7 @@ class TicketService
     }
 
     /**
-     * Staff able to take this specific case: tickets.resolve + the matching Level, never the
-     * requester (a case can't be handled by the person who filed it).
+     * Staff able to take this case: tickets.resolve + the matching Level, never its requester.
      *
      * @return Collection<int, User>
      */
@@ -431,8 +423,7 @@ class TicketService
     }
 
     /**
-     * Bell and mail to the staff who could pick up a waiting case. A bell is only seen by somebody
-     * already in the portal, and a case nobody has picked up is exactly the thing nobody is looking at.
+     * Bell and mail to the staff who could pick up a waiting case.
      *
      * @param  Collection<int, User>  $takers
      */

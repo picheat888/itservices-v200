@@ -41,8 +41,7 @@ class WorkflowService
     }
 
     /**
-     * Average days from submit to decision per workflow over the last MEASURE_DAYS, plus how many requests
-     * that average rests on. Averaged in PHP so the maths does not depend on the database's date functions.
+     * Average days from submit to decision per workflow over the last MEASURE_DAYS, averaged in PHP.
      *
      * @return Collection<int, array{avg_days: float, requests: int}>
      */
@@ -114,8 +113,7 @@ class WorkflowService
     }
 
     /**
-     * Resolve a (possibly unsaved) step list against one employee, with each approver's position and the
-     * people a group row is open to. Owner steps resolve at submit time from the picked resource.
+     * Resolve a (possibly unsaved) step list against one employee; owner steps resolve only at submit.
      *
      * @param  list<array<string, mixed>>  $steps
      * @return array{employee: array<string, mixed>, rows: Collection<int, array<string, mixed>>}

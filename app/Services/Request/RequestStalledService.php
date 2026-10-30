@@ -85,10 +85,7 @@ class RequestStalledService
     }
 
     /**
-     * The weekly digest: one mail per person, listing the steps waiting on them (group steps
-     * included) older than DIGEST_AFTER_DAYS. Only people holding requests.notify_stalled
-     * receive it — the daily bell is what everybody gets, and mail is opt-in through the
-     * Permissions screen.
+     * Weekly digest mail of steps older than DIGEST_AFTER_DAYS, only to holders of requests.notify_stalled.
      *
      * @return array{recipients: int, requests: int}
      */

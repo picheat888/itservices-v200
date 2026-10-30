@@ -299,9 +299,7 @@ class RequestApproval extends Model
     }
 
     /**
-     * Why nobody can act on this open approval step: 'left' when its approver (or everybody a named group lists) has
-     * resigned, 'vacant' when a department rung is held by nobody else or a named group lists only the requester,
-     * 'no_account' when nobody who could act has a login; null when somebody can.
+     * Why nobody can act on this open step ('left' | 'vacant' | 'no_account'), null when somebody can.
      */
     public function blockedReason(): ?string
     {
