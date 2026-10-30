@@ -42,7 +42,7 @@ export const ACTIVITY_SHARE_MS = 5_000;
 
 export type SessionMessage =
     | { type: 'activity'; at: number }
-    | { type: 'logout' }
+    | { type: 'logout'; reason: 'session_expired' | 'signed_out'; from: string | null }
     | { type: 'login'; userId: number }
     | { type: 'password'; userId: number };
 
@@ -70,8 +70,14 @@ export function dismissesWarning(warningOpenedAt: number, activityAt: number): b
 
 export function parseSessionMessage(data: unknown): SessionMessage | null {
     if (typeof data !== 'object' || data === null) return null;
-    const message = data as { type?: unknown; at?: unknown; userId?: unknown };
-    if (message.type === 'logout') return { type: 'logout' };
+    const message = data as { type?: unknown; at?: unknown; userId?: unknown; reason?: unknown; from?: unknown };
+    if (message.type === 'logout') {
+        return {
+            type: 'logout',
+            reason: message.reason === 'signed_out' ? 'signed_out' : 'session_expired',
+            from: typeof message.from === 'string' ? message.from : null,
+        };
+    }
     if ((message.type === 'login' || message.type === 'password') && typeof message.userId === 'number' && Number.isInteger(message.userId)) {
         return { type: message.type, userId: message.userId };
     }

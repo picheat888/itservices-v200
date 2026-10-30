@@ -64,6 +64,16 @@ export function showsOwnThrottle(url: string | undefined): boolean {
     return !!url && (url.endsWith('/login') || url.includes('/login/devices/') || url === '/password');
 }
 
+/** A password change came due mid-session (403 password_expired) while this tab still thinks it is fine, so /me must load again to open the wall. */
+export function passwordNewlyOwed(
+    status: number | undefined,
+    body: unknown,
+    me: { password_expired?: boolean; must_change_password?: boolean } | null | undefined,
+): boolean {
+    const message = (body as { message?: unknown } | null | undefined)?.message;
+    return status === 403 && message === 'password_expired' && !!me && !me.password_expired && !me.must_change_password;
+}
+
 export function isReadRequest(error: unknown): boolean {
     return ((error as FailureShape | null)?.config?.method ?? 'get').toLowerCase() === 'get';
 }

@@ -28,11 +28,19 @@ export function createLoginRedirect(target: { href: string }, announce?: () => v
     };
 }
 
-function announceLogout(): void {
+/** This tab's id on the session channel, so a tab skips its own sign-out news. */
+export const SESSION_TAB_ID = Math.random().toString(36).slice(2);
+
+function announceLogout(reason: SignedOutReason): void {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(SESSION_CHANNEL);
-    channel.postMessage({ type: 'logout' });
+    channel.postMessage({ type: 'logout', reason, from: SESSION_TAB_ID });
     channel.close();
+}
+
+/** Tells the other tabs this tab signed out, so they go to the login page too (see useSessionTimeout). */
+export function announceSignOut(): void {
+    announceLogout('signed_out');
 }
 
 /** Tells the other tabs which account the shared session now belongs to (see useAccountSync). */
@@ -55,7 +63,7 @@ let shared: ReturnType<typeof createLoginRedirect> | null = null;
 
 /** The app's one redirect, shared by the http client and the idle timer. */
 export function redirectToLogin(reason: SignedOutReason, options?: RedirectOptions): void {
-    shared ??= createLoginRedirect(window.location, announceLogout);
+    shared ??= createLoginRedirect(window.location, () => announceLogout('session_expired'));
     shared(reason, options);
 }
 

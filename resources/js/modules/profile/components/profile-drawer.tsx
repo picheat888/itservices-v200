@@ -256,10 +256,13 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
         const form = new FormData();
         form.append('first_name', firstName.trim());
         form.append('last_name', lastName.trim());
-        form.append('first_name_th', firstNameTh.trim());
-        form.append('last_name_th', lastNameTh.trim());
-        form.append('phone', phone);
-        if (photo) form.append('photo', photo);
+        // The Thai name, phone and photo live on the employee record
+        if (linked) {
+            form.append('first_name_th', firstNameTh.trim());
+            form.append('last_name_th', lastNameTh.trim());
+            form.append('phone', phone);
+            if (photo) form.append('photo', photo);
+        }
         try {
             await update.mutateAsync(form);
             setSaved(true);
@@ -336,7 +339,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                             className="ring-card h-[72px] w-[72px] shadow-md ring-2"
                             textClassName="text-2xl"
                         />
-                        {canEdit && (
+                        {canEdit && linked && (
                             <button
                                 type="button"
                                 onClick={() => inputRef.current?.click()}
@@ -442,6 +445,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
                                     fields={fields}
                                     errors={errors}
                                     canEdit={canEdit}
+                                    linked={linked}
                                     emp={emp}
                                     empLoading={empLoading}
                                     formError={formError}

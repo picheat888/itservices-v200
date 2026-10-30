@@ -1,6 +1,6 @@
 // Idle sign-out: polls the inactivity clock, opens the warning before sign-out, and keeps the countdown on wall-clock time.
 // Every tab of the browser shares one session cookie, so they share one activity time and sign out together.
-import { redirectToLogin, SESSION_CHANNEL } from '@/shared/lib/login-redirect';
+import { redirectToLogin, SESSION_CHANNEL, SESSION_TAB_ID, type SignedOutReason } from '@/shared/lib/login-redirect';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { authApi } from '../api/authApi';
@@ -147,12 +147,12 @@ export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolea
 
     // announce: false when the news came from another tab, which has already told everyone
     const leaveForLogin = useCallback(
-        (announce: boolean) => {
+        (announce: boolean, reason: SignedOutReason = 'session_expired') => {
             if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
             clearCountdown();
             clearHeartbeat();
             qc.clear();
-            redirectToLogin('session_expired', { announce });
+            redirectToLogin(reason, { announce });
         },
         [qc],
     );
@@ -220,7 +220,7 @@ export function useSessionTimeout(timeoutMinutes: number, sendsHeartbeat: boolea
         channel.onmessage = (event: MessageEvent) => {
             const message = parseSessionMessage(event.data);
             if (message?.type === 'activity') noteActivity(message.at);
-            if (message?.type === 'logout') leaveForLogin(false);
+            if (message?.type === 'logout' && message.from !== SESSION_TAB_ID) leaveForLogin(false, message.reason);
         };
         return () => {
             channel.close();

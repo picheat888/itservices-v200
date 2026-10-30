@@ -7,6 +7,7 @@ import {
     isRecordMissing,
     markShownInline,
     outranks,
+    passwordNewlyOwed,
     queryFailureTakesScreen,
     quietPathAfterMove,
     retryAfterOf,
@@ -139,4 +140,14 @@ test('a refusal the server worded still shows its message, else the form words',
         'The password is too short.',
     );
     assert.equal(formFailureText({ response: { status: 422, data: {} } }, 'Failed.'), 'Failed.');
+});
+
+test('a password that came due mid-session reloads /me once, not again while the wall is up', () => {
+    const fine = { password_expired: false, must_change_password: false };
+    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, fine), true);
+    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, { password_expired: true, must_change_password: false }), false);
+    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, { password_expired: false, must_change_password: true }), false);
+    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, null), false);
+    assert.equal(passwordNewlyOwed(403, { message: 'forbidden' }, fine), false);
+    assert.equal(passwordNewlyOwed(401, { message: 'password_expired' }, fine), false);
 });

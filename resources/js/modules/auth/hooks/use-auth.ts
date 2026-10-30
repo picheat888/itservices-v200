@@ -1,6 +1,6 @@
 import { disablePush } from '@/modules/notification';
 import { httpStatus } from '@/shared/lib/http-errors';
-import { announceSignIn } from '@/shared/lib/login-redirect';
+import { announceSignIn, announceSignOut } from '@/shared/lib/login-redirect';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { SUPER_ROLE, type User } from '@/shared/types';
 import { clearNewRows } from '@/stores/new-rows';
@@ -66,7 +66,8 @@ export function useLogout() {
                 ]);
             }
             clearNewRows();
-            return authApi.logout();
+            await authApi.logout();
+            announceSignOut();
         },
         // onSettled: a failed logout call still leaves; the login page sends them back if the session survived
         onSettled: () => {

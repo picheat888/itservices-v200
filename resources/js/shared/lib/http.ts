@@ -5,16 +5,18 @@ import {
     httpStatus,
     isQuietServerError,
     isServerFailure,
+    passwordNewlyOwed,
+    queryFailureTakesScreen,
     requestIdOf,
     retryAfterOf,
     serviceUnavailableKind,
     showsOwnThrottle,
     wasShownInline,
-    queryFailureTakesScreen,
 } from '@/shared/lib/http-errors';
 import { redirectToLogin, signedOutRedirectFor } from '@/shared/lib/login-redirect';
 import { formatNumber } from '@/shared/lib/number';
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
+import type { User } from '@/shared/types';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
@@ -71,6 +73,15 @@ http.interceptors.response.use(
         });
         if (signedOut) {
             redirectToLogin(signedOut.reason, { by: signedOut.by });
+            return Promise.reject(error);
+        }
+
+        // Password owed mid-session: reload /me so the change-password wall opens, and forms show words, not the code
+        if (status === 403 && error.response.data?.message === 'password_expired') {
+            if (passwordNewlyOwed(status, error.response.data, queryClient.getQueryData<User | null>(ME_KEY))) {
+                void queryClient.invalidateQueries({ queryKey: ME_KEY });
+            }
+            error.response.data.message = translate(useUiStore.getState().lang, 'pwd_expired_title');
             return Promise.reject(error);
         }
 

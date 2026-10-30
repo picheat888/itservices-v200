@@ -88,7 +88,17 @@ test('only activity after the warning opened closes it', () => {
 
 test('messages between tabs are checked before they are trusted', () => {
     assert.deepEqual(parseSessionMessage({ type: 'activity', at: 123 }), { type: 'activity', at: 123 });
-    assert.deepEqual(parseSessionMessage({ type: 'logout' }), { type: 'logout' });
+    assert.deepEqual(parseSessionMessage({ type: 'logout' }), { type: 'logout', reason: 'session_expired', from: null });
+    assert.deepEqual(parseSessionMessage({ type: 'logout', reason: 'signed_out', from: 'tab1' }), {
+        type: 'logout',
+        reason: 'signed_out',
+        from: 'tab1',
+    });
+    assert.deepEqual(parseSessionMessage({ type: 'logout', reason: 'third_device', from: 7 }), {
+        type: 'logout',
+        reason: 'session_expired',
+        from: null,
+    });
     assert.deepEqual(parseSessionMessage({ type: 'login', userId: 7 }), { type: 'login', userId: 7 });
     assert.equal(parseSessionMessage({ type: 'login' }), null);
     assert.equal(parseSessionMessage({ type: 'login', userId: '7' }), null);

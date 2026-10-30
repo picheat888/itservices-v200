@@ -12,6 +12,7 @@ export function ProfileDetailsTab({
     fields,
     errors,
     canEdit,
+    linked,
     emp,
     empLoading,
     formError,
@@ -21,6 +22,8 @@ export function ProfileDetailsTab({
     fields: Record<ProfileFormKey, string>;
     errors: Partial<Record<ProfileFormKey, string>>;
     canEdit: boolean;
+    /** Signed in with an account tied to an employee; otherwise only the English name is the account's own. */
+    linked: boolean;
     emp: Employee | undefined;
     empLoading: boolean;
     formError: string;
@@ -30,9 +33,10 @@ export function ProfileDetailsTab({
     const t = useT();
     const fmt = useDateFormat();
 
+    const isName = (key: ProfileFormKey) => key === 'firstName' || key === 'lastName';
     const textField = (key: ProfileFormKey, label: string, props: React.ComponentProps<typeof Input> = {}) => (
-        <Field label={label} name={key} error={errors[key]} required={key === 'firstName' || key === 'lastName'}>
-            <Input value={fields[key]} onChange={onEdit(key)} disabled={!canEdit} {...props} />
+        <Field label={label} name={key} error={errors[key]} required={isName(key)}>
+            <Input value={fields[key]} onChange={onEdit(key)} disabled={!canEdit || (!linked && !isName(key))} {...props} />
         </Field>
     );
 
@@ -58,6 +62,7 @@ export function ProfileDetailsTab({
                 {textField('lastNameTh', t('emp_last_name_th'), { autoComplete: 'off' })}
                 {textField('phone', t('emp_phone'), { type: 'tel', inputMode: 'tel', autoComplete: 'tel' })}
             </div>
+            {canEdit && !linked && <p className="text-muted-foreground text-[13px]">{t('profile_unlinked_note')}</p>}
         </div>
     );
 }

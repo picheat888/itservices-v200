@@ -2,11 +2,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    announceSignOut,
     createLoginRedirect,
     loginNoticeReason,
     parseDeviceSignedOut,
     readSignedOutBy,
     serverFileTarget,
+    SESSION_CHANNEL,
+    SESSION_TAB_ID,
     signedOutRedirectFor,
 } from '../../resources/js/shared/lib/login-redirect.ts';
 
@@ -302,4 +305,14 @@ test('the reasons the app itself puts in the URL keep their notice, and anything
     assert.equal(loginNoticeReason(''), null);
     assert.equal(loginNoticeReason('something_new'), null);
     assert.equal(loginNoticeReason('constructor'), null);
+});
+
+test('signing out tells the other tabs, marked as this tab and as a plain sign-out', async () => {
+    const listener = new BroadcastChannel(SESSION_CHANNEL);
+    const received = new Promise((resolve) => (listener.onmessage = (event) => resolve(event.data)));
+
+    announceSignOut();
+
+    assert.deepEqual(await received, { type: 'logout', reason: 'signed_out', from: SESSION_TAB_ID });
+    listener.close();
 });

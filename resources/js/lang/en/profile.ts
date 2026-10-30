@@ -16,6 +16,8 @@ export const profile: Dict = {
     profile_tab_details: 'Personal info',
     profile_tab_devices: 'Sign-ins',
     profile_tab_notifications: 'Notifications',
+    // profile-details-tab.tsx — แท็บข้อมูลส่วนตัว
+    profile_unlinked_note: 'This account is not linked to an employee, so only the English name can be edited.',
     // my-assets-tab.tsx — แท็บทรัพย์สิน
     my_assets_new: 'New',
     my_assets_return_confirm: 'Send this asset back to IT? It will show as pending return until IT confirms receipt.',
