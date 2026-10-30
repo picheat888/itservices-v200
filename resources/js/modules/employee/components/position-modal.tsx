@@ -17,7 +17,18 @@ import { Users } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { usePositionMutations, usePositions } from '../hooks/use-positions';
 
-export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {
+export function PositionModal({
+    open,
+    onClose,
+    position,
+    canSpecial,
+}: {
+    open: boolean;
+    onClose: () => void;
+    position: Position | null;
+    /** employees.position_special: without it the flag is shown but cannot be changed */
+    canSpecial: boolean;
+}) {
     const t = useT();
     // The header keeps the record being edited while the dialog closes
     const [shown, setShown] = useState(position);
@@ -114,7 +125,7 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                                 <div className="text-sm font-medium">{t('pos_allow_special')}</div>
                                 <div className="text-muted-foreground mt-0.5 text-xs">{t('pos_allow_special_help')}</div>
                             </div>
-                            <Switch checked={allowSpecial} onChange={toggleSpecial} aria-label={t('pos_allow_special')} />
+                            <Switch checked={allowSpecial} onChange={toggleSpecial} disabled={!canSpecial} aria-label={t('pos_allow_special')} />
                         </div>
                     </DialogBody>
                     <DialogFooterBar>

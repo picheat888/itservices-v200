@@ -3,6 +3,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Department, Employee } from '@/shared/types';
@@ -21,6 +22,7 @@ import { CountPlaceholder } from './count-placeholder';
  */
 export function DepartmentMembersDialog({ department, onClose }: { department: Department | null; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
 
     // Retain the last department so content stays rendered while the dialog animates closed.
@@ -88,10 +90,11 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     subtitle={
                         <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs" aria-busy={isLoading || sectionsLoading || undefined}>
                             <span>
-                                {sectionsLoading ? <CountPlaceholder label={t('loading')} /> : sections.length} {t('sub_sections')}
+                                {sectionsLoading ? <CountPlaceholder label={t('loading')} /> : fmtN(sections.length)} {t('sub_sections')}
                             </span>
                             <span>
-                                {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('dept_members')}
+                                {isLoading ? expected != null ? fmtN(expected) : <CountPlaceholder label={t('loading')} /> : fmtN(members.length)}{' '}
+                                {t('dept_members')}
                             </span>
                         </span>
                     }

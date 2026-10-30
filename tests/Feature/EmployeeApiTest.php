@@ -192,6 +192,17 @@ class EmployeeApiTest extends TestCase
             ->assertJsonValidationErrors('manager_id');
     }
 
+    public function test_the_directory_lists_the_newest_employee_first_whatever_its_code_length(): void
+    {
+        $this->actingAs($this->super());
+        $older = Employee::create(['code' => 'EMP-999', 'first_name' => 'Older', 'last_name' => 'Hire']);
+        $newer = Employee::create(['code' => 'EMP-1001', 'first_name' => 'Newer', 'last_name' => 'Hire']);
+
+        $codes = collect($this->getJson('/api/employees?per_page=100')->assertOk()->json('data'))->pluck('code')->all();
+
+        $this->assertLessThan(array_search('EMP-999', $codes, true), array_search('EMP-1001', $codes, true));
+    }
+
     public function test_manager_refusals_name_their_cause(): void
     {
         $this->actingAs($this->super());

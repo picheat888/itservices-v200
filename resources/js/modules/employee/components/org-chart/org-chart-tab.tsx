@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { localName } from '@/shared/lib/local-name';
 import { matchesAllWords } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
@@ -424,10 +425,17 @@ function OrgChartSkeleton() {
 /** Org chart tab: fetches the node list and renders the React Flow canvas. */
 export function OrgChartTab() {
     const t = useT();
-    const { data = [], isLoading } = useOrgChart();
+    const { data = [], isLoading, isError, refetch } = useOrgChart();
 
     if (isLoading) {
         return <OrgChartSkeleton />;
+    }
+    if (isError && data.length === 0) {
+        return (
+            <div className="py-16">
+                <LoadFailedPanel onRetry={() => refetch()} />
+            </div>
+        );
     }
     if (data.length === 0) {
         return <EmptyState title={t('emp_empty_org_chart')} hint={t('emp_empty_org_chart_hint')} className="py-16" />;

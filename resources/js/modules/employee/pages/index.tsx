@@ -610,6 +610,7 @@ export default function EmployeesPage() {
                                 await confirm({
                                     variant: 'warn',
                                     description: t('cancel_resign_confirm'),
+                                    entity: { name: localName(e, lang), sub: e.code },
                                     action: () => employeeMut.cancelResign.mutateAsync(e.id),
                                     errorMessage: cancelResignError,
                                 });
@@ -726,6 +727,7 @@ export default function EmployeesPage() {
                     await confirm({
                         variant: 'warn',
                         description: t('cancel_resign_confirm'),
+                        entity: { name: localName(e, lang), sub: e.code },
                         action: async () => {
                             await employeeMut.cancelResign.mutateAsync(e.id);
                             closeEmp();
@@ -751,7 +753,7 @@ export default function EmployeesPage() {
             />
             <ManageCredentialsModal employee={resetPwEmp} onClose={() => setResetPwEmp(null)} />
             <SetCredentialsModal employee={credEmp} onClose={() => setCredEmp(null)} />
-            <PositionModal open={posModalOpen} onClose={() => setPosModalOpen(false)} position={editPos} />
+            <PositionModal open={posModalOpen} onClose={() => setPosModalOpen(false)} position={editPos} canSpecial={canPosSpecial} />
             <DepartmentModal open={deptModalOpen} onClose={() => setDeptModalOpen(false)} department={editDept} />
             <DepartmentMembersDialog department={viewDept} onClose={() => setViewDept(null)} />
             <PositionMembersDialog position={viewPos} onClose={() => setViewPos(null)} />
@@ -1182,7 +1184,7 @@ function OverviewTab({
                             {t('emp_status_title')}
                         </span>
                         <span className="text-muted-foreground text-xs">
-                            <b className="text-foreground font-bold">{summary?.total ?? 0}</b> {t('emp_people')}
+                            <b className="text-foreground font-bold">{fmtN(summary?.total ?? 0)}</b> {t('emp_people')}
                         </span>
                     </div>
                     <div className="p-5">

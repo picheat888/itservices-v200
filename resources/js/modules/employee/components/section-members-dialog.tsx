@@ -3,6 +3,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Section } from '@/shared/types';
@@ -21,6 +22,7 @@ import { CountPlaceholder } from './count-placeholder';
  */
 export function SectionMembersDialog({ section, onClose }: { section: Section | null; onClose: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
 
     // Retain the last section so content stays rendered while the dialog animates closed.
@@ -85,7 +87,8 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                         <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs" aria-busy={isLoading || undefined}>
                             {deptName && <span>{deptName}</span>}
                             <span>
-                                {isLoading ? (expected ?? <CountPlaceholder label={t('loading')} />) : members.length} {t('section_members')}
+                                {isLoading ? expected != null ? fmtN(expected) : <CountPlaceholder label={t('loading')} /> : fmtN(members.length)}{' '}
+                                {t('section_members')}
                             </span>
                         </span>
                     }
