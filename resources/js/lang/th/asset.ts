@@ -246,7 +246,7 @@ export const asset: Dict = {
     asset_select_destination_warehouse: 'เลือกคลังปลายทาง',
 
     // contract-peek-dialog.tsx — labels moved from the component
-    asset_peek_owner: 'เจ้าของ',
+    asset_peek_owner: 'ผู้ถือครอง',
     asset_contract: 'สัญญา',
 
     // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
