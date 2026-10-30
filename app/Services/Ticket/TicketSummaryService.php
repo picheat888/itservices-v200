@@ -4,12 +4,18 @@
 
 namespace App\Services\Ticket;
 
+use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketSlaClock;
+use App\Enums\Ticket\TicketSource;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Ticket\Ticket;
+use App\Models\User;
+use App\Services\Report\TicketOverviewReportService;
+use App\Support\Permissions;
 use App\Support\TicketSla;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
 
@@ -17,6 +23,88 @@ class TicketSummaryService
 {
     /** @var list<string> */
     private array $categories = [];
+
+    public function __construct(private readonly TicketOverviewReportService $report) {}
+
+    /**
+     * The overview answer for [start, end] against the equal-length window just before it:
+     * inbound and closed flow, backlog, SLA percentages, average response and category mix.
+     * SLA KPI (priority targets) and repair KPI (work-class targets) stay separate figures.
+     *
+     * @return array<string, mixed>
+     */
+    public function overview(User $viewer, CarbonInterface $curStart, CarbonInterface $curEnd, int $days): array
+    {
+        $prevStart = $curStart->copy()->subSeconds((int) $curStart->diffInSeconds($curEnd));
+        $f = $this->figures($curStart, $curEnd, $prevStart, Permissions::ticketLevelsFor($viewer));
+        $delta = fn (string $cur, string $prev) => ($f[$cur] === null || $f[$prev] === null) ? null : $f[$cur] - $f[$prev];
+
+        return [
+            'range_days' => $days,
+
+            // Absolute changes: a % change has no baseline when the prior window is empty
+            'created' => $f['created_cur'],
+            'created_delta_count' => $f['created_cur'] - $f['created_prev'],
+            'resolved' => $f['resolved_cur'],
+            'resolved_delta_count' => $f['resolved_cur'] - $f['resolved_prev'],
+
+            'backlog' => $f['open'] + $f['in_progress'],
+            'backlog_open' => $f['open'],
+            'backlog_in_progress' => $f['in_progress'],
+            'over_sla_now' => $f['over_sla_count'],
+            'over_sla_oldest_days' => $f['over_sla_oldest_days'],
+            'flow' => $f['flow'],
+            'period_sla' => $this->periodSla($viewer, $curStart, $curEnd),
+
+            'sla_met_pct' => $f['standard_cur_pct'],
+            'sla_delta_pts' => $delta('standard_cur_pct', 'standard_prev_pct'),
+
+            'repair_kpi_met_pct' => $f['repair_cur_pct'],
+            'repair_kpi_delta_pts' => $delta('repair_cur_pct', 'repair_prev_pct'),
+            'repair_backlog' => $f['repair_backlog'],
+            'has_repair_rules' => ! empty(TicketSla::rules()[SlaScope::WorkClass->value] ?? []),
+
+            // Open tickets already past due are counted in the backlog, not here
+            'response_sla_met_pct' => $f['response_cur_pct'],
+            'response_sla_delta_pts' => $delta('response_cur_pct', 'response_prev_pct'),
+            'response_target_minutes' => TicketSla::responseMinutes(),
+
+            'avg_response_minutes' => $f['avg_cur'],
+            'avg_response_delta_minutes' => $delta('avg_cur', 'avg_prev'),
+
+            'by_category' => collect(TicketCategory::cases())->map(fn (TicketCategory $c) => [
+                'category' => $c->value,
+                'count' => $f['by_category'][$c->value],
+            ]),
+        ];
+    }
+
+    /**
+     * The window's SLA as the "ภาพรวม Ticket & SLA" report counts it, split by ticket source.
+     *
+     * @return array{from: string, to: string, goal: int, met: int, measured: int, rate: ?float, delta_pts: ?float, request_rate: ?float, manual_rate: ?float}
+     */
+    private function periodSla(User $viewer, CarbonInterface $start, CarbonInterface $end): array
+    {
+        $from = CarbonImmutable::parse($start->toDateString());
+        $to = CarbonImmutable::parse($end->toDateString());
+        $days = (int) $from->diffInDays($to) + 1;
+        $sources = $this->report->slaForSources($viewer, $from, $to);
+        $all = $sources['all'];
+        $previous = $this->report->slaFor($viewer, $from->subDays($days), $from->subDay())['sla_rate'];
+
+        return [
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'goal' => TicketSla::goalPercent(),
+            'met' => $all['sla_met'],
+            'measured' => $all['sla_measured'],
+            'rate' => $all['sla_rate'],
+            'delta_pts' => $all['sla_rate'] === null || $previous === null ? null : round($all['sla_rate'] - $previous, 1),
+            'request_rate' => $sources[TicketSource::AutoRequest->value]['sla_rate'] ?? null,
+            'manual_rate' => $sources[TicketSource::Manual->value]['sla_rate'] ?? null,
+        ];
+    }
 
     /** Tickets the viewer's Ticket Levels cover. */
     private function tickets(): Builder
