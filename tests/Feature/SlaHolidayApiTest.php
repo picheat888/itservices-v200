@@ -9,9 +9,11 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\SlaHoliday;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Ticket\TicketDeadlineService;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use RuntimeException;
 use Tests\TestCase;
 
 class SlaHolidayApiTest extends TestCase
@@ -148,6 +150,24 @@ class SlaHolidayApiTest extends TestCase
         $this->save(2027, [['date' => '2027-01-01', 'name' => 'New Year']])->assertOk()->assertJsonPath('meta.moved', 1);
 
         $this->assertSame('2027-01-04 09:00', $ticket->refresh()->sla_resolve_due_at->format('Y-m-d H:i'));
+    }
+
+    public function test_a_failed_recompute_rolls_the_holidays_back(): void
+    {
+        SlaHoliday::factory()->create(['date' => '2026-01-01', 'name' => 'Keep']);
+        $this->app->instance(TicketDeadlineService::class, new class extends TicketDeadlineService
+        {
+            public function recomputeOpen(): int
+            {
+                throw new RuntimeException('recompute failed');
+            }
+        });
+
+        $this->save(2026, [['date' => '2026-05-01', 'name' => 'Labour Day']])->assertStatus(500);
+
+        $this->assertSame(['2026-01-01' => 'Keep'], SlaHoliday::all()->mapWithKeys(fn ($h) => [$h->date->format('Y-m-d') => $h->name])->all());
+        $this->assertArrayNotHasKey('2026-05-01', TicketSla::holidays());
+        $this->assertSame(0, AuditLog::where('action', 'Updated SLA holidays')->count());
     }
 
     public function test_an_audit_row_names_the_changes(): void
