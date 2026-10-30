@@ -99,12 +99,14 @@ class NotificationTemplateTest extends TestCase
 
         // Page furniture, not notification messages: the tray's own chrome, the marker a
         // test row wears, the name of a group, the heading a bell about the reader's
-        // own account wears in place of the record name every other bell names, and the
-        // January wording of the one holiday bell (its catalogue key is notif_sla_holidays_missing).
+        // own account wears in place of the record name every other bell names, the January
+        // wording of the one holiday bell (its catalogue key is notif_sla_holidays_missing), and
+        // the heading of a bell about several assets.
         $chrome = [
             'notif_title', 'notif_all', 'notif_mark_all', 'notif_clear_all', 'notif_empty',
             'notif_dismiss', 'notif_dismiss_failed', 'notif_keys_hint', 'notif_unread', 'notif_test_prefix', 'notif_showing', 'notif_end',
             'notif_group_system', 'notif_password_title', 'notif_stock_req_line', 'notif_sla_holidays_title', 'notif_sla_holidays_started',
+            'notif_assets_count_title',
         ];
         $frontEnd = array_values(array_diff($matches[1], $chrome));
         $catalogue = array_column(NotificationCatalogue::all(), 'key');

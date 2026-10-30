@@ -15,6 +15,8 @@ use App\Notifications\AssetAssignedNotification;
 use App\Notifications\AssetOffboardingNotification;
 use App\Notifications\AssetRecalledNotification;
 use App\Notifications\AssetReturnRequestedNotification;
+use App\Notifications\AssetsAssignedNotification;
+use App\Notifications\AssetsRecalledNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\DateDisplay;
 use App\Support\EmailTable;
@@ -24,7 +26,51 @@ use Illuminate\Support\Facades\Notification;
 
 class AssetService
 {
+    /**
+     * Hand-over and recall notices held back while a bulk action runs, keyed by employee id.
+     *
+     * @var array{assigned: array<int, list<array{asset: Asset, from: ?string, fromLabel: ?string}>>, recalled: array<int, list<array{asset: Asset, subtype: string, holder: Employee}>>}|null
+     */
+    private ?array $held = null;
+
     public function __construct(private readonly EmailNotificationService $email) {}
+
+    /**
+     * Runs a bulk action and sends each person one bell and one mail for all their assets,
+     * instead of one per asset. Nothing is sent when the action throws.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $work
+     * @return T
+     */
+    public function batchNotices(callable $work): mixed
+    {
+        $this->held = ['assigned' => [], 'recalled' => []];
+        try {
+            $result = $work();
+            $held = $this->held;
+        } finally {
+            $this->held = null;
+        }
+
+        foreach ($held['assigned'] as $notices) {
+            if (count($notices) === 1) {
+                $this->notifyRecipient($notices[0]['asset'], $notices[0]['from'], $notices[0]['fromLabel']);
+            } else {
+                $this->notifyRecipientMany(collect($notices)->pluck('asset'));
+            }
+        }
+        foreach ($held['recalled'] as $notices) {
+            if (count($notices) === 1) {
+                $this->notifyRecalledHolder($notices[0]['holder'], $notices[0]['asset'], $notices[0]['subtype']);
+            } else {
+                $this->notifyRecalledHolderMany($notices[0]['holder'], collect($notices));
+            }
+        }
+
+        return $result;
+    }
 
     /**
      * The fields every asset mail names, so one machine reads the same in all four.
@@ -315,6 +361,11 @@ class AssetService
         if (! $employee) {
             return;
         }
+        if ($this->held !== null) {
+            $this->held['assigned'][$employee->id][] = ['asset' => $asset, 'from' => $from, 'fromLabel' => $fromLabel];
+
+            return;
+        }
 
         $user = User::where('employee_id', $employee->id)->first();
         if ($user) {
@@ -325,10 +376,29 @@ class AssetService
         }
     }
 
+    /**
+     * One bell + mail naming every asset a bulk hand-over put in one person's name.
+     *
+     * @param  Collection<int, Asset>  $assets
+     */
+    private function notifyRecipientMany(Collection $assets): void
+    {
+        $user = User::where('employee_id', $assets->first()->owner_employee_id)->first();
+        if ($user) {
+            $user->notify(new AssetsAssignedNotification($assets));
+            $this->emailEach([$user], 'asset.assigned_many', $this->manyVars($assets), '/?dialog=profile&section=assets', 'Accept the hand-over');
+        }
+    }
+
     /** Bell + mail to the employee an asset was pulled back from, whenever they have a login account. */
     private function notifyRecalledHolder(?Employee $holder, Asset $asset, string $subtype): void
     {
         if (! $holder) {
+            return;
+        }
+        if ($this->held !== null) {
+            $this->held['recalled'][$holder->id][] = ['asset' => $asset, 'subtype' => $subtype, 'holder' => $holder];
+
             return;
         }
 
@@ -338,6 +408,50 @@ class AssetService
             // One template for both subtypes — see asset.recalled in EmailTemplates.
             $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/?dialog=profile&section=assets', 'Open My Profile');
         }
+    }
+
+    /**
+     * One bell + mail naming every asset a bulk recall took from one person: taken back if
+     * any was in their hands, a cancelled hand-over otherwise.
+     *
+     * @param  Collection<int, array{asset: Asset, subtype: string, holder: Employee}>  $notices
+     */
+    private function notifyRecalledHolderMany(Employee $holder, Collection $notices): void
+    {
+        $user = User::where('employee_id', $holder->id)->first();
+        if ($user) {
+            $assets = $notices->pluck('asset');
+            $subtype = $notices->contains('subtype', 'taken_back') ? 'taken_back' : 'cancelled';
+            $user->notify(new AssetsRecalledNotification($assets, $subtype));
+            $this->emailEach([$user], 'asset.recalled_many', $this->manyVars($assets), '/?dialog=profile&section=assets', 'Open My Profile');
+        }
+    }
+
+    /**
+     * The count and the device table the many-asset mails carry.
+     *
+     * @param  Collection<int, Asset>  $assets
+     * @return array<string, string>
+     */
+    private function manyVars(Collection $assets): array
+    {
+        $assets->each->loadMissing(['model', 'category']);
+
+        return [
+            'asset.count' => (string) $assets->count(),
+            'asset.table' => EmailTable::render(
+                ['Asset', 'Type', 'Model', 'Tag'],
+                $assets->map(fn (Asset $asset) => [
+                    EmailTable::text($asset->asset_code),
+                    EmailTable::text($asset->category?->name ?: '-'),
+                    EmailTable::text($asset->model?->name ?: '-'),
+                    EmailTable::text($asset->tag ?: '-', 24),
+                ])->values()->all(),
+                [],
+                ['24%', '22%', '34%', '20%'],
+                [2],
+            ),
+        ];
     }
 
     /** Recipient confirms receipt: pending acceptance → deployed, stamping the possession date. */

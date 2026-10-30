@@ -483,6 +483,37 @@ You can tracking progress in {{app.name}}.</p>
                 'cadence' => 'realtime',
             ],
             [
+                // A bulk hand-over to one person: one mail listing every device, beside one bell.
+                'key' => 'asset.assigned_many',
+                'name' => 'Several assets transferred to you (ทรัพย์สินหลายเครื่องที่โอนไปยังผู้ใช้งาน)',
+                'subject' => 'Asset Management: {{asset.count}} assets are waiting for you to accept',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>{{asset.count}} assets have been transferred to you.</p>
+<p>Open My Profile in {{app.name}} and press Accept on each one.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+{{asset.table}}
+<br>
+<p style="color:#64748b">If you think an error has occurred, please contact IT.</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                // A bulk recall from one person, cancelled or taken back alike: one mail, one bell.
+                'key' => 'asset.recalled_many',
+                'name' => 'Several assets recalled from you (เรียกคืนทรัพย์สินหลายเครื่อง)',
+                'subject' => 'Asset Management: {{asset.count}} assets have been recalled',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Just letting you know that the following {{asset.count}} assets have been returned to us and removed from your account. You don\'t need to confirm anything else.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+{{asset.table}}
+<br>
+<p style="color:#64748b">If you think an error has occurred, please contact IT.</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
                 'key' => 'employee.account_needed',
                 'name' => 'New employee (พนักงานใหม่)',
                 'subject' => 'Employee Management: New employee',

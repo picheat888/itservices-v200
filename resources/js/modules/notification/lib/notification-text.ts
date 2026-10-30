@@ -55,6 +55,9 @@ export function notificationTitle(n: AppNotification, t: Translate, lang: Lang):
 
         return `${n.data.reference} ${written}`;
     }
+    // A bulk hand-over or recall names how many, not one machine
+    if ((n.data.type === 'asset_assigned' || n.data.type === 'asset_recalled') && n.data.count)
+        return t('notif_assets_count_title').replaceAll('{n}', () => formatNumber(n.data.count ?? 0, lang));
     if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested' || n.data.type === 'asset_recalled')
         return `${n.data.asset_model} (${n.data.asset_tag})`;
     // Nothing to name but the reader's own account
@@ -139,8 +142,10 @@ export function notificationMessage(n: AppNotification, t: Translate, lang: Lang
                 .replaceAll('{days}', () => fmtN(n.data.stalled_days ?? 0))
         );
     }
+    if (n.data.type === 'asset_assigned' && n.data.count) return t('notif_asset_assigned_many').replaceAll('{n}', () => fmtN(n.data.count ?? 0));
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
     if (n.data.type === 'asset_return_requested') return t('notif_asset_return_requested');
+    if (n.data.type === 'asset_recalled' && n.data.count) return t('notif_asset_recalled_many').replaceAll('{n}', () => fmtN(n.data.count ?? 0));
     // A hand-over called off, or a device actually taken back
     if (n.data.type === 'asset_recalled') {
         return t(n.data.subtype === 'taken_back' ? 'notif_asset_recalled_taken_back' : 'notif_asset_recalled_cancelled');

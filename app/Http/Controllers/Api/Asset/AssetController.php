@@ -664,15 +664,18 @@ class AssetController extends Controller
             'transfer_not_transferable',
         );
 
-        foreach ($assets as $asset) {
-            $this->service->transfer($asset, [
-                'mode' => $data['mode'],
-                'owner_employee_id' => $data['owner_employee_id'] ?? null,
-                'owner_label' => $data['owner_label'] ?? null,
-                'location_id' => $data['location_id'],
-                'reason' => $data['reason'] ?? null,
-            ], $request->user());
-        }
+        // One bell and one mail for the recipient, not one per asset.
+        $this->service->batchNotices(function () use ($assets, $data, $request) {
+            foreach ($assets as $asset) {
+                $this->service->transfer($asset, [
+                    'mode' => $data['mode'],
+                    'owner_employee_id' => $data['owner_employee_id'] ?? null,
+                    'owner_label' => $data['owner_label'] ?? null,
+                    'location_id' => $data['location_id'],
+                    'reason' => $data['reason'] ?? null,
+                ], $request->user());
+            }
+        });
         foreach ($assets as $asset) {
             AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
         }
@@ -707,11 +710,14 @@ class AssetController extends Controller
                 $forcedIds[] = $asset->id;
             }
         }
-        foreach ($assets as $asset) {
-            $this->service->recall($asset, $user, $data['warehouse'], $data['reason'] ?? null);
-            // Named per asset, as the single recall does: only the ones outside the normal states were forced.
-            AuditLog::record(in_array($asset->id, $forcedIds, true) ? 'Force-recalled asset' : 'Recalled asset', $asset->asset_code, subject: $asset);
-        }
+        // One bell and one mail per person recalled from, not one per asset.
+        $this->service->batchNotices(function () use ($assets, $user, $data, $forcedIds) {
+            foreach ($assets as $asset) {
+                $this->service->recall($asset, $user, $data['warehouse'], $data['reason'] ?? null);
+                // Named per asset, as the single recall does: only the ones outside the normal states were forced.
+                AuditLog::record(in_array($asset->id, $forcedIds, true) ? 'Force-recalled asset' : 'Recalled asset', $asset->asset_code, subject: $asset);
+            }
+        });
 
         return response()->json(['message' => 'success', 'updated' => $assets->count()]);
     }
