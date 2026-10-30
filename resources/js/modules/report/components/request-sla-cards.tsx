@@ -31,6 +31,7 @@ import { Heading, Swatch } from './backlog-board';
 import { CardsUpdating } from './cards-updating';
 import { reportDates } from './chart-parts';
 import { formatLiveNumber } from './report-scope';
+import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 export type T = (key: string) => string;
 
@@ -387,8 +388,11 @@ function RulesCard({ rules }: { rules: RequestSlaBreakdown['rules'] }) {
 
 /** The three cards between the summary tiles and the table; a press on a type line filters the page. */
 export function RequestSlaCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading, isFetching, isPlaceholderData } = useRequestSlaBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useRequestSlaBreakdown(filters);
+    const t = useT();
 
+    // Failed with nothing to show: say so instead of a skeleton that never ends
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) {
         return (
             <div className="space-y-4" aria-hidden>

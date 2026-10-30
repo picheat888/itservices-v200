@@ -1138,6 +1138,7 @@ export const report: Dict = {
     rep_ar_sheet_date_line: 'Date ........ / ........ / ........',
     rep_ar_sheet_footnote: 'This is how the PDF prints. Past one page, the table heading repeats',
     rep_ar_sheet_download: 'Download PDF',
+    rep_ar_sheet_download_failed: "Couldn't download the review sheet. Try again.",
 
     // pages/access-software-licenses.tsx · components/software-license-cards.tsx — การใช้ License ซอฟต์แวร์
     rep_fl_sl_brand: 'Publisher',

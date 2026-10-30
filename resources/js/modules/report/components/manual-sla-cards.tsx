@@ -30,6 +30,7 @@ import type { ManualSlaBreakdown, RequestSlaTally, TabularFilters } from '../typ
 import { Heading, Swatch } from './backlog-board';
 import { CardsUpdating } from './cards-updating';
 import { CountCells, GROUP, hoursText, shortMoment, SlaCells, spanText, targetText, TD, TH, type T } from './request-sla-cards';
+import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 type By = ManualSlaBreakdown['by'];
 type Group = ManualSlaBreakdown['groups'][number];
@@ -392,8 +393,11 @@ function RulesCard({ rules }: { rules: ManualSlaBreakdown['rules'] }) {
 
 /** The cards between the summary tiles and the table; a press on a group line filters the page. */
 export function ManualSlaCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading, isFetching, isPlaceholderData } = useManualSlaBreakdown(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useManualSlaBreakdown(filters);
+    const t = useT();
 
+    // Failed with nothing to show: say so instead of a skeleton that never ends
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) {
         return (
             <div className="space-y-4" aria-hidden>

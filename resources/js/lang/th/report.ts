@@ -1135,6 +1135,7 @@ export const report: Dict = {
     rep_ar_sheet_date_line: 'วันที่ ........ / ........ / ........',
     rep_ar_sheet_footnote: 'หน้าตาเดียวกับไฟล์ PDF ถ้าเกิน 1 หน้า หัวตารางจะพิมพ์ซ้ำทุกหน้า',
     rep_ar_sheet_download: 'ดาวน์โหลด PDF',
+    rep_ar_sheet_download_failed: 'ดาวน์โหลดใบทบทวนไม่สำเร็จ ลองอีกครั้ง',
 
     // pages/access-software-licenses.tsx · components/software-license-cards.tsx — การใช้ License ซอฟต์แวร์
     rep_fl_sl_brand: 'ผู้ผลิต',

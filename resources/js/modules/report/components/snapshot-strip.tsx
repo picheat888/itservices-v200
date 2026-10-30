@@ -25,6 +25,7 @@ import type { SnapshotPeriod, SnapshotRange, SnapshotTile } from '../types';
 import { Sparkline } from './chart-parts';
 import { reportRoute } from './report-catalogue';
 import { periodRange } from './report-scope';
+import { ErrorCard, errorMessageFor } from './tabular-report-view';
 
 /** Tiles whose main number is counted over the chosen period rather than as of now. */
 const PERIOD_TILES = new Set(['sla_rate']);
@@ -154,10 +155,12 @@ function Tile({ tile, range, hasRange }: { tile: SnapshotTile; range: SnapshotRa
 }
 
 export function SnapshotStrip({ range }: { range: SnapshotRange }) {
-    const { data, isLoading } = useReportSnapshot(range);
+    const { data, isLoading, isError, error } = useReportSnapshot(range);
+    const t = useT();
     // Which tiles' reports take a date range — the hub already holds the catalogue.
     const { data: catalogue = [] } = useReportCatalogue();
 
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (!isLoading && (data?.tiles.length ?? 0) === 0) return null;
 
     // One card; the 1px gaps over the border colour draw the dividers between cells, and keep

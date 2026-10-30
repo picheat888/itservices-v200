@@ -10,6 +10,7 @@
  */
 import { useT } from '@/lang';
 import { EmptyState } from '@/shared/components/empty-state';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { matchesAllWords } from '@/shared/lib/search-words';
@@ -33,7 +34,7 @@ export default function ReportsPage() {
     const t = useT();
     const fmtN = useNumberFormat();
     const { seesMyExports } = useReportRights();
-    const { data: reports = [], isLoading } = useReportCatalogue();
+    const { data: reports = [], isLoading, isError, refetch } = useReportCatalogue();
     // Search (?search) and module chip (?domain) live in the URL; a domain this user has no report in reads as all
     const list = useListParams();
     const query = list.get('search');
@@ -71,6 +72,11 @@ export default function ReportsPage() {
                 <div className="min-w-0 space-y-4">
                     {isLoading ? (
                         <ReportCatalogueSkeleton />
+                    ) : isError && reports.length === 0 ? (
+                        // Failed (a 429, the server down): not the same as having no report to open
+                        <div className="border-border rounded-xl border border-dashed">
+                            <LoadFailedPanel onRetry={() => void refetch()} />
+                        </div>
                     ) : reports.length === 0 ? (
                         <EmptyState
                             kind="denied"

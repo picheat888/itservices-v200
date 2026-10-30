@@ -6,9 +6,11 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { localPair } from '@/shared/lib/local-name';
+import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
 import { useCanOpen } from '../hooks/use-can-open';
@@ -23,7 +25,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
     const lang = useUiStore((s) => s.lang);
     // Page and rows-per-page live in the URL (?page, ?per); a filter change drops ?page
     const list = useListParams();
-    const { data, isLoading, isFetching, isPlaceholderData } = useTicketOverviewRows(filters, list.page, list.perPage);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useTicketOverviewRows(filters, list.page, list.perPage);
     const canOpenTickets = useCanOpen()('/tickets');
 
     const columns: Column<TicketReportRow>[] = [
@@ -127,6 +129,15 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
                 ),
         },
     ];
+
+    // Failed rows are not "no tickets": say so, with a retry
+    if (isError && !data) {
+        return (
+            <Card className="border-dashed">
+                <LoadFailedPanel onRetry={() => void refetch()} />
+            </Card>
+        );
+    }
 
     return (
         <DataTable

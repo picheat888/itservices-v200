@@ -6,6 +6,7 @@
  */
 import { useT } from '@/lang';
 import { DisabledReason } from '@/shared/components/disabled-reason';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
@@ -129,7 +130,7 @@ export default function TicketOverviewReportPage() {
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTicketReportFilters();
-    const { data, isLoading, isError, error } = useTicketOverview(filters);
+    const { data, isLoading, isError, error, refetch } = useTicketOverview(filters);
     // Export / schedule dialogs live in the URL (?dialog=export|schedule) — shareable, and Back closes them.
     const { dialog, setDialog, canExport, canSchedule } = useReportDialog();
     const exportOpen = dialog === 'export';
@@ -163,6 +164,8 @@ export default function TicketOverviewReportPage() {
                 ? t('rep_err_range_invalid')
                 : t('rep_err_load_failed')
           : null;
+    // A plain failure (the server down, a 429) offers a retry; a refusal or a bad range says why
+    const loadFailed = !rangeOrderInvalid && isError && !data && errorStatus !== 403 && errorStatus !== 422;
 
     return (
         <div className="space-y-4">
@@ -189,9 +192,13 @@ export default function TicketOverviewReportPage() {
 
             <TicketReportFilterBar filters={filters} options={data?.options} onChange={patch} onReset={reset} />
 
-            {errorMessage ? (
-                <Card className="flex flex-col items-center gap-2 border-dashed p-10 text-center">
-                    <AlertCircle className="text-muted-foreground h-8 w-8" />
+            {loadFailed ? (
+                <Card className="border-dashed">
+                    <LoadFailedPanel onRetry={() => void refetch()} />
+                </Card>
+            ) : errorMessage ? (
+                <Card role="alert" className="flex flex-col items-center gap-2 border-dashed p-10 text-center">
+                    <AlertCircle className="text-muted-foreground h-8 w-8" aria-hidden="true" />
                     <p className="text-muted-foreground text-sm">{errorMessage}</p>
                 </Card>
             ) : isLoading || !data ? (

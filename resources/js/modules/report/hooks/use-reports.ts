@@ -3,8 +3,10 @@
  * generic tabular report definition/rows/export, "ไฟล์ส่งออกของฉัน" (queued files: list, download, retry, remove) and
  * scheduled report emails.
  */
+import { useT } from '@/lang';
 import { FRESH_VIEW } from '@/shared/lib/freshness';
 import { downloadBlob } from '@/shared/lib/utils';
+import { useToastStore } from '@/stores/toast';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
@@ -323,12 +325,15 @@ export const useRequestApprovalsBreakdown = (filters: TabularFilters) =>
         ...FRESH_VIEW,
     });
 
-/** Download one resource's review sheet (PDF). */
-export const useAccessReviewSheet = () =>
-    useMutation({
+/** Download one resource's review sheet (PDF); a failure says so in a toast. */
+export const useAccessReviewSheet = () => {
+    const t = useT();
+    return useMutation({
         mutationFn: (resource: string) => reportApi.accessReviewSheet(resource),
         onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
+        onError: () => useToastStore.getState().push(t('rep_ar_sheet_download_failed'), 'error'),
     });
+};
 
 export const useManualSlaBreakdown = (filters: TabularFilters) => {
     const by = (filters.by as string | null | undefined) ?? 'category';

@@ -27,6 +27,7 @@ import { CARD_HEADING_TINT } from './card-heading';
 import { CardsUpdating } from './cards-updating';
 import { fold, FoldToggle, InfoMark, StackBar } from './chart-parts';
 import { FILL } from './chart-tones';
+import { ErrorCard, errorMessageFor } from './tabular-report-view';
 import { TICKET_PRIORITY_TONE } from './ticket-badges';
 import { categoryKey, priorityKey } from './ticket-labels';
 
@@ -481,8 +482,11 @@ function Categories({ tickets, filters, patch }: { tickets: BacklogBoardTicket[]
 
 /** The board and its two cards, between the summary tiles and the table; a card row press filters the page. */
 export function BacklogBoardCards({ filters, patch }: { filters: TabularFilters; patch: (next: TabularFilters) => void }) {
-    const { data, isLoading, isFetching, isPlaceholderData } = useBacklogBoard(filters);
+    const { data, isLoading, isFetching, isPlaceholderData, isError, error } = useBacklogBoard(filters);
+    const t = useT();
 
+    // Failed with nothing to show: say so instead of a skeleton that never ends
+    if (isError && !data) return <ErrorCard message={errorMessageFor(t, error)} />;
     if (isLoading || !data) {
         return (
             <Card className="space-y-3 p-5" aria-hidden>
