@@ -460,8 +460,8 @@ class TicketController extends Controller
             $request->user(),
             isset($data['priority']) ? TicketPriority::from($data['priority']) : null,
             $data['note'] ?? null,
-            // Left out = keep the asset already linked; null = unlink it
-            array_key_exists('related_asset_id', $data) ? $data['related_asset_id'] : $ticket->related_asset_id,
+            $data['related_asset_id'] ?? null,
+            keepLinkedAsset: ! array_key_exists('related_asset_id', $data),
         );
         AuditLog::record('Took ticket', "{$ticket->ticket_no} → {$request->user()?->name}", subject: $ticket);
 

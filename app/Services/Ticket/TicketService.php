@@ -85,7 +85,9 @@ class TicketService
      */
     public function update(Ticket $ticket, array $data): Ticket
     {
-        $alreadyTold = $this->takersFor($ticket)->pluck('id');
+        // Who already heard about this waiting case; only asked when the category is about to move
+        $recategorisesWaitingCase = $data['category'] !== $ticket->category->value && $ticket->status === TicketStatus::Open && $ticket->isUnassigned();
+        $alreadyTold = $recategorisesWaitingCase ? $this->takersFor($ticket)->pluck('id') : collect();
 
         $ticket->update([
             'subject' => $data['subject'],
@@ -95,7 +97,7 @@ class TicketService
         ]);
 
         // A new category reaches other staff Levels: they hear about the waiting case as if it were new
-        if ($ticket->wasChanged('category') && $ticket->status === TicketStatus::Open && $ticket->isUnassigned()) {
+        if ($recategorisesWaitingCase) {
             $this->announceToTakers($ticket, $this->takersFor($ticket)->whereNotIn('id', $alreadyTold)->values());
         }
 
@@ -109,20 +111,22 @@ class TicketService
      * A case opened automatically from an approved request gets NO priority — its target
      * comes from what was asked for, which was settled before anybody looked at it. Passing
      * one would be recording a judgement nobody made.
+     *
+     * $keepLinkedAsset leaves the asset the requester linked in place; otherwise $relatedAssetId replaces it (null unlinks).
      */
-    public function take(Ticket $ticket, User $staff, ?TicketPriority $priority, ?string $note, ?int $relatedAssetId): Ticket
+    public function take(Ticket $ticket, User $staff, ?TicketPriority $priority, ?string $note, ?int $relatedAssetId, bool $keepLinkedAsset = false): Ticket
     {
         $this->updateUnlessMoved(
             $ticket,
             fn (Ticket $locked): ?string => $locked->status === TicketStatus::Open && $locked->isUnassigned() ? null : 'not_open_for_taking',
-            function (Ticket $locked) use ($staff, $priority, $note, $relatedAssetId): array {
+            function (Ticket $locked) use ($staff, $priority, $note, $relatedAssetId, $keepLinkedAsset): array {
                 $respondedAt = $locked->responded_at ?? now();
 
                 return [
                     'assignee_id' => $staff->id,
                     'priority' => $priority,
                     'take_note' => $note,
-                    'related_asset_id' => $relatedAssetId,
+                    'related_asset_id' => $keepLinkedAsset ? $locked->related_asset_id : $relatedAssetId,
                     'status' => TicketStatus::InProgress,
                     'responded_at' => $respondedAt,
                     // Taking the case starts the resolution clock and fixes its target
