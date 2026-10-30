@@ -90,6 +90,26 @@ test('the table empty state counts pinned rows and the page never drops below 1'
     assert.match(table, /const safePage = Math\.max\(1,/);
 });
 
+test('a filter panel inside a dialog opens in that dialog, fits the room below and Escape closes only the panel', () => {
+    const popover = read('js/shared/components/filter-popover.tsx');
+    assert.match(popover, /const dialog = trigger\.closest<HTMLElement>\('\[role="dialog"\]'\);/);
+    assert.match(popover, /host \?\? document\.body,/);
+    assert.match(popover, /position: host \? 'absolute' : 'fixed'/);
+    assert.match(popover, /maxHeight: box\.bottom - top - EDGE/);
+    assert.match(popover, /scrolls && 'min-h-0 overflow-y-auto'/);
+    assert.match(popover, /if \(!open \|\| !host\) return;[\s\S]*?window\.addEventListener\('keydown', onKey, true\)/);
+    assert.match(popover, /panelRef\.current\?\.contains\(target\) \|\| pressedInside\.current/);
+});
+
+test('settings pickers use the shared SearchableSelect, and the SLA table lets their menus open in full', () => {
+    assert.ok(!filesUnder(join(root, 'js')).some((file) => file.endsWith('search-select.tsx')), 'the old SearchSelect is gone');
+    const sla = read('js/modules/settings/components/tickets-sla-tab.tsx');
+    assert.equal(sla.match(/<SearchableSelect\s+aria-label=/g)?.length, 2);
+    assert.match(sla, /aria-labelledby="sla-h-rep" className=\{cn\(TABLE, 'overflow-visible'\)\}/);
+    assert.equal(read('js/modules/settings/pages/index.tsx').match(/<SearchableSelect/g)?.length, 2);
+    assert.match(read('js/shared/components/searchable-select.tsx'), /aria-label=\{ariaLabel\}/);
+});
+
 test('the UI store checks a saved copy before laying it over the defaults', () => {
     assert.match(read('js/stores/ui.ts'), /merge: \(persisted, current\) => \(\{ \.\.\.current, \.\.\.restoreUiPrefs\(persisted, current\) \}\)/);
 });

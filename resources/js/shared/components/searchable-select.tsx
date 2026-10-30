@@ -60,6 +60,7 @@ export function SearchableSelect({
     note,
     disabled = false,
     id,
+    'aria-label': ariaLabel,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
     'aria-required': ariaRequired,
@@ -99,6 +100,8 @@ export function SearchableSelect({
     disabled?: boolean;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
+    /** Accessible name when no visible label points at the trigger. */
+    'aria-label'?: string;
     'aria-invalid'?: boolean;
     'aria-describedby'?: string;
     'aria-required'?: boolean;
@@ -541,6 +544,7 @@ export function SearchableSelect({
                             toggle();
                         }
                     }}
+                    aria-label={ariaLabel}
                     aria-invalid={ariaInvalid}
                     aria-describedby={cn(ariaDescribedBy, showRemovedNote && removedNoteId, showNote && noteId) || undefined}
                     aria-required={ariaRequired}

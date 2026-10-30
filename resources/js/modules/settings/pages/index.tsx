@@ -5,7 +5,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { PageTabs, type PageTab } from '@/shared/components/page-tabs';
 import { SaveButton } from '@/shared/components/save-button';
-import { SearchSelect } from '@/shared/components/search-select';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormRebase } from '@/shared/hooks/use-form-rebase';
@@ -1796,18 +1796,18 @@ function CompanyTab({
                     </Field>
                     <div className={FIELD_ROW}>
                         <Field label={t('set_country')}>
-                            <SearchSelect
+                            <SearchableSelect
                                 value={form.country}
                                 onChange={(v) => set('country', v)}
-                                options={countryOptions}
+                                options={countryOptions.map((o) => ({ ...o, search: o.label }))}
                                 placeholder={t('set_country_ph')}
                             />
                         </Field>
                         <Field label={t('set_currency')}>
-                            <SearchSelect
+                            <SearchableSelect
                                 value={form.currency}
                                 onChange={(v) => set('currency', v)}
-                                options={currencyOptions}
+                                options={currencyOptions.map((o) => ({ ...o, search: o.label }))}
                                 placeholder={t('set_currency_ph')}
                             />
                         </Field>

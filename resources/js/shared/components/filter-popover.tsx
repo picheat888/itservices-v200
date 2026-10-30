@@ -3,7 +3,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePresence } from '@/shared/hooks/use-presence';
 import { cn } from '@/shared/lib/utils';
 import { SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 // Default width of the floating panel (Tailwind w-72 = 18rem = 288px).
@@ -13,26 +13,15 @@ const PANEL_WIDTH = 288;
 const FOCUSABLE =
     'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Room kept between the panel and the edge of the window or dialog.
+const EDGE = 8;
+
+// Focus is in a select's open menu or on its open trigger, which closes on Escape by itself
+const inOpenMenu = (el: Element) => !!el.closest('[role="combobox"][aria-expanded="true"]') || !!el.querySelector('[role="listbox"]');
+
 /**
- * FilterPopover — a "Filters" trigger button with an active-count badge that
- * opens a small floating panel. Keeps crowded filter controls out of the toolbar.
- * `children` receives a `close` callback so the panel can dismiss itself.
- *
- * The panel is rendered as a portal at document.body with fixed positioning so it
- * is never clipped by an `overflow-hidden` ancestor (e.g. the Stock Card).
- *
- * `label` / `icon` rename the trigger and panel title for other "pick from a list" panels
- * (e.g. the report column picker); they default to "Filters" + the sliders icon.
- * `size="sm"` shrinks the trigger to sit in a card heading; `align="end"` opens the panel
- * right-aligned under it, for a trigger at the right edge of its row.
- *
- * Keyboard and screen readers (WCAG 2.1.1, 2.4.3, 4.1.2, 4.1.3): the trigger says whether the
- * panel is open (aria-expanded) and names it; the panel is a labelled group — not role="dialog",
- * which would make every SearchableSelect inside portal into the small panel and measure its
- * room against it (see searchable-select.tsx), cramping or flipping their lists. Opening
- * moves focus into it — it is portalled to the end of <body>, so Tab from the trigger would
- * otherwise skip it. Escape, Done, or tabbing past either end closes it and hands focus back to
- * the trigger. The "Found N" count is a polite live region.
+ * "Filters" trigger with a count badge and a floating panel (a labelled group, not a dialog); `children` gets `close`.
+ * The panel portals to <body>, or into the nearest dialog so a modal still lets it be clicked and focused.
  */
 export function FilterPopover({
     count,
@@ -68,9 +57,15 @@ export function FilterPopover({
     const fmtN = useNumberFormat();
     const [open, setOpen] = useState(false);
     const { mounted, closing } = usePresence(open);
-    const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [pos, setPos] = useState<{ top: number; left: number; maxHeight: number }>({ top: 0, left: 0, maxHeight: 0 });
+    // The dialog the trigger sits in, if any: the panel portals into it
+    const [host, setHost] = useState<HTMLElement | null>(null);
+    // Set when the panel is taller than the room below, so its body scrolls
+    const [scrolls, setScrolls] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
+    // A press inside the panel's React tree, including menus a select inside it portals elsewhere
+    const pressedInside = useRef(false);
     const panelId = useId();
     const titleId = useId();
 
@@ -89,8 +84,21 @@ export function FilterPopover({
         (first ?? panel)?.focus();
     }, [open]);
 
-    // Escape closes; Tab past the last control (or Shift+Tab before the first) leaves the panel
-    // back to the trigger, so the reader's place on the page is kept.
+    // In a dialog, Escape closes only the panel: caught at window capture, ahead of the dialog's document listener
+    useEffect(() => {
+        if (!open || !host) return;
+        const onKey = (e: globalThis.KeyboardEvent) => {
+            const target = e.target as Element;
+            if (e.key !== 'Escape' || !panelRef.current?.contains(target) || inOpenMenu(target)) return;
+            e.stopPropagation();
+            e.preventDefault();
+            close();
+        };
+        window.addEventListener('keydown', onKey, true);
+        return () => window.removeEventListener('keydown', onKey, true);
+    }, [open, host]);
+
+    // Escape closes; Tab past the last control (or Shift+Tab before the first) leaves the panel back to the trigger
     const onPanelKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Escape') {
             e.stopPropagation();
@@ -109,15 +117,27 @@ export function FilterPopover({
         }
     };
 
-    // Position the panel just under the trigger; clamp so it never spills past the right edge.
+    // Position the panel just under the trigger, inside the window or the dialog box it portals into
     const place = () => {
-        const r = triggerRef.current?.getBoundingClientRect();
-        if (!r) {
+        const trigger = triggerRef.current;
+        const r = trigger?.getBoundingClientRect();
+        if (!trigger || !r) {
             return;
         }
-        const left = Math.min(align === 'end' ? r.right - width : r.left, window.innerWidth - width - 8);
-        setPos({ top: r.bottom + 4, left: Math.max(8, left) });
+        const dialog = trigger.closest<HTMLElement>('[role="dialog"]');
+        const box = dialog?.getBoundingClientRect() ?? { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+        const wanted = align === 'end' ? r.right - width : r.left;
+        const left = Math.max(box.left + EDGE, Math.min(wanted, box.right - width - EDGE));
+        const top = r.bottom + 4;
+        setHost(dialog);
+        setPos({ top: top - box.top, left: left - box.left, maxHeight: box.bottom - top - EDGE });
     };
+
+    // A panel taller than the room below scrolls its body instead of running off the screen
+    useLayoutEffect(() => {
+        if (!open) return;
+        setScrolls((panelRef.current?.scrollHeight ?? 0) > pos.maxHeight);
+    }, [open, pos.maxHeight]);
 
     const toggle = () => {
         setOpen((o) => {
@@ -134,7 +154,8 @@ export function FilterPopover({
         const onDown = (e: MouseEvent) => {
             const target = e.target as Node;
             const inTrigger = triggerRef.current?.contains(target);
-            const inPanel = panelRef.current?.contains(target);
+            const inPanel = panelRef.current?.contains(target) || pressedInside.current;
+            pressedInside.current = false;
             if (!inTrigger && !inPanel) {
                 setOpen(false);
             }
@@ -197,8 +218,21 @@ export function FilterPopover({
                         aria-labelledby={titleId}
                         tabIndex={-1}
                         onKeyDown={onPanelKeyDown}
-                        style={{ position: 'fixed', top: pos.top, left: pos.left, width, zIndex: 9999 }}
-                        className={cn('border-border bg-popover rounded-lg border shadow-md', closing ? 'motion-pop-out' : 'motion-pop-in')}
+                        onMouseDown={() => {
+                            pressedInside.current = true;
+                        }}
+                        style={{
+                            position: host ? 'absolute' : 'fixed',
+                            top: pos.top,
+                            left: pos.left,
+                            width,
+                            maxHeight: pos.maxHeight,
+                            zIndex: host ? 50 : 9999,
+                        }}
+                        className={cn(
+                            'border-border bg-popover flex flex-col rounded-lg border shadow-md',
+                            closing ? 'motion-pop-out' : 'motion-pop-in',
+                        )}
                     >
                         <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
                             <Icon className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
@@ -223,7 +257,7 @@ export function FilterPopover({
                             )}
                         </div>
 
-                        <div className="p-3.5">{children(() => close())}</div>
+                        <div className={cn('p-3.5', scrolls && 'min-h-0 overflow-y-auto')}>{children(() => close())}</div>
 
                         {resultCount !== undefined && (
                             <div className="border-border/60 flex items-center gap-2 border-t px-3.5 py-2.5">
@@ -241,7 +275,7 @@ export function FilterPopover({
                             </div>
                         )}
                     </div>,
-                    document.body,
+                    host ?? document.body,
                 )}
         </>
     );

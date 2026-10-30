@@ -4,7 +4,7 @@ import { useT } from '@/lang';
 import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/modules/ticket';
 import { EmptyState } from '@/shared/components/empty-state';
 import { SaveButton } from '@/shared/components/save-button';
-import { SearchSelect } from '@/shared/components/search-select';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { REQUEST_TYPE_META, REQUEST_TYPES } from '@/shared/lib/request-meta';
@@ -558,8 +558,9 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                             </EmptyState>
                         </div>
                     ) : (
-                        <div role="table" aria-labelledby="sla-h-rep" className={TABLE}>
-                            <div role="row" className={cn(ROW, HEAD_ROW, REP_COLS)}>
+                        <div role="table" aria-labelledby="sla-h-rep" className={cn(TABLE, 'overflow-visible')}>
+                            {/* Not clipped, so a type or work menu on the last row opens in full */}
+                            <div role="row" className={cn(ROW, HEAD_ROW, REP_COLS, 'rounded-t-[calc(var(--radius-lg)-1px)]')}>
                                 <span role="columnheader">{t('set_sla_col_ticket_type')}</span>
                                 <span role="columnheader">{t('set_sla_col_work_class')}</span>
                                 <span role="columnheader">{t('set_sla_resolve_within')}</span>
@@ -577,17 +578,18 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                                             <span aria-hidden className={MINI_LABEL}>
                                                 {t('set_sla_col_ticket_type')}
                                             </span>
-                                            <SearchSelect
-                                                ariaLabel={fill(t('set_sla_aria_category'), { name })}
+                                            <SearchableSelect
+                                                aria-label={fill(t('set_sla_aria_category'), { name })}
                                                 value={row.category}
                                                 onChange={(v) => setWorkTarget(row.uid, { category: v as TicketCategory })}
                                                 // Every type stays listed; one another row already claims is greyed with the reason.
                                                 options={TICKET_CATEGORIES.map((c) => ({
                                                     value: c,
                                                     label: categoryLabel(c),
+                                                    search: categoryLabel(c),
                                                     icon: <TicketCategoryIcon category={c} className="text-muted-foreground h-4 w-4" />,
                                                     disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
-                                                    note:
+                                                    sub:
                                                         c !== row.category && taken.has(`${c}:${row.work_class}`)
                                                             ? t('set_sla_pair_taken')
                                                             : undefined,
@@ -598,15 +600,16 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                                             <span aria-hidden className={MINI_LABEL}>
                                                 {t('set_sla_col_work_class')}
                                             </span>
-                                            <SearchSelect
-                                                ariaLabel={fill(t('set_sla_aria_work_class'), { name })}
+                                            <SearchableSelect
+                                                aria-label={fill(t('set_sla_aria_work_class'), { name })}
                                                 value={row.work_class}
                                                 onChange={(v) => setWorkTarget(row.uid, { work_class: v as TicketSlaWorkClassTarget['work_class'] })}
                                                 options={WORK_CLASSES.map((w) => ({
                                                     value: w,
                                                     label: workLabel(w),
+                                                    search: workLabel(w),
                                                     disabled: w !== row.work_class && taken.has(`${row.category}:${w}`),
-                                                    note:
+                                                    sub:
                                                         w !== row.work_class && taken.has(`${row.category}:${w}`)
                                                             ? t('set_sla_pair_taken')
                                                             : undefined,
