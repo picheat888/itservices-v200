@@ -92,8 +92,8 @@ class ThaiNameFieldsTest extends TestCase
 
         $row = $this->actingAs($user)->getJson('/api/stock-counts')->assertOk()->json('data.0');
 
-        $this->assertArrayHasKey('category_th', $row);
-        $this->assertNull($row['category_th']);
+        // No Thai name on file: the English name stands in (STK-18)
+        $this->assertSame('Network', $row['category_th']);
     }
 
     public function test_workflow_preview_names_the_approver_and_candidates_in_thai(): void
