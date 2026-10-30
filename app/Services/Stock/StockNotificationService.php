@@ -14,6 +14,7 @@ use App\Notifications\StockRequestNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\DateDisplay;
 use App\Support\EmailTable;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -440,6 +441,12 @@ class StockNotificationService
     public function requestWaiting(StockRequest $request): void
     {
         $permission = $request->status === 'approved' ? 'stock.fulfill' : 'stock.approve';
+
+        // Approvers' bell from the pending days goes too, once the request waits on the issuers
+        DatabaseNotification::where('type', StockRequestNotification::class)
+            ->where('data->stock_request_id', $request->id)
+            ->where('data->subtype', 'waiting')
+            ->delete();
 
         $this->sendBell(
             $this->recipients($permission),

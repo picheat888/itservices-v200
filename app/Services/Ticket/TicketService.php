@@ -18,6 +18,7 @@ use App\Notifications\TicketOwnerNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Carbon\CarbonInterface;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -98,7 +99,9 @@ class TicketService
 
         // A new category reaches other staff Levels: they hear about the waiting case as if it were new
         if ($recategorisesWaitingCase) {
-            $this->announceToTakers($ticket, $this->takersFor($ticket)->whereNotIn('id', $alreadyTold)->values());
+            $takers = $this->takersFor($ticket);
+            $this->withdrawNewCaseBell($ticket, $alreadyTold->diff($takers->pluck('id')));
+            $this->announceToTakers($ticket, $takers->whereNotIn('id', $alreadyTold)->values());
         }
 
         return $ticket->fresh();
@@ -448,6 +451,24 @@ class TicketService
                 $taker->name,
             );
         }
+    }
+
+    /**
+     * Removes the new-case bell from staff the case's Level no longer covers.
+     *
+     * @param  Collection<int, int>  $userIds
+     */
+    private function withdrawNewCaseBell(Ticket $ticket, Collection $userIds): void
+    {
+        if ($userIds->isEmpty()) {
+            return;
+        }
+
+        DatabaseNotification::where('type', TicketCreatedNotification::class)
+            ->where('notifiable_type', (new User)->getMorphClass())
+            ->whereIn('notifiable_id', $userIds)
+            ->where('data->ticket_id', $ticket->id)
+            ->delete();
     }
 
     /**

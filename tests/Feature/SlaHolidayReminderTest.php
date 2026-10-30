@@ -86,6 +86,20 @@ class SlaHolidayReminderTest extends TestCase
         $this->assertSame([['type' => 'sla_holidays', 'subtype' => 'started', 'year' => 2027]], $this->bells($holder));
     }
 
+    public function test_each_run_replaces_the_earlier_bell_for_that_year(): void
+    {
+        $holder = $this->holder();
+
+        $this->travelTo('2026-12-01 08:00:00');
+        $this->artisan('tickets:remind-sla-holidays')->assertSuccessful();
+        $this->travelTo('2026-12-15 08:00:00');
+        $this->artisan('tickets:remind-sla-holidays')->assertSuccessful();
+        $this->travelTo('2027-01-02 08:00:00');
+        $this->artisan('tickets:remind-sla-holidays')->assertSuccessful();
+
+        $this->assertSame([['type' => 'sla_holidays', 'subtype' => 'started', 'year' => 2027]], $this->bells($holder));
+    }
+
     public function test_other_months_send_nothing(): void
     {
         $this->travelTo('2026-11-15 08:00:00');

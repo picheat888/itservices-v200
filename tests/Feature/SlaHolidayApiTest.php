@@ -117,6 +117,9 @@ class SlaHolidayApiTest extends TestCase
         $this->save(2026, [['date' => '2026-05-01', 'name' => '  ']])
             ->assertJsonValidationErrors(['holidays.0.name' => 'holiday_name_required']);
 
+        $this->save(2026, [['date' => '2026-05-01', 'name' => str_repeat('ก', 101)]])
+            ->assertJsonValidationErrors(['holidays.0.name' => 'holiday_name_too_long']);
+
         $this->save(2026, [['name' => 'A']])
             ->assertJsonValidationErrors(['holidays.0.date' => 'holiday_date_required']);
 

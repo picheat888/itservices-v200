@@ -104,6 +104,18 @@ test('rowErrors flags blank name, blank date, other year and the second equal da
     });
 });
 
+test('rowErrors says a name over 100 characters is too long, not missing', () => {
+    const errors = rowErrors(
+        [
+            { key: 'a', date: '2027-01-01', name: 'ก'.repeat(100) },
+            { key: 'b', date: '2027-01-02', name: 'ก'.repeat(101) },
+        ],
+        2027,
+    );
+    assert.deepEqual(errors, { b: { name: 'too_long' } });
+    assert.deepEqual(serverRowErrors({ 'holidays.0.name': ['holiday_name_too_long'] }, ['a']), { a: { name: 'too_long' } });
+});
+
 test('localIsoDate and isoWeekday read the calendar date without a time zone shift', () => {
     assert.equal(localIsoDate(new Date(2026, 0, 5, 23, 30)), '2026-01-05');
     assert.equal(isoWeekday('2026-01-05'), 1);

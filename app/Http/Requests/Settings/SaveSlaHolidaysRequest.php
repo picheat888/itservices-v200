@@ -43,7 +43,7 @@ class SaveSlaHolidaysRequest extends FormRequest
             'holidays.*.date.before_or_equal' => 'holiday_date_other_year',
             'holidays.*.name.required' => 'holiday_name_required',
             'holidays.*.name.string' => 'holiday_name_required',
-            'holidays.*.name.max' => 'holiday_name_required',
+            'holidays.*.name.max' => 'holiday_name_too_long',
         ];
     }
 }

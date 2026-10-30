@@ -59,7 +59,7 @@ class RequestApprovalResource extends JsonResource
             // reader's language (`req_skip_*`). Snapshotted: it stays true whatever
             // the org chart does afterwards.
             'skip_reason' => $this->skip_reason?->value,
-            // Live, never snapshotted: why nobody can act on this open step ('left' | 'no_account'), null when somebody can
+            // Live, never snapshotted: why nobody can act on this open step ('left' | 'vacant' | 'no_account'), null when somebody can
             'blocked' => $this->blockedReason(),
             'acted_by_name' => $this->acted_by_name,
             'acted_by_name_th' => $this->actorNameTh(),

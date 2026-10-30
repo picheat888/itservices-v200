@@ -8,6 +8,7 @@ use App\Models\Settings\SlaHoliday;
 use App\Models\User;
 use App\Notifications\SlaHolidaysMissingNotification;
 use Illuminate\Console\Command;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Notification;
 
 class RemindSlaHolidays extends Command
@@ -37,6 +38,11 @@ class RemindSlaHolidays extends Command
 
             return self::SUCCESS;
         }
+
+        // One bell per year: the earlier run's bell gives way to this one
+        DatabaseNotification::where('type', SlaHolidaysMissingNotification::class)
+            ->where('data->year', $year)
+            ->delete();
 
         $recipients = User::holdingPermission('settings.sla')->stillWorking()->get();
         Notification::send($recipients, new SlaHolidaysMissingNotification($year, $subtype));

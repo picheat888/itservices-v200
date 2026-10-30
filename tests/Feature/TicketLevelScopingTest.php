@@ -300,6 +300,37 @@ class TicketLevelScopingTest extends TestCase
         $this->assertSame(1, $networkGuy->notifications()->count());
     }
 
+    public function test_moving_a_waiting_case_to_another_level_takes_the_old_levels_bell_back(): void
+    {
+        $networkGuy = $this->staffWith([...self::BASE, 'tickets.level_network']);
+        $hardwareGuy = User::factory()->create([
+            'role' => 'user',
+            'employee_id' => Employee::create(['first_name' => 'Hardware', 'last_name' => 'Test', 'status' => 'active'])->id,
+        ]);
+        foreach ([...self::BASE, 'tickets.level_hardware'] as $key) {
+            RolePermission::firstOrCreate(['role_id' => $hardwareGuy->role_id, 'permission' => $key], ['allowed' => true]);
+        }
+        $requester = User::factory()->create([
+            'role' => 'super',
+            'employee_id' => Employee::create(['first_name' => 'Requester', 'last_name' => 'Test', 'status' => 'active'])->id,
+        ]);
+        $case = [
+            'subject' => 'Switch port keeps flapping',
+            'description' => 'Uplink on floor 3 drops every few minutes.',
+            'category' => 'network',
+            'callback_phone' => '081 222 3333',
+        ];
+
+        $this->actingAs($requester);
+        $id = $this->postJson('/api/tickets', $case)->assertCreated()->json('data.id');
+        $this->assertSame(1, $networkGuy->notifications()->count());
+
+        $this->putJson("/api/tickets/{$id}", [...$case, 'category' => 'hardware'])->assertOk();
+
+        $this->assertSame(0, $networkGuy->notifications()->count());
+        $this->assertSame('ticket_new', $hardwareGuy->notifications()->first()?->data['type']);
+    }
+
     public function test_assigning_sends_a_bell_to_the_assignee(): void
     {
         $staff = $this->staffWith([...self::BASE, 'tickets.level_network']);

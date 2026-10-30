@@ -125,6 +125,25 @@ class StockNotificationServiceTest extends TestCase
         Notification::assertSentTo($approver, StockRequestNotification::class);
     }
 
+    public function test_once_approved_the_approvers_waiting_bell_goes(): void
+    {
+        $approver = $this->userWithPerm('stock.approve');
+        $issuer = $this->userWithPerm('stock.fulfill');
+        $owner = $this->userWithPerm('stock.request');
+        $item = StockItem::create(['sku' => 'WT-2', 'name' => 'Wt', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+        $req = StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 1, 'reason' => 'r', 'status' => 'pending']);
+        $service = app(StockNotificationService::class);
+
+        $service->requestWaiting($req);
+        $this->assertSame(1, $approver->notifications()->count());
+
+        $req->update(['status' => 'approved']);
+        $service->requestWaiting($req);
+
+        $this->assertSame(0, $approver->notifications()->count());
+        $this->assertSame(1, $issuer->notifications()->count());
+    }
+
     /** A fresh non-super user holding every listed permission. */
     private function userWithPerms(array $permissions): User
     {

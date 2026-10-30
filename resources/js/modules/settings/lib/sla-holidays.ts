@@ -2,7 +2,8 @@
 export type HolidayRow = { key: string; date: string; name: string };
 type DateName = { date: string; name: string };
 export type LineError = 'no_date' | 'bad_date' | 'no_name' | 'other_year';
-export type RowError = { date?: 'required' | 'other_year' | 'taken'; name?: 'required' };
+export type RowError = { date?: 'required' | 'other_year' | 'taken'; name?: 'required' | 'too_long' };
+export const HOLIDAY_NAME_MAX = 100;
 
 const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const TH_MON_FULL = [
@@ -229,6 +230,8 @@ export function rowErrors(rows: HolidayRow[], year: number): Record<string, RowE
         }
         if (!row.name.trim()) {
             error.name = 'required';
+        } else if (row.name.trim().length > HOLIDAY_NAME_MAX) {
+            error.name = 'too_long';
         }
         if (error.date || error.name) {
             out[row.key] = error;
@@ -259,6 +262,7 @@ const SERVER_CODES: Record<string, RowError> = {
     holiday_date_other_year: { date: 'other_year' },
     holiday_date_taken: { date: 'taken' },
     holiday_name_required: { name: 'required' },
+    holiday_name_too_long: { name: 'too_long' },
 };
 
 // 422 field errors (holidays.<i>.date|name) keyed back to the rows that were sent, in order

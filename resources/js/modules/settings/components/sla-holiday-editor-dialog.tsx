@@ -18,7 +18,7 @@ import { CalendarDays, ClipboardPaste, Copy, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SlaHoliday } from '../api/settingsApi';
 import { useSaveFailed, useSaveSlaHolidays } from '../hooks/use-settings';
-import { fixedDateRows, isoWeekday, rowErrors, serverRowErrors, type HolidayRow, type RowError } from '../lib/sla-holidays';
+import { fixedDateRows, HOLIDAY_NAME_MAX, isoWeekday, rowErrors, serverRowErrors, type HolidayRow, type RowError } from '../lib/sla-holidays';
 import { SlaHolidayPasteDialog } from './sla-holiday-paste-dialog';
 import { ErrorSummary, FieldError, fillText, HEAD_ROW, MINI_LABEL, ROW, SLA_ERROR_BORDER, TABLE, type SlaError } from './sla-parts';
 
@@ -129,7 +129,12 @@ export function SlaHolidayEditorDialog({
     const weekdayShort = (iso: string) => t(`set_sla_day_${isoWeekday(iso)}`);
     const rowLabel = (r: HolidayRow) => (r.date ? `${weekdayShort(r.date)} ${fmt.date(r.date)}` : t('set_hol_no_date'));
     const dateMessage = (e?: RowError) => (e?.date ? fillText(t(ERROR_KEY[e.date]), { year: yearText }) : '');
-    const nameMessage = (e?: RowError) => (e?.name ? t('set_hol_err_name_required') : '');
+    const nameMessage = (e?: RowError) =>
+        e?.name === 'too_long'
+            ? fillText(t('set_hol_err_name_too_long'), { max: fmtN(HOLIDAY_NAME_MAX) })
+            : e?.name
+              ? t('set_hol_err_name_required')
+              : '';
 
     const summary: SlaError[] = sorted.flatMap((r) => {
         const e = errors[r.key];
@@ -312,7 +317,7 @@ export function SlaHolidayEditorDialog({
                                                     id={`hol-n-${r.key}`}
                                                     value={r.name}
                                                     onChange={(ev) => setRow(r.key, { name: ev.target.value })}
-                                                    maxLength={100}
+                                                    maxLength={HOLIDAY_NAME_MAX}
                                                     autoComplete="off"
                                                     aria-invalid={!!e?.name || undefined}
                                                     aria-describedby={e?.name ? `hol-n-${r.key}-error` : undefined}
