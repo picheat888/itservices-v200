@@ -121,7 +121,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with(['contract.vendor', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department'])->latest('id');
+        $query = Asset::query()->with(['contract.vendor', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'latestHandover'])->latest('id');
 
         SearchTerms::apply($query, $request->query('search'), [
             'asset_code', 'tag', 'serial',

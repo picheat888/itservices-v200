@@ -663,6 +663,21 @@ class AssetApiTest extends TestCase
         $this->assertNull($rows[$legacy->id]['handed_over_at']);
     }
 
+    public function test_the_asset_list_carries_the_latest_hand_over_time(): void
+    {
+        $this->actingAs($this->super());
+        $deployed = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-7201']);
+        $neverHanded = Asset::factory()->create();
+        AssetTransfer::forceCreate(['asset_id' => $deployed->id, 'asset_tag' => $deployed->asset_code, 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7200', 'created_at' => '2026-09-01 10:00:00']);
+        AssetTransfer::forceCreate(['asset_id' => $deployed->id, 'asset_tag' => $deployed->asset_code, 'asset_model' => 'M', 'kind' => 'handover', 'from_owner' => 'WH-01', 'to_owner' => 'EMP-7201', 'created_at' => '2026-10-13 09:15:00']);
+        AssetTransfer::forceCreate(['asset_id' => $deployed->id, 'asset_tag' => $deployed->asset_code, 'asset_model' => 'M', 'kind' => 'relocate', 'from_owner' => 'A', 'to_owner' => 'B', 'created_at' => '2026-10-20 16:00:00']);
+
+        $rows = collect($this->getJson('/api/assets?per_page=100')->assertOk()->json('data'))->keyBy('id');
+
+        $this->assertSame('2026-10-13 09:15', $rows[$deployed->id]['handed_over_at']);
+        $this->assertNull($rows[$neverHanded->id]['handed_over_at']);
+    }
+
     public function test_only_the_recipient_employee_can_accept_a_handover(): void
     {
         $employee = Employee::create(['code' => 'EMP-9001', 'first_name' => 'Rec', 'last_name' => 'Ipient']);
