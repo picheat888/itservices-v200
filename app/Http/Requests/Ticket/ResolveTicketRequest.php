@@ -4,18 +4,14 @@
 
 namespace App\Http\Requests\Ticket;
 
-use App\Models\Ticket\Ticket;
-use App\Services\Ticket\TicketActionGuard;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 
-class ResolveTicketRequest extends FormRequest
+class ResolveTicketRequest extends TicketActionRequest
 {
-    public function authorize(TicketActionGuard $guard): bool
+    public function authorize(): Response
     {
-        $guard->assertWorksTheCase($this->user(), $this->ticket());
-
-        return true;
+        return $this->guard()->canWork($this->user(), $this->ticket());
     }
 
     /**
@@ -32,10 +28,5 @@ class ResolveTicketRequest extends FormRequest
     public function completes(): bool
     {
         return $this->validated('mode') === 'complete';
-    }
-
-    public function ticket(): Ticket
-    {
-        return $this->route('ticket');
     }
 }

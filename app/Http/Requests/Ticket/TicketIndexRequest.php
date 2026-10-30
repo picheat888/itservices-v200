@@ -4,36 +4,24 @@
 
 namespace App\Http\Requests\Ticket;
 
+use App\Http\Requests\Permission\GatedPermissionRequest;
 use App\Http\Resources\Ticket\TicketResource;
-use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 
-class TicketIndexRequest extends FormRequest
+class TicketIndexRequest extends GatedPermissionRequest
 {
-    /** My Tickets (?requested=1) has its own gate so the tab can be granted per role. */
+    // Only My Tickets (?requested=1) has a gate of its own
+    protected function gate(): string
+    {
+        return 'tickets.my';
+    }
+
     public function authorize(): bool
     {
-        return ! $this->boolean('requested') || (bool) $this->user()?->hasPermission('tickets.my');
-    }
-
-    protected function failedAuthorization(): void
-    {
-        abort(403);
+        return ! $this->boolean('requested') || parent::authorize();
     }
 
     /**
-     * Unknown values fall back rather than fail, so a hand-edited URL still lists tickets.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
-    {
-        return [];
-    }
-
-    /**
-     * Priority and the SLA clocks are only shown to whoever can take a case, so a hand-typed
-     * ?sort=priority_desc, ?sla= or ?priority= from anyone else is ignored.
+     * Priority and SLA sorts and filters only count for readers who can see them.
      *
      * @return array{requested: bool, mine: bool, sort: string, over_sla: bool, search: mixed, status: mixed, category: mixed, priority: mixed, per_page: int}
      */

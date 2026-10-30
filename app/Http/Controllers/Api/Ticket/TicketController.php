@@ -33,16 +33,7 @@ class TicketController extends Controller
         private readonly TicketActionGuard $guard,
     ) {}
 
-    /** True when the user may see every ticket (IT staff); others see only their own. */
-    private function canViewAll(Request $request): bool
-    {
-        return (bool) $request->user()?->hasPermission('tickets.view_all');
-    }
-
-    /**
-     * The requester's own assets as one-click picks in Take Case. Gated by tickets.resolve,
-     * not assets.view, like the other cross-module peeks.
-     */
+    /** The requester's own assets as Take Case picks; gated by tickets.resolve, not assets.view. */
     public function requesterAssets(Request $request, Ticket $ticket, TicketAssetPickerService $assets): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
@@ -61,7 +52,7 @@ class TicketController extends Controller
     /** Paginated ticket list with the tab badge counts in meta. */
     public function index(TicketIndexRequest $request, TicketListService $list): JsonResponse
     {
-        $paginator = $list->paginate($request->user(), $request->filters());
+        ['page' => $paginator, 'counts' => $counts] = $list->page($request->user(), $request->filters());
 
         return response()->json([
             'data' => TicketResource::collection($paginator->items()),
@@ -70,7 +61,7 @@ class TicketController extends Controller
                 'per_page' => $paginator->perPage(),
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
-                ...$list->tabCounts($request->user()),
+                ...$counts,
             ],
         ]);
     }
@@ -124,15 +115,12 @@ class TicketController extends Controller
 
     public function show(Request $request, Ticket $ticket): JsonResponse
     {
-        abort_unless(
-            $this->canViewAll($request) || $ticket->requester_id === $request->user()?->employee_id,
-            403,
-        );
+        $this->guard->canView($request->user(), $ticket)->authorize();
 
         return (new TicketResource($ticket->load(['requester', 'assignee.employee', 'relatedAsset', 'attachments', 'updates.author.employee'])))->response();
     }
 
-    /** An IT staff takes an open, unassigned case for themselves (TicketActionGuard::assertCanTake). */
+    /** An IT staff takes an open, unassigned case for themselves. */
     public function take(TakeTicketRequest $request, Ticket $ticket): JsonResponse
     {
         $ticket = $this->service->take(
@@ -152,8 +140,6 @@ class TicketController extends Controller
     public function assign(AssignTicketRequest $request, Ticket $ticket): JsonResponse
     {
         $staff = $request->assignee();
-        $this->guard->assertCanAssignTo($request->user(), $staff, $ticket);
-
         $ticket = $this->service->assign($ticket, $staff, $request->priority(), $request->user());
         AuditLog::record('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}", subject: $ticket);
 
@@ -164,8 +150,6 @@ class TicketController extends Controller
     public function forward(ForwardTicketRequest $request, Ticket $ticket): JsonResponse
     {
         $staff = $request->assignee();
-        $this->guard->assertCanReceive($staff, $ticket);
-
         $ticket = $this->service->forward($ticket, $staff, $request->user());
         AuditLog::record('Forwarded ticket', "{$ticket->ticket_no} → {$staff->name}", subject: $ticket);
 
@@ -180,19 +164,14 @@ class TicketController extends Controller
         return $this->actionResponse($ticket);
     }
 
-    /**
-     * The assignee writes a progress note on a case in flight. Handing the repair to a technician
-     * rides on the same note, which is the reason for the new deadline.
-     */
+    /** The assignee's progress note; a change of work class rides on it as the reason. */
     public function storeUpdate(StoreTicketUpdateRequest $request, Ticket $ticket): JsonResponse
     {
         $user = $request->user();
-        $class = $request->workClass();
         $before = $ticket->work_class;
 
-        if ($class !== null && $class !== $before) {
-            $this->guard->assertCanReclassify($user, $ticket, $class);
-            $ticket = $this->service->setWorkClass($ticket, $user, $class, $request->validated('body'));
+        if ($request->reclassifies()) {
+            $ticket = $this->service->setWorkClass($ticket, $user, $request->workClass(), $request->validated('body'));
             AuditLog::record(
                 'Classified ticket work',
                 sprintf('%s - %s → %s', $ticket->ticket_no, $before?->value ?? 'standard', $ticket->work_class->value),
@@ -208,10 +187,7 @@ class TicketController extends Controller
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
-    /**
-     * Correct a ticket's descriptive fields. Who may edit (IT staff, or the
-     * requester while still Open) is enforced by UpdateTicketRequest::authorize.
-     */
+    /** Correct a ticket's descriptive fields; who may edit is UpdateTicketRequest::authorize. */
     public function update(UpdateTicketRequest $request, Ticket $ticket): JsonResponse
     {
         $ticket = $this->service->update($ticket, $request->validated());

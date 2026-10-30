@@ -5,42 +5,45 @@
 namespace App\Http\Requests\Ticket;
 
 use App\Enums\Ticket\TicketWorkClass;
-use App\Models\Ticket\Ticket;
-use App\Services\Ticket\TicketActionGuard;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class StoreTicketUpdateRequest extends FormRequest
+class StoreTicketUpdateRequest extends TicketActionRequest
 {
-    public function authorize(TicketActionGuard $guard): bool
+    public function authorize(): Response
     {
-        $guard->assertWorksTheCase($this->user(), $this->ticket());
-
-        return true;
+        return $this->guard()->canWork($this->user(), $this->ticket());
     }
 
     /**
-     * A request-born case already has a target decided by what was asked for, so its kind of
-     * work is refused rather than merely hidden, the same as priority.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'body' => ['required', 'string', 'min:5', 'max:5000'],
-            'work_class' => [$this->ticket()->serviceRequest()->exists() ? 'prohibited' : 'sometimes', new Enum(TicketWorkClass::class)],
+            'work_class' => [$this->unlessFromRequest('sometimes'), new Enum(TicketWorkClass::class)],
         ];
+    }
+
+    // Moving the case to another kind of work, once the fields are valid
+    protected function passedValidation(): void
+    {
+        if ($this->reclassifies()) {
+            $this->guard()->canReclassify($this->user(), $this->ticket(), $this->workClass())->authorize();
+        }
     }
 
     public function workClass(): ?TicketWorkClass
     {
-        return $this->validated('work_class') !== null ? TicketWorkClass::from($this->validated('work_class')) : null;
+        return $this->enum('work_class', TicketWorkClass::class);
     }
 
-    public function ticket(): Ticket
+    public function reclassifies(): bool
     {
-        return $this->route('ticket');
+        $class = $this->workClass();
+
+        return $class !== null && $class !== $this->ticket()->work_class;
     }
 }

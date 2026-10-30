@@ -7,7 +7,9 @@ namespace Tests\Feature;
 use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Ticket\TicketActionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TicketActionOrderTest extends TestCase
@@ -66,6 +68,51 @@ class TicketActionOrderTest extends TestCase
         $this->postJson("/api/tickets/{$mine->id}/forward", ['assignee_id' => $staff->id])->assertJsonValidationErrors(['assignee_id']);
         $this->postJson("/api/tickets/{$mine->id}/resolve", [])->assertJsonValidationErrors(['mode', 'resolution']);
         $this->postJson("/api/tickets/{$mine->id}/updates", ['body' => 'ok'])->assertJsonValidationErrors(['body']);
+    }
+
+    public function test_the_guard_answers_without_throwing_so_jobs_and_commands_can_ask_it(): void
+    {
+        $staff = $this->userWithEmployee();
+        $own = Ticket::factory()->create(['requester_id' => $staff->employee_id]);
+        $open = Ticket::factory()->create();
+        $guard = app(TicketActionGuard::class);
+
+        $refused = $guard->canTake($staff, $own);
+        $this->assertTrue($refused->denied());
+        $this->assertSame('own_case', $refused->message());
+        $this->assertSame(422, $refused->status());
+
+        $this->assertTrue($guard->canTake($staff, $open)->allowed());
+        $this->assertTrue($guard->canView($this->userWithEmployee('user'), $open)->denied());
+    }
+
+    public function test_someone_elses_ticket_stays_closed_to_a_plain_user(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $this->actingAs($this->userWithEmployee('user'));
+
+        $this->getJson("/api/tickets/{$ticket->id}")->assertForbidden()->assertJsonPath('message', '');
+    }
+
+    public function test_the_tab_badges_take_one_query_and_keep_their_numbers(): void
+    {
+        $staff = $this->userWithEmployee();
+        Ticket::factory()->count(3)->create();
+        Ticket::factory()->create(['assignee_id' => $staff->id, 'status' => 'in_progress']);
+        Ticket::factory()->count(2)->create(['requester_id' => $staff->employee_id]);
+        Ticket::factory()->create(['requester_id' => $staff->employee_id, 'status' => 'completed']);
+        $this->actingAs($staff);
+
+        $badgeQueries = 0;
+        DB::listen(function ($query) use (&$badgeQueries): void {
+            $badgeQueries += str_contains($query->sql, 'my_jobs_count') ? 1 : 0;
+        });
+
+        $this->getJson('/api/tickets')->assertOk()
+            ->assertJsonPath('meta.open_count', 5)
+            ->assertJsonPath('meta.my_jobs_count', 1)
+            ->assertJsonPath('meta.my_tickets_count', 2);
+        $this->assertSame(1, $badgeQueries);
     }
 
     public function test_a_custom_summary_range_is_validated_as_before(): void

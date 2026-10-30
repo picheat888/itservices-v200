@@ -4,20 +4,18 @@
 
 namespace App\Http\Requests\Ticket;
 
-use App\Models\Ticket\Ticket;
 use App\Models\User;
-use App\Services\Ticket\TicketActionGuard;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class ForwardTicketRequest extends FormRequest
+class ForwardTicketRequest extends TicketActionRequest
 {
-    public function authorize(TicketActionGuard $guard): bool
-    {
-        $guard->assertCanForward($this->user(), $this->ticket());
+    private ?User $assignee = null;
 
-        return true;
+    public function authorize(): Response
+    {
+        return $this->guard()->canForward($this->user(), $this->ticket());
     }
 
     /**
@@ -30,13 +28,14 @@ class ForwardTicketRequest extends FormRequest
         ];
     }
 
-    public function assignee(): User
+    // Who may receive the case, once the fields are valid
+    protected function passedValidation(): void
     {
-        return User::findOrFail($this->validated('assignee_id'));
+        $this->guard()->canReceive($this->assignee(), $this->ticket())->authorize();
     }
 
-    public function ticket(): Ticket
+    public function assignee(): User
     {
-        return $this->route('ticket');
+        return $this->assignee ??= User::findOrFail($this->validated('assignee_id'));
     }
 }

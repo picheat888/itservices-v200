@@ -5,21 +5,16 @@
 
 namespace App\Http\Requests\Ticket;
 
+use App\Http\Requests\Permission\GatedPermissionRequest;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Validator;
 
-class TicketSummaryRequest extends FormRequest
+class TicketSummaryRequest extends GatedPermissionRequest
 {
-    public function authorize(): bool
+    protected function gate(): string
     {
-        return (bool) $this->user()?->hasPermission('tickets.view_dashboard');
-    }
-
-    protected function failedAuthorization(): void
-    {
-        abort(403);
+        return 'tickets.view_dashboard';
     }
 
     /**

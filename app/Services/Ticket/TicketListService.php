@@ -14,14 +14,29 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TicketListService
 {
+    public function __construct(private readonly TicketActionGuard $guard) {}
+
     /**
-     * IT staff (tickets.view_all) see every ticket in the categories their Level grants; everyone
-     * else sees only what they requested. "mine" narrows to the viewer's assignments, "requested"
-     * to what they filed.
+     * One page of the list plus the tab badges; the viewer's scope is resolved once for both.
      *
      * @param  array{requested: bool, mine: bool, sort: string, over_sla: bool, search: mixed, status: mixed, category: mixed, priority: mixed, per_page: int}  $filters
+     * @return array{page: LengthAwarePaginator, counts: array{open_count: int, my_jobs_count: int, my_tickets_count: int}}
      */
-    public function paginate(User $viewer, array $filters): LengthAwarePaginator
+    public function page(User $viewer, array $filters): array
+    {
+        $levels = $this->guard->seesAllTickets($viewer) ? Permissions::ticketLevelsFor($viewer) : null;
+
+        return [
+            'page' => $this->paginate($viewer, $levels, $filters),
+            'counts' => $this->tabCounts($viewer, $levels),
+        ];
+    }
+
+    /**
+     * @param  list<string>|null  $levels  the viewer's Levels when they see every ticket, null when they see only their own
+     * @param  array{requested: bool, mine: bool, sort: string, over_sla: bool, search: mixed, status: mixed, category: mixed, priority: mixed, per_page: int}  $filters
+     */
+    private function paginate(User $viewer, ?array $levels, array $filters): LengthAwarePaginator
     {
         $query = Ticket::query()->with(['requester', 'assignee.employee', 'relatedAsset.category', 'relatedAsset.brand', 'relatedAsset.model', 'attachments', 'serviceRequest']);
 
@@ -42,11 +57,11 @@ class TicketListService
                 ->whereRaw(self::activeDue().' < ?', [now()->toDateTimeString()]);
         }
 
-        if (! $this->canViewAll($viewer)) {
+        if ($levels === null) {
             $query->where('requester_id', $viewer->employee_id);
         } elseif (! $filters['mine'] && ! $filters['requested']) {
             // The all-tickets tab is scoped to the viewer's Levels; own assignments and requests never are
-            $query->whereIn('category', Permissions::ticketLevelsFor($viewer));
+            $query->whereIn('category', $levels);
         }
 
         SearchTerms::apply($query, $filters['search'], [
@@ -66,31 +81,63 @@ class TicketListService
     }
 
     /**
-     * Tab badges, ignoring the tab filters so they never shift with them: open tickets in the
-     * viewer's scope (All), their unfinished assignments (My Jobs) and unresolved requests (My Tickets).
+     * Tab badges (All, My Jobs, My Tickets) in one query, ignoring the tab filters.
      *
+     * @param  list<string>|null  $levels
      * @return array{open_count: int, my_jobs_count: int, my_tickets_count: int}
      */
-    public function tabCounts(User $viewer): array
+    private function tabCounts(User $viewer, ?array $levels): array
     {
+        [$mineSql, $mineBindings] = $this->requestedBy($viewer);
+        [$scopeSql, $scopeBindings] = $levels === null ? [$mineSql, $mineBindings] : $this->inLevels($levels);
+        $working = array_map(fn (TicketStatus $s) => $s->value, TicketStatus::working());
+        $live = TicketStatus::liveValues();
+
+        $open = "status = ? AND {$scopeSql}";
+        $myJobs = 'assignee_id = ? AND status IN ('.$this->marks($working).')';
+        $myTickets = "{$mineSql} AND status IN (".$this->marks($live).')';
+
+        $row = Ticket::query()->toBase()
+            ->selectRaw(
+                "SUM(CASE WHEN {$open} THEN 1 ELSE 0 END) AS open_count,"
+                ." SUM(CASE WHEN {$myJobs} THEN 1 ELSE 0 END) AS my_jobs_count,"
+                ." SUM(CASE WHEN {$myTickets} THEN 1 ELSE 0 END) AS my_tickets_count",
+                [TicketStatus::Open->value, ...$scopeBindings, $viewer->id, ...$working, ...$mineBindings, ...$live],
+            )
+            // Only rows any badge can count, so the indexes on status, assignee and requester apply
+            ->whereRaw("({$open}) OR assignee_id = ? OR {$mineSql}", [TicketStatus::Open->value, ...$scopeBindings, $viewer->id, ...$mineBindings])
+            ->first();
+
         return [
-            'open_count' => Ticket::query()
-                ->when(
-                    $this->canViewAll($viewer),
-                    fn ($q) => $q->whereIn('category', Permissions::ticketLevelsFor($viewer)),
-                    fn ($q) => $q->where('requester_id', $viewer->employee_id),
-                )
-                ->where('status', TicketStatus::Open)
-                ->count(),
-            'my_jobs_count' => Ticket::query()
-                ->where('assignee_id', $viewer->id)
-                ->whereIn('status', TicketStatus::working())
-                ->count(),
-            'my_tickets_count' => Ticket::query()
-                ->where('requester_id', $viewer->employee_id)
-                ->whereIn('status', TicketStatus::live())
-                ->count(),
+            'open_count' => (int) ($row->open_count ?? 0),
+            'my_jobs_count' => (int) ($row->my_jobs_count ?? 0),
+            'my_tickets_count' => (int) ($row->my_tickets_count ?? 0),
         ];
+    }
+
+    /**
+     * Tickets the viewer filed; an account without an employee matches requester-less tickets, as where() did.
+     *
+     * @return array{0: string, 1: list<int>}
+     */
+    private function requestedBy(User $viewer): array
+    {
+        return $viewer->employee_id === null ? ['requester_id IS NULL', []] : ['requester_id = ?', [$viewer->employee_id]];
+    }
+
+    /**
+     * @param  list<string>  $levels
+     * @return array{0: string, 1: list<string>}
+     */
+    private function inLevels(array $levels): array
+    {
+        return $levels === [] ? ['0 = 1', []] : ['category IN ('.$this->marks($levels).')', $levels];
+    }
+
+    /** @param  list<mixed>  $values */
+    private function marks(array $values): string
+    {
+        return implode(', ', array_fill(0, count($values), '?'));
     }
 
     /** Newest (default), oldest, recently updated, priority high→low, or most urgent SLA first. */
@@ -114,10 +161,5 @@ class TicketListService
     private static function activeDue(): string
     {
         return "CASE WHEN status = 'open' AND responded_at IS NULL THEN sla_response_due_at ELSE sla_resolve_due_at END";
-    }
-
-    private function canViewAll(User $viewer): bool
-    {
-        return $viewer->hasPermission('tickets.view_all');
     }
 }

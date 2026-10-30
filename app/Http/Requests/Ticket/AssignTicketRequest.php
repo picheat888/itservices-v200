@@ -5,48 +5,45 @@
 namespace App\Http\Requests\Ticket;
 
 use App\Enums\Ticket\TicketPriority;
-use App\Models\Ticket\Ticket;
 use App\Models\User;
-use App\Services\Ticket\TicketActionGuard;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
-class AssignTicketRequest extends FormRequest
+class AssignTicketRequest extends TicketActionRequest
 {
-    public function authorize(TicketActionGuard $guard): bool
-    {
-        $guard->assertCanAssign($this->user(), $this->ticket());
+    private ?User $assignee = null;
 
-        return true;
+    public function authorize(): Response
+    {
+        return $this->guard()->canAssign($this->user(), $this->ticket());
     }
 
     /**
-     * Same rule as Take Case: a request-born case is never given a priority.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'assignee_id' => ['required', Rule::exists('users', 'id')],
-            'priority' => [$this->ticket()->serviceRequest()->exists() ? 'prohibited' : 'required', new Enum(TicketPriority::class)],
+            'priority' => [$this->unlessFromRequest('required'), new Enum(TicketPriority::class)],
         ];
+    }
+
+    // Who may receive the case, once the fields are valid
+    protected function passedValidation(): void
+    {
+        $this->guard()->canAssignTo($this->user(), $this->assignee(), $this->ticket())->authorize();
     }
 
     public function assignee(): User
     {
-        return User::findOrFail($this->validated('assignee_id'));
+        return $this->assignee ??= User::findOrFail($this->validated('assignee_id'));
     }
 
     public function priority(): ?TicketPriority
     {
-        return $this->validated('priority') !== null ? TicketPriority::from($this->validated('priority')) : null;
-    }
-
-    public function ticket(): Ticket
-    {
-        return $this->route('ticket');
+        return $this->enum('priority', TicketPriority::class);
     }
 }
