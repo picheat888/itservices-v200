@@ -1755,7 +1755,7 @@ export const report: Dict = {
     rep_cren_alert_missed: 'Not sent yet',
     rep_cren_alert_starts: 'Starts in {n} days',
     rep_cren_todo_overdue: '{n} days overdue: renew or end the contract',
-    rep_cren_todo_today: 'Ends today: renew or end the contract',
+    rep_cren_todo_today: 'Ends today: renew it, or end the contract from tomorrow',
     rep_cren_todo_return_rent: 'Return {n} rented devices or renew',
     rep_cren_todo_decide_ma: 'Decide on MA for {n} devices',
     rep_cren_todo_contact: 'Contact the vendor about renewal',

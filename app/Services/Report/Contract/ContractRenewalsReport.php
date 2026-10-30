@@ -40,9 +40,9 @@ class ContractRenewalsReport extends TabularReport
 
     private const CLOSED_RANGES = ['year' => 'rep_cren_closed_year', '12m' => 'rep_cren_closed_12m', 'all' => 'rep_cren_closed_all'];
 
-    /** Days left in bands, [from, to] inclusive (null = open-ended); overdue is 0 or less. */
+    /** Days left in bands, [from, to] inclusive (null = open-ended); overdue starts the day after the end date. */
     private const BANDS = [
-        'overdue' => [null, 0], 'd30' => [1, 30], 'd90' => [31, 90], 'd180' => [91, 180], 'd365' => [181, 365], 'later' => [366, null],
+        'overdue' => [null, -1], 'd30' => [0, 30], 'd90' => [31, 90], 'd180' => [91, 180], 'd365' => [181, 365], 'later' => [366, null],
     ];
 
     private const BAND_TH = [
@@ -225,7 +225,7 @@ class ContractRenewalsReport extends TabularReport
         $sent = $logged === [] ? [] : [min($logged)];
         $sentAt = $logs->max('alerted_at');
         // Once overdue the sweep sends only the "ended" mail (0), whatever thresholds it skipped before
-        $due = $days <= 0 ? [0] : array_values(array_filter($enabled, fn (int $t) => $days <= $t));
+        $due = $days < 0 ? [0] : array_values(array_filter($enabled, fn (int $t) => $days <= $t));
         $threshold = $enabled === [] ? null : max($enabled);
 
         $state = match (true) {
@@ -286,7 +286,7 @@ class ContractRenewalsReport extends TabularReport
         $todo = $figures['todo'];
         $lines = [match ($todo['main']) {
             'overdue' => 'เกินกำหนด '.(-$figures['days']).' วัน ต่ออายุหรือกดสิ้นสุดสัญญา',
-            'today' => 'ครบกำหนดวันนี้ ต่ออายุหรือกดสิ้นสุดสัญญา',
+            'today' => 'ครบกำหนดวันนี้ ต่ออายุ หรือกดสิ้นสุดสัญญาได้ตั้งแต่พรุ่งนี้',
             'return_rent' => "คืนเครื่องเช่า {$todo['rented']} เครื่อง หรือต่อสัญญา",
             'decide_ma' => "ตัดสินใจต่อ MA เครื่อง {$todo['bought']} เครื่อง",
             'contact' => 'ติดต่อผู้ขายเรื่องต่ออายุ',
@@ -403,9 +403,9 @@ class ContractRenewalsReport extends TabularReport
      */
     private static function tiles(Collection $open, int $within, Collection $closedThisYear): array
     {
-        $inWindow = $open->filter(fn (array $c) => $c['days'] > 0 && $c['days'] <= $within);
-        $soon = $open->filter(fn (array $c) => $c['days'] > 0 && $c['days'] <= self::SOON_DAYS)->sortBy([['days', 'asc'], ['code', 'asc']])->values();
-        $overdue = $open->filter(fn (array $c) => $c['days'] <= 0)->sortBy([['days', 'asc'], ['code', 'asc']])->values();
+        $inWindow = $open->filter(fn (array $c) => $c['days'] >= 0 && $c['days'] <= $within);
+        $soon = $open->filter(fn (array $c) => $c['days'] >= 0 && $c['days'] <= self::SOON_DAYS)->sortBy([['days', 'asc'], ['code', 'asc']])->values();
+        $overdue = $open->filter(fn (array $c) => $c['days'] < 0)->sortBy([['days', 'asc'], ['code', 'asc']])->values();
         $pick = fn (?array $c, bool $past) => $c === null ? null : ['id' => $c['id'], 'code' => $c['code'], 'days' => $past ? -$c['days'] : $c['days']];
 
         return [
@@ -464,7 +464,7 @@ class ContractRenewalsReport extends TabularReport
      */
     private static function months(Collection $open): array
     {
-        $byMonth = $open->filter(fn (array $c) => $c['days'] > 0)->groupBy(fn (array $c) => substr($c['end_date'], 0, 7));
+        $byMonth = $open->filter(fn (array $c) => $c['days'] >= 0)->groupBy(fn (array $c) => substr($c['end_date'], 0, 7));
         $months = [];
         for ($i = 0, $month = CarbonImmutable::today()->startOfMonth(); $i < 12; $i++, $month = $month->addMonth()) {
             $months[] = [

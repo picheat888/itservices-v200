@@ -1741,7 +1741,7 @@ export const report: Dict = {
     rep_cren_alert_missed: 'ยังไม่ได้ส่ง',
     rep_cren_alert_starts: 'เริ่มเตือนอีก {n} วัน',
     rep_cren_todo_overdue: 'เกินกำหนด {n} วัน ต่ออายุหรือกดสิ้นสุดสัญญา',
-    rep_cren_todo_today: 'ครบกำหนดวันนี้ ต่ออายุหรือกดสิ้นสุดสัญญา',
+    rep_cren_todo_today: 'ครบกำหนดวันนี้ ต่ออายุ หรือกดสิ้นสุดสัญญาได้ตั้งแต่พรุ่งนี้',
     rep_cren_todo_return_rent: 'คืนเครื่องเช่า {n} เครื่อง หรือต่อสัญญา',
     rep_cren_todo_decide_ma: 'ตัดสินใจต่อ MA เครื่อง {n} เครื่อง',
     rep_cren_todo_contact: 'ติดต่อผู้ขายเรื่องต่ออายุ',

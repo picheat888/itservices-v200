@@ -121,7 +121,7 @@ class ContractRenewalsReportTest extends TestCase
         $this->assertSame('30, 7 วัน ยังไม่ได้ส่ง', $rows[$this->set['overdue']->id]['alerts']);
         $this->assertSame('ไม่ได้เปิดแจ้งเตือน', $rows[$this->set['today']->id]['alerts']);
         $this->assertSame(
-            'ครบกำหนดวันนี้ ต่ออายุหรือกดสิ้นสุดสัญญา; เครื่องเช่าที่ยังไม่คืน 1 เครื่อง; ผู้ใช้ถือเครื่องอยู่ 1 เครื่อง ต้องเรียกคืนก่อน',
+            'ครบกำหนดวันนี้ ต่ออายุ หรือกดสิ้นสุดสัญญาได้ตั้งแต่พรุ่งนี้; เครื่องเช่าที่ยังไม่คืน 1 เครื่อง; ผู้ใช้ถือเครื่องอยู่ 1 เครื่อง ต้องเรียกคืนก่อน',
             $rows[$this->set['today']->id]['todo'],
         );
         $this->assertSame('/contracts?view='.$this->set['soon']->id, $rows[$this->set['soon']->id]['_links']['code']);
@@ -148,16 +148,17 @@ class ContractRenewalsReportTest extends TestCase
     {
         $tiles = $this->breakdown()['tiles'];
 
-        $this->assertSame(3, $tiles['within']['count']);
-        $this->assertEquals(42000, $tiles['within']['yearly']);
-        $this->assertSame(['count' => 1, 'nearest' => ['id' => $this->set['soon']->id, 'code' => 'CT-C', 'days' => 20]], $tiles['soon']);
-        $this->assertSame(['count' => 2, 'oldest' => ['id' => $this->set['overdue']->id, 'code' => 'CT-A', 'days' => 10]], $tiles['overdue']);
+        // Ending today is still running (overdue starts the day after): it counts in the window and the next 30 days
+        $this->assertSame(4, $tiles['within']['count']);
+        $this->assertEquals(66000, $tiles['within']['yearly']);
+        $this->assertSame(['count' => 2, 'nearest' => ['id' => $this->set['today']->id, 'code' => 'CT-B', 'days' => 0]], $tiles['soon']);
+        $this->assertSame(['count' => 1, 'oldest' => ['id' => $this->set['overdue']->id, 'code' => 'CT-A', 'days' => 10]], $tiles['overdue']);
         $this->assertSame(['missing' => 6, 'open' => 7], $tiles['files']);
         $this->assertSame(['count' => 2, 'cancelled' => 1, 'expired' => 1], $tiles['closed_year']);
 
         $summary = collect($this->actingAs($this->userWith())->getJson('/api/reports/tabular/contracts.renewals/summary')->assertOk()->json('data.summary'))
             ->pluck('value', 'key');
-        $this->assertSame(['total' => 5, 'within' => 3, 'within_30' => 1, 'overdue' => 2, 'no_file' => 6, 'closed_year' => 2], $summary->all());
+        $this->assertSame(['total' => 5, 'within' => 4, 'within_30' => 2, 'overdue' => 1, 'no_file' => 6, 'closed_year' => 2], $summary->all());
     }
 
     public function test_months_hold_contracts_still_running_by_their_end_month(): void
@@ -166,8 +167,8 @@ class ContractRenewalsReportTest extends TestCase
 
         $this->assertCount(12, $months);
         $this->assertSame(['2026-09', '2027-08'], [$months[0]['month'], $months[11]['month']]);
-        // Ending today is overdue, not this month's bar.
-        $this->assertSame([], $months[0]['items']);
+        // Ending today still runs, so it is this month's bar
+        $this->assertSame(['CT-B'], array_column($months[0]['items'], 'code'));
         $this->assertSame([[
             'id' => $this->set['soon']->id, 'code' => 'CT-C', 'name' => 'Contract CT-C', 'type' => 'hardware',
             'amount' => 1, 'date' => '2026-10-15', 'yearly' => 12000,
@@ -175,7 +176,7 @@ class ContractRenewalsReportTest extends TestCase
         $this->assertSame(['CT-D'], array_column($months[2]['items'], 'code'));
         $this->assertSame(['CT-F'], array_column($months[5]['items'], 'code'));
         // 400 days out is past the 12 months.
-        $this->assertSame(4, array_sum(array_map(fn (array $m) => count($m['items']), $months)));
+        $this->assertSame(5, array_sum(array_map(fn (array $m) => count($m['items']), $months)));
     }
 
     public function test_bands_split_open_contracts_by_time_left_with_yearly_cost_and_types(): void
@@ -183,10 +184,11 @@ class ContractRenewalsReportTest extends TestCase
         $bands = collect($this->breakdown()['bands'])->keyBy('key');
 
         $this->assertSame(['overdue', 'd30', 'd90', 'd180', 'd365', 'later'], $bands->keys()->all());
-        $this->assertSame(2, $bands['overdue']['total']);
-        $this->assertEquals(36000, $bands['overdue']['yearly']);
-        $this->assertSame(['software' => 1, 'hardware' => 1, 'service' => 0, 'connectivity' => 0, 'other' => 0], $bands['overdue']['types']);
-        $this->assertSame(1, $bands['d30']['total']);
+        $this->assertSame(1, $bands['overdue']['total']);
+        $this->assertEquals(12000, $bands['overdue']['yearly']);
+        $this->assertSame(['software' => 1, 'hardware' => 0, 'service' => 0, 'connectivity' => 0, 'other' => 0], $bands['overdue']['types']);
+        // Ending today sits in the 0-30 band
+        $this->assertSame(2, $bands['d30']['total']);
         $this->assertSame(2, $bands['d90']['total']);
         $this->assertSame(1, $bands['d180']['total']);
         $this->assertSame(0, $bands['d365']['total']);
@@ -339,7 +341,7 @@ class ContractRenewalsReportTest extends TestCase
         $sections = $report->exportSections($this->userWith(), $report->resolveFilters(['closed' => 'all']));
 
         $this->assertSame(['สัญญาที่จะหมดในแต่ละเดือน', 'สัญญาตามเวลาที่เหลือ', 'สัญญาที่ปิดไปแล้ว (ทั้งหมด)'], array_column($sections, 'title'));
-        $this->assertSame(['เกินกำหนด', 2, 36000.0, 1, 1, 0, 0, 0], $sections[1]['rows'][0]);
+        $this->assertSame(['เกินกำหนด', 1, 12000.0, 1, 0, 0, 0, 0], $sections[1]['rows'][0]);
         $this->assertSame(['CT-I', 'CT-H', 'CT-J', 'CT-K'], array_column($sections[2]['rows'], 0));
         $this->assertSame('ยกเลิกแล้ว', $sections[2]['rows'][1][3]);
 

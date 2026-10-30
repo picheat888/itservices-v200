@@ -60,7 +60,7 @@ class ContractDigestService
             ->filter(fn (Contract $c) => $c->enabledReminderDays() !== []);
 
         $expiring = $due->filter(fn (Contract $c) => $c->isInReminder())->values();
-        $overdue = $due->filter(fn (Contract $c) => $c->daysRemaining() <= 0)->values();
+        $overdue = $due->filter(fn (Contract $c) => $c->isOverdue())->values();
 
         if ($expiring->isEmpty() && $overdue->isEmpty()) {
             return ['recipients' => 0, 'expiring' => 0, 'overdue' => 0];

@@ -2,6 +2,8 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field, FormErrorBanner } from '@/shared/components/field';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { reasonWords } from '@/shared/lib/reason-words';
 import type { Contract } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
@@ -10,9 +12,13 @@ import { Ban } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
 
+// The server's max for the reason
+const REASON_MAX = 500;
+
 /** Cancel a contract with a required reason (reversible early termination). */
 export function ContractCancelDialog({ contract, onClose, onDone }: { contract: Contract | null; onClose: () => void; onDone: () => void }) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const { cancel } = useContractMutations();
     const [reason, setReason] = useState('');
     const [error, setError] = useState<string | undefined>();
@@ -47,8 +53,9 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
         try {
             await cancel.mutateAsync({ id: contract.id, reason: reason.trim() });
             onDone();
-        } catch {
-            setServerError(t('contract_cancel_failed'));
+        } catch (e) {
+            // The server's own reason when it gives one (overdue, assets left, already closed)
+            setServerError(reasonWords(e, t, 'contract_refusal_') ?? t('contract_cancel_failed'));
             setServerErrorCount((n) => n + 1);
         }
     };
@@ -74,9 +81,13 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                             onChange={(e) => setReason(e.target.value)}
                             rows={3}
                             autoFocus
+                            maxLength={REASON_MAX}
                             placeholder={t('contract_cancel_reason_ph')}
                         />
                     </Field>
+                    <div className="text-muted-foreground -mt-4 text-right text-xs tabular-nums" aria-hidden>
+                        {fmtN(reason.length)}/{fmtN(REASON_MAX)}
+                    </div>
                 </DialogBody>
 
                 <DialogFooterBar>

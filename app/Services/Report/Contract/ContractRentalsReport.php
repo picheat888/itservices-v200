@@ -251,7 +251,7 @@ class ContractRentalsReport extends TabularReport
                 $rentedUnits = $all->filter(fn (array $a) => $a['rented'] && $live($a))->count();
                 $days = $contract->daysRemaining();
                 $closed = self::closed($contract);
-                $ended = $closed || $days <= 0;
+                $ended = $closed || $days < 0;
                 $kind = $shown->contains('rented', true) ? 'rent' : ($shown->isNotEmpty() ? 'buy' : 'none');
                 $monthly = ContractBilling::monthlyCost($contract);
 

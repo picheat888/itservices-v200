@@ -83,6 +83,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_contract_due_today',
+                'module' => 'contracts',
+                'name' => 'Contract ends today',
+                'trigger' => 'A contract reaches its end date',
+                'audience' => 'Whoever has contract alerts switched on',
+                'message_en' => 'Ends today',
+                'message_th' => 'ครบกำหนดวันนี้',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_contract_expired',
                 'module' => 'contracts',
                 'name' => 'Contract overdue',

@@ -92,9 +92,11 @@ export function notificationMessage(n: AppNotification, t: Translate, lang: Lang
     // A sample keeps its placeholders' braces: there is no record behind it to fill them from
     if (n.data.type === 'test') return t(n.data.source_key ?? '');
     if (n.data.type === 'contract_expiring') {
-        return (n.data.days_remaining ?? 0) <= 0
-            ? t('notif_contract_expired').replaceAll('{days}', () => fmtN(Math.abs(n.data.days_remaining ?? 0)))
-            : t('notif_contract_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
+        const days = n.data.days_remaining ?? 0;
+        if (days === 0) return t('notif_contract_due_today');
+        return days < 0
+            ? t('notif_contract_expired').replaceAll('{days}', () => fmtN(-days))
+            : t('notif_contract_expiring').replaceAll('{days}', () => fmtN(days));
     }
     if (n.data.type === 'password_expiring') return t('notif_password_expiring').replaceAll('{days}', () => fmtN(n.data.days_remaining ?? 0));
     if (n.data.type === 'sla_holidays')

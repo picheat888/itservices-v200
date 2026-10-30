@@ -121,7 +121,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
             <span
                 className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-semibold',
-                    days <= 0
+                    days < 0
                         ? 'border-destructive/30 bg-destructive/10 dark:text-destructive text-red-700'
                         : c.in_reminder
                           ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
@@ -129,11 +129,13 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                 )}
             >
                 <Clock className="h-3 w-3" />
-                {days <= 0
+                {days < 0
                     ? t('contract_days_overdue').replace('{n}', fmtN(-days))
-                    : c.in_reminder
-                      ? t('contract_expires_in').replace('{n}', fmtN(days))
-                      : t('contract_days_left').replace('{n}', fmtN(days))}
+                    : days === 0
+                      ? t('contract_due_today')
+                      : c.in_reminder
+                        ? t('contract_expires_in').replace('{n}', fmtN(days))
+                        : t('contract_days_left').replace('{n}', fmtN(days))}
             </span>
         );
 

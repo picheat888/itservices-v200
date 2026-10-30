@@ -64,6 +64,9 @@ export const contract: Dict = {
     contract_per_quarter: '/ไตรมาส',
     contract_per_year: '/ปี',
     contract_refusal_contract_closed: 'สัญญาที่ยกเลิกหรือหมดอายุแล้วแก้ไขไม่ได้',
+    contract_refusal_term_ended: 'สัญญานี้เกินกำหนดแล้ว ยกเลิกไม่ได้ ให้กดสิ้นสุดสัญญาแทน',
+    contract_refusal_term_running: 'สัญญายังไม่เกินกำหนด กดสิ้นสุดสัญญาได้ตั้งแต่วันถัดจากวันสิ้นสุด',
+    contract_refusal_assets_pending: 'ต้องตัดจำหน่ายทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก {pending} รายการ',
     contract_refusal_too_many_files: 'แนบไฟล์ได้สูงสุด {max} ไฟล์ต่อสัญญา (เหลือ {remaining} ไฟล์)',
     contract_notify: 'แจ้งเตือนล่วงหน้า',
     contract_attachments: 'เอกสารแนบ',
@@ -134,6 +137,7 @@ export const contract: Dict = {
     contract_link_assets_loading: 'กำลังโหลด…',
     contract_link_assets_selected: 'เลือกแล้ว {n} รายการ',
     contract_link_asset_locked: 'ถอดออกไม่ได้ เพราะตัดจำหน่ายหรือคืนผู้ให้เช่าแล้ว',
+    contract_link_asset_on_contract: 'อยู่ในสัญญานี้',
     contract_type_locked: 'สัญญานี้มีทรัพย์สินที่คืนผู้ให้เช่าหรือตัดจำหน่ายแล้ว จึงต้องเป็นประเภทฮาร์ดแวร์',
     contract_asset_returned_to_vendor: 'คืนผู้ให้เช่าแล้ว',
 

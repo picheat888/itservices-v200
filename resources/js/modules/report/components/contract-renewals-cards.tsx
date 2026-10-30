@@ -389,7 +389,7 @@ function TodoCell({ filters, id, days }: { filters: TabularFilters; id: unknown;
         todo.main === 'overdue'
             ? { text: t('rep_cren_todo_overdue').replace('{n}', n(-days)), tone: 'bad' }
             : todo.main === 'today'
-              ? { text: t('rep_cren_todo_today'), tone: 'bad' }
+              ? { text: t('rep_cren_todo_today'), tone: 'warn' }
               : todo.main === 'return_rent'
                 ? { text: t('rep_cren_todo_return_rent').replace('{n}', n(todo.rented)), tone: 'warn' }
                 : todo.main === 'decide_ma'

@@ -67,11 +67,14 @@ export const assetApi = {
     list: (params: { page: number; per_page: number; search?: string; type?: string; source?: string; status?: string; warehouse?: string }) =>
         http.get<AssetPageResponse>('/assets', { params }).then((r) => r.data),
     summary: (period: OverviewPeriod) => http.get<AssetSummary>('/assets/summary', { params: overviewPeriodParams(period) }).then((r) => r.data),
-    // Assets selectable in the contract form's link picker (free assets + this contract's own).
-    linkable: (contractId?: number) =>
+    // One page of the contract form's link picker (free assets not written off + this contract's own), searched on the server
+    linkable: (params: { contract_id?: number; search?: string; page: number }) =>
         http
-            .get<ApiEnvelope<ContractLinkableAsset[]>>('/assets/linkable', { params: contractId ? { contract_id: contractId } : {} })
-            .then((r) => r.data.data),
+            .get<{
+                data: ContractLinkableAsset[];
+                meta: { total: number; per_page: number; current_page: number; last_page: number };
+            }>('/assets/linkable', { params })
+            .then((r) => r.data),
     // One page of the ownership log, searched on the server
     transfers: (params: { page: number; per_page: number; search?: string }) =>
         http.get<{ data: AssetTransferLog[]; meta: { total: number } }>('/assets/transfers', { params }).then((r) => r.data),

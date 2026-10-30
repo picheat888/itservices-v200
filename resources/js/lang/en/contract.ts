@@ -64,6 +64,9 @@ export const contract: Dict = {
     contract_per_quarter: '/qtr',
     contract_per_year: '/yr',
     contract_refusal_contract_closed: 'A cancelled or expired contract cannot be changed.',
+    contract_refusal_term_ended: 'This contract is overdue and cannot be cancelled. End the contract instead.',
+    contract_refusal_term_running: 'This contract is not overdue yet. It can be ended from the day after its end date.',
+    contract_refusal_assets_pending: 'Write off every asset linked to this contract first. {pending} still to go.',
     contract_refusal_too_many_files: 'A contract can hold up to {max} files ({remaining} left).',
     contract_notify: 'Remind before',
     contract_attachments: 'Attachments',
@@ -135,6 +138,7 @@ export const contract: Dict = {
     contract_link_assets_loading: 'Loading…',
     contract_link_assets_selected: '{n} selected',
     contract_link_asset_locked: "Can't remove: already written off or returned to the lessor",
+    contract_link_asset_on_contract: 'On this contract',
     contract_type_locked: 'This contract holds assets already returned or written off, so it stays hardware.',
     contract_asset_returned_to_vendor: 'Returned to lessor',
 

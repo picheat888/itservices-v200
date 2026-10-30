@@ -103,13 +103,15 @@ export function ContractDetailDrawer({
             : c.status === 'expired'
               ? t('contract_expired')
               : c.status === 'overdue'
-                ? t(days === 0 ? 'contract_due_today' : 'contract_overdue')
-                : t('contract_active');
+                ? t('contract_overdue')
+                : days === 0
+                  ? t('contract_due_today')
+                  : t('contract_active');
     const TypeIcon = TYPE_ICON[c.type] ?? FileText;
 
     // Days-remaining badge (header titleSuffix): hidden once terminal; colored by state.
     const daysBadge = terminal ? null : (
-        <StatusBadge tone={days <= 0 ? 'red' : c.in_reminder ? 'amber' : 'blue'} dot={false} className="gap-1 font-semibold">
+        <StatusBadge tone={days < 0 ? 'red' : c.in_reminder ? 'amber' : 'blue'} dot={false} className="gap-1 font-semibold">
             <Clock className="h-3 w-3" aria-hidden />
             {days === 0
                 ? t('contract_due_today')

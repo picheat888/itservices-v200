@@ -165,17 +165,12 @@ class ContractService
     {
         // A second cancel would overwrite who cancelled it and why
         if ($contract->cancelled_at !== null || $contract->expired_at !== null) {
-            throw ValidationException::withMessages([
-                'contract' => 'This contract has already been closed.',
-            ]);
+            Refusal::fail('contract_closed', field: 'contract');
         }
 
-        // Cancel = early termination — only valid while the contract is still
-        // running. Once the term has ended (overdue) it can only be expired.
-        if ($contract->daysRemaining() <= 0) {
-            throw ValidationException::withMessages([
-                'contract' => 'This contract term has already ended; mark it as expired instead of cancelling.',
-            ]);
+        // Cancel ends a running term early (the end date included); an overdue one is expired instead
+        if ($contract->isOverdue()) {
+            Refusal::fail('term_ended', field: 'contract');
         }
 
         $this->assertNoPendingAssets($contract);
@@ -219,17 +214,12 @@ class ContractService
     public function expire(Contract $contract): Contract
     {
         if ($contract->expired_at !== null) {
-            throw ValidationException::withMessages([
-                'contract' => 'This contract has already been marked as expired.',
-            ]);
+            Refusal::fail('contract_closed', field: 'contract');
         }
 
-        // Expire = end-of-term close-out — only once the contract term has ended.
-        // A still-running contract is ended early via cancel, not expire.
-        if ($contract->daysRemaining() > 0) {
-            throw ValidationException::withMessages([
-                'contract' => 'This contract term has not ended yet; cancel it instead of marking it expired.',
-            ]);
+        // Close-out once the term has ended (the day after the end date); a running one is cancelled instead
+        if ($contract->daysRemaining() >= 0) {
+            Refusal::fail('term_running', field: 'contract');
         }
 
         $this->assertNoPendingAssets($contract);
@@ -251,9 +241,7 @@ class ContractService
         $pending = $contract->assets()->where('status', '!=', AssetStatus::Writeoff->value)->count();
 
         if ($pending > 0) {
-            throw ValidationException::withMessages([
-                'contract' => "All {$pending} linked asset(s) must be written off before this contract can be closed.",
-            ]);
+            Refusal::fail('assets_pending', ['pending' => $pending], 'contract');
         }
     }
 }

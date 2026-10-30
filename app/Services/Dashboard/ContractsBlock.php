@@ -25,7 +25,7 @@ class ContractsBlock
                 'total' => $expiring->count(),
                 'd30' => $soon,
                 'd31_plus' => $expiring->count() - $soon,
-                'overdue' => $live->filter(fn (Contract $contract) => $contract->daysRemaining() <= 0)->count(),
+                'overdue' => $live->filter(fn (Contract $contract) => $contract->isOverdue())->count(),
             ],
         ];
     }

@@ -68,11 +68,12 @@ class ContractController extends Controller
         }
 
         if ($request->query('tab') === 'expiring') {
-            // In reminder window = still active (not cancelled, not expired) AND some enabled threshold reached.
+            // Contract::isInReminder() in SQL: live, ending today, or inside an enabled threshold
             $query->whereNull('cancelled_at')
                 ->whereNull('expired_at')
-                ->whereDate('end_date', '>', now())
+                ->whereDate('end_date', '>=', today())
                 ->where(function ($w) {
+                    $w->whereDate('end_date', today());
                     foreach (Contract::REMINDER_DAYS as $d) {
                         $w->orWhere(function ($q) use ($d) {
                             $q->where("notify_{$d}", true)
@@ -83,10 +84,10 @@ class ContractController extends Controller
         }
 
         if ($request->query('tab') === 'expired') {
-            // Overdue = still live (not cancelled, not expired) but the end date has already passed.
+            // Contract::isOverdue() in SQL: live, and the end date is before today
             $query->whereNull('cancelled_at')
                 ->whereNull('expired_at')
-                ->whereDate('end_date', '<=', now());
+                ->whereDate('end_date', '<', today());
         }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -117,7 +118,7 @@ class ContractController extends Controller
         $terminal = fn ($c) => $c->cancelled_at !== null || $c->expired_at !== null;
         $live = $contracts->reject($terminal);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
-        $overdue = $live->filter(fn ($c) => $c->daysRemaining() <= 0);
+        $overdue = $live->filter(fn ($c) => $c->isOverdue());
 
         // The header alert buttons need only these two; the rest is the Overview tab's
         if (! $request->user()->hasPermission('contracts.view_dashboard')) {
@@ -166,7 +167,8 @@ class ContractController extends Controller
             ])
             ->values();
 
-        $actionQueue = $expiring
+        // Overdue first (longest overdue on top), then ending today and the rest of the reminder window
+        $actionQueue = $overdue->merge($expiring)
             ->sortBy(fn ($c) => $c->daysRemaining())
             ->take(20)
             ->map(fn ($c) => [

@@ -214,6 +214,8 @@ export interface ContractLinkableAsset {
     name: string;
     type: string;
     status: string;
+    /** Already linked to the contract being edited. */
+    on_contract?: boolean;
 }
 
 export interface Contract {

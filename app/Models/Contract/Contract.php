@@ -149,23 +149,29 @@ class Contract extends Model
         return $this->cancelled_at !== null || $this->expired_at !== null;
     }
 
+    /** Valid through its end date: overdue from the day after, while still live. */
+    public function isOverdue(): bool
+    {
+        return ! $this->isClosed() && $this->daysRemaining() < 0;
+    }
+
     /**
-     * True when the contract is still active but has crossed into its own
-     * reminder window (days remaining ≤ earliest enabled threshold).
+     * Still live and inside its own reminder window (days remaining ≤ earliest enabled threshold);
+     * the end date itself always counts, reminders or not.
      */
     public function isInReminder(): bool
     {
-        if ($this->cancelled_at !== null || $this->expired_at !== null) {
+        if ($this->isClosed()) {
             return false;
         }
 
         $threshold = $this->reminderThreshold();
         $days = $this->daysRemaining();
 
-        return $threshold !== null && $days > 0 && $days <= $threshold;
+        return $days === 0 || ($threshold !== null && $days > 0 && $days <= $threshold);
     }
 
-    /** Live contracts inside their reminder window or past their end date: isInReminder() || daysRemaining() <= 0, in SQL. */
+    /** Live contracts inside their reminder window, ending today or overdue: isInReminder() || isOverdue(), in SQL. */
     public function scopeNeedsRenewal(Builder $query): void
     {
         $today = now()->startOfDay();
@@ -194,7 +200,7 @@ class Contract extends Model
                 return 'cancelled';
             }
 
-            return $this->daysRemaining() > 0 ? 'active' : 'overdue';
+            return $this->daysRemaining() >= 0 ? 'active' : 'overdue';
         });
     }
 

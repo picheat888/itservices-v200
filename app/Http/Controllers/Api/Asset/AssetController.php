@@ -74,25 +74,38 @@ class AssetController extends Controller
      */
     public function linkable(Request $request): JsonResponse
     {
-        $this->gateView($request);
+        // The contract form's picker: whoever may create or edit a contract, not whoever may browse assets
+        $user = $request->user();
+        abort_unless((bool) ($user?->hasPermission('contracts.create') || $user?->hasPermission('contracts.edit')), 403);
 
         $contractId = $request->integer('contract_id') ?: null;
 
-        $assets = Asset::query()
-            ->with(['brand', 'model', 'category', 'vendor'])
-            ->where(fn ($q) => $q->whereNull('contract_id')
-                ->when($contractId, fn ($w) => $w->orWhere('contract_id', $contractId)))
-            ->orderBy('asset_code')
-            ->get();
+        // Free assets that are not written off, plus everything already on this contract (listed first)
+        $query = Asset::query()
+            ->with(['brand', 'model', 'category'])
+            ->where(fn ($q) => $q->where(fn ($free) => $free->whereNull('contract_id')->where('status', '!=', AssetStatus::Writeoff))
+                ->when($contractId, fn ($w) => $w->orWhere('contract_id', $contractId)));
+        SearchTerms::apply($query, $request->query('search'), [
+            'asset_code',
+            SearchTerms::related('brand', ['name']),
+            SearchTerms::related('model', ['name']),
+            SearchTerms::related('category', ['name']),
+        ]);
+        if ($contractId) {
+            $query->orderByRaw('CASE WHEN contract_id = ? THEN 0 ELSE 1 END', [$contractId]);
+        }
+        $page = $query->orderBy('asset_code')->paginate(20);
 
         return response()->json([
-            'data' => $assets->map(fn (Asset $a) => [
+            'data' => collect($page->items())->map(fn (Asset $a) => [
                 'id' => $a->id,
                 'asset_code' => $a->asset_code,
                 'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->category?->name,
                 'type' => $a->category?->name,
                 'status' => $a->status->value,
+                'on_contract' => $contractId !== null && (int) $a->contract_id === $contractId,
             ])->all(),
+            'meta' => ['total' => $page->total(), 'per_page' => $page->perPage(), 'current_page' => $page->currentPage(), 'last_page' => $page->lastPage()],
         ]);
     }
 

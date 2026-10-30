@@ -24,7 +24,11 @@ class ContractExpiryNotification extends Notification
 
     protected function notificationKey(): string
     {
-        return $this->daysRemaining <= 0 ? 'notif_contract_expired' : 'notif_contract_expiring';
+        return match (true) {
+            $this->daysRemaining < 0 => 'notif_contract_expired',
+            $this->daysRemaining === 0 => 'notif_contract_due_today',
+            default => 'notif_contract_expiring',
+        };
     }
 
     /** @return array<string, mixed> */

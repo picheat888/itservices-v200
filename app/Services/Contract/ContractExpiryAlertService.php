@@ -55,7 +55,7 @@ class ContractExpiryAlertService
             ->whereNull('expired_at')
             ->get()
             ->filter(fn (Contract $c) => $c->enabledReminderDays() !== [])
-            ->filter(fn (Contract $c) => $c->isInReminder() || $c->daysRemaining() <= 0);
+            ->filter(fn (Contract $c) => $c->isInReminder() || $c->isOverdue());
 
         $belled = 0;
 
@@ -145,7 +145,7 @@ class ContractExpiryAlertService
         $alreadyEmailed = ContractAlertLog::where('contract_id', $contract->id)
             ->pluck('threshold')->all();
 
-        if ($days <= 0) {
+        if ($days < 0) {
             if (in_array(self::EXPIRED_EMAIL_MARKER, $alreadyEmailed, true)) {
                 return;
             }

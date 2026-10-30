@@ -245,6 +245,98 @@ class ContractApiTest extends TestCase
         $this->assertEquals(100000, $summary->json('top_vendors.0.amount'));
     }
 
+    public function test_a_contract_is_valid_through_its_end_date_and_overdue_from_the_next_day(): void
+    {
+        $this->actingAs($this->super());
+        $endingToday = Contract::create([
+            'vendor_id' => $this->vendorId('Today'), 'name' => 'Ends today', 'type' => 'software',
+            'start_date' => now()->subYear(), 'end_date' => today(), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+        $endedYesterday = Contract::create([
+            'vendor_id' => $this->vendorId('Yesterday'), 'name' => 'Ended yesterday', 'type' => 'software',
+            'start_date' => now()->subYear(), 'end_date' => today()->subDay(), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+
+        $this->assertSame('active', $endingToday->status);
+        $this->assertTrue($endingToday->isInReminder(), 'the end date is in the reminder window even with no reminders on');
+        $this->assertFalse($endingToday->isOverdue());
+        $this->assertTrue($endedYesterday->isOverdue());
+        $this->getJson('/api/contracts/summary')->assertJsonPath('expiring', 1)->assertJsonPath('overdue', 1);
+        $this->assertSame([$endingToday->id], array_column($this->getJson('/api/contracts?tab=expiring')->json('data'), 'id'));
+        $this->assertSame([$endedYesterday->id], array_column($this->getJson('/api/contracts?tab=expired')->json('data'), 'id'));
+
+        // The bell on the end date has its own wording, not "overdue by 0 days"
+        $keyFor = fn (int $days) => (fn () => $this->notificationKey())->call(new ContractExpiryNotification($endingToday, $days));
+        $this->assertSame(['notif_contract_expired', 'notif_contract_due_today', 'notif_contract_expiring'], [$keyFor(-1), $keyFor(0), $keyFor(7)]);
+
+        // On the end date it can still be cancelled, not yet expired
+        $this->postJson("/api/contracts/{$endingToday->id}/expire")->assertUnprocessable();
+        $this->postJson("/api/contracts/{$endingToday->id}/cancel", ['reason' => 'Not renewing'])->assertOk();
+        $this->postJson("/api/contracts/{$endedYesterday->id}/expire")->assertOk();
+    }
+
+    public function test_the_link_picker_hides_write_offs_except_this_contracts_and_pages_on_the_server(): void
+    {
+        $contract = Contract::create([
+            'vendor_id' => $this->vendorId('Lease'), 'name' => 'Lease', 'type' => 'hardware',
+            'start_date' => now()->subYear(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'monthly',
+        ]);
+        $keptWriteoff = Asset::factory()->create(['asset_code' => 'Z-KEPT', 'status' => 'writeoff', 'contract_id' => $contract->id]);
+        $freeWriteoff = Asset::factory()->create(['asset_code' => 'A-GONE', 'status' => 'writeoff', 'contract_id' => null]);
+        foreach (range(1, 22) as $i) {
+            Asset::factory()->create(['asset_code' => sprintf('B-%02d', $i), 'status' => 'ready', 'contract_id' => null]);
+        }
+
+        $this->actingAs($this->userWith(['assets.view']))->getJson('/api/assets/linkable')->assertForbidden();
+
+        $this->actingAs($this->userWith(['contracts.edit']));
+        $first = $this->getJson("/api/assets/linkable?contract_id={$contract->id}")->assertOk();
+        $this->assertSame(['total' => 23, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $first->json('meta'));
+        $this->assertSame([$keptWriteoff->id, true], [$first->json('data.0.id'), $first->json('data.0.on_contract')]);
+        $this->assertNotContains($freeWriteoff->id, array_column($first->json('data'), 'id'));
+        $this->assertCount(3, $this->getJson("/api/assets/linkable?contract_id={$contract->id}&page=2")->json('data'));
+        $this->assertSame(['B-07'], array_column($this->getJson('/api/assets/linkable?search=B-07')->json('data'), 'asset_code'));
+    }
+
+    public function test_cancel_and_expire_refusals_are_codes_the_dialog_words(): void
+    {
+        $this->actingAs($this->super());
+        $make = fn (string $name, int $days, string $type = 'software') => Contract::create([
+            'vendor_id' => $this->vendorId($name), 'name' => $name, 'type' => $type,
+            'start_date' => now()->subYear(), 'end_date' => today()->addDays($days), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+        $overdue = $make('Overdue', -3);
+        $running = $make('Running', 30);
+        $withAsset = $make('With asset', 30, 'hardware');
+        Asset::factory()->create(['contract_id' => $withAsset->id, 'status' => 'deployed']);
+
+        $this->postJson("/api/contracts/{$overdue->id}/cancel", ['reason' => 'x'])->assertUnprocessable()->assertJsonPath('message', 'term_ended');
+        $this->postJson("/api/contracts/{$running->id}/expire")->assertUnprocessable()->assertJsonPath('message', 'term_running');
+        $this->postJson("/api/contracts/{$withAsset->id}/cancel", ['reason' => 'x'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'assets_pending')
+            ->assertJsonPath('pending', 1);
+    }
+
+    public function test_the_action_queue_puts_overdue_contracts_first_then_by_days_left(): void
+    {
+        $this->actingAs($this->super());
+        $make = fn (string $name, int $days) => Contract::create([
+            'vendor_id' => $this->vendorId($name), 'name' => $name, 'type' => 'software', 'notify_30' => true,
+            'start_date' => now()->subYear(), 'end_date' => today()->addDays($days), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+        $make('In 28 days', 28);
+        $make('Today', 0);
+        $make('Overdue 2', -2);
+        $make('Overdue 9', -9);
+        $make('In 7 days', 7);
+
+        $queue = $this->getJson('/api/contracts/summary')->assertOk()->json('action_queue');
+
+        $this->assertSame(['Overdue 9', 'Overdue 2', 'Today', 'In 7 days', 'In 28 days'], array_column($queue, 'name'));
+        $this->assertSame([-9, -2, 0, 7, 28], array_column($queue, 'days'));
+    }
+
     public function test_cancelling_or_deleting_a_contract_takes_its_expiry_bells_back(): void
     {
         $admin = $this->super();

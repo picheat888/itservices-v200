@@ -86,7 +86,7 @@ function DaysCell({ days, inReminder, status }: { days: number; inReminder: bool
     const fmtN = useNumberFormat();
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
-    if (days === 0) return <StatusBadge tone="red">{t('contract_due_today')}</StatusBadge>;
+    if (days === 0) return <StatusBadge tone="amber">{t('contract_due_today')}</StatusBadge>;
     if (days < 0) return <StatusBadge tone="red">{t('contract_days_overdue_short').replace('{n}', fmtN(-days))}</StatusBadge>;
     if (inReminder) return <StatusBadge tone="amber">{t('contract_days_many').replace('{n}', fmtN(days))}</StatusBadge>;
     return <StatusBadge tone="blue">{t('contract_days_short').replace('{n}', fmtN(days))}</StatusBadge>;
@@ -531,7 +531,7 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
         <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground text-[11px]">{dot.code}</span>
-                <DaysCell days={dot.days} inReminder={dot.in_reminder} status={dot.days <= 0 ? 'overdue' : 'active'} />
+                <DaysCell days={dot.days} inReminder={dot.in_reminder} status={dot.days < 0 ? 'overdue' : 'active'} />
             </div>
             <div className="line-clamp-2 text-[13px] leading-snug font-semibold">{dot.name}</div>
             {dot.vendor && <div className="text-muted-foreground truncate">{localPair(dot.vendor, dot.vendor_th, lang)}</div>}
@@ -642,7 +642,8 @@ function ContractStatusBadge({ status, days }: { status: ContractStatus; days: n
     const t = useT();
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
-    if (status === 'overdue') return <StatusBadge tone="red">{t(days === 0 ? 'contract_due_today' : 'contract_overdue')}</StatusBadge>;
+    if (status === 'overdue') return <StatusBadge tone="red">{t('contract_overdue')}</StatusBadge>;
+    if (days === 0) return <StatusBadge tone="amber">{t('contract_due_today')}</StatusBadge>;
     return <StatusBadge tone="green">{t('contract_active')}</StatusBadge>;
 }
 
@@ -828,7 +829,7 @@ function OverviewTab({ summary, maxVendor, onSelect }: { summary: ContractSummar
                                             className={cn(
                                                 // A 24px hit area around the 12px dot (WCAG 2.5.8)
                                                 'ring-background focus-visible:outline-ring relative block h-3 w-3 cursor-pointer rounded-full ring-2 transition-transform before:absolute before:-inset-1.5 before:content-[""] hover:scale-125 data-[state=open]:scale-125 motion-reduce:transition-none motion-reduce:hover:scale-100',
-                                                c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-600 dark:bg-amber-500' : 'bg-brand',
+                                                c.days < 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-600 dark:bg-amber-500' : 'bg-brand',
                                             )}
                                         >
                                             {null}
@@ -904,8 +905,19 @@ function OverviewTab({ summary, maxVendor, onSelect }: { summary: ContractSummar
                                 className="row-in press hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                                 style={rowDelay(i)}
                             >
-                                <span className="flex h-9 w-16 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
-                                    {t('contract_days_short').replace('{n}', fmtN(c.days))}
+                                <span
+                                    className={cn(
+                                        'flex h-9 min-w-16 shrink-0 items-center justify-center rounded-full px-3 text-xs font-bold whitespace-nowrap',
+                                        c.days < 0
+                                            ? 'bg-red-500/10 text-red-700 dark:text-red-400'
+                                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+                                    )}
+                                >
+                                    {c.days < 0
+                                        ? t('contract_days_overdue_short').replace('{n}', fmtN(-c.days))
+                                        : c.days === 0
+                                          ? t('contract_due_today')
+                                          : t('contract_days_short').replace('{n}', fmtN(c.days))}
                                 </span>
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{c.name}</div>

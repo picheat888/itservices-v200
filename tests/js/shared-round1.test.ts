@@ -73,7 +73,7 @@ test('every touch-hit button is positioned, so the tap area sits on it', () => {
             literals++;
         }
     }
-    assert.equal(literals, 12);
+    assert.equal(literals, 14);
 });
 
 test('shared and stores do not import from modules or app', () => {

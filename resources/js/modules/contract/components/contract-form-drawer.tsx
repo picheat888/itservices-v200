@@ -9,6 +9,7 @@ import { InfoPopover } from '@/shared/components/info-popover';
 import { MoneyInput } from '@/shared/components/money-input';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useFormRebase } from '@/shared/hooks/use-form-rebase';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -19,7 +20,7 @@ import { FRESH_LIST } from '@/shared/lib/freshness';
 import { localName } from '@/shared/lib/local-name';
 import { toMoneyText } from '@/shared/lib/money';
 import { reasonWords } from '@/shared/lib/reason-words';
-import { matchesAllWords, searchLabel } from '@/shared/lib/search-words';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { type AssetStatus, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -30,7 +31,7 @@ import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from 
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
@@ -247,18 +248,22 @@ export function ContractFormDrawer({
     const isHardware = form.type === 'hardware';
 
     // Linked-assets picker: loaded only for hardware contracts (the only type that can link assets).
+    // Searched and paged on the server; ticks live in form.asset_ids, so they survive paging
     const [assetSearch, setAssetSearch] = useState('');
+    const assetQueryText = useDebouncedSearch(assetSearch);
+    const [assetPage, setAssetPage] = useState(1);
+    useEffect(() => setAssetPage(1), [assetQueryText]);
     const linkableQuery = useQuery({
-        queryKey: ['assets-linkable', editing?.id ?? 'new'],
-        queryFn: () => assetApi.linkable(editing?.id),
+        queryKey: ['assets-linkable', editing?.id ?? 'new', assetQueryText, assetPage],
+        queryFn: () => assetApi.linkable({ contract_id: editing?.id, search: assetQueryText || undefined, page: assetPage }),
         enabled: open && isHardware,
+        placeholderData: keepPreviousData,
         ...FRESH_LIST,
     });
-    const { data: linkableAssets = [], isLoading: assetsLoading } = linkableQuery;
+    const { isLoading: assetsLoading } = linkableQuery;
     useRefetchOnOpen(open, linkableQuery);
-    const filteredAssets = useMemo(() => {
-        return linkableAssets.filter((a) => matchesAllWords(`${a.asset_code} ${a.name}`, assetSearch));
-    }, [linkableAssets, assetSearch]);
+    const filteredAssets = linkableQuery.data?.data ?? [];
+    const assetMeta = linkableQuery.data?.meta;
     const toggleAsset = (id: number) =>
         setForm((f) => ({ ...f, asset_ids: f.asset_ids.includes(id) ? f.asset_ids.filter((x) => x !== id) : [...f.asset_ids, id] }));
 
@@ -855,6 +860,11 @@ export function ContractFormDrawer({
                                                                     </span>
                                                                     <span className="text-xs">{a.asset_code}</span>
                                                                     <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
+                                                                    {locked && a.on_contract && (
+                                                                        <span className="text-muted-foreground shrink-0 text-xs">
+                                                                            {t('contract_link_asset_on_contract')}
+                                                                        </span>
+                                                                    )}
                                                                     <AssetStatusBadge status={a.status as AssetStatus} t={t} />
                                                                 </button>
                                                                 {/* Beside the row, not around it, so the checkbox keeps its own name and state */}
@@ -873,8 +883,43 @@ export function ContractFormDrawer({
                                                     })
                                                 )}
                                             </div>
-                                            <div className="border-border text-muted-foreground border-t px-3 py-1.5 text-xs">
-                                                {t('contract_link_assets_selected').replace('{n}', fmtN(form.asset_ids.length))}
+                                            <div className="border-border text-muted-foreground flex items-center gap-3 border-t px-3 py-1.5 text-xs">
+                                                <span className="mr-auto">
+                                                    {t('contract_link_assets_selected').replace('{n}', fmtN(form.asset_ids.length))}
+                                                </span>
+                                                {/* Same range and arrows as the shared DataTable pager */}
+                                                {assetMeta && assetMeta.last_page > 1 && (
+                                                    <>
+                                                        <span>
+                                                            {fmtN((assetMeta.current_page - 1) * assetMeta.per_page + 1)}–
+                                                            {fmtN(Math.min(assetMeta.current_page * assetMeta.per_page, assetMeta.total))}{' '}
+                                                            {t('cmn_of')} {fmtN(assetMeta.total)}
+                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setAssetPage((p) => Math.max(1, p - 1))}
+                                                                disabled={assetMeta.current_page <= 1}
+                                                                aria-label={t('page_prev')}
+                                                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring relative flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                                            >
+                                                                <ChevronLeft aria-hidden className="h-4 w-4" />
+                                                            </button>
+                                                            <span className="text-foreground px-1 font-medium">
+                                                                {fmtN(assetMeta.current_page)} / {fmtN(assetMeta.last_page)}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setAssetPage((p) => Math.min(assetMeta.last_page, p + 1))}
+                                                                disabled={assetMeta.current_page >= assetMeta.last_page}
+                                                                aria-label={t('page_next')}
+                                                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring relative flex h-7 w-7 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                                            >
+                                                                <ChevronRight aria-hidden className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </Field>
