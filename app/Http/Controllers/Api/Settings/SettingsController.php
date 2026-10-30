@@ -7,7 +7,6 @@ use App\Enums\Request\RequestType;
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketSlaClock;
-use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
@@ -20,6 +19,7 @@ use App\Services\Auth\DeviceService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Employee\EmployeeService;
 use App\Services\Settings\LogRetentionService;
+use App\Services\Ticket\TicketDeadlineService;
 use App\Support\DateDisplay;
 use App\Support\NotificationSounds;
 use App\Support\TicketSla;
@@ -293,30 +293,7 @@ class SettingsController extends Controller
         }
         TicketSla::flush(); // the deadlines below use the new values
 
-        // Stored deadlines of open tickets follow the new targets; closed history stays frozen
-        Ticket::query()->with('serviceRequest')->whereIn('status', TicketStatus::liveValues())->chunkById(200, function ($tickets) {
-            foreach ($tickets as $ticket) {
-                // Compute before timestamps=false, which also drops the created_at cast
-                $dues = [
-                    'sla_response' => TicketSla::responseDueAt($ticket),
-                    'sla_resolve' => TicketSla::resolveDueAt($ticket),
-                ];
-                $changes = [];
-                foreach ($dues as $clock => $due) {
-                    if ($ticket->{"{$clock}_due_at"}?->timestamp === $due?->timestamp) {
-                        continue;
-                    }
-                    // A moved deadline re-evaluates its own alert stage
-                    $changes["{$clock}_due_at"] = $due;
-                    $changes["{$clock}_alert_level"] = null;
-                }
-                if ($changes === []) {
-                    continue;
-                }
-                $ticket->timestamps = false; // a recompute is not an edit — keep updated_at
-                $ticket->forceFill($changes)->saveQuietly();
-            }
-        });
+        app(TicketDeadlineService::class)->recomputeOpen(); // open tickets follow the new targets
     }
 
     /**
