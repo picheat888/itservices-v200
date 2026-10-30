@@ -426,17 +426,38 @@ class SettingsController extends Controller
         ]);
 
         $previousDeviceLimit = $devices->limit();
+        $before = $this->securityPayload();
 
         foreach ($data as $key => $value) {
             AppSetting::put($key, (string) $value);
         }
-        AuditLog::record('Updated security settings', implode(', ', array_keys($data)));
+        $this->recordSecurityChanges($before, $data);
 
         if (isset($data['device_limit'])) {
             $this->trimDevicesToLimit($request, $devices, $previousDeviceLimit, (int) $data['device_limit']);
         }
 
         return $this->security($request);
+    }
+
+    /**
+     * One audit row with each setting that really changed, old and new value; a save that changes nothing writes none.
+     *
+     * @param  array<string, mixed>  $before
+     * @param  array<string, int>  $saved
+     */
+    private function recordSecurityChanges(array $before, array $saved): void
+    {
+        $changes = [];
+        foreach ($saved as $key => $value) {
+            if ((int) $before[$key] !== (int) $value) {
+                $changes[$key] = ['from' => (int) $before[$key], 'to' => (int) $value];
+            }
+        }
+
+        if ($changes !== []) {
+            AuditLog::record('Updated security settings', implode(', ', array_keys($changes)), ['changes' => $changes]);
+        }
     }
 
     /** The Login log is kept forever (0) or at least as long as the sign-in rule looks back for a known IP. */

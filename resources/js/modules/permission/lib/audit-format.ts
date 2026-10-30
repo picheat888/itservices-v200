@@ -5,10 +5,12 @@ import { isDateString, storedDateText, type DateFormatter } from '@/shared/lib/d
 import { formatNumber } from '@/shared/lib/number';
 import type { Lang } from '@/shared/types';
 import { auditBooleanKey, auditValueKey, decimalPlaces, isBlankAuditValue } from './audit-details';
+import { isSecuritySetting, securitySettingLabel, securitySettingValue } from './audit-security';
 import { auditFieldText } from './audit-words';
 
 /** A column's label (audit_field_<column>, owner by subject type), or the raw column name when it has none. */
 export function auditFieldLabel(field: string, lang: Lang, subjectType?: string | null): string {
+    if (isSecuritySetting(field)) return securitySettingLabel(field, (key) => translate(lang, key));
     return auditFieldText(field, (key) => translate(lang, key), subjectType);
 }
 
@@ -49,6 +51,13 @@ export function auditValueText(
 ): string | null {
     const resolved = resolveAuditValue(field, value, ctx.lookups);
     if (isBlankAuditValue(resolved)) return null;
+    if (isSecuritySetting(field))
+        return securitySettingValue(
+            field,
+            resolved,
+            (key) => translate(ctx.lang, key),
+            (n) => formatNumber(n, ctx.lang),
+        );
     if (isDateString(resolved)) return storedDateText(resolved, ctx.fmt);
     const key = auditBooleanKey(field, resolved) ?? auditValueKey(field, resolved, ctx.subjectType);
     if (key) return translate(ctx.lang, key);

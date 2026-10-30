@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\CheckSessionTimeout;
+use App\Models\AuditLog;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
@@ -52,6 +53,39 @@ class SecuritySettingsTest extends TestCase
 
         $this->assertSame('30', AppSetting::get('session_timeout_minutes'));
         $this->assertSame('90', AppSetting::get('password_expiry_days'));
+    }
+
+    /** The audit row names only the settings that changed, with old and new value; an unchanged save writes none (PRM-7). */
+    public function test_the_audit_log_keeps_what_each_changed_setting_was_and_became(): void
+    {
+        $admin = $this->super();
+        $admin->forceFill(['password_changed_at' => now()])->save();
+        $this->actingAs($admin);
+        AppSetting::put('session_timeout_minutes', '30');
+        AppSetting::put('password_expiry_days', '90');
+
+        $this->putJson('/api/settings/security', [
+            'session_timeout_minutes' => 30,
+            'password_expiry_days' => 90,
+            'audit_log_days' => 1,
+            'device_limit' => 2,
+        ])->assertOk();
+
+        $log = AuditLog::where('action', 'Updated security settings')->sole();
+        $this->assertSame('audit_log_days, device_limit', $log->target);
+        $this->assertSame([
+            'audit_log_days' => ['from' => 0, 'to' => 1],
+            'device_limit' => ['from' => 0, 'to' => 2],
+        ], $log->details['changes']);
+
+        $this->putJson('/api/settings/security', [
+            'session_timeout_minutes' => 30,
+            'password_expiry_days' => 90,
+            'audit_log_days' => 1,
+            'device_limit' => 2,
+        ])->assertOk();
+
+        $this->assertSame(1, AuditLog::where('action', 'Updated security settings')->count());
     }
 
     public function test_the_session_timeout_cannot_outlast_the_server_session(): void

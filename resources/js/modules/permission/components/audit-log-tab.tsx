@@ -22,6 +22,7 @@ import { auditDiffSummary, auditFacts, hasAuditDetails, hasAuditMove, isBlankAud
 import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, auditValueText, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
+import { SECURITY_SETTINGS_ACTION, securitySettingsTarget } from '../lib/audit-security';
 import { auditEventLabel } from '../lib/audit-words';
 import { actionLabel, moduleLabel } from '../lib/permission-labels';
 import { AuditMemberChanges } from './audit-member-changes';
@@ -94,7 +95,7 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
                         const box = 'border-border block max-h-32 overflow-auto rounded border px-2 py-1 text-xs break-all whitespace-pre-wrap';
                         return (
                             <div key={field} className={cn('gap-2 text-sm', long ? 'space-y-1' : 'flex items-center')}>
-                                <span className="text-muted-foreground block w-32 shrink-0 truncate text-xs font-medium">{label(field)}</span>
+                                <span className="text-muted-foreground block w-44 shrink-0 text-xs font-medium">{label(field)}</span>
                                 {long && <span className="text-muted-foreground block text-[11px]">{t('audit_before')}</span>}
                                 <span className={cn('text-muted-foreground', long ? box : 'line-through')}>{shown(before)}</span>
                                 {!long && <ChevronRight aria-hidden className="text-muted-foreground h-3.5 w-3.5 shrink-0" />}
@@ -126,7 +127,7 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
             {(details.items ?? []).length > 0 && <WordList heading={t('audit_records')} items={details.items ?? []} />}
             {auditFacts(details).map(([key, value]) => (
                 <div key={key} className="flex items-baseline gap-2 text-sm">
-                    <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{label(key)}</span>
+                    <span className="text-muted-foreground w-44 shrink-0 text-xs font-medium">{label(key)}</span>
                     <span className="min-w-0 break-words">{shown(text(key, value))}</span>
                 </div>
             ))}
@@ -135,7 +136,7 @@ function AuditDetailPanel({ entry, lang, lookups }: { entry: AuditEntry; lang: L
                 <dl className="border-border grid gap-x-6 border-t pt-2 @lg:grid-cols-2">
                     {snapshotEntries.map(([field, value]) => (
                         <div key={field} className="border-border/60 flex items-baseline gap-2 border-b py-1 text-sm">
-                            <dt className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{label(field)}</dt>
+                            <dt className="text-muted-foreground w-44 shrink-0 text-xs font-medium">{label(field)}</dt>
                             <dd className="min-w-0 break-words">{shown(text(field, value))}</dd>
                         </div>
                     ))}
@@ -253,7 +254,12 @@ export function AuditLogTab() {
             key: 'target',
             header: t('audit_target'),
             minWidth: '7rem',
-            render: (l) => <TruncText text={l.target} className="text-muted-foreground" />,
+            render: (l) => (
+                <TruncText
+                    text={l.action === SECURITY_SETTINGS_ACTION && l.target ? securitySettingsTarget(l.target, t) : l.target}
+                    className="text-muted-foreground"
+                />
+            ),
         },
         {
             key: 'open',
