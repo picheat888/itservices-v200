@@ -9,6 +9,7 @@ import {
     ArrowRightLeft,
     Boxes,
     CalendarClock,
+    CalendarX,
     CheckCircle2,
     ClipboardList,
     Clock,
@@ -121,6 +122,10 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; tone
     }
     if (n.data.type === 'password_expiring') {
         return { Icon: KeyRound, ...TONE.amber };
+    }
+    // A year with no holidays yet: a job for the SLA settings owner
+    if (n.data.type === 'sla_holidays') {
+        return { Icon: CalendarX, ...TONE.amber };
     }
     if (n.data.type === 'asset_assigned') {
         return { Icon: PackageCheck, ...TONE.emerald };

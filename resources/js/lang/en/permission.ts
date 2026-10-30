@@ -719,6 +719,7 @@ export const permission: Dict = {
     audit_ev_removed_logo: 'Removed logo',
     audit_ev_updated_asset_settings: 'Updated asset settings',
     audit_ev_updated_sla_settings: 'Updated SLA settings',
+    audit_ev_updated_sla_holidays: 'Updated SLA holidays',
     audit_ev_updated_date_and_time_settings: 'Updated date and time settings',
     audit_ev_updated_notification_sound: 'Updated notification sound',
     audit_ev_updated_security_settings: 'Updated security settings',
