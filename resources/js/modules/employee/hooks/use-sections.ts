@@ -25,13 +25,11 @@ export function useSectionMembers(id: number | null, enabled = true) {
 
 export function useSectionMutations() {
     const qc = useQueryClient();
-    const invalidate = () => {
-        qc.invalidateQueries({ queryKey: ['sections'] });
-        // Departments count their sections, and that count decides whether one can be deleted
-        qc.invalidateQueries({ queryKey: DEPT });
-        qc.invalidateQueries({ queryKey: EMP });
-        qc.invalidateQueries({ queryKey: ['employees-directory'] });
-    };
+    // DEPT: departments count their sections, and that count decides whether one can be deleted
+    const invalidate = () =>
+        Promise.all(
+            [['sections'], DEPT, EMP, ['employees-directory'], ['org-chart'], ['employee']].map((queryKey) => qc.invalidateQueries({ queryKey })),
+        );
     return {
         create: useMutation({
             mutationFn: (p: { department_id: number; name: string; name_th?: string | null }) => sectionApi.create(p),

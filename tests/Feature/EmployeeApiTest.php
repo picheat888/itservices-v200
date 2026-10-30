@@ -63,6 +63,15 @@ class EmployeeApiTest extends TestCase
         $this->assertSame('EMP-7002', $other->fresh()->to_owner);
         $this->assertSame('2026-09-01 10:00:00', $in->fresh()->updated_at->format('Y-m-d H:i:s'));
 
+        // A code the trail already uses for a warehouse (or anyone else) is refused, so their rows are not taken over
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Code', 'last_name' => 'Move', 'code' => 'WH-01'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('code');
+        $this->postJson('/api/employees', ['first_name' => 'New', 'last_name' => 'Hire', 'joined_at' => '2026-10-01', 'code' => 'EMP-7002'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('code');
+        $this->assertSame('WH-01', $in->fresh()->from_owner);
+
         // Leaving the code out keeps it; an empty code is a field error, not a database failure
         $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Code', 'last_name' => 'Kept'])->assertOk();
         $this->assertSame('EMP-7100', $e->fresh()->code);

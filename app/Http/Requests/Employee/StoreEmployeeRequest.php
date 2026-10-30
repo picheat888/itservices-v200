@@ -4,6 +4,7 @@ namespace App\Http\Requests\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\RequestType;
+use App\Models\Asset\AssetTransfer;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
@@ -94,6 +95,7 @@ class StoreEmployeeRequest extends FormRequest
             'code' => [
                 ...($this->route('employee') ? ['sometimes', 'required'] : ['nullable']),
                 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId),
+                $this->notOnSomeoneElsesTrail($employeeId),
             ],
             'photo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             // Day-one services to request for a new hire, as service => its submitted
@@ -158,6 +160,20 @@ class StoreEmployeeRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /** The transfer trail names people, warehouses and shared labels by text: a code already there belongs to someone else's rows. */
+    private function notOnSomeoneElsesTrail(?int $employeeId): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($employeeId) {
+            $current = $employeeId ? Employee::whereKey($employeeId)->value('code') : null;
+            if ($value === $current) {
+                return;
+            }
+            if (AssetTransfer::where('from_owner', $value)->orWhere('to_owner', $value)->exists()) {
+                $fail('This code is already used in the asset transfer history.');
+            }
+        };
     }
 
     /**

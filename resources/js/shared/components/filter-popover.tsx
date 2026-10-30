@@ -16,7 +16,7 @@ const FOCUSABLE =
 // Room kept between the panel and the edge of the window or dialog.
 const EDGE = 8;
 
-// Least height a panel in a dialog is squeezed to before its body scrolls.
+// Below this much room under the trigger, a panel in a dialog opens upward if there is more room above.
 const MIN_PANEL = 160;
 
 // Focus is in a select's open menu or on its open trigger (never the panel itself), which closes on Escape by itself
@@ -61,8 +61,8 @@ export function FilterPopover({
     const fmtN = useNumberFormat();
     const [open, setOpen] = useState(false);
     const { mounted, closing } = usePresence(open);
-    // maxHeight only inside a dialog; on a page the panel keeps its natural height
-    const [pos, setPos] = useState<{ top: number; left: number; maxHeight?: number }>({ top: 0, left: 0 });
+    // maxHeight and bottom (opening upward) only inside a dialog; on a page the panel keeps its natural height below the trigger
+    const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight?: number }>({ top: 0, left: 0 });
     // The dialog the trigger sits in, if any: the panel portals into it
     const [host, setHost] = useState<HTMLElement | null>(null);
     // Set when a panel in a dialog is taller than the room below, so its body scrolls
@@ -135,26 +135,45 @@ export function FilterPopover({
         const left = Math.max(box.left + EDGE, Math.min(wanted, box.right - width - EDGE));
         const top = r.bottom + 4;
         setHost(dialog);
+        if (!dialog) {
+            setPos({ top, left });
+            return;
+        }
+        // In a dialog: below by default, above when below is too cramped and above has more room
+        const below = box.bottom - top - EDGE;
+        const above = r.top - 4 - box.top - EDGE;
+        const up = below < MIN_PANEL && above > below;
         setPos({
-            top: top - box.top,
+            top: up ? undefined : top - box.top,
+            bottom: up ? box.bottom - r.top + 4 : undefined,
             left: left - box.left,
-            maxHeight: dialog ? Math.max(MIN_PANEL, box.bottom - top - EDGE) : undefined,
+            // The roomier side when below is cramped, so the panel stays inside the dialog
+            maxHeight: up ? above : below,
         });
     };
 
-    // In a dialog, a panel taller than the room below scrolls its body; measured from the content, scrolling or not
+    // In a dialog, a panel taller than its room scrolls its body; measured from the content (scrolling or not), and again as it grows
     useLayoutEffect(() => {
         const panel = panelRef.current;
-        if (!open || !panel || pos.maxHeight === undefined) {
+        const maxHeight = pos.maxHeight;
+        if (!open || !panel || maxHeight === undefined) {
             setScrolls(false);
             return;
         }
         const body = panel.children[1];
-        const natural = Array.from(panel.children).reduce(
-            (sum, part) => sum + (part === body ? part.scrollHeight : (part as HTMLElement).offsetHeight),
-            2,
-        );
-        setScrolls(natural > pos.maxHeight);
+        const measure = () => {
+            const natural = Array.from(panel.children).reduce(
+                (sum, part) => sum + (part === body ? part.scrollHeight : (part as HTMLElement).offsetHeight),
+                2,
+            );
+            setScrolls(natural > maxHeight);
+        };
+        measure();
+        const content = body?.firstElementChild;
+        if (!content || typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(measure);
+        observer.observe(content);
+        return () => observer.disconnect();
     }, [open, pos.maxHeight]);
 
     const toggle = () => {
@@ -239,7 +258,7 @@ export function FilterPopover({
                         onMouseDown={() => {
                             pressedInside.current = true;
                         }}
-                        style={{ top: pos.top, left: pos.left, width, maxHeight: pos.maxHeight }}
+                        style={{ top: pos.top, bottom: pos.bottom, left: pos.left, width, maxHeight: pos.maxHeight }}
                         className={cn(
                             'border-border bg-popover rounded-lg border shadow-md',
                             host ? 'absolute z-50 flex flex-col' : 'fixed z-[9999]',

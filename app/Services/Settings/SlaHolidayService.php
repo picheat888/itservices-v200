@@ -5,6 +5,7 @@
 namespace App\Services\Settings;
 
 use App\Models\Settings\SlaHoliday;
+use App\Models\User;
 use App\Notifications\SlaHolidaysMissingNotification;
 use App\Services\Ticket\TicketDeadlineService;
 use App\Support\TicketSla;
@@ -34,7 +35,11 @@ class SlaHolidayService
 
             // The year has holidays now: the "none set" reminder no longer applies
             if ($incoming->isNotEmpty()) {
-                DatabaseNotification::where('type', SlaHolidaysMissingNotification::class)->where('data->year', $year)->delete();
+                DatabaseNotification::where('type', SlaHolidaysMissingNotification::class)
+                    ->where('notifiable_type', (new User)->getMorphClass())
+                    ->whereIn('notifiable_id', User::holdingPermission('settings.sla')->pluck('id'))
+                    ->where('data->year', $year)
+                    ->delete();
             }
 
             return $result;

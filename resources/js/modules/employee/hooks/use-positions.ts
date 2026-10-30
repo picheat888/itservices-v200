@@ -18,13 +18,9 @@ export function usePositionMembers(id: number | null, enabled = true) {
 
 export function usePositionMutations() {
     const qc = useQueryClient();
-    // A position's title also shows on the employee rows and the org chart
-    const invalidate = () => {
-        qc.invalidateQueries({ queryKey: POS });
-        qc.invalidateQueries({ queryKey: EMP });
-        qc.invalidateQueries({ queryKey: ['employees-directory'] });
-        qc.invalidateQueries({ queryKey: ['org-chart'] });
-    };
+    // A position's title also shows on the employee rows, the employee view and the org chart
+    const invalidate = () =>
+        Promise.all([POS, EMP, ['employees-directory'], ['org-chart'], ['employee']].map((queryKey) => qc.invalidateQueries({ queryKey })));
     return {
         create: useMutation({
             mutationFn: (p: { title: string; allow_special_position?: boolean }) => positionApi.create(p),

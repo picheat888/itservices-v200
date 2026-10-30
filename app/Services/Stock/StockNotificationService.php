@@ -250,7 +250,8 @@ class StockNotificationService
 
         // Waiting — refresh each request's bell.
         $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with(['item', 'user.employee'])->get();
-        $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r));
+        $people = $this->waitingPeople();
+        $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r, $people));
 
         // Counting — bell-only reminder per draft session.
         $drafts = StockCount::where('status', StockCountStatus::Draft)->get();
@@ -439,33 +440,54 @@ class StockNotificationService
         return EmailTable::render(self::REQUEST_HEADERS, $rows, [], self::REQUEST_WIDTHS, [3]);
     }
 
-    /** Removes the "waiting" bells of a request from everyone who approves or issues stock. */
-    public function clearWaiting(StockRequest $request): void
+    /**
+     * Who approves and who issues stock, looked up once for a whole run.
+     *
+     * @return array{stock.approve: Collection<int, User>, stock.fulfill: Collection<int, User>, ids: Collection<int, int>}
+     */
+    private function waitingPeople(): array
     {
-        $holders = $this->recipients('stock.approve')->merge($this->recipients('stock.fulfill'))->pluck('id')->unique();
+        $approvers = $this->recipients('stock.approve');
+        $issuers = $this->recipients('stock.fulfill');
 
+        return [
+            'stock.approve' => $approvers,
+            'stock.fulfill' => $issuers,
+            'ids' => $approvers->merge($issuers)->pluck('id')->unique()->values(),
+        ];
+    }
+
+    /**
+     * Removes the "waiting" bells of a request from everyone who approves or issues stock.
+     *
+     * @param  Collection<int, int>|null  $holderIds
+     */
+    public function clearWaiting(StockRequest $request, ?Collection $holderIds = null): void
+    {
         DatabaseNotification::where('type', StockRequestNotification::class)
             ->where('notifiable_type', (new User)->getMorphClass())
-            ->whereIn('notifiable_id', $holders)
+            ->whereIn('notifiable_id', $holderIds ?? $this->waitingPeople()['ids'])
             ->where('data->stock_request_id', $request->id)
             ->where('data->subtype', 'waiting')
             ->delete();
     }
 
-    /** Daily bell-only nag (overwritten): pending reminds approvers, approved reminds issuers. */
-    public function requestWaiting(StockRequest $request): void
+    /**
+     * Daily bell-only nag (overwritten): pending reminds approvers, approved reminds issuers.
+     *
+     * @param  array{stock.approve: Collection<int, User>, stock.fulfill: Collection<int, User>, ids: Collection<int, int>}|null  $people
+     */
+    public function requestWaiting(StockRequest $request, ?array $people = null): void
     {
-        $permission = $request->status === 'approved' ? 'stock.fulfill' : 'stock.approve';
+        $people ??= $this->waitingPeople();
+        $recipients = $people[$request->status === 'approved' ? 'stock.fulfill' : 'stock.approve'];
 
-        // Approvers' bell from the pending days goes too, once the request waits on the issuers
-        $this->clearWaiting($request);
+        // Clears everyone's earlier bell for it, the approvers' too once it waits on the issuers
+        $this->clearWaiting($request, $people['ids']);
 
-        $this->sendBell(
-            $this->recipients($permission),
-            new StockRequestNotification($request, 'waiting'),
-            StockRequestNotification::class,
-            ['stock_request_id' => $request->id, 'subtype' => 'waiting'],
-        );
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new StockRequestNotification($request, 'waiting'));
+        }
     }
 
     /** Daily bell-only reminder (overwritten) to view_count holders while a count is draft. */

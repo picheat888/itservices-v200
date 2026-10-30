@@ -19,14 +19,11 @@ export function useDepartmentMembers(id: number | null, enabled = true) {
 
 export function useDepartmentMutations() {
     const qc = useQueryClient();
-    // A department's name also shows on its sections, the employee rows and the org chart
-    const invalidate = () => {
-        qc.invalidateQueries({ queryKey: DEPT });
-        qc.invalidateQueries({ queryKey: ['sections'] });
-        qc.invalidateQueries({ queryKey: EMP });
-        qc.invalidateQueries({ queryKey: ['employees-directory'] });
-        qc.invalidateQueries({ queryKey: ['org-chart'] });
-    };
+    // A department's name also shows on its sections, the employee rows, the employee view and the org chart
+    const invalidate = () =>
+        Promise.all(
+            [DEPT, ['sections'], EMP, ['employees-directory'], ['org-chart'], ['employee']].map((queryKey) => qc.invalidateQueries({ queryKey })),
+        );
     return {
         create: useMutation({
             mutationFn: (p: Partial<Department>) => departmentApi.create(p),

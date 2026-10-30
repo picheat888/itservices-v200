@@ -17,6 +17,7 @@ use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockRequestService;
 use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -164,6 +165,31 @@ class StockNotificationServiceTest extends TestCase
         $requests->cancel($cancelled, $owner);
 
         $this->assertSame([$other->id], $this->waitingBellsOf($approver));
+    }
+
+    public function test_the_daily_run_looks_up_approvers_and_issuers_once_however_many_requests_wait(): void
+    {
+        $this->userWithPerm('stock.approve');
+        $this->userWithPerm('stock.fulfill');
+        $owner = $this->userWithPerm('stock.request');
+        $count = 0;
+        DB::listen(function ($query) use (&$count) {
+            $count += str_contains($query->sql, 'role_permissions') ? 1 : 0;
+        });
+        $permissionLookups = function (int $requests) use ($owner, &$count): int {
+            StockRequest::query()->delete();
+            foreach (range(1, $requests) as $i) {
+                $this->openRequest($owner, $i % 2 ? 'pending' : 'approved');
+            }
+            $count = 0;
+            app(StockNotificationService::class)->run(force: true);
+
+            return $count;
+        };
+
+        $one = $permissionLookups(1);
+        $this->assertGreaterThan(0, $one);
+        $this->assertSame($one, $permissionLookups(6));
     }
 
     /** A fresh non-super user holding every listed permission. */
