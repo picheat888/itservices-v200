@@ -11,6 +11,8 @@ export interface AssetContractOption {
     vendor: string | null;
     vendor_th?: string | null;
     details: string | null;
+    /** Cancelled or expired: listed only as the asset's current contract. */
+    closed?: boolean;
 }
 
 export interface AssetPageMeta {

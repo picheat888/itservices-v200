@@ -72,14 +72,12 @@ class ContractExpiryAlertService
         return $belled;
     }
 
-    /** Clears a contract's alert ledgers so a renewed term alerts afresh on both channels. */
+    /** Clears a contract's alert ledgers and bells: a renewed or reopened term alerts afresh, a closed or deleted one stops. */
     public function resetForContract(Contract $contract): void
     {
         ContractAlertLog::where('contract_id', $contract->id)->delete();
         ContractBellLog::where('contract_id', $contract->id)->delete();
 
-        // Also drop the in-app bell so a renewed contract stops showing a stale
-        // "expiring soon" alert; a fresh term will re-bell on the next run.
         DatabaseNotification::where('type', ContractExpiryNotification::class)
             ->where('data->contract_id', $contract->id)
             ->delete();

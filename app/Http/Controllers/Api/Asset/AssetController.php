@@ -119,6 +119,8 @@ class AssetController extends Controller
                 'vendor' => $c->vendor?->name,
                 'vendor_th' => $c->vendor?->name_th,
                 'details' => $c->details,
+                // Cancelled or expired: offered only as the asset's current contract, never as a new pick
+                'closed' => $c->cancelled_at !== null || $c->expired_at !== null,
             ]);
 
         return response()->json(['data' => $contracts]);

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Contract\ContractType;
+use App\Models\Contract\Contract;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -53,6 +54,7 @@ class StoreAssetRequest extends FormRequest
             'contract_id' => [
                 'nullable', 'required_if:source,rented', 'integer',
                 Rule::exists('contracts', 'id')->where('type', ContractType::Hardware->value),
+                $this->contractStillOpenUnlessKept(),
             ],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
@@ -64,5 +66,21 @@ class StoreAssetRequest extends FormRequest
     public function attributes(): array
     {
         return ['tag' => 'Tag'];
+    }
+
+    /** A cancelled or expired contract takes no new assets; an asset already on one may keep it. */
+    private function contractStillOpenUnlessKept(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            if (blank($value) || (int) $value === (int) $this->route('asset')?->contract_id) {
+                return;
+            }
+            $closed = Contract::whereKey($value)
+                ->where(fn ($q) => $q->whereNotNull('cancelled_at')->orWhereNotNull('expired_at'))
+                ->exists();
+            if ($closed) {
+                $fail('contract_closed');
+            }
+        };
     }
 }

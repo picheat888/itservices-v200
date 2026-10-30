@@ -153,6 +153,30 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.asset_code', fn ($assetCode) => str_starts_with($assetCode, 'INK-IT-'));
     }
 
+    public function test_a_closed_contract_takes_no_new_assets_but_an_asset_already_on_it_keeps_it(): void
+    {
+        $this->actingAs($this->super());
+        $lease = fn (string $name) => Contract::create([
+            'vendor_id' => $this->vendorId($name), 'name' => $name, 'type' => 'hardware',
+            'start_date' => '2025-01-01', 'end_date' => '2027-12-31', 'value' => 100, 'billing_cycle' => 'monthly',
+        ]);
+        $open = $lease('Open lease');
+        $cancelled = $lease('Cancelled lease');
+        $cancelled->update(['cancelled_at' => now(), 'cancel_reason' => 'Ended early']);
+
+        $options = collect($this->getJson('/api/assets/contract-options')->assertOk()->json('data'))->keyBy('id');
+        $this->assertFalse($options[$open->id]['closed']);
+        $this->assertTrue($options[$cancelled->id]['closed']);
+
+        $rented = ['category_id' => $this->categoryId('network'), 'source' => 'rented', 'model_id' => $this->modelId('Cisco 9300')];
+        $this->postJson('/api/assets', [...$rented, 'contract_id' => $cancelled->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['contract_id' => 'contract_closed']);
+
+        $kept = Asset::factory()->create(['source' => 'rented', 'contract_id' => $cancelled->id, 'value' => 0, 'vendor_id' => null]);
+        $this->putJson("/api/assets/{$kept->id}", [...$rented, 'contract_id' => $cancelled->id])->assertOk();
+    }
+
     public function test_rented_asset_does_not_snapshot_lease_fields_on_its_own_row(): void
     {
         $this->actingAs($this->super());

@@ -135,7 +135,8 @@ class ContractController extends Controller
 
         $annual = $live->sum(fn ($c) => $c->annualValue());
 
-        $topVendors = $contracts
+        // Running contracts only, the same set as the annual value card
+        $topVendors = $live
             ->groupBy(fn ($c) => $c->vendor?->name)
             ->map(fn ($group, $vendor) => [
                 'vendor' => $vendor,
@@ -235,6 +236,7 @@ class ContractController extends Controller
         ]);
 
         $contract = $this->service->cancel($contract, $validated['reason']);
+        $this->alertService->resetForContract($contract);
         AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) - {$validated['reason']}", subject: $contract);
 
         return (new ContractResource($contract))
@@ -263,6 +265,7 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.expire'), 403);
 
         $contract = $this->service->expire($contract);
+        $this->alertService->resetForContract($contract);
         AuditLog::record('Expired contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
         return (new ContractResource($contract))
@@ -280,6 +283,7 @@ class ContractController extends Controller
         abort_if($contract->assets()->exists(), 422, 'Detach the linked assets before deleting this contract.');
 
         AuditLog::recordDeleted('Deleted contract', "{$contract->name} ({$contract->code})", $contract);
+        $this->alertService->resetForContract($contract);
 
         // Remove the attachment files; the DB rows go via cascade on delete.
         $paths = $contract->attachments()->pluck('path')->all();

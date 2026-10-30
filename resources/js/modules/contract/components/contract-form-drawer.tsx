@@ -34,6 +34,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Lock, Package, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
+import { contractTotalEstimate } from '../lib/estimate';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
@@ -179,20 +180,8 @@ export function ContractFormDrawer({
     const shownEditing = open ? editing : lastEditing;
     const [step, setStep] = useState(0);
 
-    // Rough auto-estimate of the whole-contract total (value/cycle × billing
-    // cycles between start & end) — a reference the admin can check against or
-    // click to fill. The saved total is whatever they type into the manual field.
-    const totalValueEstimate = (() => {
-        const v = Number(form.value);
-        if (!v || !form.start_date || !form.end_date) return null;
-        const start = new Date(form.start_date);
-        const end = new Date(form.end_date);
-        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
-        const months =
-            (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + (end.getDate() >= start.getDate() ? 0 : -1);
-        const raw = form.billing_cycle === 'monthly' ? months : form.billing_cycle === 'quarterly' ? months / 3 : months / 12;
-        return Math.round(v * Math.max(1, Math.round(raw)) * 100) / 100;
-    })();
+    // Reference total the admin can check against or click to fill; the saved total is what they type
+    const totalValueEstimate = contractTotalEstimate(Number(form.value), form.start_date, form.end_date, form.billing_cycle);
 
     // Attachments: already-saved files (with pending removals) + newly picked files
     // not yet uploaded. Both are applied when the form is saved.

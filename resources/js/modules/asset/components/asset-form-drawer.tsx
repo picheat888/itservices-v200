@@ -234,14 +234,18 @@ export function AssetFormDrawer({
     const contractsQuery = useAssetContractOptions(open);
     const refreshContracts = useSelectRefresh(contractsQuery);
     const contracts = useMemo(() => contractsQuery.data ?? [], [contractsQuery.data]);
+    // A closed contract stays only as the one this asset is already on
+    const keptContractId = editing?.contract_id ?? null;
     const contractOptions = useMemo(
         () =>
-            contracts.map((c) => ({
-                value: String(c.id),
-                label: `${c.code} - ${localPair(c.vendor, c.vendor_th, lang) ?? ''}`,
-                search: `${c.code} ${c.vendor ?? ''} ${c.vendor_th ?? ''} ${c.details ?? ''}`,
-            })),
-        [contracts, lang],
+            contracts
+                .filter((c) => !c.closed || c.id === keptContractId)
+                .map((c) => ({
+                    value: String(c.id),
+                    label: `${c.code} - ${localPair(c.vendor, c.vendor_th, lang) ?? ''}`,
+                    search: `${c.code} ${c.vendor ?? ''} ${c.vendor_th ?? ''} ${c.details ?? ''}`,
+                })),
+        [contracts, lang, keptContractId],
     );
 
     const submit = async () => {

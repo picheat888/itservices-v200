@@ -12,6 +12,7 @@ use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\User;
+use App\Notifications\ContractExpiryNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -225,6 +226,47 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('expiring', 1)
             ->assertJsonPath('overdue', 1)
             ->assertJsonPath('expired', 1);
+    }
+
+    public function test_top_vendors_count_only_running_contracts_like_the_annual_value(): void
+    {
+        $this->actingAs($this->super());
+        $contract = fn (string $vendor, int $value) => Contract::create([
+            'vendor_id' => $this->vendorId($vendor), 'name' => $vendor, 'type' => 'software',
+            'start_date' => now()->subYear(), 'end_date' => now()->addYear(), 'value' => $value, 'billing_cycle' => 'yearly',
+        ]);
+        $contract('Running', 100000);
+        $contract('Cancelled', 900000)->update(['cancelled_at' => now(), 'cancel_reason' => 'x']);
+        $contract('Expired', 800000)->update(['expired_at' => now()]);
+
+        $summary = $this->getJson('/api/contracts/summary')->assertOk();
+
+        $this->assertSame(['Running'], collect($summary->json('top_vendors'))->pluck('vendor')->all());
+        $this->assertEquals(100000, $summary->json('top_vendors.0.amount'));
+    }
+
+    public function test_cancelling_or_deleting_a_contract_takes_its_expiry_bells_back(): void
+    {
+        $admin = $this->super();
+        $this->actingAs($admin);
+        $contract = fn (string $name) => Contract::create([
+            'vendor_id' => $this->vendorId($name), 'name' => $name, 'type' => 'software',
+            'start_date' => now()->subYear(), 'end_date' => now()->addDays(20), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_30' => true,
+        ]);
+        $cancelled = $contract('To cancel');
+        $deleted = $contract('To delete');
+        $kept = $contract('Kept');
+        foreach ([$cancelled, $deleted, $kept] as $c) {
+            $admin->notify(new ContractExpiryNotification($c, 20));
+        }
+        $bellsFor = fn (Contract $c) => $admin->notifications()->get()->filter(fn ($n) => ($n->data['contract_id'] ?? null) === $c->id)->count();
+
+        $this->postJson("/api/contracts/{$cancelled->id}/cancel", ['reason' => 'No longer needed'])->assertOk();
+        $this->deleteJson("/api/contracts/{$deleted->id}")->assertOk();
+
+        $this->assertSame(0, $bellsFor($cancelled));
+        $this->assertSame(0, $bellsFor($deleted));
+        $this->assertSame(1, $bellsFor($kept));
     }
 
     public function test_expiring_tab_returns_contracts_in_their_reminder_window(): void
