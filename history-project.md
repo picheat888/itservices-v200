@@ -7701,3 +7701,15 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - ผู้ใช้ให้ทดสอบบนฐาน demo เปลี่ยน "เนื้อหาอีเมล" 90 → 180 วันแล้วบันทึก จากนั้นเปลี่ยนกลับเป็น 90 วันทันที (ระบบล้างเนื้อหาอีเมลตอนกลางคืน จึงไม่มีอะไรถูกลบ)
 - หน้าประวัติการใช้งานมี 2 แถว "แก้ไขการตั้งค่าความปลอดภัย" รายการขึ้น "เนื้อหาอีเมล" บรรทัดสรุปใต้ชื่อการกระทำ "เนื้อหาอีเมล: 90 วัน → 180 วัน" แผงรายละเอียดขึ้นค่าเดิมขีดฆ่ากับค่าใหม่ตาม mockup แบบ ก
 - บันทึกโดยไม่เปลี่ยนค่าทำจากหน้าเว็บไม่ได้ เพราะปุ่มบันทึกปิดเมื่อไม่มีอะไรเปลี่ยน กรณีนี้มีเทสต์ฝั่ง server อยู่แล้ว
+
+## Ticket TKT-16 แก้ตามรีวิว (2026-10-30)
+
+- security review ของ `1d275364` ไม่พบช่องโหว่ ด่านสิทธิ์ ลำดับ และขอบเขตข้อมูลเท่าของเดิมทุก action
+- code review พบ 9 ข้อ แก้ครบตามที่ผู้ใช้สั่ง ยังไม่ได้ push
+- `b218c150` `TicketActionGuard` คืน gate Response (allow, deny พร้อมรหัส, denyWithStatus 422) แทนการ abort ใช้จาก job หรือ command ได้ FormRequest คืน Response นั้นจาก authorize() ผลที่ผู้ใช้ได้เหมือนเดิม ผู้ใช้เลือกแบบนี้แทน Policy เพื่อไม่เพิ่มโฟลเดอร์ `app/Policies`
+- การเช็กผู้รับเคส (self_assign, target_*) และการเปลี่ยนประเภทงานย้ายไป `passedValidation()` ของ request controller เหลือเรียก service กับเขียน audit
+- `TicketActionRequest` เป็นฐานของ request 5 ตัว (ticket, assignee, guard, กฎเคสจากคำขอ) ใช้ `enum()` ของ Laravel request รายการกับ summary extend `GatedPermissionRequest`
+- ตัวเลขบนแท็บ 3 ตัวเป็น query เดียว (`SUM(CASE …)`) EXPLAIN บน itservices_perf ใช้ index merge อ่านแถวพอ ๆ กับ COUNT 3 ครั้ง ลดเหลือรอบเดียว
+- `336d2cc5` comment ยาวใน `TicketResource` และ `TicketWorkClassTest` เหลือบรรทัดเดียว สาระของคำเตือนอยู่ใน commit message
+- รีวิวรอบสอง `16f10147` บัญชีที่ไม่ผูกพนักงานไม่นับเป็นผู้แจ้งของเคสไหน (เดิม null เท่ากับ null แต่ requester_id เป็น NOT NULL จึงไม่เกิดกับข้อมูลจริง) ดาวน์โหลดไฟล์แนบ Ticket ใช้ `canView` ตัวเดียวกัน
+- เทสต์ Ticket รายงาน ทรัพย์สิน ไฟล์ route และ Dashboard ผ่าน 1,252 ข้อ `TicketActionOrderTest` มี 10 ข้อ
