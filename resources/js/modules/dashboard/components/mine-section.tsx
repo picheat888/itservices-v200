@@ -28,6 +28,7 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
     const fmtN = useNumberFormat();
     const links = useDashLinks();
     const k = mine.kpi;
+    const myTicketsLabel = (status: string, n: number) => t('dash_my_tickets_status_n').replace('{status}', status).replace('{n}', fmtN(n));
 
     return (
         <section aria-labelledby="dash-mine" className="space-y-3">
@@ -38,8 +39,8 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                 link={{ to: { search: '?dialog=profile' }, state: dialogPushedState(), label: t('dash_go_profile') }}
             />
             <div className={TILE_GRID}>
+                {/* The tile counts two statuses, so only each legend piece opens a list */}
                 <DashTile
-                    to={links.myTickets}
                     icon={Ticket}
                     label={t('dash_kpi_my_open')}
                     value={k.open_tickets}
@@ -50,8 +51,22 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                     footer={
                         <LegendFooter
                             items={[
-                                { key: 'open', label: t('ticket_open'), value: k.open_split.open, dot: FILL.blue },
-                                { key: 'in_progress', label: t('ticket_in_progress'), value: k.open_split.in_progress, dot: FILL.violet },
+                                {
+                                    key: 'open',
+                                    label: t('ticket_open'),
+                                    value: k.open_split.open,
+                                    dot: FILL.blue,
+                                    to: links.myTicketsStatus('open'),
+                                    ariaLabel: myTicketsLabel(t('ticket_open'), k.open_split.open),
+                                },
+                                {
+                                    key: 'in_progress',
+                                    label: t('ticket_in_progress'),
+                                    value: k.open_split.in_progress,
+                                    dot: FILL.violet,
+                                    to: links.myTicketsStatus('in_progress'),
+                                    ariaLabel: myTicketsLabel(t('ticket_in_progress'), k.open_split.in_progress),
+                                },
                             ]}
                         />
                     }
@@ -100,13 +115,8 @@ export function MineSection({ mine }: { mine: DashboardMine }) {
                         />
                     }
                 />
-                <DashTile
-                    to={links.myTickets}
-                    icon={CircleCheck}
-                    label={t('dash_kpi_my_closed')}
-                    value={k.closed_this_month}
-                    footer={t('dash_tickets_you_filed')}
-                />
+                {/* The list can't filter by the month a ticket closed, so this stays a figure */}
+                <DashTile icon={CircleCheck} label={t('dash_kpi_my_closed')} value={k.closed_this_month} footer={t('dash_tickets_you_filed')} />
             </div>
             <div className={PAIR_GRID}>
                 <MyTicketsCard mine={mine} />

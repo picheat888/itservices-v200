@@ -51,6 +51,7 @@ export const dashboard: Dict = {
     dash_no_pending_handover: 'Nothing waiting to accept',
     dash_pending_handover_n: '{n} waiting to accept',
     dash_tickets_you_filed: 'Tickets you filed',
+    dash_my_tickets_status_n: 'My tickets with status {status}, {n}',
     dash_col_ticket: 'Ticket no.',
     dash_col_subject: 'Subject',
     dash_col_assignee: 'Assignee',

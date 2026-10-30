@@ -7,6 +7,7 @@ use App\Models\Access\EmailGroup;
 use App\Models\Access\Software;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
+use App\Models\Permission\RolePermission;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\Ticket\Ticket;
@@ -64,6 +65,26 @@ class MineBlockTest extends TestCase
         $this->assertSame(1, $mine['kpi']['closed_this_month']);
         $this->assertSame(2, $mine['tickets_total']);
         $this->assertCount(2, $mine['tickets']);
+    }
+
+    /** Each legend piece on the open-tickets tile opens My Tickets on that status, holding exactly that many. */
+    public function test_open_split_matches_the_my_tickets_list_its_legend_opens(): void
+    {
+        $me = $this->staff();
+        RolePermission::firstOrCreate(['role_id' => $me->role_id, 'permission' => 'tickets.my'], ['allowed' => true]);
+        $me->refresh();
+        Ticket::factory()->count(2)->create(['requester_id' => $me->employee_id, 'status' => 'open']);
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'in_progress']);
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'completed', 'resolved_at' => now()]);
+        Ticket::factory()->create(['requester_id' => $this->staff('Manee')->employee_id, 'status' => 'open']);
+
+        $split = $this->mine($me)['kpi']['open_split'];
+
+        foreach (['open', 'in_progress'] as $status) {
+            $listed = $this->actingAs($me)->getJson("/api/tickets?requested=1&status={$status}")->assertOk()->json('meta.total');
+            $this->assertSame($split[$status], $listed, $status);
+        }
+        $this->assertSame(['open' => 2, 'in_progress' => 1], $split);
     }
 
     public function test_requests_count_filed_by_for_or_on_behalf_of_the_reader(): void

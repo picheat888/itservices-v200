@@ -18,6 +18,7 @@ export function dashLinks(can: Can, linkedEmployee: boolean) {
         // Tickets tabs, each behind the permission the page checks for it
         myJobs: can('tickets.jobs') ? '/tickets?tab=mine' : null,
         myTickets: can('tickets.my') ? '/tickets?tab=my' : null,
+        myTicketsStatus: (status: 'open' | 'in_progress') => (can('tickets.my') ? `/tickets?tab=my&status=${status}` : null),
         pickup: desk ? '/tickets?tab=all&status=open' : null,
         approvals: requests ? '/requests?tab=approvals' : null,
         // The IT queue tab for completers (the tile counts every approved request, as the queue does)

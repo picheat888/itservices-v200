@@ -51,6 +51,7 @@ export const dashboard: Dict = {
     dash_no_pending_handover: 'ไม่มีรายการรอรับมอบ',
     dash_pending_handover_n: 'รอรับมอบอีก {n}',
     dash_tickets_you_filed: 'Ticket ที่คุณแจ้ง',
+    dash_my_tickets_status_n: 'Ticket ของฉันที่สถานะ{status} {n} ใบ',
     dash_col_ticket: 'เลข Ticket',
     dash_col_subject: 'หัวข้อ',
     dash_col_assignee: 'ผู้รับผิดชอบ',

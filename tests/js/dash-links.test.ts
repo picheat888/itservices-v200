@@ -1,5 +1,6 @@
 // Dashboard links follow the module rights; a Dashboard switch alone opens nothing.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { dashLinks } from '../../resources/js/modules/dashboard/lib/links.ts';
 
@@ -81,4 +82,19 @@ test('the over-SLA badge opens exactly the over-SLA tickets, for those the list 
     // The list applies ?sla= only for tickets.resolve; without it the badge is a plain count.
     assert.equal(dashLinks((p) => p === 'tickets.view_all', false).overSla, null);
     assert.equal(dashLinks(() => false, false).overSla, null);
+});
+
+test('the my-tickets legend opens My Tickets on one status', () => {
+    const links = dashLinks((permission) => permission === 'tickets.my', true);
+    assert.equal(links.myTicketsStatus('open'), '/tickets?tab=my&status=open');
+    assert.equal(links.myTicketsStatus('in_progress'), '/tickets?tab=my&status=in_progress');
+    assert.equal(dashLinks(() => false, true).myTicketsStatus('open'), null);
+});
+
+test('the two-status and this-month tiles are figures; their legend pieces are the links', () => {
+    const source = readFileSync('resources/js/modules/dashboard/components/mine-section.tsx', 'utf8');
+    assert.doesNotMatch(source, /to=\{links\.myTickets\}\s+icon=\{Ticket\}/);
+    assert.doesNotMatch(source, /to=\{links\.myTickets\}\s+icon=\{CircleCheck\}/);
+    assert.match(source, /to: links\.myTicketsStatus\('open'\)/);
+    assert.match(source, /to: links\.myTicketsStatus\('in_progress'\)/);
 });

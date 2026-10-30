@@ -80,13 +80,26 @@ export interface LegendItem {
     dot: string;
     /** Opens the list of just this piece; only on a tile that has no link of its own. */
     to?: To | null;
+    /** What a screen reader says for the link, when the label and count alone don't name the list. */
+    ariaLabel?: string;
 }
+
+// Plain at rest; hover gives the link look, touch screens (no hover) keep a faint dotted underline
+const LEGEND_LINK = cn(
+    'focus-visible:ring-ring -mx-1 inline-flex items-center gap-1 rounded-sm px-1 underline-offset-2 transition-colors focus-visible:ring-2 focus-visible:outline-none',
+    'hover:bg-blue-50 hover:text-blue-700 hover:underline dark:hover:bg-blue-500/15 dark:hover:text-blue-300',
+    '[&:hover>span:last-child]:text-blue-700 dark:[&:hover>span:last-child]:text-blue-300',
+    'touch:decoration-muted-foreground/60 touch:underline touch:decoration-dotted',
+);
 
 /** The legend under a tile's bar: dot, label, and the count in ink. */
 export function LegendFooter({ items }: { items: LegendItem[] }) {
     const fmtN = useNumberFormat();
     return (
-        <span className="flex gap-x-2.5 overflow-hidden" title={items.map((item) => `${item.label} ${fmtN(item.value)}`).join(', ')}>
+        <span
+            className={cn('flex gap-x-2.5 overflow-hidden', items.some((item) => item.to) && '-mx-1 px-1')}
+            title={items.map((item) => `${item.label} ${fmtN(item.value)}`).join(', ')}
+        >
             {items.map((item) => {
                 const body = (
                     <>
@@ -96,12 +109,7 @@ export function LegendFooter({ items }: { items: LegendItem[] }) {
                     </>
                 );
                 return item.to ? (
-                    <Link
-                        key={item.key}
-                        to={item.to}
-                        state={stateFor(item.to)}
-                        className="focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                    >
+                    <Link key={item.key} to={item.to} state={stateFor(item.to)} aria-label={item.ariaLabel} className={LEGEND_LINK}>
                         {body}
                     </Link>
                 ) : (
