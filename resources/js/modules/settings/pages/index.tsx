@@ -1596,7 +1596,7 @@ function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyCha
                             </div>
                             <fieldset className="m-0 min-w-0 border-0 p-0">
                                 <legend className="sr-only">{label}</legend>
-                                <div className="flex gap-1.5">
+                                <div className="touch:gap-2 flex gap-1.5">
                                     {ASSET_STATUS_PALETTE.map((c) => {
                                         const selected = cur?.toLowerCase() === c.hex.toLowerCase();
                                         return (
@@ -1613,7 +1613,7 @@ function AssetsTab({ onDirtyChange, onOpenSection }: { onDirtyChange: OnDirtyCha
                                                 <span
                                                     aria-hidden
                                                     className={cn(
-                                                        'ring-offset-background peer-focus-visible:outline-brand block h-7 w-7 cursor-pointer rounded-full ring-2 ring-offset-2 transition-shadow peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4',
+                                                        'ring-offset-background peer-focus-visible:outline-brand touch:h-9 touch:w-9 block h-7 w-7 cursor-pointer rounded-full ring-2 ring-offset-2 transition-shadow peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4',
                                                         selected ? 'ring-foreground' : 'hover:ring-border ring-transparent',
                                                     )}
                                                     style={{ background: c.hex }}
