@@ -14,6 +14,12 @@ class UpdateProfileRequest extends FormRequest
         return (bool) $this->user()?->hasPermission('profile.edit');
     }
 
+    /** A plain 403 with no message, so the form shows its own words. */
+    protected function failedAuthorization(): void
+    {
+        abort(403);
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

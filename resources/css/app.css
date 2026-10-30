@@ -9,9 +9,8 @@
 @custom-variant split (@media (min-width: 80rem) and (pointer: fine));
 @custom-variant touch (@media (pointer: coarse));
 
-/* Touch screens: a 40px tap area centred on a small button; the button keeps its look */
+/* Touch screens: a 40px tap area centred on a small button; the button keeps its look and sets its own position (relative) */
 @utility touch-hit {
-    position: relative;
     @media (pointer: coarse) {
         &::after {
             content: '';

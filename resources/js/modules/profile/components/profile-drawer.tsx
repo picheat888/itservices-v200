@@ -106,7 +106,7 @@ export function ProfileDrawer({ open, onClose, onChangePassword }: { open: boole
     const { data: emp, isLoading: empLoading } = empQuery;
 
     const canEdit = can('profile.edit');
-    const linked = !!user?.employee_code;
+    const linked = user?.employee_id != null;
     // Assets and Access show for any linked employee; Tickets and Requests answer to their page's permission; Sign-ins and Notifications are everyone's own
     const sees: Record<ProfileSection, boolean> = {
         profile: true,

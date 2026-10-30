@@ -6,26 +6,16 @@ namespace App\Services\Auth;
 
 use App\Models\AuditLog;
 use App\Models\User;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileService
 {
-    /** Preferences the login screen can set, so they save while a password change is owed. */
-    private const WALL_PREFERENCES = ['dark', 'lang', 'sidebar'];
-
     /**
      * @param  array<string, mixed>  $preferences
      */
     public function updatePreferences(User $user, array $preferences): User
     {
-        // Behind the password wall only what the login screen can change gets through
-        $owesPassword = $user->must_change_password || $user->isPasswordExpired();
-        if ($owesPassword && array_diff(array_keys($preferences), self::WALL_PREFERENCES) !== []) {
-            throw new HttpResponseException(response()->json(['message' => 'password_expired'], 403));
-        }
-
         $user->preferences = array_merge($user->resolvedPreferences(), $preferences);
         $user->save();
 

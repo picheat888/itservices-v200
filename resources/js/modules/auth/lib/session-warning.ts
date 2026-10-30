@@ -1,4 +1,5 @@
 // Idle-warning maths: when it opens, the ring colour, the clock text, the screen-reader milestones and the clock tabs share.
+import { SIGNED_OUT_REASONS, type SignedOutReason } from '../../../shared/lib/login-redirect.ts';
 
 /** The warning never opens more than this many seconds before sign-out. */
 export const WARN_CAP_SEC = 120;
@@ -42,7 +43,7 @@ export const ACTIVITY_SHARE_MS = 5_000;
 
 export type SessionMessage =
     | { type: 'activity'; at: number }
-    | { type: 'logout'; reason: 'session_expired' | 'signed_out'; from: string | null }
+    | { type: 'logout'; reason: SignedOutReason; from: string | null }
     | { type: 'login'; userId: number }
     | { type: 'password'; userId: number };
 
@@ -74,7 +75,7 @@ export function parseSessionMessage(data: unknown): SessionMessage | null {
     if (message.type === 'logout') {
         return {
             type: 'logout',
-            reason: message.reason === 'signed_out' ? 'signed_out' : 'session_expired',
+            reason: SIGNED_OUT_REASONS.find((known) => known === message.reason) ?? 'session_expired',
             from: typeof message.from === 'string' ? message.from : null,
         };
     }

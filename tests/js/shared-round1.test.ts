@@ -25,6 +25,9 @@ function runThemeScript(saved: string | null): string[] {
     return classes;
 }
 
+// Class names in one string literal, so "relative" and "touch-hit" can be checked together
+const classList = (literal: string) => literal.slice(1, -1).split(/\s+/);
+
 test('the shell puts the saved dark mode on <html> before the bundle loads', () => {
     assert.deepEqual(runThemeScript(JSON.stringify({ state: { dark: true } })), ['dark']);
     assert.deepEqual(runThemeScript(JSON.stringify({ state: { dark: false } })), []);
@@ -40,6 +43,7 @@ test('touch-hit gives a 40px tap area on touch screens only', () => {
     assert.match(utility, /@media \(pointer: coarse\)/);
     assert.match(utility, /width: max\(100%, 40px\)/);
     assert.match(utility, /height: max\(100%, 40px\)/);
+    assert.doesNotMatch(utility, /position: relative/, 'each button sets its own position');
 });
 
 test('small shared controls and every row menu use touch-hit', () => {
@@ -59,6 +63,19 @@ test('small shared controls and every row menu use touch-hit', () => {
     assert.equal(rowMenus, 7);
 });
 
+test('every touch-hit button is positioned, so the tap area sits on it', () => {
+    let literals = 0;
+    for (const file of filesUnder(join(root, 'js'))) {
+        for (const literal of readFileSync(file, 'utf8').match(/['"`][^'"`]*touch-hit[^'"`]*['"`]/g) ?? []) {
+            const classes = classList(literal);
+            if (!classes.includes('touch-hit')) continue;
+            assert.ok(classes.includes('relative'), `${file}: ${literal}`);
+            literals++;
+        }
+    }
+    assert.equal(literals, 12);
+});
+
 test('shared and stores do not import from modules or app', () => {
     for (const dir of ['js/shared', 'js/stores']) {
         for (const file of filesUnder(join(root, dir))) {
@@ -73,9 +90,6 @@ test('the table empty state counts pinned rows and the page never drops below 1'
     assert.match(table, /const safePage = Math\.max\(1,/);
 });
 
-test('a saved UI copy lays over the defaults and its date setting is normalised', () => {
-    const store = read('js/stores/ui.ts');
-    assert.match(store, /merge: \(persisted, current\)/);
-    assert.match(store, /assetStatusColors: \{ \.\.\.current\.assetStatusColors, \.\.\.saved\.assetStatusColors \}/);
-    assert.match(store, /dateConfig: normalizeDateConfig\(saved\.dateConfig\)/);
+test('the UI store checks a saved copy before laying it over the defaults', () => {
+    assert.match(read('js/stores/ui.ts'), /merge: \(persisted, current\) => \(\{ \.\.\.current, \.\.\.restoreUiPrefs\(persisted, current\) \}\)/);
 });

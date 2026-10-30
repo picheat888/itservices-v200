@@ -46,7 +46,8 @@ class ProfileUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/profile', ['first_name' => 'Nope', 'last_name' => 'Nope'])
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonMissing(['message' => 'This action is unauthorized.']);
     }
 
     /** The retired employees.edit_own key opens nothing; profile.edit does. */

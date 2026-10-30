@@ -506,7 +506,7 @@ export function DataTable<T>({
                                         if (!server) setPage(1);
                                     }}
                                 >
-                                    <SelectTrigger className="touch-hit h-8 w-[72px]">
+                                    <SelectTrigger className="touch-hit relative h-8 w-[72px]">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -531,7 +531,7 @@ export function DataTable<T>({
                                 onClick={() => setPage(Math.max(1, safePage - 1))}
                                 disabled={safePage <= 1}
                                 aria-label={t('page_prev')}
-                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <ChevronLeft aria-hidden className="h-4 w-4" />
                             </button>
@@ -542,7 +542,7 @@ export function DataTable<T>({
                                 onClick={() => setPage(Math.min(pageCount, safePage + 1))}
                                 disabled={safePage >= pageCount}
                                 aria-label={t('page_next')}
-                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                className="press-icon touch-hit border-border hover:bg-accent focus-visible:ring-ring relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <ChevronRight aria-hidden className="h-4 w-4" />
                             </button>

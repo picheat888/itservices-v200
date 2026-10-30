@@ -96,8 +96,13 @@ test('messages between tabs are checked before they are trusted', () => {
     });
     assert.deepEqual(parseSessionMessage({ type: 'logout', reason: 'third_device', from: 7 }), {
         type: 'logout',
-        reason: 'session_expired',
+        reason: 'third_device',
         from: null,
+    });
+    assert.deepEqual(parseSessionMessage({ type: 'logout', reason: 'made_up', from: 'tab1' }), {
+        type: 'logout',
+        reason: 'session_expired',
+        from: 'tab1',
     });
     assert.deepEqual(parseSessionMessage({ type: 'login', userId: 7 }), { type: 'login', userId: 7 });
     assert.equal(parseSessionMessage({ type: 'login' }), null);

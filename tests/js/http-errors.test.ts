@@ -143,11 +143,9 @@ test('a refusal the server worded still shows its message, else the form words',
 });
 
 test('a password that came due mid-session reloads /me once, not again while the wall is up', () => {
-    const fine = { password_expired: false, must_change_password: false };
-    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, fine), true);
-    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, { password_expired: true, must_change_password: false }), false);
-    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, { password_expired: false, must_change_password: true }), false);
-    assert.equal(passwordNewlyOwed(403, { message: 'password_expired' }, null), false);
-    assert.equal(passwordNewlyOwed(403, { message: 'forbidden' }, fine), false);
-    assert.equal(passwordNewlyOwed(401, { message: 'password_expired' }, fine), false);
+    assert.equal(passwordNewlyOwed({ password_expired: false, must_change_password: false }), true);
+    assert.equal(passwordNewlyOwed({ password_expired: true, must_change_password: false }), false);
+    assert.equal(passwordNewlyOwed({ password_expired: false, must_change_password: true }), false);
+    assert.equal(passwordNewlyOwed(null), false);
+    assert.equal(passwordNewlyOwed(undefined), false);
 });

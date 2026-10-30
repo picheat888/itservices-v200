@@ -215,7 +215,7 @@ export function FilterPopover({
                                     type="button"
                                     onClick={onClear}
                                     disabled={count === 0}
-                                    className="touch-hit text-muted-foreground hover:bg-accent hover:text-foreground ml-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-40"
+                                    className="touch-hit text-muted-foreground hover:bg-accent hover:text-foreground relative ml-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-40"
                                 >
                                     <X className="h-3 w-3" />
                                     {t('filter_clear_all')}

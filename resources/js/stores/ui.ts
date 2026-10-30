@@ -1,4 +1,5 @@
 import { DEFAULT_DATE_CONFIG, normalizeDateConfig, sameDateConfig, type DateConfig } from '@/shared/lib/datetime';
+import { restoreUiPrefs } from '@/shared/lib/ui-prefs';
 import type { AssetStatusColors, Density, Lang, SidebarStyle } from '@/shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -139,16 +140,8 @@ export const useUiStore = create<UiState>()(
                 assetStatusColors: s.assetStatusColors,
                 dateConfig: s.dateConfig,
             }),
-            // A copy saved by an older build may lack newer keys, so it lays over the defaults
-            merge: (persisted, current) => {
-                const saved = (persisted ?? {}) as Partial<UiState>;
-                return {
-                    ...current,
-                    ...saved,
-                    assetStatusColors: { ...current.assetStatusColors, ...saved.assetStatusColors },
-                    dateConfig: normalizeDateConfig(saved.dateConfig),
-                };
-            },
+            // A copy saved by an older build may lack keys or hold values this build does not know
+            merge: (persisted, current) => ({ ...current, ...restoreUiPrefs(persisted, current) }),
         },
     ),
 );

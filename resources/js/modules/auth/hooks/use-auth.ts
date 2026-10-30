@@ -66,11 +66,11 @@ export function useLogout() {
                 ]);
             }
             clearNewRows();
-            await authApi.logout();
-            announceSignOut();
+            return authApi.logout();
         },
-        // onSettled: a failed logout call still leaves; the login page sends them back if the session survived
+        // onSettled: a failed logout call still leaves and still takes the other tabs along; the login page sends them back if the session survived
         onSettled: () => {
+            announceSignOut();
             window.location.href = '/login';
         },
     });

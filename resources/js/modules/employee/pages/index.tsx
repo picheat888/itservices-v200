@@ -919,7 +919,7 @@ function DirectoryTab({
                 <div onClick={(ev) => ev.stopPropagation()} className="flex justify-end">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button type="button" aria-label={`${t('actions')} ${localName(e, lang)}`} className={cn('touch-hit', ICON_BTN)}>
+                            <button type="button" aria-label={`${t('actions')} ${localName(e, lang)}`} className={cn('touch-hit relative', ICON_BTN)}>
                                 <MoreVertical aria-hidden className="h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>

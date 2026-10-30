@@ -26,13 +26,13 @@ test('the details tab greys the employee fields and says why', () => {
     }
 });
 
-test('signing out announces it after the server ends the session, and tabs skip their own news', () => {
-    assert.match(read('modules/auth/hooks/use-auth.ts'), /await authApi\.logout\(\);\s*announceSignOut\(\);/);
+test('signing out tells the other tabs even when the logout call fails, and tabs skip their own news', () => {
+    assert.match(read('modules/auth/hooks/use-auth.ts'), /onSettled: \(\) => \{\s*announceSignOut\(\);\s*window\.location\.href = '\/login';/);
     assert.match(read('modules/auth/hooks/use-session-timeout.ts'), /message\.from !== SESSION_TAB_ID\) leaveForLogin\(false, message\.reason\)/);
 });
 
 test('a 403 password_expired reloads /me and words the form error', () => {
     const http = read('shared/lib/http.ts');
-    assert.match(http, /passwordNewlyOwed\(status, error\.response\.data, queryClient\.getQueryData<User \| null>\(ME_KEY\)\)/);
-    assert.match(http, /error\.response\.data\.message = translate\(useUiStore\.getState\(\)\.lang, 'pwd_expired_title'\)/);
+    assert.match(http, /const me = queryClient\.getQueryData<User \| null>\(ME_KEY\);\s*if \(passwordNewlyOwed\(me\)\)/);
+    assert.match(http, /me\?\.must_change_password \? 'pwd_set_desc' : 'pwd_expired_title'/);
 });

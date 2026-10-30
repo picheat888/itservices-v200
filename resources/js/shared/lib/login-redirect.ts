@@ -1,7 +1,7 @@
 // Sends the reader to the login page with why they were signed out; when several requests or tabs fail at once,
 // the first reason wins, and an idle timeout is announced so the other tabs show it too.
 
-const SIGNED_OUT_REASONS = ['session_expired', 'signed_out', 'third_device', 'profile', 'limit', 'account_closed'] as const;
+export const SIGNED_OUT_REASONS = ['session_expired', 'signed_out', 'third_device', 'profile', 'limit', 'account_closed'] as const;
 
 export type SignedOutReason = (typeof SIGNED_OUT_REASONS)[number];
 

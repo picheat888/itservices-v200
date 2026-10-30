@@ -78,10 +78,12 @@ http.interceptors.response.use(
 
         // Password owed mid-session: reload /me so the change-password wall opens, and forms show words, not the code
         if (status === 403 && error.response.data?.message === 'password_expired') {
-            if (passwordNewlyOwed(status, error.response.data, queryClient.getQueryData<User | null>(ME_KEY))) {
+            const me = queryClient.getQueryData<User | null>(ME_KEY);
+            if (passwordNewlyOwed(me)) {
                 void queryClient.invalidateQueries({ queryKey: ME_KEY });
             }
-            error.response.data.message = translate(useUiStore.getState().lang, 'pwd_expired_title');
+            // The same words as the wall this account sees: a temporary password to replace, or an expired one
+            error.response.data.message = translate(useUiStore.getState().lang, me?.must_change_password ? 'pwd_set_desc' : 'pwd_expired_title');
             return Promise.reject(error);
         }
 
