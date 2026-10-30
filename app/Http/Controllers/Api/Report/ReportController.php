@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api\Report;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Report\TicketOverviewReportRequest;
 use App\Services\Report\ReportPinService;
 use App\Services\Report\ReportSnapshotService;
 use App\Support\ReportCatalogue;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Report Center (/reports): the reports this reader may open (each flagged when pinned),
@@ -34,6 +37,10 @@ class ReportController extends Controller
             'to' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:from', 'before_or_equal:today'],
         ]);
         $period = $validated['period'] ?? '30d';
+        // The tiles link to the Ticket & SLA report, which takes at most this many days
+        if ($period === 'custom' && CarbonImmutable::parse($validated['from'])->diffInDays(CarbonImmutable::parse($validated['to'])) + 1 > TicketOverviewReportRequest::MAX_RANGE_DAYS) {
+            throw ValidationException::withMessages(['to' => 'The range may span at most '.TicketOverviewReportRequest::MAX_RANGE_DAYS.' days.']);
+        }
 
         return response()->json(['data' => $snapshot->for(
             $request->user(),

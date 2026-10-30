@@ -21,3 +21,14 @@ export function periodRange(
 
     return { from: isoDate(start), to: isoDate(today) };
 }
+
+/** Longest custom period, both ends counted — TicketOverviewReportRequest::MAX_RANGE_DAYS, the report its tiles open. */
+export const MAX_RANGE_DAYS = 366;
+
+/** Days from one "YYYY-MM-DD" to another, both ends counted. */
+export const rangeDays = (from: string, to: string) => Math.round((Date.UTC(...ymd(to)) - Date.UTC(...ymd(from))) / 86_400_000) + 1;
+
+const ymd = (value: string): [number, number, number] => {
+    const [y, m, d] = value.split('-').map(Number);
+    return [y, m - 1, d];
+};

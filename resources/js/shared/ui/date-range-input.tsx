@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useUiStore } from '@/stores/ui';
-import { format, isAfter, isSameDay, subMonths } from 'date-fns';
+import { differenceInCalendarDays, format, isAfter, isSameDay, subMonths } from 'date-fns';
 import { enUS, th } from 'date-fns/locale';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as React from 'react';
@@ -26,6 +26,8 @@ export function DateRangeInput({
     to,
     onChange,
     maxDate,
+    maxDays,
+    tooLongText,
     align = 'start',
     className,
     children,
@@ -37,6 +39,9 @@ export function DateRangeInput({
     onChange: (from: string, to: string) => void;
     /** Last pickable day; later days are greyed out (e.g. today, for ranges the API caps at today). */
     maxDate?: Date;
+    /** Longest range, both ends counted; a longer pick shows `tooLongText` and can't be applied. */
+    maxDays?: number;
+    tooLongText?: string;
     align?: 'start' | 'end';
     /** The field's classes; ignored when `children` supplies the trigger. */
     className?: string;
@@ -89,6 +94,7 @@ export function DateRangeInput({
         'text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto grid h-7 w-7 place-items-center rounded-md transition-colors';
     const edge = 'bg-brand/10 [&>button]:bg-brand [&>button]:hover:bg-brand [&>button]:font-medium [&>button]:text-white';
     const hint = !draft?.from ? t('date_range_pick_start') : t('date_range_pick_end');
+    const tooLong = maxDays != null && !!draft?.from && !!draft.to && differenceInCalendarDays(draft.to, draft.from) + 1 > maxDays;
 
     return (
         <Popover open={open} onOpenChange={handleOpenChange}>
@@ -165,7 +171,16 @@ export function DateRangeInput({
                 />
                 <div className="mt-2 flex items-center justify-between gap-4 border-t pt-3">
                     {draft?.from && draft.to ? (
-                        <span className="text-sm font-medium">{fmt.range(iso(draft.from), iso(draft.to))}</span>
+                        <div className="flex flex-col">
+                            <span className={cn('text-sm font-medium', tooLong && 'text-red-700 dark:text-red-400')}>
+                                {fmt.range(iso(draft.from), iso(draft.to))}
+                            </span>
+                            {tooLong && (
+                                <span role="alert" className="text-xs text-red-700 dark:text-red-400">
+                                    {tooLongText}
+                                </span>
+                            )}
+                        </div>
                     ) : (
                         <span className="text-muted-foreground text-xs">{hint}</span>
                     )}
@@ -173,7 +188,7 @@ export function DateRangeInput({
                         <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
                             {t('cancel')}
                         </Button>
-                        <Button type="button" size="sm" disabled={!draft?.from || !draft.to} onClick={apply}>
+                        <Button type="button" size="sm" disabled={!draft?.from || !draft.to || tooLong} onClick={apply}>
                             {t('apply')}
                         </Button>
                     </div>

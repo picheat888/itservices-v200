@@ -14,7 +14,7 @@ import { DateRangeInput } from '@/shared/ui/date-range-input';
 import { useUiStore } from '@/stores/ui';
 import { CalendarRange } from 'lucide-react';
 import { SNAPSHOT_PRESETS } from '../hooks/use-snapshot-range';
-import { periodRange } from '../lib/period-range';
+import { MAX_RANGE_DAYS, periodRange } from '../lib/period-range';
 import type { SnapshotRange } from '../types';
 import { compactRange } from './report-scope';
 
@@ -64,6 +64,8 @@ function CustomRange({ range, onChange }: { range: SnapshotRange; onChange: (ran
             from={shown.from}
             to={shown.to}
             maxDate={new Date()}
+            maxDays={MAX_RANGE_DAYS}
+            tooLongText={t('rep_err_range_invalid')}
             align="end"
             onChange={(from, to) => onChange({ period: 'custom', from, to })}
         >

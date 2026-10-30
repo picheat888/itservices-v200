@@ -6,7 +6,7 @@
  * nearest preset, so a returning reader never sends the API a period it refuses.
  */
 import { useEffect, useState } from 'react';
-import { isoDate } from '../lib/period-range';
+import { isoDate, MAX_RANGE_DAYS, rangeDays } from '../lib/period-range';
 import type { SnapshotPreset, SnapshotRange } from '../types';
 
 const STORAGE_KEY = 'reports.snapshot.period';
@@ -22,9 +22,17 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const isPreset = (value: unknown): value is SnapshotPreset => typeof value === 'string' && (SNAPSHOT_PRESETS as string[]).includes(value);
 
-/** A custom range the API takes: two dates, in order, not past today. */
+/** A custom range the API takes: two dates, in order, not past today, at most MAX_RANGE_DAYS long. */
 export function isValidCustomRange(from: unknown, to: unknown): boolean {
-    return typeof from === 'string' && typeof to === 'string' && ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to && to <= isoDate(new Date());
+    return (
+        typeof from === 'string' &&
+        typeof to === 'string' &&
+        ISO_DATE.test(from) &&
+        ISO_DATE.test(to) &&
+        from <= to &&
+        to <= isoDate(new Date()) &&
+        rangeDays(from, to) <= MAX_RANGE_DAYS
+    );
 }
 
 function load(): SnapshotRange {

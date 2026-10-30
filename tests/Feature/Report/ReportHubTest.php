@@ -245,6 +245,9 @@ class ReportHubTest extends TestCase
         $get('period=custom&from=2026-09-10&to=2026-09-01')->assertUnprocessable()->assertJsonValidationErrors(['to']);
         $get('period=custom&from=2026-09-01&to=2026-09-26')->assertUnprocessable()->assertJsonValidationErrors(['to']);
         $get('period=custom&from=01/09/2026&to=2026-09-10')->assertUnprocessable()->assertJsonValidationErrors(['from']);
+        // At most 366 days, both ends counted, as the Ticket & SLA report the tiles open
+        $get('period=custom&from=2025-09-25&to=2026-09-25')->assertOk();
+        $get('period=custom&from=2025-09-24&to=2026-09-25')->assertUnprocessable()->assertJsonValidationErrors(['to']);
         // A preset ignores stray dates.
         $get('period=7d&from=2026-01-01&to=2026-01-02')->assertOk()->assertJsonPath('data.from', '2026-09-19');
     }
