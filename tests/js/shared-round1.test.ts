@@ -110,7 +110,15 @@ test('settings pickers use the shared SearchableSelect, and the SLA table lets t
     const sla = read('js/modules/settings/components/tickets-sla-tab.tsx');
     assert.equal(sla.match(/<SearchableSelect\s+aria-label=/g)?.length, 2);
     assert.match(sla, /aria-labelledby="sla-h-rep" className=\{cn\(TABLE, 'overflow-visible'\)\}/);
-    assert.equal(read('js/modules/settings/pages/index.tsx').match(/<SearchableSelect/g)?.length, 2);
+    const settings = read('js/modules/settings/pages/index.tsx');
+    assert.equal(settings.match(/<SearchableSelect/g)?.length, 2);
+    // Built once at module level, not on every render
+    assert.match(settings, /^const COUNTRY_CHOICES = countryOptions\.map/m);
+    assert.match(settings, /options=\{COUNTRY_CHOICES\}/);
+    assert.match(settings, /options=\{CURRENCY_CHOICES\}/);
+    // The SLA pickers still find a type by its key, as the old picker did
+    assert.match(sla, /search: `\$\{categoryLabel\(c\)\} \$\{c\}`/);
+    assert.match(sla, /search: `\$\{workLabel\(w\)\} \$\{w\}`/);
     assert.match(read('js/shared/components/searchable-select.tsx'), /aria-label=\{ariaLabel\}/);
 });
 

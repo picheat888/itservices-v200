@@ -5,8 +5,10 @@
 namespace App\Services\Settings;
 
 use App\Models\Settings\SlaHoliday;
+use App\Notifications\SlaHolidaysMissingNotification;
 use App\Services\Ticket\TicketDeadlineService;
 use App\Support\TicketSla;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -23,12 +25,19 @@ class SlaHolidayService
         $incoming = collect($rows)->mapWithKeys(fn (array $row): array => [$row['date'] => trim($row['name'])]);
 
         try {
-            return DB::transaction(function () use ($year, $incoming): array {
+            $result = DB::transaction(function () use ($year, $incoming): array {
                 $changes = $this->saveRows($year, $incoming);
                 TicketSla::flush();
 
                 return $changes + ['moved' => $this->deadlines->recomputeOpen()];
             });
+
+            // The year has holidays now: the "none set" reminder no longer applies
+            if ($incoming->isNotEmpty()) {
+                DatabaseNotification::where('type', SlaHolidaysMissingNotification::class)->where('data->year', $year)->delete();
+            }
+
+            return $result;
         } finally {
             TicketSla::flush(); // a rollback must not leave the failed holidays memoized
         }

@@ -86,9 +86,7 @@ class TicketService
      */
     public function update(Ticket $ticket, array $data): Ticket
     {
-        // Who already heard about this waiting case; only asked when the category is about to move
         $recategorisesWaitingCase = $data['category'] !== $ticket->category->value && $ticket->status === TicketStatus::Open && $ticket->isUnassigned();
-        $alreadyTold = $recategorisesWaitingCase ? $this->takersFor($ticket)->pluck('id') : collect();
 
         $ticket->update([
             'subject' => $data['subject'],
@@ -100,6 +98,7 @@ class TicketService
         // A new category reaches other staff Levels: they hear about the waiting case as if it were new
         if ($recategorisesWaitingCase) {
             $takers = $this->takersFor($ticket);
+            $alreadyTold = $this->newCaseBellHolders($ticket);
             $this->withdrawNewCaseBell($ticket, $alreadyTold->diff($takers->pluck('id')));
             $this->announceToTakers($ticket, $takers->whereNotIn('id', $alreadyTold)->values());
         }
@@ -442,6 +441,23 @@ class TicketService
                 $taker->name,
             );
         }
+    }
+
+    /**
+     * Staff who hold this case's new-case bell, read from the bells themselves.
+     *
+     * @return Collection<int, int>
+     */
+    private function newCaseBellHolders(Ticket $ticket): Collection
+    {
+        return DatabaseNotification::where('type', TicketCreatedNotification::class)
+            ->where('notifiable_type', (new User)->getMorphClass())
+            ->whereIn('notifiable_id', User::holdingPermission('tickets.resolve')->pluck('id'))
+            ->where('data->ticket_id', $ticket->id)
+            ->pluck('notifiable_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
     }
 
     /**

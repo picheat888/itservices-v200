@@ -14,6 +14,7 @@ use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
 use App\Services\Stock\StockNotificationService;
+use App\Services\Stock\StockRequestService;
 use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -142,6 +143,27 @@ class StockNotificationServiceTest extends TestCase
 
         $this->assertSame(0, $approver->notifications()->count());
         $this->assertSame(1, $issuer->notifications()->count());
+    }
+
+    public function test_approving_rejecting_or_cancelling_takes_the_waiting_bell_back_at_once(): void
+    {
+        $approver = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerm('stock.request');
+        $notifications = app(StockNotificationService::class);
+        $requests = app(StockRequestService::class);
+        [$approved, $rejected, $cancelled, $other] = array_map(
+            fn () => StockRequest::create(['stock_item_id' => $this->openRequest($owner, 'pending')->stock_item_id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 1, 'reason' => 'r', 'status' => 'pending']),
+            range(1, 4),
+        );
+        foreach ([$approved, $rejected, $cancelled, $other] as $request) {
+            $notifications->requestWaiting($request);
+        }
+
+        $requests->approve($approved, $approver);
+        $requests->reject($rejected, $approver, 'no');
+        $requests->cancel($cancelled, $owner);
+
+        $this->assertSame([$other->id], $this->waitingBellsOf($approver));
     }
 
     /** A fresh non-super user holding every listed permission. */

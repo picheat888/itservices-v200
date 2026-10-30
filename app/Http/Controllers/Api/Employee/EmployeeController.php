@@ -605,7 +605,7 @@ class EmployeeController extends Controller
         );
 
         $employee->load(['department', 'position', 'section', 'manager', 'creator.employee', 'updater.employee'])
-            ->loadCount(['subordinates as direct_reports_count' => fn ($q) => $q->where('status', EmployeeStatus::Active)]);
+            ->loadCount('activeSubordinates as direct_reports_count');
 
         return (new EmployeeResource($employee))->response();
     }
@@ -745,7 +745,7 @@ class EmployeeController extends Controller
         $employees = Employee::query()
             ->where('status', EmployeeStatus::Active)
             ->with(['position', 'section', 'department'])
-            ->withCount(['subordinates as reports_count' => fn ($q) => $q->where('status', EmployeeStatus::Active)])
+            ->withCount('activeSubordinates as reports_count')
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get();

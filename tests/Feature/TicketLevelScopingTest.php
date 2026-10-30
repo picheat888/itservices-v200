@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
+use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -329,6 +330,44 @@ class TicketLevelScopingTest extends TestCase
 
         $this->assertSame(0, $networkGuy->notifications()->count());
         $this->assertSame('ticket_new', $hardwareGuy->notifications()->first()?->data['type']);
+    }
+
+    public function test_moving_a_case_goes_by_who_holds_the_bell_not_by_todays_levels(): void
+    {
+        // Each staff on a role of their own, so their Levels change separately
+        $staff = function (string $name, array $levels): User {
+            $user = User::factory()->create(['role' => 'user', 'employee_id' => Employee::create(['first_name' => $name, 'status' => 'active'])->id]);
+            $role = Role::create(['key' => 'r_'.uniqid(), 'name' => $name, 'is_system' => false]);
+            $user->update(['role_id' => $role->id]);
+            foreach ([...self::BASE, ...$levels] as $key) {
+                RolePermission::create(['role_id' => $role->id, 'permission' => $key, 'allowed' => true]);
+            }
+
+            return $user->fresh();
+        };
+        $wasNetwork = $staff('Was network', ['tickets.level_network']);
+        $joinedLate = $staff('Joined late', []);
+        $requester = User::factory()->create([
+            'role' => 'super',
+            'employee_id' => Employee::create(['first_name' => 'Requester', 'last_name' => 'Test', 'status' => 'active'])->id,
+        ]);
+        $case = ['subject' => 'Switch port keeps flapping', 'description' => 'Uplink on floor 3 drops every few minutes.', 'category' => 'network', 'callback_phone' => '081 222 3333'];
+
+        $this->actingAs($requester);
+        $id = $this->postJson('/api/tickets', $case)->assertCreated()->json('data.id');
+        $this->assertSame(1, $wasNetwork->notifications()->count());
+        $this->assertSame(0, $joinedLate->notifications()->count());
+
+        // After the case opened: one loses the network Level, the other gains network and hardware
+        RolePermission::where('role_id', $wasNetwork->role_id)->where('permission', 'tickets.level_network')->delete();
+        foreach (['tickets.level_network', 'tickets.level_hardware'] as $key) {
+            RolePermission::create(['role_id' => $joinedLate->role_id, 'permission' => $key, 'allowed' => true]);
+        }
+
+        $this->putJson("/api/tickets/{$id}", [...$case, 'category' => 'hardware'])->assertOk();
+
+        $this->assertSame(0, $wasNetwork->notifications()->count());
+        $this->assertSame(1, $joinedLate->notifications()->count());
     }
 
     public function test_assigning_sends_a_bell_to_the_assignee(): void

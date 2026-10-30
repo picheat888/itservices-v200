@@ -144,6 +144,9 @@ const emptyForm: SettingsForm = {
 };
 
 const COMPANY_KEYS = ['company_name', 'legal_name', 'tax_id', 'industry', 'address', 'country', 'currency'] as const;
+// Country and currency pickers, built once
+const COUNTRY_CHOICES = countryOptions.map((o) => ({ ...o, search: o.label }));
+const CURRENCY_CHOICES = currencyOptions.map((o) => ({ ...o, search: o.label }));
 const BRANDING_KEYS = ['brand_name', 'brand_sub'] as const;
 
 /** The given fields of a form or loaded settings, e.g. the company payload. */
@@ -1799,7 +1802,7 @@ function CompanyTab({
                             <SearchableSelect
                                 value={form.country}
                                 onChange={(v) => set('country', v)}
-                                options={countryOptions.map((o) => ({ ...o, search: o.label }))}
+                                options={COUNTRY_CHOICES}
                                 placeholder={t('set_country_ph')}
                             />
                         </Field>
@@ -1807,7 +1810,7 @@ function CompanyTab({
                             <SearchableSelect
                                 value={form.currency}
                                 onChange={(v) => set('currency', v)}
-                                options={currencyOptions.map((o) => ({ ...o, search: o.label }))}
+                                options={CURRENCY_CHOICES}
                                 placeholder={t('set_currency_ph')}
                             />
                         </Field>

@@ -242,6 +242,12 @@ class Employee extends Model
         return $this->hasMany(Employee::class, 'manager_id');
     }
 
+    /** Direct reports still working: the count the org chart and the employee view show. */
+    public function activeSubordinates(): HasMany
+    {
+        return $this->subordinates()->where('status', EmployeeStatus::Active);
+    }
+
     /**
      * True when $other sits somewhere below this employee in the reporting tree
      * (used to reject a manager assignment that would create a cycle). Walks up

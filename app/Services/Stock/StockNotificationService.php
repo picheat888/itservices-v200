@@ -146,6 +146,8 @@ class StockNotificationService
      */
     public function requestResponded(StockRequest $request, string $outcome): void
     {
+        $this->clearWaiting($request);
+
         $owner = $request->user;
         if (! $owner) {
             return;
@@ -437,16 +439,26 @@ class StockNotificationService
         return EmailTable::render(self::REQUEST_HEADERS, $rows, [], self::REQUEST_WIDTHS, [3]);
     }
 
+    /** Removes the "waiting" bells of a request from everyone who approves or issues stock. */
+    public function clearWaiting(StockRequest $request): void
+    {
+        $holders = $this->recipients('stock.approve')->merge($this->recipients('stock.fulfill'))->pluck('id')->unique();
+
+        DatabaseNotification::where('type', StockRequestNotification::class)
+            ->where('notifiable_type', (new User)->getMorphClass())
+            ->whereIn('notifiable_id', $holders)
+            ->where('data->stock_request_id', $request->id)
+            ->where('data->subtype', 'waiting')
+            ->delete();
+    }
+
     /** Daily bell-only nag (overwritten): pending reminds approvers, approved reminds issuers. */
     public function requestWaiting(StockRequest $request): void
     {
         $permission = $request->status === 'approved' ? 'stock.fulfill' : 'stock.approve';
 
         // Approvers' bell from the pending days goes too, once the request waits on the issuers
-        DatabaseNotification::where('type', StockRequestNotification::class)
-            ->where('data->stock_request_id', $request->id)
-            ->where('data->subtype', 'waiting')
-            ->delete();
+        $this->clearWaiting($request);
 
         $this->sendBell(
             $this->recipients($permission),

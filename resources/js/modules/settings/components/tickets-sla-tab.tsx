@@ -586,7 +586,7 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                                                 options={TICKET_CATEGORIES.map((c) => ({
                                                     value: c,
                                                     label: categoryLabel(c),
-                                                    search: categoryLabel(c),
+                                                    search: `${categoryLabel(c)} ${c}`,
                                                     icon: <TicketCategoryIcon category={c} className="text-muted-foreground h-4 w-4" />,
                                                     disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
                                                     sub:
@@ -607,7 +607,7 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                                                 options={WORK_CLASSES.map((w) => ({
                                                     value: w,
                                                     label: workLabel(w),
-                                                    search: workLabel(w),
+                                                    search: `${workLabel(w)} ${w}`,
                                                     disabled: w !== row.work_class && taken.has(`${row.category}:${w}`),
                                                     sub:
                                                         w !== row.work_class && taken.has(`${row.category}:${w}`)

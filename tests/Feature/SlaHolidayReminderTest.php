@@ -10,6 +10,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\SlaHoliday;
 use App\Models\User;
+use App\Services\Settings\SlaHolidayService;
 use App\Support\NotificationCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -98,6 +99,20 @@ class SlaHolidayReminderTest extends TestCase
         $this->artisan('tickets:remind-sla-holidays')->assertSuccessful();
 
         $this->assertSame([['type' => 'sla_holidays', 'subtype' => 'started', 'year' => 2027]], $this->bells($holder));
+    }
+
+    public function test_saving_that_years_holidays_takes_the_bell_back(): void
+    {
+        $holder = $this->holder();
+        $this->travelTo('2026-12-01 08:00:00');
+        $this->artisan('tickets:remind-sla-holidays')->assertSuccessful();
+        $this->assertCount(1, $this->bells($holder));
+
+        app(SlaHolidayService::class)->replaceYear(2028, [['date' => '2028-01-01', 'name' => 'Other year']]);
+        $this->assertCount(1, $this->bells($holder), 'another year leaves it');
+
+        app(SlaHolidayService::class)->replaceYear(2027, [['date' => '2027-01-01', 'name' => 'New Year']]);
+        $this->assertSame([], $this->bells($holder));
     }
 
     public function test_other_months_send_nothing(): void

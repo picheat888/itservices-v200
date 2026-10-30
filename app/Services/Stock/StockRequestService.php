@@ -118,6 +118,7 @@ class StockRequestService
             ]);
         });
         AuditLog::record('Cancelled stock request', "#{$stockRequest->id}", subject: $stockRequest);
+        $this->notifications->clearWaiting($stockRequest);
         if ((int) $stockRequest->user_id !== (int) $actor->id) {
             $this->notifications->requestCancelled($stockRequest->load('item'));
         }
