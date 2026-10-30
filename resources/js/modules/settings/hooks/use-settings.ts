@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { currencySymbol } from '@/shared/lib/currency';
+import { FRESH_LIST } from '@/shared/lib/freshness';
 import { formatNumber } from '@/shared/lib/number';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
@@ -18,6 +19,7 @@ import {
 } from '../api/settingsApi';
 
 const KEY = ['settings'] as const;
+const HOLIDAYS_KEY = ['settings', 'sla-holidays'] as const;
 
 /** Applies the system-wide display theme (accent/density/radius) + asset colors to the UI store. */
 function applyTheme(data: SettingsData) {
@@ -159,6 +161,26 @@ export function useUpdateTicketSla() {
     const sync = useSyncStore();
     const failed = useSaveFailed();
     return useMutation({ mutationFn: (payload: TicketSlaPayload) => settingsApi.updateTicketSla(payload), onSuccess: sync, onError: failed });
+}
+
+/** Company holidays of every year (Settings -> Tickets). */
+export function useSlaHolidays() {
+    return useQuery({ queryKey: HOLIDAYS_KEY, queryFn: settingsApi.slaHolidays, ...FRESH_LIST });
+}
+
+/** Replaces one year's holidays; open cases' deadlines move with them. */
+export function useSaveSlaHolidays() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ year, holidays }: { year: number; holidays: { date: string; name: string }[] }) => settingsApi.saveSlaHolidays(year, holidays),
+        onSuccess: (response) => {
+            qc.setQueryData(HOLIDAYS_KEY, response.data);
+            void qc.invalidateQueries({ queryKey: HOLIDAYS_KEY });
+            void qc.invalidateQueries({ queryKey: ['tickets'] });
+            // Ticket lists, details and summaries keep stored deadlines under their own keys
+            void qc.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && /ticket/.test(query.queryKey[0]) });
+        },
+    });
 }
 
 export function useUploadLogo() {

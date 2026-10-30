@@ -1,7 +1,17 @@
 // Holiday text parser, month summary, fixed-date copy and row validation helpers for the SLA holiday editor.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fixedDateRows, monthSummary, parseHolidayLine, parseHolidayText, rowErrors } from '../../resources/js/modules/settings/lib/sla-holidays.ts';
+import {
+    fixedDateRows,
+    holidayYears,
+    isoWeekday,
+    localIsoDate,
+    monthSummary,
+    parseHolidayLine,
+    parseHolidayText,
+    rowErrors,
+    serverRowErrors,
+} from '../../resources/js/modules/settings/lib/sla-holidays.ts';
 
 const SEED_2026 = [
     ['2026-01-01', 'วันขึ้นปีใหม่'],
@@ -91,5 +101,34 @@ test('rowErrors flags blank name, blank date, other year and the second equal da
         b: { name: 'required' },
         c: { date: 'other_year' },
         e: { date: 'taken' },
+    });
+});
+
+test('localIsoDate and isoWeekday read the calendar date without a time zone shift', () => {
+    assert.equal(localIsoDate(new Date(2026, 0, 5, 23, 30)), '2026-01-05');
+    assert.equal(isoWeekday('2026-01-05'), 1);
+    assert.equal(isoWeekday('2026-01-04'), 7);
+    assert.equal(isoWeekday('2026-01-10'), 6);
+});
+
+test('holidayYears offers earlier years with rows, this year and next year', () => {
+    assert.deepEqual(holidayYears([], 2026), [2026, 2027]);
+    assert.deepEqual(holidayYears(['2024-01-01', '2025-04-13', '2025-05-01', '2026-01-01', '2028-01-01'], 2026), [2024, 2025, 2026, 2027]);
+});
+
+test('serverRowErrors maps 422 codes to the rows sent, by position', () => {
+    const errors = {
+        'holidays.0.date': ['holiday_date_taken'],
+        'holidays.1.date': ['holiday_date_other_year'],
+        'holidays.1.name': ['holiday_name_required'],
+        'holidays.2.date': ['holiday_date_required'],
+        'holidays.9.date': ['holiday_date_taken'],
+        'holidays.0.name': ['something_else'],
+        holidays: ['The holidays field must not have more than 60 items.'],
+    };
+    assert.deepEqual(serverRowErrors(errors, ['a', 'b', 'c']), {
+        a: { date: 'taken' },
+        b: { date: 'other_year', name: 'required' },
+        c: { date: 'required' },
     });
 });

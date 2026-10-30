@@ -1,5 +1,5 @@
 // Settings → Ticket & SLA: working hours, pick-up and close targets (by priority, repair, request type) and the SLA goal.
-// A summary card jumps to each section; one Save button at the end saves the tab.
+// A summary card jumps to each section; one Save button at the end saves the tab (holidays save in their own dialog).
 import { useT } from '@/lang';
 import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/modules/ticket';
 import { EmptyState } from '@/shared/components/empty-state';
@@ -22,17 +22,24 @@ import {
     type TicketSlaTargets,
     type TicketSlaWorkClassTarget,
 } from '../api/settingsApi';
-import { useSettings, useUpdateTicketSla } from '../hooks/use-settings';
+import { useSettings, useSlaHolidays, useUpdateTicketSla } from '../hooks/use-settings';
+import { localIsoDate } from '../lib/sla-holidays';
 import { FIELD_ROW, FORM_WIDTH } from './form-layout';
+import { SlaHolidaysSection, useHolidayYearParam } from './sla-holidays-section';
 import {
     ClockToggle,
     DayPicker,
     ErrorSummary,
     FieldError,
+    HEAD_ROW,
+    MINI_LABEL,
     NumberField,
+    ROW,
+    SECTION,
     SectionHead,
     SLA_LABEL,
     SlaSummary,
+    TABLE,
     WorkdayBar,
     type SlaError,
 } from './sla-parts';
@@ -47,14 +54,9 @@ const WORK_CLASS_LABEL_KEY: Record<(typeof WORK_CLASSES)[number], string> = {
 };
 const REPAIR_PAIRS = TICKET_CATEGORIES.length * WORK_CLASSES.length;
 
-const SECTION = 'border-border scroll-mt-4 border-t py-5 focus:outline-none';
-const TABLE = 'border-border bg-card overflow-hidden rounded-lg border';
-const ROW = 'border-border grid items-center gap-x-4 gap-y-2 border-t px-3.5 py-2 first:border-t-0';
-const HEAD_ROW = 'bg-muted/50 text-muted-foreground hidden py-2 text-xs font-semibold @2xl:grid';
 const PRI_COLS = 'grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[7.5rem_minmax(0,1fr)_15rem]';
 const REP_COLS = 'grid-cols-2 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)_15rem_2.5rem]';
 const REQ_COLS = 'grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_15rem]';
-const MINI_LABEL = 'text-muted-foreground mb-1 block text-xs font-semibold @2xl:hidden';
 
 type WorkRow = TicketSlaWorkClassTarget & { uid: number };
 type SlaForm = {
@@ -129,6 +131,8 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
     const t = useT();
     const { data } = useSettings();
     const update = useUpdateTicketSla();
+    const { data: holidays } = useSlaHolidays();
+    const pickHolidayYear = useHolidayYearParam();
     // Stored work rows take ids by position; rows added here count up from far above them
     const nextUid = useRef(10_000);
 
@@ -332,6 +336,18 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
         goalErrors: countErrors((id) => id === 'sla-goal'),
     };
 
+    // Summary card: this year's holiday count, and a warning while next year has none
+    const thisYear = Number(localIsoDate(new Date()).slice(0, 4));
+    const holidaySummary = holidays
+        ? {
+              year: thisYear,
+              count: holidays.filter((h) => h.date.startsWith(`${thisYear}-`)).length,
+              nextYear: thisYear + 1,
+              nextMissing: !holidays.some((h) => h.date.startsWith(`${thisYear + 1}-`)),
+              onPick: pickHolidayYear,
+          }
+        : undefined;
+
     return (
         <div className="@container">
             <div className={FORM_WIDTH}>
@@ -342,7 +358,7 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
 
                 {shown.length > 0 && <ErrorSummary key={attempt} errors={shown} attempt={attempt} />}
 
-                <SlaSummary values={summary} />
+                <SlaSummary values={summary} holidays={holidaySummary} />
 
                 {/* Working days and hours */}
                 <section id="sla-sec-hours" tabIndex={-1} aria-labelledby="sla-h-hours" className={cn(SECTION, 'mt-1 border-t-0')}>
@@ -423,6 +439,9 @@ export function TicketsSlaTab({ onDirtyChange }: { onDirtyChange: (dirty: boolea
                         </div>
                     </div>
                 </section>
+
+                {/* Company holidays */}
+                <SlaHolidaysSection workDays={hours.days} />
 
                 {/* Pick-up target and SLA goal */}
                 <section aria-labelledby="sla-h-main" className={SECTION}>

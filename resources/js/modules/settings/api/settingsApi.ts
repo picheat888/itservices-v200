@@ -196,6 +196,13 @@ export interface MailSettingsPayload {
     from_name: string | null;
 }
 
+/** A company holiday the SLA business clock skips. */
+export interface SlaHoliday {
+    id: number;
+    date: string;
+    name: string;
+}
+
 export const settingsApi = {
     get: () => http.get<ApiEnvelope<SettingsData>>('/settings').then((r) => r.data.data),
 
@@ -239,6 +246,14 @@ export const settingsApi = {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/sla', payload);
         return data.data;
+    },
+
+    slaHolidays: (): Promise<SlaHoliday[]> => http.get<ApiEnvelope<SlaHoliday[]>>('/settings/sla-holidays').then((r) => r.data.data),
+
+    saveSlaHolidays: async (year: number, holidays: { date: string; name: string }[]): Promise<{ data: SlaHoliday[]; meta: { moved: number } }> => {
+        await ensureCsrf();
+        const { data } = await http.put<{ data: SlaHoliday[]; meta: { moved: number } }>(`/settings/sla-holidays/${year}`, { holidays });
+        return data;
     },
 
     uploadLogo: async (file: File) => {

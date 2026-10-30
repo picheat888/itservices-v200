@@ -1,5 +1,6 @@
 // Settings → Ticket & SLA: the tab's small parts (summary card, clock and day pickers, number field, error list, section head).
 import { useT } from '@/lang';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
@@ -11,6 +12,17 @@ import { SegmentedRadio } from './segmented-radio';
 export const SLA_LABEL = 'mb-1.5 block text-sm leading-none font-medium';
 export const SLA_ERROR_BORDER = 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25';
 
+// Section, table and row layout shared by the tab and the holiday editor
+export const SECTION = 'border-border scroll-mt-4 border-t py-5 focus:outline-none';
+export const TABLE = 'border-border bg-card overflow-hidden rounded-lg border';
+export const ROW = 'border-border grid items-center gap-x-4 gap-y-2 border-t px-3.5 py-2 first:border-t-0';
+export const HEAD_ROW = 'bg-muted/50 text-muted-foreground hidden py-2 text-xs font-semibold @2xl:grid';
+export const MINI_LABEL = 'text-muted-foreground mb-1 block text-xs font-semibold @2xl:hidden';
+
+/** Fills every {name} in a lang string. */
+export const fillText = (text: string, vars: Record<string, string | number>) =>
+    text.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole));
+
 /** Scrolls to an element on this tab and focuses it, without touching the URL. */
 export function jumpTo(id: string, block: ScrollLogicalPosition = 'center') {
     const el = document.getElementById(id);
@@ -20,13 +32,26 @@ export function jumpTo(id: string, block: ScrollLogicalPosition = 'center') {
     el.focus({ preventScroll: true });
 }
 
-function JumpLink({ to, block, className, children }: { to: string; block?: ScrollLogicalPosition; className?: string; children: ReactNode }) {
+function JumpLink({
+    to,
+    block,
+    className,
+    onJump,
+    children,
+}: {
+    to: string;
+    block?: ScrollLogicalPosition;
+    className?: string;
+    onJump?: () => void;
+    children: ReactNode;
+}) {
     return (
         <a
             href={`#${to}`}
             className={className}
             onClick={(e) => {
                 e.preventDefault();
+                onJump?.();
                 jumpTo(to, block);
             }}
         >
@@ -45,7 +70,7 @@ export function FieldError({ id, message }: { id?: string; message: string }) {
     );
 }
 
-export function SectionHead({ id, title, desc, aside }: { id: string; title: string; desc: string; aside?: string }) {
+export function SectionHead({ id, title, desc, aside, asideWarn }: { id: string; title: string; desc: string; aside?: string; asideWarn?: boolean }) {
     return (
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div className="min-w-0">
@@ -55,7 +80,14 @@ export function SectionHead({ id, title, desc, aside }: { id: string; title: str
                 <p className="text-muted-foreground text-sm">{desc}</p>
             </div>
             {aside && (
-                <span className="bg-muted text-muted-foreground border-border rounded-full border px-2.5 py-px text-xs font-semibold whitespace-nowrap">
+                <span
+                    className={cn(
+                        'rounded-full border px-2.5 py-px text-xs font-semibold whitespace-nowrap',
+                        asideWarn
+                            ? 'border-amber-600/40 bg-amber-50 text-amber-800 dark:border-amber-400/40 dark:bg-amber-950/40 dark:text-amber-400'
+                            : 'bg-muted text-muted-foreground border-border',
+                    )}
+                >
                     {aside}
                 </span>
             )}
@@ -254,9 +286,22 @@ function FixBadge({ count }: { count: number }) {
     );
 }
 
+/** This year's holiday count and a missing next year, shown under the working hours. */
+export interface SlaSummaryHolidays {
+    year: number;
+    count: number;
+    nextYear: number;
+    nextMissing: boolean;
+    onPick: (year: number) => void;
+}
+
+const HOLIDAY_LINE = 'touch:min-h-10 flex w-max max-w-full items-center rounded-sm text-xs font-medium hover:underline';
+
 /** Summary of every target on the tab; each cell jumps to its section. */
-export function SlaSummary({ values }: { values: SlaSummaryValues }) {
+export function SlaSummary({ values, holidays }: { values: SlaSummaryValues; holidays?: SlaSummaryHolidays }) {
     const t = useT();
+    const fmt = useDateFormat();
+    const fmtN = useNumberFormat();
     const v = values;
     return (
         <nav aria-labelledby="sla-summary-title" className="bg-muted/40 border-border rounded-xl border">
@@ -267,14 +312,38 @@ export function SlaSummary({ values }: { values: SlaSummaryValues }) {
                 <span className="text-muted-foreground text-xs">{t('set_sla_summary_hint')}</span>
             </div>
             <div className="grid grid-cols-2 p-1.5 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1.9fr)_minmax(0,0.8fr)]">
-                <JumpLink to="sla-sec-hours" block="start" className={CELL}>
-                    <span className="text-muted-foreground text-xs font-semibold">{t('set_sla_clock_business')}</span>
-                    <span className="text-base font-bold tabular-nums">
-                        {v.days} {v.window}
-                    </span>
-                    <span className="text-muted-foreground text-xs">{v.breakText}</span>
-                    <FixBadge count={v.hoursErrors} />
-                </JumpLink>
+                <div className="flex min-w-0 flex-col">
+                    <JumpLink to="sla-sec-hours" block="start" className={cn(CELL, holidays && 'pb-1')}>
+                        <span className="text-muted-foreground text-xs font-semibold">{t('set_sla_clock_business')}</span>
+                        <span className="text-base font-bold tabular-nums">
+                            {v.days} {v.window}
+                        </span>
+                        <span className="text-muted-foreground text-xs">{v.breakText}</span>
+                        <FixBadge count={v.hoursErrors} />
+                    </JumpLink>
+                    {holidays && (
+                        <div className="flex flex-col px-2.5 pb-2">
+                            <JumpLink
+                                to="sla-sec-holidays"
+                                block="start"
+                                onJump={() => holidays.onPick(holidays.year)}
+                                className={cn(HOLIDAY_LINE, 'text-foreground')}
+                            >
+                                {fillText(t('set_hol_sum'), { year: fmt.year(holidays.year), n: fmtN(holidays.count) })}
+                            </JumpLink>
+                            {holidays.nextMissing && (
+                                <JumpLink
+                                    to="sla-sec-holidays"
+                                    block="start"
+                                    onJump={() => holidays.onPick(holidays.nextYear)}
+                                    className={cn(HOLIDAY_LINE, 'font-semibold text-amber-700 dark:text-amber-400')}
+                                >
+                                    {fillText(t('set_hol_missing'), { year: fmt.year(holidays.nextYear) })}
+                                </JumpLink>
+                            )}
+                        </div>
+                    )}
+                </div>
                 <JumpLink to="sla-resp" className={cn(CELL, 'border-border rounded-l-none border-l')}>
                     <span className="text-muted-foreground text-xs font-semibold">{t('set_sla_response_within')}</span>
                     <span className="text-base font-bold tabular-nums">{v.response}</span>

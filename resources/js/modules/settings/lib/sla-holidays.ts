@@ -201,3 +201,46 @@ export function rowErrors(rows: HolidayRow[], year: number): Record<string, RowE
     }
     return out;
 }
+
+// Browser-local calendar date as YYYY-MM-DD
+export function localIsoDate(now: Date): string {
+    return isoOf(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+// ISO weekday of a YYYY-MM-DD date: 1 = Monday … 7 = Sunday
+export function isoWeekday(iso: string): number {
+    const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
+    return day === 0 ? 7 : day;
+}
+
+// Years offered on the page: earlier years that have rows, this year and next year
+export function holidayYears(dates: string[], thisYear: number): number[] {
+    const earlier = dates.map((date) => Number(date.slice(0, 4))).filter((year) => year < thisYear);
+    return [...new Set([...earlier, thisYear, thisYear + 1])].sort((a, b) => a - b);
+}
+
+const SERVER_CODES: Record<string, RowError> = {
+    holiday_date_required: { date: 'required' },
+    holiday_date_other_year: { date: 'other_year' },
+    holiday_date_taken: { date: 'taken' },
+    holiday_name_required: { name: 'required' },
+};
+
+// 422 field errors (holidays.<i>.date|name) keyed back to the rows that were sent, in order
+export function serverRowErrors(errors: Record<string, string[]>, sentKeys: string[]): Record<string, RowError> {
+    const out: Record<string, RowError> = {};
+    for (const [field, messages] of Object.entries(errors)) {
+        const match = /^holidays\.(\d+)\.(date|name)$/.exec(field);
+        const key = match ? sentKeys[Number(match[1])] : undefined;
+        const mapped = SERVER_CODES[messages[0] ?? ''];
+        if (!match || key === undefined || !mapped) {
+            continue;
+        }
+        const part = match[2] as 'date' | 'name';
+        if (mapped[part] === undefined) {
+            continue;
+        }
+        out[key] = { ...out[key], [part]: mapped[part] };
+    }
+    return out;
+}
