@@ -32,6 +32,13 @@ class MailConfigService
         Config::set('mail.mailers.smtp.username', $settings->username ?: null);
         Config::set('mail.mailers.smtp.password', $settings->password ?: null);
         Config::set('mail.mailers.smtp.encryption', $settings->encryption ?: null);
+        // Laravel reads the scheme and STARTTLS options, not "encryption": SSL connects encrypted, TLS insists on STARTTLS
+        Config::set('mail.mailers.smtp.scheme', match ($settings->encryption) {
+            'ssl' => 'smtps',
+            'tls' => 'smtp',
+            default => null,
+        });
+        Config::set('mail.mailers.smtp.require_tls', $settings->encryption === 'tls');
         Config::set('mail.from.address', $settings->from_address);
         Config::set('mail.from.name', $settings->from_name ?: config('app.name'));
         // A worker keeps built mailers; rebuild from the config just set
