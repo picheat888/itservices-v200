@@ -64,3 +64,11 @@ test('the detail shows the strip and the trail reads the live flag', () => {
     assert.doesNotMatch(strip, /role="status"/);
     assert.match(strip, /<TriangleAlert[^>]*aria-hidden="true"/);
 });
+
+test('the approvals report lists empty positions under nobody left to approve, tagged per row', () => {
+    const cards = read('resources/js/modules/report/components/request-approvals-cards.tsx');
+    assert.match(cards, /r\.reason === 'vacant' &&/);
+    assert.match(cards, /flag === 'vacant' &&/);
+    // Only real leavers feed the "left on {date}" hint
+    assert.match(cards, /rows\.filter\(\(r\) => r\.reason === 'left'\)/);
+});

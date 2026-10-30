@@ -1212,7 +1212,7 @@ export const report: Dict = {
     rep_k_rqa_rejected: 'ไม่อนุมัติ',
     rep_k_rqa_skipped: 'ระบบข้าม',
     rep_k_rqa_blocked: 'คำขอที่ติดค้าง',
-    rep_rqa_blocked_left: 'ลาออก',
+    rep_rqa_blocked_left: 'ไม่เหลือผู้อนุมัติ',
     rep_rqa_blocked_no_account: 'ยังไม่มีบัญชี',
     rep_rqa_rows_title: 'ขั้นอนุมัติ',
     rep_c_rqa_step: 'ขั้น',
@@ -1236,7 +1236,7 @@ export const report: Dict = {
     rep_rqa_requester: 'ผู้ขอ {name}',
     rep_rqa_stuck_title: 'ขั้นอนุมัติที่ค้างและสาเหตุ',
     rep_rqa_stuck_note: 'คำขอที่ยังรออนุมัติ แยกตามสาเหตุที่ค้าง ไม่ขึ้นกับช่วงวันที่',
-    rep_rqa_stuck_left: 'ผู้อนุมัติลาออกแล้ว',
+    rep_rqa_stuck_left: 'ไม่เหลือผู้อนุมัติ',
     rep_rqa_stuck_no_account: 'ผู้อนุมัติยังไม่มีบัญชี',
     rep_rqa_stuck_over7: 'รอเกิน 7 วัน',
     rep_rqa_stuck_upto7: 'รอไม่เกิน 7 วัน',
@@ -1254,6 +1254,7 @@ export const report: Dict = {
     rep_rqa_appr_group_step: 'ขั้นของแผนก ยังไม่มีใครรับ',
     rep_rqa_appr_unlinked: 'บัญชีที่ไม่ได้ผูกพนักงาน',
     rep_rqa_flag_left: 'ลาออกแล้ว',
+    rep_rqa_flag_vacant: 'ไม่มีคนในตำแหน่ง',
     rep_rqa_flag_no_account: 'ยังไม่มีบัญชี',
     rep_rqa_out_approved: 'อนุมัติแล้ว',
     rep_rqa_out_rejected: 'ไม่อนุมัติ',
@@ -2045,7 +2046,7 @@ export const report: Dict = {
     rep_empty_open_items_data_clear_hint: 'ไม่มีช่องสำคัญที่ยังว่าง',
     rep_empty_approvals_stuck: 'ไม่มีคำขอที่รออนุมัติ',
     rep_empty_approvals_stuck_hint: 'นับตามสถานะตอนนี้ ไม่ขึ้นกับช่วงวันที่',
-    rep_empty_approvals_stuck_left: 'ไม่มีคำขอที่รอผู้อนุมัติที่ลาออก',
+    rep_empty_approvals_stuck_left: 'ไม่มีคำขอที่ไม่เหลือผู้อนุมัติ',
     rep_empty_approvals_stuck_left_hint: 'เลือกกลุ่มอื่นด้านบนเพื่อดูคำขอที่ค้าง',
     rep_empty_approvals_stuck_no_account: 'ผู้อนุมัติที่ถือขั้นอยู่มีบัญชีครบ',
     rep_empty_approvals_stuck_no_account_hint: 'เลือกกลุ่มอื่นด้านบนเพื่อดูคำขอที่ค้าง',
@@ -2171,7 +2172,7 @@ export const report: Dict = {
     rep_info_requests_approvals_rqa_skipped:
         'ขั้นอนุมัติที่ระบบข้ามตอนยื่นเพราะหาผู้อนุมัติไม่ได้หรือผู้ขอเป็นเจ้าของรายการเอง ของคำขอที่ยื่นในช่วงวันที่ที่เลือก นับเป็นขั้น ตัวกรองผู้อนุมัติไม่มีผล',
     rep_info_requests_approvals_rqa_blocked:
-        'คำขอที่รออนุมัติอยู่ตอนนี้ แต่ผู้อนุมัติลาออกแล้วหรือยังไม่มีบัญชีเข้าระบบ จึงไม่มีใครกดอนุมัติได้ ไม่รวมขั้นของแผนกที่ยังไม่ระบุผู้อนุมัติ',
+        'คำขอที่รออนุมัติอยู่ตอนนี้ แต่ไม่เหลือผู้อนุมัติ (ลาออก หรือไม่มีคนในตำแหน่ง) หรือผู้อนุมัติยังไม่มีบัญชีเข้าระบบ จึงไม่มีใครกดอนุมัติได้',
     rep_info_requests_it_pending_rqi_waiting:
         'คำขอที่อนุมัติครบแล้วและรอ IT ส่งมอบอยู่ตอนนี้ ตามตัวกรองที่เลือก แยกตามจำนวนวันที่รอนับจากวันที่อนุมัติครบ',
     rep_info_requests_it_pending_rqi_over_3: 'คำขอที่รอ IT ส่งมอบมาแล้ว 4 วันขึ้นไปนับจากวันที่อนุมัติครบ รวมกลุ่มที่เกิน 7 วันด้วย',

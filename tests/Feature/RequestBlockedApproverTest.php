@@ -154,9 +154,9 @@ class RequestBlockedApproverTest extends TestCase
 
         $this->assertCount(1, $this->bells($this->itLead, 'blocked_no_approver'));
         $this->assertSame('vacant', $this->approvalRow($request, 2)['blocked']);
-        // The approvals report has no group for it yet; it is not counted as a resignation
+        // The approvals report lists it under "nobody left to approve", tagged as an empty position
         $steps = ApprovalFacts::waitingSteps([], now()->subMonth(), now());
-        $this->assertNull(ApprovalFacts::blockedBecause($steps->first()));
+        $this->assertSame('vacant', ApprovalFacts::blockedBecause($steps->first()));
     }
 
     public function test_a_group_step_with_somebody_left_to_sign_is_not_blocked(): void

@@ -1075,6 +1075,8 @@ export interface RequestStuckStep {
     label: string;
     position: number;
     approver: { name: string; code: string | null; kind: 'person' | 'group_step' | 'unlinked_account' };
+    /** Why nobody can approve it; null for an ordinary wait. */
+    reason: 'left' | 'vacant' | 'no_account' | null;
     /** "Y-m-d", the approver's last day when they have left. */
     approver_left_on: string | null;
     requester: string;

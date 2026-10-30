@@ -308,7 +308,7 @@ final class ApprovalFacts
         return self::facts($step)['waiting'];
     }
 
-    /** Why nobody can act on a waiting step — its approver or whole group has left, or nobody has a login — or null. */
+    /** Why nobody can act on a waiting step ('left' | 'vacant' | 'no_account'), or null. */
     public static function blockedBecause(RequestApproval $step): ?string
     {
         return self::once($step, 'blocked', fn () => self::computeBlocked($step));
@@ -316,10 +316,7 @@ final class ApprovalFacts
 
     private static function computeBlocked(RequestApproval $step): ?string
     {
-        $reason = $step->blockedReason();
-
-        // The report has no group for a vacant step yet; it reads as an ordinary wait
-        return $reason === 'vacant' ? null : $reason;
+        return $step->blockedReason();
     }
 
     /** Why nobody can act for this approver: they have left, or have no login; null when they can, or there is no one. */

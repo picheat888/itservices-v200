@@ -13,6 +13,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-13 09:46",
@@ -30,6 +31,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-14 08:09",
@@ -47,6 +49,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-04 16:34",
@@ -64,6 +67,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-02-26 13:23",
@@ -81,6 +85,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-02-27 11:45",
@@ -98,6 +103,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-11 16:59",
@@ -115,6 +121,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-12 15:22",
@@ -132,6 +139,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-03 13:47",
@@ -149,6 +157,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-04 12:10",
@@ -166,6 +175,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-25 10:35",
@@ -183,6 +193,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-05-26 08:58",
@@ -200,6 +211,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-07-08 14:11",
@@ -217,6 +229,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-30 10:59",
@@ -234,6 +247,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-07-31 09:22",
@@ -251,6 +265,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-01 17:45",
@@ -268,6 +283,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-22 16:10",
@@ -285,6 +301,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-23 14:33",
@@ -304,6 +321,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-21 08:33",
@@ -321,6 +339,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-16 17:23",
@@ -338,6 +357,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-17 15:46",
@@ -355,6 +375,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-12 14:35",
@@ -372,6 +393,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-13 12:58",
@@ -389,6 +411,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-14 11:21",
@@ -408,6 +431,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-20 12:35",
@@ -425,6 +449,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-21 10:58",
@@ -442,6 +467,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-05 14:57",
@@ -459,6 +485,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-11 09:23",
@@ -476,6 +503,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-12 17:46",
@@ -493,6 +521,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -510,6 +539,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-03-05 16:11",
@@ -527,6 +557,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-06 14:34",
@@ -544,6 +575,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-20 10:11",
@@ -561,6 +593,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-27 12:59",
@@ -578,6 +611,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-28 11:22",
@@ -595,6 +629,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-18 09:47",
@@ -612,6 +647,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -629,6 +665,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-10 16:35",
@@ -646,6 +683,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-11 14:58",
@@ -663,6 +701,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-12 13:21",
@@ -680,6 +719,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-05-31 23:59",
@@ -697,6 +737,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -714,6 +755,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-06-02 11:46",
@@ -731,6 +773,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-03 10:09",
@@ -748,6 +791,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-24 08:34",
@@ -765,6 +809,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-06-25 16:57",
@@ -782,6 +827,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-07-09 12:34",
@@ -799,6 +845,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-17 13:45",
@@ -816,6 +863,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-08-07 12:10",
@@ -833,6 +881,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-21 17:47",
@@ -850,6 +899,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-29 08:59",
@@ -867,6 +917,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-30 17:21",
@@ -886,6 +937,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",
@@ -903,6 +955,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-21 14:09",
@@ -920,6 +973,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-24 09:15",
@@ -1999,6 +2053,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-13 09:46",
@@ -2016,6 +2071,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-14 08:09",
@@ -2033,6 +2089,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-04 16:34",
@@ -2050,6 +2107,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-02-26 13:23",
@@ -2067,6 +2125,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-02-27 11:45",
@@ -2084,6 +2143,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-11 16:59",
@@ -2101,6 +2161,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-12 15:22",
@@ -2118,6 +2179,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-03 13:47",
@@ -2135,6 +2197,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-04 12:10",
@@ -2152,6 +2215,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-25 10:35",
@@ -2169,6 +2233,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-05-26 08:58",
@@ -2186,6 +2251,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-07-08 14:11",
@@ -2203,6 +2269,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-30 10:59",
@@ -2220,6 +2287,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-07-31 09:22",
@@ -2237,6 +2305,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-01 17:45",
@@ -2254,6 +2323,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-22 16:10",
@@ -2271,6 +2341,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-23 14:33",
@@ -2290,6 +2361,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-21 08:33",
@@ -2307,6 +2379,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-16 17:23",
@@ -2324,6 +2397,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-17 15:46",
@@ -2341,6 +2415,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-12 14:35",
@@ -2358,6 +2433,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-13 12:58",
@@ -2375,6 +2451,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-14 11:21",
@@ -2394,6 +2471,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-20 12:35",
@@ -2411,6 +2489,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-21 10:58",
@@ -2428,6 +2507,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-05 14:57",
@@ -2445,6 +2525,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-11 09:23",
@@ -2462,6 +2543,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-12 17:46",
@@ -2479,6 +2561,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -2496,6 +2579,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-03-05 16:11",
@@ -2513,6 +2597,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-06 14:34",
@@ -2530,6 +2615,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-20 10:11",
@@ -2547,6 +2633,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-27 12:59",
@@ -2564,6 +2651,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-28 11:22",
@@ -2581,6 +2669,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-18 09:47",
@@ -2598,6 +2687,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -2615,6 +2705,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-10 16:35",
@@ -2632,6 +2723,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-11 14:58",
@@ -2649,6 +2741,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-12 13:21",
@@ -2666,6 +2759,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-05-31 23:59",
@@ -2683,6 +2777,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -2700,6 +2795,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-06-02 11:46",
@@ -2717,6 +2813,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-03 10:09",
@@ -2734,6 +2831,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-24 08:34",
@@ -2751,6 +2849,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-06-25 16:57",
@@ -2768,6 +2867,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-07-09 12:34",
@@ -2785,6 +2885,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-17 13:45",
@@ -2802,6 +2903,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-08-07 12:10",
@@ -2819,6 +2921,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-21 17:47",
@@ -2836,6 +2939,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-29 08:59",
@@ -2853,6 +2957,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-30 17:21",
@@ -2872,6 +2977,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",
@@ -2889,6 +2995,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-21 14:09",
@@ -2906,6 +3013,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-24 09:15",
@@ -3987,6 +4095,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-20 12:35",
@@ -4004,6 +4113,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-05 14:57",
@@ -4021,6 +4131,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-20 10:11",
@@ -4038,6 +4149,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-11 14:58",
@@ -4055,6 +4167,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-05-31 23:59",
@@ -4072,6 +4185,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-07-09 12:34",
@@ -4089,6 +4203,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-21 17:47",
@@ -4106,6 +4221,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-30 17:21",
@@ -4442,6 +4558,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-03 13:47",
@@ -4459,6 +4576,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-22 16:10",
@@ -4478,6 +4596,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-21 08:33",
@@ -4497,6 +4616,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-21 10:58",
@@ -4514,6 +4634,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-03-05 16:11",
@@ -4531,6 +4652,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-12 13:21",
@@ -4548,6 +4670,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-24 08:34",
@@ -4962,6 +5085,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-13 09:46",
@@ -4979,6 +5103,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-14 08:09",
@@ -4996,6 +5121,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-04 16:34",
@@ -5013,6 +5139,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-02-26 13:23",
@@ -5030,6 +5157,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-02-27 11:45",
@@ -5047,6 +5175,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-11 16:59",
@@ -5064,6 +5193,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-12 15:22",
@@ -5081,6 +5211,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-03 13:47",
@@ -5098,6 +5229,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-04 12:10",
@@ -5115,6 +5247,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-25 10:35",
@@ -5132,6 +5265,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-05-26 08:58",
@@ -5149,6 +5283,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-07-08 14:11",
@@ -5166,6 +5301,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-30 10:59",
@@ -5183,6 +5319,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-07-31 09:22",
@@ -5200,6 +5337,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-01 17:45",
@@ -5217,6 +5355,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-22 16:10",
@@ -5234,6 +5373,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-23 14:33",
@@ -5253,6 +5393,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-21 08:33",
@@ -5270,6 +5411,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-16 17:23",
@@ -5287,6 +5429,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-17 15:46",
@@ -5304,6 +5447,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-12 14:35",
@@ -5321,6 +5465,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-13 12:58",
@@ -5338,6 +5483,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-14 11:21",
@@ -5357,6 +5503,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-20 12:35",
@@ -5374,6 +5521,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-21 10:58",
@@ -5391,6 +5539,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-05 14:57",
@@ -5408,6 +5557,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-11 09:23",
@@ -5425,6 +5575,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-12 17:46",
@@ -5442,6 +5593,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -5459,6 +5611,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-03-05 16:11",
@@ -5476,6 +5629,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-06 14:34",
@@ -5493,6 +5647,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-20 10:11",
@@ -5510,6 +5665,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-27 12:59",
@@ -5527,6 +5683,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-28 11:22",
@@ -5544,6 +5701,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-18 09:47",
@@ -5561,6 +5719,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -5578,6 +5737,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-10 16:35",
@@ -5595,6 +5755,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-11 14:58",
@@ -5612,6 +5773,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-12 13:21",
@@ -5629,6 +5791,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-05-31 23:59",
@@ -5646,6 +5809,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -5663,6 +5827,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-06-02 11:46",
@@ -5680,6 +5845,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-03 10:09",
@@ -5697,6 +5863,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-24 08:34",
@@ -5714,6 +5881,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-06-25 16:57",
@@ -5731,6 +5899,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-07-09 12:34",
@@ -5748,6 +5917,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-17 13:45",
@@ -5765,6 +5935,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-08-07 12:10",
@@ -5782,6 +5953,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-21 17:47",
@@ -5799,6 +5971,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-29 08:59",
@@ -5816,6 +5989,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-30 17:21",
@@ -5835,6 +6009,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",
@@ -5852,6 +6027,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-21 14:09",
@@ -5869,6 +6045,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-24 09:15",
@@ -6556,6 +6733,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-13 09:46",
@@ -6573,6 +6751,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-14 08:09",
@@ -6590,6 +6769,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-04 16:34",
@@ -6607,6 +6787,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-02-26 13:23",
@@ -6624,6 +6805,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-02-27 11:45",
@@ -6641,6 +6823,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-11 16:59",
@@ -6658,6 +6841,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-12 15:22",
@@ -6675,6 +6859,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-03 13:47",
@@ -6692,6 +6877,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-04 12:10",
@@ -6709,6 +6895,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-25 10:35",
@@ -6726,6 +6913,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-05-26 08:58",
@@ -6743,6 +6931,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-07-08 14:11",
@@ -6760,6 +6949,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-30 10:59",
@@ -6777,6 +6967,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-07-31 09:22",
@@ -6794,6 +6985,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-01 17:45",
@@ -6811,6 +7003,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-22 16:10",
@@ -6828,6 +7021,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-23 14:33",
@@ -6847,6 +7041,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-21 08:33",
@@ -6864,6 +7059,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-16 17:23",
@@ -6881,6 +7077,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-17 15:46",
@@ -6898,6 +7095,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-12 14:35",
@@ -6915,6 +7113,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-13 12:58",
@@ -6932,6 +7131,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-14 11:21",
@@ -6951,6 +7151,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-20 12:35",
@@ -6968,6 +7169,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-21 10:58",
@@ -6985,6 +7187,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-05 14:57",
@@ -7002,6 +7205,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-11 09:23",
@@ -7019,6 +7223,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-12 17:46",
@@ -7036,6 +7241,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -7053,6 +7259,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-03-05 16:11",
@@ -7070,6 +7277,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-06 14:34",
@@ -7087,6 +7295,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-20 10:11",
@@ -7104,6 +7313,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-27 12:59",
@@ -7121,6 +7331,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-28 11:22",
@@ -7138,6 +7349,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-18 09:47",
@@ -7155,6 +7367,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -7172,6 +7385,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-10 16:35",
@@ -7189,6 +7403,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-11 14:58",
@@ -7206,6 +7421,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-12 13:21",
@@ -7223,6 +7439,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-05-31 23:59",
@@ -7240,6 +7457,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -7257,6 +7475,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-06-02 11:46",
@@ -7274,6 +7493,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-03 10:09",
@@ -7291,6 +7511,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-24 08:34",
@@ -7308,6 +7529,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-06-25 16:57",
@@ -7325,6 +7547,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-07-09 12:34",
@@ -7342,6 +7565,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-17 13:45",
@@ -7359,6 +7583,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-08-07 12:10",
@@ -7376,6 +7601,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-21 17:47",
@@ -7393,6 +7619,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-29 08:59",
@@ -7410,6 +7637,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-30 17:21",
@@ -7429,6 +7657,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",
@@ -7446,6 +7675,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-21 14:09",
@@ -7463,6 +7693,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-24 09:15",
@@ -7571,6 +7802,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-13 09:46",
@@ -7588,6 +7820,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-14 08:09",
@@ -7605,6 +7838,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-04 16:34",
@@ -7622,6 +7856,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-02-26 13:23",
@@ -7639,6 +7874,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-02-27 11:45",
@@ -7656,6 +7892,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-11 16:59",
@@ -7673,6 +7910,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-12 15:22",
@@ -7690,6 +7928,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-03 13:47",
@@ -7707,6 +7946,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-04 12:10",
@@ -7724,6 +7964,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-25 10:35",
@@ -7741,6 +7982,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-05-26 08:58",
@@ -7758,6 +8000,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-07-08 14:11",
@@ -7775,6 +8018,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-30 10:59",
@@ -7792,6 +8036,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-07-31 09:22",
@@ -7809,6 +8054,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-01 17:45",
@@ -7826,6 +8072,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-22 16:10",
@@ -7843,6 +8090,7 @@
                         "code": "E4",
                         "kind": "person"
                     },
+                    "reason": "left",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-23 14:33",
@@ -7862,6 +8110,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-21 08:33",
@@ -7879,6 +8128,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-16 17:23",
@@ -7896,6 +8146,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-17 15:46",
@@ -7913,6 +8164,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-12 14:35",
@@ -7930,6 +8182,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-13 12:58",
@@ -7947,6 +8200,7 @@
                         "code": "E3",
                         "kind": "person"
                     },
+                    "reason": "no_account",
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-14 11:21",
@@ -7966,6 +8220,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-01-20 12:35",
@@ -7983,6 +8238,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-01-21 10:58",
@@ -8000,6 +8256,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-05 14:57",
@@ -8017,6 +8274,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-11 09:23",
@@ -8034,6 +8292,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-02-12 17:46",
@@ -8051,6 +8310,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -8068,6 +8328,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-03-05 16:11",
@@ -8085,6 +8346,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-06 14:34",
@@ -8102,6 +8364,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-20 10:11",
@@ -8119,6 +8382,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-03-27 12:59",
@@ -8136,6 +8400,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-28 11:22",
@@ -8153,6 +8418,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-04-18 09:47",
@@ -8170,6 +8436,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -8187,6 +8454,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-10 16:35",
@@ -8204,6 +8472,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-05-11 14:58",
@@ -8221,6 +8490,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-05-12 13:21",
@@ -8238,6 +8508,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-05-31 23:59",
@@ -8255,6 +8526,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -8272,6 +8544,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-06-02 11:46",
@@ -8289,6 +8562,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-06-03 10:09",
@@ -8306,6 +8580,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-06-24 08:34",
@@ -8323,6 +8598,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-06-25 16:57",
@@ -8340,6 +8616,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-07-09 12:34",
@@ -8357,6 +8634,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-17 13:45",
@@ -8374,6 +8652,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-08-07 12:10",
@@ -8391,6 +8670,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-08-21 17:47",
@@ -8408,6 +8688,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-29 08:59",
@@ -8425,6 +8706,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-08-30 17:21",
@@ -8444,6 +8726,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",
@@ -8461,6 +8744,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-21 14:09",
@@ -8478,6 +8762,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-09-24 09:15",
@@ -9199,6 +9484,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -9216,6 +9502,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -9233,6 +9520,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -9252,6 +9540,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",
@@ -9509,6 +9798,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-02-11 09:23",
@@ -9526,6 +9816,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-06-02 11:46",
@@ -9545,6 +9836,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-09-21 14:09",
@@ -9813,6 +10105,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-03-28 11:22",
@@ -9830,6 +10123,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-05-10 16:35",
@@ -9847,6 +10141,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-07-17 13:45",
@@ -9864,6 +10159,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 4",
                     "became_current_at": "2026-08-29 08:59",
@@ -10118,6 +10414,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 2",
                     "became_current_at": "2026-03-01 00:00",
@@ -10135,6 +10432,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 0",
                     "became_current_at": "2026-04-19 08:10",
@@ -10152,6 +10450,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 1",
                     "became_current_at": "2026-06-01 13:23",
@@ -10171,6 +10470,7 @@
                         "code": null,
                         "kind": "group_step"
                     },
+                    "reason": null,
                     "approver_left_on": null,
                     "requester": "Req 3",
                     "became_current_at": "2026-09-20 15:47",

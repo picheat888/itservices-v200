@@ -117,9 +117,9 @@ function StuckColumn({
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const { folds, shown } = fold(rows, STUCK_SHOWN, open, 0);
-    const leavers = [...new Map(rows.map((r) => [r.approver.name, r.approver_left_on])).entries()];
+    const leavers = [...new Map(rows.filter((r) => r.reason === 'left').map((r) => [r.approver.name, r.approver_left_on])).entries()];
     const hint =
-        group === 'left' && rows.length > 0
+        group === 'left' && leavers.length > 0
             ? leavers.map(([name, on]) =>
                   t('rep_rqa_stuck_left_hint')
                       .replace('{name}', name)
@@ -171,7 +171,18 @@ function StuckColumn({
                                     <WaitPill days={r.days} band={r.age_band} />
                                 </span>
                                 <span className="text-muted-foreground flex min-w-0 flex-col text-xs">
-                                    <span className="truncate">{t('rep_rqa_waits_on').replace('{name}', r.approver.name)}</span>
+                                    <span className="truncate">
+                                        {t('rep_rqa_waits_on').replace('{name}', r.approver.name)}
+                                        {/* Which way nobody is left: resigned, or nobody holds the position */}
+                                        {r.reason === 'left' && (
+                                            <span className="ml-2 font-semibold text-red-700 dark:text-red-300">{t('rep_rqa_flag_left')}</span>
+                                        )}
+                                        {r.reason === 'vacant' && (
+                                            <span className="ml-2 font-semibold text-orange-700 dark:text-orange-300">
+                                                {t('rep_rqa_flag_vacant')}
+                                            </span>
+                                        )}
+                                    </span>
                                     <span
                                         className="truncate"
                                         title={t('rep_rqa_step_n').replace('{label}', r.label).replace('{n}', fmtN(r.position))}
@@ -724,6 +735,7 @@ function ApproverRowCell({ row }: { row: Record<string, unknown> }) {
                     <span>{t(kind === 'group_step' ? 'rep_rqa_appr_group_step' : 'rep_rqa_appr_unlinked')}</span>
                 )}
                 {flag === 'left' && <span className="font-semibold text-red-700 dark:text-red-300">{t('rep_rqa_flag_left')}</span>}
+                {flag === 'vacant' && <span className="font-semibold text-orange-700 dark:text-orange-300">{t('rep_rqa_flag_vacant')}</span>}
                 {flag === 'no_account' && <span className="font-semibold text-amber-700 dark:text-amber-300">{t('rep_rqa_flag_no_account')}</span>}
             </span>
         </span>

@@ -28,7 +28,7 @@ class RequestApprovalsReport extends TabularReport
 {
     private const APPROVER_KIND_TH = ['person' => 'พนักงาน', 'unlinked_account' => 'บัญชีที่ไม่ได้ผูกพนักงาน', 'group_step' => 'ขั้นของแผนก ยังไม่มีใครรับ'];
 
-    private const APPROVER_FLAG_TH = ['left' => 'ลาออก', 'no_account' => 'ยังไม่มีบัญชี'];
+    private const APPROVER_FLAG_TH = ['left' => 'ลาออก', 'vacant' => 'ไม่มีคนในตำแหน่ง', 'no_account' => 'ยังไม่มีบัญชี'];
 
     use RequestLabels;
 
@@ -198,7 +198,7 @@ class RequestApprovalsReport extends TabularReport
             ReportColumn::text('approver_flag', 'สถานะผู้อนุมัติ', fn (RequestApproval $s) => ApprovalFacts::isWaiting($s) ? ApprovalFacts::blockedBecause($s) : null)
                 ->labelKey('rep_c_rqa_approver_flag')->hiddenByDefault()->screenOnly(),
             ReportColumn::text('approver_flag_th', 'สถานะผู้อนุมัติ', fn (RequestApproval $s) => ApprovalFacts::isWaiting($s) ? self::APPROVER_FLAG_TH[ApprovalFacts::blockedBecause($s)] ?? null : null)
-                ->sheetOnly()->describe('เหตุที่ผู้อนุมัติของขั้นที่รออยู่อนุมัติไม่ได้: ลาออก หรือยังไม่มีบัญชี (ว่าง = อนุมัติได้ตามปกติ)'),
+                ->sheetOnly()->describe('เหตุที่ผู้อนุมัติของขั้นที่รออยู่อนุมัติไม่ได้: ลาออก ไม่มีคนในตำแหน่ง หรือยังไม่มีบัญชี (ว่าง = อนุมัติได้ตามปกติ)'),
             ReportColumn::dateTime('became_current_at', 'ถึงคิวเมื่อ', fn (RequestApproval $s) => $s->became_current_at)->labelKey('rep_c_rqa_became_current'),
             ReportColumn::dateTime('acted_at', 'ตัดสินเมื่อ', fn (RequestApproval $s) => $s->acted_at)->labelKey('rep_c_rqa_acted_at'),
             ReportColumn::number('days', 'ใช้เวลา (วัน)', fn (RequestApproval $s) => ApprovalFacts::days($s))->labelKey('rep_c_rqa_days'),
@@ -241,7 +241,8 @@ class RequestApprovalsReport extends TabularReport
                 'key' => $band, 'label_key' => self::AGE_BAND_KEYS[$band], 'tone' => ['over_7' => 'red', 'days_4_7' => 'amber', 'upto_3' => 'gray'][$band], 'value' => (int) $bands->get($band, 0),
             ], self::AGE_BANDS));
         $blockedTile = ReportSummary::make('rqa_blocked', 'คำขอที่ติดค้าง', $blocked->count())->withSplit([
-            ['key' => 'left', 'label_key' => 'rep_rqa_blocked_left', 'tone' => 'red', 'value' => $blocked->filter(fn (string $b) => $b === 'left')->count()],
+            // Nobody left to approve: resigned, or a group nobody holds now
+            ['key' => 'left', 'label_key' => 'rep_rqa_blocked_left', 'tone' => 'red', 'value' => $blocked->filter(fn (string $b) => $b !== 'no_account')->count()],
             ['key' => 'no_account', 'label_key' => 'rep_rqa_blocked_no_account', 'tone' => 'amber', 'value' => $blocked->filter(fn (string $b) => $b === 'no_account')->count()],
         ]);
 
@@ -343,7 +344,13 @@ class RequestApprovalsReport extends TabularReport
         $sorted = $waiting->sortBy([fn ($a, $b) => ApprovalFacts::days($b) <=> ApprovalFacts::days($a), fn ($a, $b) => $a->id <=> $b->id]);
         foreach ($sorted as $step) {
             $days = ApprovalFacts::days($step);
-            $group = ApprovalFacts::blockedBecause($step) ?? ($days > 7 ? 'over7' : 'upto7');
+            $reason = ApprovalFacts::blockedBecause($step);
+            // 'left' holds every step nobody is left to approve; each row says which way
+            $group = match ($reason) {
+                'left', 'vacant' => 'left',
+                'no_account' => 'no_account',
+                default => $days > 7 ? 'over7' : 'upto7',
+            };
             $person = ApprovalFacts::person($step);
             $groups[$group][] = [
                 'request_id' => $step->service_request_id,
@@ -352,7 +359,8 @@ class RequestApprovalsReport extends TabularReport
                 'label' => $step->label,
                 'position' => $step->position,
                 'approver' => ['name' => $person['name'], 'code' => $person['code'], 'kind' => $person['kind']],
-                'approver_left_on' => $group === 'left' ? $step->approver?->last_day?->format('Y-m-d') : null,
+                'reason' => $reason,
+                'approver_left_on' => $reason === 'left' ? $step->approver?->last_day?->format('Y-m-d') : null,
                 'requester' => $step->request->requester_name,
                 'became_current_at' => $step->became_current_at->format('Y-m-d H:i'),
                 'days' => $days,
@@ -562,11 +570,11 @@ class RequestApprovalsReport extends TabularReport
         $b = $this->breakdown($viewer, $filters);
         $type = fn (string $t) => self::typeTh()[$t] ?? $t;
         $dept = fn (?array $d) => $d === null ? null : (($d['name_th'] ?? null) ?: $d['name']);
-        $why = ['left' => 'ผู้อนุมัติลาออกแล้ว', 'no_account' => 'ผู้อนุมัติยังไม่มีบัญชี', 'over7' => 'รอเกิน 7 วัน', 'upto7' => 'รอไม่เกิน 7 วัน'];
+        $why = ['left' => 'ผู้อนุมัติลาออกแล้ว', 'vacant' => 'ไม่มีคนในตำแหน่ง', 'no_account' => 'ผู้อนุมัติยังไม่มีบัญชี', 'over7' => 'รอเกิน 7 วัน', 'upto7' => 'รอไม่เกิน 7 วัน'];
         $stuck = [];
         foreach ($b['stuck'] as $group => $rows) {
             foreach ($rows as $r) {
-                $stuck[] = [$why[$group], $r['reference'], $type($r['type']), $r['label'], $r['approver']['name'], $r['approver']['code'], $r['requester'], CellDate::dateTime($r['became_current_at']), $r['days'], self::AGE_BAND_TH[$r['age_band']]];
+                $stuck[] = [$why[$r['reason'] ?? $group], $r['reference'], $type($r['type']), $r['label'], $r['approver']['name'], $r['approver']['code'], $r['requester'], CellDate::dateTime($r['became_current_at']), $r['days'], self::AGE_BAND_TH[$r['age_band']]];
             }
         }
 
