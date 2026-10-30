@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
@@ -50,6 +51,20 @@ class DepartmentApiTest extends TestCase
         $this->getJson('/api/departments')
             ->assertOk()
             ->assertJsonMissingPath('data.0.head');
+    }
+
+    public function test_the_list_counts_active_staff_apart_from_everyone(): void
+    {
+        $this->actingAs($this->super());
+        $department = Department::create(['code' => 'DEP-AC1', 'tag' => 'AC', 'name' => 'Accounting']);
+        Employee::create(['first_name' => 'Still', 'last_name' => 'Here', 'department_id' => $department->id, 'status' => EmployeeStatus::Active]);
+        Employee::create(['first_name' => 'Also', 'last_name' => 'Here', 'department_id' => $department->id, 'status' => EmployeeStatus::Active]);
+        Employee::create(['first_name' => 'Gone', 'last_name' => 'Away', 'department_id' => $department->id, 'status' => EmployeeStatus::Resigned]);
+
+        $row = collect($this->getJson('/api/departments')->assertOk()->json('data'))->firstWhere('id', $department->id);
+
+        $this->assertSame(3, $row['count']);
+        $this->assertSame(2, $row['active_count']);
     }
 
     public function test_updates_a_department(): void

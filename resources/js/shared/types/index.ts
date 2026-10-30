@@ -67,6 +67,8 @@ export interface Department {
     name: string;
     name_th: string | null;
     count?: number;
+    /** Staff still working there; `count` includes leavers. */
+    active_count?: number;
     sections_count?: number;
 }
 

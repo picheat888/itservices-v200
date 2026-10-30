@@ -507,7 +507,7 @@ export default function EmployeesPage() {
             render: (d) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {fmtN(d.count ?? 0)}
+                    {fmtN(d.active_count ?? d.count ?? 0)}
                 </span>
             ),
         },
@@ -1269,7 +1269,7 @@ function OverviewTab({
                     </div>
                     <div className="divide-border/60 divide-y px-5">
                         {[...departments]
-                            .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+                            .sort((a, b) => (b.active_count ?? b.count ?? 0) - (a.active_count ?? a.count ?? 0))
                             .slice(0, DASH_DEPT_LIMIT)
                             .map((d, i) => (
                                 <div key={d.id} className="row-in flex items-center justify-between py-2.5" style={rowDelay(i)}>
@@ -1277,7 +1277,7 @@ function OverviewTab({
                                         <span className="bg-muted rounded-md px-2 py-0.5 text-[11px]">{d.tag}</span>
                                         <span className="text-sm">{localName(d, lang)}</span>
                                     </div>
-                                    <span className="text-sm font-semibold">{fmtN(d.count ?? 0)}</span>
+                                    <span className="text-sm font-semibold">{fmtN(d.active_count ?? d.count ?? 0)}</span>
                                 </div>
                             ))}
                     </div>

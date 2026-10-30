@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreDepartmentRequest;
 use App\Http\Resources\Employee\DepartmentResource;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Department;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +18,11 @@ class DepartmentController extends Controller
     public function index(): JsonResponse
     {
         return DepartmentResource::collection(
-            Department::withCount(['employees', 'sections'])->orderBy('name')->get()
+            Department::withCount([
+                'employees',
+                'employees as active_employees_count' => fn (Builder $q) => $q->where('status', EmployeeStatus::Active->value),
+                'sections',
+            ])->orderBy('name')->get()
         )->response();
     }
 
