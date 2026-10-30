@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Ticket\TicketDeadlineService;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use RuntimeException;
 use Tests\TestCase;
@@ -85,6 +86,21 @@ class SlaHolidayApiTest extends TestCase
         $this->assertSame(
             ['2026-01-01' => 'New Year', '2026-05-01' => 'Labour Day', '2027-01-01' => 'Next year'],
             SlaHoliday::orderBy('date')->get()->mapWithKeys(fn ($h) => [$h->date->format('Y-m-d') => $h->name])->all(),
+        );
+    }
+
+    public function test_resaving_a_year_that_holds_31_december_does_not_duplicate_it(): void
+    {
+        DB::table('sla_holidays')->insert(['date' => '2026-12-31 00:00:00', 'name' => 'New Year Eve', 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->save(2026, [
+            ['date' => '2026-12-31', 'name' => 'New Year Eve'],
+            ['date' => '2026-05-01', 'name' => 'Labour Day'],
+        ])->assertOk()->assertJsonCount(2, 'data');
+
+        $this->assertSame(
+            ['2026-05-01', '2026-12-31'],
+            SlaHoliday::orderBy('date')->get()->map(fn ($h) => $h->date->format('Y-m-d'))->all(),
         );
     }
 

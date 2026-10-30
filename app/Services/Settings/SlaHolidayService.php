@@ -41,7 +41,7 @@ class SlaHolidayService
     private function saveRows(int $year, Collection $incoming): array
     {
         $existing = SlaHoliday::query()
-            ->whereBetween('date', ["{$year}-01-01", "{$year}-12-31"])
+            ->whereYear('date', $year)
             ->get()
             ->keyBy(fn (SlaHoliday $holiday): string => $holiday->date->format('Y-m-d'));
 

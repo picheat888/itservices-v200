@@ -4,6 +4,7 @@ namespace Tests;
 
 use App\Support\LogSource;
 use App\Support\NotificationCatalogue;
+use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\File;
 
@@ -18,6 +19,7 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         NotificationCatalogue::forgetSwitches();
+        TicketSla::flush();
         $this->useTemporaryLogRoot();
     }
 

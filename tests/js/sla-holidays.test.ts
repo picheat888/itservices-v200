@@ -132,3 +132,35 @@ test('serverRowErrors maps 422 codes to the rows sent, by position', () => {
         c: { date: 'required' },
     });
 });
+
+test('parseHolidayText expands day ranges before a Thai month', () => {
+    for (const line of ['13-15 เมษายน 2569 วันสงกรานต์', '13–15 เม.ย. 2026 วันสงกรานต์']) {
+        const result = parseHolidayText(line, 2026, []);
+        assert.deepEqual(result.ok, [
+            { date: '2026-04-13', name: 'วันสงกรานต์' },
+            { date: '2026-04-14', name: 'วันสงกรานต์' },
+            { date: '2026-04-15', name: 'วันสงกรานต์' },
+        ]);
+        assert.deepEqual(result.bad, []);
+    }
+});
+
+test('parseHolidayText rejects backwards or impossible day ranges', () => {
+    for (const line of ['15-13 เมษายน 2569 x', '1-32 เมษายน 2569 x', '29-31 เมษายน 2569 x']) {
+        const result = parseHolidayText(line, 2026, []);
+        assert.equal(result.ok.length, 0);
+        assert.equal(result.bad[0].error, 'bad_date');
+    }
+});
+
+test('parseHolidayText counts duplicates inside a range and keeps numeric dates single', () => {
+    const range = parseHolidayText('13-15 เมษายน 2569 วันสงกรานต์', 2026, ['2026-04-13', '2026-04-14']);
+    assert.equal(range.duplicates, 2);
+    assert.deepEqual(range.ok, [{ date: '2026-04-15', name: 'วันสงกรานต์' }]);
+
+    const numeric = parseHolidayText('13/04/2027 a\n2027-04-14 b', 2027, []);
+    assert.deepEqual(numeric.ok, [
+        { date: '2027-04-13', name: 'a' },
+        { date: '2027-04-14', name: 'b' },
+    ]);
+});

@@ -48,6 +48,8 @@ const MONTH_PATTERN = MONTH_WORDS.map(([word]) => word.replace(/\./g, '\\.')).jo
 const RE_DMY = /(\d{1,2})\s*[/\-.]\s*(\d{1,2})\s*[/\-.]\s*(\d{4})/;
 const RE_YMD = /(\d{4})-(\d{1,2})-(\d{1,2})/;
 const RE_THAI = new RegExp(`(\\d{1,2})\\s*(${MONTH_PATTERN})\\s*(\\d{4})`);
+const RE_THAI_RANGE = new RegExp(`(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})\\s*(${MONTH_PATTERN})\\s*(\\d{4})`);
+const MAX_RANGE_DAYS = 31;
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 const isoOf = (y: number, m: number, d: number): string => `${y}-${pad(m)}-${pad(d)}`;
@@ -103,6 +105,37 @@ export function parseHolidayLine(rawLine: string, year: number): { date: string;
     return { date: isoOf(y, mo, d), name };
 }
 
+type ParsedLine = { dates: string[]; name: string } | { error: LineError; found?: number };
+
+// A line may name a run of days ("13-15 เมษายน 2569 ...") which becomes one date per day
+export function parseHolidayRange(rawLine: string, year: number): ParsedLine {
+    const line = rawLine.trim();
+    const m = line.match(RE_THAI_RANGE);
+    if (m && !line.match(RE_YMD) && !line.match(RE_DMY)) {
+        const word = MONTH_WORDS.find(([w]) => w === m[3]);
+        const mo = (word ? word[1] : 0) + 1;
+        const [from, to] = [Number(m[1]), Number(m[2])];
+        let y = Number(m[4]);
+        if (y > 2400) {
+            y -= 543;
+        }
+        if (from > to || to - from + 1 > MAX_RANGE_DAYS || !isValidDate(y, mo, from) || !isValidDate(y, mo, to)) {
+            return { error: 'bad_date' };
+        }
+        const name = line.replace(m[0], '').replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '');
+        if (!name) {
+            return { error: 'no_name' };
+        }
+        if (y !== year) {
+            return { error: 'other_year', found: y };
+        }
+        return { dates: Array.from({ length: to - from + 1 }, (_, i) => isoOf(y, mo, from + i)), name };
+    }
+
+    const single = parseHolidayLine(line, year);
+    return 'error' in single ? single : { dates: [single.date], name: single.name };
+}
+
 export function parseHolidayText(
     text: string,
     year: number,
@@ -122,17 +155,19 @@ export function parseHolidayText(
         if (!line) {
             return;
         }
-        const parsed = parseHolidayLine(line, year);
+        const parsed = parseHolidayRange(line, year);
         if ('error' in parsed) {
             bad.push({ line: index + 1, text: line, ...parsed });
             return;
         }
-        if (have.has(parsed.date)) {
-            duplicates++;
-            return;
+        for (const date of parsed.dates) {
+            if (have.has(date)) {
+                duplicates++;
+                continue;
+            }
+            have.add(date);
+            ok.push({ date, name: parsed.name });
         }
-        have.add(parsed.date);
-        ok.push(parsed);
     });
 
     return { ok, bad, duplicates };
