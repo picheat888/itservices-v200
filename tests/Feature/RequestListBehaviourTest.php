@@ -1,8 +1,8 @@
 <?php
 
-// Pins GET /api/service-requests as it behaves before the list moves out of RequestController.
+// GET /api/service-requests: module gate, filed-date errors and their order, tab scopes, page size and the meta keys.
 
-namespace Tests\Feature\Refactor;
+namespace Tests\Feature;
 
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
