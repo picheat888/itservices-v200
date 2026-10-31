@@ -8098,3 +8098,7 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - โครงโฟลเดอร์เขียนใหม่ตามของจริง `app/App.tsx` กับ `route-pages.ts` แทน `router.tsx` และ `providers.tsx` ที่ไม่มีอยู่ เพิ่ม `lib/` ของโมดูล, store `new-rows`, `lang/translate.ts`, `tests/js`, `routes/console.php`, `Exports/`, `Listeners/`, `Controllers/File` รายชื่อในวงเล็บเปลี่ยนเป็นตัวอย่างพร้อมบอกให้เช็คด้วย `ls` จะได้ไม่ล้าสมัยอีก
 - กฎ type ตามที่ผู้ใช้เลือก type ข้อมูลจาก API ที่ใช้ร่วมอยู่ `shared/types` และ `types.ts` ของโมดูลมีเฉพาะ type ที่ใช้แค่ในโมดูลนั้น ไม่ย้าย type เดิม 119 ตัว (import ราว 180 ไฟล์) เว้นแต่กำลังแก้โมดูลนั้นอยู่แล้ว
 - CLAUDE.md อยู่ใน gitignore จึงไม่มี commit ฉบับก่อนแก้สำรองไว้ใน scratchpad ของ session 23a3f8cf (`CLAUDE.md.before-ui11`) ไม่แตะโค้ด
+
+## คำเตือน apple-mobile-web-app-capable ใน Console (2026-10-31)
+
+- `app.blade.php` เพิ่ม `<meta name="mobile-web-app-capable" content="yes">` คู่กับแท็ก `apple-` เดิม Chrome เลิกเตือนว่าแท็กเก่าเลิกใช้ แท็ก `apple-` ยังอยู่เพราะ Safari บน iPad ยังอ่านชื่อนี้สำหรับแอปบนหน้าจอโฮมที่ Web Push ต้องใช้ manifest ตั้ง `display: standalone` อยู่แล้ว การเปิดเต็มจอจึงไม่เปลี่ยน เทสต์ `ServiceWorkerRouteTest` เพิ่ม 1 ข้อ (`545a4867`)
