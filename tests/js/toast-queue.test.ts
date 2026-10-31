@@ -90,7 +90,7 @@ test('the same key within a second collapses into one toast', (t) => {
     assert.equal(useToastStore.getState().toasts.length, 1);
 });
 
-test('the same key stays one toast while the first is up and sliding out, and for a second after it starts to leave', (t) => {
+test('a named key stays one toast while the first is up and sliding out, and for a second after it times out', (t) => {
     reset();
     t.mock.timers.enable({ apis: ['setTimeout'] });
     let now = 4_500_000;
@@ -102,7 +102,7 @@ test('the same key stays one toast while the first is up and sliding out, and fo
     assert.equal(useToastStore.getState().toasts.length, 1);
 
     // Counted from the start of the slide-out, not from when the toast was made
-    leave(useToastStore.getState().toasts[0].id);
+    leave(useToastStore.getState().toasts[0].id, true);
     push('slow down while it slides out', 'warning', undefined, undefined, { key: 'http-throttle' });
     assert.deepEqual(
         useToastStore.getState().toasts.map((toast) => toast.message),
@@ -128,13 +128,39 @@ test('another key is not held back by a toast that is leaving', (t) => {
     const now = 4_700_000;
     t.mock.method(Date, 'now', () => now);
     const { push, leave } = useToastStore.getState();
-    push('saved', 'success');
-    leave(useToastStore.getState().toasts[0].id);
-    push('deleted', 'success');
+    push('saved', 'success', undefined, undefined, { key: 'save' });
+    leave(useToastStore.getState().toasts[0].id, true);
+    push('deleted', 'success', undefined, undefined, { key: 'delete' });
     assert.deepEqual(
         useToastStore.getState().toasts.map((toast) => toast.message),
         ['saved', 'deleted'],
     );
+});
+
+test('a toast the user closes does not hold back the same message pushed right after', (t) => {
+    reset();
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const now = 4_800_000;
+    t.mock.method(Date, 'now', () => now);
+    const { push, leave } = useToastStore.getState();
+    push('server error', 'error', undefined, undefined, { key: 'http-server' });
+    leave(useToastStore.getState().toasts[0].id);
+    t.mock.timers.tick(TOAST_LEAVE_MS);
+    push('server error', 'error', undefined, undefined, { key: 'http-server' });
+    assert.equal(useToastStore.getState().toasts.length, 1);
+});
+
+test('a message toast that times out does not hold back the same message', (t) => {
+    reset();
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const now = 4_900_000;
+    t.mock.method(Date, 'now', () => now);
+    const { push, leave } = useToastStore.getState();
+    push('saved', 'success');
+    leave(useToastStore.getState().toasts[0].id, true);
+    t.mock.timers.tick(TOAST_LEAVE_MS);
+    push('saved', 'success');
+    assert.equal(useToastStore.getState().toasts.length, 1);
 });
 
 test('a group dismissal slides shown toasts out before removing them; queued ones drop at once', (t) => {

@@ -22,7 +22,7 @@ export const TOAST_MAX_TIMED = 5;
 /** Gap between two timed toasts entering the screen. */
 export const TOAST_STAGGER_MS = 1500;
 
-/** Same-key toasts collapse while one is queued or on screen, and for this long after it starts to leave. */
+/** Same-key toasts collapse while one is queued or on screen, and a named key for this long after its toast times out. */
 export const TOAST_DEDUPE_MS = 1000;
 
 /** Slide-out plus row collapse (app.css .toast-leave / .toast-row-leaving); the toast is removed after it. */
@@ -61,19 +61,21 @@ export interface Toast {
     shownAt: number | null;
     /** Playing its slide-out; removed after TOAST_LEAVE_MS. */
     leaving?: boolean;
+    /** The caller named its key; only such a toast holds its key back after it times out. */
+    named?: boolean;
 }
 
 interface ToastState {
     toasts: Toast[];
     /** When the last timed toast entered the screen; paces the next one. */
     lastShownAt: number;
-    /** Key → when its toast started to leave; feeds the duplicate guard. */
+    /** Named key → when its toast timed out; feeds the duplicate guard. */
     leftAt: Record<string, number>;
     /** `tone` is required so no caller gets the loudest tone by accident. */
     push: (message: string, tone: ToastTone, title?: string, icon?: ToastIcon, options?: ToastOptions) => void;
     dismiss: (id: number) => void;
-    /** Slide a toast out, then remove it. */
-    leave: (id: number) => void;
+    /** Slide a toast out, then remove it. `timedOut` = its life ran out, not closed by the user. */
+    leave: (id: number, timedOut?: boolean) => void;
     /** Slide out every toast in a group except the one just activated (it plays its own); queued ones drop at once. */
     dismissGroup: (group: string, exceptId: number) => void;
     /** Let the next waiting toast in if a slot is free and the gap has passed. */
@@ -143,6 +145,7 @@ export const useToastStore = create<ToastState>((set, get) => ({
                 group: options?.group,
                 onActivate: options?.onActivate,
                 polite: options?.polite,
+                named: options?.key !== undefined,
                 // A toast that waits to be dismissed shows at once; timed ones queue
                 shownAt: duration === null ? now : null,
             };
@@ -150,7 +153,7 @@ export const useToastStore = create<ToastState>((set, get) => ({
             return { leftAt, ...(promoteNext(toasts, s.lastShownAt, now) ?? { toasts }) };
         }),
     dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-    leave: (id) => {
+    leave: (id, timedOut = false) => {
         const target = get().toasts.find((t) => t.id === id);
         if (!target || target.leaving) return;
         if (target.shownAt === null) {
@@ -159,7 +162,8 @@ export const useToastStore = create<ToastState>((set, get) => ({
         }
         set((s) => ({
             toasts: s.toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t)),
-            leftAt: { ...s.leftAt, [target.key]: Date.now() },
+            // Closed by the user: the next same-key toast shows at once
+            leftAt: timedOut && target.named ? { ...s.leftAt, [target.key]: Date.now() } : s.leftAt,
         }));
         setTimeout(() => get().dismiss(id), TOAST_LEAVE_MS);
     },

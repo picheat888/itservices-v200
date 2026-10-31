@@ -88,16 +88,16 @@ function ToastItem({ toast }: { toast: Toast }) {
     // Hover and focus each hold the countdown; it runs only when neither does
     const held = useRef({ hover: false, focus: false });
 
-    const beginClose = () => {
+    const beginClose = (timedOut = false) => {
         window.clearTimeout(lifeTimer.current);
-        leave(toast.id);
+        leave(toast.id, timedOut);
     };
     const closeRef = useRef(beginClose);
     closeRef.current = beginClose;
 
     const run = () => {
         startedAt.current = Date.now();
-        lifeTimer.current = window.setTimeout(() => closeRef.current(), Math.max(0, remaining.current));
+        lifeTimer.current = window.setTimeout(() => closeRef.current(true), Math.max(0, remaining.current));
     };
 
     useEffect(() => {
@@ -187,7 +187,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 
                     <button
                         type="button"
-                        onClick={beginClose}
+                        onClick={() => beginClose()}
                         aria-label={t('notif_dismiss')}
                         className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring relative flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md transition-colors after:absolute after:-inset-2 focus-visible:ring-2 focus-visible:outline-none"
                     >
