@@ -21,8 +21,7 @@ class DepartmentResource extends JsonResource
             'name' => $this->name,
             'name_th' => $this->name_th,
             'count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
-            // Who still works there; `count` keeps the leavers, who still block deleting the department
-            'active_count' => $this->whenCounted('active_employees', $this->active_employees_count),
+            'active_employees_count' => $this->whenCounted('active_employees'),
             'sections_count' => $this->whenCounted('sections', $this->sections_count, $this->sections()->count()),
         ];
     }

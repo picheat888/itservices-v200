@@ -192,15 +192,27 @@ class EmployeeApiTest extends TestCase
             ->assertJsonValidationErrors('manager_id');
     }
 
-    public function test_the_directory_lists_the_newest_employee_first_whatever_its_code_length(): void
+    public function test_the_directory_lists_the_latest_start_date_first_whatever_its_code_length(): void
     {
         $this->actingAs($this->super());
-        $older = Employee::create(['code' => 'EMP-999', 'first_name' => 'Older', 'last_name' => 'Hire']);
-        $newer = Employee::create(['code' => 'EMP-1001', 'first_name' => 'Newer', 'last_name' => 'Hire']);
+        Employee::create(['code' => 'EMP-999', 'first_name' => 'Older', 'last_name' => 'Hire', 'joined_at' => '2026-01-05']);
+        Employee::create(['code' => 'EMP-1001', 'first_name' => 'Newer', 'last_name' => 'Hire', 'joined_at' => '2026-09-01']);
 
         $codes = collect($this->getJson('/api/employees?per_page=100')->assertOk()->json('data'))->pluck('code')->all();
 
         $this->assertLessThan(array_search('EMP-999', $codes, true), array_search('EMP-1001', $codes, true));
+    }
+
+    public function test_staff_imported_later_do_not_jump_above_a_newer_hire(): void
+    {
+        $this->actingAs($this->super());
+        Employee::create(['code' => 'EMP-1500', 'first_name' => 'Recent', 'last_name' => 'Hire', 'joined_at' => '2026-10-01']);
+        Employee::create(['code' => 'EMP-0001', 'first_name' => 'Long', 'last_name' => 'Serving', 'joined_at' => '2015-03-01']);
+        Employee::create(['code' => 'EMP-0002', 'first_name' => 'No', 'last_name' => 'Date']);
+
+        $codes = collect($this->getJson('/api/employees?per_page=100')->assertOk()->json('data'))->pluck('code')->values()->all();
+
+        $this->assertSame(['EMP-1500', 'EMP-0001', 'EMP-0002'], array_values(array_intersect($codes, ['EMP-1500', 'EMP-0001', 'EMP-0002'])));
     }
 
     public function test_manager_refusals_name_their_cause(): void

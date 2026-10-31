@@ -3,17 +3,17 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { localName, localPair } from '@/shared/lib/local-name';
 import type { Employee, Section } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useSectionMembers } from '../hooks/use-sections';
-import { CountPlaceholder } from './count-placeholder';
+import { leaversLast } from '../lib/member-counts';
+import { MemberCount } from './member-count';
 
 /**
  * Focused dialog listing every employee in a section. Uses the shared DataTable
@@ -22,7 +22,6 @@ import { CountPlaceholder } from './count-placeholder';
  */
 export function SectionMembersDialog({ section, onClose }: { section: Section | null; onClose: () => void }) {
     const t = useT();
-    const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
 
     // Retain the last section so content stays rendered while the dialog animates closed.
@@ -41,6 +40,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     const membersQuery = useSectionMembers(view?.id ?? null, openId != null);
     const { data: members = [], isLoading } = membersQuery;
+    const listed = useMemo(() => leaversLast(membersQuery.data ?? []), [membersQuery.data]);
     useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.members_count;
@@ -86,10 +86,13 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                     subtitle={
                         <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs" aria-busy={isLoading || undefined}>
                             {deptName && <span>{deptName}</span>}
-                            <span>
-                                {isLoading ? expected != null ? fmtN(expected) : <CountPlaceholder label={t('loading')} /> : fmtN(members.length)}{' '}
-                                {t('section_members')}
-                            </span>
+                            <MemberCount
+                                members={members}
+                                loading={isLoading}
+                                rowActive={view?.active_employees_count}
+                                rowTotal={view?.members_count}
+                                label={t('section_members')}
+                            />
                         </span>
                     }
                 />
@@ -97,7 +100,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                 <div className="min-h-0 border-t px-6 py-5">
                     <DataTable
                         columns={columns}
-                        rows={members}
+                        rows={listed}
                         rowKey={(m) => m.id}
                         loading={loadingMembers}
                         loadingRows={expected ? Math.min(expected, 20) : undefined}

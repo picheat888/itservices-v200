@@ -137,6 +137,7 @@ export const employee: Dict = {
     dept_del_blocked_desc: 'แผนกนี้ยังมีพนักงานหรือหน่วยงานอยู่\nย้ายหรือลบออกให้หมดก่อน',
     dept_location: 'ที่ตั้ง',
     dept_members: 'สมาชิก',
+    members_left_n: 'ลาออกแล้ว {n} คน',
     dept_view: 'ดูสมาชิก',
     dept_no_members: 'ยังไม่มีพนักงานในแผนกนี้',
     resign_employee: 'ลาออก',

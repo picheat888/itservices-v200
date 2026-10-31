@@ -64,7 +64,7 @@ class DepartmentApiTest extends TestCase
         $row = collect($this->getJson('/api/departments')->assertOk()->json('data'))->firstWhere('id', $department->id);
 
         $this->assertSame(3, $row['count']);
-        $this->assertSame(2, $row['active_count']);
+        $this->assertSame(2, $row['active_employees_count']);
     }
 
     public function test_updates_a_department(): void

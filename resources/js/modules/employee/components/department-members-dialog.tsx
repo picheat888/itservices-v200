@@ -10,10 +10,12 @@ import type { Department, Employee } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDepartmentMembers } from '../hooks/use-departments';
 import { useSections } from '../hooks/use-sections';
+import { leaversLast } from '../lib/member-counts';
 import { CountPlaceholder } from './count-placeholder';
+import { MemberCount } from './member-count';
 
 /**
  * Focused dialog listing every employee in a department. Uses the shared
@@ -41,6 +43,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
 
     const membersQuery = useDepartmentMembers(view?.id ?? null, openId != null);
     const { data: members = [], isLoading } = membersQuery;
+    const listed = useMemo(() => leaversLast(membersQuery.data ?? []), [membersQuery.data]);
     // Member count from the clicked row
     const expected = view?.count;
     const loadingMembers = isLoading && expected !== 0;
@@ -92,10 +95,13 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                             <span>
                                 {sectionsLoading ? <CountPlaceholder label={t('loading')} /> : fmtN(sections.length)} {t('sub_sections')}
                             </span>
-                            <span>
-                                {isLoading ? expected != null ? fmtN(expected) : <CountPlaceholder label={t('loading')} /> : fmtN(members.length)}{' '}
-                                {t('dept_members')}
-                            </span>
+                            <MemberCount
+                                members={members}
+                                loading={isLoading}
+                                rowActive={view?.active_employees_count}
+                                rowTotal={view?.count}
+                                label={t('dept_members')}
+                            />
                         </span>
                     }
                 />
@@ -103,7 +109,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                 <div className="min-h-0 border-t px-6 py-5">
                     <DataTable
                         columns={columns}
-                        rows={members}
+                        rows={listed}
                         rowKey={(m) => m.id}
                         loading={loadingMembers}
                         loadingRows={expected ? Math.min(expected, 20) : undefined}

@@ -425,9 +425,9 @@ function OrgChartSkeleton() {
 /** Org chart tab: fetches the node list and renders the React Flow canvas. */
 export function OrgChartTab() {
     const t = useT();
-    const { data = [], isLoading, isError, refetch } = useOrgChart();
+    const { data = [], isLoading, isError, isFetching, refetch } = useOrgChart();
 
-    if (isLoading) {
+    if (isLoading || (isError && isFetching && data.length === 0)) {
         return <OrgChartSkeleton />;
     }
     if (isError && data.length === 0) {

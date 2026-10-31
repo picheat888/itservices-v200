@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreSectionRequest;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\SectionResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Section;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +20,11 @@ class SectionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Section::with('department')->withCount('employees')
+        $query = Section::with('department')
+            ->withCount([
+                'employees',
+                'employees as active_employees_count' => fn (Builder $q) => $q->where('status', EmployeeStatus::Active->value),
+            ])
             ->orderBy('department_id')->orderBy('name');
 
         if ($request->filled('department_id')) {

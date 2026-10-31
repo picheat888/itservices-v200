@@ -67,8 +67,7 @@ export interface Department {
     name: string;
     name_th: string | null;
     count?: number;
-    /** Staff still working there; `count` includes leavers. */
-    active_count?: number;
+    active_employees_count?: number;
     sections_count?: number;
 }
 
@@ -80,6 +79,7 @@ export interface Section {
     name_th: string | null;
     department?: string;
     members_count?: number;
+    active_employees_count?: number;
 }
 
 export interface Position {

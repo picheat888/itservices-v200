@@ -17,6 +17,7 @@ import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useSectionMutations, useSections } from '../hooks/use-sections';
+import { blockedMembersLine } from '../lib/member-counts';
 import { SectionMembersDialog } from './section-members-dialog';
 import { SectionModal } from './section-modal';
 
@@ -78,7 +79,9 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
         if (sort === 'code') return [...rows].sort((a, b) => a.code.localeCompare(b.code));
         if (sort === 'name') return [...rows].sort((a, b) => sectionLabel(a).localeCompare(sectionLabel(b)));
         if (sort === 'members')
-            return [...rows].sort((a, b) => (b.members_count ?? 0) - (a.members_count ?? 0) || sectionLabel(a).localeCompare(sectionLabel(b)));
+            return [...rows].sort(
+                (a, b) => (b.active_employees_count ?? 0) - (a.active_employees_count ?? 0) || sectionLabel(a).localeCompare(sectionLabel(b)),
+            );
         return rows;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sections, deptFilter, sort, lang]);
@@ -94,7 +97,11 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 hideCancel: true,
                 title: t('section_del_blocked_title'),
                 description: t('section_del_blocked_desc'),
-                entity: { name, sub: `${fmtN(count)} ${t('section_members')}` },
+                entity: {
+                    name,
+                    sub: blockedMembersLine(s.active_employees_count ?? 0, count, fmtN, { members: t('section_members'), left: t('members_left_n') }),
+                    subBelow: true,
+                },
                 confirmText: t('got_it'),
             });
             return;
@@ -126,7 +133,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
             render: (s) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {fmtN(s.members_count ?? 0)}
+                    {fmtN(s.active_employees_count ?? 0)}
                 </span>
             ),
         },

@@ -138,6 +138,7 @@ export const employee: Dict = {
     dept_del_blocked_desc: 'This department still has employees or sections.\nMove or remove all of them first.',
     dept_location: 'Location',
     dept_members: 'Members',
+    members_left_n: '{n} left',
     dept_view: 'View members',
     dept_no_members: 'No employees in this department',
     resign_employee: 'Record resignation',

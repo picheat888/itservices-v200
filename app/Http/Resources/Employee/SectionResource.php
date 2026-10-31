@@ -22,6 +22,7 @@ class SectionResource extends JsonResource
             'name_th' => $this->name_th,
             'department' => $this->whenLoaded('department', fn () => $this->department?->name),
             'members_count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
+            'active_employees_count' => $this->whenCounted('active_employees'),
         ];
     }
 }

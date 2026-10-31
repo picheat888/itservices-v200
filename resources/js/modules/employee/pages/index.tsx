@@ -89,6 +89,7 @@ import { useDepartmentMutations, useDepartments } from '../hooks/use-departments
 import { useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary } from '../hooks/use-employees';
 import { usePositionMutations, usePositions } from '../hooks/use-positions';
 import { accountDeleteRefusal } from '../lib/delete-account';
+import { blockedMembersLine } from '../lib/member-counts';
 
 const TAB_IDS = ['overview', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
@@ -330,7 +331,11 @@ export default function EmployeesPage() {
                 hideCancel: true,
                 title: t('pos_del_blocked_title'),
                 description: t('pos_del_blocked_desc'),
-                entity: { name: p.title, sub: `${fmtN(members)} ${t('dept_members')}` },
+                entity: {
+                    name: p.title,
+                    sub: blockedMembersLine(p.active_employees_count ?? 0, members, fmtN, { members: t('dept_members'), left: t('members_left_n') }),
+                    subBelow: true,
+                },
                 confirmText: t('got_it'),
             });
             return;
@@ -361,7 +366,7 @@ export default function EmployeesPage() {
             render: (p) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {fmtN(p.employees_count ?? 0)}
+                    {fmtN(p.active_employees_count ?? 0)}
                 </span>
             ),
         },
@@ -459,7 +464,8 @@ export default function EmployeesPage() {
                 description: t('dept_del_blocked_desc'),
                 entity: {
                     name: deptName(d),
-                    sub: `${fmtN(members)} ${t('dept_members')}, ${fmtN(sections)} ${t('sub_sections')}`,
+                    sub: `${blockedMembersLine(d.active_employees_count ?? 0, members, fmtN, { members: t('dept_members'), left: t('members_left_n') })}, ${fmtN(sections)} ${t('sub_sections')}`,
+                    subBelow: true,
                 },
                 confirmText: t('got_it'),
             });
@@ -507,7 +513,7 @@ export default function EmployeesPage() {
             render: (d) => (
                 <span className="inline-flex items-center justify-end gap-1.5 text-xs">
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
-                    {fmtN(d.active_count ?? d.count ?? 0)}
+                    {fmtN(d.active_employees_count ?? 0)}
                 </span>
             ),
         },
@@ -1135,25 +1141,25 @@ function OverviewTab({
     const kpis = [
         {
             label: t('total_employees'),
-            value: String(summary?.total ?? '—'),
+            value: summary ? fmtN(summary.total) : '—',
             icon: Users,
             sub: words.now(t('emp_kpi_total_sub').replace('{n}', fmtN(summary?.active ?? 0))),
         },
         {
             label: t('departments_count'),
-            value: String(departments.length),
+            value: fmtN(departments.length),
             icon: Building2,
             sub: words.now(t('emp_kpi_depts_sub').replace('{n}', fmtN(sectionTotal))),
         },
         {
             label: t('active_positions'),
-            value: String(positions.length),
+            value: fmtN(positions.length),
             icon: Briefcase,
             sub: words.now(t('emp_kpi_positions_sub').replace('{n}', fmtN(filledPositions))),
         },
         {
             label: t('new_hires'),
-            value: String(summary?.new_hires ?? '—'),
+            value: summary?.new_hires != null ? fmtN(summary.new_hires) : '—',
             icon: UserPlus,
             sub: periodWord('emp_kpi_hires_days', 'emp_kpi_hires_all', 'emp_kpi_hires_range'),
         },
@@ -1269,7 +1275,7 @@ function OverviewTab({
                     </div>
                     <div className="divide-border/60 divide-y px-5">
                         {[...departments]
-                            .sort((a, b) => (b.active_count ?? b.count ?? 0) - (a.active_count ?? a.count ?? 0))
+                            .sort((a, b) => (b.active_employees_count ?? 0) - (a.active_employees_count ?? 0))
                             .slice(0, DASH_DEPT_LIMIT)
                             .map((d, i) => (
                                 <div key={d.id} className="row-in flex items-center justify-between py-2.5" style={rowDelay(i)}>
@@ -1277,7 +1283,7 @@ function OverviewTab({
                                         <span className="bg-muted rounded-md px-2 py-0.5 text-[11px]">{d.tag}</span>
                                         <span className="text-sm">{localName(d, lang)}</span>
                                     </div>
-                                    <span className="text-sm font-semibold">{fmtN(d.active_count ?? d.count ?? 0)}</span>
+                                    <span className="text-sm font-semibold">{fmtN(d.active_employees_count ?? 0)}</span>
                                 </div>
                             ))}
                     </div>

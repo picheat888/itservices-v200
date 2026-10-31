@@ -48,7 +48,7 @@ class EmployeeService
 
     /**
      * Directory ordering: resigned sink to the bottom; within active, no-account first;
-     * then the newest record first (codes are text, so EMP-1001 would sort below EMP-999).
+     * then the latest start date first.
      *
      * @param  Builder<Employee>  $query
      * @return Builder<Employee>
@@ -58,6 +58,7 @@ class EmployeeService
         return $query
             ->orderByRaw("status = 'resigned'")
             ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
+            ->orderByDesc('joined_at')
             ->orderByDesc('id');
     }
 

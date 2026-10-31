@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Section;
@@ -40,6 +41,20 @@ class SectionApiTest extends TestCase
         $this->assertSame($dept->id, $section->department->id);
         $this->assertCount(1, $section->employees);
         $this->assertTrue($dept->sections->contains($section));
+    }
+
+    public function test_the_list_counts_active_staff_apart_from_everyone(): void
+    {
+        $this->actingAs($this->super());
+        $dept = Department::create(['name' => 'IT']);
+        $section = Section::create(['department_id' => $dept->id, 'name' => 'Support']);
+        Employee::create(['first_name' => 'Still', 'last_name' => 'Here', 'department_id' => $dept->id, 'section_id' => $section->id, 'status' => EmployeeStatus::Active]);
+        Employee::create(['first_name' => 'Gone', 'last_name' => 'Away', 'department_id' => $dept->id, 'section_id' => $section->id, 'status' => EmployeeStatus::Resigned]);
+
+        $row = collect($this->getJson('/api/sections')->assertOk()->json('data'))->firstWhere('id', $section->id);
+
+        $this->assertSame(2, $row['members_count']);
+        $this->assertSame(1, $row['active_employees_count']);
     }
 
     public function test_deleting_a_department_cascades_its_sections(): void

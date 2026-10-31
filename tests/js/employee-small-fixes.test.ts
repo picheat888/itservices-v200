@@ -26,9 +26,11 @@ test('both cancel-resignation confirms name the employee', () => {
 });
 
 test('member counts in the three member dialogs go through fmtN', () => {
+    assert.match(read('components/member-count.tsx'), /fmtN\(counts\.active\)/);
+    assert.match(read('components/member-count.tsx'), /fmtN\(counts\.left\)/);
     for (const name of ['department', 'position', 'section']) {
         const dialog = read(`components/${name}-members-dialog.tsx`);
-        assert.match(dialog, /fmtN\(members\.length\)/, name);
-        assert.doesNotMatch(dialog, /: members\.length\}/, name);
+        assert.match(dialog, /<MemberCount/, name);
+        assert.doesNotMatch(dialog, /members\.length\}/, name);
     }
 });

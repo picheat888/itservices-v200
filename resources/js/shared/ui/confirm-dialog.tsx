@@ -33,7 +33,7 @@ export function AlertIconCircle({ icon: Icon, tone = 'brand', className }: { ico
 
 // Frame
 
-type AlertEntity = { name: ReactNode; sub?: ReactNode };
+type AlertEntity = { name: ReactNode; sub?: ReactNode; subBelow?: boolean };
 
 type Shown = {
     Icon: LucideIcon;
@@ -170,7 +170,14 @@ export function CenteredAlert({
                                 {shown.entity.sub && (
                                     <>
                                         {' '}
-                                        <span className="text-muted-foreground inline-block max-w-full font-normal">{shown.entity.sub}</span>
+                                        <span
+                                            className={cn(
+                                                'text-muted-foreground max-w-full font-normal',
+                                                shown.entity.subBelow ? 'block' : 'inline-block',
+                                            )}
+                                        >
+                                            {shown.entity.sub}
+                                        </span>
                                     </>
                                 )}
                             </p>
@@ -206,7 +213,7 @@ export interface ConfirmOptions {
     title?: React.ReactNode;
     description?: React.ReactNode;
     /** The record the action applies to, named under the title. */
-    entity?: { name: React.ReactNode; sub?: React.ReactNode };
+    entity?: AlertEntity;
     confirmText?: React.ReactNode;
     cancelText?: React.ReactNode;
     /** Button words while `action` runs and once it succeeds, when the variant's own words do not fit. */

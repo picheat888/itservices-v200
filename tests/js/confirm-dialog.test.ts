@@ -79,8 +79,16 @@ test('a long unbroken word in the record line breaks inside the window instead o
 
 test('the second line follows the name in grey after a space, and a short code stays whole', () => {
     const src = frame();
-    const sub = src.match(/\{' '\}\s*<span className="([^"]*)">\{shown\.entity\.sub\}/)?.[1].split(/\s+/) ?? [];
-    for (const t of ['text-muted-foreground', 'font-normal', 'inline-block', 'max-w-full']) assert.ok(sub.includes(t), `second line: ${t}`);
+    const sub = src.match(
+        /\{' '\}\s*<span\s+className=\{cn\(\s*'([^']*)',\s*shown\.entity\.subBelow \? 'block' : '([^']*)',?\s*\)\}\s*>\s*\{shown\.entity\.sub\}/,
+    );
+    const classes = [...(sub?.[1].split(/\s+/) ?? []), sub?.[2]];
+    for (const t of ['text-muted-foreground', 'font-normal', 'inline-block', 'max-w-full']) assert.ok(classes.includes(t), `second line: ${t}`);
+});
+
+test('a record line asked to sit below the name gets its own line', () => {
+    assert.match(frame(), /type AlertEntity = \{ name: ReactNode; sub\?: ReactNode; subBelow\?: boolean \}/);
+    assert.match(read('shared/ui/confirm-dialog.tsx'), /entity\?: AlertEntity;/);
 });
 
 test('the record line is read before the description, as it is shown, and written line breaks stay', () => {
