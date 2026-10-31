@@ -11,29 +11,12 @@ use App\Support\EmailTable;
 use Illuminate\Support\Collection;
 
 /**
- * The Monday summary of contracts that need a decision, mailed to whoever has contract
- * alerts switched on.
- *
- * The daily sweep (ContractExpiryAlertService) mails one contract at a time, and only on the
- * day it crosses a threshold — which answers "what changed today" but never "what is on my
- * plate". This is the other question: everything currently expiring or already past its end
- * date, in one list, once a week.
- *
- * Two tables because they need different things done to them: a contract still inside its
- * reminder window can still be renewed on time, while an overdue one is already late and is
- * either renewed or closed out. Both tables carry the same columns so they line up under
- * each other.
- *
- * Reads only. The daily channel's ledgers (contract_alert_logs, contract_bell_logs) decide
- * what has already been said once, and a summary of what those ledgers already covered must
- * not mark anything as said.
+ * Monday summary mail of contracts expiring or overdue, in two tables.
+ * Read only: it never writes the daily alert ledgers.
  */
 class ContractDigestService
 {
-    /**
-     * The shape of both tables — shared so the two sections line up, and so the preview on
-     * the Email screen is laid out by the same numbers as the mail itself.
-     */
+    /** Table columns, shared with the preview on the Email page. */
     public const HEADERS = ['Contract No.', 'Vendor / Supplier', 'Contract Name', 'Total value', 'End Date', 'Notification schedule'];
 
     public const WIDTHS = ['14%', '18%', '21%', '14%', '13%', '20%'];
@@ -54,9 +37,7 @@ class ContractDigestService
             ->whereNull('expired_at')
             ->orderBy('end_date')
             ->get()
-            // Same opt-out the daily sweep honours: a contract with every reminder switched
-            // off has been told not to chase anyone, and a weekly summary that listed it
-            // anyway would be a way round that setting.
+            // Reminders all off = left out, as in the daily alerts
             ->filter(fn (Contract $c) => $c->enabledReminderDays() !== []);
 
         $expiring = $due->filter(fn (Contract $c) => $c->isInReminder())->values();
@@ -66,7 +47,7 @@ class ContractDigestService
             return ['recipients' => 0, 'expiring' => 0, 'overdue' => 0];
         }
 
-        $recipients = User::holdingPermission('contracts.alerts')->holdingPermission('contracts.view')->orderBy('id')->get();
+        $recipients = User::holdingPermission('contracts.alerts')->holdingPermission('contracts.view')->stillWorking()->orderBy('id')->get();
 
         foreach ($recipients as $recipient) {
             $this->email->sendTemplate('contract.weekly_digest', $recipient->email, [
@@ -86,10 +67,7 @@ class ContractDigestService
     }
 
     /**
-     * One section's table, or a line saying there is nothing in it.
-     *
-     * An empty table renders as a bare row of headings, which reads as something that failed
-     * to load rather than as good news. The heading above it still carries the count.
+     * One section's table, or a "nothing in this list" line when empty.
      *
      * @param  Collection<int, Contract>  $contracts
      */
@@ -113,11 +91,7 @@ class ContractDigestService
         return EmailTable::render(self::HEADERS, $rows, self::NUMERIC, self::WIDTHS);
     }
 
-    /**
-     * The reminder thresholds this contract is set to alert on, as the days-before figures
-     * the contract form itself shows — so a reader who thinks a contract is chasing them too
-     * often (or not at all) can see the setting without opening it.
-     */
+    /** The contract's switched-on reminder days, as the contract form shows them. */
     private function schedule(Contract $contract): string
     {
         return e(implode(', ', $contract->enabledReminderDays()).' days');

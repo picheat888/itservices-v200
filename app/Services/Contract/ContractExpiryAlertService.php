@@ -14,18 +14,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * Drives the two contract-expiry alert channels for every contract that is
- * "expiring soon" (inside its reminder window) or already expired:
- *
- *  - Bell (in-app): re-fires once a day for as long as the contract stays in
- *    that state, deduped per calendar day via contract_bell_logs.
- *  - Email: deliberately quieter — once per crossed reminder threshold
- *    (150/120/90/60/45/30/7) plus a single "it has expired" mail, deduped per
- *    threshold via contract_alert_logs (the sentinel threshold 0 marks the
- *    expired mail).
- *
- * A contract only alerts on either channel when it has at least one reminder
- * threshold enabled, so the per-contract opt-out is respected even once expired.
+ * Contract expiry alerts: a daily bell (contract_bell_logs) and one email per crossed threshold
+ * plus one when overdue (contract_alert_logs), only for contracts with a reminder switched on.
  */
 class ContractExpiryAlertService
 {
@@ -42,11 +32,9 @@ class ContractExpiryAlertService
      */
     public function run(bool $force = false): int
     {
-        $recipients = User::holdingPermission('contracts.alerts')->holdingPermission('contracts.view')->orderBy('id')->get();
+        $recipients = User::holdingPermission('contracts.alerts')->holdingPermission('contracts.view')->stillWorking()->orderBy('id')->get();
 
-        // Don't touch any ledger when there's nobody to notify yet — otherwise
-        // enabling contracts.alerts later would skip alerts whose dedup row was
-        // already written against an empty audience.
+        // No recipients = no ledger rows written
         if ($recipients->isEmpty()) {
             return 0;
         }
@@ -102,17 +90,11 @@ class ContractExpiryAlertService
             return false;
         }
 
-        // Overwrite rather than stack: drop each recipient's existing bell for
-        // this contract first, so today's resend leaves a single, freshly-unread
-        // alert. It therefore re-surfaces even if the user had already marked it
-        // read — and keeps doing so daily until the contract is renewed (which
-        // clears the ledgers via resetForContract) or cancelled (filtered out of
-        // the run entirely).
+        // Replace, not stack: one unread bell per contract
         $this->clearBellNotifications($contract, $recipients);
 
         Notification::send($recipients, new ContractExpiryNotification($contract, $days));
-        // firstOrCreate (not create) so a --force resend on the same day re-fires the bell
-        // without violating the one-row-per-(contract, day) unique constraint.
+        // firstOrCreate: a forced resend keeps the one row per contract and day
         ContractBellLog::firstOrCreate(['contract_id' => $contract->id, 'bell_date' => $today]);
 
         return true;
@@ -173,8 +155,7 @@ class ContractExpiryAlertService
             },
         ]);
 
-        // Record every newly-crossed threshold (including larger ones we skipped
-        // by mailing at the most urgent) so they never fire as stale mails later.
+        // Log every crossed threshold so skipped ones never mail later
         $this->logEmailed($contract, $newCrossed);
     }
 
@@ -194,7 +175,6 @@ class ContractExpiryAlertService
                 'contract.vendor' => e((string) $contract->vendor?->name),
                 'contract.name' => e((string) $contract->name),
                 'contract.code' => e((string) $contract->code),
-                // Written the way the reader writes a date, not the way the column stores it.
                 'contract.end_date' => DateDisplay::emailDate($contract->end_date),
                 'contract.details' => e(filled($contract->details) ? $contract->details : '-'),
             ], $extraVars), url("/contracts?view={$contract->id}"), 'Open the contract', $recipient->name);

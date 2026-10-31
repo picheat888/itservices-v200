@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAlertLog;
 use App\Models\Contract\ContractBellLog;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\Vendor;
@@ -486,5 +488,24 @@ class ContractExpiryAlertTest extends TestCase
 
         Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => str_contains($job->html, '&lt;a href=')
             && ! str_contains($job->html, '<a href="https://evil.example">'));
+    }
+
+    public function test_staff_who_have_left_get_no_bell_or_email_but_staff_serving_notice_still_do(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $staying = $this->alertedUser('staying@inaba.co.th');
+        $gone = $this->alertedUser('gone@inaba.co.th');
+        $gone->forceFill(['employee_id' => Employee::create(['first_name' => 'Gone', 'status' => EmployeeStatus::Resigned, 'last_day' => now()->subDay()->toDateString()])->id])->save();
+        $leaving = $this->alertedUser('leaving@inaba.co.th');
+        $leaving->forceFill(['employee_id' => Employee::create(['first_name' => 'Leaving', 'status' => EmployeeStatus::Resigned, 'last_day' => now()->addWeek()->toDateString()])->id])->save();
+        $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();
+
+        Notification::assertSentTo([$staying, $leaving], ContractExpiryNotification::class);
+        Notification::assertNotSentTo($gone, ContractExpiryNotification::class);
+        Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => $job->toEmail === 'leaving@inaba.co.th');
+        Bus::assertNotDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => $job->toEmail === 'gone@inaba.co.th');
     }
 }

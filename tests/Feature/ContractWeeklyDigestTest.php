@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAlertLog;
 use App\Models\Contract\ContractBellLog;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\Vendor;
@@ -224,5 +226,18 @@ class ContractWeeklyDigestTest extends TestCase
         $this->artisan('contracts:send-weekly-digest')
             ->expectsOutputToContain('recipients: 1')
             ->assertSuccessful();
+    }
+
+    public function test_staff_who_have_left_are_not_sent_the_summary(): void
+    {
+        Bus::fake();
+        $this->alertedUser('staying@inaba.co.th');
+        $gone = $this->alertedUser('gone@inaba.co.th');
+        $gone->forceFill(['employee_id' => Employee::create(['first_name' => 'Gone', 'status' => EmployeeStatus::Resigned, 'last_day' => now()->subDay()->toDateString()])->id])->save();
+        $this->contract('CT-2026-014', 20, [30]);
+
+        $this->assertSame(1, $this->send()['recipients']);
+        Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => $job->toEmail === 'staying@inaba.co.th');
+        Bus::assertNotDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => $job->toEmail === 'gone@inaba.co.th');
     }
 }
