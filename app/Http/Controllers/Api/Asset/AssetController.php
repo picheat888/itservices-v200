@@ -25,6 +25,7 @@ use App\Services\Asset\AssetListService;
 use App\Services\Asset\AssetService;
 use App\Services\Asset\AssetSummaryService;
 use App\Support\OverviewPeriod;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -77,7 +78,7 @@ class AssetController extends Controller
             'source' => $request->filled('source') ? $request->query('source') : null,
             'status' => $request->filled('status') ? $request->query('status') : null,
             'warehouse' => $request->filled('warehouse') ? $request->query('warehouse') : null,
-            'per_page' => max(10, min(100, (int) $request->query('per_page', 20))),
+            'per_page' => PerPage::from($request),
         ]);
 
         return response()->json([
@@ -121,7 +122,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        ['page' => $page, 'rows' => $rows] = $this->lists->transfers($request->query('search'), max(10, min(100, (int) $request->query('per_page', 20))));
+        ['page' => $page, 'rows' => $rows] = $this->lists->transfers($request->query('search'), PerPage::from($request));
 
         return response()->json([
             'data' => $rows,

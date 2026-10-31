@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Email;
 use App\Http\Controllers\Controller;
 use App\Models\Email\EmailLog;
 use App\Services\Email\EmailLogService;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -48,7 +49,7 @@ class EmailLogController extends Controller
         $this->gate($request);
 
         $status = $request->query('status');
-        $paginator = $this->log->page(is_string($status) ? $status : null, $request->query('search'), max(10, min(100, (int) $request->query('per_page', 20))));
+        $paginator = $this->log->page(is_string($status) ? $status : null, $request->query('search'), PerPage::from($request));
 
         return response()->json([
             'data' => collect($paginator->items())->map(fn (EmailLog $log) => [

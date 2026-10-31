@@ -25,6 +25,7 @@ use App\Services\Employee\EmployeeService;
 use App\Services\Employee\EmployeeSummaryService;
 use App\Support\CsvReader;
 use App\Support\OverviewPeriod;
+use App\Support\PerPage;
 use App\Support\RequestSchemas;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,7 @@ class EmployeeController extends Controller
             'search' => $request->query('search'),
             'department_id' => $request->filled('department_id') ? (int) $request->query('department_id') : null,
             'status' => $request->query('status'),
-            'per_page' => max(10, min(100, (int) $request->query('per_page', 20))),
+            'per_page' => PerPage::from($request),
         ]);
 
         return response()->json([

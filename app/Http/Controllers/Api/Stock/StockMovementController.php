@@ -8,6 +8,7 @@ use App\Http\Resources\Stock\StockMovementResource;
 use App\Models\Stock\StockMovement;
 use App\Services\Stock\StockLotReader;
 use App\Services\Stock\StockMovementService;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -26,7 +27,7 @@ class StockMovementController extends Controller
             'type' => $request->filled('type') ? $request->query('type') : null,
             'stock_item_id' => $request->filled('stock_item_id') ? $request->query('stock_item_id') : null,
             'search' => $request->query('search'),
-        ], max(10, min(100, (int) $request->query('per_page', 20))));
+        ], PerPage::from($request));
 
         return response()->json([
             'data' => StockMovementResource::collection($paginator->items()),

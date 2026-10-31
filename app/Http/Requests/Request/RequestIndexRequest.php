@@ -5,6 +5,7 @@
 namespace App\Http\Requests\Request;
 
 use App\Http\Requests\Permission\GatedPermissionRequest;
+use App\Support\PerPage;
 
 class RequestIndexRequest extends GatedPermissionRequest
 {
@@ -49,7 +50,7 @@ class RequestIndexRequest extends GatedPermissionRequest
             'filed_days' => ! $byRange && $this->filled('filed_days') ? (int) $this->query('filed_days') : null,
             'search' => $this->query('search'),
             'scope' => $this->query('scope'),
-            'per_page' => max(10, min(100, (int) $this->query('per_page', 20))),
+            'per_page' => PerPage::from($this),
         ];
     }
 }

@@ -6,6 +6,7 @@ namespace App\Http\Requests\Ticket;
 
 use App\Http\Requests\Permission\GatedPermissionRequest;
 use App\Http\Resources\Ticket\TicketResource;
+use App\Support\PerPage;
 
 class TicketIndexRequest extends GatedPermissionRequest
 {
@@ -43,7 +44,7 @@ class TicketIndexRequest extends GatedPermissionRequest
             'category' => $this->filled('category') ? $this->query('category') : null,
             'priority' => $canSeeInternals && $this->filled('priority') ? $this->query('priority') : null,
             // Floor 5, not 10: the overview's "Latest" card asks for five rows
-            'per_page' => max(5, min(100, (int) $this->query('per_page', 20))),
+            'per_page' => PerPage::from($this, min: 5),
         ];
     }
 }

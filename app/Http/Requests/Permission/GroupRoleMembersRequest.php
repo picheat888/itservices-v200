@@ -4,6 +4,8 @@
 
 namespace App\Http\Requests\Permission;
 
+use App\Support\PerPage;
+
 class GroupRoleMembersRequest extends ManageGroupsRequest
 {
     /**
@@ -24,6 +26,6 @@ class GroupRoleMembersRequest extends ManageGroupsRequest
 
     public function perPage(): int
     {
-        return max(10, min(100, (int) ($this->validated('per_page') ?? 20)));
+        return PerPage::clamp($this->validated('per_page') ?? PerPage::DEFAULT);
     }
 }

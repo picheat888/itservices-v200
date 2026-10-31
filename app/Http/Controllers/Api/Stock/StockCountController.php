@@ -11,6 +11,7 @@ use App\Models\Stock\StockCount;
 use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockCountPdf;
 use App\Services\Stock\StockCountService;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -37,7 +38,7 @@ class StockCountController extends Controller
     {
         $this->gateView($request);
 
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $perPage = PerPage::from($request);
         $paginator = StockCount::with('countedBy.employee')
             ->withCount([
                 'lines',

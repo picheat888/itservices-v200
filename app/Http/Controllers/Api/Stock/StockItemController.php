@@ -12,6 +12,7 @@ use App\Models\Stock\StockItemSerial;
 use App\Services\Stock\StockHistoryService;
 use App\Services\Stock\StockItemListService;
 use App\Services\Stock\StockItemService;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -60,7 +61,7 @@ class StockItemController extends Controller
             ]);
         }
 
-        $paginator = $this->lists->page($filters, max(10, min(100, (int) $request->query('per_page', 20))));
+        $paginator = $this->lists->page($filters, PerPage::from($request));
 
         return response()->json([
             'data' => StockItemResource::collection($paginator->items()),

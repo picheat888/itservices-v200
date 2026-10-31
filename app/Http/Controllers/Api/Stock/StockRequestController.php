@@ -10,6 +10,7 @@ use App\Services\Stock\StockIssuePdf;
 use App\Services\Stock\StockIssueService;
 use App\Services\Stock\StockLotReader;
 use App\Services\Stock\StockRequestService;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -35,7 +36,7 @@ class StockRequestController extends Controller
             $user,
             $request->query('status'),
             $request->query('search'),
-            max(10, min(100, (int) $request->query('per_page', 20))),
+            PerPage::from($request),
         );
 
         return response()->json([

@@ -10,6 +10,7 @@ use App\Models\Contract\Contract;
 use App\Services\Contract\ContractListService;
 use App\Services\Contract\ContractService;
 use App\Services\Contract\ContractSummaryService;
+use App\Support\PerPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,7 +37,7 @@ class ContractController extends Controller
             'search' => $request->query('search'),
             'type' => $request->filled('type') ? $request->query('type') : null,
             'tab' => $request->query('tab'),
-            'per_page' => max(10, min(100, (int) $request->query('per_page', 20))),
+            'per_page' => PerPage::from($request),
         ]);
 
         return response()->json([
