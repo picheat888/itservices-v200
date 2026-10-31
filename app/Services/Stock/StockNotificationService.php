@@ -18,6 +18,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
+use Throwable;
 
 /** Central send path for Stock bells (cleared and resent so they resurface unread) and templated emails. */
 class StockNotificationService
@@ -35,8 +36,18 @@ class StockNotificationService
         };
     }
 
-    /** Bell + email module holders for an alerting item (once a day per type); clear its ledger once normal. */
+    /** Stock-level alert after a saved change; a failure is reported to the log, never thrown at the saved movement. */
     public function alert(StockItem $item): void
+    {
+        try {
+            $this->sendAlert($item);
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    /** Bell + email module holders for an alerting item (once a day per type); clear its ledger once normal. */
+    private function sendAlert(StockItem $item): void
     {
         $type = $this->alertType($item);
 
