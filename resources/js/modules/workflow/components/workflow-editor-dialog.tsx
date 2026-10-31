@@ -522,7 +522,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                             {previewRows && !preview.isPending && (
                                 <div className="bg-background mt-3 space-y-3 rounded-xl px-4 py-4">
                                     {previewRows.map((row, i) => (
-                                        <ResolvedRow key={i} row={row} t={t} />
+                                        <ResolvedRow key={i} row={row} autoTicket={autoTicket} t={t} />
                                     ))}
                                 </div>
                             )}
@@ -559,7 +559,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 }
 
 /** One resolved step of the preview timeline. */
-function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => string }) {
+function ResolvedRow({ row, autoTicket, t }: { row: ResolvedPreviewRow; autoTicket: boolean; t: (k: string) => string }) {
     const lang = useUiStore((s) => s.lang);
     const skipped = row.status === 'skipped';
     const queue = row.actor_type === 'it_staff';
@@ -593,7 +593,7 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                             ? t(REQUEST_SKIP_REASON_LABEL[row.skip_reason])
                             : t('wf_skipped')
                         : queue
-                          ? t('wf_queue_preview')
+                          ? t(autoTicket ? 'wf_queue_preview' : 'wf_queue_preview_manual')
                           : owner
                             ? t('wf_owner_preview')
                             : candidates.length > 0

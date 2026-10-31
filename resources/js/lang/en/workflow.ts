@@ -93,6 +93,7 @@ export const workflow: Dict = {
     wf_covers: 'Standing in for',
     wf_owner_preview: 'Known once the requester picks a resource',
     wf_queue_preview: 'Goes to the IT queue, which opens a ticket automatically',
+    wf_queue_preview_manual: 'Goes to the IT queue, which closes it on the request',
     wf_save_error_steps: 'Could not save. Check the steps.',
     wf_err_need_approval_step: 'A workflow needs at least one approval step.',
     wf_err_one_completion: 'Only one completion step is allowed.',

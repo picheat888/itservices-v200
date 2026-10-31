@@ -96,6 +96,7 @@ export const workflow: Dict = {
     wf_covers: 'อนุมัติแทน',
     wf_owner_preview: 'รู้ว่าเป็นใครเมื่อผู้ขอเลือก Resource',
     wf_queue_preview: 'เข้าคิวทีม IT และเปิด Ticket อัตโนมัติ',
+    wf_queue_preview_manual: 'เข้าคิวทีม IT แล้วปิดงานที่คำขอ',
     wf_save_error_steps: 'บันทึกไม่สำเร็จ ตรวจรายการขั้นตอนอีกครั้ง',
     wf_err_need_approval_step: 'ต้องมีขั้นอนุมัติอย่างน้อย 1 ขั้น',
     wf_err_one_completion: 'มีขั้นปิดงานได้ขั้นเดียว',

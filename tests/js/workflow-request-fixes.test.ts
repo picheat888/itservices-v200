@@ -38,3 +38,9 @@ test('a decision sends the step it was opened on, and the refusal reads in both 
     assert.equal(th.req_refusal_step_moved, 'ขั้นนี้มีการตัดสินไปแล้ว โหลดหน้าใหม่แล้วลองอีกครั้ง');
     assert.equal(en.req_refusal_step_moved, 'This step has already been decided. Reload and try again.');
 });
+
+test('the test preview says a ticket opens only when the workflow opens one', () => {
+    assert.match(editor, /<ResolvedRow key=\{i\} row=\{row\} autoTicket=\{autoTicket\} t=\{t\} \/>/);
+    assert.match(editor, /\? t\(autoTicket \? 'wf_queue_preview' : 'wf_queue_preview_manual'\)/);
+    for (const lang of ['th', 'en']) assert.match(read(`resources/js/lang/${lang}/workflow.ts`), /wf_queue_preview_manual: '/);
+});
