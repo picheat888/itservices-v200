@@ -96,7 +96,10 @@ class AssetController extends Controller
     {
         $this->guard->canViewOverview($request->user())->authorize();
 
-        return response()->json($summary->summary(OverviewPeriod::fromRequest($request)));
+        $figures = $summary->summary(OverviewPeriod::fromRequest($request));
+        $figures['top_purchased'] = AssetResource::collection($figures['top_purchased']);
+
+        return response()->json($figures);
     }
 
     /** Active employees who cannot accept a hand-over because they have no linked account, as id → 'no_account'. */
@@ -110,9 +113,7 @@ class AssetController extends Controller
     /** The assets the signed-in user holds; self-service, only a linked employee record needed. */
     public function mine(Request $request): JsonResponse
     {
-        $assets = $this->lists->mine($request->user());
-
-        return response()->json(['data' => $assets === null ? [] : AssetResource::collection($assets)]);
+        return response()->json(['data' => AssetResource::collection($this->lists->mine($request->user()))]);
     }
 
     /** Ownership-change history across all assets, newest first, paged and searched on the server. */

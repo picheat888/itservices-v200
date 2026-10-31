@@ -130,15 +130,15 @@ class AssetListService
     }
 
     /**
-     * The assets the user's linked employee holds, newest first; null when the account has no employee.
+     * The assets the user's linked employee holds, newest first; none when the account has no employee.
      *
-     * @return EloquentCollection<int, Asset>|null
+     * @return EloquentCollection<int, Asset>
      */
-    public function mine(?User $user): ?EloquentCollection
+    public function mine(?User $user): EloquentCollection
     {
         $employee = $user?->linkedEmployee();
         if ($employee === null) {
-            return null;
+            return new EloquentCollection;
         }
 
         return Asset::query()

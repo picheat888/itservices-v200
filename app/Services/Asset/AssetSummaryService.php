@@ -5,7 +5,6 @@
 namespace App\Services\Asset;
 
 use App\Enums\Asset\AssetStatus;
-use App\Http\Resources\Asset\AssetResource;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Support\OverviewPeriod;
@@ -27,7 +26,7 @@ class AssetSummaryService
 
     public function __construct(private readonly AssetTopValueService $topValue) {}
 
-    /** @return array<string, mixed> */
+    /** @return array<string, mixed>  top_purchased is a collection of assets; the controller wraps it as AssetResource */
     public function summary(OverviewPeriod $period): array
     {
         $assets = Asset::with(['location', 'category', 'vendor', 'contract.vendor'])->get();
@@ -54,7 +53,7 @@ class AssetSummaryService
             'writeoff' => $assets->where('status', AssetStatus::Writeoff)->count(),
             'total_value' => round($assets->sum(fn (Asset $a) => $a->annualValue()), 2),
             'by_type' => $byType,
-            'top_purchased' => AssetResource::collection($this->topValue->topPurchased($inService)),
+            'top_purchased' => $this->topValue->topPurchased($inService),
             'top_rented' => $this->topValue->topRented($inService),
             'activity' => $this->activity($period),
         ];
