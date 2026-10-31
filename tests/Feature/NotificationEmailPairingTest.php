@@ -12,15 +12,7 @@ use Database\Seeders\NotificationTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * The Notification screen warns that a bell is the ONLY announcement its event has — switch
- * it off and nobody is told the thing happened. That warning is worth having only while it
- * is true, and it is decided by a hand-written module → email-prefix map.
- *
- * The map went stale exactly once already: `access` stayed null after access.offboarding
- * shipped, so the one bell that had just stopped being its event's only channel was the only
- * one still flagged as it. A map maintained by hand cannot notice that on its own.
- */
+/** Keeps the Notification screen's "no email covers this bell" warning true. */
 class NotificationEmailPairingTest extends TestCase
 {
     use RefreshDatabase;
@@ -43,12 +35,7 @@ class NotificationEmailPairingTest extends TestCase
             ->unique()->sort()->values()->all();
     }
 
-    /**
-     * Email families no bell pairs with, on purpose. `report.` is the scheduled report itself:
-     * the mail is the delivery, sent to addresses that may have no account and so no bell,
-     * and no bell announces the same event — claiming it for a module would tell that
-     * module's bells they have a mail they do not.
-     */
+    /** Email families no module claims; report mails pair per bell through BELL_EMAILS. */
     private const STANDALONE_EMAIL_FAMILIES = ['report'];
 
     public function test_every_email_family_is_claimed_by_a_notification_module(): void
@@ -92,13 +79,33 @@ class NotificationEmailPairingTest extends TestCase
         $this->assertTrue($bell['has_email'], 'access.offboarding covers this event — the warning is stale');
     }
 
-    /**
-     * The counts above the table, including the two that answer opposite halves of the same
-     * question: how many bells are on, and how many are off.
-     *
-     * "Switched off" is the first thing to check when somebody reports an alert that never
-     * arrived — before this it could only be found by reading down the whole table.
-     */
+    public function test_only_the_report_ready_bell_of_the_system_module_has_a_mail(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $this->seed(NotificationTemplateSeeder::class);
+
+        $rows = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'))->keyBy('key');
+
+        $this->assertTrue($rows['notif_report_export_ready']['has_email'], 'report.export_ready mails the same person');
+        $this->assertFalse($rows['notif_report_export_failed']['has_email']);
+        $this->assertFalse($rows['notif_report_schedule_failed']['has_email']);
+        $this->assertFalse($rows['notif_password_expiring']['has_email']);
+        $this->assertFalse($rows['notif_sla_holidays_missing']['has_email']);
+    }
+
+    public function test_every_bell_level_mail_names_a_real_template(): void
+    {
+        $keys = collect(EmailTemplates::all())->pluck('key')->all();
+        $bells = collect(NotificationCatalogue::all())->pluck('key')->all();
+
+        foreach (NotificationTemplateService::BELL_EMAILS as $bell => $email) {
+            $this->assertContains($bell, $bells, "BELL_EMAILS names \"{$bell}\", which is not a bell");
+            $this->assertContains($email, $keys, "BELL_EMAILS pairs \"{$bell}\" with \"{$email}\", which is not a template");
+        }
+    }
+
+    /** The counts above the table. */
     public function test_the_counts_add_up_and_report_both_sides_of_the_switch(): void
     {
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
@@ -113,8 +120,7 @@ class NotificationEmailPairingTest extends TestCase
         $this->assertSame(count(NotificationCatalogue::all()), $stats['total']);
         $this->assertSame(1, $stats['disabled']);
         $this->assertSame($stats['total'], $stats['enabled'] + $stats['disabled'], 'every bell is either on or off');
-        // Deliberately no total for the bells no mail covers: it only ever read 0 once every
-        // module had mail of its own, and the useful form of it is the warning on the row.
+        // No only-channel total on purpose
         $this->assertArrayNotHasKey('only_channel', $stats);
     }
 }

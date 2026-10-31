@@ -48,7 +48,7 @@ class NotificationTemplateService
                 'is_standard' => $row->message_en === $bell['message_en'] && $row->message_th === $bell['message_th'],
                 // Reset also restores this, so the page offers it when only the switch moved
                 'standard_enabled' => (bool) $bell['enabled'],
-                'has_email' => in_array(self::emailPrefixFor($bell['module']), $emailModules, true),
+                'has_email' => in_array(self::emailPrefixFor($bell['module']), $emailModules, true) || isset(self::BELL_EMAILS[$bell['key']]),
             ];
         })->values();
     }
@@ -67,6 +67,11 @@ class NotificationTemplateService
             'edited' => $rows->where('is_standard', false)->count(),
         ];
     }
+
+    /** Bells of a module with no mail family of its own whose event still sends one mail. */
+    public const BELL_EMAILS = [
+        'notif_report_export_ready' => 'report.export_ready',
+    ];
 
     /** The email-template prefix of the same module, or null when no mail does (NotificationEmailPairingTest keeps it complete). */
     public static function emailPrefixFor(string $module): ?string
