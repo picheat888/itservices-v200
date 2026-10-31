@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
     nextPromotionAt,
     promoteNext,
+    TOAST_DEDUPE_MS,
     TOAST_LEAVE_MS,
     TOAST_MAX_TIMED,
     TOAST_STAGGER_MS,
@@ -12,7 +13,7 @@ import {
     type Toast,
 } from '../../resources/js/stores/toast.ts';
 
-const reset = () => useToastStore.setState({ toasts: [], lastShownAt: Number.NEGATIVE_INFINITY });
+const reset = () => useToastStore.setState({ toasts: [], lastShownAt: Number.NEGATIVE_INFINITY, leftAt: {} });
 const shownIds = () => visibleToasts(useToastStore.getState().toasts).map((toast) => toast.message);
 
 test('a burst enters one toast per gap, in the order it was pushed', (t) => {
@@ -73,7 +74,6 @@ test('a dismissed toast does not pull the next one forward', () => {
         message: `m${id}`,
         tone: 'info',
         duration: 5000,
-        createdAt: 0,
         shownAt,
     });
     assert.equal(promoteNext([toast(2, null)], 10_000, 10_000 + TOAST_STAGGER_MS - 1), null);
@@ -90,22 +90,51 @@ test('the same key within a second collapses into one toast', (t) => {
     assert.equal(useToastStore.getState().toasts.length, 1);
 });
 
-test('the same key stays one toast while the first is still up, and may come back once it leaves', (t) => {
+test('the same key stays one toast while the first is up and sliding out, and for a second after it starts to leave', (t) => {
     reset();
     t.mock.timers.enable({ apis: ['setTimeout'] });
     let now = 4_500_000;
     t.mock.method(Date, 'now', () => now);
     const { push, leave } = useToastStore.getState();
     push('slow down', 'warning', undefined, undefined, { key: 'http-throttle' });
-    now += 3_000;
+    now += 6_000;
     push('slow down again', 'warning', undefined, undefined, { key: 'http-throttle' });
     assert.equal(useToastStore.getState().toasts.length, 1);
 
+    // Counted from the start of the slide-out, not from when the toast was made
     leave(useToastStore.getState().toasts[0].id);
     push('slow down while it slides out', 'warning', undefined, undefined, { key: 'http-throttle' });
+    assert.deepEqual(
+        useToastStore.getState().toasts.map((toast) => toast.message),
+        ['slow down'],
+    );
+
+    now += TOAST_LEAVE_MS;
     t.mock.timers.tick(TOAST_LEAVE_MS);
-    assert.equal(useToastStore.getState().toasts.length, 1);
-    assert.equal(useToastStore.getState().toasts[0].message, 'slow down while it slides out');
+    push('slow down just after it left', 'warning', undefined, undefined, { key: 'http-throttle' });
+    assert.equal(useToastStore.getState().toasts.length, 0);
+
+    now += TOAST_DEDUPE_MS - TOAST_LEAVE_MS;
+    push('slow down a second later', 'warning', undefined, undefined, { key: 'http-throttle' });
+    assert.deepEqual(
+        useToastStore.getState().toasts.map((toast) => toast.message),
+        ['slow down a second later'],
+    );
+});
+
+test('another key is not held back by a toast that is leaving', (t) => {
+    reset();
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const now = 4_700_000;
+    t.mock.method(Date, 'now', () => now);
+    const { push, leave } = useToastStore.getState();
+    push('saved', 'success');
+    leave(useToastStore.getState().toasts[0].id);
+    push('deleted', 'success');
+    assert.deepEqual(
+        useToastStore.getState().toasts.map((toast) => toast.message),
+        ['saved', 'deleted'],
+    );
 });
 
 test('a group dismissal slides shown toasts out before removing them; queued ones drop at once', (t) => {
