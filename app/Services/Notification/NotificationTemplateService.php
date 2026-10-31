@@ -6,6 +6,8 @@ namespace App\Services\Notification;
 
 use App\Models\AuditLog;
 use App\Models\Notification\NotificationTemplate;
+use App\Models\User;
+use App\Notifications\NotificationTestNotification;
 use App\Support\EmailTemplates;
 use App\Support\NotificationCatalogue;
 use App\Support\SystemTime;
@@ -122,6 +124,16 @@ class NotificationTemplateService
         NotificationCatalogue::forgetSwitches();
 
         AuditLog::record('Updated bell', $standard['name'], AuditLog::changes($before, $bell), subject: $bell);
+    }
+
+    /**
+     * A real copy into the user's own tray; a switched-off notification still tests.
+     *
+     * @param  array{module: string}  $standard
+     */
+    public function sendTest(User $user, string $key, array $standard): void
+    {
+        $user->notify(new NotificationTestNotification($key, $standard['module']));
     }
 
     /** @param  array{name: string, message_en: string, message_th: string, enabled: bool}  $standard */

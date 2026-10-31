@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Notification;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification\NotificationTemplate;
-use App\Notifications\NotificationTestNotification;
 use App\Services\Notification\NotificationTemplateService;
 use App\Support\NotificationCatalogue;
 use Illuminate\Http\JsonResponse;
@@ -82,7 +81,7 @@ class NotificationTemplateController extends Controller
         $standard = NotificationCatalogue::find($key);
         abort_if($standard === null, 404, 'No such notification.');
 
-        $request->user()->notify(new NotificationTestNotification($key, $standard['module']));
+        $this->bells->sendTest($request->user(), $key, $standard);
 
         return response()->json(['message' => 'success']);
     }
