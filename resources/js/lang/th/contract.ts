@@ -68,6 +68,8 @@ export const contract: Dict = {
     contract_refusal_term_running: 'สัญญายังไม่เกินกำหนด กดสิ้นสุดสัญญาได้ตั้งแต่วันถัดจากวันสิ้นสุด',
     contract_refusal_assets_pending: 'ต้องตัดจำหน่ายทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก {pending} รายการ',
     contract_refusal_too_many_files: 'แนบไฟล์ได้สูงสุด {max} ไฟล์ต่อสัญญา (เหลือ {remaining} ไฟล์)',
+    contract_refusal_not_deletable: 'ลบได้เฉพาะสัญญาที่ยังใช้งานอยู่ สัญญานี้ให้ยกเลิกหรือกดสิ้นสุดสัญญาแทน',
+    contract_refusal_assets_linked: 'ต้องถอดทรัพย์สินที่ผูกกับสัญญานี้ออกก่อนจึงจะลบได้',
     contract_notify: 'แจ้งเตือนล่วงหน้า',
     contract_attachments: 'เอกสารแนบ',
     contract_link_assets: 'ทรัพย์สินที่ผูก',

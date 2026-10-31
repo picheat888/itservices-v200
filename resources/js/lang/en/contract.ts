@@ -68,6 +68,8 @@ export const contract: Dict = {
     contract_refusal_term_running: 'This contract is not overdue yet. It can be ended from the day after its end date.',
     contract_refusal_assets_pending: 'Write off every asset linked to this contract first. {pending} still to go.',
     contract_refusal_too_many_files: 'A contract can hold up to {max} files ({remaining} left).',
+    contract_refusal_not_deletable: 'Only a running contract can be deleted. Cancel or end this one instead.',
+    contract_refusal_assets_linked: 'Unlink the assets on this contract before deleting it.',
     contract_notify: 'Remind before',
     contract_attachments: 'Attachments',
     contract_link_assets: 'Linked assets',

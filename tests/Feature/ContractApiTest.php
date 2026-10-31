@@ -636,7 +636,7 @@ class ContractApiTest extends TestCase
         $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
         Asset::create(['asset_code' => 'RNT-LT-09', 'type' => 'laptop', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
 
-        $this->deleteJson("/api/contracts/{$contract->id}")->assertStatus(422);
+        $this->deleteJson("/api/contracts/{$contract->id}")->assertStatus(422)->assertJsonPath('message', 'assets_linked');
         $this->assertDatabaseHas('contracts', ['id' => $contract->id]);
     }
 
@@ -646,13 +646,13 @@ class ContractApiTest extends TestCase
 
         // Overdue — past its end date but never closed out; lifecycle-managed via Expire.
         $overdue = Contract::create(['vendor' => 'B', 'name' => 'Overdue', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDay(), 'value' => 1, 'billing_cycle' => 'yearly']);
-        $this->deleteJson("/api/contracts/{$overdue->id}")->assertStatus(422);
+        $this->deleteJson("/api/contracts/{$overdue->id}")->assertStatus(422)->assertJsonPath('message', 'not_deletable');
         $this->assertDatabaseHas('contracts', ['id' => $overdue->id]);
 
         // Cancelled — not deletable either.
         $cancelled = Contract::create(['vendor' => 'C', 'name' => 'Cancelled', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
         $cancelled->update(['cancelled_at' => now()]);
-        $this->deleteJson("/api/contracts/{$cancelled->id}")->assertStatus(422);
+        $this->deleteJson("/api/contracts/{$cancelled->id}")->assertStatus(422)->assertJsonPath('message', 'not_deletable');
         $this->assertDatabaseHas('contracts', ['id' => $cancelled->id]);
     }
 

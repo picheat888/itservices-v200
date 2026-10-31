@@ -80,6 +80,7 @@ export function useContractActions(onDone: () => void = () => undefined) {
             entity: { name: c.name, sub: c.code },
             description: t('contract_delete_note'),
             confirmText: t('contract_delete'),
+            errorMessage: (e) => reasonWords(e, t, 'contract_refusal_'),
             action: async () => {
                 await remove.mutateAsync(c.id);
                 onDone();

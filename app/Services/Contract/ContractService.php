@@ -9,10 +9,13 @@ use App\Models\Contract\Contract;
 use App\Support\Refusal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ContractService
 {
+    public function __construct(private readonly ContractExpiryAlertService $alerts) {}
+
     /**
      * Create a contract from validated data.
      *
@@ -28,7 +31,7 @@ class ContractService
     }
 
     /**
-     * Update an existing contract.
+     * Update an existing contract. A new end date is a renewal: its reminders start over.
      *
      * @param  array<string, mixed>  $data
      */
@@ -39,11 +42,17 @@ class ContractService
         }
 
         $this->assertKeepsRetiredAssets($contract, $data);
+        $endBefore = $contract->end_date;
         $assetIds = $this->pullAssetIds($data);
         $contract->update($this->withoutBlankCode($data));
         $this->syncAssets($contract, $this->assetIdsForType($contract, $assetIds));
 
-        return $contract->fresh();
+        $contract = $contract->fresh();
+        if (! $contract->end_date->isSameDay($endBefore)) {
+            $this->alerts->resetForContract($contract);
+        }
+
+        return $contract;
     }
 
     /**
@@ -180,6 +189,7 @@ class ContractService
             'cancelled_at' => Carbon::now(),
             'cancel_reason' => $reason,
         ]);
+        $this->alerts->resetForContract($contract);
 
         return $contract->fresh();
     }
@@ -202,6 +212,7 @@ class ContractService
             'cancel_reason' => null,
             'expired_at' => null,
         ]);
+        $this->alerts->resetForContract($contract);
 
         return $contract->fresh();
     }
@@ -226,8 +237,34 @@ class ContractService
         $this->assertNoPendingAssets($contract);
 
         $contract->update(['expired_at' => Carbon::now()]);
+        $this->alerts->resetForContract($contract);
 
         return $contract->fresh();
+    }
+
+    /**
+     * Hard-delete a contract added by mistake: only a running one (not overdue, cancelled or
+     * expired) with no linked assets. Anything past that is closed with cancel or expire instead.
+     * The attachment rows go with the contract (cascade); their files are removed here.
+     *
+     * @throws ValidationException
+     */
+    public function delete(Contract $contract): void
+    {
+        if ($contract->status !== 'active') {
+            Refusal::fail('not_deletable', field: 'contract');
+        }
+        if ($contract->assets()->exists()) {
+            Refusal::fail('assets_linked', field: 'contract');
+        }
+
+        $this->alerts->resetForContract($contract);
+
+        $paths = $contract->attachments()->pluck('path')->all();
+        if ($paths !== []) {
+            Storage::disk('local')->delete($paths);
+        }
+        $contract->delete();
     }
 
     /**

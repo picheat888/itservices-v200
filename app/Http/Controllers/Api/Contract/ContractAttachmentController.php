@@ -7,23 +7,17 @@ use App\Http\Resources\Contract\ContractResource;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAttachment;
-use App\Support\Refusal;
+use App\Services\Contract\ContractAttachmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
-/**
- * Manages the PDF documents attached to a contract. Files are kept on the public
- * disk under contracts/{id}; only PDFs up to 25 MB are accepted and a contract
- * may hold at most self::MAX_FILES of them.
- */
+/** The PDF documents attached to a contract: PDFs up to 25 MB, stored and capped by ContractAttachmentService. */
 class ContractAttachmentController extends Controller
 {
     /** Largest single upload, in kilobytes (25 MB). */
     private const MAX_SIZE_KB = 25600;
 
-    /** Hard cap on the number of attachments a single contract may hold. */
-    private const MAX_FILES = 5;
+    public function __construct(private readonly ContractAttachmentService $attachments) {}
 
     /**
      * Stores one or more uploaded PDFs against the contract: contracts.edit for any contract,
@@ -32,10 +26,7 @@ class ContractAttachmentController extends Controller
     public function store(Request $request, Contract $contract): JsonResponse
     {
         abort_unless($this->canUpload($request, $contract), 403);
-
-        if ($contract->isClosed()) {
-            Refusal::fail('contract_closed', field: 'contract');
-        }
+        $this->attachments->assertOpen($contract);
 
         $request->validate([
             'files' => ['required', 'array', 'min:1'],
@@ -43,22 +34,7 @@ class ContractAttachmentController extends Controller
         ]);
 
         $files = $request->file('files');
-
-        $remaining = self::MAX_FILES - $contract->attachments()->count();
-        if (count($files) > $remaining) {
-            // A reason and its figures; the page words it in the reader's language
-            return response()->json(['message' => 'too_many_files', 'max' => self::MAX_FILES, 'remaining' => $remaining], 422);
-        }
-
-        foreach ($files as $file) {
-            $path = $file->store("contracts/{$contract->id}", 'local');
-            $contract->attachments()->create([
-                'original_name' => $file->getClientOriginalName(),
-                'path' => $path,
-                'size' => $file->getSize(),
-                'mime' => $file->getMimeType() ?: 'application/pdf',
-            ]);
-        }
+        $this->attachments->store($contract, $files);
 
         AuditLog::record('Uploaded contract attachment', count($files)." ไฟล์ - {$contract->name} ({$contract->code})", subject: $contract);
 
@@ -72,12 +48,7 @@ class ContractAttachmentController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.edit'), 403);
         abort_unless($attachment->contract_id === $contract->id, 404);
 
-        if ($contract->isClosed()) {
-            Refusal::fail('contract_closed', field: 'contract');
-        }
-
-        Storage::disk('local')->delete($attachment->path);
-        $attachment->delete();
+        $this->attachments->delete($contract, $attachment);
 
         AuditLog::recordDeleted('Deleted contract attachment', "{$attachment->original_name} - {$contract->name} ({$contract->code})", $attachment);
 

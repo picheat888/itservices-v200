@@ -8,19 +8,17 @@ use App\Http\Requests\Contract\StoreContractRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
-use App\Models\Settings\AppSetting;
-use App\Services\Contract\ContractExpiryAlertService;
 use App\Services\Contract\ContractService;
+use App\Services\Contract\ContractSummaryService;
 use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ContractController extends Controller
 {
     public function __construct(
         private readonly ContractService $service,
-        private readonly ContractExpiryAlertService $alertService,
+        private readonly ContractSummaryService $summaries,
     ) {}
 
     /** Gates read access to the contracts.view permission (super bypasses). */
@@ -104,95 +102,12 @@ class ContractController extends Controller
         ]);
     }
 
-    /**
-     * Dashboard aggregates: status counts, normalised annual spend, the top
-     * vendors by spend, the 12-month expiry timeline, and the action queue.
-     * Without contracts.view_dashboard only the expiring and overdue counts.
-     */
+    /** The header alert counts; the Overview tab's figures need contracts.view_dashboard as well. */
     public function summary(Request $request): JsonResponse
     {
         $this->gateView($request);
 
-        $contracts = Contract::with('vendor')->get();
-
-        $terminal = fn ($c) => $c->cancelled_at !== null || $c->expired_at !== null;
-        $live = $contracts->reject($terminal);
-        $expiring = $live->filter(fn ($c) => $c->isInReminder());
-        $overdue = $live->filter(fn ($c) => $c->isOverdue());
-
-        // The header alert buttons need only these two; the rest is the Overview tab's
-        if (! $request->user()->hasPermission('contracts.view_dashboard')) {
-            return response()->json([
-                'expiring' => $expiring->count(),
-                'overdue' => $overdue->count(),
-            ]);
-        }
-
-        // "Active" = healthy contracts only — exclude those already inside their
-        // reminder window so active/expiring/overdue stay mutually exclusive.
-        $active = $live->filter(fn ($c) => $c->daysRemaining() > 0 && ! $c->isInReminder());
-        $cancelled = $contracts->filter(fn ($c) => $c->cancelled_at !== null && $c->expired_at === null);
-        $expired = $contracts->filter(fn ($c) => $c->expired_at !== null);
-
-        $annual = $live->sum(fn ($c) => $c->annualValue());
-
-        // Running contracts only, the same set as the annual value card
-        $topVendors = $live
-            ->groupBy(fn ($c) => $c->vendor?->name)
-            ->map(fn ($group, $vendor) => [
-                'vendor' => $vendor,
-                'vendor_th' => $group->first()->vendor?->name_th,
-                'amount' => round($group->sum(fn ($c) => $c->annualValue()), 2),
-            ])
-            ->sortByDesc('amount')
-            ->take(5)
-            ->values();
-
-        // Timeline dots: exactly the page's 12-month axis (2 months back to 9 ahead)
-        $axisStart = now()->startOfMonth()->subMonthsNoOverflow(2);
-        $axisEnd = now()->startOfMonth()->addMonthsNoOverflow(9)->endOfMonth();
-        $timeline = $live
-            ->filter(fn ($c) => $c->end_date->between($axisStart, $axisEnd))
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'code' => $c->code,
-                'name' => $c->name,
-                'vendor' => $c->vendor?->name,
-                'vendor_th' => $c->vendor?->name_th,
-                'end' => $c->end_date->toDateString(),
-                'days' => $c->daysRemaining(),
-                // Mirror the Action-queue logic: amber dot = inside the contract's
-                // own (per-contract) reminder window, not a fixed day threshold.
-                'in_reminder' => $c->isInReminder(),
-            ])
-            ->values();
-
-        // Overdue first (longest overdue on top), then ending today and the rest of the reminder window
-        $actionQueue = $overdue->merge($expiring)
-            ->sortBy(fn ($c) => $c->daysRemaining())
-            ->take(20)
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'code' => $c->code,
-                'name' => $c->name,
-                'vendor' => $c->vendor?->name,
-                'vendor_th' => $c->vendor?->name_th,
-                'days' => $c->daysRemaining(),
-            ])
-            ->values();
-
-        return response()->json([
-            'total' => $contracts->count(),
-            'active' => $active->count(),
-            'expiring' => $expiring->count(),
-            'overdue' => $overdue->count(),
-            'expired' => $expired->count(),
-            'cancelled' => $cancelled->count(),
-            'annual_value' => $this->formatMoney($annual),
-            'top_vendors' => $topVendors,
-            'timeline' => $timeline,
-            'action_queue' => $actionQueue,
-        ]);
+        return response()->json($this->summaries->summary($request->user()->hasPermission('contracts.view_dashboard')));
     }
 
     public function store(StoreContractRequest $request): JsonResponse
@@ -215,10 +130,6 @@ class ContractController extends Controller
     {
         $before = $contract->getOriginal();
         $contract = $this->service->update($contract, $request->validated());
-        // A new end date is a renewal: its reminders start over
-        if (! $contract->end_date->isSameDay($before['end_date'])) {
-            $this->alertService->resetForContract($contract);
-        }
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract), subject: $contract);
 
         return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category', 'assets.ownerEmployee', 'creator.employee', 'updater.employee', 'canceller'])))
@@ -238,7 +149,6 @@ class ContractController extends Controller
         ]);
 
         $contract = $this->service->cancel($contract, $validated['reason']);
-        $this->alertService->resetForContract($contract);
         AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) - {$validated['reason']}", subject: $contract);
 
         return (new ContractResource($contract))
@@ -254,7 +164,6 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.reactivate'), 403);
 
         $contract = $this->service->reactivate($contract);
-        $this->alertService->resetForContract($contract);
         AuditLog::record('Reactivated contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
         return (new ContractResource($contract))
@@ -267,39 +176,20 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.expire'), 403);
 
         $contract = $this->service->expire($contract);
-        $this->alertService->resetForContract($contract);
         AuditLog::record('Expired contract', "{$contract->name} ({$contract->code})", subject: $contract);
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
     }
 
+    /** Hard-delete a contract added by mistake (see ContractService::delete). Requires contracts.delete. */
     public function destroy(Request $request, Contract $contract): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.delete'), 403);
 
-        // Hard-delete is only for a freshly-created contract added by mistake: it must
-        // still be active (not cancelled/expired/overdue) and have no linked assets.
-        // Anything past that is lifecycle-managed via Cancel/Expire instead.
-        abort_unless($contract->status === 'active', 422, 'Only a newly created (active) contract can be deleted.');
-        abort_if($contract->assets()->exists(), 422, 'Detach the linked assets before deleting this contract.');
-
+        $this->service->delete($contract);
         AuditLog::recordDeleted('Deleted contract', "{$contract->name} ({$contract->code})", $contract);
-        $this->alertService->resetForContract($contract);
-
-        // Remove the attachment files; the DB rows go via cascade on delete.
-        $paths = $contract->attachments()->pluck('path')->all();
-        if ($paths !== []) {
-            Storage::disk('local')->delete($paths);
-        }
-        $contract->delete();
 
         return response()->json(['message' => 'success']);
-    }
-
-    /** Formats an amount as "฿4,310,000.00" (symbol per Settings currency). */
-    private function formatMoney(float $amount): string
-    {
-        return AppSetting::money($amount);
     }
 }
