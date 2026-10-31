@@ -18,11 +18,13 @@ test('a failed org chart load shows the retry panel before the empty state', () 
     assert.ok(failed > 0 && empty > failed);
 });
 
-test('both cancel-resignation confirms name the employee', () => {
+test('both cancel-resignation entry points use the one confirm that names the employee', () => {
     const page = read('pages/index.tsx');
     const confirms = page.split("description: t('cancel_resign_confirm')").slice(1);
-    assert.equal(confirms.length, 2);
-    for (const rest of confirms) assert.match(rest.slice(0, 120), /entity: \{ name: localName\(e, lang\), sub: e\.code \}/);
+    assert.equal(confirms.length, 1);
+    assert.match(confirms[0].slice(0, 120), /entity: \{ name: localName\(e, lang\), sub: e\.code \}/);
+    assert.match(page, /onCancelResign=\{\(e\) => confirmCancelResign\(e\)\}/);
+    assert.match(page, /onCancelResign=\{\(e\) => confirmCancelResign\(e, closeEmp\)\}/);
 });
 
 test('member counts in the three member dialogs go through fmtN', () => {

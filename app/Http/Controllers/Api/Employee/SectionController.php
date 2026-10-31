@@ -2,29 +2,27 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
-use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreSectionRequest;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\SectionResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Section;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Employee\UnitMembers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SectionController extends Controller
 {
+    public function __construct(private readonly UnitMembers $unitMembers) {}
+
     /**
      * List all sections, optionally filtered by department_id, with employee count.
      */
     public function index(Request $request): JsonResponse
     {
         $query = Section::with('department')
-            ->withCount([
-                'employees',
-                'employees as active_employees_count' => fn (Builder $q) => $q->where('status', EmployeeStatus::Active->value),
-            ])
+            ->withCount($this->unitMembers->counts())
             ->orderBy('department_id')->orderBy('name');
 
         if ($request->filled('department_id')) {
@@ -39,8 +37,7 @@ class SectionController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.view_section'), 403);
 
-        $members = $section->employees()->with(['department', 'position', 'section', 'user'])
-            ->orderByRaw("status = 'resigned'")->orderBy('first_name')->orderBy('last_name')->get();
+        $members = $this->unitMembers->list($section->employees());
 
         return EmployeeResource::collection($members)->response();
     }
@@ -53,7 +50,7 @@ class SectionController extends Controller
         $section = Section::create($request->validated());
         AuditLog::record('Created section', $section->name, subject: $section);
 
-        return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        return (new SectionResource($section->load('department')->loadCount($this->unitMembers->counts())))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     /**
@@ -74,7 +71,7 @@ class SectionController extends Controller
         $section->update($data);
         AuditLog::record('Updated section', $section->name, AuditLog::changes($before, $section), subject: $section);
 
-        return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response();
+        return (new SectionResource($section->load('department')->loadCount($this->unitMembers->counts())))->additional(['message' => 'success'])->response();
     }
 
     /**

@@ -20,9 +20,9 @@ class DepartmentResource extends JsonResource
             'tag' => $this->tag,
             'name' => $this->name,
             'name_th' => $this->name_th,
-            'count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
+            'count' => $this->whenCounted('employees', $this->employees_count, fn () => $this->employees()->count()),
             'active_employees_count' => $this->whenCounted('active_employees'),
-            'sections_count' => $this->whenCounted('sections', $this->sections_count, $this->sections()->count()),
+            'sections_count' => $this->whenCounted('sections', $this->sections_count, fn () => $this->sections()->count()),
         ];
     }
 }

@@ -11,6 +11,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DepartmentApiTest extends TestCase
@@ -84,6 +85,54 @@ class DepartmentApiTest extends TestCase
             $names = collect($this->getJson($url)->assertOk()->json('data'))->pluck('first_name')->all();
             $this->assertSame(['Mia', 'Zed', 'Aaron'], $names, $url);
         }
+    }
+
+    public function test_the_three_lists_do_not_count_again_per_row(): void
+    {
+        $this->actingAs($this->super());
+        $queries = function (string $url): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $this->getJson($url)->assertOk();
+            DB::disableQueryLog();
+
+            return count(DB::getQueryLog());
+        };
+        $add = function (int $n): void {
+            foreach (range(1, $n) as $i) {
+                $department = Department::create(['name' => 'Dept '.uniqid()]);
+                Section::create(['department_id' => $department->id, 'name' => 'Sec '.uniqid()]);
+                Position::create(['code' => 'P-'.uniqid(), 'title' => 'Pos '.uniqid()]);
+            }
+        };
+
+        $add(2);
+        array_map($queries, ['/api/departments', '/api/positions', '/api/sections']);
+        $before = array_map($queries, ['/api/departments', '/api/positions', '/api/sections']);
+        $add(5);
+        $after = array_map($queries, ['/api/departments', '/api/positions', '/api/sections']);
+
+        $this->assertSame($before, $after);
+    }
+
+    public function test_create_and_update_answer_with_the_same_counts_as_the_list(): void
+    {
+        $this->actingAs($this->super());
+
+        $department = $this->postJson('/api/departments', ['name' => 'Logistics'])->assertCreated()
+            ->assertJsonPath('data.count', 0)->assertJsonPath('data.active_employees_count', 0)->assertJsonPath('data.sections_count', 0)
+            ->json('data');
+        $this->putJson("/api/departments/{$department['id']}", ['name' => 'Logistics TH'])->assertOk()
+            ->assertJsonPath('data.active_employees_count', 0);
+
+        $position = $this->postJson('/api/positions', ['title' => 'Driver'])->assertCreated()
+            ->assertJsonPath('data.employees_count', 0)->assertJsonPath('data.active_employees_count', 0)
+            ->json('data');
+        $this->putJson("/api/positions/{$position['id']}", ['title' => 'Senior Driver'])->assertOk()
+            ->assertJsonPath('data.active_employees_count', 0);
+
+        $this->postJson('/api/sections', ['department_id' => $department['id'], 'name' => 'Fleet'])->assertCreated()
+            ->assertJsonPath('data.members_count', 0)->assertJsonPath('data.active_employees_count', 0);
     }
 
     public function test_updates_a_department(): void

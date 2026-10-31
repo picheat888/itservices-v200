@@ -2,25 +2,23 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
-use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StorePositionRequest;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\PositionResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Position;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Employee\UnitMembers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PositionController extends Controller
 {
+    public function __construct(private readonly UnitMembers $unitMembers) {}
+
     public function index(): JsonResponse
     {
-        $positions = Position::withCount([
-            'employees',
-            'employees as active_employees_count' => fn (Builder $q) => $q->where('status', EmployeeStatus::Active->value),
-        ])->orderBy('code')->get();
+        $positions = Position::withCount($this->unitMembers->counts())->orderBy('code')->get();
 
         return PositionResource::collection($positions)->response();
     }
@@ -30,8 +28,7 @@ class PositionController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.view_position'), 403);
 
-        $members = $position->employees()->with(['department', 'position', 'section', 'user'])
-            ->orderByRaw("status = 'resigned'")->orderBy('first_name')->orderBy('last_name')->get();
+        $members = $this->unitMembers->list($position->employees());
 
         return EmployeeResource::collection($members)->response();
     }
@@ -64,7 +61,7 @@ class PositionController extends Controller
         $position = Position::create($data);
         AuditLog::record('Created position', $position->title, subject: $position);
 
-        return (new PositionResource($position))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        return (new PositionResource($position->loadCount($this->unitMembers->counts())))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     public function update(StorePositionRequest $request, Position $position): JsonResponse
@@ -74,7 +71,7 @@ class PositionController extends Controller
         $position->update($data);
         AuditLog::record('Updated position', $position->title, AuditLog::changes($before, $position), subject: $position);
 
-        return (new PositionResource($position))->additional(['message' => 'success'])->response();
+        return (new PositionResource($position->loadCount($this->unitMembers->counts())))->additional(['message' => 'success'])->response();
     }
 
     public function destroy(Request $request, Position $position): JsonResponse

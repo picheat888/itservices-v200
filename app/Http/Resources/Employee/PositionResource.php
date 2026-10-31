@@ -19,7 +19,7 @@ class PositionResource extends JsonResource
             'code' => $this->code,
             'title' => $this->title,
             'allow_special_position' => (bool) $this->allow_special_position,
-            'employees_count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
+            'employees_count' => $this->whenCounted('employees', $this->employees_count, fn () => $this->employees()->count()),
             'active_employees_count' => $this->whenCounted('active_employees'),
         ];
     }

@@ -89,7 +89,7 @@ import { useDepartmentMutations, useDepartments } from '../hooks/use-departments
 import { useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary } from '../hooks/use-employees';
 import { usePositionMutations, usePositions } from '../hooks/use-positions';
 import { accountDeleteRefusal } from '../lib/delete-account';
-import { blockedMembersLine } from '../lib/member-counts';
+import { blockedMembersLine, memberWords } from '../lib/member-counts';
 
 const TAB_IDS = ['overview', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
@@ -202,6 +202,19 @@ export default function EmployeesPage() {
     };
     // A cancel-resign refused on a Super admin account says why
     const cancelResignError = (err: unknown) => (accountDeleteRefusal(err) === 'super_account' ? t('cancel_resign_err_super_account') : undefined);
+    // Cancel a resignation after a confirm naming the person; `after` runs once it succeeds
+    const confirmCancelResign = async (e: Employee, after?: () => void) => {
+        await confirm({
+            variant: 'warn',
+            description: t('cancel_resign_confirm'),
+            entity: { name: localName(e, lang), sub: e.code },
+            action: async () => {
+                await employeeMut.cancelResign.mutateAsync(e.id);
+                after?.();
+            },
+            errorMessage: cancelResignError,
+        });
+    };
 
     // View drawer in ?view=<id>; row clicks seed the cache for an instant open
     const qc = useQueryClient();
@@ -333,10 +346,7 @@ export default function EmployeesPage() {
                 description: t('pos_del_blocked_desc'),
                 entity: {
                     name: p.title,
-                    sub: blockedMembersLine(p.active_employees_count ?? 0, members, fmtN, {
-                        plain: t('members_n'),
-                        withLeft: t('members_with_left'),
-                    }),
+                    sub: blockedMembersLine(p.active_employees_count ?? 0, members, fmtN, memberWords(t)),
                     subBelow: true,
                 },
                 confirmText: t('got_it'),
@@ -467,7 +477,7 @@ export default function EmployeesPage() {
                 description: t('dept_del_blocked_desc'),
                 entity: {
                     name: deptName(d),
-                    sub: `${blockedMembersLine(d.active_employees_count ?? 0, members, fmtN, { plain: t('members_n'), withLeft: t('members_with_left') })}, ${fmtN(sections)} ${t('sub_sections')}`,
+                    sub: `${blockedMembersLine(d.active_employees_count ?? 0, members, fmtN, memberWords(t))}, ${fmtN(sections)} ${t('sub_sections')}`,
                     subBelow: true,
                 },
                 confirmText: t('got_it'),
@@ -615,15 +625,7 @@ export default function EmployeesPage() {
                             onView={openEmp}
                             onEdit={openEditEmp}
                             onResign={setResignEmp}
-                            onCancelResign={async (e) => {
-                                await confirm({
-                                    variant: 'warn',
-                                    description: t('cancel_resign_confirm'),
-                                    entity: { name: localName(e, lang), sub: e.code },
-                                    action: () => employeeMut.cancelResign.mutateAsync(e.id),
-                                    errorMessage: cancelResignError,
-                                });
-                            }}
+                            onCancelResign={(e) => confirmCancelResign(e)}
                             onResetPassword={setResetPwEmp}
                             onSetCredentials={setCredEmp}
                         />
@@ -732,18 +734,7 @@ export default function EmployeesPage() {
                 canDelete={canDelete}
                 canViewOrg={canViewOrg}
                 onResign={(e) => setResignEmp(e)}
-                onCancelResign={async (e) => {
-                    await confirm({
-                        variant: 'warn',
-                        description: t('cancel_resign_confirm'),
-                        entity: { name: localName(e, lang), sub: e.code },
-                        action: async () => {
-                            await employeeMut.cancelResign.mutateAsync(e.id);
-                            closeEmp();
-                        },
-                        errorMessage: cancelResignError,
-                    });
-                }}
+                onCancelResign={(e) => confirmCancelResign(e, closeEmp)}
                 onDelete={askDeleteEmployee}
                 onResetPassword={(e) => setResetPwEmp(e)}
                 // Keep the view dialog open so the credentials modal stacks on top of it.

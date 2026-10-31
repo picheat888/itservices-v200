@@ -82,7 +82,7 @@ export function PositionModal({
         if (position && !(await confirmEdit({ name: position.title, sub: position.code }))) return;
         setError('');
         formError.clear();
-        const payload = { title: title.trim(), allow_special_position: allowSpecial };
+        const payload = { title: title.trim(), ...(canSpecial ? { allow_special_position: allowSpecial } : {}) };
         try {
             if (position) await update.mutateAsync({ id: position.id, ...payload });
             else await create.mutateAsync(payload);

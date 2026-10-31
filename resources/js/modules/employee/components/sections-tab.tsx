@@ -17,7 +17,7 @@ import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useSectionMutations, useSections } from '../hooks/use-sections';
-import { blockedMembersLine } from '../lib/member-counts';
+import { blockedMembersLine, memberWords } from '../lib/member-counts';
 import { SectionMembersDialog } from './section-members-dialog';
 import { SectionModal } from './section-modal';
 
@@ -97,7 +97,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 description: t('section_del_blocked_desc'),
                 entity: {
                     name,
-                    sub: blockedMembersLine(s.active_employees_count ?? 0, count, fmtN, { plain: t('members_n'), withLeft: t('members_with_left') }),
+                    sub: blockedMembersLine(s.active_employees_count ?? 0, count, fmtN, memberWords(t)),
                     subBelow: true,
                 },
                 confirmText: t('got_it'),

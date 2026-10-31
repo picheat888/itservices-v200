@@ -56,7 +56,7 @@ class EmployeeService
     public function inDirectoryOrder(Builder $query): Builder
     {
         return $query
-            ->orderByRaw("status = 'resigned'")
+            ->orderByRaw('status = ?', [EmployeeStatus::Resigned->value])
             ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
             ->orderByDesc('joined_at')
             ->orderByDesc('id');

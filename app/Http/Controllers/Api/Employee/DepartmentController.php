@@ -2,27 +2,24 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
-use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreDepartmentRequest;
 use App\Http\Resources\Employee\DepartmentResource;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Department;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Employee\UnitMembers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
+    public function __construct(private readonly UnitMembers $unitMembers) {}
+
     public function index(): JsonResponse
     {
         return DepartmentResource::collection(
-            Department::withCount([
-                'employees',
-                'employees as active_employees_count' => fn (Builder $q) => $q->where('status', EmployeeStatus::Active->value),
-                'sections',
-            ])->orderBy('name')->get()
+            Department::withCount([...$this->unitMembers->counts(), 'sections'])->orderBy('name')->get()
         )->response();
     }
 
@@ -31,7 +28,7 @@ class DepartmentController extends Controller
         $department = Department::create($request->validated());
         AuditLog::record('Created department', $department->name, subject: $department);
 
-        return (new DepartmentResource($department))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        return (new DepartmentResource($department->loadCount([...$this->unitMembers->counts(), 'sections'])))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     public function update(StoreDepartmentRequest $request, Department $department): JsonResponse
@@ -40,7 +37,7 @@ class DepartmentController extends Controller
         $department->update($request->validated());
         AuditLog::record('Updated department', $department->name, AuditLog::changes($before, $department), subject: $department);
 
-        return (new DepartmentResource($department))->additional(['message' => 'success'])->response();
+        return (new DepartmentResource($department->loadCount([...$this->unitMembers->counts(), 'sections'])))->additional(['message' => 'success'])->response();
     }
 
     public function destroy(Request $request, Department $department): JsonResponse
@@ -70,8 +67,7 @@ class DepartmentController extends Controller
         $user = $request->user();
         abort_unless((bool) ($user?->hasPermission('employees.view_department') || $user?->hasPermission('workflows.manage') || $user?->hasPermission('workflows.module')), 403);
 
-        $members = $department->employees()->with(['department', 'position', 'section', 'user'])
-            ->orderByRaw("status = 'resigned'")->orderBy('first_name')->orderBy('last_name')->get();
+        $members = $this->unitMembers->list($department->employees());
 
         return EmployeeResource::collection($members)->response();
     }

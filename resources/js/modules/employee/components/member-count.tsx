@@ -25,7 +25,7 @@ export function MemberCount({
         <>
             <span>
                 {counts ? (
-                    t('members_n').replace('{n}', fmtN(counts.active))
+                    t(counts.active === 1 ? 'members_n_one' : 'members_n').replace('{n}', fmtN(counts.active))
                 ) : (
                     <>
                         <CountPlaceholder label={t('loading')} /> {t('dept_members')}

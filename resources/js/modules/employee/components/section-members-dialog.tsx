@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -35,6 +36,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     const membersQuery = useSectionMembers(view?.id ?? null, openId != null);
     const { data: members = [], isLoading } = membersQuery;
+    const failed = membersQuery.isError && !membersQuery.data;
     useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.members_count;
@@ -82,7 +84,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                             {deptName && <span>{deptName}</span>}
                             <MemberCount
                                 members={members}
-                                loading={isLoading}
+                                loading={isLoading || failed}
                                 rowActive={view?.active_employees_count}
                                 rowTotal={view?.members_count}
                             />
@@ -91,23 +93,27 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                 />
 
                 <div className="min-h-0 border-t px-6 py-5">
-                    <DataTable
-                        columns={columns}
-                        rows={members}
-                        rowKey={(m) => m.id}
-                        loading={loadingMembers}
-                        loadingRows={expected ? Math.min(expected, 20) : undefined}
-                        loadingAvatar
-                        maxBodyHeight="52dvh"
-                        search={{ value: query, onChange: setQuery }}
-                        empty={
-                            query
-                                ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
-                                : { kind: 'empty', title: t('emp_empty_section_members'), hint: t('emp_empty_section_members_hint') }
-                        }
-                        searchPlaceholder={t('emp_search_by_position')}
-                        searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
-                    />
+                    {failed ? (
+                        <LoadFailedPanel onRetry={() => membersQuery.refetch()} />
+                    ) : (
+                        <DataTable
+                            columns={columns}
+                            rows={members}
+                            rowKey={(m) => m.id}
+                            loading={loadingMembers}
+                            loadingRows={expected ? Math.min(expected, 20) : undefined}
+                            loadingAvatar
+                            maxBodyHeight="52dvh"
+                            search={{ value: query, onChange: setQuery }}
+                            empty={
+                                query
+                                    ? { kind: 'search', title: t('emp_empty_members_search'), hint: t('emp_empty_members_search_hint') }
+                                    : { kind: 'empty', title: t('emp_empty_section_members'), hint: t('emp_empty_section_members_hint') }
+                            }
+                            searchPlaceholder={t('emp_search_by_position')}
+                            searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
+                        />
+                    )}
                 </div>
             </DialogContent>
         </Dialog>
