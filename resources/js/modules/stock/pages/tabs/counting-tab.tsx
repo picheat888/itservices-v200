@@ -18,9 +18,8 @@ import { CountDoneDialog } from '../../components/count/count-done-dialog';
 import { CountOpenDialog } from '../../components/count/count-open-dialog';
 import { CountSheetDialog } from '../../components/count/count-sheet-dialog';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockPrefetch } from '../../hooks/use-stock';
+import { countStatusTone } from '../../lib/count-sheet';
 import { stockRefusalText } from '../../lib/refusal';
-
-const statusTone = (s: StockCount['status']) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
 /** Stock Count tab: the list of count sheets; opening, counting and confirming happen in the count dialogs. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
@@ -130,7 +129,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             // Older sheets confirmed to adjust later keep their badge beside the status
             render: (s) => (
                 <span className="inline-flex items-center gap-1.5">
-                    <StatusBadge tone={statusTone(s.status)}>{t(`stock_count_${s.status}`)}</StatusBadge>
+                    <StatusBadge tone={countStatusTone(s.status)}>{t(`stock_count_${s.status}`)}</StatusBadge>
                     {s.status === 'committed' && s.adjust_mode === 'manual' && (
                         <StatusBadge tone="gray">{t('stock_count_mode_badge_manual')}</StatusBadge>
                     )}

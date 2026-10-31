@@ -65,7 +65,6 @@ class StockCountLockTest extends TestCase
     public function test_a_count_refuses_movements_of_its_items_on_its_shelf_only(): void
     {
         $counted = $this->item('A-1', ['Main' => 10]);
-        Warehouse::create(['name' => 'Branch']);
         $this->actingAs(User::factory()->create(['role' => 'super']));
         $this->open('Main', [$counted->id]);
         $other = $this->item('B-1', ['Main' => 4]);

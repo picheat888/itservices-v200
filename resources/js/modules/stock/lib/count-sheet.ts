@@ -1,8 +1,11 @@
 // Count sheet maths: reason lists, reason clearing on a qty change, summary, chip/search filtering, draft edits over saved lines and the row a refusal names.
 // Pure (no React or browser imports) so node tests can load it.
-import type { CountReason } from '@/shared/types';
+import type { CountReason, StockCount } from '@/shared/types';
 import { matchesAllWords } from '../../../shared/lib/search-words.ts';
 import type { LinePatch } from '../api/stockApi';
+
+/** Badge tone of a sheet's status, shared by the list and the sheet. */
+export const countStatusTone = (s: StockCount['status']) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
 export const SHORT_REASONS: CountReason[] = ['lost', 'broken', 'used', 'miscount', 'custom'];
 export const OVER_REASONS: CountReason[] = ['inbound', 'returned', 'miscount', 'custom'];

@@ -8,8 +8,8 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { searchLabel } from '@/shared/lib/search-words';
 import { localPair } from '@/shared/lib/local-name';
+import { searchLabel } from '@/shared/lib/search-words';
 import { cn } from '@/shared/lib/utils';
 import type { CountReason, StockCount, StockCountLine } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -23,6 +23,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LinePatch } from '../../api/stockApi';
 import { useStockCountMutations } from '../../hooks/use-stock';
 import {
+    countStatusTone,
     draftLine,
     filterIds,
     lineNeedsReason,
@@ -55,8 +56,6 @@ function scrollToRow(table: HTMLElement | null, lineId: number, focus: string) {
     row?.scrollIntoView({ block: 'center' });
     row?.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
 }
-
-const statusTone = (s: StockCount['status']) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
 export function CountSheetDialog({
     open,
@@ -234,8 +233,13 @@ export function CountSheetDialog({
         try {
             await commit.mutateAsync(shown.id);
             const read = await onRefetch();
-            if (read.isError) toastError(read.error);
             setReview((r) => ({ ...r, open: false }));
+            // Confirmed, but the fresh copy did not arrive: close rather than show the draft as still editable
+            if (read.isError) {
+                toastError(read.error);
+                setEdits({});
+                onClose();
+            }
         } catch (e) {
             toastError(e);
             showRefusedLine(e);
@@ -283,7 +287,7 @@ export function CountSheetDialog({
                             eyebrow={shown.reference}
                             title={t('stock_count_sheet')}
                             srDescription={`${shown.reference} ${warehouse}`}
-                            titleSuffix={<StatusBadge tone={statusTone(shown.status)}>{t(`stock_count_${shown.status}`)}</StatusBadge>}
+                            titleSuffix={<StatusBadge tone={countStatusTone(shown.status)}>{t(`stock_count_${shown.status}`)}</StatusBadge>}
                             subtitle={
                                 shown.recount_of ? (
                                     <span className="text-muted-foreground text-sm">

@@ -7,7 +7,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
 use App\Support\Refusal;
 
-/** Per-warehouse on-hand quantities (stock_balances) by warehouse name or row; removals never go below zero. */
+/** Per-warehouse on-hand quantities (stock_balances) by warehouse name or row; "Unassigned" maps to no row, and removals never go below zero. */
 class StockBalanceService
 {
     /** Increment (or create) the balance for a warehouse. */

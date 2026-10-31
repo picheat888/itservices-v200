@@ -75,9 +75,13 @@ export function CountSheetRow({
                     <button
                         type="button"
                         onClick={onOpenSerials}
-                        aria-label={t('stock_count_tick_serials')
-                            .replace('{sku}', line.sku ?? '')
-                            .replace('{n}', countedText)}
+                        aria-label={
+                            line.counted_qty === null
+                                ? t('stock_count_tick_serials_none').replace('{sku}', line.sku ?? '')
+                                : t('stock_count_tick_serials')
+                                      .replace('{sku}', line.sku ?? '')
+                                      .replace('{n}', countedText)
+                        }
                         className="hover:border-brand/50 focus-visible:border-brand focus-visible:ring-brand/15 bg-background ml-auto flex h-9 w-20 items-center justify-between rounded-md border border-violet-300 px-2.5 text-sm tabular-nums transition-[border-color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-hidden dark:border-violet-500/50"
                     >
                         <ScanBarcode className="h-3.5 w-3.5 text-violet-700 dark:text-violet-300" aria-hidden />

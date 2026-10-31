@@ -31,7 +31,10 @@ test('every reason and the found event have words in both languages', () => {
 });
 
 // Count sheet words
-const countKeys = (dict: Record<string, string>) => Object.keys(dict).filter((k) => /^stock_(count|refusal_count)_/.test(k)).sort();
+const countKeys = (dict: Record<string, string>) =>
+    Object.keys(dict)
+        .filter((k) => /^stock_(count|refusal_count)_/.test(k))
+        .sort();
 
 test('th and en have the same count keys', () => {
     assert.deepEqual(countKeys(th), countKeys(en));
@@ -77,9 +80,22 @@ test('refusal words use only placeholders the server sends', () => {
 });
 
 // Sheet logic (count-sheet.ts)
-import { filterLines, lineNeedsReason, OVER_REASONS, reasonAfterQtyChange, SHORT_REASONS, sheetSummary } from '../../resources/js/modules/stock/lib/count-sheet.ts';
+import {
+    filterLines,
+    lineNeedsReason,
+    OVER_REASONS,
+    reasonAfterQtyChange,
+    sheetSummary,
+    SHORT_REASONS,
+} from '../../resources/js/modules/stock/lib/count-sheet.ts';
 
-const sheetLine = (sku: string, system_qty: number, counted_qty: number | null, reason: never = null as never, reason_note: string | null = null) => ({
+const sheetLine = (
+    sku: string,
+    system_qty: number,
+    counted_qty: number | null,
+    reason: never = null as never,
+    reason_note: string | null = null,
+) => ({
     sku,
     name: `Item ${sku}`,
     system_qty,
@@ -112,19 +128,40 @@ test('a differing line needs a reason, a custom one needs a note too', () => {
 test('the sheet summary counts matches, shorts, overs and the missing reasons', () => {
     const lines = [sheetLine('A', 3, 3), sheetLine('B', 5, 3), sheetLine('C', 1, 2), sheetLine('D', 4, null)];
     const s = sheetSummary(lines);
-    assert.deepEqual({ ...s, noReason: undefined }, { total: 4, counted: 3, same: 1, short: 1, over: 1, shortQty: 2, overQty: 1, noReason: undefined });
+    assert.deepEqual(
+        { ...s, noReason: undefined },
+        { total: 4, counted: 3, same: 1, short: 1, over: 1, shortQty: 2, overQty: 1, noReason: undefined },
+    );
     assert.equal(s.noReason, 2);
 });
 
 test('chips and search narrow the lines', () => {
     const lines = [sheetLine('A', 3, 3), sheetLine('B', 5, 3, 'lost' as never), sheetLine('C', 1, 2), sheetLine('D', 4, null)];
-    assert.deepEqual(filterLines(lines, 'no_reason', '').map((l) => l.sku), ['C']);
-    assert.deepEqual(filterLines(lines, 'pending', '').map((l) => l.sku), ['D']);
-    assert.deepEqual(filterLines(lines, 'short', '').map((l) => l.sku), ['B']);
-    assert.deepEqual(filterLines(lines, 'over', '').map((l) => l.sku), ['C']);
-    assert.deepEqual(filterLines(lines, 'same', '').map((l) => l.sku), ['A']);
+    assert.deepEqual(
+        filterLines(lines, 'no_reason', '').map((l) => l.sku),
+        ['C'],
+    );
+    assert.deepEqual(
+        filterLines(lines, 'pending', '').map((l) => l.sku),
+        ['D'],
+    );
+    assert.deepEqual(
+        filterLines(lines, 'short', '').map((l) => l.sku),
+        ['B'],
+    );
+    assert.deepEqual(
+        filterLines(lines, 'over', '').map((l) => l.sku),
+        ['C'],
+    );
+    assert.deepEqual(
+        filterLines(lines, 'same', '').map((l) => l.sku),
+        ['A'],
+    );
     assert.equal(filterLines(lines, 'all', '').length, 4);
-    assert.deepEqual(filterLines(lines, 'all', 'item b').map((l) => l.sku), ['B']);
+    assert.deepEqual(
+        filterLines(lines, 'all', 'item b').map((l) => l.sku),
+        ['B'],
+    );
 });
 
 // Sheet draft (edits laid over the saved lines)
@@ -240,9 +277,11 @@ test('the retired mode words are gone from both languages', () => {
 import { clampQtyText, filterIds, linesByIds } from '../../resources/js/modules/stock/lib/count-sheet.ts';
 
 test('the filter snapshot keeps a row in view while it is being edited', () => {
-    const lines = [savedLine({ sku: 'A', system_qty: 5 }), savedLine({ sku: 'B', system_qty: 3, counted_qty: 3 }), savedLine({ sku: 'C', system_qty: 2 })].map(
-        (l, i) => ({ ...l, id: i + 1 }),
-    );
+    const lines = [
+        savedLine({ sku: 'A', system_qty: 5 }),
+        savedLine({ sku: 'B', system_qty: 3, counted_qty: 3 }),
+        savedLine({ sku: 'C', system_qty: 2 }),
+    ].map((l, i) => ({ ...l, id: i + 1 }));
     const ids = filterIds(lines, 'pending', '');
     assert.deepEqual(ids, [1, 3]);
     // Typing the first digit on a pending row no longer matches the chip, but the snapshot still shows it with the new value
@@ -331,4 +370,49 @@ test('the sheet puts a refused row in view after a save or the commit', () => {
     const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`);
     assert.ok(sheet.includes('showRefusedLine(e)'));
     assert.ok(sheet.includes('refusedLine(e, lines)'));
+});
+
+test('every count refusal word uses only the placeholders the server sends with it', () => {
+    const sent: Record<string, string[]> = {
+        count_in_progress: ['reference'],
+        count_needs_warehouse: [],
+        count_overlap: ['sku', 'reference'],
+        count_overlap_many: ['sku', 'reference', 'n'],
+        count_overlap_commit: ['reference'],
+        count_reason_missing: ['sku'],
+        count_reason_note_missing: ['sku'],
+        count_reason_wrong_side: ['sku'],
+        count_recount_not_committed: ['reference'],
+        count_recount_nothing: ['reference'],
+        count_serial_missing_mismatch: ['sku'],
+        count_serial_not_here: ['sku'],
+        count_serial_over: ['sku'],
+        count_not_editable: [],
+        count_closed: [],
+        count_not_draft: [],
+    };
+    for (const dict of [th, en] as Record<string, string>[]) {
+        for (const key of Object.keys(dict).filter((k) => k.startsWith('stock_refusal_count_'))) {
+            const code = key.slice('stock_refusal_'.length);
+            assert.ok(code in sent, `${key} has no server code in this table`);
+            for (const [, name] of dict[key].matchAll(/\{(\w+)\}/g)) assert.ok(sent[code].includes(name), `${key} uses {${name}}`);
+        }
+    }
+});
+
+test('the count screens name an uncounted serial row, re-announce a repeated scan and close after a confirm they cannot re-read', () => {
+    const row = src(`${COUNT_DIR}count-sheet-row.tsx`);
+    const serials = src(`${COUNT_DIR}count-serial-dialog.tsx`);
+    const sheet = src(`${COUNT_DIR}count-sheet-dialog.tsx`);
+    const list = src('modules/stock/pages/tabs/counting-tab.tsx');
+    assert.match(row, /line\.counted_qty === null\s*\? t\('stock_count_tick_serials_none'\)/);
+    assert.equal(th.stock_count_tick_serials_none, 'ยังไม่นับ {sku} แตะเพื่อติ๊ก Serial');
+    assert.equal(en.stock_count_tick_serials_none, '{sku} not counted yet, tap to tick serials');
+    assert.match(serials, /\{note && <span key=\{note\.seq\}>\{note\.text\}<\/span>\}/);
+    assert.equal((serials.match(/seq: \(prev\?\.seq \?\? 0\) \+ 1/g) ?? []).length, 3);
+    assert.match(sheet, /if \(read\.isError\) \{\s*toastError\(read\.error\);\s*setEdits\(\{\}\);\s*onClose\(\);/);
+    for (const file of [sheet, list]) {
+        assert.ok(file.includes('countStatusTone('));
+        assert.ok(!file.includes('const statusTone'));
+    }
 });

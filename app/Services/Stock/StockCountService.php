@@ -78,7 +78,7 @@ class StockCountService
 
         $warehouse = $original->warehouse_id === null ? null : Warehouse::find($original->warehouse_id);
         if ($warehouse === null) {
-            Refusal::fail('count_needs_warehouse', ['sku' => '']);
+            Refusal::fail('count_needs_warehouse');
         }
 
         $itemIds = $original->lines()->get()
@@ -147,7 +147,12 @@ class StockCountService
             $changes['reason_note'] = $payload['reason_note'];
         }
 
+        $wasCustom = $line->reason === StockCountReason::Custom;
         $line->fill($changes);
+        // Leaving "custom" without a new note drops the note typed for it
+        if ($wasCustom && $line->reason !== StockCountReason::Custom && ! array_key_exists('reason_note', $payload)) {
+            $line->reason_note = null;
+        }
         $this->assertReasonFits($line, $sku);
         $line->save();
     }
@@ -209,7 +214,7 @@ class StockCountService
 
             $warehouse = $count->warehouse_id === null ? null : Warehouse::find($count->warehouse_id);
             if ($warehouse === null) {
-                Refusal::fail('count_needs_warehouse', ['sku' => '']);
+                Refusal::fail('count_needs_warehouse');
             }
 
             $lines = $count->lines()->with('item')->orderBy('id')->get();

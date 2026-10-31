@@ -20,16 +20,7 @@ use App\Services\Stock\StockTransferService;
 use Illuminate\Http\Request;
 use RuntimeException;
 
-/**
- * The spare-parts store: consumables and parts in three warehouses. Receipts come in
- * several lots at different prices (so FIFO cost has something to show), stock moves
- * between warehouses, a requisition comes partly back, requisitions sit in every status, one count is
- * committed with a variance and one is still a draft, and the final quantities leave
- * items out of stock, below minimum and above maximum.
- *
- * Receipts go through StockReceiveService, transfers through StockTransferService, requisitions through
- * StockRequestController's actions and the return through StockReturnService.
- */
+/** Demo spare-parts store in three warehouses: lots, transfers, requisitions in every status, a return and two counts, all through the real services. */
 final class DemoStock implements DemoStep
 {
     /** key => [name, category, unit, min, max, [[days ago, qty, unit cost, warehouse #], ...]] */
@@ -240,17 +231,24 @@ final class DemoStock implements DemoStep
     {
         $ctx->actAs($lead);
 
+        // A warehouse holding nothing gets no sheet; a sheet with no lines is not a count
         $clock->at($clock->daysAgo(12, 16));
-        $count = $this->counts->open($this->warehouse($warehouses[2]), $this->itemIdsIn($warehouses[2]), $lead);
-        $counted = $count->lines->values()->mapWithKeys(fn ($line, int $i) => [
-            $line->id => $i === 0 && $line->system_qty > 0
-                ? ['counted_qty' => $line->system_qty - 1, 'reason' => 'lost']
-                : ['counted_qty' => $line->system_qty],
-        ])->all();
-        $this->counts->commit($this->counts->saveLines($count, $counted), $lead);
+        $itemIds = $this->itemIdsIn($warehouses[2]);
+        if ($itemIds !== []) {
+            $count = $this->counts->open($this->warehouse($warehouses[2]), $itemIds, $lead);
+            $counted = $count->lines->values()->mapWithKeys(fn ($line, int $i) => [
+                $line->id => $i === 0 && $line->system_qty > 0
+                    ? ['counted_qty' => $line->system_qty - 1, 'reason' => 'lost']
+                    : ['counted_qty' => $line->system_qty],
+            ])->all();
+            $this->counts->commit($this->counts->saveLines($count, $counted), $lead);
+        }
 
         $clock->at($clock->daysAgo(1, 16));
-        $this->counts->open($this->warehouse($warehouses[0]), $this->itemIdsIn($warehouses[0]), $lead);
+        $itemIds = $this->itemIdsIn($warehouses[0]);
+        if ($itemIds !== []) {
+            $this->counts->open($this->warehouse($warehouses[0]), $itemIds, $lead);
+        }
     }
 
     private function warehouse(string $name): Warehouse

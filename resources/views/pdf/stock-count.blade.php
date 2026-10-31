@@ -30,7 +30,7 @@
         .tile-unit { font-size: 10.5px; font-weight: normal; color: #475569; }
         h2 { font-size: 12px; margin: 12px 0 4px; page-break-after: avoid; }
         h2 .count { font-weight: normal; color: #475569; }
-        table.data { width: 100%; border-collapse: collapse;  }
+        table.data { width: 100%; border-collapse: collapse; }
         table.data thead { display: table-header-group; }
         table.data tr { page-break-inside: avoid; }
         table.data th { background: #f1f5f9; border: 0.5px solid #cbd5e1; padding: 4px 5px; text-align: left; font-size: 9.5px; }
@@ -82,8 +82,8 @@
                         <td style="width: 128px;"><span class="tile-label">นับแล้ว</span><span class="tile-value">{{ $number($totals['counted']) }} <span class="tile-unit">จาก {{ $number($totals['lines']) }} รายการ</span></span></td>
                         <td class="gap"></td>
                         <td class="same"><span class="tile-label">ยอดตรง</span><span class="tile-value">{{ $number($totals['same_lines']) }} <span class="tile-unit">รายการ</span></span></td>
-                        <td class="bad"><span class="tile-label">ยอดขาด</span><span class="tile-value short-t">{{ $number($totals['short_lines']) }} <span class="tile-unit">รายการ@if ($totals['short_qty'] > 0) (−{{ $number($totals['short_qty']) }} Q'ty)@endif</span></span></td>
-                        <td class="good"><span class="tile-label">ยอดเกิน</span><span class="tile-value over-t">{{ $number($totals['over_lines']) }} <span class="tile-unit">รายการ@if ($totals['over_qty'] > 0) (+{{ $number($totals['over_qty']) }} Q'ty)@endif</span></span></td>
+                        <td class="bad"><span class="tile-label">ยอดขาด</span><span class="tile-value short-t">{{ $number($totals['short_lines']) }} <span class="tile-unit">รายการ@if ($totals['short_qty'] > 0) (−{{ $number($totals['short_qty']) }}&nbsp;Q'ty)@endif</span></span></td>
+                        <td class="good"><span class="tile-label">ยอดเกิน</span><span class="tile-value over-t">{{ $number($totals['over_lines']) }} <span class="tile-unit">รายการ@if ($totals['over_qty'] > 0) (+{{ $number($totals['over_qty']) }}&nbsp;Q'ty)@endif</span></span></td>
                     </tr>
                 </table>
             </td>

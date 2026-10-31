@@ -65,12 +65,23 @@ class StockCount extends Model
      */
     public function lostSerials(int $stockItemId): ?Builder
     {
+        return $this->lostSerialsOf([$stockItemId]);
+    }
+
+    /**
+     * lostSerials() for several items in one query.
+     *
+     * @param  list<int>  $stockItemIds
+     * @return Builder<StockItemSerial>|null
+     */
+    public function lostSerialsOf(array $stockItemIds): ?Builder
+    {
         $original = $this->recountOf;
         if ($original === null) {
             return null;
         }
 
-        return StockItemSerial::where('stock_item_id', $stockItemId)
+        return StockItemSerial::whereIn('stock_item_id', $stockItemIds)
             ->where('warehouse_id', $this->warehouse_id)
             ->where('status', 'adjusted')
             ->where('reference', $original->reference);

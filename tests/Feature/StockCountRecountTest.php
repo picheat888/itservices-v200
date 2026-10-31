@@ -110,6 +110,19 @@ class StockCountRecountTest extends TestCase
         $this->postJson("/api/stock-counts/{$noWarehouse['id']}/recount")->assertStatus(422)->assertJsonPath('message', 'count_needs_warehouse');
     }
 
+    public function test_a_second_recount_while_the_first_is_a_draft_is_refused(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $wh = Warehouse::create(['name' => 'Main']);
+        $item = $this->plainItem('A', 5, $wh);
+        $original = $this->confirmedCount($wh, [$item], ['A' => ['counted_qty' => 4, 'reason' => 'lost']]);
+        $first = $this->postJson("/api/stock-counts/{$original['id']}/recount")->assertCreated()->json('data');
+
+        $this->postJson("/api/stock-counts/{$original['id']}/recount")
+            ->assertStatus(422)->assertJsonPath('message', 'count_overlap')->assertJsonPath('reference', $first['reference']);
+        $this->assertSame(2, StockCount::count());
+    }
+
     public function test_recount_of_all_matching_is_refused(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));

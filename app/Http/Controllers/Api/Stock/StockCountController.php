@@ -66,7 +66,7 @@ class StockCountController extends Controller
             // A real warehouse row; the 'Unassigned' sentinel is never countable
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where(fn ($q) => $q->where('name', '!=', 'Unassigned'))],
             'stock_item_ids' => ['required', 'array', 'min:1'],
-            'stock_item_ids.*' => ['integer', 'exists:stock_items,id'],
+            'stock_item_ids.*' => ['integer', 'distinct', 'exists:stock_items,id'],
         ]);
 
         $count = $this->service->open(Warehouse::findOrFail($data['warehouse_id']), $data['stock_item_ids'], $request->user());
@@ -134,7 +134,7 @@ class StockCountController extends Controller
     {
         $this->gateManage($request);
         // Confirming always adjusts; serial ticks come from the draft lines
-        $request->validate(['mode' => ['prohibited']]);
+        $request->validate(['mode' => ['missing']]);
 
         $count = $this->service->commit($stockCount, $request->user());
 

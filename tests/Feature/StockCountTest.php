@@ -479,7 +479,7 @@ class StockCountTest extends TestCase
         $this->assertNull($count->fresh()->warehouse_id);
 
         $this->postJson("/api/stock-counts/{$count->id}/commit", [])
-            ->assertStatus(422)->assertJsonPath('message', 'count_needs_warehouse')->assertJsonPath('sku', '');
+            ->assertStatus(422)->assertJsonPath('message', 'count_needs_warehouse')->assertJsonMissingPath('sku');
 
         $this->assertSame(10, $item->fresh()->current_stock);
         $this->assertSame(0, StockMovement::count());
@@ -616,6 +616,28 @@ class StockCountTest extends TestCase
         $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'custom'])
             ->assertStatus(422)->assertJsonPath('message', 'count_reason_note_missing')->assertJsonPath('sku', 'A-1');
         $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'custom', 'reason_note' => 'water damage'])->assertOk();
+    }
+
+    public function test_leaving_custom_drops_its_note(): void
+    {
+        [$countId, $lineId] = $this->openOneLine();
+        $this->saveLine($countId, $lineId, ['counted_qty' => 7, 'reason' => 'custom', 'reason_note' => 'water damage'])->assertOk();
+
+        $this->saveLine($countId, $lineId, ['reason' => 'lost'])->assertOk();
+
+        $this->getJson("/api/stock-counts/{$countId}")
+            ->assertJsonPath('data.lines.0.reason', 'lost')
+            ->assertJsonPath('data.lines.0.reason_note', null);
+    }
+
+    public function test_open_refuses_the_same_item_twice(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/stock-counts', ['warehouse_id' => $this->warehouse()->id, 'stock_item_ids' => [$item->id, $item->id]])
+            ->assertUnprocessable()->assertJsonValidationErrors(['stock_item_ids.1']);
+        $this->assertSame(0, StockCount::count());
     }
 
     public function test_save_allows_a_difference_without_reason(): void

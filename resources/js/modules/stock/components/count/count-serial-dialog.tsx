@@ -18,7 +18,7 @@ import { CountChip } from './count-chip';
 
 type Serial = { id: number; serial: string };
 type Chip = 'all' | 'found' | 'notfound';
-type ScanNote = { kind: 'ok' | 'dup' | 'none'; text: string } | null;
+type ScanNote = { kind: 'ok' | 'dup' | 'none'; text: string; seq: number } | null;
 
 // Violet marks serial tracking, as the S/N tag does
 const SERIAL_ACCENT = '#6d28d9';
@@ -137,12 +137,12 @@ export function CountSerialDialog({
         const wasLost = inStock ? undefined : lost.find(same);
         const hit = inStock ?? wasLost;
         if (!hit) {
-            setNote({ kind: 'none', text: t('stock_count_scan_none').replace('{serial}', code) });
+            setNote((prev) => ({ kind: 'none', text: t('stock_count_scan_none').replace('{serial}', code), seq: (prev?.seq ?? 0) + 1 }));
         } else if ((inStock ? foundSet : backSet).has(hit.id)) {
-            setNote({ kind: 'dup', text: t('stock_count_scan_dup').replace('{serial}', hit.serial) });
+            setNote((prev) => ({ kind: 'dup', text: t('stock_count_scan_dup').replace('{serial}', hit.serial), seq: (prev?.seq ?? 0) + 1 }));
         } else {
             (inStock ? setFound : setBack)((prev) => [...prev, hit.id]);
-            setNote({ kind: 'ok', text: t('stock_count_scan_found').replace('{serial}', hit.serial) });
+            setNote((prev) => ({ kind: 'ok', text: t('stock_count_scan_found').replace('{serial}', hit.serial), seq: (prev?.seq ?? 0) + 1 }));
         }
         setQuery('');
         scanRef.current?.focus();
@@ -215,7 +215,8 @@ export function CountSerialDialog({
                                       : 'text-muted-foreground',
                             )}
                         >
-                            {note?.text}
+                            {/* A new key re-announces the same words when the same serial is scanned again */}
+                            {note && <span key={note.seq}>{note.text}</span>}
                         </p>
                     </div>
 

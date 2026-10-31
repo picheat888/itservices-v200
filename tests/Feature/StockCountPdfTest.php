@@ -75,6 +75,11 @@ class StockCountPdfTest extends TestCase
         $this->assertSame(['A-SHORT-SN1'], $rows[0]['missing_serials']);
         $this->assertSame(1, $seen[0]['totals']['short_lines']);
         $this->assertSame(1, $seen[0]['totals']['uncounted']);
+
+        $html = view('pdf.stock-count', $seen[0])->render();
+        $this->assertStringContainsString('A-SHORT-SN1', $html);
+        $this->assertStringContainsString('ของหาย', $html);
+        $this->assertStringContainsString("(−1&nbsp;Q'ty)", $html);
     }
 
     public function test_confirmed_count_without_differences_renders(): void

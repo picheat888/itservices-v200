@@ -15,6 +15,7 @@ class StockCountResource extends JsonResource
     public function toArray(Request $request): array
     {
         $missingSerials = $this->missingSerialNames();
+        $lostSerials = $this->lostSerialsByItem();
 
         return [
             'id' => $this->id,
@@ -53,9 +54,7 @@ class StockCountResource extends JsonResource
                     ->values(),
                 'track_serial' => (bool) $l->item?->track_serial,
                 // Serials the original count wrote off, open to tick back on a recount
-                'lost_serials' => $l->item?->track_serial
-                    ? ($this->resource->lostSerials($l->stock_item_id)?->orderBy('id')->get(['id', 'serial'])->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values() ?? [])
-                    : [],
+                'lost_serials' => $l->item?->track_serial ? ($lostSerials[$l->stock_item_id] ?? []) : [],
                 // Only present once the in-stock serials are eager-loaded (the show endpoint).
                 'serials' => $l->item && $l->item->relationLoaded('serials')
                     ? $l->item->serials->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values()
@@ -97,5 +96,26 @@ class StockCountResource extends JsonResource
         $ids = $this->lines->flatMap(fn ($l) => $l->missing_serial_ids ?? [])->unique()->values()->all();
 
         return $ids === [] ? collect() : StockItemSerial::whereIn('id', $ids)->pluck('serial', 'id');
+    }
+
+    /**
+     * On a recount, the serials the original count wrote off for each serial line's item, read in one query.
+     *
+     * @return array<int, list<array{id: int, serial: string}>>
+     */
+    private function lostSerialsByItem(): array
+    {
+        if (! $this->relationLoaded('lines') || $this->recount_of_id === null) {
+            return [];
+        }
+        $itemIds = $this->lines->filter(fn ($l) => $l->item?->track_serial)->pluck('stock_item_id')->unique()->values()->all();
+        if ($itemIds === []) {
+            return [];
+        }
+
+        return ($this->resource->lostSerialsOf($itemIds)?->orderBy('id')->get(['id', 'serial', 'stock_item_id']) ?? collect())
+            ->groupBy('stock_item_id')
+            ->map(fn ($serials) => $serials->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values()->all())
+            ->all();
     }
 }
