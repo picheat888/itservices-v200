@@ -7,14 +7,11 @@ use App\Http\Requests\Stock\StoreStockItemRequest;
 use App\Http\Resources\Stock\StockItemResource;
 use App\Http\Resources\Stock\StockMovementResource;
 use App\Http\Resources\Stock\StockReorderItemResource;
-use App\Models\AuditLog;
-use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
-use App\Models\Stock\StockLot;
-use App\Models\Stock\StockMovement;
 use App\Services\Stock\StockHistoryService;
-use App\Support\SearchTerms;
+use App\Services\Stock\StockItemListService;
+use App\Services\Stock\StockItemService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -22,6 +19,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockItemController extends Controller
 {
+    public function __construct(
+        private readonly StockItemListService $lists,
+        private readonly StockItemService $items,
+    ) {}
+
     /** Gate read access to the stock.view permission (super bypasses). */
     private function gateView(Request $request): void
     {
@@ -34,58 +36,21 @@ class StockItemController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('stock.view_dashboard'), 403);
     }
 
-    /**
-     * Server-paginated stock item list with search, category/warehouse/status filters
-     * and sorting. Status is derived but maps to DB columns, so it filters in SQL via
-     * StockItem::scopeWithDerivedStatus() — letting pagination happen at the database.
-     */
+    /** Server-paginated item list with search, category / warehouse / status filters and sorting; all=1 for pickers. */
     public function index(Request $request): JsonResponse
     {
         $this->gateView($request);
 
-        $query = StockItem::query()
-            ->select('stock_items.*')
-            ->with(['balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category', 'draftCountLines.count:id,reference,warehouse'])
-            ->withExists(['movements as has_movements', 'serials as has_serials'])
-            // Reserved = qty held by approved-but-unfulfilled requests.
-            ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
-            // FIFO stock value as a sortable subquery column.
-            ->addSelect(['value_total' => StockLot::query()
-                ->selectRaw('COALESCE(SUM(qty_remaining * unit_cost), 0)')
-                ->whereColumn('stock_item_id', 'stock_items.id')]);
+        $filters = [
+            'search' => $request->query('search'),
+            'category' => $request->filled('category') ? $request->query('category') : null,
+            'warehouse' => $request->filled('warehouse') ? $request->query('warehouse') : null,
+            'status' => $request->filled('status') ? $request->query('status') : null,
+            'sort' => $request->query('sort', 'name_asc'),
+        ];
 
-        SearchTerms::apply($query, $request->query('search'), [
-            'stock_items.name', 'stock_items.sku',
-            SearchTerms::related('brand', ['name']),
-            SearchTerms::related('model', ['name']),
-        ]);
-        if ($request->filled('category')) {
-            // Category filter arrives as a name.
-            $query->whereHas('category', fn ($c) => $c->where('name', $request->query('category')));
-        }
-        if ($request->filled('warehouse')) {
-            // Warehouse filter = where stock sits (per-warehouse balances).
-            $warehouse = $request->query('warehouse');
-            $query->whereHas('balances', fn ($q) => $q->whereHas('warehouse', fn ($w) => $w->where('name', $warehouse)));
-        }
-        if ($request->filled('status')) {
-            $query->withDerivedStatus($request->query('status'));
-        }
-
-        match ($request->query('sort', 'name_asc')) {
-            'name_desc' => $query->orderBy('name', 'desc'),
-            'stock_desc' => $query->orderBy('current_stock', 'desc'),
-            'stock_asc' => $query->orderBy('current_stock', 'asc'),
-            'value_desc' => $query->orderBy('value_total', 'desc'),
-            'value_asc' => $query->orderBy('value_total', 'asc'),
-            default => $query->orderBy('name', 'asc'),
-        };
-        // Tie-breaker so equal names/stock/values never swap or repeat across pages.
-        $query->orderBy('stock_items.id');
-
-        // all=1: full filtered list for pickers/drawers.
         if ($request->boolean('all')) {
-            $items = $query->get();
+            $items = $this->lists->all($filters);
 
             return response()->json([
                 'data' => StockItemResource::collection($items),
@@ -93,8 +58,7 @@ class StockItemController extends Controller
             ]);
         }
 
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $paginator = $query->paginate($perPage);
+        $paginator = $this->lists->page($filters, max(10, min(100, (int) $request->query('per_page', 20))));
 
         return response()->json([
             'data' => StockItemResource::collection($paginator->items()),
@@ -107,73 +71,20 @@ class StockItemController extends Controller
         ]);
     }
 
-    /**
-     * Dashboard aggregates: SKU/unit/value totals, min-max alert buckets
-     * (low/out, overstock, dead stock), and per-warehouse / per-category breakdowns.
-     */
+    /** Dashboard aggregates: totals, min-max buckets, reorder lists, per-warehouse / per-category, recent movements. */
     public function summary(Request $request): JsonResponse
     {
         $this->gateDashboard($request);
 
-        $items = StockItem::with(['lots', 'balances', 'category'])->get();
+        $figures = $this->lists->summary($request->user());
+        $figures['out_items'] = StockReorderItemResource::collection($figures['out_items']);
+        $figures['low_items'] = StockReorderItemResource::collection($figures['low_items']);
+        $figures['recent_movements'] = $figures['recent_movements'] === null ? [] : StockMovementResource::collection($figures['recent_movements']);
 
-        $out = $items->filter(fn (StockItem $i) => $i->status() === 'out');
-        $low = $items->filter(fn (StockItem $i) => $i->status() === 'low');
-        $over = $items->filter(fn (StockItem $i) => $i->status() === 'over');
-        $dead = $items->filter(fn (StockItem $i) => $i->status() === 'dead');
-
-        // The reorder lists show warehouse names; load them once for out/low items only
-        $out->concat($low)->load('balances.warehouse');
-
-        // Aggregate per-warehouse totals from stock_balances so that items
-        // split across multiple warehouses are counted accurately.
-        // Per-warehouse cost (value) is out of scope for FIFO lot costing.
-        $byWarehouse = StockBalance::query()
-            ->leftJoin('warehouses', 'warehouses.id', '=', 'stock_balances.warehouse_id')
-            ->selectRaw('warehouses.name as warehouse, COUNT(DISTINCT stock_item_id) as skus, SUM(qty) as units')
-            ->groupBy('warehouses.name')
-            ->get()
-            ->map(fn ($row) => [
-                'warehouse' => $row->warehouse ?: 'Unassigned',
-                'skus' => (int) $row->skus,
-                'units' => (int) $row->units,
-            ])
-            ->values();
-
-        $byCategory = $items->groupBy(fn (StockItem $i) => $i->category?->name)->map(fn ($group, $name) => [
-            'category' => $name ?: '—',
-            'category_th' => $group->first()->category?->name_th,
-            'skus' => $group->count(),
-            'units' => $group->sum('current_stock'),
-        ])->sortByDesc('units')->values();
-
-        // Recent movements are folded into the summary so the dashboard's "Recent movements"
-        // card lands in the same request as every other panel (no lagging second query).
-        // Only for users who can view the event log; others get an empty list (card is hidden).
-        $recentMovements = $request->user()?->hasPermission('stock.view_events')
-            ? StockMovementResource::collection(
-                StockMovement::with('item')->orderByDesc('moved_at')->orderByDesc('id')->limit(10)->get()
-            )
-            : [];
-
-        return response()->json([
-            'skus' => $items->count(),
-            'total_units' => $items->sum('current_stock'),
-            'total_value' => round($items->sum(fn (StockItem $i) => $i->stockValue()), 2),
-            'out_count' => $out->count(),
-            'low_count' => $low->count(),
-            'over_count' => $over->count(),
-            'dead_count' => $dead->count(),
-            'out_items' => StockReorderItemResource::collection($out->sortBy('name')->values()),
-            'low_items' => StockReorderItemResource::collection($low->sortBy('current_stock')->values()),
-            'by_warehouse' => $byWarehouse,
-            'by_category' => $byCategory,
-            'recent_movements' => $recentMovements,
-        ]);
+        return response()->json($figures);
     }
 
-    /** Flat list of every serial known to the system — used by the receive
-     *  drawer to flag duplicates live as the user captures serials. */
+    /** Every serial known to the system, for the receive drawer's live duplicate check. */
     public function serials(Request $request): JsonResponse
     {
         $this->gateView($request);
@@ -184,10 +95,7 @@ class StockItemController extends Controller
     /** Create a stock item with an auto-generated running SKU (SKU-#######). */
     public function store(StoreStockItemRequest $request): JsonResponse
     {
-        $data = $request->validated();
-        $data['sku'] = StockItem::nextSku();
-        $item = StockItem::create($data);
-        AuditLog::record('Created stock item', "{$item->sku} - {$item->name}", subject: $item);
+        $item = $this->items->create($request->validated());
 
         return (new StockItemResource($item))->response()->setStatusCode(201);
     }
@@ -197,36 +105,7 @@ class StockItemController extends Controller
     {
         $this->gateView($request);
 
-        $stockItem->load([
-            'lots' => fn ($q) => $q->with(['movement.user.employee:id,first_name_th,last_name_th', 'warehouse'])
-                ->withSum(['entries as issued_sum' => fn ($e) => $e->whereHas('movement', fn ($m) => $m->where('type', 'issue'))], 'qty')
-                ->withSum(['entries as returned_sum' => fn ($e) => $e->whereHas('movement', fn ($m) => $m->where('type', 'return'))], 'qty')
-                ->orderBy('received_at')
-                ->orderBy('id'),
-            'serials' => fn ($q) => $q->with('warehouse')->orderBy('serial'),
-            'balances' => fn ($q) => $q->with('warehouse')->orderBy('warehouse_id'),
-            'unit',
-            'warrantyType',
-            'brand',
-            'model',
-            'category',
-            'creator.employee',
-            'updater.employee',
-            'draftCountLines.count:id,reference,warehouse',
-        ]);
-
-        return (new StockItemResource($this->withReserved($stockItem)))->response();
-    }
-
-    /**
-     * Load the reserved quantity (approved-but-unfulfilled requests) the way index() does with
-     * withSum. Without it a single item's response said 0 reserved, so the item dialog never
-     * showed its "reserved / free" line.
-     */
-    private function withReserved(StockItem $stockItem): StockItem
-    {
-        return $stockItem->loadSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
-            ->loadExists(['movements as has_movements', 'serials as has_serials']);
+        return (new StockItemResource($this->lists->loadDetail($stockItem)))->response();
     }
 
     /** Full audit history for one SKU: movement timeline + lots + per-serial event timelines. */
@@ -244,8 +123,7 @@ class StockItemController extends Controller
 
         $file = $histories->pdf($stockItem, (string) $request->query('v', 'summary'), $request->user());
 
-        // dompdf v3's own stream() returns a buffered Illuminate Response; the tests read the
-        // body via streamedContent(), so wrap the rendered bytes in a real StreamedResponse.
+        // A real StreamedResponse (the tests read streamedContent())
         return new StreamedResponse(function () use ($file) {
             echo $file['bytes'];
         }, 200, [
@@ -257,35 +135,20 @@ class StockItemController extends Controller
     /** Update a stock item. */
     public function update(StoreStockItemRequest $request, StockItem $stockItem): JsonResponse
     {
-        $before = $stockItem->getOriginal();
-        $stockItem->update($request->validated());
-        AuditLog::record('Updated stock item', "{$stockItem->sku} - {$stockItem->name}", AuditLog::changes($before, $stockItem), subject: $stockItem);
+        $this->items->update($stockItem, $request->validated());
 
-        return (new StockItemResource($this->withReserved($stockItem)))->response();
+        return (new StockItemResource($this->lists->withReserved($stockItem)))->response();
     }
 
-    /** Delete a stock item (requires stock.delete). Only an empty SKU — zero
-     *  on-hand and zero FIFO value — may be removed, so stock or lot value is
-     *  never lost by a delete — and only one that has never moved, so deleting can never
-     *  take a ledger with it. The UI mirrors this; this is the safety net. */
+    /** Delete an empty SKU that never moved (stock.delete); the reason it cannot is a 422. */
     public function destroy(Request $request, StockItem $stockItem): JsonResponse
     {
         abort_unless((bool) ($request->user()?->isSuper() || $request->user()?->hasPermission('stock.delete')), 403);
 
-        if ($stockItem->current_stock !== 0 || $stockItem->stockValue() > 0) {
-            return response()->json(['message' => 'item_has_stock'], 422);
+        $refusal = $this->items->delete($stockItem);
+        if ($refusal !== null) {
+            return response()->json($refusal, 422);
         }
-
-        // A SKU that has ever moved carries a ledger — and the lots, serials and serial
-        // events hanging off it. The FK is restrictOnDelete, so the database would refuse
-        // this anyway; refusing here is what turns that into a reason the UI can show.
-        $movements = $stockItem->movements()->count();
-        if ($movements > 0) {
-            return response()->json(['message' => 'has_history', 'movements_count' => $movements], 422);
-        }
-
-        AuditLog::recordDeleted('Deleted stock item', "{$stockItem->sku} - {$stockItem->name}", $stockItem);
-        $stockItem->delete();
 
         return response()->json(['message' => 'success']);
     }
