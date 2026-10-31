@@ -162,11 +162,26 @@ test('a pasted line drops its list number and weekday, never the holiday name', 
     assert.deepEqual(named('วันจักรี 6 เมษายน 2569', 2026), { date: '2026-04-06', name: 'วันจักรี' });
     assert.deepEqual(named('Sunday Fun Day 2026-03-01', 2026), { date: '2026-03-01', name: 'Sunday Fun Day' });
     assert.deepEqual(named('วันจันทร์ที่ 13 เมษายน 2569', 2026), { error: 'no_name' });
-    assert.deepEqual(parseHolidayText('1. 13-15 เมษายน 2569 (วันจันทร์) วันสงกรานต์', 2026, []).ok, [
-        { date: '2026-04-13', name: 'วันสงกรานต์' },
-        { date: '2026-04-14', name: 'วันสงกรานต์' },
-        { date: '2026-04-15', name: 'วันสงกรานต์' },
-    ]);
+    assert.deepEqual(named('10 ธันวาคม 2569 วันรัฐธรรมนูญ (วันพฤหัสบดี)', 2026), { date: '2026-12-10', name: 'วันรัฐธรรมนูญ' });
+    assert.deepEqual(named('2026-04-13 MONDAY, Songkran', 2026), { date: '2026-04-13', name: 'Songkran' });
+    for (const range of ['1. 13-15 เมษายน 2569 (วันจันทร์) วันสงกรานต์', '13-15 เมษายน 2569 (จันทร์-พุธ) วันสงกรานต์']) {
+        assert.deepEqual(parseHolidayText(range, 2026, []).ok, [
+            { date: '2026-04-13', name: 'วันสงกรานต์' },
+            { date: '2026-04-14', name: 'วันสงกรานต์' },
+            { date: '2026-04-15', name: 'วันสงกรานต์' },
+        ]);
+    }
+});
+
+test('a name that ends or starts with a weekday word stays whole', () => {
+    const named = (line: string) => parseHolidayLine(line, 2026);
+    assert.deepEqual(named('Good Friday 3/4/2569'), { date: '2026-04-03', name: 'Good Friday' });
+    assert.deepEqual(named('Easter Monday 6/4/2569'), { date: '2026-04-06', name: 'Easter Monday' });
+    assert.deepEqual(named('Rising Sun 3/4/2569'), { date: '2026-04-03', name: 'Rising Sun' });
+    assert.deepEqual(named('งานพุธ 13 เมษายน 2569'), { date: '2026-04-13', name: 'งานพุธ' });
+    assert.deepEqual(named('3/4/2569 Good Friday'), { date: '2026-04-03', name: 'Good Friday' });
+    assert.deepEqual(named('2026-03-01 Sun Day Festival'), { date: '2026-03-01', name: 'Sun Day Festival' });
+    assert.deepEqual(named('2 พฤษภาคม 2569 วันเสาร์ห้า'), { date: '2026-05-02', name: 'วันเสาร์ห้า' });
 });
 
 test('the holiday date picker opens on the edited year and stays inside it', () => {

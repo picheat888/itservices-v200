@@ -55,15 +55,21 @@ const MAX_RANGE_DAYS = 31;
 const WEEKDAY_TH = '(?:วัน)?(?:จันทร์|อังคาร|พุธ|พฤหัสบดี|พฤหัส|ศุกร์|เสาร์|อาทิตย์)(?:ที่)?';
 const WEEKDAY_EN = '(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tues|Tue|Wed|Thurs|Thu|Fri|Sat|Sun)\\.?(?![A-Za-z])';
 const WEEKDAY = `(?:${WEEKDAY_TH}|${WEEKDAY_EN})`;
+const BRACKETED_WEEKDAYS = `[(（]\\s*${WEEKDAY}(?:\\s*[-–]\\s*${WEEKDAY})?\\s*[)）]`;
 const RE_LIST_MARK = /^(?:\d{1,3}[.)]|[-–•*])\s+/;
-const RE_BEFORE_DATE = new RegExp(`(?:${WEEKDAY}|วันที่|ที่)[\\s,]*$`);
-const RE_AFTER_DATE = new RegExp(`^[\\s,]*(?:[(（]\\s*${WEEKDAY}\\s*[)）]|${WEEKDAY}(?=[\\s,]))`);
+const RE_ONLY_WEEKDAY = new RegExp(`^[\\s,]*(?:${WEEKDAY}|วันที่|ที่)?[\\s,]*$`, 'i');
+const RE_AFTER_DATE = new RegExp(`^[\\s,]*(?:${BRACKETED_WEEKDAYS}|${WEEKDAY_TH}(?=\\s)|${WEEKDAY_EN},)`, 'i');
+const RE_LAST_BRACKETED = new RegExp(`\\s*${BRACKETED_WEEKDAYS}\\s*$`, 'i');
 
-// The text around the date, less a list number in front and the weekday beside the date
+// The text around the date, less a list number, a lone weekday before the date and a weekday beside or after it
 function nameAround(line: string, date: string): string {
     const at = line.indexOf(date);
-    const before = line.slice(0, at).replace(RE_LIST_MARK, '').replace(RE_BEFORE_DATE, '');
-    const after = line.slice(at + date.length).replace(RE_AFTER_DATE, '');
+    const lead = line.slice(0, at).replace(RE_LIST_MARK, '');
+    const before = RE_ONLY_WEEKDAY.test(lead) ? '' : lead;
+    const after = line
+        .slice(at + date.length)
+        .replace(RE_AFTER_DATE, '')
+        .replace(RE_LAST_BRACKETED, '');
     return `${before} ${after}`.replace(/\s+/g, ' ').replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '');
 }
 
