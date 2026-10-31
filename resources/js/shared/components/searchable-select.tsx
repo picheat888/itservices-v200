@@ -25,8 +25,7 @@ export interface SearchOption {
     badge?: React.ReactNode;
     /** Optional avatar URL; when the field is present an avatar slot renders (initials fallback). */
     avatar?: string | null;
-    /** Optional leading visual (e.g. a type icon or status color dot). When any option
-     *  has one, every row reserves the slot so labels stay aligned. */
+    /** Optional leading visual (e.g. a type icon or status dot); every row reserves the slot when any option has one. */
     icon?: React.ReactNode;
     /** Shown muted; it cannot be chosen. */
     disabled?: boolean;
@@ -35,7 +34,7 @@ export interface SearchOption {
 
 // Prefer dropping down; only flip up when there's less than this much room below.
 const FLIP_THRESHOLD = 180;
-// Default option-list height (matches the old max-h-56) when there's ample room.
+// Default option-list height when there's ample room.
 const LIST_MAX = 224;
 // Chrome outside the list (search box + paddings/borders) — reserved when capping height.
 const LIST_CHROME = 56;
@@ -75,8 +74,7 @@ export function SearchableSelect({
     clearable?: boolean;
     /** Brand-tinted trigger — marks a filter field whose value differs from its default. */
     active?: boolean;
-    /** Measure drop direction against the viewport instead of the enclosing dialog, so a field
-     *  near a small dialog's footer opens DOWN (overflowing the dialog) rather than flipping up. */
+    /** Measure drop direction against the viewport, not the dialog, so a field near a small dialog's footer opens down. */
     preferDown?: boolean;
     /** Show at most this many options before the list scrolls. */
     maxRows?: number;
@@ -138,8 +136,7 @@ export function SearchableSelect({
     const filtered = q && !isAsync ? options.filter((o) => matchesAllWords(o.search, q)) : options;
     // Rows that cannot be chosen, which the highlight and the arrow keys pass over
     const offFlags = filtered.map((o) => !!o.disabled);
-    // Reserve the leading icon slot on every row when at least one option supplies one,
-    // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
+    // Reserve the leading icon slot on every row when any option supplies one
     const hasIcons = options.some((o) => o.icon !== undefined);
     const optionId = (index: number) => `${listId}-opt-${index}`;
 
@@ -255,8 +252,7 @@ export function SearchableSelect({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeIndex, keyboardNav, open]);
 
-    // Measure the trigger and decide drop direction + portal target. When inside a
-    // dialog we store coordinates relative to the dialog box for absolute placement.
+    // Measure the trigger, pick drop direction and portal target (coords relative to the dialog box inside one)
     const place = () => {
         const el = ref.current;
         if (!el) {
@@ -617,18 +613,14 @@ export function SearchableSelect({
                                 tabIndex={-1}
                                 onKeyDown={onMenuKeyDown}
                                 style={{
-                                    position: 'absolute',
                                     left: coords.left,
                                     // Trigger width is a floor, so a narrow column doesn't cut option labels
                                     minWidth: menuMinWidth(coords.width, reloading),
-                                    maxWidth: 320,
-                                    width: 'max-content',
                                     top: coords.top,
                                     bottom: coords.bottom,
-                                    zIndex: 50,
                                 }}
                                 className={cn(
-                                    'border-border bg-popover overflow-hidden rounded-md border shadow-md outline-none',
+                                    'border-border bg-popover absolute z-50 w-max max-w-[320px] overflow-hidden rounded-md border shadow-md outline-none',
                                     coords.bottom !== undefined ? 'origin-bottom' : 'origin-top',
                                     closing ? 'motion-pop-out' : 'motion-pop-in',
                                 )}

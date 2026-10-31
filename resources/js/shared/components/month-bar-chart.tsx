@@ -10,17 +10,7 @@ export interface MonthBar {
     count: number;
 }
 
-/**
- * Vertical bar chart over a fixed run of months, oldest on the left. The last column is the
- * one being lived through, so it is drawn in solid brand while the closed months behind it
- * fade back — a reader should not compare a half-finished month against whole ones without
- * noticing. Counts sit above their bar; the year rides under the month name because the
- * window crosses a new year twice a year.
- *
- * Deliberately hand-rolled: twelve bars need no scales, axes or tooltips, and a chart
- * library would have to be taught the app's brand variable and both themes to look like
- * this. Callers own the card, the title and the legend — this draws only the bars.
- */
+/** Vertical bar chart over a run of months, oldest left; the current column is solid brand. Draws only the bars. */
 export type BarUnit = 'day' | 'week' | 'month' | 'year';
 
 export function MonthBarChart({
@@ -42,8 +32,7 @@ export function MonthBarChart({
     const fmtN = useNumberFormat();
     const max = Math.max(1, ...data.map((d) => d.count));
     const lastIndex = highlightLast ? data.length - 1 : -1;
-    // A run of zeroes is not a chart. Twelve empty bars read as something broken, so say
-    // there is nothing instead — the caller supplies the wording for its own subject.
+    // All zeroes shows the caller's empty state instead of empty bars
     const isEmpty = data.length === 0 || data.every((d) => d.count === 0);
 
     // Top line + the smaller one under it: day/week = day + month, month = month + 2-digit year, year = the year alone.
@@ -64,10 +53,9 @@ export function MonthBarChart({
                 return (
                     <div key={d.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
                         <div
-                            className={cn('relative w-full max-w-[32px] rounded-t-md', now ? 'bg-brand' : 'bg-brand/35')}
-                            // minHeight keeps an empty month visible as a baseline tick rather
-                            // than a gap the eye reads as a missing month.
-                            style={{ height: `${(d.count / max) * 100}%`, minHeight: 3 }}
+                            // min-h keeps an empty month visible as a baseline tick
+                            className={cn('relative min-h-[3px] w-full max-w-[32px] rounded-t-md', now ? 'bg-brand' : 'bg-brand/35')}
+                            style={{ height: `${(d.count / max) * 100}%` }}
                         >
                             <span
                                 className={cn(

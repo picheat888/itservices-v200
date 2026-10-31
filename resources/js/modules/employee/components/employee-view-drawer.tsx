@@ -653,7 +653,7 @@ function OrgPane({
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), navTo(node.id))}
                 className="border-border bg-card focus-visible:ring-brand relative flex w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border py-1.5 pr-2.5 pl-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-                <NodeAvatar node={node} size={32} />
+                <NodeAvatar node={node} size="md" />
                 <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] leading-tight font-bold">{nameOf(node)}</div>
                     <div className="text-muted-foreground truncate text-[11px]">{node.title || '—'}</div>
@@ -702,7 +702,7 @@ function OrgPane({
                                 <span className="flex -space-x-2">
                                     {hiddenManagers.slice(0, 3).map((m) => (
                                         <span key={m.id} className="ring-card inline-flex rounded-full ring-2">
-                                            <NodeAvatar node={m} size={20} />
+                                            <NodeAvatar node={m} size="sm" />
                                         </span>
                                     ))}
                                 </span>
@@ -726,7 +726,7 @@ function OrgPane({
                         style={{ borderColor: dc, boxShadow: `0 0 0 2px color-mix(in oklch, ${dc} 16%, transparent)` }}
                     >
                         <div className="flex items-start gap-2.5">
-                            <NodeAvatar node={focusNode} size={42} />
+                            <NodeAvatar node={focusNode} size="lg" />
                             <div className="min-w-0 flex-1">
                                 <div className="truncate text-[14px] leading-tight font-bold">{nameOf(focusNode)}</div>
                                 <div className="text-muted-foreground truncate text-[12px]">{focusNode.title || '—'}</div>
@@ -820,16 +820,24 @@ function NavBtn({ onClick, disabled, label, children }: { onClick: () => void; d
     );
 }
 
+// NodeAvatar sizes: box px and initials at 0.36 of the box
+const NODE_AVATAR_SIZES = {
+    sm: { box: 'size-[20px]', text: 'text-[7.2px]' },
+    md: { box: 'size-[32px]', text: 'text-[11.52px]' },
+    lg: { box: 'size-[42px]', text: 'text-[15.12px]' },
+} as const;
+
 // Round photo or initials on the department fill
-function NodeAvatar({ node, size }: { node: OrgChartNode; size: number }) {
+function NodeAvatar({ node, size }: { node: OrgChartNode; size: keyof typeof NODE_AVATAR_SIZES }) {
+    const { box, text } = NODE_AVATAR_SIZES[size];
     return (
-        <div className="shrink-0 overflow-hidden rounded-full shadow-[inset_0_0_0_2px_rgba(255,255,255,.18)]" style={{ width: size, height: size }}>
+        <div className={cn('shrink-0 overflow-hidden rounded-full shadow-[inset_0_0_0_2px_rgba(255,255,255,.18)]', box)}>
             {node.photo_url ? (
                 <img src={node.photo_url} alt="" className="h-full w-full object-cover" />
             ) : (
                 <div
-                    className="grid h-full w-full place-items-center font-bold text-white"
-                    style={{ background: deptFill(node.department_code), fontSize: size * 0.36 }}
+                    className={cn('grid h-full w-full place-items-center font-bold text-white', text)}
+                    style={{ background: deptFill(node.department_code) }}
                 >
                     {initials(node.name || '?')}
                 </div>
