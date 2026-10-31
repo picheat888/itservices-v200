@@ -1,6 +1,7 @@
 import { AppShell } from '@/app/layout/app-shell';
 import { Toaster } from '@/app/layout/toaster';
 import NotFoundPage from '@/app/not-found';
+import { preloadNavPage } from '@/app/route-pages';
 import { AccessControlPage } from '@/modules/access';
 import { AssetsPage } from '@/modules/asset';
 import { LoginPage, ProtectedRoute, RequirePermission } from '@/modules/auth';
@@ -10,7 +11,7 @@ import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { useServiceWorkerBridge } from '@/modules/notification';
 import { PermissionsPage } from '@/modules/permission';
-import { ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
+import { preloadReportPage, ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, LotHistoryPage, StockPage } from '@/modules/stock';
@@ -218,6 +219,10 @@ function App() {
 }
 
 installClientErrorReporting();
+
+// The page being opened downloads alongside the sign-in check
+preloadNavPage(window.location.pathname);
+if (window.location.pathname.startsWith('/reports/')) preloadReportPage(window.location.pathname.slice('/reports/'.length));
 
 createRoot(document.getElementById('app')!).render(
     <QueryClientProvider client={queryClient}>

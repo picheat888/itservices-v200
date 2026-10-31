@@ -7,6 +7,6 @@ export { KpiTile, slaLevel, type SlaLevel } from './components/kpi-tile';
 export { reportSlug } from './components/report-catalogue';
 export { ReportDateScope } from './components/report-date-scope';
 export { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from './hooks/use-reports';
-export { reportPageRoutes } from './routes';
+export { preloadReportPage, reportPageRoutes } from './routes';
 export const ReportsPage = lazyPage(() => import('./pages'));
 export const UnknownReportPage = lazyPage(() => import('./pages/unknown-report'));

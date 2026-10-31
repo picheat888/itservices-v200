@@ -106,3 +106,9 @@ test('a page already downloaded renders straight, without a Suspense round trip'
     assert.match(lazyPage, /if \(module\) loaded = module\.default;/);
     assert.match(lazyPage, /useState<ComponentType>\(\(\) => loaded \?\? current\)/);
 });
+
+test('the page being opened starts downloading at start-up, alongside the sign-in check', () => {
+    const app = read('resources/js/app/App.tsx');
+    assert.match(app, /preloadNavPage\(window\.location\.pathname\);/);
+    assert.match(app, /if \(window\.location\.pathname\.startsWith\('\/reports\/'\)\) preloadReportPage\(/);
+});
