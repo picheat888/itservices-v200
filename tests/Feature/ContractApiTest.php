@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Contract\ContractBellLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -13,6 +14,7 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
+use App\Services\Contract\ContractService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -583,6 +585,41 @@ class ContractApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'overdue'); // term still ended, but reopened
         $this->assertNull($contract->fresh()->expired_at);
+    }
+
+    public function test_reactivating_an_open_contract_is_refused_with_a_code(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->postJson("/api/contracts/{$contract->id}/reactivate")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'not_closed');
+    }
+
+    public function test_a_delete_logs_the_contract_and_clears_its_alert_ledgers(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'Mistake', 'code' => 'CT-DEL-1', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        ContractBellLog::create(['contract_id' => $contract->id, 'bell_date' => today()]);
+
+        $this->deleteJson("/api/contracts/{$contract->id}")->assertOk();
+
+        $this->assertDatabaseMissing('contracts', ['id' => $contract->id]);
+        $this->assertDatabaseMissing('contract_bell_logs', ['contract_id' => $contract->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'Deleted contract', 'target' => 'Mistake (CT-DEL-1)']);
+    }
+
+    public function test_a_renewal_is_read_against_the_saved_end_date(): void
+    {
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addMonth(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        ContractBellLog::create(['contract_id' => $contract->id, 'bell_date' => today()]);
+
+        // A model that already carries the new date unsaved still counts as renewed
+        $contract->end_date = now()->addYear();
+        app(ContractService::class)->update($contract, ['end_date' => now()->addYear()->toDateString()]);
+
+        $this->assertDatabaseMissing('contract_bell_logs', ['contract_id' => $contract->id]);
     }
 
     public function test_user_without_permission_cannot_reactivate_contract(): void

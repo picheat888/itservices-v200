@@ -27,12 +27,7 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.view'), 403);
     }
 
-    /**
-     * Paginated contract list. The "expiring" tab narrows to contracts that have
-     * entered their own reminder window (any enabled threshold reached); the
-     * "expired" tab narrows to live contracts whose end date has already passed;
-     * search matches vendor/name/code. Soonest expiry first.
-     */
+    /** Paginated contract list with search, type, sort and the expiring / expired tabs. */
     public function index(Request $request): JsonResponse
     {
         $this->gateView($request);
@@ -136,10 +131,7 @@ class ContractController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Cancel a contract — early termination while it's still running. Requires the
-     * contracts.cancel permission and a reason (stored on the contract).
-     */
+    /** Cancel a running contract with a reason. Requires contracts.cancel. */
     public function cancel(Request $request, Contract $contract): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.cancel'), 403);
@@ -155,10 +147,7 @@ class ContractController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Reactivate a cancelled or expired contract — reopens it by clearing the
-     * cancelled/expired timestamps. Requires the contracts.reactivate permission.
-     */
+    /** Reopen a cancelled or expired contract. Requires contracts.reactivate. */
     public function reactivate(Request $request, Contract $contract): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.reactivate'), 403);
@@ -188,7 +177,6 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.delete'), 403);
 
         $this->service->delete($contract);
-        AuditLog::recordDeleted('Deleted contract', "{$contract->name} ({$contract->code})", $contract);
 
         return response()->json(['message' => 'success']);
     }

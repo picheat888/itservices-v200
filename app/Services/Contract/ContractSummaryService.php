@@ -17,7 +17,8 @@ class ContractSummaryService
      */
     public function summary(bool $withOverview): array
     {
-        $contracts = Contract::with('vendor')->get();
+        // Vendor names are only shown on the Overview tab
+        $contracts = Contract::query()->when($withOverview, fn ($query) => $query->with('vendor'))->get();
 
         $live = $contracts->reject(fn (Contract $c) => $c->isClosed());
         $expiring = $live->filter(fn (Contract $c) => $c->isInReminder());

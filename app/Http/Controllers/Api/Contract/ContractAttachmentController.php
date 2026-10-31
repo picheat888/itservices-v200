@@ -19,10 +19,7 @@ class ContractAttachmentController extends Controller
 
     public function __construct(private readonly ContractAttachmentService $attachments) {}
 
-    /**
-     * Stores one or more uploaded PDFs against the contract: contracts.edit for any contract,
-     * contracts.create only for a contract the uploader created (the add form uploads right after saving).
-     */
+    /** Upload PDFs: contracts.edit for any contract, contracts.create only for one the uploader created. */
     public function store(Request $request, Contract $contract): JsonResponse
     {
         abort_unless($this->canUpload($request, $contract), 403);

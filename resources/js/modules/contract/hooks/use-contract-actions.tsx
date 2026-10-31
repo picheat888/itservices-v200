@@ -67,6 +67,7 @@ export function useContractActions(onDone: () => void = () => undefined) {
             title: t('contract_reactivate_confirm_title'),
             entity: { name: c.name, sub: c.code },
             confirmText: t('contract_reactivate'),
+            errorMessage: (e) => reasonWords(e, t, 'contract_refusal_'),
             action: async () => {
                 await reactivate.mutateAsync(c.id);
                 onDone();

@@ -20,12 +20,19 @@ test('the contract controllers hand summary, renewal, delete and files to the se
 
     const service = read('app/Services/Contract/ContractService.php');
     assert.equal(service.match(/\$this->alerts->resetForContract\(\$contract\);/g)?.length, 5, 'renew, cancel, reactivate, expire, delete');
+    assert.match(service, /\$endBefore = \$contract->getOriginal\('end_date'\);/);
+    // Rows and the audit line in one transaction, files only after it
+    assert.match(service, /DB::transaction\(function \(\) use \(\$contract\) \{[\s\S]*?\$contract->delete\(\);[\s\S]*?AuditLog::recordDeleted[\s\S]*?\}\);\s*\/\/[^\n]*\n\s*if \(\$paths !== \[\]\) \{\s*Storage::disk/);
+    assert.match(read('app/Services/Contract/ContractSummaryService.php'), /->when\(\$withOverview, fn \(\$query\) => \$query->with\('vendor'\)\)/);
 });
 
-test('a refused delete shows the reason the server sent', () => {
-    assert.match(read('resources/js/modules/contract/hooks/use-contract-actions.tsx'), /confirmText: t\('contract_delete'\),\s*errorMessage: \(e\) => reasonWords\(e, t, 'contract_refusal_'\)/);
+test('a refused delete or reactivate shows the reason the server sent', () => {
+    const actions = read('resources/js/modules/contract/hooks/use-contract-actions.tsx');
+    for (const action of ['contract_delete', 'contract_reactivate']) {
+        assert.match(actions, new RegExp(`confirmText: t\\('${action}'\\),\\s*errorMessage: \\(e\\) => reasonWords\\(e, t, 'contract_refusal_'\\)`));
+    }
     for (const lang of ['th', 'en']) {
         const words = read(`resources/js/lang/${lang}/contract.ts`);
-        for (const code of ['not_deletable', 'assets_linked']) assert.match(words, new RegExp(`contract_refusal_${code}: '`));
+        for (const code of ['not_deletable', 'assets_linked', 'not_closed']) assert.match(words, new RegExp(`contract_refusal_${code}: '`));
     }
 });

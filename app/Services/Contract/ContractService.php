@@ -5,10 +5,12 @@ namespace App\Services\Contract;
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
+use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Support\Refusal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -31,7 +33,7 @@ class ContractService
     }
 
     /**
-     * Update an existing contract. A new end date is a renewal: its reminders start over.
+     * Update an open contract; a new end date is a renewal, so its reminders start over.
      *
      * @param  array<string, mixed>  $data
      */
@@ -42,7 +44,7 @@ class ContractService
         }
 
         $this->assertKeepsRetiredAssets($contract, $data);
-        $endBefore = $contract->end_date;
+        $endBefore = $contract->getOriginal('end_date');
         $assetIds = $this->pullAssetIds($data);
         $contract->update($this->withoutBlankCode($data));
         $this->syncAssets($contract, $this->assetIdsForType($contract, $assetIds));
@@ -56,9 +58,7 @@ class ContractService
     }
 
     /**
-     * A hardware contract that holds assets already returned to the lessor or written off stays a
-     * hardware contract: switching the type would have to unlink every asset, and those are kept
-     * on the contract for good (syncAssets) as its record of what came back.
+     * A hardware contract holding written-off assets stays hardware: those links are kept for good.
      *
      * @param  array<string, mixed>  $data
      *
@@ -81,9 +81,7 @@ class ContractService
     }
 
     /**
-     * Only hardware contracts may hold assets. For any other type this forces a
-     * full detach ([]) regardless of what was submitted; hardware keeps the
-     * caller's selection (null = leave existing links untouched).
+     * Only hardware holds assets: other types detach all ([]); null leaves the links untouched.
      *
      * @param  list<int>|null  $assetIds
      * @return list<int>|null
@@ -94,9 +92,7 @@ class ContractService
     }
 
     /**
-     * Pull the (optional) asset_ids out of the payload so they don't reach the
-     * Contract model. Returns null when not provided (links left untouched), or a
-     * de-duplicated list of ids otherwise.
+     * Take asset_ids out of the payload: null when not sent, otherwise unique ids.
      *
      * @param  array<string, mixed>  $data
      * @return list<int>|null
@@ -114,14 +110,7 @@ class ContractService
     }
 
     /**
-     * Sync which assets point at this contract (asset.contract_id). Detaches assets
-     * that were unselected and attaches selected ones — but only assets that are
-     * currently free or already this contract's, so links are never stolen from
-     * another contract. Passing null leaves all existing links untouched.
-     *
-     * A written-off asset (returned to the lessor or written off) is never detached: it is the
-     * contract's record of what came back, and the write-off report counts it against the
-     * contract. Leaving it out of the selection keeps it linked.
+     * Link the selected free assets and unlink the rest; written-off assets are never moved either way.
      *
      * @param  list<int>|null  $assetIds
      */
@@ -131,15 +120,13 @@ class ContractService
             return;
         }
 
-        // Detach assets currently linked here but no longer selected ([0] sentinel
-        // detaches all when the selection is empty).
+        // Unlink ([0] sentinel unlinks all when nothing is selected)
         Asset::where('contract_id', $contract->id)
             ->whereNotIn('id', $assetIds ?: [0])
             ->where('status', '!=', AssetStatus::Writeoff->value)
             ->update(['contract_id' => null, 'updated_by' => Auth::id()]);
 
-        // Attach the selected, link-free, not written-off assets (already-ours ones are left alone,
-        // so editing a contract does not stamp every asset it holds as just changed).
+        // Link only free ones, so another contract's assets are never taken and ours are not restamped
         if ($assetIds !== []) {
             Asset::whereIn('id', $assetIds)
                 ->whereNull('contract_id')
@@ -149,8 +136,7 @@ class ContractService
     }
 
     /**
-     * Drop a blank "code" so create falls back to auto-generation and update
-     * keeps the existing contract number rather than nulling it.
+     * A blank code means auto-number on create and keep the number on update.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -165,9 +151,7 @@ class ContractService
     }
 
     /**
-     * Cancel a contract — early termination while it's still running. Only valid
-     * before the term ends (an overdue contract can only be expired), and every
-     * linked asset must be written off first.
+     * End a running contract early (its end date included), once its assets are written off.
      *
      * @throws ValidationException
      */
@@ -178,7 +162,7 @@ class ContractService
             Refusal::fail('contract_closed', field: 'contract');
         }
 
-        // Cancel ends a running term early (the end date included); an overdue one is expired instead
+        // An overdue one is expired instead
         if ($contract->isOverdue()) {
             Refusal::fail('term_ended', field: 'contract');
         }
@@ -195,16 +179,14 @@ class ContractService
     }
 
     /**
-     * Reactivate a cancelled or expired contract — reopens it by clearing whichever
-     * lifecycle timestamp is set (cancelled_at / expired_at) plus the cancel reason,
-     * so the contract returns to its date-derived active/overdue state.
+     * Reopen a cancelled or expired contract; it goes back to its date-derived state.
+     *
+     * @throws ValidationException
      */
     public function reactivate(Contract $contract): Contract
     {
-        if ($contract->cancelled_at === null && $contract->expired_at === null) {
-            throw ValidationException::withMessages([
-                'contract' => 'Only a cancelled or expired contract can be reactivated.',
-            ]);
+        if (! $contract->isClosed()) {
+            Refusal::fail('not_closed', field: 'contract');
         }
 
         $contract->update([
@@ -218,8 +200,7 @@ class ContractService
     }
 
     /**
-     * Mark a contract as expired — the admin close-out once its term has ended; contracts.reactivate
-     * can reopen it. Every linked asset must be written off first.
+     * Close out a contract once its term has ended (from the day after the end date).
      *
      * @throws ValidationException
      */
@@ -229,7 +210,7 @@ class ContractService
             Refusal::fail('contract_closed', field: 'contract');
         }
 
-        // Close-out once the term has ended (the day after the end date); a running one is cancelled instead
+        // A running one is cancelled instead
         if ($contract->daysRemaining() >= 0) {
             Refusal::fail('term_running', field: 'contract');
         }
@@ -243,9 +224,7 @@ class ContractService
     }
 
     /**
-     * Hard-delete a contract added by mistake: only a running one (not overdue, cancelled or
-     * expired) with no linked assets. Anything past that is closed with cancel or expire instead.
-     * The attachment rows go with the contract (cascade); their files are removed here.
+     * Hard-delete a running contract with no linked assets, then its attachment files.
      *
      * @throws ValidationException
      */
@@ -258,19 +237,22 @@ class ContractService
             Refusal::fail('assets_linked', field: 'contract');
         }
 
-        $this->alerts->resetForContract($contract);
-
         $paths = $contract->attachments()->pluck('path')->all();
+
+        DB::transaction(function () use ($contract) {
+            $this->alerts->resetForContract($contract);
+            $contract->delete();
+            AuditLog::recordDeleted('Deleted contract', "{$contract->name} ({$contract->code})", $contract);
+        });
+
+        // Files go only once the rows are gone for good
         if ($paths !== []) {
             Storage::disk('local')->delete($paths);
         }
-        $contract->delete();
     }
 
     /**
-     * A contract with linked assets can only be closed (cancelled or expired)
-     * once every linked asset has been written off — otherwise tracked hardware
-     * would be left pointing at a dead contract. Applies to all contract types.
+     * Closing needs every linked asset written off first, so no live asset points at a closed contract.
      *
      * @throws ValidationException
      */
