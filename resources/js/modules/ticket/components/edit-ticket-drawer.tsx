@@ -92,7 +92,7 @@ export function EditTicketDrawer({
 
     // Preload the form once per ticket it opens on, from the live copy when it is already here
     const live = ticket && fresh && fresh.id === ticket.id ? fresh : null;
-    useSeedOnce(ticket?.id ?? null, () => {
+    const seeded = useSeedOnce(ticket?.id ?? null, () => {
         if (!ticket) return;
         const opened = toForm(live ?? ticket);
         setForm(opened);
@@ -106,7 +106,7 @@ export function EditTicketDrawer({
         setDeleted(0);
         setSaving(false);
     });
-    useFormRebase({ fresh: live ? toForm(live) : null, base, setBase, setForm, skip: ['existing'] });
+    useFormRebase({ fresh: live && seeded ? toForm(live) : null, base, setBase, setForm, skip: ['existing'] });
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
     const totalFiles = keptExisting.length + pending.length;

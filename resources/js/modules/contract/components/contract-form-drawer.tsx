@@ -212,7 +212,7 @@ export function ContractFormDrawer({
 
     // Hydrate the form once per contract it opens on, from the live copy when it is already here
     const live = editing && fresh && fresh.id === editing.id ? fresh : null;
-    useSeedOnce(open ? (editing?.id ?? 'new') : null, () => {
+    const seeded = useSeedOnce(open ? (editing?.id ?? 'new') : null, () => {
         setErr({});
         setSaveState('idle');
         setStep(0);
@@ -229,7 +229,7 @@ export function ContractFormDrawer({
         setBase(next);
     });
     // Ticked assets stay the user's; the other fields follow the server while untouched
-    useFormRebase({ fresh: live ? toForm(live) : null, base, setBase, setForm, skip: ['asset_ids'] });
+    useFormRebase({ fresh: live && seeded ? toForm(live) : null, base, setBase, setForm, skip: ['asset_ids'] });
 
     /** Update one field and drop its validation error — editing counts as fixing it.
      *  Error keys match field names, except the notify_* checkboxes which share 'notify'. */

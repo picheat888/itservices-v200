@@ -1,7 +1,11 @@
 // Edit forms and fresh server data: untouched fields take the new values, typed ones stay, and a form seeds once per record.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { needsSeed, nextBase, rebaseForm, rebaseLinked, sameValue } from '../../resources/js/shared/lib/form-rebase.ts';
+
+const read = (rel: string) => readFileSync(join(import.meta.dirname, '../../resources/js', rel), 'utf8');
 
 test('an untouched field takes the fresh server value', () => {
     const base = { a: '1', b: 'x' };
@@ -41,6 +45,18 @@ test('a form seeds once per record, not on every refresh of it', () => {
 test('a skipped key keeps its opening value in the base, so an untouched form stays clean', () => {
     assert.deepEqual(nextBase({ a: '1', ids: [1] }, { a: '2', ids: [1, 2] }, ['ids']), { a: '2', ids: [1] });
     assert.deepEqual(nextBase({ a: '1' }, { a: '2' }), { a: '2' });
+});
+
+test('a form with skipped keys rebases only after its seed has rendered, so it opens clean', () => {
+    const hook = read('shared/hooks/use-seed-once.ts');
+    assert.match(hook, /seed\(\);\s*setSeededKey\(key\);/);
+    assert.match(hook, /return key !== null && seededKey === key;/);
+    const contract = read('modules/contract/components/contract-form-drawer.tsx');
+    assert.match(contract, /const seeded = useSeedOnce\(/);
+    assert.match(contract, /fresh: live && seeded \? toForm\(live\) : null, base, setBase, setForm, skip: \['asset_ids'\]/);
+    const ticket = read('modules/ticket/components/edit-ticket-drawer.tsx');
+    assert.match(ticket, /const seeded = useSeedOnce\(/);
+    assert.match(ticket, /fresh: live && seeded \? toForm\(live\) : null, base, setBase, setForm, skip: \['existing'\]/);
 });
 
 const ORG = [{ child: 'section', parent: 'dept', empty: '' }] as const;
