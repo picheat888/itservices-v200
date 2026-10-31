@@ -2,15 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Api\Notification\NotificationTemplateController;
 use App\Models\Notification\NotificationTemplate;
 use App\Models\Permission\Role;
 use App\Models\User;
+use App\Services\Notification\NotificationTemplateService;
 use App\Support\EmailTemplates;
 use App\Support\NotificationCatalogue;
 use Database\Seeders\NotificationTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -29,14 +28,10 @@ class NotificationEmailPairingTest extends TestCase
     /** @return array<string, string|null> module => email prefix */
     private function map(): array
     {
-        $method = new ReflectionMethod(NotificationTemplateController::class, 'emailPrefixFor');
-        $method->setAccessible(true);
-        $controller = app(NotificationTemplateController::class);
-
         $modules = collect(NotificationCatalogue::all())->pluck('module')->unique();
 
         return $modules->mapWithKeys(fn (string $module) => [
-            $module => $method->invoke($controller, $module),
+            $module => NotificationTemplateService::emailPrefixFor($module),
         ])->all();
     }
 
