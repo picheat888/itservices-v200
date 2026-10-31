@@ -1,4 +1,5 @@
 import { navGroups } from '@/app/nav';
+import { preloadNavPage } from '@/app/route-pages';
 import { useT } from '@/lang';
 import { useAuth, useLogout } from '@/modules/auth';
 import type { ProfileSection } from '@/modules/profile';
@@ -347,6 +348,10 @@ function NavRow({ item, badge, onPick }: { item: NavItem; badge: number | null; 
             aria-current={pageMissing ? false : 'page'}
             title={t(item.label)}
             onClick={onPick}
+            // Start the page download before the click lands
+            onPointerEnter={() => preloadNavPage(item.to)}
+            onPointerDown={() => preloadNavPage(item.to)}
+            onFocus={() => preloadNavPage(item.to)}
             className={({ isActive }) =>
                 cn(
                     'group relative flex items-center gap-3 overflow-hidden rounded-md py-2 pr-3 pl-[15px] text-sm font-medium focus-visible:outline-none',

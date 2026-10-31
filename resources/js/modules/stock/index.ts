@@ -1,5 +1,6 @@
+import { lazyPage } from '@/shared/lib/lazy-page';
 export { STOCK_STATUS_TONE, StockLevelBar } from './components/stock-level-bar';
-export { default as StockPage } from './pages';
-export { default as ItemHistoryPage } from './pages/item-history';
-export { default as LotHistoryPage } from './pages/lot-history';
 export { MV_META } from './pages/shared';
+export const StockPage = lazyPage(() => import('./pages'));
+export const ItemHistoryPage = lazyPage(() => import('./pages/item-history'));
+export const LotHistoryPage = lazyPage(() => import('./pages/lot-history'));

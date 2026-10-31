@@ -1,3 +1,4 @@
+import { lazyPage } from '@/shared/lib/lazy-page';
 export { settingsApi } from './api/settingsApi';
 export type {
     AssetColorsPayload,
@@ -44,4 +45,4 @@ export {
     useUpdateTicketSla,
     useUploadLogo,
 } from './hooks/use-settings';
-export { default as SettingsPage } from './pages';
+export const SettingsPage = lazyPage(() => import('./pages'));

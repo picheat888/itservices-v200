@@ -1,3 +1,4 @@
+import { lazyPage } from '@/shared/lib/lazy-page';
 export { groupRoleApi, permissionApi, roleApi } from './api/permissionApi';
 export type {
     AuditDetails,
@@ -21,4 +22,4 @@ export {
     useSetDefaultGroup,
     useUpdateRolePermissions,
 } from './hooks/use-permissions';
-export { default as PermissionsPage } from './pages';
+export const PermissionsPage = lazyPage(() => import('./pages'));

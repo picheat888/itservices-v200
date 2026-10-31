@@ -1,5 +1,6 @@
+import { lazyPage } from '@/shared/lib/lazy-page';
 export { contractApi } from './api/contractApi';
 export type { ContractPageMeta, ContractPageResponse, ContractPayload } from './api/contractApi';
-export { useContract, useContractMutations, useContractSummary, useContracts } from './hooks/use-contracts';
-export { default as ContractsPage } from './pages';
+export { useContract, useContractMutations, useContracts, useContractSummary } from './hooks/use-contracts';
 export { CONTRACT_TYPE_TONE } from './tones';
+export const ContractsPage = lazyPage(() => import('./pages'));

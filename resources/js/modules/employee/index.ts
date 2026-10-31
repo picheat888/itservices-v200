@@ -1,3 +1,4 @@
+import { lazyPage } from '@/shared/lib/lazy-page';
 export type { Department, Position } from '@/shared/types';
 export { departmentApi } from './api/departmentApi';
 export { employeeApi } from './api/employeeApi';
@@ -15,10 +16,10 @@ export { sectionApi } from './api/sectionApi';
 export { AccessPane, AssetsPane, IdChip, RAIL_HEADING, RailRow, RequestsPane, TicketsPane } from './components/employee-panes';
 export { PhotoCropDialog } from './components/photo-crop-dialog';
 export { useDepartmentMembers, useDepartmentMutations, useDepartments } from './hooks/use-departments';
-export { useEmployeePicker, useEmployeeSearch, useEmployeesByIds } from './hooks/use-employee-pickers';
+export { useEmployeePicker, useEmployeesByIds, useEmployeeSearch } from './hooks/use-employee-pickers';
 export { useApprovalChain, useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary, useOrgChart } from './hooks/use-employees';
 export { useLocationMutations, useLocations } from './hooks/use-locations';
 export { usePositionMembers, usePositionMutations, usePositions } from './hooks/use-positions';
 export { useSectionMembers, useSectionMutations, useSections } from './hooks/use-sections';
 export { HELD_STATUS_META } from './lib/held-assets';
-export { default as EmployeesPage } from './pages';
+export const EmployeesPage = lazyPage(() => import('./pages'));

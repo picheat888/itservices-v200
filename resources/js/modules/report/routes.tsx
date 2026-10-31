@@ -1,35 +1,32 @@
 /**
- * Every report page of the Report module: its address, who may open it, and the page file that
- * draws it — one line per report, mounted by App.tsx. The address is the report's key with "."
- * and "_" made "-" (report-catalogue.tsx reportSlug), and the file in pages/ has the same name.
- *
- * `allOf` is every permission the report's ReportCatalogue entry requires, so the page opens exactly
- * when its data does.
- * An address not listed here opens UnknownReportPage.
+ * Every report page: its address (the report key with "." and "_" made "-"), the permissions its
+ * ReportCatalogue entry requires, and its page file in pages/, loaded when first opened.
  */
+import { lazyPage } from '@/shared/lib/lazy-page';
 import type { ComponentType } from 'react';
-import AccessOverviewReportPage from './pages/access-overview';
-import AccessResourceMembersReportPage from './pages/access-resource-members';
-import AccessSoftwareLicensesReportPage from './pages/access-software-licenses';
-import AssetsOverviewReportPage from './pages/assets-overview';
-import AssetsTransferHistoryReportPage from './pages/assets-transfer-history';
-import AssetsWarrantyExpiringReportPage from './pages/assets-warranty-expiring';
-import AssetsWriteoffsReportPage from './pages/assets-writeoffs';
-import ContractsOverviewReportPage from './pages/contracts-overview';
-import ContractsRenewalsReportPage from './pages/contracts-renewals';
-import ContractsRentalsReportPage from './pages/contracts-rentals';
-import EmployeesOpenItemsReportPage from './pages/employees-open-items';
-import EmployeesOverviewReportPage from './pages/employees-overview';
-import RequestsApprovalsReportPage from './pages/requests-approvals';
-import RequestsItPendingReportPage from './pages/requests-it-pending';
-import RequestsOverviewReportPage from './pages/requests-overview';
-import StockBelowMinReportPage from './pages/stock-below-min';
-import StockMovementsReportPage from './pages/stock-movements';
-import StockValuationReportPage from './pages/stock-valuation';
-import TicketsBacklogReportPage from './pages/tickets-backlog';
-import TicketsManualSlaReportPage from './pages/tickets-manual-sla';
-import TicketsOverviewReportPage from './pages/tickets-overview';
-import TicketsRequestSlaReportPage from './pages/tickets-request-sla';
+
+const AccessOverviewReportPage = lazyPage(() => import('./pages/access-overview'));
+const AccessResourceMembersReportPage = lazyPage(() => import('./pages/access-resource-members'));
+const AccessSoftwareLicensesReportPage = lazyPage(() => import('./pages/access-software-licenses'));
+const AssetsOverviewReportPage = lazyPage(() => import('./pages/assets-overview'));
+const AssetsTransferHistoryReportPage = lazyPage(() => import('./pages/assets-transfer-history'));
+const AssetsWarrantyExpiringReportPage = lazyPage(() => import('./pages/assets-warranty-expiring'));
+const AssetsWriteoffsReportPage = lazyPage(() => import('./pages/assets-writeoffs'));
+const ContractsOverviewReportPage = lazyPage(() => import('./pages/contracts-overview'));
+const ContractsRenewalsReportPage = lazyPage(() => import('./pages/contracts-renewals'));
+const ContractsRentalsReportPage = lazyPage(() => import('./pages/contracts-rentals'));
+const EmployeesOpenItemsReportPage = lazyPage(() => import('./pages/employees-open-items'));
+const EmployeesOverviewReportPage = lazyPage(() => import('./pages/employees-overview'));
+const RequestsApprovalsReportPage = lazyPage(() => import('./pages/requests-approvals'));
+const RequestsItPendingReportPage = lazyPage(() => import('./pages/requests-it-pending'));
+const RequestsOverviewReportPage = lazyPage(() => import('./pages/requests-overview'));
+const StockBelowMinReportPage = lazyPage(() => import('./pages/stock-below-min'));
+const StockMovementsReportPage = lazyPage(() => import('./pages/stock-movements'));
+const StockValuationReportPage = lazyPage(() => import('./pages/stock-valuation'));
+const TicketsBacklogReportPage = lazyPage(() => import('./pages/tickets-backlog'));
+const TicketsManualSlaReportPage = lazyPage(() => import('./pages/tickets-manual-sla'));
+const TicketsOverviewReportPage = lazyPage(() => import('./pages/tickets-overview'));
+const TicketsRequestSlaReportPage = lazyPage(() => import('./pages/tickets-request-sla'));
 
 export interface ReportPageRoute {
     /** Under /reports — "tickets-overview" opens /reports/tickets-overview. */

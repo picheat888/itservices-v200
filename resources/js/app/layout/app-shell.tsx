@@ -14,13 +14,14 @@ import {
 import { PROFILE_SECTION_PARAM, ProfileDrawer } from '@/modules/profile';
 import { settingsApi } from '@/modules/settings';
 import { ErrorBoundary } from '@/shared/components/error-boundary';
+import { PageLoading } from '@/shared/components/page-loading';
 import { useDialogParam, useShownDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useNavigationGuardHost } from '@/shared/hooks/use-navigation-guard';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { NotificationsDropdown, useOpenTrayFromUrl } from './notifications-dropdown';
 import { Sidebar } from './sidebar';
@@ -128,7 +129,9 @@ export function AppShell() {
                     className="bg-content relative flex-1 overflow-y-auto px-6 py-4 [--sticky-top:-1rem] [scrollbar-gutter:stable]"
                 >
                     <ErrorBoundary inline resetKey={pathname}>
-                        <Outlet />
+                        <Suspense fallback={<PageLoading />}>
+                            <Outlet />
+                        </Suspense>
                     </ErrorBoundary>
                 </main>
             </div>

@@ -1,3 +1,4 @@
+import { lazyPage } from '@/shared/lib/lazy-page';
 export { ticketApi } from './api/ticketApi';
 export type { CreateTicketPayload, TicketListParams, TicketPageMeta, TicketPageResponse } from './api/ticketApi';
 export {
@@ -8,5 +9,5 @@ export {
     TicketPriorityBadge,
     TicketStatusBadge,
 } from './components/ticket-meta';
-export { useTicketMutations, useTicketStaff, useTicketSummary, useTickets } from './hooks/use-tickets';
-export { default as TicketsPage } from './pages';
+export { useTicketMutations, useTickets, useTicketStaff, useTicketSummary } from './hooks/use-tickets';
+export const TicketsPage = lazyPage(() => import('./pages'));
