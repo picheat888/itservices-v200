@@ -18,7 +18,12 @@ class UpdateEmployeeCredentialsRequest extends EmployeeCredentialsRequest
     public function rules(): array
     {
         return [
-            'username' => ['sometimes', ...self::USERNAME_RULES, Rule::unique('users', 'username')->ignore($this->employee()->user->id)],
+            'username' => [
+                'sometimes',
+                ...self::USERNAME_RULES,
+                Rule::unique('users', 'username')->ignore($this->employee()->user->id),
+                Rule::unique('employees', 'username')->ignore($this->employee()->id),
+            ],
             'reset_password' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', $this->passwordRule()],
             'force_change' => ['sometimes', 'boolean'],
@@ -27,7 +32,7 @@ class UpdateEmployeeCredentialsRequest extends EmployeeCredentialsRequest
 
     public function renaming(): bool
     {
-        return array_key_exists('username', $this->validated());
+        return $this->has('username');
     }
 
     public function resetting(): bool

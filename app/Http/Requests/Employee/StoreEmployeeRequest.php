@@ -20,15 +20,11 @@ use Illuminate\Validation\Validator;
 class StoreEmployeeRequest extends FormRequest
 {
     /** Creating needs employees.add, editing employees.edit; an Administrator is edited by an Administrator only. */
-    public function authorize(EmployeeActionGuard $guard): bool|Response
+    public function authorize(EmployeeActionGuard $guard): Response
     {
-        $user = $this->user();
         $employee = $this->route('employee');
-        if (! $user?->hasPermission($employee ? 'employees.edit' : 'employees.add')) {
-            return false;
-        }
 
-        return $employee ? $guard->canEdit($user, $employee) : true;
+        return $employee ? $guard->canEdit($this->user(), $employee) : $guard->canAdd($this->user());
     }
 
     /**

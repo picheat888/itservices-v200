@@ -604,14 +604,18 @@ class EmployeeController extends Controller
     /** Renames an existing login (employees.set_credentials) and/or resets its password (employees.reset_password). */
     public function updateCredentials(UpdateEmployeeCredentialsRequest $request, Employee $employee): JsonResponse
     {
+        $newPassword = $this->service->updateLogin(
+            $employee,
+            $request->renaming() ? $request->validated('username') : null,
+            $request->resetting(),
+            $request->validated('password'),
+            $request->boolean('force_change'),
+        );
+
         if ($request->renaming()) {
-            $this->service->changeUsername($employee, $request->validated('username'));
             AuditLog::record('Changed username', "{$employee->name} ({$employee->code})", subject: $employee);
         }
-
-        $newPassword = null;
         if ($request->resetting()) {
-            $newPassword = $this->service->resetPassword($employee, $request->validated('password'), $request->boolean('force_change'));
             AuditLog::record('Reset password', "{$employee->name} ({$employee->code})", subject: $employee);
         }
 

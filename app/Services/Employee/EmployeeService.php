@@ -34,21 +34,14 @@ use Illuminate\Validation\ValidationException;
 
 class EmployeeService
 {
-    /**
-     * Sent when no role can be resolved for a login account. A code, not a sentence, so
-     * the SPA writes it out in the reader's language — same contract as ChainBlockReason.
-     */
+    /** Refusal code when no role can be resolved for a login account; the SPA words it. */
     public const NO_ROLE_CONFIGURED = 'no_role_configured';
 
-    /**
-     * The Asset service is here so a resignation can hand the leaver's devices back on its
-     * own — see resign(). Injected rather than resolved inline so tests can swap it out.
-     */
+    /** AssetService recalls a leaver's devices in resign(). */
     public function __construct(private readonly AssetService $assets) {}
 
     /**
-     * Directory ordering: resigned sink to the bottom; within active, no-account first;
-     * then the latest start date first.
+     * Directory order: resigned last, no-account first, then the latest start date.
      *
      * @param  Builder<Employee>  $query
      * @return Builder<Employee>
@@ -63,9 +56,7 @@ class EmployeeService
     }
 
     /**
-     * Slim rows for pickers and lookups, in directory order. `ids` returns exactly those
-     * people; otherwise a multi-word search over names, code and department (or position
-     * title with match=position), optional status / exclude, and one page of `limit` rows.
+     * Slim picker rows in directory order: exactly `ids`, or a search with status, exclude and limit.
      *
      * @param  array{search?: ?string, limit?: int, ids?: array<int, int>, exclude?: array<int, int>, status?: ?string, match?: ?string}  $params
      * @return Collection<int, Employee>
@@ -101,13 +92,7 @@ class EmployeeService
     }
 
     /**
-     * Creates a new employee and assigns them to the default Role Group.
-     * No login account is created automatically — a user with the
-     * employees.set_credentials permission must set a username & password
-     * later. We notify those users so they can provision the account.
-     *
-     * The credentials-needed bell goes to every holder of the permission — including
-     * whoever just added this person, since provisioning the account is their next task.
+     * Creates an employee in the default Role Group and bells everyone who can set their login.
      *
      * @param  array<string, mixed>  $data
      */
@@ -115,8 +100,7 @@ class EmployeeService
     {
         $employee = Employee::create($data)->load(['department', 'position']);
 
-        // Assign to default group so the correct role key can be resolved
-        // when the login account is provisioned later.
+        // The group decides the role of the login made later
         $this->defaultGroupForNewEmployee()?->employees()->syncWithoutDetaching([$employee->id]);
 
         $this->notifyCredentialSetters($employee);
@@ -124,12 +108,7 @@ class EmployeeService
         return $employee;
     }
 
-    /**
-     * Creates a login account for an employee, using a manually chosen
-     * username & password. Called by a permitted user from the Employee list.
-     * Login is by username; the employee's email is mirrored onto the account
-     * only as a contact field (it is not a login identifier).
-     */
+    /** Creates the employee's login; the email is copied as a contact field, not a login name. */
     public function createUserWithCredentials(Employee $employee, string $username, string $password, bool $mustChangePassword = false): User
     {
         $user = User::create([
@@ -147,12 +126,22 @@ class EmployeeService
         // Mirror the username onto the employee for display/search.
         $employee->update(['username' => $username]);
 
-        // An approval that reached this person before they had an account was never
-        // delivered — nothing replays a notification. Now that there is an inbox, hand
-        // over whatever has been waiting on them.
+        // Approvals that reached them before they had an inbox
         app(RequestNotificationService::class)->deliverPendingApprovals($employee);
 
         return $user;
+    }
+
+    /** Renames and/or resets the login in one transaction; returns the new password when reset. */
+    public function updateLogin(Employee $employee, ?string $username, bool $resetting, ?string $password, bool $mustChangePassword): ?string
+    {
+        return DB::transaction(function () use ($employee, $username, $resetting, $password, $mustChangePassword) {
+            if ($username !== null) {
+                $this->changeUsername($employee, $username);
+            }
+
+            return $resetting ? $this->resetPassword($employee, $password, $mustChangePassword) : null;
+        });
     }
 
     /** Renames the employee's login and mirrors it onto the employee for display and search. */
@@ -162,10 +151,7 @@ class EmployeeService
         $employee->update(['username' => $username]);
     }
 
-    /**
-     * Sets a new password on the employee's login and signs it out everywhere. With no password
-     * given one is generated; the one set is returned so the screen can show it once.
-     */
+    /** Sets a new password (generated when none is given), signs the login out everywhere, returns it. */
     public function resetPassword(Employee $employee, ?string $password, bool $mustChangePassword): string
     {
         $password = filled($password) ? $password : $this->generatePassword();
@@ -181,10 +167,7 @@ class EmployeeService
         return $password;
     }
 
-    /**
-     * A temporary password that always meets the admin password policy: one character from each
-     * class first, then filled and shuffled. 0/O and 1/l/I are left out so it can be read aloud.
-     */
+    /** A temporary password that meets the policy, without 0/O and 1/l/I. */
     private function generatePassword(int $length = 14): string
     {
         $pools = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789', '!@#$%&*?'];
@@ -227,12 +210,7 @@ class EmployeeService
         AssetTransfer::where('to_owner', $oldCode)->toBase()->update(['to_owner' => $newCode]);
     }
 
-    /**
-     * Mirrors the employee's (possibly edited) email onto their linked login
-     * account, so notifications and email-login keep working after HR updates
-     * the address. Skipped when another account already owns the new email
-     * (users.email is unique).
-     */
+    /** Copies an edited email onto the linked login, unless another account already has it. */
     private function syncAccountEmail(Employee $employee): void
     {
         $user = User::where('employee_id', $employee->id)->first();
@@ -256,15 +234,10 @@ class EmployeeService
             'last_day' => $lastDay,
         ]);
 
-        // A leaver's devices are recalled with them: everything still in their hands turns
-        // Pending return and IT is belled to collect it. Ungated on purpose — recording a
-        // resignation must not also require an assets permission.
+        // Their devices turn Pending return; no assets permission needed
         $this->assets->requestReturnForEmployee($employee, "Resignation — {$employee->code}");
 
-        // Access is NOT revoked automatically — the system's standing rule is that IT does
-        // access by hand (the same reason an approved request never auto-grants). What was
-        // missing was anyone being told: the leaver's grants and owned resources simply sat
-        // there until somebody happened to open the Access Directory.
+        // Access is cleared by IT by hand; this only tells them
         $this->notifyAccessOffboarding($employee);
 
         $this->notifyResignation($employee);
@@ -273,15 +246,7 @@ class EmployeeService
     }
 
     /**
-     * Everything that makes an employee record un-deletable, as short keys the UI translates.
-     * Empty means the record is a clean mis-entry: nothing in the system refers to it.
-     *
-     * Deleting is only ever for "this person was typed in by mistake", never for a leaver —
-     * a leaver is resigned, because their name has to keep reading correctly on every ticket,
-     * asset and request they touched. That is also why this list is long and cautious: it is
-     * the layer that explains WHY a delete is refused. `tickets.requester_id`, the access
-     * tables and workflow_step_approvers are restrictOnDelete underneath it, so a check that
-     * went missing here surfaces as a database error rather than as silent history loss.
+     * Why a record cannot be deleted, as keys the UI words; empty means a clean mis-entry.
      *
      * @return list<string>
      */
@@ -298,8 +263,7 @@ class EmployeeService
         if (Asset::where('owner_employee_id', $employee->id)->exists()) {
             $blockers[] = 'assets';
         }
-        // The custody trail keeps codes as plain text, not a foreign key — an employee who
-        // once held a device leaves no FK behind, only their code on those rows.
+        // The custody trail stores codes, not a foreign key
         if (AssetTransfer::where('from_owner', $employee->code)->orWhere('to_owner', $employee->code)->exists()) {
             $blockers[] = 'asset_history';
         }
@@ -309,23 +273,16 @@ class EmployeeService
         if (EmailGroup::where('owner_employee_id', $employee->id)->exists() || FileShare::where('owner_employee_id', $employee->id)->exists()) {
             $blockers[] = 'access_owner';
         }
-        // Role-group membership is deliberately NOT a blocker. `create()` puts every new
-        // employee in the default group straight away, so counting it would block the delete
-        // for precisely the record it exists for — one added by mistake a minute ago. It is a
-        // setting the system assigned, not something the person did; the pivot row carries no
-        // history and cascades away with them.
+        // Role-group membership is not a blocker: create() adds everyone to the default group
         if (ServiceRequest::where('employee_id', $employee->id)->exists()) {
             $blockers[] = 'requests';
         }
-        // Being one of the people a step is open to counts as much as holding it outright:
-        // both are this person's name frozen into a request's approval trail.
+        // Holding a step or being one of those it is open to
         if (RequestApproval::where('approver_employee_id', $employee->id)->exists()
             || RequestApproval::whereJsonContains('approver_employee_ids', (int) $employee->id)->exists()) {
             $blockers[] = 'approvals';
         }
-        // Named on a workflow step (as its approver or as the deputy beside them). Letting
-        // this one through would leave the step with nobody to ask and say nothing about it,
-        // so the route has to be pointed at somebody else before the record can go.
+        // Named on a workflow step as approver or deputy
         if (DB::table('workflow_step_approvers')->where('employee_id', $employee->id)->exists()) {
             $blockers[] = 'workflow_approver';
         }
@@ -339,10 +296,7 @@ class EmployeeService
         return $blockers;
     }
 
-    /**
-     * Has this login ever done anything? A brand-new account is part of the same mis-entry and
-     * goes with it; one that has acted is history of its own and stops the delete.
-     */
+    /** Whether the login has ever acted; a fresh one goes with the mis-entry. */
     private function accountHasBeenUsed(?User $user): bool
     {
         if (! $user) {
@@ -364,10 +318,7 @@ class EmployeeService
         $employee->delete();
     }
 
-    /**
-     * Cancels a resignation by reverting the employee's status back to Active
-     * and clearing resign_reason and last_day fields.
-     */
+    /** Back to Active, clearing the reason and last day. */
     public function cancelResign(Employee $employee): Employee
     {
         $employee->update([
@@ -413,9 +364,7 @@ class EmployeeService
     }
 
     /**
-     * Resolves the recipients for employee events: users holding the given permission.
-     * Pass $exclude to leave somebody out — used for announcements, where telling the
-     * person who just acted what they just did is noise.
+     * Users holding the permission, optionally leaving one out.
      *
      * @return Collection<int, User>
      */
@@ -430,10 +379,7 @@ class EmployeeService
     /** Notifies every user allowed to set credentials that this person still needs one. */
     private function notifyCredentialSetters(Employee $employee): void
     {
-        // The acting user is NOT excluded here, unlike the resignation notice: this bell
-        // is a to-do ("this person still needs a login"), and adding an employee is a
-        // separate act from provisioning their account — usually by the same person, who
-        // is often the only holder of the permission. Excluding them sent it to nobody.
+        // The actor is included: often the only holder of the permission
         $recipients = $this->recipientsWithPermission('employees.set_credentials', null);
 
         if ($recipients->isEmpty()) {
@@ -443,19 +389,14 @@ class EmployeeService
         // In-app (database) bell — synchronous, shows immediately.
         Notification::send($recipients, new NewEmployeeNotification($employee));
 
-        // Email — queued, via the employee.account_needed template (if enabled).
-        //
-        // Enough of the new starter to set an account up without opening the record: who
-        // they are, where they sit, and when they need it by. Loaded once rather than per
-        // recipient — the same three relations for everybody on the list.
+        // Email via employee.account_needed (queued)
         $employee->loadMissing(['position', 'section', 'department']);
 
         $vars = [
             'employee.name' => e((string) $employee->name),
             'employee.code' => e((string) $employee->code),
             'employee.position' => e($employee->position?->title ?: '-'),
-            // Master data is mixed-language and the English name is the one that is always
-            // filled; the Thai name stands in where it is not.
+            // English name, Thai where English is blank
             'employee.section' => e($this->masterName($employee->section)),
             'employee.department' => e($this->masterName($employee->department)),
             'employee.working' => DateDisplay::emailDate($employee->joined_at),
@@ -470,13 +411,7 @@ class EmployeeService
         }
     }
 
-    /**
-     * A master-data record's name for an English email: its own name, or the Thai one when
-     * that is all it has.
-     *
-     * Departments carry both, sections usually only the English — a blank cell in a list an
-     * IT admin works from is worse than the wrong language.
-     */
+    /** A master-data name for an English email, the Thai one when that is all it has. */
     private function masterName(?object $record): string
     {
         if ($record === null) {
@@ -486,22 +421,7 @@ class EmployeeService
         return (string) ($record->name ?: ($record->name_th ?: '-'));
     }
 
-    /**
-     * Bells whoever can actually clear a leaver's access. Silent when they hold none — an
-     * alert about nothing trains people to ignore the tray.
-     *
-     * Gated on both halves of what the bell asks for, reusing the keys the module already
-     * defines rather than inventing one: access.module because the bell links to /access and
-     * that master opens the page (a bell whose link 403s is worse than no bell), plus any
-     * access.*_edit because revoking a grant and reassigning an owner both need edit — a
-     * viewer would get a to-do they cannot carry out. Normalisation makes edit imply the
-     * master on save, but older roles can still hold a child without it, so both are checked.
-     *
-     * The acting user is NOT excluded, for the reason spelled out on notifyCredentialSetters:
-     * clearing access is a separate act from recording the resignation, and the person who
-     * can do it is often the only holder of the permission — dropping them leaves the bell
-     * with nobody to go to. Whoever files the resignation still has to clear the access later.
-     */
+    /** Bells and mails access.module holders with an access.*_edit right when the leaver still has access. */
     private function notifyAccessOffboarding(Employee $employee): void
     {
         $access = app(AccessService::class);
@@ -523,9 +443,7 @@ class EmployeeService
 
         Notification::send($recipients, new AccessOffboardingNotification($employee, $outstanding));
 
-        // The mail carries what the bell only counts: a bell says there is work, the list
-        // says what it is — and it is read away from the screen, by whoever is clearing the
-        // account rather than sitting in the Access Directory.
+        // The mail lists what the bell only counts
         $table = $access->outstandingTableFor($employee);
         $emailService = app(EmailNotificationService::class);
 
@@ -541,14 +459,7 @@ class EmployeeService
         }
     }
 
-    /**
-     * Notifies IT (employees.set_credentials) to offboard a resigned employee.
-     *
-     * The actor used to be excluded, which quietly killed the bell: a single admin holds
-     * this permission in most installs, so filing a resignation removed the only recipient
-     * and nobody was ever told to close the account. Closing a login is a later job than
-     * recording that someone left, even when the same person does both.
-     */
+    /** Bells employees.set_credentials holders to offboard the leaver (actor included), others as news. */
     private function notifyResignation(Employee $employee): void
     {
         $offboarders = $this->recipientsWithPermission('employees.set_credentials', null);
@@ -558,11 +469,7 @@ class EmployeeService
             Notification::send($offboarders, new EmployeeResignedNotification($employee));
         }
 
-        // Everyone else who works with the directory hears it as news rather than a task:
-        // they cannot close the account, but a departure changes who they route work to and
-        // who they expect to see on a list. Reuses employees.view — the key that already
-        // decides who may look at staff records at all — minus the people above, so nobody
-        // gets told twice about the same person.
+        // employees.view holders hear it as news, minus the offboarders above
         $offboarderIds = $offboarders->pluck('id');
         $watchers = $this->recipientsWithPermission('employees.view', null)
             ->reject(fn (User $u) => $offboarderIds->contains($u->id));
@@ -575,16 +482,7 @@ class EmployeeService
     }
 
     /**
-     * Mails the same departure notice the bell carries.
-     *
-     * Sent to everyone who may look at staff records — offboarders included, unlike the two
-     * bells above. The bells split because somebody holding both permissions would otherwise
-     * be told twice about one event in one tray; on email there is nothing to be told twice
-     * BY, because the offboarding task itself has no mail of its own. Leaving them out would
-     * mean the person most involved in a departure is the one person it is not announced to.
-     *
-     * The leaver is skipped when they have a login of their own: telling somebody their own
-     * resignation has been recorded is not news to them.
+     * Mails the departure notice to offboarders and watchers alike, never to the leaver.
      *
      * @param  Collection<int, User>  $recipients
      */

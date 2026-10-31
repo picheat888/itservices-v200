@@ -6,7 +6,9 @@ use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Services\Employee\EmployeeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 /** Employee actions refuse rights first, then the record, then the fields, with the same codes (EMP-20). */
@@ -161,6 +163,50 @@ class EmployeeActionOrderTest extends TestCase
         $this->assertMatchesRegularExpression('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{14}$/', $password);
         $this->assertTrue($account->fresh()->must_change_password);
         $this->assertNull($account->fresh()->password_changed_at);
+    }
+
+    public function test_a_username_another_employee_still_carries_is_a_field_error(): void
+    {
+        $this->employee(['username' => 'taken']);
+        $account = User::factory()->create(['username' => 'before']);
+        $employee = $this->linkedTo($account);
+        $noLogin = $this->employee();
+        $this->actingAs($this->userWith('employees.set_credentials'));
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'taken'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('username');
+        $this->postJson("/api/employees/{$noLogin->id}/credentials", ['username' => 'taken', 'password' => 'Secret#2026', 'password_confirmation' => 'Secret#2026'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('username');
+
+        $this->assertSame('before', $account->fresh()->username);
+        $this->assertNull($noLogin->fresh()->user);
+    }
+
+    public function test_a_rename_with_a_failed_reset_leaves_the_login_as_it_was(): void
+    {
+        $account = User::factory()->create(['username' => 'before']);
+        $employee = $this->linkedTo($account, ['username' => 'before']);
+        $this->partialMock(EmployeeService::class, fn ($mock) => $mock->shouldReceive('resetPassword')->andThrow(new RuntimeException('reset failed')));
+
+        $this->actingAs($this->userWith('employees.set_credentials', 'employees.reset_password'))
+            ->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'after', 'reset_password' => true])
+            ->assertServerError();
+
+        $this->assertSame('before', $account->fresh()->username);
+        $this->assertSame('before', $employee->fresh()->username);
+    }
+
+    public function test_a_coded_refusal_outside_json_falls_back_to_the_error_page(): void
+    {
+        $hr = $this->userWith('employees.resign');
+        $own = $this->linkedTo($hr);
+
+        $response = $this->actingAs($hr)->post("/api/employees/{$own->id}/resign");
+
+        $response->assertForbidden();
+        $this->assertStringNotContainsString('application/json', (string) $response->headers->get('Content-Type'));
     }
 
     public function test_cancelling_the_resignation_of_a_working_employee_is_a_422(): void

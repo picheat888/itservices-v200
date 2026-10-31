@@ -48,9 +48,11 @@ class EmployeeActionGuard
     /** Administrator employees are edited by an Administrator only. */
     public function canEdit(?User $user, Employee $employee): Response
     {
-        return $employee->isSuperAdmin() && ! $user?->isSuper()
-            ? $this->forbidden('Only an Administrator can edit an Administrator account.')
-            : Response::allow();
+        return match (true) {
+            ! $user?->hasPermission('employees.edit') => $this->forbidden(),
+            $this->isAdministratorOutOfReach($user, $employee) => $this->forbidden('Only an Administrator can edit an Administrator account.'),
+            default => Response::allow(),
+        };
     }
 
     /** A first login for someone who has none (employees.set_credentials). */

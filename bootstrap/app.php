@@ -44,7 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // A refusal that carries a code (Response::deny('own_account', 'own_account_resign')) answers both, as the SPA reads them
-        $exceptions->map(fn (AuthorizationException $e) => $e->getCode() ? new HttpResponseException(response()->json([
+        $exceptions->map(fn (AuthorizationException $e) => $e->getCode() && request()->expectsJson() ? new HttpResponseException(response()->json([
             'message' => $e->getMessage(),
             'code' => $e->getCode(),
         ], $e->status() ?? 403)) : $e);
