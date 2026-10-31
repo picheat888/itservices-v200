@@ -7963,3 +7963,14 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - แบบ ก ที่ผู้ใช้เลือก `6caab446` ตัวกันซ้ำเคยเทียบกับเวลาที่ toast ถูกสร้าง toast เตือน 6 วินาทีที่เริ่มเลื่อนออกจึงปล่อย 429 ใบใหม่ขึ้นซ้อนทันที ตอนนี้ store จดเวลาที่ toast เริ่มออก (`leftAt`) แล้วกัน key เดียวกัน 1 วินาทีนับจากตอนนั้น (`TOAST_DEDUPE_MS`) ฟิลด์ createdAt ที่ไม่มีใครใช้แล้วลบออก
 - code review พบ 1 ข้อ แก้ใน `cab17f29` เดิมจดทุกทางที่ toast ออก กดปิด error แล้วบันทึกซ้ำภายใน 1 วินาทีจึงไม่เห็นข้อความ ตอนนี้จดเฉพาะ toast ที่หมดเวลาเองและผู้เรียกตั้ง key ไว้ (http-throttle, http-server, การแจ้งเตือน) ผู้ใช้กดปิดหรือ toast ที่ใช้ข้อความเป็น key ขึ้นใบใหม่ได้ทันทีเหมือนเดิม
 - security review ไม่พบช่องโหว่ (คิว toast ฝั่งหน้าเว็บ ไม่มี API หรือสิทธิ์) เทสต์ toast-queue 10 ข้อ JS ทั้งชุด 1,132 ข้อผ่าน tsc ESLint Prettier ผ่าน ยังไม่ได้ push
+
+## พนักงาน EMP-20 ย้ายกฎสิทธิ์และสถานะออกจาก EmployeeController (2026-10-31)
+
+- `b9d28864` ยังไม่ได้ push ไม่มี migration ทำแบบเดียวกับ TKT-16 และ AST-20 ผู้ใช้ไม่เห็นความต่าง controller จาก 940 บรรทัดเหลือ 675
+- `EmployeeActionGuard` ตอบว่าใครดู นำเข้า เพิ่ม แก้ ลาออก ยกเลิกลาออก ลบ และตั้งหรือเปลี่ยนบัญชีเข้าระบบได้ เป็น gate Response รหัสเดิมทุกตัว
+- FormRequest ใหม่ `ResignEmployeeRequest` `StoreEmployeeCredentialsRequest` `UpdateEmployeeCredentialsRequest` บนฐาน `EmployeeActionRequest` กฎชื่อผู้ใช้ รหัสผ่าน และการแปลงชื่อเป็นตัวเล็กอยู่ใน `EmployeeCredentialsRequest` การเปลี่ยนชื่อผู้ใช้ รีเซ็ตรหัส และสร้างรหัสชั่วคราวย้ายไป `EmployeeService`
+- การปฏิเสธที่มีรหัสคู่ (own_account กับ own_account_resign หรือ own_account_delete และ last_super_admin) ตอบ `{message, code}` เหมือนเดิมผ่านตัวแปลงใน `bootstrap/app.php`
+- ลำดับที่เปลี่ยน 1 จุด คนที่ไม่ใช่ Administrator แก้ข้อมูล Administrator ได้ 403 ก่อน error ของช่อง เทสต์ใหม่ `EmployeeActionOrderTest` ล็อกลำดับการปฏิเสธ
+- security review ของ `7904216b` กับ `b9d28864` รวมกันไม่พบช่องโหว่ code review พบ 7 ข้อ ผู้ใช้ให้แก้ 1-5 กับ 7 คงข้อ 6 (เงื่อนไขแผงโหลดพลาดที่เขียนซ้ำ ทั้งระบบใช้แบบนี้อยู่)
+- `e79f6953` ชื่อผู้ใช้ที่พนักงานอีกคนยังถืออยู่ขึ้น error ที่ช่องแทน 500 เปลี่ยนชื่อกับรีเซ็ตรหัสอยู่ใน transaction เดียว ตัวแปลงรหัสตอบ JSON เฉพาะคำขอ JSON `canEdit` เช็คสิทธิ์ `employees.edit` เอง comment ยาวใน `EmployeeService` เหลือบรรทัดเดียว
+- เทสต์ PHP ทั้งชุด 3,348 ข้อผ่าน (AssetApiTest กับ DashboardTest พังครั้งเดียวในรอบรวมแล้วผ่านเมื่อรันเดี่ยว ช่วงนั้น session อื่นกำลัง commit) `EmployeeActionOrderTest` 12 ข้อ
