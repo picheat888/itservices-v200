@@ -1,5 +1,6 @@
 // Employee module small fixes: the special-position switch follows the permission (EMP-8), a failed org chart
-// is not an empty one (EMP-13), the cancel-resignation confirm names the person (EMP-17), member counts carry commas (EMP-18).
+// is not an empty one (EMP-13), the cancel-resignation confirm names the person (EMP-17), member counts carry commas (EMP-18),
+// the unit tables are not empty while loading or after a failed load.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -25,6 +26,21 @@ test('both cancel-resignation entry points use the one confirm that names the em
     assert.match(confirms[0].slice(0, 120), /entity: \{ name: localName\(e, lang\), sub: e\.code \}/);
     assert.match(page, /onCancelResign=\{\(e\) => confirmCancelResign\(e\)\}/);
     assert.match(page, /onCancelResign=\{\(e\) => confirmCancelResign\(e, closeEmp\)\}/);
+});
+
+test('the positions, departments and sections tables load with a skeleton and say so when the load fails', () => {
+    const page = read('pages/index.tsx');
+    for (const query of ['positionsQuery', 'departmentsQuery']) {
+        assert.match(page, new RegExp(`loading=\\{${query}\\.isLoading\\}`), query);
+        assert.match(
+            page,
+            new RegExp(`${query}\\.isError && !${query}\\.data \\? \\(?\\s*<LoadFailed onRetry=\\{\\(\\) => void ${query}\\.refetch\\(\\)\\} />`),
+            query,
+        );
+    }
+    const sections = read('components/sections-tab.tsx');
+    assert.match(sections, /loading=\{isLoading\}/);
+    assert.match(sections, /sectionsQuery\.isError && !sectionsQuery\.data \? <LoadFailed onRetry=\{\(\) => void sectionsQuery\.refetch\(\)\} \/>/);
 });
 
 test('member counts in the three member dialogs go through fmtN', () => {

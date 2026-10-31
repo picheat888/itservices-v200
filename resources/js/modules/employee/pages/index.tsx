@@ -3,7 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { EmptyState } from '@/shared/components/empty-state';
 import { FilterPopover } from '@/shared/components/filter-popover';
-import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { LoadFailed, LoadFailedPanel } from '@/shared/components/load-failed';
 import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import {
     OverviewHeader,
@@ -638,6 +638,12 @@ export default function EmployeesPage() {
                             pinned={newPositions.pinned}
                             rowKey={(p) => p.id}
                             rowClassName={(p) => (newPositions.isNew(p) ? NEW_ROW_CLASS : undefined)}
+                            loading={positionsQuery.isLoading}
+                            emptyState={
+                                positionsQuery.isError && !positionsQuery.data ? (
+                                    <LoadFailed onRetry={() => void positionsQuery.refetch()} />
+                                ) : undefined
+                            }
                             onRowClick={(p) => setViewPos(p)}
                             searchPlaceholder={t('emp_positions_search')}
                             searchable={(p) => `${p.code} ${p.title}`}
@@ -675,6 +681,12 @@ export default function EmployeesPage() {
                             pinned={newDepts.pinned}
                             rowKey={(d) => d.id}
                             rowClassName={(d) => (newDepts.isNew(d) ? NEW_ROW_CLASS : undefined)}
+                            loading={departmentsQuery.isLoading}
+                            emptyState={
+                                departmentsQuery.isError && !departmentsQuery.data ? (
+                                    <LoadFailed onRetry={() => void departmentsQuery.refetch()} />
+                                ) : undefined
+                            }
                             onRowClick={(d) => setViewDept(d)}
                             searchPlaceholder={t('emp_departments_search')}
                             searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}

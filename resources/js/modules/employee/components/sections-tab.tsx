@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { LoadFailed } from '@/shared/components/load-failed';
 import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -36,7 +37,8 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     // The sections table refreshes on browser-tab return; the department filter reloads when opened
-    const { data: sections = [], isLoading } = useSections(undefined, { refetchOnWindowFocus: true });
+    const sectionsQuery = useSections(undefined, { refetchOnWindowFocus: true });
+    const { data: sections = [], isLoading } = sectionsQuery;
     const departmentsQuery = useDepartments();
     const refreshDepartments = useSelectRefresh(departmentsQuery);
     const departments = useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
@@ -182,6 +184,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 rowKey={(s) => s.id}
                 rowClassName={(s) => (newSections.isNew(s) ? NEW_ROW_CLASS : undefined)}
                 loading={isLoading}
+                emptyState={sectionsQuery.isError && !sectionsQuery.data ? <LoadFailed onRetry={() => void sectionsQuery.refetch()} /> : undefined}
                 empty={
                     sections.length === 0
                         ? {
