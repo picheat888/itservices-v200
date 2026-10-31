@@ -8015,3 +8015,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - แก้ตามรีวิว `e7eba509` ค้นเครื่องปัจจุบันเฉพาะตอนต้องตัดจำนวนเครื่องเหมือนเดิม `55e6d816` แยกเมธอดบันทึกต่อหมวดให้ action ของ audit เขียนเป็นข้อความตรง (audit-words.test.ts อ่านแบบนี้)
 - รีวิว: security ไม่พบช่องโหว่ code review 9 ข้อ ข้อ 1–3 เป็นงานวันหยุด SLA ของอีก session จดส่งต่อใน forward-session.md ข้อที่เหลือเป็นพฤติกรรมเดิมหรือเรื่องเล็กที่เลื่อนไว้
 - เทสต์ PHP ทั้งชุด 3,367 ข้อ JS 1,148 ข้อผ่าน เปิดหน้าตั้งค่าบน itdemo บันทึกทุกหมวดด้วยค่าเดิมผ่านหมด
+
+## ย้าย logic ออกจาก controller รอบ 3 Email/Notification template และ log การส่ง (2026-10-31)
+
+- `e6598cf9` TemplateEndpointsBehaviourTest 8 ข้อบันทึกพฤติกรรมเดิม (รูปคำตอบของหน้าอีเมล กระดิ่ง และ log, ข้อความปฏิเสธ reset ที่ไม่มีต้นฉบับ, ส่งทดสอบโดยไม่มีอีเมล, reset ทั้งหมดเขียน audit เฉพาะแถวที่เปลี่ยน, key กระดิ่งที่ไม่มีได้ 404 ก่อน validate, พรีวิวเป็น HTML)
+- `81a51787` EmailTemplateService (stats, ผู้ส่ง, สิทธิ์ที่การบันทึกต้องใช้, บันทึก, reset, ส่งทดสอบ, พรีวิว) และข้อมูลตัวอย่างพรีวิว 200 บรรทัดแยกเป็น EmailSampleVars controller จาก 507 เหลือ 132 บรรทัด `edad98c8` NotificationTemplateService controller จาก 237 เหลือ 103 `fd812ca0` EmailLogService controller จาก 136 เหลือ 70 เทสต์ที่เคยใช้ reflection เจาะ controller 3 ไฟล์เรียก class ใหม่ตรง ๆ ค่าที่ตรวจเหมือนเดิม
+- แก้ตามรีวิว `5e8e489b` EmailSampleVars อยู่ใน App\Services\Email, comment ที่อ้างเมธอดเดิมเปลี่ยนชื่อตาม
+- รีวิว: security ไม่พบช่องโหว่ code review ไม่พบจุดพัง บั๊กเดิม `?status[]=` ใน log ได้ 500 จดไว้ใน forward-session.md ไม่แก้ในรอบนี้
+- เทสต์ PHP ทั้งชุด 3,375 ข้อ JS 1,148 ข้อผ่าน เปิดหน้าอีเมลและการแจ้งเตือนบน itdemo รายการ บันทึกค่าเดิม พรีวิว กระดิ่ง และ log การส่งตอบปกติ
