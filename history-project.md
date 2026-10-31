@@ -8007,3 +8007,11 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `477ebab7` ใส่วันหยุดเกิน 60 วันในปีเดียว server ตอบรหัส `holiday_too_many` หน้าต่างแก้ไขวันหยุดขึ้น "ใส่วันหยุดได้ไม่เกินปีละ 60 วัน" / "Keep each year to 60 holidays" แทนประโยคภาษาอังกฤษของ Laravel บันทึกวันหยุดแล้ว Dashboard กับรายงานทุกตัวถูกทำให้ข้อมูลเก่า ตัวเลข SLA จึงตามกำหนดเวลาใหม่ตอนเปิดดูครั้งถัดไป
 - รีวิวรวม code review กับ security review ไม่พบช่องโหว่ แก้ 2 ข้อใน `19296542` ถ้า 422 มีทั้งเกิน 60 วันและแถวผิด แถวยังถูกทำเครื่องหมาย และเทสต์ผูกเลข 60 ฝั่งหน้าเว็บกับกฎ `max:60` ฝั่ง server ข้อที่ไม่ทำ หน้าเว็บยังไม่เช็ค 60 วันก่อนส่ง
 - เทสต์ SlaHoliday และ TicketSla 88 ข้อผ่าน JS 1,146 ข้อผ่าน ล้ม 2 ข้อใน `audit-words.test.ts` จาก `SettingsService.php` ที่อีก session ยังเขียนอยู่ ไม่มี migration
+
+## ย้าย logic ออกจาก controller รอบ 2 SettingsController (2026-10-31)
+
+- `81f83ec4` SettingsBehaviourTest 8 ข้อบันทึกพฤติกรรมเดิม (key ที่ผู้ยังไม่ login เห็น, key ทั้งหมดและลำดับ, คำตอบและ audit ของแต่ละหมวด, ข้อความของสองกฎข้ามแถวใน SLA, ความปลอดภัยที่ไม่มีอะไรเปลี่ยนไม่เขียน audit, โลโก้, SMTP)
+- `b03fcf0e` validation ย้ายไป FormRequest 10 ตัว (สิทธิ์ยังตรวจที่ route middleware ก่อนเหมือนเดิม) งานย้ายไป SettingsService, SlaSettingsService (transaction, ล้าง cache ใน finally, คำนวณกำหนดเวลา Ticket ที่เปิดอยู่ใหม่), SecuritySettingsService และ MailSettingsService controller จาก 653 เหลือ 148 บรรทัด tests/js/audit-security.test.ts อ่าน key จาก FormRequest แทน
+- แก้ตามรีวิว `e7eba509` ค้นเครื่องปัจจุบันเฉพาะตอนต้องตัดจำนวนเครื่องเหมือนเดิม `55e6d816` แยกเมธอดบันทึกต่อหมวดให้ action ของ audit เขียนเป็นข้อความตรง (audit-words.test.ts อ่านแบบนี้)
+- รีวิว: security ไม่พบช่องโหว่ code review 9 ข้อ ข้อ 1–3 เป็นงานวันหยุด SLA ของอีก session จดส่งต่อใน forward-session.md ข้อที่เหลือเป็นพฤติกรรมเดิมหรือเรื่องเล็กที่เลื่อนไว้
+- เทสต์ PHP ทั้งชุด 3,367 ข้อ JS 1,148 ข้อผ่าน เปิดหน้าตั้งค่าบน itdemo บันทึกทุกหมวดด้วยค่าเดิมผ่านหมด
