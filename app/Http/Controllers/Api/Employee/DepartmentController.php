@@ -70,7 +70,8 @@ class DepartmentController extends Controller
         $user = $request->user();
         abort_unless((bool) ($user?->hasPermission('employees.view_department') || $user?->hasPermission('workflows.manage') || $user?->hasPermission('workflows.module')), 403);
 
-        $members = $department->employees()->with(['department', 'position', 'section', 'user'])->orderBy('first_name')->orderBy('last_name')->get();
+        $members = $department->employees()->with(['department', 'position', 'section', 'user'])
+            ->orderByRaw("status = 'resigned'")->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();
     }

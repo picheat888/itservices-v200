@@ -138,6 +138,8 @@ export const employee: Dict = {
     dept_location: 'ที่ตั้ง',
     dept_members: 'สมาชิก',
     members_left_n: 'ลาออกแล้ว {n} คน',
+    members_n: '{n} สมาชิก',
+    members_with_left: '{n} สมาชิก, ลาออกแล้ว {left} คน',
     dept_view: 'ดูสมาชิก',
     dept_no_members: 'ยังไม่มีพนักงานในแผนกนี้',
     resign_employee: 'ลาออก',

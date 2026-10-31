@@ -9,15 +9,11 @@ import type { Employee, Position } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePositionMembers } from '../hooks/use-positions';
-import { leaversLast } from '../lib/member-counts';
 import { MemberCount } from './member-count';
 
-/**
- * Focused dialog listing every employee holding a position. Uses the shared
- * DataTable (search + pagination + sticky header) so it scales to 100+ members.
- */
+/** Focused dialog listing every employee holding a position, searchable and paged. */
 export function PositionMembersDialog({ position, onClose }: { position: Position | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -38,7 +34,6 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
 
     const membersQuery = usePositionMembers(view?.id ?? null, openId != null);
     const { data: members = [], isLoading } = membersQuery;
-    const listed = useMemo(() => leaversLast(membersQuery.data ?? []), [membersQuery.data]);
     useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.employees_count;
@@ -92,7 +87,6 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                                 loading={isLoading}
                                 rowActive={view?.active_employees_count}
                                 rowTotal={view?.employees_count}
-                                label={t('dept_members')}
                             />
                         </span>
                     }
@@ -101,7 +95,7 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                 <div className="min-h-0 border-t px-6 py-5">
                     <DataTable
                         columns={columns}
-                        rows={listed}
+                        rows={members}
                         rowKey={(m) => m.id}
                         loading={loadingMembers}
                         loadingRows={expected ? Math.min(expected, 20) : undefined}

@@ -72,8 +72,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
         [departments, lang, t],
     );
 
-    // Filter by department, then order. Default 'dept' keeps the API order
-    // (department_id → name); the other keys re-sort client-side.
+    // Filter by department, then order ('dept' keeps the API order)
     const view = useMemo(() => {
         const rows = deptFilter ? sections.filter((s) => String(s.department_id) === deptFilter) : sections;
         if (sort === 'code') return [...rows].sort((a, b) => a.code.localeCompare(b.code));
@@ -86,8 +85,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sections, deptFilter, sort, lang]);
 
-    // A section can only be deleted when it's empty. If it still has members,
-    // show a blocking notice asking the user to move/remove them first.
+    // Only an empty section can be deleted; otherwise a notice
     const handleDelete = (s: Section) => {
         const name = localName(s, lang);
         const count = s.members_count ?? 0;
@@ -99,7 +97,7 @@ export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; c
                 description: t('section_del_blocked_desc'),
                 entity: {
                     name,
-                    sub: blockedMembersLine(s.active_employees_count ?? 0, count, fmtN, { members: t('section_members'), left: t('members_left_n') }),
+                    sub: blockedMembersLine(s.active_employees_count ?? 0, count, fmtN, { plain: t('members_n'), withLeft: t('members_with_left') }),
                     subBelow: true,
                 },
                 confirmText: t('got_it'),

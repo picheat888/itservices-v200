@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
+use App\Models\Employee\Section;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
@@ -65,6 +67,23 @@ class DepartmentApiTest extends TestCase
 
         $this->assertSame(3, $row['count']);
         $this->assertSame(2, $row['active_employees_count']);
+    }
+
+    public function test_the_three_member_lists_put_leavers_last(): void
+    {
+        $this->actingAs($this->super());
+        $department = Department::create(['code' => 'DEP-ML1', 'tag' => 'ML', 'name' => 'Members']);
+        $section = Section::create(['department_id' => $department->id, 'name' => 'Desk']);
+        $position = Position::create(['code' => 'P-ML1', 'title' => 'Clerk']);
+        $place = ['department_id' => $department->id, 'section_id' => $section->id, 'position_id' => $position->id];
+        Employee::create(['first_name' => 'Aaron', 'last_name' => 'Gone', 'status' => EmployeeStatus::Resigned] + $place);
+        Employee::create(['first_name' => 'Zed', 'last_name' => 'Here', 'status' => EmployeeStatus::Active] + $place);
+        Employee::create(['first_name' => 'Mia', 'last_name' => 'Here', 'status' => EmployeeStatus::Active] + $place);
+
+        foreach (["/api/departments/{$department->id}/members", "/api/positions/{$position->id}/members", "/api/sections/{$section->id}/members"] as $url) {
+            $names = collect($this->getJson($url)->assertOk()->json('data'))->pluck('first_name')->all();
+            $this->assertSame(['Mia', 'Zed', 'Aaron'], $names, $url);
+        }
     }
 
     public function test_updates_a_department(): void

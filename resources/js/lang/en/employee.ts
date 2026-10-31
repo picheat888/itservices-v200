@@ -139,6 +139,8 @@ export const employee: Dict = {
     dept_location: 'Location',
     dept_members: 'Members',
     members_left_n: '{n} left',
+    members_n: '{n} Members',
+    members_with_left: '{n} Members, {left} left',
     dept_view: 'View members',
     dept_no_members: 'No employees in this department',
     resign_employee: 'Record resignation',

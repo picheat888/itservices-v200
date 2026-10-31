@@ -333,7 +333,10 @@ export default function EmployeesPage() {
                 description: t('pos_del_blocked_desc'),
                 entity: {
                     name: p.title,
-                    sub: blockedMembersLine(p.active_employees_count ?? 0, members, fmtN, { members: t('dept_members'), left: t('members_left_n') }),
+                    sub: blockedMembersLine(p.active_employees_count ?? 0, members, fmtN, {
+                        plain: t('members_n'),
+                        withLeft: t('members_with_left'),
+                    }),
                     subBelow: true,
                 },
                 confirmText: t('got_it'),
@@ -464,7 +467,7 @@ export default function EmployeesPage() {
                 description: t('dept_del_blocked_desc'),
                 entity: {
                     name: deptName(d),
-                    sub: `${blockedMembersLine(d.active_employees_count ?? 0, members, fmtN, { members: t('dept_members'), left: t('members_left_n') })}, ${fmtN(sections)} ${t('sub_sections')}`,
+                    sub: `${blockedMembersLine(d.active_employees_count ?? 0, members, fmtN, { plain: t('members_n'), withLeft: t('members_with_left') })}, ${fmtN(sections)} ${t('sub_sections')}`,
                     subBelow: true,
                 },
                 confirmText: t('got_it'),

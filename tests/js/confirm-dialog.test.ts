@@ -80,7 +80,7 @@ test('a long unbroken word in the record line breaks inside the window instead o
 test('the second line follows the name in grey after a space, and a short code stays whole', () => {
     const src = frame();
     const sub = src.match(
-        /\{' '\}\s*<span\s+className=\{cn\(\s*'([^']*)',\s*shown\.entity\.subBelow \? 'block' : '([^']*)',?\s*\)\}\s*>\s*\{shown\.entity\.sub\}/,
+        /\{!shown\.entity\.subBelow && ' '\}\s*<span\s+className=\{cn\(\s*'([^']*)',\s*shown\.entity\.subBelow \? 'block' : '([^']*)',?\s*\)\}\s*>\s*\{shown\.entity\.sub\}/,
     );
     const classes = [...(sub?.[1].split(/\s+/) ?? []), sub?.[2]];
     for (const t of ['text-muted-foreground', 'font-normal', 'inline-block', 'max-w-full']) assert.ok(classes.includes(t), `second line: ${t}`);

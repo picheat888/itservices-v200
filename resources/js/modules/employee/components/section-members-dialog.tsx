@@ -9,17 +9,12 @@ import type { Employee, Section } from '@/shared/types';
 import { Dialog, DialogContent, focusDialogOnOpen, mediumDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useSectionMembers } from '../hooks/use-sections';
-import { leaversLast } from '../lib/member-counts';
 import { MemberCount } from './member-count';
 
-/**
- * Focused dialog listing every employee in a section. Uses the shared DataTable
- * (search + pagination) so it scales to 100+ members per section without
- * turning into an endless scroll — handy before acting on the section.
- */
+/** Focused dialog listing every employee in a section, searchable and paged. */
 export function SectionMembersDialog({ section, onClose }: { section: Section | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -40,7 +35,6 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
 
     const membersQuery = useSectionMembers(view?.id ?? null, openId != null);
     const { data: members = [], isLoading } = membersQuery;
-    const listed = useMemo(() => leaversLast(membersQuery.data ?? []), [membersQuery.data]);
     useRefetchOnOpen(openId != null, membersQuery);
     // Member count from the clicked row
     const expected = view?.members_count;
@@ -91,7 +85,6 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                                 loading={isLoading}
                                 rowActive={view?.active_employees_count}
                                 rowTotal={view?.members_count}
-                                label={t('section_members')}
                             />
                         </span>
                     }
@@ -100,7 +93,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                 <div className="min-h-0 border-t px-6 py-5">
                     <DataTable
                         columns={columns}
-                        rows={listed}
+                        rows={members}
                         rowKey={(m) => m.id}
                         loading={loadingMembers}
                         loadingRows={expected ? Math.min(expected, 20) : undefined}

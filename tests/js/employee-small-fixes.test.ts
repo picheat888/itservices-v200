@@ -13,7 +13,7 @@ test('the position dialog switch is disabled without employees.position_special'
 
 test('a failed org chart load shows the retry panel before the empty state', () => {
     const tab = read('components/org-chart/org-chart-tab.tsx');
-    const failed = tab.indexOf('<LoadFailedPanel onRetry={() => refetch()} />');
+    const failed = tab.indexOf('<LoadFailedPanel onRetry={retry} />');
     const empty = tab.indexOf("title={t('emp_empty_org_chart')}");
     assert.ok(failed > 0 && empty > failed);
 });

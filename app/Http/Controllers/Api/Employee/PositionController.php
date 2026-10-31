@@ -31,7 +31,7 @@ class PositionController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('employees.view_position'), 403);
 
         $members = $position->employees()->with(['department', 'position', 'section', 'user'])
-            ->orderBy('first_name')->orderBy('last_name')->get();
+            ->orderByRaw("status = 'resigned'")->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();
     }

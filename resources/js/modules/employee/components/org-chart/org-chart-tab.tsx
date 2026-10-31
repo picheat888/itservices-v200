@@ -106,8 +106,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             const { x, y, zoom } = rf.getViewport();
             // Normalise line-mode deltas (Firefox) to roughly pixel scale.
             const delta = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
-            // ctrlKey is set for a trackpad pinch (and ⌘/ctrl + wheel) → zoom
-            // snappily so it keeps up with the fingers; a plain mouse wheel stays gentle.
+            // Trackpad pinch (ctrlKey) zooms faster than a mouse wheel
             const sensitivity = e.ctrlKey || e.metaKey ? PINCH_SENSITIVITY : WHEEL_SENSITIVITY;
             const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * Math.exp(-delta * sensitivity)));
             if (next === zoom) {
@@ -425,15 +424,20 @@ function OrgChartSkeleton() {
 /** Org chart tab: fetches the node list and renders the React Flow canvas. */
 export function OrgChartTab() {
     const t = useT();
-    const { data = [], isLoading, isError, isFetching, refetch } = useOrgChart();
+    const { data = [], isLoading, isError, refetch } = useOrgChart();
+    const [retrying, setRetrying] = useState(false);
+    const retry = () => {
+        setRetrying(true);
+        void refetch().finally(() => setRetrying(false));
+    };
 
-    if (isLoading || (isError && isFetching && data.length === 0)) {
+    if (isLoading || retrying) {
         return <OrgChartSkeleton />;
     }
     if (isError && data.length === 0) {
         return (
             <div className="py-16">
-                <LoadFailedPanel onRetry={() => refetch()} />
+                <LoadFailedPanel onRetry={retry} />
             </div>
         );
     }

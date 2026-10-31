@@ -169,7 +169,7 @@ export function CenteredAlert({
                                 {shown.entity.name}
                                 {shown.entity.sub && (
                                     <>
-                                        {' '}
+                                        {!shown.entity.subBelow && ' '}
                                         <span
                                             className={cn(
                                                 'text-muted-foreground max-w-full font-normal',
