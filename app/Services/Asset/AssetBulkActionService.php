@@ -1,6 +1,6 @@
 <?php
 
-// Actions on many assets at once, and delete: each one writes one audit row per asset, where the single action would.
+// Actions on many assets at once, and delete: each runs with its audit rows in one transaction, one row per asset.
 
 namespace App\Services\Asset;
 
@@ -11,6 +11,7 @@ use App\Models\Settings\Location;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class AssetBulkActionService
 {
@@ -26,13 +27,15 @@ class AssetBulkActionService
      */
     public function writeOff(array $ids, int $reasonId, ?string $note): int
     {
-        $count = $this->assets->bulkSetStatus($ids, AssetStatus::Writeoff, $note, $reasonId);
-        $reasonName = WriteoffReason::whereKey($reasonId)->value('name');
-        foreach (Asset::whereIn('id', $ids)->get() as $asset) {
-            AuditLog::record('Wrote off asset', $asset->asset_code, ['facts' => array_filter(['reason' => $reasonName, 'note' => $note])], subject: $asset);
-        }
+        return DB::transaction(function () use ($ids, $reasonId, $note) {
+            $count = $this->assets->bulkSetStatus($ids, AssetStatus::Writeoff, $note, $reasonId);
+            $reasonName = WriteoffReason::whereKey($reasonId)->value('name');
+            foreach (Asset::whereIn('id', $ids)->get() as $asset) {
+                AuditLog::record('Wrote off asset', $asset->asset_code, ['facts' => array_filter(['reason' => $reasonName, 'note' => $note])], subject: $asset);
+            }
 
-        return $count;
+            return $count;
+        });
     }
 
     /**
@@ -42,17 +45,19 @@ class AssetBulkActionService
      */
     public function returnToVendor(array $ids, ?string $note): int
     {
-        $count = $this->assets->returnToVendor($ids, $note);
-        foreach (Asset::with('contract:id,code')->whereIn('id', $ids)->get() as $asset) {
-            AuditLog::record(
-                'Returned asset to lessor',
-                $asset->asset_code,
-                ['facts' => array_filter(['contract' => $asset->contract?->code, 'note' => $note])],
-                subject: $asset,
-            );
-        }
+        return DB::transaction(function () use ($ids, $note) {
+            $count = $this->assets->returnToVendor($ids, $note);
+            foreach (Asset::with('contract:id,code')->whereIn('id', $ids)->get() as $asset) {
+                AuditLog::record(
+                    'Returned asset to lessor',
+                    $asset->asset_code,
+                    ['facts' => array_filter(['contract' => $asset->contract?->code, 'note' => $note])],
+                    subject: $asset,
+                );
+            }
 
-        return $count;
+            return $count;
+        });
     }
 
     /**
@@ -63,16 +68,18 @@ class AssetBulkActionService
      */
     public function relocate(Collection $assets, Location $location, User $actor, ?string $note): Collection
     {
-        $moved = $this->assets->relocateMany($assets, $location, $actor, $note);
-        foreach ($moved as $asset) {
-            AuditLog::record('Updated asset location', "{$asset->asset_code} → {$location->name}", subject: $asset);
-        }
+        return DB::transaction(function () use ($assets, $location, $actor, $note) {
+            $moved = $this->assets->relocateMany($assets, $location, $actor, $note);
+            foreach ($moved as $asset) {
+                AuditLog::record('Updated asset location', "{$asset->asset_code} → {$location->name}", subject: $asset);
+            }
 
-        return $moved;
+            return $moved;
+        });
     }
 
     /**
-     * Hands Ready assets to one owner; one bell and one mail for the recipient, audit rows after.
+     * Hands Ready assets to one owner; one bell and one mail for the recipient after the commit.
      *
      * @param  Collection<int, Asset>  $assets
      * @param  array{mode: string, owner_employee_id?: ?int, owner_label?: ?string, location_id: int, reason?: ?string}  $data
@@ -89,10 +96,10 @@ class AssetBulkActionService
                     'reason' => $data['reason'] ?? null,
                 ], $actor);
             }
+            foreach ($assets as $asset) {
+                AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
+            }
         });
-        foreach ($assets as $asset) {
-            AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}", subject: $asset);
-        }
     }
 
     /**
@@ -118,12 +125,14 @@ class AssetBulkActionService
      */
     public function receive(Collection $assets, User $actor, string $warehouse): void
     {
-        foreach ($assets as $asset) {
-            $this->assets->markReceived($asset, $actor, $warehouse);
-        }
-        foreach ($assets as $asset) {
-            AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
-        }
+        DB::transaction(function () use ($assets, $actor, $warehouse) {
+            foreach ($assets as $asset) {
+                $this->assets->markReceived($asset, $actor, $warehouse);
+            }
+            foreach ($assets as $asset) {
+                AuditLog::record('Received asset', $asset->asset_code, subject: $asset);
+            }
+        });
     }
 
     /**
@@ -138,8 +147,10 @@ class AssetBulkActionService
             return $blocker;
         }
 
-        AuditLog::recordDeleted('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}", $asset);
-        $asset->delete();
+        DB::transaction(function () use ($asset) {
+            AuditLog::recordDeleted('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}", $asset);
+            $asset->delete();
+        });
 
         return null;
     }
