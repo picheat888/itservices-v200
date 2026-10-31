@@ -38,14 +38,14 @@ class SettingsController extends Controller
 
     public function updateCompany(UpdateCompanySettingsRequest $request): JsonResponse
     {
-        $this->settings->save($request->validated(), 'Updated company settings');
+        $this->settings->saveCompany($request->validated());
 
         return $this->show();
     }
 
     public function updateBranding(UpdateBrandingSettingsRequest $request): JsonResponse
     {
-        $this->settings->save($request->validated(), 'Updated branding settings');
+        $this->settings->saveBranding($request->validated());
 
         return $this->show();
     }
@@ -66,14 +66,14 @@ class SettingsController extends Controller
 
     public function updateDisplay(UpdateDisplaySettingsRequest $request): JsonResponse
     {
-        $this->settings->save($request->validated(), 'Updated display settings');
+        $this->settings->saveDisplay($request->validated());
 
         return $this->show();
     }
 
     public function updateDateTime(UpdateDateTimeSettingsRequest $request): JsonResponse
     {
-        $this->settings->save($request->validated(), 'Updated date and time settings');
+        $this->settings->saveDateTime($request->validated());
 
         return $this->show();
     }

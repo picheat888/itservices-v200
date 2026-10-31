@@ -114,17 +114,42 @@ class SettingsService
         return array_intersect_key($this->payload(), array_flip(self::PUBLIC_KEYS));
     }
 
+    /** @param  array<string, mixed>  $values */
+    public function saveCompany(array $values): void
+    {
+        AuditLog::record('Updated company settings', $this->put($values));
+    }
+
+    /** @param  array<string, mixed>  $values */
+    public function saveBranding(array $values): void
+    {
+        AuditLog::record('Updated branding settings', $this->put($values));
+    }
+
+    /** @param  array<string, mixed>  $values */
+    public function saveDisplay(array $values): void
+    {
+        AuditLog::record('Updated display settings', $this->put($values));
+    }
+
+    /** @param  array<string, mixed>  $values */
+    public function saveDateTime(array $values): void
+    {
+        AuditLog::record('Updated date and time settings', $this->put($values));
+    }
+
     /**
-     * Saves one section's values (null stored as '') and writes its audit row naming the keys sent.
+     * Stores a section's values (null as '') and returns the audit target: the keys sent.
      *
      * @param  array<string, mixed>  $values
      */
-    public function save(array $values, string $auditAction): void
+    private function put(array $values): string
     {
         foreach ($values as $key => $value) {
             AppSetting::put($key, $value === null ? '' : (string) $value);
         }
-        AuditLog::record($auditAction, implode(', ', array_keys($values)));
+
+        return implode(', ', array_keys($values));
     }
 
     /** @param  array<string, string>  $colors */
