@@ -1,9 +1,4 @@
-/**
- * Report Center list, as the design lays it out: reports grouped by module (in the design's
- * module order), each row linking to its report page and reading title + description, the
- * file formats it offers (lined up beside the pin) with the reader's latest kept file under them
- * (being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin.
- */
+// Report Center list: reports grouped by module, each row linking to its page with formats, latest file and a pin.
 import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { relativeTime } from '@/shared/lib/datetime';
@@ -15,25 +10,16 @@ import { Link } from 'react-router-dom';
 import { useReportRights } from '../hooks/use-report-rights';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import { periodRange } from '../lib/period-range';
+import { preloadReportPage } from '../routes';
 import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 
-/**
- * A report's page address: its key with every "." and "_" made a "-" — "assets.warranty_expiring"
- * → "assets-warranty-expiring". Reversible because a domain ("assets", "tickets", …) never
- * holds a "-" or "_": the first "-" is the dot, the rest were underscores (reportKeyFromSlug).
- * The API keeps the dotted key (/api/reports/tabular/{key}); only the page URL reads plainly.
- */
+/** Page address from a report key: "assets.warranty_expiring" → "assets-warranty-expiring" (reportKeyFromSlug reverses it). */
 export const reportSlug = (key: string) => key.replace('.', '-').replaceAll('_', '-');
 
 export const reportKeyFromSlug = (slug: string) => slug.replace('-', '.').replaceAll('-', '_');
 
-/**
- * Every report opens at /reports/<slug> (its page in pages/<slug>.tsx). With `range` (the hub's
- * period) the link carries ?from=&to= — but only for a report that has a date range
- * (`def.range`, from the catalogue): handing dates to one without would make it shed the query
- * and the address flicker.
- */
+/** /reports/<slug>, with the hub's ?from=&to= only for a report that has a date range. */
 export function reportRoute(def: Pick<ReportDefinition, 'key'> & { range?: boolean }, range?: { from: string; to: string }): string {
     const path = `/reports/${reportSlug(def.key)}`;
     return range && def.range ? `${path}?${new URLSearchParams(range)}` : path;
@@ -79,10 +65,7 @@ function StatusPill({ tone, children }: { tone: 'blue' | 'red'; children: React.
     );
 }
 
-/**
- * The reader's latest kept file of this report, under the row's format badges.
- * Nothing when there is none — a "no file yet" on every row says nothing a missing line does not.
- */
+/** The reader's latest kept file of this report, under the format badges; nothing when there is none. */
 function LastExport({ item }: { item: ReportExportItem }) {
     const t = useT();
     const fmtN = useNumberFormat();
@@ -122,14 +105,16 @@ function ReportRow({ report, latest, range }: { report: ReportDefinition; latest
         <div className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
             <Link
                 to={reportRoute(report, range && periodRange(range))}
+                onPointerEnter={() => preloadReportPage(reportSlug(report.key))}
+                onPointerDown={() => preloadReportPage(reportSlug(report.key))}
+                onFocus={() => preloadReportPage(reportSlug(report.key))}
                 className="focus-visible:ring-brand flex min-w-0 flex-1 items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
                 <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{t(`rep_${reportStem(report.key)}_title`)}</div>
                     <div className="text-muted-foreground mt-0.5 text-xs">{t(`rep_${reportStem(report.key)}_desc`)}</div>
                 </div>
-                {/* Beside the pin, right-aligned: the badges line up down every group, and the
-                    latest file sits under them (nothing when there is none). */}
+                {/* Format badges, latest file under them */}
                 <div className="flex shrink-0 flex-col items-end gap-1">
                     <div className="hidden gap-1 sm:flex">
                         {report.formats.map((f) => (
@@ -148,10 +133,7 @@ function ReportRow({ report, latest, range }: { report: ReportDefinition; latest
     );
 }
 
-/**
- * A module group: a tinted heading (icon, name, count) over its report rows. The tint is a
- * faint brand wash in light — muted gray matched the page ground and sank — and muted in dark.
- */
+/** A module group: a tinted heading (icon, name, count) over its report rows. */
 function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; title: string; count: number; children: React.ReactNode }) {
     const t = useT();
     const fmtN = useNumberFormat();
@@ -170,11 +152,7 @@ function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; t
     );
 }
 
-/**
- * The catalogue while it loads, shaped like what replaces it — search box, module chips, then
- * group cards (tinted heading, report rows with title, description and format badges) — so the
- * page pulses in place instead of swapping a block for a list.
- */
+/** The catalogue while it loads, shaped like the search box, chips and group cards that replace it. */
 export function ReportCatalogueSkeleton() {
     return (
         <div className="space-y-3.5" aria-hidden="true">
@@ -213,11 +191,7 @@ export function ReportCatalogueSkeleton() {
 /** Pinned first, in the order they were pinned; the rest keep the catalogue's order. */
 const pinnedFirst = (a: ReportDefinition, b: ReportDefinition) => (a.pin_order ?? Infinity) - (b.pin_order ?? Infinity);
 
-/**
- * `showPinned` puts the "ปักหมุดไว้" card on top (the hub's unfiltered view) — quick access in
- * the order the reader pinned things, as Drive or a Start menu does. Pinned reports stay in
- * their module group as well, listed first there.
- */
+/** `showPinned` adds the pinned card on top; pinned reports also stay first in their module group. */
 export function ReportCatalogue({
     reports,
     showPinned = false,

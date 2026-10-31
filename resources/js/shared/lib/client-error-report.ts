@@ -1,11 +1,11 @@
 // Sends browser errors to POST /api/client-errors (logs/frontend) and reloads once when a stale build's files are gone.
+import { isPageLoadWaiting, reloadForNewBuild } from '@/shared/lib/chunk-reload';
 import { createReportCache } from '@/shared/lib/report-cache';
 import axios, { isAxiosError } from 'axios';
 
 export type ClientErrorKind = 'error' | 'rejection' | 'render' | 'chunk';
 
 const MAX_REPORTS_PER_PAGE = 10;
-const CHUNK_RELOAD_KEY = 'itsd-chunk-reload';
 const IGNORED = [/ResizeObserver loop/i];
 
 const reportOnce = createReportCache(MAX_REPORTS_PER_PAGE);
@@ -64,18 +64,6 @@ export function reportClientError(
     });
 }
 
-/** A deploy replaced the build: reload once to fetch the new files (guarded so it can't loop). */
-function reloadForNewBuild(): void {
-    try {
-        const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0);
-        if (Date.now() - last < 60_000) return;
-        sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
-    } catch {
-        return;
-    }
-    window.location.reload();
-}
-
 export function installClientErrorReporting(): void {
     if (installed) return;
     installed = true;
@@ -90,8 +78,8 @@ export function installClientErrorReporting(): void {
     });
 
     window.addEventListener('vite:preloadError', (event) => {
-        event.preventDefault();
         void reportClientError('chunk', (event as Event & { payload?: unknown }).payload ?? 'Failed to load a build file');
-        reloadForNewBuild();
+        // Only a page being opened reloads; otherwise the load fails and its error shows (a failed preload stays quiet)
+        if (isPageLoadWaiting() && reloadForNewBuild()) event.preventDefault();
     });
 }

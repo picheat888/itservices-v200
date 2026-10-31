@@ -49,7 +49,8 @@ function App() {
     useServiceWorkerBridge();
 
     return (
-        <BrowserRouter>
+        // No transitions: a tap moves the menu at once and the page loading fallback shows, instead of the old page lingering
+        <BrowserRouter useTransitions={false}>
             {/* Pages outside the shell (stock item and lot history) wait here for their code */}
             <Suspense
                 fallback={
@@ -178,10 +179,9 @@ function App() {
                                     }
                                 />
                             ))}
-                            {/* Merged into the Ticket & SLA page's cards (2026-10-02) — old links land there. */}
+                            {/* Old report addresses */}
                             <Route path="reports/tickets-by-department" element={<Navigate to="/reports/tickets-overview" replace />} />
                             <Route path="reports/tickets-staff-performance" element={<Navigate to="/reports/tickets-overview" replace />} />
-                            {/* The old /reports/r/<dotted key> addresses keep working (2026-10-02). */}
                             <Route path="reports/r/:key" element={<OldReportRedirect />} />
                             <Route
                                 path="reports/:slug"

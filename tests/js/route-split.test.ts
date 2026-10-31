@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { isChunkLoadError } from '../../resources/js/shared/lib/chunk-reload.ts';
+import { isPageLoadWaiting, reloadForNewBuild, trackPageLoad } from '../../resources/js/shared/lib/chunk-reload.ts';
 
 const root = join(import.meta.dirname, '../..');
 const read = (rel: string) => readFileSync(join(root, rel), 'utf8');
@@ -50,9 +50,53 @@ test('the loading fallback waits 300ms before it shows', () => {
     assert.match(loading, /if \(!shown\) return null;/);
 });
 
-test('only a failed page-file download counts as a new build', () => {
-    assert.ok(isChunkLoadError(new TypeError('Failed to fetch dynamically imported module: https://x/build/assets/index-abc.js')));
-    assert.ok(isChunkLoadError(new TypeError('Importing a module script failed.')));
-    assert.ok(isChunkLoadError(new Error('error loading dynamically imported module')));
-    assert.ok(!isChunkLoadError(new TypeError("Cannot read properties of undefined (reading 'map')")));
+test('report hub cards preload their report page', () => {
+    assert.match(read('resources/js/modules/report/routes.tsx'), /export function preloadReportPage\(path: string\)/);
+    assert.match(
+        read('resources/js/modules/report/components/report-catalogue.tsx'),
+        /onPointerEnter=\{\(\) => preloadReportPage\(reportSlug\(report\.key\)\)\}/,
+    );
+});
+
+test('the one build-file handler reloads only while a page is being opened', () => {
+    const handler = read('resources/js/shared/lib/client-error-report.ts');
+    assert.match(handler, /if \(isPageLoadWaiting\(\) && reloadForNewBuild\(\)\) event\.preventDefault\(\);/);
+    assert.doesNotMatch(handler, /function reloadForNewBuild/);
+});
+
+test('a page load counts as waiting until it settles; a preload alone never does', async () => {
+    let finish!: () => void;
+    const load = trackPageLoad(new Promise<void>((resolve) => (finish = resolve)));
+    assert.equal(isPageLoadWaiting(), true);
+    finish();
+    await load;
+    assert.equal(isPageLoadWaiting(), false);
+
+    const failed = trackPageLoad(Promise.reject(new Error('gone')));
+    await assert.rejects(failed);
+    assert.equal(isPageLoadWaiting(), false);
+});
+
+test('reload is skipped when offline, and at most once a minute', (t) => {
+    const store = new Map<string, string>();
+    let reloads = 0;
+    const win = {
+        sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) },
+        location: { reload: () => void reloads++ },
+    };
+    const online = { onLine: true };
+    const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    Object.defineProperty(globalThis, 'window', { value: win, configurable: true });
+    Object.defineProperty(globalThis, 'navigator', { value: online, configurable: true });
+    t.after(() => {
+        delete (globalThis as { window?: unknown }).window;
+        if (realNavigator) Object.defineProperty(globalThis, 'navigator', realNavigator);
+    });
+
+    assert.equal(reloadForNewBuild(1_000_000), true);
+    assert.equal(reloadForNewBuild(1_030_000), false);
+    assert.equal(reloadForNewBuild(1_061_000), true);
+    online.onLine = false;
+    assert.equal(reloadForNewBuild(1_200_000), false);
+    assert.equal(reloads, 2);
 });

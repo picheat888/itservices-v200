@@ -1,19 +1,25 @@
 // After a deploy, an open tab can ask for page files the new build no longer has; reload once to pick it up.
 
-const RELOADED_AT_KEY = 'itsd:chunk-reload-at';
+const RELOADED_AT_KEY = 'itsd-chunk-reload';
 
 /** A second failure within this window shows the error instead of reloading again. */
-export const CHUNK_RELOAD_WINDOW_MS = 10_000;
+export const CHUNK_RELOAD_WINDOW_MS = 60_000;
 
-/** The browser could not fetch a page file (Chrome, Safari, Firefox wording, or Vite's CSS preload). */
-export function isChunkLoadError(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : String(error);
-    return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS/i.test(
-        message,
-    );
+let pageLoadsWaiting = 0;
+
+/** Marks a page the user is opening, so a failed download of it may reload; a failed preload never does. */
+export function trackPageLoad<T>(load: Promise<T>): Promise<T> {
+    pageLoadsWaiting++;
+    return load.finally(() => {
+        pageLoadsWaiting--;
+    });
 }
 
-/** Reloads the page unless offline, storage is blocked, or it already reloaded moments ago. Returns whether it did. */
+export function isPageLoadWaiting(): boolean {
+    return pageLoadsWaiting > 0;
+}
+
+/** Reloads the page unless offline, storage is blocked, or it already reloaded within the window. Returns whether it did. */
 export function reloadForNewBuild(now = Date.now()): boolean {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
     try {

@@ -2,8 +2,7 @@
  * Every report page: its address (the report key with "." and "_" made "-"), the permissions its
  * ReportCatalogue entry requires, and its page file in pages/, loaded when first opened.
  */
-import { lazyPage } from '@/shared/lib/lazy-page';
-import type { ComponentType } from 'react';
+import { lazyPage, type LazyPage } from '@/shared/lib/lazy-page';
 
 const AccessOverviewReportPage = lazyPage(() => import('./pages/access-overview'));
 const AccessResourceMembersReportPage = lazyPage(() => import('./pages/access-resource-members'));
@@ -32,7 +31,7 @@ export interface ReportPageRoute {
     /** Under /reports — "tickets-overview" opens /reports/tickets-overview. */
     path: string;
     allOf: string[];
-    Page: ComponentType;
+    Page: LazyPage;
 }
 
 export const reportPageRoutes: ReportPageRoute[] = [
@@ -66,3 +65,8 @@ export const reportPageRoutes: ReportPageRoute[] = [
     { path: 'access-resource-members', allOf: ['reports.module', 'reports.access'], Page: AccessResourceMembersReportPage },
     { path: 'access-software-licenses', allOf: ['reports.module', 'reports.access'], Page: AccessSoftwareLicensesReportPage },
 ];
+
+/** Starts a report page's download (hub card hover, focus or tap). */
+export function preloadReportPage(path: string): void {
+    reportPageRoutes.find((route) => route.path === path)?.Page.preload();
+}
