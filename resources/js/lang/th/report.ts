@@ -1699,6 +1699,7 @@ export const report: Dict = {
     rep_cren_k_within_none: 'ไม่มีสัญญาที่จะหมดในช่วงนี้',
     rep_cren_k_soon: 'หมดภายใน 30 วัน',
     rep_cren_k_soon_foot: 'ใกล้สุด {code} อีก {n} วัน',
+    rep_cren_k_soon_foot_today: 'ใกล้สุด {code} ครบกำหนดวันนี้',
     rep_cren_k_soon_none: 'ไม่มีสัญญาที่ใกล้หมด',
     rep_cren_k_overdue: 'เกินกำหนด ยังไม่ปิด',
     rep_cren_k_overdue_foot: 'นานสุด {code} {n} วัน',

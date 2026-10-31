@@ -105,7 +105,7 @@ function Tiles({ data }: { data: ContractRenewalsBreakdown }) {
                 alert={soon.count > 0 ? 'amber' : undefined}
                 footer={
                     soon.nearest
-                        ? rich(t('rep_cren_k_soon_foot'), {
+                        ? rich(t(soon.nearest.days === 0 ? 'rep_cren_k_soon_foot_today' : 'rep_cren_k_soon_foot'), {
                               code: <span translate="no">{soon.nearest.code}</span>,
                               n: count(soon.nearest.days, lang),
                           })

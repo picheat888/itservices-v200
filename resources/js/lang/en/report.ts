@@ -1711,6 +1711,7 @@ export const report: Dict = {
     rep_cren_k_within_none: 'No contracts end in this window',
     rep_cren_k_soon: 'Ending within 30 days',
     rep_cren_k_soon_foot: 'Nearest {code} in {n} days',
+    rep_cren_k_soon_foot_today: 'Nearest {code} ends today',
     rep_cren_k_soon_none: 'Nothing ends soon',
     rep_cren_k_overdue: 'Overdue, still open',
     rep_cren_k_overdue_foot: 'Longest {code} {n} days',

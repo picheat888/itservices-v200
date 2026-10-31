@@ -20,6 +20,14 @@ test('the end date reads "ends today" in amber, overdue only from the next day',
     for (const lang of ['th', 'en']) assert.match(read(`lang/${lang}/notification.ts`), /notif_contract_due_today: '/);
 });
 
+test('the report pill and the 30-day tile read the end date as "ends today" in amber', () => {
+    const pill = read('modules/report/components/contract-left-pill.tsx');
+    assert.match(pill, /if \(days === 0\) return <StatusBadge tone="amber">\{t\('contract_due_today'\)\}<\/StatusBadge>;/);
+    const cards = read('modules/report/components/contract-renewals-cards.tsx');
+    assert.match(cards, /t\(soon\.nearest\.days === 0 \? 'rep_cren_k_soon_foot_today' : 'rep_cren_k_soon_foot'\)/);
+    for (const lang of ['th', 'en']) assert.match(read(`lang/${lang}/report.ts`), /rep_cren_k_soon_foot_today: '[^']*\{code\}/);
+});
+
 test('the action queue pill says overdue in red, ends today, or days left', () => {
     const page = read('modules/contract/pages/index.tsx');
     assert.match(page, /c\.days < 0\s*\? 'bg-red-500\/10 text-red-700 dark:text-red-400'/);
