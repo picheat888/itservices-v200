@@ -100,3 +100,9 @@ test('reload is skipped when offline, and at most once a minute', (t) => {
     assert.equal(reloadForNewBuild(1_200_000), false);
     assert.equal(reloads, 2);
 });
+
+test('a page already downloaded renders straight, without a Suspense round trip', () => {
+    const lazyPage = read('resources/js/shared/lib/lazy-page.ts');
+    assert.match(lazyPage, /if \(module\) loaded = module\.default;/);
+    assert.match(lazyPage, /useState<ComponentType>\(\(\) => loaded \?\? current\)/);
+});
