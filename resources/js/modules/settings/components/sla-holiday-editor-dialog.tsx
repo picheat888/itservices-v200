@@ -131,6 +131,7 @@ export function SlaHolidayEditorDialog({
     const guardClose = useDiscardGuard(dirty);
     useNavigationGuard(dirty, ['holidays_edit']);
     const fixed = fixedDateRows(previousYear, year);
+    const tableDates = useMemo(() => rows.map((r) => r.date).filter(Boolean), [rows]);
 
     const errors = useMemo(() => {
         if (!attempted) return {} as Record<string, RowError>;
@@ -186,7 +187,9 @@ export function SlaHolidayEditorDialog({
         setRows((prev) => prev.filter((r) => r.key !== key));
     };
     const copyFixed = () => {
-        append(fixed);
+        const [first] = [...append(fixed)].sort(byDate);
+        // The copy button leaves with the empty state, so focus goes to the first copied name
+        if (first) focusAfter.current = `hol-n-${first.key}`;
         useToastStore
             .getState()
             .push(fillText(t('set_hol_copied_body'), { year: yearText }), 'success', fillText(t('set_hol_copied'), { n: fmtN(fixed.length) }));
@@ -311,6 +314,7 @@ export function SlaHolidayEditorDialog({
                                                 </span>
                                                 <label htmlFor={`hol-d-${r.key}`} className="sr-only">
                                                     {fillText(t('set_hol_aria_date'), { name: label })}
+                                                    {r.date && `, ${fmt.date(r.date)}`}
                                                 </label>
                                                 <DateInput
                                                     id={`hol-d-${r.key}`}
@@ -390,7 +394,7 @@ export function SlaHolidayEditorDialog({
                 <SlaHolidayPasteDialog
                     open={pasteOpen}
                     year={year}
-                    existing={rows.map((r) => r.date).filter(Boolean)}
+                    existing={tableDates}
                     onClose={() => setPasteOpen(false)}
                     onAdd={addPasted}
                     returnFocusTo={PASTE_BUTTON_ID}

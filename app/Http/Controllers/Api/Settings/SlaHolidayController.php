@@ -25,11 +25,13 @@ class SlaHolidayController extends Controller
         $year = $request->year();
         $result = $service->replaceYear($year, $request->validated('holidays'));
 
-        AuditLog::record('Updated SLA holidays', (string) $year, [
-            'added' => $result['added'],
-            'removed' => $result['removed'],
-            'renamed' => $result['renamed'],
-        ]);
+        if ($result['added'] || $result['removed'] || $result['renamed']) {
+            AuditLog::record('Updated SLA holidays', (string) $year, [
+                'added' => $result['added'],
+                'removed' => $result['removed'],
+                'renamed' => $result['renamed'],
+            ]);
+        }
 
         return $this->index()
             ->additional(['message' => 'success', 'meta' => ['moved' => $result['moved']]])

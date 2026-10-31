@@ -12,6 +12,11 @@ test('it sits in the system tab and opens the holiday list of that year', () => 
     assert.match(text, /type === 'sla_holidays'\) return `\/settings\?tab=tickets&holidays=\$\{n\.data\.year\}`/);
 });
 
+test('its bell shows an amber calendar, a job to do', () => {
+    const display = readFileSync(new URL('../../resources/js/app/layout/notification-display.tsx', import.meta.url), 'utf8');
+    assert.match(display, /n\.data\.type === 'sla_holidays'\) \{\s*return \{ Icon: CalendarX, \.\.\.TONE\.amber \};/);
+});
+
 test('the message follows the subtype and the title carries the year', () => {
     assert.match(text, /subtype === 'started' \? 'notif_sla_holidays_started' : 'notif_sla_holidays_missing'/);
     assert.match(text, /t\('notif_sla_holidays_title'\)/);

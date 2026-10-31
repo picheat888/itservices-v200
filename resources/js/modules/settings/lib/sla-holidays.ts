@@ -56,7 +56,9 @@ const WEEKDAY_TH = '(?:วัน)?(?:จันทร์|อังคาร|พ�
 const WEEKDAY_EN = '(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tues|Tue|Wed|Thurs|Thu|Fri|Sat|Sun)\\.?(?![A-Za-z])';
 const WEEKDAY = `(?:${WEEKDAY_TH}|${WEEKDAY_EN})`;
 const BRACKETED_WEEKDAYS = `[(（]\\s*${WEEKDAY}(?:\\s*[-–]\\s*${WEEKDAY})?\\s*[)）]`;
-const RE_LIST_MARK = /^(?:\d{1,3}[.)]|[-–•*])\s+/;
+const DASHES = '\\-\u2010-\u2015\u2212';
+const RE_LIST_MARK = new RegExp(`^(?:\\d{1,3}[.)]|[${DASHES}•*])\\s+`);
+const RE_EDGES = new RegExp(`^[\\s,:${DASHES}]+|[\\s,:${DASHES}]+$`, 'g');
 const RE_ONLY_WEEKDAY = new RegExp(`^[\\s,]*(?:${WEEKDAY}|วันที่|ที่)?[\\s,]*$`, 'i');
 const RE_AFTER_DATE = new RegExp(`^[\\s,]*(?:${BRACKETED_WEEKDAYS}|${WEEKDAY_TH}(?=\\s)|${WEEKDAY_EN},)`, 'i');
 const RE_LAST_BRACKETED = new RegExp(`\\s*${BRACKETED_WEEKDAYS}\\s*$`, 'i');
@@ -70,7 +72,7 @@ function nameAround(line: string, date: string): string {
         .slice(at + date.length)
         .replace(RE_AFTER_DATE, '')
         .replace(RE_LAST_BRACKETED, '');
-    return `${before} ${after}`.replace(/\s+/g, ' ').replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '');
+    return `${before} ${after}`.replace(/\s+/g, ' ').replace(RE_EDGES, '');
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0');
@@ -172,7 +174,7 @@ export function parseHolidayText(
     let duplicates = 0;
     const have = new Set(existing);
 
-    text.split('\n').forEach((raw, index) => {
+    text.split(/\r\n|\r|\n/).forEach((raw, index) => {
         const line = raw.trim();
         if (!line) {
             return;
@@ -200,25 +202,34 @@ export function monthSummary(
     today: string,
 ): { month: number; items: { from: number; to: number; name: string; past: boolean; next: boolean }[] }[] {
     const sorted = rows.filter((r) => r.date).sort((a, b) => a.date.localeCompare(b.date));
-    const nextDate = sorted.find((r) => r.date >= today)?.date;
+    let nextDate = sorted.find((r) => r.date >= today)?.date;
     const groups = new Map<number, { from: number; to: number; name: string; past: boolean; next: boolean }[]>();
 
     for (let i = 0; i < sorted.length; i++) {
         const first = sorted[i];
+        const monthText = first.date.slice(5, 7);
         let j = i;
-        // Merge consecutive days that share a name
-        while (j + 1 < sorted.length && sorted[j + 1].name === first.name && sorted[j + 1].date === addDays(sorted[j].date, 1)) {
+        // Merge consecutive days that share a name, within one month
+        while (
+            j + 1 < sorted.length &&
+            sorted[j + 1].name === first.name &&
+            sorted[j + 1].date === addDays(sorted[j].date, 1) &&
+            sorted[j + 1].date.slice(5, 7) === monthText
+        ) {
             j++;
         }
         const last = sorted[j];
-        const month = Number(first.date.slice(5, 7));
+        const month = Number(monthText);
         const items = groups.get(month) ?? [];
+        const next = nextDate !== undefined && nextDate >= first.date && nextDate <= last.date;
+        // Only the first row on the next holiday's date carries the mark
+        if (next) nextDate = undefined;
         items.push({
             from: Number(first.date.slice(8)),
             to: Number(last.date.slice(8)),
             name: first.name,
             past: last.date < today,
-            next: nextDate !== undefined && nextDate >= first.date && nextDate <= last.date,
+            next,
         });
         groups.set(month, items);
         i = j;

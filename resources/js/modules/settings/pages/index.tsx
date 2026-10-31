@@ -114,8 +114,7 @@ type OnDirtyChange = (dirty: boolean) => void;
 
 type Section = 'system' | 'company' | 'master-data' | 'email' | 'sound' | 'tickets' | 'request-data' | 'assets' | 'security';
 
-// Theme accent options — kept to Blue / Purple / Black per branding guidelines.
-// Theme colours that read at 4.5:1 as text on white and on their own buttons, stay apart in dark mode, and stay clear of the status reds, greens and ambers.
+// Theme accent options (4.5:1 on white and on their own buttons)
 const THEME_ACCENTS: { hex: string; nameKey: string }[] = [
     { hex: '#2563eb', nameKey: 'set_accent_blue' },
     { hex: '#1e40af', nameKey: 'set_accent_navy' },
@@ -162,9 +161,9 @@ const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 
 /** A ?tab= value this page has — checked, never cast, so ?tab=garbage falls back instead of opening nothing. */
 const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v as Section);
 
-/** Drops the shown list's search, page and Master Data sub-tab (?search, page, list); ?per stays. */
+/** Drops the shown list's search, page, Master Data sub-tab and holiday year (?search, page, list, holidays); ?per stays. */
 const clearListParams = (params: URLSearchParams) => {
-    for (const key of ['search', 'page', 'list']) params.delete(key);
+    for (const key of ['search', 'page', 'list', 'holidays']) params.delete(key);
 };
 
 /** Focuses the control of the first invalid Field (by its `name`) inside a form. */
@@ -328,12 +327,7 @@ export default function SettingsPage() {
 
 // ─── Request Data Tab ────────────────────────────────────────────────────────
 
-/**
- * RequestDataTab — the choice lists the request form's selects offer. Its own
- * section rather than a ninth Master Data sub-tab: those lists are shared lookup
- * tables for Assets/Contracts/Stock, while these belong to one module and are
- * reached while configuring requests, not while configuring inventory.
- */
+/** RequestDataTab — the choice lists the request form's selects offer. */
 function RequestDataTab() {
     const t = useT();
 
@@ -1506,8 +1500,7 @@ function SaveRow({ onSave, saving, saved, disabled }: { onSave: () => void; savi
     );
 }
 
-// Swatch palette + the asset statuses shown in the color editor (mirrors the design).
-// Each swatch carries a colour name so a screen reader says "สีเขียว", not a hex code.
+// Swatch palette with colour names for screen readers, and the asset statuses in the color editor
 const ASSET_STATUS_PALETTE = [
     { hex: '#0284c7', nameKey: 'set_color_blue' },
     { hex: '#059669', nameKey: 'set_color_green' },

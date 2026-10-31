@@ -203,4 +203,39 @@ class SlaHolidayApiTest extends TestCase
         $this->assertSame('2026', $log->target);
         $this->assertSame(['added' => ['2026-05-01'], 'removed' => ['2026-02-02'], 'renamed' => ['2026-01-01']], $log->details);
     }
+
+    public function test_saving_an_unchanged_year_writes_no_audit_row(): void
+    {
+        SlaHoliday::factory()->create(['date' => '2026-01-01', 'name' => 'New Year']);
+
+        $this->save(2026, [['date' => '2026-01-01', 'name' => 'New Year']])->assertOk();
+
+        $this->assertSame(0, AuditLog::where('action', 'Updated SLA holidays')->count());
+    }
+
+    public function test_saving_needs_the_sla_settings_right(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->putJson('/api/settings/sla-holidays/2026', ['holidays' => [['date' => '2026-05-01', 'name' => 'Labour Day']]])
+            ->assertForbidden();
+
+        $this->assertSame(0, SlaHoliday::count());
+    }
+
+    public function test_an_empty_list_clears_that_year_only(): void
+    {
+        SlaHoliday::factory()->create(['date' => '2026-01-01', 'name' => 'New Year']);
+        SlaHoliday::factory()->create(['date' => '2027-01-01', 'name' => 'Next year']);
+
+        $this->save(2026, [])->assertOk()->assertJsonCount(1, 'data');
+
+        $this->assertSame(['2027-01-01'], SlaHoliday::get()->map(fn ($h) => $h->date->format('Y-m-d'))->all());
+    }
+
+    public function test_a_stored_name_is_trimmed(): void
+    {
+        $this->save(2026, [['date' => '2026-05-01', 'name' => '  Labour Day  ']])->assertOk();
+
+        $this->assertSame('Labour Day', SlaHoliday::firstOrFail()->name);
+    }
 }

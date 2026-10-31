@@ -82,6 +82,63 @@ test('monthSummary merges consecutive same-name days and tags the next one', () 
     assert.equal(months.flatMap((m) => m.items).filter((i) => i.next).length, 1);
 });
 
+test('monthSummary keeps a run inside its month, marks one next row, and none once the year is over', () => {
+    const rows = [
+        { date: '2026-04-30', name: 'Long weekend' },
+        { date: '2026-05-01', name: 'Long weekend' },
+        { date: '2026-06-01', name: 'A' },
+        { date: '2026-06-01', name: 'B' },
+    ];
+    const months = monthSummary(rows, '2026-05-15');
+    assert.deepEqual(
+        months.map((m) => [m.month, m.items.map((i) => [i.from, i.to])]),
+        [
+            [4, [[30, 30]]],
+            [5, [[1, 1]]],
+            [
+                6,
+                [
+                    [1, 1],
+                    [1, 1],
+                ],
+            ],
+        ],
+    );
+    assert.deepEqual(
+        months.flatMap((m) => m.items).map((i) => i.next),
+        [false, false, true, false],
+    );
+    assert.equal(
+        monthSummary(rows, '2027-01-01')
+            .flatMap((m) => m.items)
+            .filter((i) => i.next).length,
+        0,
+    );
+});
+
+test('parseHolidayText splits on any line break, trims every dash and reads full month names first', () => {
+    assert.deepEqual(parseHolidayText('1/1/2026 วันขึ้นปีใหม่\r6/4/2026 วันจักรี', 2026, []).ok, [
+        { date: '2026-01-01', name: 'วันขึ้นปีใหม่' },
+        { date: '2026-04-06', name: 'วันจักรี' },
+    ]);
+    assert.deepEqual(parseHolidayLine('1/5/2026 — วันแรงงาน —', 2026), { date: '2026-05-01', name: 'วันแรงงาน' });
+    assert.deepEqual(parseHolidayLine('— 1/5/2026 วันแรงงาน', 2026), { date: '2026-05-01', name: 'วันแรงงาน' });
+    assert.deepEqual(parseHolidayLine('6 เมษายน 2569 วันจักรี', 2026), { date: '2026-04-06', name: 'วันจักรี' });
+    assert.deepEqual(parseHolidayLine('6/4/69 วันจักรี', 2026), { error: 'no_date' });
+});
+
+test('the holiday screen keeps focus, names the picked date and leaves the year behind with the section', () => {
+    const editor = readFileSync(new URL('../../resources/js/modules/settings/components/sla-holiday-editor-dialog.tsx', import.meta.url), 'utf8');
+    const page = readFileSync(new URL('../../resources/js/modules/settings/pages/index.tsx', import.meta.url), 'utf8');
+    assert.match(
+        editor,
+        /const \[first\] = \[\.\.\.append\(fixed\)\]\.sort\(byDate\);\s*\/\/[^\n]*\n\s*if \(first\) focusAfter\.current = `hol-n-\$\{first\.key\}`;/,
+    );
+    assert.match(editor, /\{r\.date && `, \$\{fmt\.date\(r\.date\)\}`\}/);
+    assert.match(editor, /existing=\{tableDates\}/);
+    assert.match(page, /for \(const key of \['search', 'page', 'list', 'holidays'\]\) params\.delete\(key\);/);
+});
+
 test('fixedDateRows copies only fixed month-days into the new year', () => {
     const rows = fixedDateRows(SEED_2026, 2027);
     assert.equal(rows.length, 14);

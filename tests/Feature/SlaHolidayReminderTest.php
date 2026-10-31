@@ -87,6 +87,17 @@ class SlaHolidayReminderTest extends TestCase
         $this->assertSame([['type' => 'sla_holidays', 'subtype' => 'started', 'year' => 2027]], $this->bells($holder));
     }
 
+    public function test_january_with_the_year_already_set_rings_nobody(): void
+    {
+        $this->travelTo('2027-01-02 08:00:00');
+        $holder = $this->holder();
+        SlaHoliday::factory()->create(['date' => '2027-04-13', 'name' => 'Songkran']);
+
+        $this->artisan('tickets:remind-sla-holidays')->assertSuccessful();
+
+        $this->assertSame([], $this->bells($holder));
+    }
+
     public function test_each_run_replaces_the_earlier_bell_for_that_year(): void
     {
         $holder = $this->holder();
