@@ -2,11 +2,16 @@
 
 namespace App\Services\Employee;
 
+use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\ChainBlockReason;
 use App\Enums\Request\RequestOrigin;
 use App\Enums\Request\RequestType;
 use App\Models\Employee\Employee;
 use App\Models\User;
+use App\Models\Workflow\Workflow;
 use App\Services\Request\RequestService;
+use App\Services\Request\WorkflowResolverService;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -19,7 +24,14 @@ class EmployeeOnboardingService
     /** The services offered on the Add Employee form. */
     public const SERVICES = ['computer', 'mobile', 'email'];
 
-    public function __construct(private readonly RequestService $requests) {}
+    /** A day-one service whose workflow is missing or off; sits beside the ChainBlockReason codes. */
+    public const WORKFLOW_INACTIVE = 'workflow_inactive';
+
+    public function __construct(
+        private readonly RequestService $requests,
+        private readonly WorkflowResolverService $resolver,
+        private readonly ApprovalChainService $chain,
+    ) {}
 
     /**
      * @param  array<string, array<string, mixed>>  $services  service from self::SERVICES => the fields Step 3 collected for it
@@ -72,5 +84,51 @@ class EmployeeOnboardingService
         $note = trim((string) $note);
 
         return $note === '' ? $generated : $generated."\n**".$note;
+    }
+
+    /**
+     * Whether the day-one requests could be filed for a person with this manager and position; advisory, submit checks again.
+     *
+     * @return array{can_request: bool, reason: ?string, blocked_services: list<string>, resigned_in_chain: Collection<int, Employee>}
+     */
+    public function precheck(?int $managerId, ?int $positionId): array
+    {
+        $prospect = new Employee([
+            'manager_id' => $managerId,
+            'position_id' => $positionId,
+        ]);
+
+        /** @var array<string, string> $codes service => block code */
+        $codes = [];
+        foreach (self::SERVICES as $service) {
+            $workflow = Workflow::where('request_type', $service)->first();
+            $code = $workflow === null || ! $workflow->active
+                ? self::WORKFLOW_INACTIVE
+                : $this->resolver->blockReason($workflow, $prospect)?->value;
+
+            if ($code !== null) {
+                $codes[$service] = $code;
+            }
+        }
+
+        // One banner for all three services: a fixable reporting line beats a closed workflow
+        $reason = collect([
+            ChainBlockReason::ApproverResigned->value,
+            ChainBlockReason::NoManager->value,
+            self::WORKFLOW_INACTIVE,
+            ChainBlockReason::WorkflowIncomplete->value,
+        ])->first(fn (string $candidate) => in_array($candidate, $codes, true));
+
+        // Named only for the resigned case, which is useless without whose record to fix
+        $resigned = $reason === ChainBlockReason::ApproverResigned->value
+            ? $this->chain->chainFor($prospect)->filter(fn (Employee $manager) => $manager->status === EmployeeStatus::Resigned)->values()
+            : collect();
+
+        return [
+            'can_request' => $codes === [],
+            'reason' => $reason,
+            'blocked_services' => array_keys($codes),
+            'resigned_in_chain' => $resigned,
+        ];
     }
 }

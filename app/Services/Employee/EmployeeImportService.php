@@ -1,5 +1,7 @@
 <?php
 
+// Bulk employee import from a CSV: matches text to master data, all-or-nothing, preview with the same rules, no login accounts.
+
 namespace App\Services\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
@@ -13,33 +15,10 @@ use App\Support\CsvReader;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Bulk employee import from a CSV.
- *
- * The file speaks plain text, not ids: `department`, `section` and `position` carry
- * whatever the person filling in the sheet knows the unit as, so every one of them is
- * matched against the master data before anything is written — a department by its tag,
- * code, English or Thai name; a section by code or name but ONLY within the department
- * named on the same row (the same rule the employee form enforces); a position by code
- * or title. Text matching two different records is an error, never a coin flip.
- *
- * The reporting line travels as `report_to_employee_code`, so a manager may appear
- * further down the file than their subordinates: employees are created first and the
- * reporting lines attached in a second pass, with loops rejected up front.
- *
- * Validation is all-or-nothing — one bad row and nothing is imported — so the caller
- * can preview a file (dryRun) with the exact same rules that the real import applies.
- *
- * No login accounts and no "credentials needed" notifications are created here: a bulk
- * import would spam every account provisioner. Accounts are set up afterwards through
- * the normal set-credentials flow.
- */
 class EmployeeImportService
 {
     /**
-     * The template columns, in the order the downloaded CSV carries them. `employee_code`
-     * was called `code` in the first version of the template; both are still accepted so
-     * a sheet somebody downloaded months ago keeps working.
+     * The template columns in CSV order; the old `code` header is still read as employee_code.
      *
      * @var list<string>
      */
@@ -49,20 +28,10 @@ class EmployeeImportService
         'report_to_employee_code',
     ];
 
-    /**
-     * How many preview rows travel back to the dialog. The upload limit allows tens of
-     * thousands of rows; every one of them rendered into one scrolling table is a frozen
-     * browser, and nobody reads past the first screenful anyway. The COUNTS still cover
-     * the whole file — only the listing is a page.
-     */
+    /** Preview rows sent back to the dialog; the counts still cover the whole file. */
     public const PREVIEW_LIMIT = 500;
 
-    /**
-     * How alike a typed value and a real one must be (percent) before the error
-     * offers it as the spelling that was probably meant. Set high enough that a
-     * genuinely unknown unit gets no suggestion at all — being sent to correct a
-     * typo that is not there costs more than being told nothing.
-     */
+    /** Similarity (percent) a typed value needs before the error suggests a real name. */
     private const SUGGEST_MIN_SIMILARITY = 65.0;
 
     /**
@@ -347,9 +316,7 @@ class EmployeeImportService
     }
 
     /**
-     * Creates the employees, then attaches the reporting lines in a second pass so a
-     * manager listed after their subordinates still resolves. Both passes share one
-     * transaction: a failure anywhere leaves the table exactly as it was.
+     * Creates the employees, then the reporting lines in a second pass, in one transaction.
      *
      * @param  list<array{line: int, code: string, report_to: string, data: array<string, mixed>}>  $prepared
      * @param  array<string, int>  $existingIdByCode  upper-cased employee code => id
@@ -398,9 +365,7 @@ class EmployeeImportService
     }
 
     /**
-     * Finds rows whose reporting line loops back on itself within the file. Only rows
-     * in the file can form a new loop: a manager who already exists cannot report to
-     * somebody who does not exist yet, so their chain is known to be sound.
+     * Rows in the file whose reporting line loops back on itself.
      *
      * @param  list<array{line: int, code: string, report_to: string, data: array<string, mixed>}>  $prepared
      * @return list<array{row: int, message: string}>
@@ -446,8 +411,7 @@ class EmployeeImportService
     }
 
     /**
-     * Reads the first column present out of a row and trims it. Several names are
-     * accepted for the same field so older templates keep working.
+     * The first of the given columns present in the row, trimmed.
      *
      * @param  array<string, string>  $row
      */
@@ -463,9 +427,7 @@ class EmployeeImportService
     }
 
     /**
-     * Records one spelling of a master-data record in a lookup index. Every id that a
-     * spelling points at is kept, which is how ambiguous text is detected rather than
-     * silently resolved to whichever row happened to be indexed last.
+     * Adds one spelling to a lookup index, keeping every id it points at so ambiguity shows.
      *
      * @param  array<string, list<int>>  $index
      */
@@ -500,11 +462,7 @@ class EmployeeImportService
     }
 
     /**
-     * The real name a value almost matches, and null for one that matches nothing closely.
-     *
-     * Compared against the DISPLAY names only, never against every alias the index
-     * accepts: a two-letter department tag is a few edits away from half the org
-     * chart, so including those turned the suggestion into noise.
+     * The display name a value almost matches (never the aliases), or null.
      *
      * @param  list<string>  $candidates
      */
@@ -526,5 +484,110 @@ class EmployeeImportService
         }
 
         return $bestScore >= self::SUGGEST_MIN_SIMILARITY ? $best : null;
+    }
+
+    /**
+     * Dry-runs the rows: counts cover the whole file, the listing is capped with bad rows first.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @return array{data: list<array<string, mixed>>, errors: list<array{row: int, message: string}>, meta: array<string, mixed>}
+     */
+    public function preview(array $rows): array
+    {
+        $result = $this->importRows($rows, dryRun: true);
+        $valid = count(array_filter($result['rows'], fn (array $row) => $row['errors'] === []));
+        $total = count($result['rows']);
+
+        $listed = collect($result['rows'])
+            ->sortBy(fn (array $row) => $row['errors'] === [] ? 1 : 0)
+            ->take(self::PREVIEW_LIMIT)
+            ->sortBy('row')
+            ->values()
+            ->all();
+
+        return [
+            'data' => $listed,
+            'errors' => $result['errors'],
+            'meta' => [
+                'total' => $total,
+                'valid' => $valid,
+                'invalid' => $total - $valid,
+                'shown' => count($listed),
+                'ignored_columns' => $this->unknownColumns($rows),
+            ],
+        ];
+    }
+
+    /**
+     * Columns the import has no field for: ignored, but named in the preview.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @return list<string>
+     */
+    public function unknownColumns(array $rows): array
+    {
+        // 'code' = the old name of the employee_code column, still accepted
+        return CsvReader::unknownColumns($rows, array_merge(self::COLUMNS, ['code']));
+    }
+
+    /**
+     * Every spelling the import accepts for department, section and position, one CSV row each.
+     *
+     * @return list<array{string, string, string, string}>
+     */
+    public function referenceRows(): array
+    {
+        $rows = [];
+        foreach (Department::orderBy('name')->get() as $department) {
+            $rows[] = ['department', $department->name, '', $this->alsoAccepted([
+                $department->tag, $department->code, $department->name_th,
+            ])];
+        }
+        foreach (Section::with('department')->orderBy('name')->get() as $section) {
+            // A section name resolves only inside its own department
+            $rows[] = ['section', $section->name, $section->department?->name ?? '', $this->alsoAccepted([
+                $section->code, $section->name_th,
+            ])];
+        }
+        foreach (Position::orderBy('title')->get() as $position) {
+            $rows[] = ['position', $position->title, '', $this->alsoAccepted([$position->code])];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * The template's example row: real master-data spellings, placeholders on a bare install.
+     *
+     * @return list<string>
+     */
+    public function sampleRow(): array
+    {
+        $department = Department::orderBy('id')->first();
+        $section = $department ? Section::where('department_id', $department->id)->orderBy('id')->first() : null;
+        $position = Position::where('allow_special_position', false)->orderBy('id')->first();
+        // Someone at the top of the tree is the safest example of a person to report to
+        $manager = Employee::whereNotNull('code')->whereNull('manager_id')->orderBy('id')->first();
+
+        return [
+            '',                                        // employee_code — blank lets the system assign EMP-####
+            'John',
+            'Doe',
+            'จอห์น',
+            'โด',
+            'john.doe@abcd.co.th',
+            '+66 81 000 0000',
+            $department->tag ?? 'It',
+            $section->name ?? 'Support',
+            $position->title ?? 'Staff/Officer',
+            '2024-01-15',
+            $manager->code ?? 'EMP-1001',
+        ];
+    }
+
+    /** The other spellings of one record, as one cell: "IT | DEP-0003 | ฝ่ายไอที". */
+    private function alsoAccepted(array $aliases): string
+    {
+        return implode(' | ', array_filter(array_map('trim', array_map('strval', $aliases))));
     }
 }

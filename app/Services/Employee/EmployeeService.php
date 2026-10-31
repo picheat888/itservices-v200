@@ -25,11 +25,14 @@ use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
 use App\Support\DateDisplay;
 use App\Support\SearchTerms;
+use App\Support\SuperAdmins;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeService
@@ -316,6 +319,49 @@ class EmployeeService
     {
         $employee->user?->delete();
         $employee->delete();
+    }
+
+    /**
+     * Deletes a mis-entry with its login and audits it, unless something refers to them.
+     *
+     * @return list<string>|null the blockers when refused, null when deleted
+     */
+    public function deleteUnlessUsed(Employee $employee): ?array
+    {
+        $blockers = $this->deletionBlockers($employee);
+        if ($blockers) {
+            return $blockers;
+        }
+
+        // Read before the row is gone
+        $label = "{$employee->name} ({$employee->code})";
+        $deletedAccount = $employee->user?->username;
+
+        SuperAdmins::keepAtLeastOne(function () use ($employee, $label, $deletedAccount) {
+            $this->delete($employee);
+            AuditLog::recordDeleted('Deleted employee', $label, $employee, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
+        });
+
+        return null;
+    }
+
+    /**
+     * Swaps the form's photo field for a stored photo_path, deleting the previous file.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function withStoredPhoto(array $data, ?UploadedFile $photo, ?string $oldPath = null): array
+    {
+        unset($data['photo']);
+        if ($photo) {
+            if ($oldPath) {
+                Storage::disk('local')->delete($oldPath);
+            }
+            $data['photo_path'] = $photo->store('employees', 'local');
+        }
+
+        return $data;
     }
 
     /** Back to Active, clearing the reason and last day. */
