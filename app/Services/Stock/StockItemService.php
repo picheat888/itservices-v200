@@ -5,6 +5,7 @@
 namespace App\Services\Stock;
 
 use App\Models\AuditLog;
+use App\Models\Stock\StockCountLine;
 use App\Models\Stock\StockItem;
 
 class StockItemService
@@ -28,7 +29,7 @@ class StockItemService
     }
 
     /**
-     * Deletes an empty SKU that never moved; otherwise the refusal payload (422): stock or value first, then history.
+     * Deletes an empty SKU no movement, requisition or count names; otherwise the refusal (422): stock or value, history, then documents.
      *
      * @return array<string, mixed>|null
      */
@@ -42,6 +43,12 @@ class StockItemService
         $movements = $item->movements()->count();
         if ($movements > 0) {
             return ['message' => 'has_history', 'movements_count' => $movements];
+        }
+
+        // Requisitions and count lines cascade with the item, so any of them, open or closed, keeps it
+        $documents = $item->requests()->count() + StockCountLine::where('stock_item_id', $item->id)->count();
+        if ($documents > 0) {
+            return ['message' => 'has_documents', 'documents_count' => $documents];
         }
 
         AuditLog::recordDeleted('Deleted stock item', "{$item->sku} - {$item->name}", $item);

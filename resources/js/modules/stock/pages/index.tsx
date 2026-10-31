@@ -320,6 +320,9 @@ export default function StockPage() {
                 const refusal = refusalReason(e);
                 // Stock arrived after the list was drawn, so the button was still enabled.
                 if (refusal?.reason === 'item_has_stock') return t('stock_refusal_item_has_stock');
+                if (refusal?.reason === 'has_documents') {
+                    return t('stock_delete_has_documents').replace('{count}', fmtN(Number(refusal.body.documents_count ?? 0)));
+                }
                 if (refusal?.reason !== 'has_history') return undefined;
                 return t('stock_delete_has_history').replace('{count}', fmtN(Number(refusal.body.movements_count ?? 0)));
             },

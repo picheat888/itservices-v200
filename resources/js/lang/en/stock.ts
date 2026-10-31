@@ -15,6 +15,7 @@ export const stock: Dict = {
     stock_delete_item: 'Delete stock item',
     stock_delete_confirm: 'This action cannot be undone.',
     stock_delete_has_history: 'This SKU has {count} stock movements recorded. Its ledger must stay, so it cannot be deleted.',
+    stock_delete_has_documents: '{count} requisitions or stock counts name this SKU. They must stay, so it cannot be deleted.',
     stock_delete_blocked: 'Only items with 0 on-hand and 0 value can be deleted',
     stock_item_name_auto: 'Auto',
     stock_item_name_auto_hint: 'Generated from Brand + Model',
