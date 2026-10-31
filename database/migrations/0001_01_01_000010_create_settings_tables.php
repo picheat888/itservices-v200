@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Baseline 11/18 — admin-managed configuration that does not belong in .env: app settings,
- * SMTP (mail_settings row id=1), email templates, the delivery log and named networks.
+ * SMTP (mail_settings row id=1), email templates, the delivery log, named networks and document numbers.
  * No foreign keys here on purpose: settings must survive whatever they describe.
  */
 return new class extends Migration
@@ -71,10 +71,21 @@ return new class extends Migration
             $table->string('name', 100);
             $table->timestamps();
         });
+
+        // Last number handed out per document prefix and year (App\Support\DocSequence)
+        Schema::create('document_sequences', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 20);
+            $table->smallInteger('year');
+            $table->unsignedInteger('last');
+            $table->timestamps();
+            $table->unique(['name', 'year']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('document_sequences');
         Schema::dropIfExists('network_names');
         Schema::dropIfExists('email_logs');
         Schema::dropIfExists('email_templates');

@@ -16,9 +16,6 @@ use Carbon\Carbon;
 /** SLA targets and clocks from Settings → Tickets: one response target on working time, resolution targets by rule precedence. */
 class TicketSla
 {
-    /** Storage key for the saved per-priority resolution map. */
-    public const KEY = 'ticket_sla';
-
     /** Storage key for the single first-response target (minutes). */
     public const RESPONSE_KEY = 'ticket_sla_response';
 

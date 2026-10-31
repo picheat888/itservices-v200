@@ -91,26 +91,4 @@ class StockRequestCountThaiNamesTest extends TestCase
         $this->assertSame('Somchai Admin', $data['counted_by_th']);
         $this->assertSame('Somchai Admin', $data['committed_by_th']);
     }
-
-    public function test_migration_backfills_ids_only_for_names_held_by_one_user(): void
-    {
-        $unique = User::factory()->create(['name' => 'Unique Person']);
-        User::factory()->count(2)->create(['name' => 'Twin Name']);
-        $item = StockItem::create(['sku' => 'SKU-2', 'name' => 'Cable', 'unit' => 'pcs', 'current_stock' => 1, 'min_stock' => 0, 'max_stock' => 5]);
-        $migration = require database_path('migrations/2026_10_29_130000_add_approver_and_fulfiller_ids_to_stock_requests.php');
-        $migration->down();
-
-        $make = fn (string $name) => StockRequest::unguarded(fn () => StockRequest::create([
-            'stock_item_id' => $item->id, 'user_id' => $unique->id, 'requester_name' => 'x', 'qty' => 1, 'reason' => 'r',
-            'status' => 'fulfilled', 'approver_name' => $name, 'fulfilled_by' => $name,
-        ]))->id;
-        $uniqueId = $make('Unique Person');
-        $twinId = $make('Twin Name');
-        $migration->up();
-
-        $this->assertSame($unique->id, StockRequest::find($uniqueId)->approver_id);
-        $this->assertSame($unique->id, StockRequest::find($uniqueId)->fulfilled_by_id);
-        $this->assertNull(StockRequest::find($twinId)->approver_id);
-        $this->assertNull(StockRequest::find($twinId)->fulfilled_by_id);
-    }
 }

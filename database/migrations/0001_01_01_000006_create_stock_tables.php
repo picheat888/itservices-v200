@@ -43,7 +43,8 @@ return new class extends Migration
         // The ledger; restrict on stock_item_id so a SKU that has moved can never be deleted
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            $table->string('doc_no', 30)->nullable()->unique();
+            // One ISS or RET number spans several rows
+            $table->string('doc_no', 30)->nullable();
             $table->enum('type', ['receive', 'issue', 'return', 'transfer', 'adjust_up', 'adjust_down']);
             $table->unsignedBigInteger('stock_item_id');
             $table->integer('qty');
@@ -59,12 +60,16 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->dateTime('moved_at');
             $table->timestamps();
+            $table->string('reason', 30)->nullable();
+            // FK added once stock_requests exists, below
+            $table->unsignedBigInteger('stock_request_id')->nullable();
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->restrictOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('from_warehouse_id')->references('id')->on('warehouses')->nullOnDelete();
             $table->foreign('to_warehouse_id')->references('id')->on('warehouses')->nullOnDelete();
             $table->index('moved_at');
             $table->index(['stock_item_id', 'moved_at']);
+            $table->index('doc_no');
         });
 
         Schema::create('stock_lots', function (Blueprint $table) {
@@ -76,10 +81,14 @@ return new class extends Migration
             $table->integer('qty_remaining');
             $table->dateTime('received_at');
             $table->timestamps();
-            // FIFO consumption order: oldest received first, id breaking same-instant ties.
+            $table->string('lot_no', 30)->nullable()->unique();
+            $table->unsignedBigInteger('warehouse_id')->nullable();
+            // FIFO consumption order: oldest received first, id breaking same-instant ties
             $table->index(['stock_item_id', 'received_at', 'id']);
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();
             $table->foreign('stock_movement_id')->references('id')->on('stock_movements')->nullOnDelete();
+            $table->foreign('warehouse_id')->references('id')->on('warehouses')->restrictOnDelete();
+            $table->index(['stock_item_id', 'warehouse_id']);
         });
 
         Schema::create('stock_balances', function (Blueprint $table) {
@@ -104,10 +113,12 @@ return new class extends Migration
             $table->string('reference', 100)->nullable();
             $table->dateTime('received_at')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('stock_lot_id')->nullable();
             $table->index(['stock_item_id', 'status']);
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->restrictOnDelete();
             $table->foreign('stock_movement_id')->references('id')->on('stock_movements')->nullOnDelete();
+            $table->foreign('stock_lot_id')->references('id')->on('stock_lots')->nullOnDelete();
         });
 
         Schema::create('stock_item_serial_events', function (Blueprint $table) {
@@ -116,7 +127,7 @@ return new class extends Migration
             $table->unsignedBigInteger('stock_item_id');
             $table->string('event', 20);
             $table->unsignedBigInteger('stock_movement_id')->nullable();
-            $table->string('reference', 60)->nullable();
+            $table->string('reference', 100)->nullable();
             $table->string('warehouse', 120)->nullable();
             $table->string('from_label', 120)->nullable();
             $table->string('to_label', 120)->nullable();
@@ -139,15 +150,25 @@ return new class extends Migration
             $table->string('requester_name', 160);
             $table->integer('qty');
             $table->text('reason');
-            $table->enum('status', ['pending', 'approved', 'fulfilled', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'fulfilled', 'rejected', 'cancelled'])->default('pending');
             $table->string('approver_name', 160)->nullable();
+            $table->unsignedBigInteger('approver_id')->nullable();
             $table->dateTime('approved_at')->nullable();
             $table->dateTime('fulfilled_at')->nullable();
             $table->string('fulfilled_by')->nullable();
+            $table->unsignedBigInteger('fulfilled_by_id')->nullable();
             $table->dateTime('rejected_at')->nullable();
+            $table->string('cancelled_by', 160)->nullable();
+            $table->dateTime('cancelled_at')->nullable();
             $table->timestamps();
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('approver_id')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('fulfilled_by_id')->references('id')->on('users')->nullOnDelete();
+        });
+
+        Schema::table('stock_movements', function (Blueprint $table) {
+            $table->foreign('stock_request_id')->references('id')->on('stock_requests')->nullOnDelete();
         });
 
         Schema::create('stock_counts', function (Blueprint $table) {
@@ -163,8 +184,12 @@ return new class extends Migration
             $table->unsignedBigInteger('counted_by')->nullable();
             $table->timestamp('committed_at')->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('recount_of_id')->nullable();
+            $table->unsignedBigInteger('committed_by')->nullable();
             $table->foreign('counted_by')->references('id')->on('users')->nullOnDelete();
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->nullOnDelete();
+            $table->foreign('recount_of_id')->references('id')->on('stock_counts')->nullOnDelete();
+            $table->foreign('committed_by')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('stock_count_lines', function (Blueprint $table) {
@@ -174,8 +199,26 @@ return new class extends Migration
             $table->integer('system_qty');
             $table->integer('counted_qty')->nullable();
             $table->timestamps();
+            $table->string('reason', 30)->nullable();
+            $table->string('reason_note', 500)->nullable();
+            $table->json('missing_serial_ids')->nullable();
+            $table->json('found_serial_ids')->nullable();
             $table->foreign('stock_count_id')->references('id')->on('stock_counts')->cascadeOnDelete();
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();
+        });
+
+        // Every quantity in or out of a lot, per warehouse
+        Schema::create('stock_lot_entries', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('stock_lot_id')->constrained('stock_lots')->cascadeOnDelete();
+            $table->foreignId('stock_movement_id')->nullable()->constrained('stock_movements')->nullOnDelete();
+            $table->foreignId('warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
+            $table->foreignId('from_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
+            $table->integer('qty');
+            $table->string('reference', 100)->nullable();
+            $table->dateTime('occurred_at');
+            $table->timestamps();
+            $table->index(['stock_lot_id', 'occurred_at']);
         });
 
         // One row per (item, alert type) so the daily sweep alerts once per state
@@ -193,6 +236,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('stock_alert_logs');
+        Schema::dropIfExists('stock_lot_entries');
+        Schema::table('stock_movements', function (Blueprint $table) {
+            $table->dropForeign(['stock_request_id']);
+        });
         Schema::dropIfExists('stock_count_lines');
         Schema::dropIfExists('stock_counts');
         Schema::dropIfExists('stock_requests');

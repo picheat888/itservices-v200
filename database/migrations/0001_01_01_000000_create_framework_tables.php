@@ -3,10 +3,11 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use NotificationChannels\WebPush\PushSubscription;
 
 /**
- * Baseline 1/18 — tables Laravel itself owns: cache, queue, sessions, Sanctum tokens and the
- * notifications behind the in-app bell. Nothing here references an application table.
+ * Baseline 1/18 — tables Laravel and its packages own: cache, queue, sessions, Sanctum tokens, the
+ * notifications behind the in-app bell and Web Push subscriptions. Nothing here references an application table.
  */
 return new class extends Migration
 {
@@ -101,10 +102,22 @@ return new class extends Migration
             $table->index(['notifiable_type', 'notifiable_id', 'kind'], 'notifications_notifiable_kind_index');
             $table->index(['notifiable_type', 'notifiable_id', 'created_at'], 'notifications_notifiable_created_index');
         });
+
+        // Web Push: one row per browser that allowed notifications (laravel-notification-channels/webpush)
+        Schema::connection(config('webpush.database_connection'))->create(config('webpush.table_name'), function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->morphs('subscribable', 'push_subscriptions_subscribable_morph_idx');
+            $table->string('endpoint', PushSubscription::ENDPOINT_MAX_LENGTH)->charset('ascii')->unique();
+            $table->string('public_key')->nullable();
+            $table->string('auth_token')->nullable();
+            $table->string('content_encoding')->nullable();
+            $table->timestamps();
+        });
     }
 
     public function down(): void
     {
+        Schema::connection(config('webpush.database_connection'))->dropIfExists(config('webpush.table_name'));
         Schema::dropIfExists('notifications');
         Schema::dropIfExists('personal_access_tokens');
         Schema::dropIfExists('password_reset_tokens');
