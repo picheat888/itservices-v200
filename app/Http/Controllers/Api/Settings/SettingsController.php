@@ -107,10 +107,8 @@ class SettingsController extends Controller
 
     public function updateSecurity(UpdateSecuritySettingsRequest $request, SecuritySettingsService $security, DeviceService $devices): JsonResponse
     {
-        $data = $request->validated();
         // The saving admin's own device stays when the limit trims the rest
-        $keep = isset($data['device_limit']) ? $devices->currentOf($request->user(), $request)?->id : null;
-        $security->update($data, $keep);
+        $security->update($request->validated(), fn () => $devices->currentOf($request->user(), $request)?->id);
 
         return $this->security($security);
     }

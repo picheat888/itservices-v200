@@ -8,6 +8,7 @@ use App\Console\Commands\UpdateGeoIpDatabase;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
 use App\Services\Auth\DeviceService;
+use Closure;
 
 class SecuritySettingsService
 {
@@ -49,11 +50,12 @@ class SecuritySettingsService
     }
 
     /**
-     * Saves the policy values; turning the device limit on or lowering it signs out the extra devices but $keepDeviceId.
+     * Saves the policy values; turning the device limit on or lowering it signs out the extra devices but the saver's own.
      *
      * @param  array<string, int>  $data  validated by UpdateSecuritySettingsRequest
+     * @param  Closure(): ?int  $keepDeviceId  the saver's device, looked up only when devices are trimmed
      */
-    public function update(array $data, ?int $keepDeviceId): void
+    public function update(array $data, Closure $keepDeviceId): void
     {
         $previousDeviceLimit = $this->devices->limit();
         $before = $this->payload();
@@ -67,7 +69,7 @@ class SecuritySettingsService
             $newLimit = (int) $data['device_limit'];
             $isTurnedOnOrLowered = $newLimit > 0 && ($previousDeviceLimit === 0 || $newLimit < $previousDeviceLimit);
             if ($isTurnedOnOrLowered) {
-                $this->devices->trimTo($newLimit, $keepDeviceId);
+                $this->devices->trimTo($newLimit, $keepDeviceId());
             }
         }
     }
