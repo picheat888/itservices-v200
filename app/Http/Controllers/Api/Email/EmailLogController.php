@@ -47,7 +47,8 @@ class EmailLogController extends Controller
     {
         $this->gate($request);
 
-        $paginator = $this->log->page((string) $request->query('status'), $request->query('search'), max(10, min(100, (int) $request->query('per_page', 20))));
+        $status = $request->query('status');
+        $paginator = $this->log->page(is_string($status) ? $status : null, $request->query('search'), max(10, min(100, (int) $request->query('per_page', 20))));
 
         return response()->json([
             'data' => collect($paginator->items())->map(fn (EmailLog $log) => [

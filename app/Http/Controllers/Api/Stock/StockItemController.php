@@ -41,11 +41,13 @@ class StockItemController extends Controller
     {
         $this->gateView($request);
 
+        // A filter sent as an array (?status[]=) is ignored like an unknown value
+        $text = fn (string $key): ?string => is_string($value = $request->query($key)) && trim($value) !== '' ? $value : null;
         $filters = [
             'search' => $request->query('search'),
-            'category' => $request->filled('category') ? $request->query('category') : null,
-            'warehouse' => $request->filled('warehouse') ? $request->query('warehouse') : null,
-            'status' => $request->filled('status') ? $request->query('status') : null,
+            'category' => $text('category'),
+            'warehouse' => $text('warehouse'),
+            'status' => $text('status'),
             'sort' => $request->query('sort', 'name_asc'),
         ];
 
