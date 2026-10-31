@@ -57,4 +57,13 @@ class ServiceWorkerRouteTest extends TestCase
         $response->assertJsonPath('start_url', '/');
         $response->assertJsonPath('icons.0.src', '/logo.png');
     }
+
+    public function test_the_page_asks_for_a_full_screen_home_screen_app_under_both_names(): void
+    {
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('<link rel="manifest" href="/manifest.webmanifest">', false)
+            ->assertSee('<meta name="mobile-web-app-capable" content="yes">', false)
+            ->assertSee('<meta name="apple-mobile-web-app-capable" content="yes">', false);
+    }
 }

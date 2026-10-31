@@ -16,6 +16,7 @@
         {{-- Add to Home Screen (web push on iPad needs the installed app) --}}
         <link rel="manifest" href="/manifest.webmanifest">
         <link rel="apple-touch-icon" href="{{ $brand['logo_url'] ?: asset('logo.png') }}">
+        <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
 
         {{-- What the SPA's UI store starts from; JSON_HEX_TAG keeps an admin-typed brand name inside the block --}}
