@@ -83,4 +83,16 @@ class OverviewPeriodTest extends TestCase
         $this->assertSame(['month' => '2026-10-14', 'count' => 2], end($counted['data']));
         $this->assertSame(3, array_sum(array_column($counted['data'], 'count')));
     }
+
+    public function test_a_date_on_a_column_edge_lands_in_the_column_it_belongs_to(): void
+    {
+        $counted = $this->period(['from' => '2026-09-30', 'to' => '2026-10-20'])->countInto([
+            CarbonImmutable::parse('2026-10-03 23:59:59'),
+            CarbonImmutable::parse('2026-10-04 00:00:00'),
+            CarbonImmutable::parse('2026-10-03 23:59:59', 'UTC'),
+        ], null);
+
+        $this->assertSame([1, 2, 0, 0], array_column($counted['data'], 'count'), 'compared as instants, whatever the zone');
+        $this->assertSame(['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18'], array_column($counted['data'], 'month'));
+    }
 }

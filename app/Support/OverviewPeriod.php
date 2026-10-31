@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -94,6 +95,31 @@ final class OverviewPeriod
     }
 
     /**
+     * Which column an instant falls in (null when none); the bounds are read once as timestamps, so thousands of rows stay cheap.
+     *
+     * @param  list<array{from: CarbonInterface, to: CarbonInterface}>  $columns
+     * @return Closure(?CarbonInterface): ?int
+     */
+    public static function columnFinder(array $columns): Closure
+    {
+        $bounds = array_map(fn (array $c) => [$c['from']->getTimestamp(), $c['to']->getTimestamp()], $columns);
+
+        return function (?CarbonInterface $at) use ($bounds): ?int {
+            if ($at === null) {
+                return null;
+            }
+            $ts = $at->getTimestamp();
+            foreach ($bounds as $i => [$from, $to]) {
+                if ($ts >= $from && $ts <= $to) {
+                    return $i;
+                }
+            }
+
+            return null;
+        };
+    }
+
+    /**
      * Count dates into the period's chart columns.
      *
      * @param  iterable<?CarbonInterface>  $dates
@@ -102,16 +128,15 @@ final class OverviewPeriod
     public function countInto(iterable $dates, ?CarbonInterface $earliest): array
     {
         ['unit' => $unit, 'columns' => $columns] = $this->columns($earliest);
+        $columnOf = self::columnFinder($columns);
         $counts = array_fill(0, count($columns), 0);
         foreach ($dates as $at) {
             if (! $this->contains($at)) {
                 continue;
             }
-            foreach ($columns as $i => $column) {
-                if ($at->gte($column['from']) && $at->lte($column['to'])) {
-                    $counts[$i]++;
-                    break;
-                }
+            $i = $columnOf($at);
+            if ($i !== null) {
+                $counts[$i]++;
             }
         }
 

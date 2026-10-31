@@ -69,17 +69,17 @@ class AssetSummaryService
         $rows = $period->apply(AssetTransfer::query(), 'created_at')->get(['kind', 'created_at']);
         $earliest = AssetTransfer::min('created_at');
         ['unit' => $unit, 'columns' => $columns] = $period->columns($earliest === null ? null : Carbon::parse($earliest));
+        $columnOf = OverviewPeriod::columnFinder($columns);
 
         $data = array_map(fn (array $c) => ['month' => $c['start'], 'handover' => 0, 'returned' => 0], $columns);
         foreach ($rows as $row) {
-            if ($row->created_at === null || ($row->kind && ! $row->kind->changesCustody())) {
+            $kind = $row->kind;
+            if ($kind && ! $kind->changesCustody()) {
                 continue;
             }
-            foreach ($columns as $i => $column) {
-                if ($row->created_at->between($column['from'], $column['to'])) {
-                    $data[$i][$row->kind?->isInbound() ? 'returned' : 'handover']++;
-                    break;
-                }
+            $i = $columnOf($row->created_at);
+            if ($i !== null) {
+                $data[$i][$kind?->isInbound() ? 'returned' : 'handover']++;
             }
         }
 
