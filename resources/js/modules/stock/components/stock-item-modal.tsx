@@ -111,7 +111,7 @@ export function StockItemModal({
 
     // Seed once per item the form opens on, from the live copy when it is already here
     const live = item && fresh && fresh.id === item.id ? fresh : null;
-    useSeedOnce(open ? (item?.id ?? 'new') : null, () => {
+    const seeded = useSeedOnce(open ? (item?.id ?? 'new') : null, () => {
         const next = item ? itemToForm(live ?? item) : empty;
         setForm(next);
         setBase(next);
@@ -122,7 +122,7 @@ export function StockItemModal({
     });
     // While auto-name is on the name follows brand and model, never the server
     useFormRebase({
-        fresh: live ? itemToForm(live) : null,
+        fresh: live && seeded ? itemToForm(live) : null,
         base,
         setBase,
         setForm,

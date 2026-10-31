@@ -166,6 +166,11 @@ class ContractExpiryAlertService
 
         $this->emailRecipients($contract, $recipients, 'contract.expiry_alert', [
             'contract.days_remaining' => $days,
+            'contract.expires_in' => match ($days) {
+                0 => 'today',
+                1 => 'in 1 day',
+                default => "in {$days} days",
+            },
         ]);
 
         // Record every newly-crossed threshold (including larger ones we skipped

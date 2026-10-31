@@ -40,7 +40,16 @@ test('the link picker searches and pages on the server and names a kept write-of
     assert.match(form, /assetApi\.linkable\(\{ contract_id: editing\?\.id, search: assetQueryText \|\| undefined, page: assetPage \}\)/);
     assert.match(form, /useDebouncedSearch\(assetSearch\)/);
     assert.doesNotMatch(form, /matchesAllWords/);
-    assert.match(form, /locked && a\.on_contract &&/);
+    assert.match(form, /\{locked && \(\s*<span[^>]*>\s*\{t\('contract_link_asset_on_contract'\)\}/);
+    // The page belongs to its search and resets when the form opens
+    assert.match(form, /const assetPage = assetPaging\.query === assetQueryText \? assetPaging\.page : 1;/);
+    assert.match(form, /setAssetSearch\(''\);\s*setAssetPaging\(\{ query: '', page: 1 \}\);/);
+    assert.doesNotMatch(form, /useEffect\(\(\) => setAssetPage\(1\)/);
+});
+
+test('a refused expire and the peek dialog speak the round 2 words', () => {
+    assert.match(read('modules/contract/hooks/use-contract-actions.tsx'), /errorMessage: \(e\) => reasonWords\(e, t, 'contract_refusal_'\)/);
+    assert.match(read('modules/asset/components/contract-peek-dialog.tsx'), /c\.days_remaining === 0\s*\? t\('contract_due_today'\)\s*: t\('active'\)/);
     for (const lang of ['th', 'en']) assert.match(read(`lang/${lang}/contract.ts`), /contract_link_asset_on_contract: '/);
 });
 

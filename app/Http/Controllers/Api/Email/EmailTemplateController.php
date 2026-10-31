@@ -409,6 +409,7 @@ class EmailTemplateController extends Controller
             'contract.name' => 'Annual support',
             'contract.code' => 'CT-2026-014',
             'contract.days_remaining' => 30,
+            'contract.expires_in' => 'in 30 days',
             'contract.days_overdue' => 5,
             'contract.end_date' => DateDisplay::emailDate('2026-12-31'),
             'contract.details' => 'Microsoft 365 E3 License Agreement, 320 seats',

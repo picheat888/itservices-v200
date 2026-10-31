@@ -1,7 +1,7 @@
 // Edit forms and fresh server data: untouched fields take the new values, typed ones stay, and a form seeds once per record.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { test } from 'node:test';
 import { needsSeed, nextBase, rebaseForm, rebaseLinked, sameValue } from '../../resources/js/shared/lib/form-rebase.ts';
 
@@ -47,16 +47,29 @@ test('a skipped key keeps its opening value in the base, so an untouched form st
     assert.deepEqual(nextBase({ a: '1' }, { a: '2' }), { a: '2' });
 });
 
-test('a form with skipped keys rebases only after its seed has rendered, so it opens clean', () => {
+function sourcesUnder(dir: string): string[] {
+    return readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+        return statSync(path).isDirectory() ? sourcesUnder(path) : /\.tsx?$/.test(name) ? [path] : [];
+    });
+}
+
+test('every form with skipped keys rebases only after its seed has rendered, so it opens clean', () => {
     const hook = read('shared/hooks/use-seed-once.ts');
     assert.match(hook, /seed\(\);\s*setSeededKey\(key\);/);
     assert.match(hook, /return key !== null && seededKey === key;/);
-    const contract = read('modules/contract/components/contract-form-drawer.tsx');
-    assert.match(contract, /const seeded = useSeedOnce\(/);
-    assert.match(contract, /fresh: live && seeded \? toForm\(live\) : null, base, setBase, setForm, skip: \['asset_ids'\]/);
-    const ticket = read('modules/ticket/components/edit-ticket-drawer.tsx');
-    assert.match(ticket, /const seeded = useSeedOnce\(/);
-    assert.match(ticket, /fresh: live && seeded \? toForm\(live\) : null, base, setBase, setForm, skip: \['existing'\]/);
+
+    const gated: string[] = [];
+    for (const file of sourcesUnder(join(import.meta.dirname, '../../resources/js/modules'))) {
+        const source = readFileSync(file, 'utf8');
+        for (const call of source.match(/useFormRebase\(\{[\s\S]*?\}\);/g) ?? []) {
+            if (!/\bskip:/.test(call)) continue;
+            assert.match(call, /fresh: live && seeded \?/, file);
+            assert.match(source, /const seeded = useSeedOnce\(/, file);
+            gated.push(basename(file));
+        }
+    }
+    assert.deepEqual(gated.sort(), ['contract-form-drawer.tsx', 'edit-ticket-drawer.tsx', 'stock-item-modal.tsx']);
 });
 
 const ORG = [{ child: 'section', parent: 'dept', empty: '' }] as const;

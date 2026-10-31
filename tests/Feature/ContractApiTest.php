@@ -438,6 +438,22 @@ class ContractApiTest extends TestCase
         $this->assertNull($a2->fresh()->contract_id);
     }
 
+    public function test_a_free_written_off_asset_is_never_linked(): void
+    {
+        $this->actingAs($this->super());
+        $ready = Asset::factory()->create(['status' => 'ready']);
+        $gone = Asset::factory()->create(['status' => 'writeoff', 'contract_id' => null]);
+
+        $id = $this->postJson('/api/contracts', [
+            'code' => 'CT-LINK-WO', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'total_value' => 1000, 'billing_cycle' => 'yearly',
+            'asset_ids' => [$ready->id, $gone->id],
+        ])->assertStatus(201)->json('data.id');
+
+        $this->assertSame($id, $ready->fresh()->contract_id);
+        $this->assertNull($gone->fresh()->contract_id);
+    }
+
     public function test_linking_never_steals_assets_from_another_contract(): void
     {
         $this->actingAs($this->super());

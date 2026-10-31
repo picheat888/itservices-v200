@@ -569,19 +569,21 @@ You can tracking progress in {{app.name}}.</p>
             [
                 'key' => 'contract.expiry_alert',
                 'name' => 'Contract expiring soon (เตือนสัญญาก่อนหมดอายุตาม Schedule)',
-                'subject' => 'Contract Management: {{contract.vendor}} expires in {{contract.days_remaining}} days',
+                'subject' => 'Contract Management: {{contract.vendor}} expires {{contract.expires_in}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>The contract is expiring.<br>
 Please review and decide on renewal.</p>
 <br>
 <p><strong>Information</strong></p>
-<p><strong style="color:#64748b">Expires in:</strong> <strong>{{contract.days_remaining}} days</strong> ({{contract.end_date}})<br>
+<p><strong style="color:#64748b">Expires:</strong> <strong>{{contract.expires_in}}</strong> ({{contract.end_date}})<br>
 <strong style="color:#64748b">Contract No.:</strong> {{contract.code}}<br>
 <strong style="color:#64748b">Vendor/Supplier:</strong> {{contract.vendor}}<br>
 <strong style="color:#64748b">Contract Name:</strong> {{contract.name}}<br>
 <strong style="color:#64748b">Contract Details:</strong> {{contract.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'daily',
+                // Sent but not in the standard wording: the plain day count.
+                'variables' => ['contract.days_remaining'],
             ],
             [
                 'key' => 'contract.expired_alert',

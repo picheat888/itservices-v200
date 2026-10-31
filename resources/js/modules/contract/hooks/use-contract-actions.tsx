@@ -1,6 +1,7 @@
 // Contract lifecycle actions (cancel / expire / reactivate / delete) shared by the detail dialog and the row menu.
 import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { reasonWords } from '@/shared/lib/reason-words';
 import type { Contract } from '@/shared/types';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useState } from 'react';
@@ -52,6 +53,7 @@ export function useContractActions(onDone: () => void = () => undefined) {
             entity: { name: c.name, sub: c.code },
             description: t('contract_expire_permanent_note'),
             confirmText: t('contract_expire'),
+            errorMessage: (e) => reasonWords(e, t, 'contract_refusal_'),
             action: async () => {
                 await expire.mutateAsync(c.id);
                 onDone();

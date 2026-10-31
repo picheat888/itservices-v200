@@ -444,6 +444,35 @@ class ContractExpiryAlertTest extends TestCase
         $this->assertSame(1, ContractAlertLog::where('contract_id', $contract->id)->count());
     }
 
+    public function test_the_threshold_email_on_the_end_date_says_today_not_zero_days(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $this->contractExpiringIn(0, [7]);
+
+        $this->service()->run();
+
+        Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => $job->templateKey === 'contract.expiry_alert'
+            && str_ends_with($job->subject, 'expires today')
+            && str_contains($job->html, '<strong>today</strong>')
+            && ! str_contains($job->html, '0 days'));
+    }
+
+    public function test_the_threshold_email_counts_the_days_left(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $this->contractExpiringIn(1, [7]);
+        $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();
+
+        Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => str_ends_with($job->subject, 'expires in 1 day'));
+        Bus::assertDispatched(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => str_ends_with($job->subject, 'expires in 30 days'));
+    }
+
     /** Contract text is the editor's input: it lands in the email as text, never as markup. */
     public function test_contract_text_is_escaped_in_the_alert_email(): void
     {

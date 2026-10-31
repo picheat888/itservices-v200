@@ -113,7 +113,9 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
             ? t('contract_expired')
             : c.status === 'overdue'
               ? t('contract_overdue')
-              : t('active');
+              : c.days_remaining === 0
+                ? t('contract_due_today')
+                : t('active');
 
     const days = c?.days_remaining ?? 0;
     const daysBadge =

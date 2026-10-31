@@ -129,11 +129,12 @@ class ContractService
             ->where('status', '!=', AssetStatus::Writeoff->value)
             ->update(['contract_id' => null, 'updated_by' => Auth::id()]);
 
-        // Attach the selected, link-free assets (already-ours ones are left alone, so editing a
-        // contract does not stamp every asset it holds as just changed).
+        // Attach the selected, link-free, not written-off assets (already-ours ones are left alone,
+        // so editing a contract does not stamp every asset it holds as just changed).
         if ($assetIds !== []) {
             Asset::whereIn('id', $assetIds)
                 ->whereNull('contract_id')
+                ->where('status', '!=', AssetStatus::Writeoff->value)
                 ->update(['contract_id' => $contract->id, 'updated_by' => Auth::id()]);
         }
     }

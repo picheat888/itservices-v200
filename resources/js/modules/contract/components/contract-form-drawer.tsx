@@ -217,6 +217,7 @@ export function ContractFormDrawer({
         setSaveState('idle');
         setStep(0);
         setAssetSearch('');
+        setAssetPaging({ query: '', page: 1 });
         setExisting(editing?.attachments ?? []);
         setRemovedIds([]);
         setPending([]);
@@ -251,8 +252,10 @@ export function ContractFormDrawer({
     // Searched and paged on the server; ticks live in form.asset_ids, so they survive paging
     const [assetSearch, setAssetSearch] = useState('');
     const assetQueryText = useDebouncedSearch(assetSearch);
-    const [assetPage, setAssetPage] = useState(1);
-    useEffect(() => setAssetPage(1), [assetQueryText]);
+    // The page belongs to the search it was turned on, so a new search starts on page 1 in the same request
+    const [assetPaging, setAssetPaging] = useState({ query: '', page: 1 });
+    const assetPage = assetPaging.query === assetQueryText ? assetPaging.page : 1;
+    const setAssetPage = (next: (page: number) => number) => setAssetPaging({ query: assetQueryText, page: next(assetPage) });
     const linkableQuery = useQuery({
         queryKey: ['assets-linkable', editing?.id ?? 'new', assetQueryText, assetPage],
         queryFn: () => assetApi.linkable({ contract_id: editing?.id, search: assetQueryText || undefined, page: assetPage }),
@@ -860,7 +863,7 @@ export function ContractFormDrawer({
                                                                     </span>
                                                                     <span className="text-xs">{a.asset_code}</span>
                                                                     <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
-                                                                    {locked && a.on_contract && (
+                                                                    {locked && (
                                                                         <span className="text-muted-foreground shrink-0 text-xs">
                                                                             {t('contract_link_asset_on_contract')}
                                                                         </span>
