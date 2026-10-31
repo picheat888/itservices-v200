@@ -2,568 +2,133 @@
 
 namespace App\Http\Controllers\Api\Settings;
 
-use App\Console\Commands\UpdateGeoIpDatabase;
-use App\Enums\Request\RequestType;
-use App\Enums\Ticket\SlaScope;
-use App\Enums\Ticket\TicketCategory;
-use App\Enums\Ticket\TicketSlaClock;
-use App\Enums\Ticket\TicketWorkClass;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Models\AuditLog;
-use App\Models\Settings\AppSetting;
+use App\Http\Requests\Settings\UpdateAssetColorsRequest;
+use App\Http\Requests\Settings\UpdateBrandingSettingsRequest;
+use App\Http\Requests\Settings\UpdateCompanySettingsRequest;
+use App\Http\Requests\Settings\UpdateDateTimeSettingsRequest;
+use App\Http\Requests\Settings\UpdateDisplaySettingsRequest;
+use App\Http\Requests\Settings\UpdateMailSettingsRequest;
+use App\Http\Requests\Settings\UpdateSecuritySettingsRequest;
+use App\Http\Requests\Settings\UpdateSlaSettingsRequest;
+use App\Http\Requests\Settings\UpdateSoundSettingsRequest;
+use App\Http\Requests\Settings\UploadLogoRequest;
 use App\Models\Settings\MailSetting;
-use App\Models\Settings\SlaTarget;
-use App\Models\Ticket\Ticket;
 use App\Services\Auth\DeviceService;
 use App\Services\Email\EmailNotificationService;
-use App\Services\Employee\EmployeeService;
-use App\Services\Settings\LogRetentionService;
-use App\Services\Ticket\TicketDeadlineService;
-use App\Support\DateDisplay;
-use App\Support\NotificationSounds;
-use App\Support\TicketSla;
-use Closure;
+use App\Services\Settings\MailSettingsService;
+use App\Services\Settings\SecuritySettingsService;
+use App\Services\Settings\SettingsService;
+use App\Services\Settings\SlaSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Enum;
 
+/** System settings; every save is gated by its route's permission middleware and answers with the settings it changed. */
 class SettingsController extends Controller
 {
-    /** @var array<string, string> */
-    private array $defaults = [
-        'brand_name' => '',          // falls back to config('app.name')
-        'brand_sub' => 'Service Desk',
-        // Empty until saved: the Settings form shows samples as placeholders
-        'company_name' => '',
-        'legal_name' => '',
-        'tax_id' => '',
-        'industry' => '',
-        'address' => '',
-        'country' => 'Thailand',
-        'currency' => 'THB',
-        // Display theme — system-wide (shared by all users), not per-user.
-        'theme_accent' => '#2563eb',
-        'theme_density' => 'normal',
-        'theme_radius' => '10',
-        // Date and time display — system-wide, see App\Support\DateDisplay.
-        'date_format' => 'dmy_slash',
-        'date_era' => 'ce',
-        'time_format' => '24',
-        // Notification sound - system-wide, signed-in only.
-        'notification_sound' => NotificationSounds::DEFAULT,
-        'notification_sound_enabled' => '1',
-    ];
+    public function __construct(private readonly SettingsService $settings) {}
 
-    /**
-     * Default asset status badge colors (system-wide). Editable from
-     * Settings -> Assets; stored as JSON under the `asset_status_colors` key.
-     *
-     * @var array<string, string>
-     */
-    private array $assetStatusColorDefaults = [
-        'deployed' => '#0284c7',
-        'ready' => '#059669',
-        'pending_acceptance' => '#d97706',
-        'pending_return' => '#7c3aed',
-        'common' => '#64748b',
-        'writeoff' => '#dc2626',
-    ];
-
-    /** What the page may show before anybody signs in: its name, logo and theme. */
-    private const PUBLIC_KEYS = ['brand_name', 'brand_sub', 'logo_url', 'theme_accent', 'theme_density', 'theme_radius'];
-
-    /**
-     * Outside the sign-in check because the login page themes itself from it: a guest gets PUBLIC_KEYS only.
-     * The rest comes back to a session that passed the route's idle, device and closed-account checks.
-     */
+    /** Outside the sign-in check (the login page themes itself from it): a guest gets the public keys only. */
     public function show(?Request $request = null): JsonResponse
     {
-        $payload = $this->payload();
-        if (($request ?? request())->user('sanctum') === null) {
-            $payload = array_intersect_key($payload, array_flip(self::PUBLIC_KEYS));
-        }
+        $guest = ($request ?? request())->user('sanctum') === null;
 
-        return response()->json(['data' => $payload, 'message' => 'success']);
+        return response()->json(['data' => $guest ? $this->settings->publicPayload() : $this->settings->payload(), 'message' => 'success']);
     }
 
-    /** Company information (Settings -> Company). Gated by route middleware permission:settings.company. */
-    public function updateCompany(Request $request): JsonResponse
+    public function updateCompany(UpdateCompanySettingsRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'company_name' => ['sometimes', 'required', 'string', 'max:150'],
-            'legal_name' => ['sometimes', 'required', 'string', 'max:150'],
-            'tax_id' => ['sometimes', 'required', 'digits:13'],
-            'industry' => ['sometimes', 'required', 'string', 'max:100'],
-            'address' => ['sometimes', 'required', 'string', 'max:255'],
-            'country' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'currency' => ['sometimes', 'nullable', 'string', 'max:20'],
-        ]);
-
-        foreach ($data as $key => $value) {
-            AppSetting::put($key, $value === null ? '' : (string) $value);
-        }
-        AuditLog::record('Updated company settings', implode(', ', array_keys($data)));
+        $this->settings->save($request->validated(), 'Updated company settings');
 
         return $this->show();
     }
 
-    /** Branding name/subtitle (Settings -> Branding). Logo upload/delete are separate routes, same permission. */
-    public function updateBranding(Request $request): JsonResponse
+    public function updateBranding(UpdateBrandingSettingsRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'brand_name' => ['sometimes', 'required', 'string', 'max:60'],
-            'brand_sub' => ['sometimes', 'nullable', 'string', 'max:60'],
-        ]);
-
-        foreach ($data as $key => $value) {
-            AppSetting::put($key, $value === null ? '' : (string) $value);
-        }
-        AuditLog::record('Updated branding settings', implode(', ', array_keys($data)));
+        $this->settings->save($request->validated(), 'Updated branding settings');
 
         return $this->show();
     }
 
-    /** Asset status badge colors (Settings -> Assets). Gated by permission:settings.assets. */
-    public function updateAssets(Request $request): JsonResponse
+    public function updateAssets(UpdateAssetColorsRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'asset_status_colors' => ['required', 'array'],
-            'asset_status_colors.*' => ['string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ]);
-
-        AppSetting::put('asset_status_colors', json_encode($data['asset_status_colors']));
-        AuditLog::record('Updated asset settings', 'asset_status_colors');
+        $this->settings->saveAssetColors($request->validated('asset_status_colors'));
 
         return $this->show();
     }
 
-    /** Per-priority ticket SLA targets (Settings -> Ticket & SLA). Gated by permission:settings.sla. */
-    public function updateSla(Request $request): JsonResponse
+    public function updateSla(UpdateSlaSettingsRequest $request, SlaSettingsService $sla): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            // Resolution is per priority; first response is ONE system-wide target
-            // (priority doesn't exist yet while a case waits to be taken).
-            'ticket_sla' => ['required', 'array'],
-            'ticket_sla.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
-            'ticket_sla.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
-            // Targets keyed on what was requested rather than how urgent it is. Absent key =
-            // leave the saved rules alone, so the Priority form can save without them.
-            'ticket_sla_request' => ['sometimes', 'array'],
-            'ticket_sla_request.*.type' => ['required', 'distinct', new Enum(RequestType::class)],
-            'ticket_sla_request.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
-            'ticket_sla_request.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
-            // Targets keyed on how long a repair runs, judged by whoever has seen the job.
-            // Absent key = leave the saved rules alone (same as ticket_sla_request). No
-            // 'standard' — ordinary work has no target of its own, priority already answers it,
-            // and a row that could be created but never fire is a row that misleads the screen.
-            'ticket_sla_work_class' => ['sometimes', 'array'],
-            'ticket_sla_work_class.*.category' => ['required', new Enum(TicketCategory::class)],
-            'ticket_sla_work_class.*.work_class' => ['required', Rule::in(TicketWorkClass::repairValues())],
-            'ticket_sla_work_class.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
-            'ticket_sla_work_class.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
-            'ticket_sla_work_class.*.enabled' => ['sometimes', 'boolean'],
-            'ticket_sla_response' => ['sometimes', 'required', 'integer', 'min:1', 'max:10080'],
-            // The share of cases that should close within target — what the reports hold
-            // the met-rate against. Absent key = leave it alone.
-            'ticket_sla_goal' => ['sometimes', 'required', 'integer', 'min:1', 'max:100'],
-            // Working window the SLA clocks count against (days: ISO weekday 1–7).
-            'ticket_sla_hours' => ['sometimes', 'required', 'array'],
-            'ticket_sla_hours.days' => ['required_with:ticket_sla_hours', 'array', 'min:1'],
-            'ticket_sla_hours.days.*' => ['integer', 'between:1,7', 'distinct'],
-            'ticket_sla_hours.start' => ['required_with:ticket_sla_hours', 'date_format:H:i'],
-            'ticket_sla_hours.end' => ['required_with:ticket_sla_hours', 'date_format:H:i', 'after:ticket_sla_hours.start'],
-            // Optional break the clocks skip (e.g. lunch) — null on both = no break.
-            'ticket_sla_hours.break_start' => [
-                'nullable', 'required_with:ticket_sla_hours.break_end', 'date_format:H:i',
-                'after_or_equal:ticket_sla_hours.start', 'before:ticket_sla_hours.end',
-            ],
-            'ticket_sla_hours.break_end' => [
-                'nullable', 'required_with:ticket_sla_hours.break_start', 'date_format:H:i',
-                'after:ticket_sla_hours.break_start', 'before_or_equal:ticket_sla_hours.end',
-            ],
-        ]);
-
-        // Two rows can never name the same pair. 'distinct' guards one column at a time, and what
-        // has to be unique here is the combination — Hardware+External listed twice would leave
-        // two different numbers both claiming the same case.
-        $validator->after(function ($v) use ($request) {
-            $seen = [];
-            foreach ((array) $request->input('ticket_sla_work_class', []) as $i => $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
-                $pair = ($row['category'] ?? '').':'.($row['work_class'] ?? '');
-                if (isset($seen[$pair])) {
-                    $v->errors()->add("ticket_sla_work_class.{$i}.work_class", 'This kind of work already has a target for that ticket type.');
-                }
-                $seen[$pair] = true;
-            }
-        });
-
-        // Every resolution target (hours), on every list, must be at least the first-response
-        // target (minutes) — a case cannot be due for resolution before it is even guaranteed
-        // a response. Applies to ticket_sla (keyed by priority name) the same as the two
-        // row-list scopes (keyed by index) — the row identity in the error key is whatever the
-        // request actually used, so the screen can still attach the message to the right field.
-        $validator->after(function ($v) use ($request) {
-            $response = (int) $request->input('ticket_sla_response', TicketSla::responseMinutes());
-            if ($response <= 0) {
-                return;
-            }
-
-            foreach (['ticket_sla', 'ticket_sla_request', 'ticket_sla_work_class'] as $listKey) {
-                foreach ((array) $request->input($listKey, []) as $key => $row) {
-                    $resolve = (int) (is_array($row) ? ($row['resolve'] ?? 0) : 0);
-                    if ($resolve > 0 && $resolve * 60 < $response) {
-                        $v->errors()->add("{$listKey}.{$key}.resolve", 'Resolution must be at least the first-response target.');
-                    }
-                }
-            }
-        });
-
-        $data = $validator->validate();
-
-        try {
-            DB::transaction(fn () => $this->saveSla($data));
-        } finally {
-            // A rolled-back save must not leave its values in the caches
-            AppSetting::flushCache();
-            TicketSla::flush();
-        }
-
-        AuditLog::record('Updated SLA settings', 'ticket_sla');
+        $sla->save($request->validated());
 
         return $this->show();
     }
 
-    /**
-     * Writes the validated SLA settings and moves the stored deadlines of every open ticket.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function saveSla(array $data): void
+    public function updateDisplay(UpdateDisplaySettingsRequest $request): JsonResponse
     {
-        // Priority targets: one row each, written straight over whatever was there.
-        foreach ($data['ticket_sla'] as $priority => $row) {
-            SlaTarget::updateOrCreate(
-                ['scope' => SlaScope::Priority->value, 'match_value' => (string) $priority],
-                [
-                    'resolve_hours' => (int) $row['resolve'],
-                    'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
-                    'enabled' => true,
-                ],
-            );
-        }
-
-        // Request-type and work-class targets both arrive as the WHOLE list, so a row the
-        // administrator deleted on the screen is a row that disappears here. Saving the
-        // Priority form alone sends neither key and leaves both untouched.
-        if (array_key_exists('ticket_sla_request', $data)) {
-            // Forced on: a case opened from a request has no priority to fall back to, so a
-            // switched-off request rule would drop it silently onto the built-in medium default.
-            // The screen has no switch for these rows either — this is the same rule, enforced.
-            $this->saveScopeRows(
-                SlaScope::RequestType,
-                'type',
-                array_map(fn (array $row) => $row + ['enabled' => true], $data['ticket_sla_request']),
-            );
-        }
-        if (array_key_exists('ticket_sla_work_class', $data)) {
-            // A repair target belongs to a pair — the kind of case and who does the work. Keyed
-            // through TicketSla so the writer and the reader cannot drift on the format.
-            $this->saveScopeRows(SlaScope::WorkClass, 'key', array_map(
-                fn (array $row) => $row + ['key' => TicketSla::workClassKey($row['category'], $row['work_class'])],
-                $data['ticket_sla_work_class'],
-            ));
-        }
-
-        if (isset($data['ticket_sla_response'])) {
-            AppSetting::put(TicketSla::RESPONSE_KEY, (string) $data['ticket_sla_response']);
-        }
-        if (isset($data['ticket_sla_goal'])) {
-            AppSetting::put(TicketSla::GOAL_KEY, (string) $data['ticket_sla_goal']);
-        }
-        if (isset($data['ticket_sla_hours'])) {
-            AppSetting::put(TicketSla::HOURS_KEY, json_encode($data['ticket_sla_hours']));
-        }
-        TicketSla::flush(); // the deadlines below use the new values
-
-        app(TicketDeadlineService::class)->recomputeOpen(); // open tickets follow the new targets
-    }
-
-    /**
-     * Whole-list save for an SLA scope keyed on something other than priority: upsert every row
-     * in $rows, then delete whatever existing row of this scope was NOT in the list — the
-     * administrator's screen always sends its list in full, so a row missing from it is a row
-     * that was deleted on screen. Shared by the request-type and work-class blocks in
-     * updateSla(), which differ only in the scope and which field of a row names the rule.
-     *
-     * @param  list<array{resolve: int, clock?: string, enabled?: bool}>  $rows
-     */
-    private function saveScopeRows(SlaScope $scope, string $keyField, array $rows): void
-    {
-        $keep = [];
-        foreach ($rows as $row) {
-            $keep[] = $row[$keyField];
-            SlaTarget::updateOrCreate(
-                ['scope' => $scope->value, 'match_value' => $row[$keyField]],
-                [
-                    'resolve_hours' => (int) $row['resolve'],
-                    'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
-                    'enabled' => (bool) ($row['enabled'] ?? true),
-                ],
-            );
-        }
-        SlaTarget::where('scope', $scope->value)->whereNotIn('match_value', $keep)->delete();
-    }
-
-    /** System-wide display theme (Settings -> Display). Gated by permission:settings.display. */
-    public function updateDisplay(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'theme_accent' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'theme_density' => ['sometimes', 'in:compact,normal,cozy'],
-            'theme_radius' => ['sometimes', 'integer', 'min:0', 'max:20'],
-        ]);
-
-        foreach ($data as $key => $value) {
-            AppSetting::put($key, (string) $value);
-        }
-        AuditLog::record('Updated display settings', implode(', ', array_keys($data)));
+        $this->settings->save($request->validated(), 'Updated display settings');
 
         return $this->show();
     }
 
-    /** Date and time display (Settings -> System). Gated by route middleware permission:settings.system. */
-    public function updateDateTime(Request $request): JsonResponse
+    public function updateDateTime(UpdateDateTimeSettingsRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'date_format' => ['required', Rule::in(DateDisplay::FORMATS)],
-            'date_era' => ['required', Rule::in(DateDisplay::ERAS)],
-            'time_format' => ['required', Rule::in(DateDisplay::TIMES)],
-        ]);
-
-        foreach ($data as $key => $value) {
-            AppSetting::put($key, (string) $value);
-        }
-        AuditLog::record('Updated date and time settings', implode(', ', array_keys($data)));
+        $this->settings->save($request->validated(), 'Updated date and time settings');
 
         return $this->show();
     }
 
-    /** Notification sound and its system switch (Settings -> Sound). Gated by route middleware permission:settings.sound. */
-    public function updateSound(Request $request): JsonResponse
+    public function updateSound(UpdateSoundSettingsRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'sound' => ['required', Rule::in(NotificationSounds::KEYS)],
-            'enabled' => ['required', 'boolean'],
-        ]);
-
-        AppSetting::put('notification_sound', $data['sound']);
-        AppSetting::put('notification_sound_enabled', $data['enabled'] ? '1' : '0');
-        AuditLog::record('Updated notification sound', $data['sound'].($data['enabled'] ? ', on' : ', off'));
+        $this->settings->saveSound($request->validated('sound'), (bool) $request->validated('enabled'));
 
         return $this->show();
     }
 
-    public function uploadLogo(Request $request): JsonResponse
+    public function uploadLogo(UploadLogoRequest $request): JsonResponse
     {
-        $request->validate([
-            // PNG only — the logo is also used in emails, where SVG doesn't render.
-            'logo' => ['required', 'file', 'mimes:png', 'max:2048'],
-        ]);
-
-        // Replace any previous logo so we don't accumulate orphans.
-        if ($old = AppSetting::get('logo_path')) {
-            Storage::disk('public')->delete($old);
-        }
-
-        $path = $request->file('logo')->store('branding', 'public');
-        AppSetting::put('logo_path', $path);
-        AuditLog::record('Uploaded logo', 'Branding');
+        $this->settings->uploadLogo($request->file('logo'));
 
         return $this->show();
     }
 
-    /** Removes the custom logo and reverts to the text-based default. */
-    public function deleteLogo(Request $request): JsonResponse
+    public function deleteLogo(): JsonResponse
     {
-        if ($old = AppSetting::get('logo_path')) {
-            Storage::disk('public')->delete($old);
-            AppSetting::put('logo_path', null);
-            AuditLog::record('Removed logo', 'Branding');
-        }
+        $this->settings->deleteLogo();
 
         return $this->show();
     }
 
-    /** Security policy values; any signed-in user may read them (the session-timeout hook needs the timeout on every load). */
-    public function security(Request $request): JsonResponse
+    /** Any signed-in user may read these: the session-timeout hook needs the timeout on every load. */
+    public function security(SecuritySettingsService $security): JsonResponse
     {
-        return response()->json(['data' => $this->securityPayload(), 'message' => 'success']);
+        return response()->json(['data' => $security->payload(), 'message' => 'success']);
     }
 
-    /** Updates session timeout, password expiry, device limit and the retention windows (route permission settings.security). */
-    public function updateSecurity(Request $request, DeviceService $devices): JsonResponse
+    public function updateSecurity(UpdateSecuritySettingsRequest $request, SecuritySettingsService $security, DeviceService $devices): JsonResponse
     {
-        $data = $request->validate([
-            // 0 turns the policy off; for the retention windows that means keep forever
-            // No longer than the server session: a device ends with its session, before a longer timeout could warn
-            'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:'.self::sessionLifetimeMinutes()],
-            'password_expiry_days' => ['required', 'integer', 'min:0', 'max:3650'],
-            // Later-added keys are `sometimes`, so a client sending only the first two keeps working
-            'email_log_body_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
-            'email_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
-            'audit_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
-            'notification_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
-            'login_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650', $this->atLeastKnownIpDays(...)],
-            'device_limit' => ['sometimes', 'integer', 'min:0', 'max:10'],
-        ]);
+        $data = $request->validated();
+        // The saving admin's own device stays when the limit trims the rest
+        $keep = isset($data['device_limit']) ? $devices->currentOf($request->user(), $request)?->id : null;
+        $security->update($data, $keep);
 
-        $previousDeviceLimit = $devices->limit();
-        $before = $this->securityPayload();
-
-        foreach ($data as $key => $value) {
-            AppSetting::put($key, (string) $value);
-        }
-        $this->recordSecurityChanges($before, $data);
-
-        if (isset($data['device_limit'])) {
-            $this->trimDevicesToLimit($request, $devices, $previousDeviceLimit, (int) $data['device_limit']);
-        }
-
-        return $this->security($request);
+        return $this->security($security);
     }
 
-    /**
-     * One audit row with each setting that really changed, old and new value; a save that changes nothing writes none.
-     *
-     * @param  array<string, mixed>  $before
-     * @param  array<string, int>  $saved
-     */
-    private function recordSecurityChanges(array $before, array $saved): void
+    /** The SMTP settings with the password masked. */
+    public function mailSettings(MailSettingsService $mail): JsonResponse
     {
-        $changes = [];
-        foreach ($saved as $key => $value) {
-            if ((int) $before[$key] !== (int) $value) {
-                $changes[$key] = ['from' => (int) $before[$key], 'to' => (int) $value];
-            }
-        }
-
-        if ($changes !== []) {
-            AuditLog::record('Updated security settings', implode(', ', array_keys($changes)), ['changes' => $changes]);
-        }
+        return response()->json(['data' => $mail->payload(), 'message' => 'success']);
     }
 
-    /** The Login log is kept forever (0) or at least as long as the sign-in rule looks back for a known IP. */
-    private function atLeastKnownIpDays(string $attribute, mixed $value, Closure $fail): void
+    public function updateMailSettings(UpdateMailSettingsRequest $request, MailSettingsService $mail): JsonResponse
     {
-        $days = (int) $value;
-        if ($days > 0 && $days < LoginRequest::KNOWN_IP_DAYS) {
-            $fail('validation.login_log_days_min')->translate(['days' => LoginRequest::KNOWN_IP_DAYS]);
-        }
+        $mail->update($request->validated());
+
+        return $this->mailSettings($mail);
     }
 
-    // Turning the limit on or lowering it signs out the extra devices; the saving admin's own device stays
-    private function trimDevicesToLimit(Request $request, DeviceService $devices, int $previousLimit, int $newLimit): void
-    {
-        $isTurnedOnOrLowered = $newLimit > 0 && ($previousLimit === 0 || $newLimit < $previousLimit);
-        if (! $isTurnedOnOrLowered) {
-            return;
-        }
-
-        $devices->trimTo($newLimit, $devices->currentOf($request->user(), $request)?->id);
-    }
-
-    /** The longest idle timeout that can hold: the server session's lifetime (SESSION_LIFETIME), at most a day. */
-    private static function sessionLifetimeMinutes(): int
-    {
-        return min(1440, (int) config('session.lifetime'));
-    }
-
-    /**
-     * @return array{session_timeout_minutes: int, session_lifetime_minutes: int, session_timeout_effective_minutes: int, password_expiry_days: int, email_log_body_days: int, email_log_days: int, audit_log_days: int, notification_days: int, login_log_days: int, device_limit: int, geoip_updated_at: string|null}
-     */
-    private function securityPayload(): array
-    {
-        $retention = app(LogRetentionService::class);
-        $timeout = (int) AppSetting::get('session_timeout_minutes', '0');
-        $lifetime = self::sessionLifetimeMinutes();
-
-        return [
-            'session_timeout_minutes' => $timeout,
-            // Read-only: the cap, and the timeout the server really enforces (what the SPA's idle timer counts)
-            'session_lifetime_minutes' => $lifetime,
-            'session_timeout_effective_minutes' => $timeout > 0 ? min($timeout, $lifetime) : 0,
-            'password_expiry_days' => (int) AppSetting::get('password_expiry_days', '0'),
-            // Defaults live on the service that enforces them, so the screen and the nightly sweep agree
-            'email_log_body_days' => $retention->days('email_log_body_days'),
-            'email_log_days' => $retention->days('email_log_days'),
-            'audit_log_days' => $retention->days('audit_log_days'),
-            'notification_days' => $retention->days('notification_days'),
-            'login_log_days' => $retention->days('login_log_days'),
-            'device_limit' => app(DeviceService::class)->limit(),
-            // Read-only: when the GeoIP file was last replaced
-            'geoip_updated_at' => UpdateGeoIpDatabase::lastUpdated()?->toIso8601String(),
-        ];
-    }
-
-    /** Returns the SMTP settings with the password masked (never sent to the client). */
-    public function mailSettings(Request $request): JsonResponse
-    {
-        $s = MailSetting::current();
-
-        return response()->json([
-            'data' => [
-                'host' => $s->host,
-                'port' => $s->port,
-                'username' => $s->username,
-                'has_password' => ! empty($s->password),
-                'encryption' => $s->encryption,
-                'from_address' => $s->from_address,
-                'from_name' => $s->from_name,
-            ],
-            'message' => 'success',
-        ]);
-    }
-
-    /** Updates the SMTP settings. A blank password leaves the stored one intact; a blank username means no sign-in. */
-    public function updateMailSettings(Request $request): JsonResponse
-    {
-        $s = MailSetting::current();
-        // Password is required only when signing in for the first time; once one is stored, blank keeps it
-        $needsPassword = filled($request->input('username')) && blank($s->password);
-
-        $data = $request->validate([
-            'host' => ['required', 'string', 'max:255'],
-            'port' => ['required', 'integer', 'min:1', 'max:65535'],
-            'username' => ['nullable', 'string', 'max:255'],
-            'password' => [$needsPassword ? 'required' : 'nullable', 'string', 'max:255'],
-            'encryption' => ['nullable', 'in:tls,ssl'],
-            'from_address' => ['required', 'email', 'max:255'],
-            'from_name' => ['required', 'string', 'max:255'],
-        ]);
-
-        // A relay that takes mail without signing in: no username, and no password kept for it
-        if (blank($data['username'] ?? null)) {
-            $data['username'] = null;
-            $data['password'] = null;
-        } elseif (($data['password'] ?? '') === '') {
-            unset($data['password']);
-        }
-
-        $s->update($data);
-        AuditLog::record('Updated mail settings', 'SMTP');
-
-        return $this->mailSettings($request);
-    }
-
-    /** Sends a test email to the current user using the saved SMTP config. */
+    /** Sends a test email to the current user with the saved SMTP settings. */
     public function testMail(Request $request, EmailNotificationService $service): JsonResponse
     {
         if (! MailSetting::current()->isConfigured()) {
@@ -577,77 +142,7 @@ class SettingsController extends Controller
 
         $ok = $service->sendTest($to);
 
-        // 200 either way — see EmailTemplateController::test(). A failed delivery is the
-        // result being reported, not a server fault, and a 5xx would cover the page with
-        // the fatal-error screen instead of letting the toast say what went wrong.
+        // 200 either way: a failed delivery is the result being reported, not a server fault
         return response()->json(['message' => $ok ? 'success' : 'failed', 'sent' => $ok, 'to' => $to]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function payload(): array
-    {
-        $values = [];
-        foreach ($this->defaults as $key => $default) {
-            $values[$key] = AppSetting::get($key, $default);
-        }
-        // The same rule the server-rendered page title answers with — see
-        // AppSetting::brandName().
-        $values['brand_name'] = AppSetting::brandName();
-        $values['theme_radius'] = (int) $values['theme_radius'];
-        $values['vapid_public_key'] = (string) config('webpush.vapid.public_key');
-
-        $logoPath = AppSetting::get('logo_path');
-        $values['logo_url'] = $logoPath ? Storage::disk('public')->url($logoPath) : null;
-
-        // The role a new employee actually ends up with, asked of the service that puts
-        // them there. It resolves through the default Role Group set on the Permission
-        // page — the only place an Admin can choose it. Reading a separate
-        // `default_employee_role` setting here (as this used to) showed the Add Employee
-        // form a role nothing ever assigned, and the two agreed only by accident, while
-        // both happened to fall back to Staff.
-        //
-        // Null on an install with no default Role Group — not filled in with a guess, and
-        // nothing here writes. SetCredentialsModal reads the null to say why an account
-        // cannot be created yet.
-        $values['default_employee_role_label'] = app(EmployeeService::class)->defaultRoleForNewEmployee()?->name;
-
-        // Asset status colors: stored saved values merged over defaults so any
-        // status without an explicit override still resolves to a color.
-        $stored = json_decode((string) AppSetting::get('asset_status_colors', '{}'), true);
-        $values['asset_status_colors'] = array_merge($this->assetStatusColorDefaults, is_array($stored) ? $stored : []);
-
-        // Ticket SLA: per-priority resolution targets, the single first-response
-        // target, and the working window — saved values merged over defaults.
-        $values['ticket_sla'] = TicketSla::targets();
-        $values['ticket_sla_response'] = TicketSla::responseMinutes();
-        $values['ticket_sla_goal'] = TicketSla::goalPercent();
-        $values['ticket_sla_hours'] = TicketSla::hours();
-        // Request-type targets are a list the administrator adds to, so they come back as
-        // rows (including the switched-off ones) rather than merged over anything.
-        $values['ticket_sla_request'] = SlaTarget::where('scope', SlaScope::RequestType->value)
-            ->orderBy('match_value')
-            ->get()
-            ->map(fn (SlaTarget $target) => [
-                'type' => $target->match_value,
-                'resolve' => $target->resolve_hours,
-                'clock' => $target->clock->value,
-                'enabled' => $target->enabled,
-            ])->all();
-        // Repair targets are keyed on a pair, so they come back split into the two halves the
-        // screen edits rather than as the composite string the table stores.
-        $values['ticket_sla_work_class'] = SlaTarget::where('scope', SlaScope::WorkClass->value)
-            ->orderBy('match_value')
-            ->get()
-            ->map(fn (SlaTarget $target) => [
-                'category' => explode(':', $target->match_value, 2)[0] ?? '',
-                'work_class' => explode(':', $target->match_value, 2)[1] ?? '',
-                'resolve' => $target->resolve_hours,
-                'clock' => $target->clock->value,
-                'enabled' => $target->enabled,
-            ])->all();
-
-        return $values;
     }
 }

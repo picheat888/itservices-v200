@@ -40,8 +40,8 @@ test('the stored target becomes the setting names', () => {
 });
 
 test('every key the server saves has words', () => {
-    const php = readFileSync('app/Http/Controllers/Api/Settings/SettingsController.php', 'utf8');
-    const block = php.slice(php.indexOf('function updateSecurity'), php.indexOf('$previousDeviceLimit'));
+    const php = readFileSync('app/Http/Requests/Settings/UpdateSecuritySettingsRequest.php', 'utf8');
+    const block = php.slice(php.indexOf('function rules'), php.indexOf('function atLeastKnownIpDays'));
     const keys = [...block.matchAll(/'(\w+)' => \[/g)].map((m) => m[1]);
     assert.equal(keys.length, 8);
     for (const key of keys) assert.ok(isSecuritySetting(key), key);
