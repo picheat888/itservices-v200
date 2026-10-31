@@ -57,7 +57,7 @@ class StoreStockMovementRequest extends FormRequest
         ];
     }
 
-    /** The movement type's right, checked after the fields as before. */
+    /** The movement type's right, checked after the fields (a bad payload is a 422 before the 403). */
     protected function passedValidation(): void
     {
         abort_unless((bool) $this->user()?->hasPermission(self::TYPE_PERMISSION[$this->validated('type')]), 403);
