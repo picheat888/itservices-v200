@@ -13,18 +13,7 @@ use App\Models\Ticket\Ticket;
 use BackedEnum;
 use Carbon\Carbon;
 
-/**
- * SLA targets, configurable from Settings → Tickets (stored in app_settings):
- *
- * - First response is ONE system-wide target in minutes (`ticket_sla_response`) —
- *   priority is only assigned when a case is taken, so a per-priority response
- *   target could never guide the queue it is meant for. It always runs on the
- *   business-hours clock (see hours()); it never reads a rule row.
- * - Resolution (close-the-case) target is chosen by precedence — work_class,
- *   then request_type, then priority, then the built-in defaults (see
- *   SlaScope::precedence(), targetFor()) — and each winning rule carries its
- *   own clock: business hours or calendar time (see TicketSlaClock).
- */
+/** SLA targets and clocks from Settings → Tickets: one response target on working time, resolution targets by rule precedence. */
 class TicketSla
 {
     /** Storage key for the saved per-priority resolution map. */
@@ -42,11 +31,7 @@ class TicketSla
         return 90;
     }
 
-    /**
-     * The SLA goal the reports hold the met-rate against (Ticket & SLA overview's KPI badge,
-     * red rows, goal line). Set in Settings → SLA; a missing or out-of-range value reads as
-     * the default.
-     */
+    /** The SLA goal the reports hold the met-rate against; a missing or out-of-range value reads as the default. */
     public static function goalPercent(): int
     {
         $stored = (int) AppSetting::get(self::GOAL_KEY, (string) self::goalDefault());
@@ -80,12 +65,7 @@ class TicketSla
     private static ?int $responseMemo = null;
 
     /**
-     * Per-priority resolution targets: the saved rows merged over the defaults, so any priority
-     * without a row of its own still resolves to a target.
-     *
-     * Clock rides along here (not just in `rules()`) because this is what Settings -> show()
-     * returns for the Priority form — a form that can save a clock per row but never sees it
-     * back is a form that cannot round-trip what it just saved.
+     * Per-priority resolution targets and clocks, saved rows over the defaults (Settings shows the clock back).
      *
      * @return array<string, array{resolve: int, clock: string}>
      */
@@ -113,9 +93,7 @@ class TicketSla
     public const HOURS_KEY = 'ticket_sla_hours';
 
     /**
-     * Default SLA working window: Mon–Fri (ISO weekday 1–5), 08:00–17:00 local
-     * with a 12:00–13:00 lunch break the clocks skip (break_* null = no break).
-     * Occasional OT is deliberately NOT counted — it helps beat the clock instead.
+     * Default working window: Mon–Fri 08:00–17:00 with a 12:00–13:00 break (break_* null = no break); OT is not counted.
      *
      * @return array{days: list<int>, start: string, end: string, break_start: ?string, break_end: ?string}
      */
@@ -128,11 +106,9 @@ class TicketSla
     private static ?array $hoursMemo = null;
 
     /**
-     * Saved working window merged over the defaults. An unusable saved value
-     * (no days / start not before end) falls back to the defaults so the
-     * business-time walkers can never loop forever.
+     * Saved working window over the defaults; an unusable one falls back so the walkers cannot loop forever.
      *
-     * @return array{days: list<int>, start: string, end: string}
+     * @return array{days: list<int>, start: string, end: string, break_start: ?string, break_end: ?string}
      */
     public static function hours(): array
     {
@@ -155,9 +131,7 @@ class TicketSla
             return self::$hoursMemo = $defaults;
         }
 
-        // Break: a saved null/'' means "no break" — only a missing key falls back to
-        // the default lunch hour. An unusable break (inverted / outside the window)
-        // is dropped rather than poisoning the whole window.
+        // Break: saved null means none, a missing key means the default lunch, an unusable one is dropped
         $breakStart = self::timeOrNull(array_key_exists('break_start', $stored) ? $stored['break_start'] : $defaults['break_start']);
         $breakEnd = self::timeOrNull(array_key_exists('break_end', $stored) ? $stored['break_end'] : $defaults['break_end']);
         if ($breakStart === null || $breakEnd === null || $breakStart >= $breakEnd || $breakStart < $start || $breakEnd > $end) {
@@ -197,7 +171,7 @@ class TicketSla
         return self::$holidayMemo = $holidays;
     }
 
-    /** Drop the memoized targets/window — call after saving new values (and between tests). */
+    /** Drop the memoized targets, window and holidays — call after saving new values (and between tests). */
     public static function flush(): void
     {
         self::$memo = null;
@@ -216,43 +190,26 @@ class TicketSla
         return $targets[$priority]['resolve'] ?? $targets['medium']['resolve'];
     }
 
-    /**
-     * เป้าหมายปิดเคสของ ticket หนึ่งใบ เป็นชั่วโมง — คำตอบของ "ทำไมเดดไลน์เป็นวันนี้"
-     *
-     * ลักษณะงาน ชนะ ประเภทคำขอ ชนะ priority ชนะ ค่าเริ่มต้นในโค้ด (ดู SlaScope::precedence)
-     *
-     * @return array{hours: int, scope: ?SlaScope, value: ?string, clock: TicketSlaClock}
-     */
-    /**
-     * How a repair target is keyed: the ticket's category and who does the work, together.
-     *
-     * One place rather than a format spelled out at each call site — the settings writer, the
-     * rule reader and the forecast all have to agree on it, and a string built by hand in three
-     * places is a string that eventually differs in one of them.
-     */
+    /** How a repair target is keyed: the ticket's category and who does the work, in one place for writer, reader and forecast. */
     public static function workClassKey(string $category, string $workClass): string
     {
         return "{$category}:{$workClass}";
     }
 
-    /**
-     * The "who does the work" half of a pair key, for callers that have a matched rule and want
-     * to name it. The category half is dropped because every such caller is already holding the
-     * ticket the rule matched, and the ticket carries its own category.
-     *
-     * Lives next to workClassKey() so both directions of the format sit in one place: a reader
-     * that splits the string somewhere else is the same drift the writer was centralised to stop,
-     * only harder to spot because it fails by printing the raw key rather than by throwing.
-     */
+    /** The "who does the work" half of a workClassKey(); the caller already holds the ticket's category. */
     public static function workClassFromKey(string $key): string
     {
         return str_contains($key, ':') ? explode(':', $key, 2)[1] : $key;
     }
 
+    /**
+     * One ticket's resolution target: work class, then request type, then priority, then the code defaults.
+     *
+     * @return array{hours: int, scope: ?SlaScope, value: ?string, clock: TicketSlaClock}
+     */
     public static function targetFor(Ticket $ticket): array
     {
-        // Builder::value() ใช้ cast ของโมเดล ทั้งสองทางจึงคืน enum ได้ — บีบเป็นสตริงตรงนี้
-        // เพราะนั่นคือสิ่งที่ match_value เก็บ
+        // match_value stores the plain string, while value() may hand back the cast enum
         $requestType = $ticket->relationLoaded('serviceRequest')
             ? $ticket->serviceRequest?->type
             : $ticket->serviceRequest()->value('type');
@@ -270,10 +227,7 @@ class TicketSla
     {
         $rules = self::rules();
 
-        // เป้าหมายงานซ่อมอยู่ที่ "คู่" ของประเภทเคสกับคนที่ทำ ไม่ใช่ที่คลาสลำพัง — เปลี่ยน
-        // mainboard ที่ส่งช่างนอกกับเดินสายเน็ตเวิร์กที่ส่งช่างนอก เป็นงานคนละความยาวกัน
-        //
-        // งานปกติไม่เข้ากฎไหนเลย ซึ่งคือสิ่งที่ทำให้ scope นี้ชนะลำดับบนสุดได้โดยไม่แอบทับเงียบ ๆ
+        // A repair target belongs to the category and work-class pair; ordinary work matches no pair rule
         $workClass = $workClassValue !== null && TicketWorkClass::from($workClassValue)->isRepair() && $category !== null
             ? self::workClassKey($category, $workClassValue)
             : null;
@@ -292,8 +246,7 @@ class TicketSla
             }
         }
 
-        // ไม่มีอะไรตั้งไว้สำหรับเคสนี้: ค่าเริ่มต้นตาม priority และ medium เมื่อยังไม่มี priority
-        // รายงานเป็น scope null เพราะไม่มีใครเลือกมัน — และนับด้วยเวลาทำการ ซึ่งคือพฤติกรรมเดิม
+        // No rule: the priority default (medium without one), no scope, on business time
         return [
             'hours' => self::resolveHours($priority),
             'scope' => null,
@@ -302,14 +255,11 @@ class TicketSla
         ];
     }
 
-    /** memo ของกฎที่เปิดอยู่ต่อ request, เป็น [scope][match_value] => ['hours', 'clock'] */
+    /** Per-request memo of the enabled rules, as [scope][match_value] => ['hours', 'clock']. */
     private static ?array $rulesMemo = null;
 
     /**
-     * เป้าหมายทุกแถวที่เปิดอยู่ อ่านครั้งเดียวต่อ request
-     *
-     * หน้ารายการ ticket resolve SLA ทีละแถว และตารางนี้เล็กพอที่ query เดียวจะชนะ
-     * การ query ต่อแถวในทุกแง่ที่ควรวัด
+     * Every enabled target row, read once per request.
      *
      * @return array<string, array<string, array{hours: int, clock: TicketSlaClock}>>
      */
@@ -342,10 +292,7 @@ class TicketSla
         return self::$responseMemo = ($stored >= 1 ? $stored : self::responseDefault());
     }
 
-    /**
-     * Share of the active clock already spent (0–100) at which a ticket turns "near_due". Not the
-     * backlog report's "due_soon" (inside 24 hours): this one is 80% of the ticket's own target.
-     */
+    /** Share of the ticket's own target spent (%) at which it turns "near_due"; not the backlog report's 24-hour "due_soon". */
     private const NEAR_DUE_PCT = 80;
 
     /** Bound on days skipped while looking for the next working day; only a broken config reaches it. */
@@ -359,8 +306,7 @@ class TicketSla
     }
 
     /**
-     * The working sub-windows of the instant's own date — one [start, end] pair,
-     * or two when a break splits the day (e.g. 08–12 and 13–17).
+     * The working sub-windows of the instant's own date: one pair, or two when a break splits the day.
      *
      * @return list<array{0: Carbon, 1: Carbon}>
      */
@@ -380,11 +326,7 @@ class TicketSla
         ];
     }
 
-    /**
-     * The first working instant at or after $at: $at itself when inside a
-     * sub-window, otherwise the opening of the next one (after the break, or
-     * the next working day's morning).
-     */
+    /** The first working instant at or after $at, skipping breaks, non-working days and holidays. */
     private static function nextWorkOpen(Carbon $at): Carbon
     {
         $cursor = $at->copy();
@@ -414,10 +356,7 @@ class TicketSla
         return $at; // defensive — an instant outside every window advances no time
     }
 
-    /**
-     * The instant reached after spending $minutes of working time from $from.
-     * A ticket filed outside the window starts its clock at the next opening.
-     */
+    /** The instant reached after $minutes of working time from $from; outside the window the clock starts at the next opening. */
     public static function addBusinessMinutes(Carbon $from, int $minutes): Carbon
     {
         return self::addBusinessMinutesFast($from, $minutes) ?? self::addBusinessMinutesWalk($from, $minutes);
@@ -545,10 +484,7 @@ class TicketSla
         return $cursor;
     }
 
-    /**
-     * addMinutesOn() on whole-second Unix timestamps, without Carbon in the loop. Zones with clock
-     * changes and instants before 1970 take the Carbon path, so the answer is always the same.
-     */
+    /** addMinutesOn() on whole-second Unix timestamps; zones with clock changes and pre-1970 instants take the Carbon path. */
     public static function addMinutesToTimestamp(int $from, int $minutes, TicketSlaClock $clock): int
     {
         if ($clock === TicketSlaClock::Calendar) {
@@ -583,12 +519,7 @@ class TicketSla
         return $minutes;
     }
 
-    /**
-     * เวลาที่ถึงหลังใช้เวลาไป $minutes นับด้วยนาฬิกาที่กฎกำหนด
-     *
-     * โหมด calendar นับเวลาจริงตรง ๆ เพราะ KPI อย่าง "ซ่อมเสร็จใน 30 วัน" ที่องค์กร
-     * ประกาศไว้ ไม่ได้หยุดเดินตอนคนกลับบ้าน
-     */
+    /** The instant after $minutes on the rule's clock: calendar counts real time, business counts working time. */
     public static function addMinutesOn(Carbon $from, int $minutes, TicketSlaClock $clock): Carbon
     {
         return $clock === TicketSlaClock::Calendar
@@ -596,7 +527,7 @@ class TicketSla
             : self::addBusinessMinutes($from, $minutes);
     }
 
-    /** เวลาที่ผ่านไประหว่างสองจุด นับด้วยนาฬิกาเรือนเดียวกับที่ตั้งเดดไลน์ */
+    /** Minutes between two instants on the same clock that set the deadline. */
     public static function minutesBetweenOn(Carbon $from, Carbon $to, TicketSlaClock $clock): int
     {
         if ($clock === TicketSlaClock::Calendar) {
@@ -606,23 +537,13 @@ class TicketSla
         return self::businessMinutesBetween($from, $to);
     }
 
-    /**
-     * จุดเริ่มเดินของนาฬิกาปิดเคส — เวลาที่เคสถูกรับ ไม่ใช่เวลาที่เคสถูกเปิด
-     *
-     * เวลารอคิวกับเวลาทำงานเป็นคนละเรื่อง และระบบมีนาฬิกาให้ทั้งสองอยู่แล้ว: เป้าตอบสนอง
-     * วัดว่าผู้แจ้งรอนานแค่ไหนกว่าจะมีคนมอง ส่วนเป้าปิดเคสวัดว่างานใช้เวลาเท่าไรหลังมีเจ้าของ
-     * ถ้านับเป้าปิดเคสจากเวลาเปิด ตัวเลขเดียวจะแบกทั้งสองเรื่อง เคสที่ค้างคิวสามวันจึงถึงมือช่าง
-     * พร้อมเดดไลน์ที่หมดไปแล้ว
-     *
-     * เคสที่ยังไม่มีใครรับยังไม่มีเจ้าของและยังไม่มีจุดเริ่ม จึงใช้เวลาเปิดไปพลางเป็นค่าชั่วคราว
-     * ให้แถวในลิสต์ยังเรียงได้และยังมีอะไรให้แสดง แล้ว take() จะเขียนทับทันทีที่มีคนกดรับ
-     */
+    /** Where the resolution clock starts: when the case was taken, or its opening time until someone takes it. */
     public static function resolveStart(Ticket $ticket): Carbon
     {
         return $ticket->responded_at ?? $ticket->created_at;
     }
 
-    /** เดดไลน์ปิดเคส นับด้วยนาฬิกาที่เป้าหมายของเคสนี้กำหนด — ใช้ร่วมกับ SLA % บน dashboard */
+    /** Resolution deadline on the clock of the ticket's target — shared with the dashboard SLA %. */
     public static function resolveDueAt(Ticket $ticket): Carbon
     {
         $target = self::targetFor($ticket);
@@ -637,25 +558,7 @@ class TicketSla
     }
 
     /**
-     * Snapshot of both SLA clocks for one ticket, or null when SLA doesn't apply
-     * (canceled tickets). All math runs on Carbon instants in the app timezone
-     * (local wall time, fixed by APP_TIMEZONE) — durations and comparisons are
-     * timezone-agnostic either way.
-     *
-     * - Response clock: created_at → first response (take/assign), one system-wide
-     *   target in minutes, always on WORKING TIME (see hours()) — a ticket filed
-     *   outside the window starts at the next opening, and the target consumes only
-     *   window minutes. The clock starts at submission, before any priority exists,
-     *   and never reads a rule row.
-     * - Resolution clock: resolveStart() (เวลารับเคส) → resolved_at, target chosen by precedence
-     *   (work_class → request_type → priority → built-in defaults; tickets without
-     *   a priority run against the medium default). The winning rule's own `clock`
-     *   decides how time is counted — business hours (window minutes only, like the
-     *   response clock) or calendar time (real elapsed minutes, for KPIs such as
-     *   "repaired within 30 days" that keep running after hours).
-     * - `state` describes the clock that currently matters: the response clock while
-     *   the ticket is open, the resolution clock once it's in progress, and the final
-     *   met/missed verdict once completed.
+     * Both SLA clocks of one ticket and the state of the one that matters now; null for canceled tickets.
      *
      * @return array{response_due_at: string, resolve_due_at: string, state: string, pct_elapsed: int, clock: string}|null
      */
@@ -669,7 +572,7 @@ class TicketSla
         $clock = $target['clock'];
         $responseTarget = self::responseMinutes();
         $resolveTarget = $target['hours'] * 60;
-        // นาฬิกาตอบรับเป็น business เสมอ: เป้าหมายตอบรับเป็นค่าเดียวทั้งระบบ ไม่ได้มาจากแถวกฎ
+        // The response clock is always business time: one system-wide target, never a rule row
         $responseDue = self::addBusinessMinutes($ticket->created_at, $responseTarget);
         $resolveDue = self::addMinutesOn(self::resolveStart($ticket), $resolveTarget, $clock);
 
@@ -679,13 +582,11 @@ class TicketSla
             return self::payload($responseDue, $resolveDue, $state, 100, $clock);
         }
 
-        // นาฬิกาที่กำลังเดิน: ตอบรับระหว่างที่ยังเปิด ปิดเคสหลังจากนั้น
+        // The running clock: response while open, resolution after that
         $responseActive = $ticket->responded_at === null && $ticket->status === TicketStatus::Open;
         $due = $responseActive ? $responseDue : $resolveDue;
         $total = max(1, $responseActive ? $responseTarget : $resolveTarget);
-        // เวลาที่ผ่านไปต้องนับด้วยนาฬิกาเรือนเดียวกับที่ตั้งเดดไลน์ ไม่งั้นแถบความคืบหน้าจะโกหก
-        // Measured from whichever instant the active clock counts from, or the bar reports a
-        // share of a window it is not actually running against.
+        // Elapsed time on the same clock and from the same start as the active deadline
         $elapsed = self::minutesBetweenOn(
             $responseActive ? $ticket->created_at : self::resolveStart($ticket),
             now(),
