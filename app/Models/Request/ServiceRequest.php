@@ -165,13 +165,7 @@ class ServiceRequest extends Model
         return $this->approvals()->where('status', ApprovalStatus::Current->value)->first();
     }
 
-    /**
-     * May this account read the request at all? Its participants (owner, the person
-     * it is about, whoever filed it, anybody the chain can route to), plus IT and
-     * the module's readers. The single answer behind both the detail endpoint and
-     * the attachment download route, so a file is never reachable by someone who
-     * cannot open the request it belongs to.
-     */
+    /** Whether the account may open the request: the same set the list shows it (RequestListService::visibleTo), for the detail and attachment routes. */
     public function isVisibleTo(?User $user): bool
     {
         if ($user === null) {
@@ -184,10 +178,11 @@ class ServiceRequest extends Model
             || ($user->employee_id !== null && $user->employee_id === $this->employee_id)
             || ($user->employee_id !== null && $this->approvals()->actionableBy($user->employee)->exists());
 
+        // A completer without view_all sees the approved and completed queue, nothing earlier or closed
         return $isParticipant
             || $user->isSuper()
             || $user->hasPermission('requests.view_all')
-            || $user->hasPermission('requests.complete');
+            || ($user->hasPermission('requests.complete') && in_array($this->status, [RequestStatus::Approved, RequestStatus::Completed], true));
     }
 
     /** The owner, or whoever filed it on the owner's behalf (onboarding). */

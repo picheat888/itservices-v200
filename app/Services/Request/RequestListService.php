@@ -72,7 +72,9 @@ class RequestListService
                 ? $query->whereIn('id', [])
                 : $query->whereHas('approvals', fn ($a) => $a
                     ->actionableBy($employee)
-                    ->where('status', ApprovalStatus::Current->value));
+                    ->where('status', ApprovalStatus::Current->value)
+                    // Completion steps live in the queue tab; awaiting_me and the badge count approval steps only
+                    ->where('kind', WorkflowStepKind::Approval->value));
         } elseif ($filters['scope'] === 'queue' && $canComplete) {
             $query->where('status', RequestStatus::Approved->value);
         } elseif ($filters['scope'] === 'mine') {
