@@ -67,7 +67,7 @@ function firstArgument(source: string, open: number): string {
 
 const literals = (code: string) => [...code.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1]);
 
-/** The keys of a PHP array constant, e.g. StockMovementController::TYPE_PERMISSION. */
+/** The keys of a PHP array constant, e.g. StoreStockMovementRequest::TYPE_PERMISSION. */
 function constantKeys(file: string, name: string): string[] {
     const source = readFileSync(new URL(file, APP_DIR), 'utf8');
     const body = source.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\];`))?.[1] ?? '';
@@ -84,7 +84,7 @@ function appAuditActions(): Set<string> {
             const arg = firstArgument(source, (call.index ?? 0) + call[0].length - 1).trim();
             if (arg.startsWith('string $action')) continue;
             if (arg === "'Stock '.$type") {
-                for (const type of constantKeys('Http/Controllers/Api/Stock/StockMovementController.php', 'TYPE_PERMISSION'))
+                for (const type of constantKeys('Http/Requests/Stock/StoreStockMovementRequest.php', 'TYPE_PERMISSION'))
                     actions.add(`Stock ${type}`);
                 continue;
             }
