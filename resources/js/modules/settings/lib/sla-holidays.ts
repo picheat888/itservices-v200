@@ -4,6 +4,7 @@ type DateName = { date: string; name: string };
 export type LineError = 'no_date' | 'bad_date' | 'no_name' | 'other_year';
 export type RowError = { date?: 'required' | 'other_year' | 'taken'; name?: 'required' | 'too_long' };
 export const HOLIDAY_NAME_MAX = 100;
+export const HOLIDAYS_PER_YEAR_MAX = 60;
 
 const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const TH_MON_FULL = [
@@ -264,6 +265,11 @@ const SERVER_CODES: Record<string, RowError> = {
     holiday_name_required: { name: 'required' },
     holiday_name_too_long: { name: 'too_long' },
 };
+
+// The one 422 that belongs to the whole year rather than a row
+export function tooManyHolidays(errors: Record<string, string[]>): boolean {
+    return errors.holidays?.[0] === 'holiday_too_many';
+}
 
 // 422 field errors (holidays.<i>.date|name) keyed back to the rows that were sent, in order
 export function serverRowErrors(errors: Record<string, string[]>, sentKeys: string[]): Record<string, RowError> {

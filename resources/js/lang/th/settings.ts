@@ -322,6 +322,7 @@ export const settings: Dict = {
     set_hol_err_date_taken: 'มีวันที่นี้แล้ว',
     set_hol_err_name_required: 'ใส่ชื่อวันหยุด',
     set_hol_err_name_too_long: 'ชื่อยาวได้ไม่เกิน {max} ตัวอักษร',
+    set_hol_err_too_many: 'ใส่วันหยุดได้ไม่เกินปีละ {n} วัน',
     set_hol_changes: 'แก้ไว้ {n} จุด',
     set_hol_save: 'บันทึกวันหยุด',
     set_hol_saved: 'บันทึกวันหยุดปี {year} แล้ว',

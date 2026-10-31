@@ -179,6 +179,8 @@ export function useSaveSlaHolidays() {
             void qc.invalidateQueries({ queryKey: ['tickets'] });
             // Ticket lists, details and summaries keep stored deadlines under their own keys
             void qc.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && /ticket/.test(query.queryKey[0]) });
+            void qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+            void qc.invalidateQueries({ queryKey: ['reports'] });
         },
     });
 }

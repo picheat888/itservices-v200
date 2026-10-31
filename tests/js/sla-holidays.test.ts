@@ -1,8 +1,12 @@
 // Holiday text parser, month summary, fixed-date copy and row validation helpers for the SLA holiday editor.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { settings as en } from '../../resources/js/lang/en/settings.ts';
+import { settings as th } from '../../resources/js/lang/th/settings.ts';
 import {
     fixedDateRows,
+    HOLIDAYS_PER_YEAR_MAX,
     holidayYears,
     isoWeekday,
     localIsoDate,
@@ -11,6 +15,7 @@ import {
     parseHolidayText,
     rowErrors,
     serverRowErrors,
+    tooManyHolidays,
 } from '../../resources/js/modules/settings/lib/sla-holidays.ts';
 
 const SEED_2026 = [
@@ -143,6 +148,24 @@ test('serverRowErrors maps 422 codes to the rows sent, by position', () => {
         b: { date: 'other_year', name: 'required' },
         c: { date: 'required' },
     });
+});
+
+test('tooManyHolidays reads the year-wide refusal that no row carries', () => {
+    assert.equal(tooManyHolidays({ holidays: ['holiday_too_many'] }), true);
+    assert.equal(tooManyHolidays({ 'holidays.0.date': ['holiday_date_taken'] }), false);
+    assert.equal(tooManyHolidays({}), false);
+});
+
+test('the editor names the year cap in both languages and the save refreshes the SLA figures elsewhere', () => {
+    const editor = readFileSync(new URL('../../resources/js/modules/settings/components/sla-holiday-editor-dialog.tsx', import.meta.url), 'utf8');
+    const hooks = readFileSync(new URL('../../resources/js/modules/settings/hooks/use-settings.ts', import.meta.url), 'utf8');
+    assert.match(editor, /tooManyHolidays\(/);
+    assert.match(editor, /fillText\(t\('set_hol_err_too_many'\), \{ n: fmtN\(HOLIDAYS_PER_YEAR_MAX\) \}\)/);
+    assert.equal(HOLIDAYS_PER_YEAR_MAX, 60);
+    assert.equal(th.set_hol_err_too_many, 'ใส่วันหยุดได้ไม่เกินปีละ {n} วัน');
+    assert.equal(en.set_hol_err_too_many, 'Keep each year to {n} holidays');
+    assert.match(hooks, /invalidateQueries\(\{ queryKey: \['dashboard-summary'\] \}\)/);
+    assert.match(hooks, /invalidateQueries\(\{ queryKey: \['reports'\] \}\)/);
 });
 
 test('parseHolidayText expands day ranges before a Thai month', () => {

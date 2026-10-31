@@ -325,6 +325,7 @@ export const settings: Dict = {
     set_hol_err_date_taken: 'This date is already listed',
     set_hol_err_name_required: 'Enter the holiday name',
     set_hol_err_name_too_long: 'Keep the name to {max} characters',
+    set_hol_err_too_many: 'Keep each year to {n} holidays',
     set_hol_changes: '{n} changes',
     set_hol_save: 'Save holidays',
     set_hol_saved: '{year} holidays saved',

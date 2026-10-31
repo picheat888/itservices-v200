@@ -36,6 +36,7 @@ class SaveSlaHolidaysRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'holidays.max' => 'holiday_too_many',
             'holidays.*.date.required' => 'holiday_date_required',
             'holidays.*.date.date_format' => 'holiday_date_required',
             'holidays.*.date.distinct' => 'holiday_date_taken',

@@ -127,7 +127,7 @@ class SlaHolidayApiTest extends TestCase
         for ($i = 0; $i < 61; $i++) {
             $many[] = ['date' => date('Y-m-d', strtotime("2026-01-01 +{$i} days")), 'name' => "H{$i}"];
         }
-        $this->save(2026, $many)->assertUnprocessable();
+        $this->save(2026, $many)->assertJsonValidationErrors(['holidays' => 'holiday_too_many']);
 
         $this->save(1999, [])->assertNotFound();
         $this->assertSame(0, SlaHoliday::count());

@@ -18,7 +18,17 @@ import { CalendarDays, ClipboardPaste, Copy, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SlaHoliday } from '../api/settingsApi';
 import { useSaveFailed, useSaveSlaHolidays } from '../hooks/use-settings';
-import { fixedDateRows, HOLIDAY_NAME_MAX, isoWeekday, rowErrors, serverRowErrors, type HolidayRow, type RowError } from '../lib/sla-holidays';
+import {
+    fixedDateRows,
+    HOLIDAY_NAME_MAX,
+    HOLIDAYS_PER_YEAR_MAX,
+    isoWeekday,
+    rowErrors,
+    serverRowErrors,
+    tooManyHolidays,
+    type HolidayRow,
+    type RowError,
+} from '../lib/sla-holidays';
 import { SlaHolidayPasteDialog } from './sla-holiday-paste-dialog';
 import { ErrorSummary, FieldError, fillText, HEAD_ROW, MINI_LABEL, ROW, SLA_ERROR_BORDER, TABLE, type SlaError } from './sla-parts';
 
@@ -200,6 +210,12 @@ export function SlaHolidayEditorDialog({
                 },
                 onError: (error) => {
                     const res = (error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } })?.response;
+                    if (res?.status === 422 && tooManyHolidays(res.data?.errors ?? {})) {
+                        useToastStore
+                            .getState()
+                            .push(fillText(t('set_hol_err_too_many'), { n: fmtN(HOLIDAYS_PER_YEAR_MAX) }), 'error', t('settings_save_failed_title'));
+                        return;
+                    }
                     const mapped =
                         res?.status === 422
                             ? serverRowErrors(
