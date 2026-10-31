@@ -2,11 +2,13 @@
 
 namespace App\Services\Request;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\StepActorType;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Request\ServiceRequest;
 use App\Models\Workflow\Workflow;
 use Illuminate\Support\Collection;
@@ -22,6 +24,42 @@ class WorkflowService
     public const MEASURE_DAYS = 30;
 
     public function __construct(private readonly WorkflowResolverService $resolver) {}
+
+    /**
+     * The job titles a chain rung can name, by code.
+     *
+     * @return Collection<int, array{id: int, title: string}>
+     */
+    public function positionOptions(): Collection
+    {
+        return Position::orderBy('code')->get()->map(fn (Position $position) => [
+            'id' => $position->id,
+            'title' => $position->title,
+        ])->values();
+    }
+
+    /**
+     * Active employees with a login account, by first name, for the editor's preview.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function employeeOptions(): Collection
+    {
+        return Employee::with(['position', 'department'])
+            ->where('status', EmployeeStatus::Active->value)
+            ->whereHas('user')
+            ->orderBy('first_name')
+            ->get()
+            ->map(fn (Employee $e) => [
+                'id' => $e->id,
+                'code' => $e->code,
+                'name' => $e->name,
+                'name_th' => $e->name_th,
+                'position' => $e->position?->title,
+                'department' => $e->department?->name,
+                'department_th' => $e->department?->name_th,
+            ])->values();
+    }
 
     /**
      * Every workflow in RequestType's order, each carrying `measured` (how long its route actually took lately).

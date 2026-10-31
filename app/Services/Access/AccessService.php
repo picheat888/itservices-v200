@@ -7,20 +7,24 @@ use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
+use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Support\EmailTable;
 use App\Support\OverviewPeriod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AccessService
 {
+    public function __construct(private readonly ResourceLogoService $logos) {}
+
     /**
-     * Grant an employee access to a resource. Rejects a second ACTIVE grant for
-     * the same (resource, employee). Returns the membership.
+     * Grants an employee access; a second active grant for the same resource and employee is refused.
      *
      * @param  array{access_level?: string|null, purpose?: string|null, granted_at?: string|null}  $attrs
      */
@@ -86,11 +90,63 @@ class AccessService
     }
 
     /**
-     * Set (or clear) a resource's owner. Owner and member are mutually exclusive:
-     *  - the incoming owner's active membership (if any) is soft-revoked, and
-     *  - the replaced owner is demoted to a plain member so they keep access rather
-     *    than vanishing from the resource entirely.
+     * Saves a software edit: seat count checked against granted licences and the logo swapped in one transaction, then the audit.
+     *
+     * @param  array<string, mixed>  $data  validated fields
      */
+    public function updateSoftware(Software $software, array $data, ?UploadedFile $logo): Software
+    {
+        $before = $software->getOriginal();
+        DB::transaction(function () use ($software, $data, $logo): void {
+            $this->guardSeatCount($software, $data['seats'] ?? null);
+            $software->update($this->logos->apply(Arr::except($data, 'seats_unlimited'), $logo, 'software-logos', $software->logo_path));
+        });
+        AuditLog::record('Updated software', $software->name, $this->softwareAuditChanges($before, $software), subject: $software);
+
+        return $software;
+    }
+
+    /**
+     * Audit diff with the product key masked: the log only says it changed, never the key.
+     *
+     * @param  array<string, mixed>  $before
+     * @return array<string, mixed>|null
+     */
+    private function softwareAuditChanges(array $before, Software $software): ?array
+    {
+        $changes = AuditLog::changes($before, $software, ['product_key']);
+        if ($software->wasChanged('product_key')) {
+            $mask = fn (mixed $key): ?string => filled($key) ? '••••' : null;
+            $changes['changes']['product_key'] = ['from' => $mask($before['product_key'] ?? null), 'to' => $mask($software->product_key)];
+        }
+
+        return $changes;
+    }
+
+    /** Deletes software no one holds a licence for (audit first); false while any active member remains. */
+    public function deleteSoftware(Software $software): bool
+    {
+        if ($software->memberships()->active()->exists()) {
+            return false;
+        }
+        AuditLog::recordDeleted('Deleted software', $software->name, $software);
+        $software->delete();
+
+        return true;
+    }
+
+    /** Takes a licence back (audit first); a seat already revoked is left alone. */
+    public function revokeSoftwareMember(Software $software, AccessMembership $membership): void
+    {
+        if ($membership->revoked_at !== null) {
+            return;
+        }
+
+        AuditLog::record('Removed member from software', $software->name, ['employee' => $membership->employee?->name], subject: $software);
+        $this->revoke($membership);
+    }
+
+    /** Sets or clears the owner; the new owner's membership is revoked and the old owner stays on as a member. */
     public function setOwner(Model $resource, ?int $ownerEmployeeId): void
     {
         $previousOwnerId = $resource->getAttribute('owner_employee_id');
@@ -116,10 +172,7 @@ class AccessService
     }
 
     /**
-     * Active memberships for an employee grouped by resource type, eager-loaded.
-     * Email groups + file shares the employee OWNS (approver / share owner) are folded
-     * in too — the owner is stored on the resource, not as a membership, so an owner who
-     * isn't also a member would otherwise be missing from their access list.
+     * Active memberships per resource type, plus the email groups and file shares they own (owner is not a membership).
      *
      * @return array{email_group: Collection, file_share: Collection, social_platform: Collection, software: Collection}
      */
@@ -148,9 +201,7 @@ class AccessService
     }
 
     /**
-     * How much access a departed employee still holds: grants left switched on plus resources
-     * they still own. The same two things the Access overview counts, so an offboarding notice
-     * and the governance card can never disagree about how much is outstanding.
+     * Grants still on plus resources still owned, counted as the Access overview counts them.
      *
      * @return array{grants: int, owned: int, total: int}
      */
@@ -163,20 +214,7 @@ class AccessService
         return ['grants' => $grants, 'owned' => $owned, 'total' => $grants + $owned];
     }
 
-    /**
-     * Everything outstandingFor() counts, written out as the one table an offboarding email
-     * carries — because a count alone ("5 access items") tells the reader there is work
-     * without telling them what it is.
-     *
-     * One list, not two. Being a member and being the owner do call for different things
-     * done to them, but that difference is a word in the "Held as" column, and splitting the
-     * mail into two tables made the reader check two places to answer "what does this person
-     * still have". Grants first, owners after, so the rows that are simply revoked are not
-     * interleaved with the ones that need somebody found.
-     *
-     * Kept here rather than in the sender: naming a resource means knowing which of the four
-     * registries it came from, which is this service's knowledge and nobody else's.
-     */
+    /** What outstandingFor() counts as the one offboarding mail table: grants first, then owned resources. */
     public function outstandingTableFor(Employee $employee): string
     {
         $rows = AccessMembership::query()->active()
@@ -204,22 +242,14 @@ class AccessService
         'software' => 'Software',
     ];
 
-    /**
-     * The column holding a resource's address — the value somebody clearing the access
-     * actually searches for at the other end. Software has none: a seat is identified by the
-     * product, which is already the name.
-     */
+    /** The column a resource is searched by at the other end; software has none. */
     private const ADDRESS_COLUMNS = [
         'email_group' => 'email',
         'file_share' => 'path',
         'social_platform' => 'url',
     ];
 
-    /**
-     * What a stored level is called on screen. "Write" grants read as well as write, and the
-     * Access Directory has always shown it as "Read/Write" — the mail says the same thing,
-     * or it looks like a different level from the one in the app.
-     */
+    /** Stored level => screen words, as the Access Directory shows them ("Write" reads "Read/Write"). */
     private const LEVEL_LABELS = ['Read' => 'Read', 'Write' => 'Read/Write'];
 
     public const ACCESS_HEADERS = ['Code', 'Type', 'Name', 'Resource', 'Held as'];
@@ -229,14 +259,7 @@ class AccessService
     /** Name and Resource: the two columns carrying a long value with nowhere natural to break. */
     public const ACCESS_WRAP = [2, 3];
 
-    /**
-     * How the access is held, in the terms the Access Directory itself uses.
-     *
-     * Only file shares grade access (Read / Read-Write) and only email groups and file shares
-     * have an owner; a social or software membership carries no level at all, so the honest
-     * answer for those is simply that they are a member. A blank cell here would read as
-     * missing data in the one column that says what has to be done to the row.
-     */
+    /** How the access is held, in the Access Directory words; never blank. */
     private function heldAs(AccessMembership $membership): string
     {
         $level = (string) $membership->access_level;
@@ -245,10 +268,7 @@ class AccessService
     }
 
     /**
-     * One row of the table.
-     *
-     * Every cell through text(): names and paths are typed by hand, so an ampersand or a
-     * stray angle bracket would otherwise reach the message as markup.
+     * One row of the table; every cell goes through text() so typed names never reach the mail as markup.
      *
      * @return list<string>
      */
@@ -267,10 +287,7 @@ class AccessService
     }
 
     /**
-     * Aggregate figures for the Access Directory "overview" tab: per-channel
-     * counts (resources / active grants / net change in the period), the
-     * active-grant distribution total, a handful of governance-hygiene checks,
-     * and the most-reached resources. Returned as a plain array (rendered as-is).
+     * The Access Directory overview figures: per-channel counts, grant total, hygiene checks and top resources.
      *
      * @return array<string, mixed>
      */
@@ -399,9 +416,7 @@ class AccessService
     }
 
     /**
-     * The most-reached resources across all four types, ranked by active-grant
-     * count. Each row carries the front-end tab key (for linking) plus a type-
-     * appropriate detail line: email / path / url, or the publisher for software.
+     * The most-granted resources across the four types, with the tab key and a detail line.
      *
      * @return array<int, array{id: int, name: string, detail: string|null, logo: string|null, kind: string, grants: int}>
      */
@@ -425,10 +440,7 @@ class AccessService
         return $rows->sortByDesc('grants')->take($limit)->values()->all();
     }
 
-    /**
-     * Wrap an owned resource in a membership-shaped row (no access level, negative id
-     * so it never collides with a real membership id used as the list key).
-     */
+    /** An owned resource as a membership-shaped row with a negative id, so it never clashes with a real one. */
     private function ownerRow(Model $resource): AccessMembership
     {
         $m = new AccessMembership;

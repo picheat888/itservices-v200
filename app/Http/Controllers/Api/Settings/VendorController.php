@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Settings\Vendor;
+use App\Support\InUse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -56,9 +57,12 @@ class VendorController extends Controller
     /** Delete a vendor — blocked (409) while any asset or contract still references it. */
     public function destroy(Vendor $vendor): JsonResponse
     {
-        $count = Asset::where('vendor_id', $vendor->id)->count() + Contract::where('vendor_id', $vendor->id)->count();
-        if ($count > 0) {
-            return response()->json(['message' => 'in_use', 'count' => $count], 409);
+        $refusal = InUse::refusal([
+            Asset::where('vendor_id', $vendor->id)->count(),
+            Contract::where('vendor_id', $vendor->id)->count(),
+        ]);
+        if ($refusal) {
+            return $refusal;
         }
         AuditLog::recordDeleted('Deleted vendor', $vendor->name, $vendor);
         $vendor->delete();

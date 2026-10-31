@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Settings\WriteoffReason;
+use App\Support\InUse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -51,9 +52,9 @@ class WriteoffReasonController extends Controller
     /** Delete a reason — blocked (409) while any asset was written off with it. */
     public function destroy(WriteoffReason $writeoffReason): JsonResponse
     {
-        $count = Asset::where('writeoff_reason_id', $writeoffReason->id)->count();
-        if ($count > 0) {
-            return response()->json(['message' => 'in_use', 'count' => $count], 409);
+        $refusal = InUse::refusal([Asset::where('writeoff_reason_id', $writeoffReason->id)->count()]);
+        if ($refusal) {
+            return $refusal;
         }
         AuditLog::recordDeleted('Deleted write-off reason', $writeoffReason->name, $writeoffReason);
         $writeoffReason->delete();

@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Settings\AssetModel;
 use App\Models\Stock\StockItem;
+use App\Support\InUse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -53,9 +54,12 @@ class AssetModelController extends Controller
     /** Delete an asset model — blocked (409) while any asset or stock item still references it. */
     public function destroy(AssetModel $assetModel): JsonResponse
     {
-        $count = Asset::where('model_id', $assetModel->id)->count() + StockItem::where('model_id', $assetModel->id)->count();
-        if ($count > 0) {
-            return response()->json(['message' => 'in_use', 'count' => $count], 409);
+        $refusal = InUse::refusal([
+            Asset::where('model_id', $assetModel->id)->count(),
+            StockItem::where('model_id', $assetModel->id)->count(),
+        ]);
+        if ($refusal) {
+            return $refusal;
         }
         AuditLog::recordDeleted('Deleted asset model', $assetModel->name, $assetModel);
         $assetModel->delete();

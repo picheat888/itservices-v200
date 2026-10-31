@@ -69,10 +69,7 @@ class Contract extends Model
         ];
     }
 
-    /**
-     * Auto-generate a CT-YYYY-NNN code when one isn't supplied, and stamp who cancelled it: set with
-     * cancelled_at (ContractService::cancel), cleared when it is reactivated.
-     */
+    /** Fills a missing CT-YYYY-NNN code and stamps who cancelled (set with cancelled_at, cleared on reactivate). */
     protected static function booted(): void
     {
         static::creating(function (Contract $contract) {
@@ -89,12 +86,7 @@ class Contract extends Model
     }
 
     /**
-     * The next CT-<year>-### nobody holds.
-     *
-     * Counting from `max(id)` is a starting point, not an answer: contract numbers can
-     * also be typed in by hand on the form, so the number the counter lands on may
-     * already be taken — and `contracts.code` is unique, so that reaches the database
-     * as a violation nobody can report against a field.
+     * The next CT-<year>-### nobody holds; codes can be typed by hand, so max(id) is only where the search starts.
      *
      * @param  string|null  $startDate  the contract's own start date — the year is part of the code
      */
@@ -132,10 +124,7 @@ class Contract extends Model
         return array_values(array_filter(self::REMINDER_DAYS, fn (int $d) => (bool) $this->{"notify_{$d}"}));
     }
 
-    /**
-     * The earliest enabled reminder threshold — the point at which this contract
-     * first enters its reminder window. Null when no reminders are enabled.
-     */
+    /** The earliest enabled reminder threshold, where the reminder window starts; null with no reminders on. */
     public function reminderThreshold(): ?int
     {
         $enabled = $this->enabledReminderDays();
@@ -155,10 +144,7 @@ class Contract extends Model
         return ! $this->isClosed() && $this->daysRemaining() < 0;
     }
 
-    /**
-     * Still live and inside its own reminder window (days remaining ≤ earliest enabled threshold);
-     * the end date itself always counts, reminders or not.
-     */
+    /** Live and inside its reminder window (earliest enabled threshold); the end date itself always counts. */
     public function isInReminder(): bool
     {
         if ($this->isClosed()) {
@@ -186,6 +172,31 @@ class Contract extends Model
                         ->whereDate('end_date', '<=', $today->copy()->addDays($days)));
                 }
             });
+    }
+
+    /** The list's ใกล้หมดอายุ tab: isInReminder() in SQL (live, ending today, or inside an enabled threshold). */
+    public function scopeExpiring(Builder $query): void
+    {
+        $query->whereNull('cancelled_at')
+            ->whereNull('expired_at')
+            ->whereDate('end_date', '>=', today())
+            ->where(function ($w) {
+                $w->whereDate('end_date', today());
+                foreach (self::REMINDER_DAYS as $d) {
+                    $w->orWhere(function ($q) use ($d) {
+                        $q->where("notify_{$d}", true)
+                            ->whereDate('end_date', '<=', now()->copy()->addDays($d));
+                    });
+                }
+            });
+    }
+
+    /** The list's เกินกำหนด tab: isOverdue() in SQL (live, end date before today). */
+    public function scopeExpired(Builder $query): void
+    {
+        $query->whereNull('cancelled_at')
+            ->whereNull('expired_at')
+            ->whereDate('end_date', '<', today());
     }
 
     /** Derived lifecycle status: expired (manual, permanent) › cancelled › active/overdue by date. */
@@ -216,12 +227,7 @@ class Contract extends Model
         return (float) $this->value * $multiplier;
     }
 
-    /**
-     * Whole-months part of the contract term (calendar-accurate, e.g. 24), paired
-     * with durationDays() for the leftover days. The end date is inclusive (the
-     * last active day), so the term is counted through end + 1 day: a contract
-     * 1 Jan–31 Dec = 12 months; a single-day contract (start = end) = 0 months 1 day.
-     */
+    /** Whole months of the term, end date inclusive (1 Jan to 31 Dec = 12; start = end = 0 months 1 day). */
     public function durationMonths(): int
     {
         $diff = $this->start_date->diff($this->end_date->copy()->addDay());

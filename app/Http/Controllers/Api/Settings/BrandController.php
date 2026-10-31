@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Stock\StockItem;
+use App\Support\InUse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -50,12 +51,14 @@ class BrandController extends Controller
     /** Delete a brand — blocked (409) while any model, asset, stock item or software still references it. */
     public function destroy(Brand $brand): JsonResponse
     {
-        $count = AssetModel::where('brand_id', $brand->id)->count()
-            + Asset::where('brand_id', $brand->id)->count()
-            + StockItem::where('brand_id', $brand->id)->count()
-            + Software::where('brand_id', $brand->id)->count();
-        if ($count > 0) {
-            return response()->json(['message' => 'in_use', 'count' => $count], 409);
+        $refusal = InUse::refusal([
+            AssetModel::where('brand_id', $brand->id)->count(),
+            Asset::where('brand_id', $brand->id)->count(),
+            StockItem::where('brand_id', $brand->id)->count(),
+            Software::where('brand_id', $brand->id)->count(),
+        ]);
+        if ($refusal) {
+            return $refusal;
         }
         AuditLog::recordDeleted('Deleted brand', $brand->name, $brand);
         $brand->delete();

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Workflow;
 
-use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
@@ -10,20 +9,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Request\UpdateWorkflowRequest;
 use App\Http\Resources\Request\WorkflowResource;
 use App\Models\Employee\Employee;
-use App\Models\Employee\Position;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\WorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/**
- * Workflows admin (reads gated by permission:workflows.module, writes by
- * permission:workflows.manage): list the ten definitions, replace a workflow's
- * steps/flags, and preview how a step list resolves along a real employee's
- * reporting line. Editing never touches in-flight requests — they run on their
- * submit-time snapshot.
- */
+/** Workflows admin (reads workflows.module, writes workflows.manage): list, replace steps, preview; in-flight requests keep their snapshot. */
 class WorkflowController extends Controller
 {
     public function __construct(private readonly WorkflowService $workflows) {}
@@ -67,45 +59,15 @@ class WorkflowController extends Controller
         ]);
     }
 
-    /**
-     * The job titles a chain rung can name — the editor's position picker.
-     *
-     * Read-only peek at Employee-module master data under the workflows.module gate:
-     * choosing who approves is a workflow decision, so it must not also require the
-     * permission to administer positions.
-     */
+    /** The editor's position picker: a read-only peek under workflows.module, no positions admin right needed. */
     public function positionOptions(): JsonResponse
     {
-        return response()->json([
-            'data' => Position::orderBy('code')->get()->map(fn (Position $position) => [
-                'id' => $position->id,
-                'title' => $position->title,
-            ])->values(),
-        ]);
+        return response()->json(['data' => $this->workflows->positionOptions()]);
     }
 
-    /**
-     * Active employees with a login account — the editor's "test with" picker.
-     * Own-module endpoint under the workflows.module gate (read-only peek).
-     */
+    /** The editor's "test with" picker: active employees with a login (read-only peek under workflows.module). */
     public function employeeOptions(): JsonResponse
     {
-        $employees = Employee::with(['position', 'department'])
-            ->where('status', EmployeeStatus::Active->value)
-            ->whereHas('user')
-            ->orderBy('first_name')
-            ->get();
-
-        return response()->json([
-            'data' => $employees->map(fn (Employee $e) => [
-                'id' => $e->id,
-                'code' => $e->code,
-                'name' => $e->name,
-                'name_th' => $e->name_th,
-                'position' => $e->position?->title,
-                'department' => $e->department?->name,
-                'department_th' => $e->department?->name_th,
-            ])->values(),
-        ]);
+        return response()->json(['data' => $this->workflows->employeeOptions()]);
     }
 }

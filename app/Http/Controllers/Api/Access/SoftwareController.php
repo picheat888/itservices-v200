@@ -13,7 +13,6 @@ use App\Models\AuditLog;
 use App\Services\Access\AccessService;
 use App\Services\Access\ResourceLogoService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class SoftwareController extends Controller
 {
@@ -40,41 +39,17 @@ class SoftwareController extends Controller
     /** Update an existing software entry. */
     public function update(StoreSoftwareRequest $request, Software $software, AccessService $svc): JsonResponse
     {
-        $before = $software->getOriginal();
-        DB::transaction(function () use ($request, $software, $svc): void {
-            $svc->guardSeatCount($software, $request->validated('seats'));
-            $software->update($this->logos->apply($request->safe()->except('seats_unlimited'), $request->file('logo'), 'software-logos', $software->logo_path));
-        });
-        AuditLog::record('Updated software', $software->name, $this->auditChanges($before, $software), subject: $software);
+        $svc->updateSoftware($software, $request->validated(), $request->file('logo'));
 
         return (new SoftwareResource($software))->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Audit diff with the product key masked: the log only says it changed, never the key.
-     *
-     * @param  array<string, mixed>  $before
-     * @return array<string, mixed>|null
-     */
-    private function auditChanges(array $before, Software $software): ?array
-    {
-        $changes = AuditLog::changes($before, $software, ['product_key']);
-        if ($software->wasChanged('product_key')) {
-            $mask = fn (mixed $key): ?string => filled($key) ? '••••' : null;
-            $changes['changes']['product_key'] = ['from' => $mask($before['product_key'] ?? null), 'to' => $mask($software->product_key)];
-        }
-
-        return $changes;
-    }
-
     /** Delete a software entry, guarding against active members. */
-    public function destroy(Software $software): JsonResponse
+    public function destroy(Software $software, AccessService $svc): JsonResponse
     {
-        if ($software->memberships()->active()->exists()) {
+        if (! $svc->deleteSoftware($software)) {
             return response()->json(['message' => 'resource_has_members'], 422);
         }
-        AuditLog::recordDeleted('Deleted software', $software->name, $software);
-        $software->delete();
 
         return response()->json(['message' => 'success']);
     }
@@ -98,12 +73,7 @@ class SoftwareController extends Controller
     /** Soft-revoke an employee's licence. */
     public function revokeMember(Software $software, AccessMembership $membership, AccessService $svc): JsonResponse
     {
-        if ($membership->revoked_at !== null) {
-            return response()->json(['message' => 'success']);
-        }
-
-        AuditLog::record('Removed member from software', $software->name, ['employee' => $membership->employee?->name], subject: $software);
-        $svc->revoke($membership);
+        $svc->revokeSoftwareMember($software, $membership);
 
         return response()->json(['message' => 'success']);
     }

@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Settings\Category;
 use App\Models\Stock\StockItem;
+use App\Support\InUse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -52,9 +53,12 @@ class CategoryController extends Controller
     /** Delete a category — blocked (409) while any asset or stock item still references it. */
     public function destroy(Category $category): JsonResponse
     {
-        $count = Asset::where('category_id', $category->id)->count() + StockItem::where('category_id', $category->id)->count();
-        if ($count > 0) {
-            return response()->json(['message' => 'in_use', 'count' => $count], 409);
+        $refusal = InUse::refusal([
+            Asset::where('category_id', $category->id)->count(),
+            StockItem::where('category_id', $category->id)->count(),
+        ]);
+        if ($refusal) {
+            return $refusal;
         }
         AuditLog::recordDeleted('Deleted category', $category->name, $category);
         $category->delete();

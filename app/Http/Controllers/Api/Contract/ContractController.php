@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Api\Contract;
 
-use App\Enums\Asset\AssetStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Contract\StoreContractRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
+use App\Services\Contract\ContractListService;
 use App\Services\Contract\ContractService;
 use App\Services\Contract\ContractSummaryService;
-use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,63 +27,17 @@ class ContractController extends Controller
     }
 
     /** Paginated contract list with search, type, sort and the expiring / expired tabs. */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ContractListService $lists): JsonResponse
     {
         $this->gateView($request);
 
-        $query = Contract::query()
-            ->with('vendor')
-            ->withCount([
-                'assets',
-                'assets as open_assets_count' => fn ($assets) => $assets->where('status', '!=', AssetStatus::Writeoff->value),
-            ]);
-
-        // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
-        match ($request->query('sort', 'end_asc')) {
-            'end_desc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('end_date', 'desc'),
-            'created_desc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('created_at', 'desc'),
-            'created_asc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('created_at', 'asc'),
-            'value_desc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('value', 'desc'),
-            'value_asc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('value', 'asc'),
-            default => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('end_date', 'asc'),
-        };
-        // Tie-breaker so equal dates/values never swap or repeat across pages.
-        $query->orderBy('id');
-
-        SearchTerms::apply($query, $request->query('search'), [
-            'code', 'name', 'details',
-            SearchTerms::related('vendor', ['name', 'name_th']),
+        $paginator = $lists->page([
+            'sort' => $request->query('sort', 'end_asc'),
+            'search' => $request->query('search'),
+            'type' => $request->filled('type') ? $request->query('type') : null,
+            'tab' => $request->query('tab'),
+            'per_page' => max(10, min(100, (int) $request->query('per_page', 20))),
         ]);
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->query('type'));
-        }
-
-        if ($request->query('tab') === 'expiring') {
-            // Contract::isInReminder() in SQL: live, ending today, or inside an enabled threshold
-            $query->whereNull('cancelled_at')
-                ->whereNull('expired_at')
-                ->whereDate('end_date', '>=', today())
-                ->where(function ($w) {
-                    $w->whereDate('end_date', today());
-                    foreach (Contract::REMINDER_DAYS as $d) {
-                        $w->orWhere(function ($q) use ($d) {
-                            $q->where("notify_{$d}", true)
-                                ->whereDate('end_date', '<=', now()->copy()->addDays($d));
-                        });
-                    }
-                });
-        }
-
-        if ($request->query('tab') === 'expired') {
-            // Contract::isOverdue() in SQL: live, and the end date is before today
-            $query->whereNull('cancelled_at')
-                ->whereNull('expired_at')
-                ->whereDate('end_date', '<', today());
-        }
-
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'data' => ContractResource::collection($paginator->items()),
