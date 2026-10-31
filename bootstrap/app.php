@@ -7,12 +7,14 @@ use App\Http\Middleware\LogRateLimitHits;
 use App\Http\Middleware\SetRequestLocale;
 use App\Http\Middleware\TrackDevice;
 use App\Support\DatabaseBusy;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -41,6 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request) => '/login?next='.rawurlencode($request->getRequestUri()));
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // A refusal that carries a code (Response::deny('own_account', 'own_account_resign')) answers both, as the SPA reads them
+        $exceptions->map(fn (AuthorizationException $e) => $e->getCode() ? new HttpResponseException(response()->json([
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+        ], $e->status() ?? 403)) : $e);
         // A browser whose device was ended elsewhere has lost its session row; it still learns why
         $exceptions->render(fn (AuthenticationException $e, Request $request) => TrackDevice::answerLostSession($request));
         // A full or unreachable database asks the reader to wait (503 + Retry-After); the QueryException is still logged

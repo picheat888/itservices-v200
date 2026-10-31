@@ -9,29 +9,26 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\User;
+use App\Services\Employee\EmployeeActionGuard;
 use App\Services\Employee\EmployeeOnboardingService;
 use App\Support\RequestSchemas;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreEmployeeRequest extends FormRequest
 {
-    /**
-     * Gate by the granular Employee permission: creating a record requires
-     * employees.add, updating an existing one requires employees.edit. The
-     * presence of an {employee} route binding distinguishes update from store.
-     */
-    public function authorize(): bool
+    /** Creating needs employees.add, editing employees.edit; an Administrator is edited by an Administrator only. */
+    public function authorize(EmployeeActionGuard $guard): bool|Response
     {
         $user = $this->user();
-        if (! $user) {
+        $employee = $this->route('employee');
+        if (! $user?->hasPermission($employee ? 'employees.edit' : 'employees.add')) {
             return false;
         }
 
-        $permission = $this->route('employee') ? 'employees.edit' : 'employees.add';
-
-        return (bool) $user->hasPermission($permission);
+        return $employee ? $guard->canEdit($user, $employee) : true;
     }
 
     /**

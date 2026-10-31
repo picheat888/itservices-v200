@@ -6,7 +6,10 @@ use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ChainBlockReason;
 use App\Enums\Request\RequestType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Employee\ResignEmployeeRequest;
+use App\Http\Requests\Employee\StoreEmployeeCredentialsRequest;
 use App\Http\Requests\Employee\StoreEmployeeRequest;
+use App\Http\Requests\Employee\UpdateEmployeeCredentialsRequest;
 use App\Http\Resources\Access\EmployeeAccessResource;
 use App\Http\Resources\Employee\ApproverNodeResource;
 use App\Http\Resources\Employee\EmployeeOptionResource;
@@ -20,10 +23,10 @@ use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Request\ServiceRequest;
 use App\Models\Ticket\Ticket;
-use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Access\AccessService;
 use App\Services\Employee\ApprovalChainService;
+use App\Services\Employee\EmployeeActionGuard;
 use App\Services\Employee\EmployeeImportService;
 use App\Services\Employee\EmployeeOnboardingService;
 use App\Services\Employee\EmployeeService;
@@ -37,81 +40,23 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
-    /**
-     * Login-name rules shared by account creation and username changes. English letters only —
-     * the name must start with a letter, end with a letter or digit, and may use . _ - in
-     * between (the separator set accepted by AD / POSIX logins). The frontend mirrors this
-     * pattern for instant feedback; this copy is the authority.
-     *
-     * @var list<string>
-     */
-    private const USERNAME_RULES = ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z0-9._-]*[A-Za-z0-9]$/'];
-
-    /**
-     * The one reason a day-one service cannot be requested that is not a ChainBlockReason:
-     * the service's workflow is missing or switched off. Sits beside those codes in the
-     * precheck response so the SPA translates all of them the same way.
-     */
+    /** A day-one service whose workflow is missing or off; sits beside the ChainBlockReason codes. */
     private const WORKFLOW_INACTIVE = 'workflow_inactive';
-
-    /**
-     * Password policy for admin-set credentials — the complexity set Active Directory and most
-     * corporate policies use. The forms mirror it as a live checklist; this copy is the authority.
-     */
-    private static function passwordRule(): Password
-    {
-        return Password::min(8)->mixedCase()->numbers()->symbols();
-    }
-
-    /**
-     * Temporary password used when a reset arrives without one. Takes a character from each
-     * required class first so the result always satisfies passwordRule(), then fills and
-     * shuffles. Ambiguous glyphs (0/O, 1/l/I) are left out so it survives being read aloud.
-     */
-    private function generatePassword(int $length = 14): string
-    {
-        $pools = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789', '!@#$%&*?'];
-        $combined = implode('', $pools);
-
-        $chars = array_map(fn (string $pool) => $pool[random_int(0, strlen($pool) - 1)], $pools);
-        while (count($chars) < $length) {
-            $chars[] = $combined[random_int(0, strlen($combined) - 1)];
-        }
-        shuffle($chars);
-
-        return implode('', $chars);
-    }
-
-    /**
-     * Fold an incoming username to lower case before it is validated or stored. Logins are
-     * case-insensitive, so this keeps "John_Do" from slipping past an existing "john_do" —
-     * a guarantee that would otherwise rest on the database collation alone.
-     */
-    private function normalizeUsername(Request $request): void
-    {
-        if ($request->has('username')) {
-            $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
-        }
-    }
 
     public function __construct(
         private readonly EmployeeService $service,
         private readonly EmployeeImportService $importService,
         private readonly EmployeeOnboardingService $onboarding,
+        private readonly EmployeeActionGuard $guard,
     ) {}
 
     /**
-     * Pull the uploaded photo (if any) out of the validated data and replace
-     * it with a stored path, deleting the previous file when present.
+     * Swaps an uploaded photo for its stored path, deleting the previous file.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -129,12 +74,10 @@ class EmployeeController extends Controller
         return $data;
     }
 
-    /**
-     * Directory page: search (name, code, email, username), department and status filters.
-     */
+    /** Directory page: search (name, code, email, username), department and status filters. */
     public function index(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        $this->guard->canView($request->user())->authorize();
 
         $query = $this->service->inDirectoryOrder(Employee::with(['department', 'position', 'section', 'user.role']));
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -173,9 +116,7 @@ class EmployeeController extends Controller
         ]);
     }
 
-    /**
-     * Slim employee rows for pickers and lookups — open to any signed-in user, no personal fields.
-     */
+    /** Slim rows for pickers, open to any signed-in user, no personal fields. */
     public function options(Request $request): JsonResponse
     {
         $params = $request->validate([
@@ -203,13 +144,10 @@ class EmployeeController extends Controller
         return EmployeeOptionResource::collection($this->service->pickerList($filters))->response();
     }
 
-    /**
-     * Overview stats. Headcount and status are as of now; hires, resignations and the hiring
-     * chart follow the chosen period (OverviewPeriod, all time by default).
-     */
+    /** Overview stats: headcount as of now; hires, resignations and the hiring chart follow the period. */
     public function summary(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view_dashboard'), 403);
+        $this->guard->canViewOverview($request->user())->authorize();
         $period = OverviewPeriod::fromRequest($request)->onDates();
         $resignedQuery = fn () => Employee::where('status', EmployeeStatus::Resigned->value);
 
@@ -242,16 +180,10 @@ class EmployeeController extends Controller
         ]);
     }
 
-    /**
-     * Streams a CSV template (UTF-8 BOM so Excel renders Thai) with the import column
-     * headers and one example row. The example is filled from the master data actually
-     * present — a real department tag, one of ITS sections, a normal position title and
-     * an existing employee code — so the file shows the spelling the import expects
-     * instead of names somebody has to guess at.
-     */
+    /** CSV template (UTF-8 BOM for Excel) with one example row from the real master data. */
     public function importTemplate(Request $request): StreamedResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
+        $this->guard->canImport($request->user())->authorize();
 
         $headers = EmployeeImportService::COLUMNS;
         $sample = $this->importSampleRow();
@@ -265,17 +197,10 @@ class EmployeeController extends Controller
         }, 'employee-import-template.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    /**
-     * Every spelling the import accepts for department / section / position, as its own
-     * small CSV.
-     *
-     * A separate download rather than a second sheet, because the file is filled in
-     * Excel long after the dialog was closed: the person typing needs this open BESIDE
-     * the template, and a .csv opens there without being unpacked first.
-     */
+    /** Every spelling the import accepts for department, section and position, as a CSV to open beside the template. */
     public function importReference(Request $request): StreamedResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
+        $this->guard->canImport($request->user())->authorize();
 
         $departments = Department::orderBy('name')->get();
         $sections = Section::with('department')->orderBy('name')->get();
@@ -288,8 +213,7 @@ class EmployeeController extends Controller
             ])];
         }
         foreach ($sections as $section) {
-            // The department is part of the answer, not a note: the same section name
-            // may exist in several, and each row only resolves inside its own.
+            // A section name resolves only inside its own department
             $rows[] = ['section', $section->name, $section->department?->name ?? '', $this->alsoAccepted([
                 $section->code, $section->name_th,
             ])];
@@ -316,8 +240,7 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Example row for the template: real master-data spellings when the tables are
-     * populated, static placeholders on a bare install.
+     * The template's example row: real master-data spellings, placeholders on a bare install.
      *
      * @return list<string>
      */
@@ -345,15 +268,10 @@ class EmployeeController extends Controller
         ];
     }
 
-    /**
-     * Dry-runs an uploaded CSV: same rules as the real import, nothing written. Returns
-     * every row with its resolved department / section / position / manager plus the
-     * errors it would raise, so the dialog can show what is about to be saved. A file
-     * full of errors is still a 200 — this is a report, not a failed action.
-     */
+    /** Dry-runs an uploaded CSV with the import's rules; a file full of errors is still a 200 report. */
     public function importPreview(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
+        $this->guard->canImport($request->user())->authorize();
 
         $rows = $this->readImportFile($request);
         if ($rows instanceof JsonResponse) {
@@ -364,9 +282,7 @@ class EmployeeController extends Controller
         $valid = count(array_filter($result['rows'], fn (array $row) => $row['errors'] === []));
         $total = count($result['rows']);
 
-        // The counts describe the whole file; the listing is the first page of it.
-        // Bad rows lead, because a listing that stops at 500 must not stop before the
-        // rows the person actually has to go and fix.
+        // Counts cover the whole file; the listing is capped, bad rows first
         $listed = collect($result['rows'])
             ->sortBy(fn (array $row) => $row['errors'] === [] ? 1 : 0)
             ->take(EmployeeImportService::PREVIEW_LIMIT)
@@ -388,13 +304,10 @@ class EmployeeController extends Controller
         ]);
     }
 
-    /**
-     * Bulk-imports employees from an uploaded CSV. Validation is all-or-nothing:
-     * any bad row aborts the whole import and returns a 422 with per-row errors.
-     */
+    /** Bulk-imports employees from a CSV, all or nothing: any bad row is a 422 with per-row errors. */
     public function import(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
+        $this->guard->canImport($request->user())->authorize();
 
         $rows = $this->readImportFile($request);
         if ($rows instanceof JsonResponse) {
@@ -404,11 +317,7 @@ class EmployeeController extends Controller
         try {
             $result = $this->importService->importRows($rows);
         } catch (UniqueConstraintViolationException) {
-            // The rules the preview ran are the rules this run ran, so the only way to
-            // land here is a collision created between the two — somebody else saving
-            // an employee, or a second import, while this file was being checked.
-            // Answered as a 422 the dialog can print: a 500 takes over the whole screen
-            // and loses the file the person had just chosen.
+            // Someone saved a clashing employee between the preview and this run
             return response()->json([
                 'message' => 'มีข้อมูลพนักงานถูกเปลี่ยนแปลงระหว่างตรวจไฟล์ (รหัสหรืออีเมลซ้ำ) ยังไม่ได้นำเข้า กรุณาตรวจไฟล์อีกครั้งแล้วลองใหม่',
                 'errors' => [],
@@ -428,8 +337,7 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Validates the upload and parses it, or returns the 422 to send back. Shared by
-     * the preview and the real import so both accept exactly the same files.
+     * Validates and parses the upload, or returns the 422 to send; the preview and the import share it.
      *
      * @return array<int, array<string, string>>|JsonResponse
      */
@@ -450,9 +358,7 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Columns in the uploaded file that the import has no field for. They are ignored
-     * rather than rejected (an HR export carries plenty of payroll columns), but the
-     * preview names them so nobody assumes a column was saved when it was not.
+     * Columns the import has no field for: ignored, but named in the preview.
      *
      * @param  array<int, array<string, string>>  $rows
      * @return list<string>
@@ -463,23 +369,10 @@ class EmployeeController extends Controller
         return CsvReader::unknownColumns($rows, array_merge(EmployeeImportService::COLUMNS, ['code']));
     }
 
-    /**
-     * The detail each day-one service asks for, so Step 3 can collect it instead of
-     * filing a request with no device type on it.
-     *
-     * Reads RequestSchemas, which resolves every `managed` choice out of
-     * request_options — so a device type IT adds under Settings → Request data appears
-     * here without a deploy, which is the whole point of those fields being rows.
-     *
-     * A separate endpoint from service-requests/options on purpose: that one is gated by
-     * requests.submit and carries the request types the user may file, their workflows and source lists.
-     * The HR role happens to hold requests.submit today, but an administrator can revoke
-     * it, and Step 3 would then break on a permission belonging to a module this form
-     * never opens. Gated by employees.add — the cross-module "peek" rule.
-     */
+    /** The detail each day-one service asks for on Step 3, gated by employees.add (cross-module peek). */
     public function onboardingServices(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
+        $this->guard->canAdd($request->user())->authorize();
 
         $services = array_map(fn (string $service) => [
             'service' => $service,
@@ -489,25 +382,10 @@ class EmployeeController extends Controller
         return response()->json(['data' => $services, 'message' => 'success']);
     }
 
-    /**
-     * Whether the day-one service requests on the Add Employee form could be filed for
-     * somebody who does not exist yet — asked while Step 3 is on screen, so the form can
-     * say why up front instead of after the employee is already saved.
-     *
-     * Routing depends on nothing but the two Step-2 answers: who they report to, and
-     * what position they hold. An unsaved Employee carrying just those two is therefore
-     * enough for the real blockReason() to judge, which is the point — the preview
-     * cannot drift from what Save actually does, because it is the same code.
-     *
-     * Advisory only. RequestService checks again at submit time, which is what catches a
-     * manager who resigns while this dialog sits open.
-     *
-     * Gated by employees.add, not workflows.view: the Add Employee form is the only
-     * caller and this reads Workflow data on its behalf — the cross-module "peek" rule.
-     */
+    /** Whether the day-one requests could be filed for the person on the form; advisory, submit checks again. */
     public function onboardingPrecheck(Request $request, WorkflowResolverService $resolver, ApprovalChainService $chain): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
+        $this->guard->canAdd($request->user())->authorize();
 
         $data = $request->validate([
             'manager_id' => ['nullable', 'integer', 'exists:employees,id'],
@@ -532,10 +410,7 @@ class EmployeeController extends Controller
             }
         }
 
-        // One banner covers all three services, so pick the reason worth putting on it:
-        // a reporting line that cannot carry the request is what the person filling this
-        // form can go and fix, while a closed workflow is the admin's and only earns the
-        // banner when nothing else is wrong.
+        // One banner for all three services: a fixable reporting line beats a closed workflow
         $reason = collect([
             ChainBlockReason::ApproverResigned->value,
             ChainBlockReason::NoManager->value,
@@ -543,8 +418,7 @@ class EmployeeController extends Controller
             ChainBlockReason::WorkflowIncomplete->value,
         ])->first(fn (string $candidate) => in_array($candidate, $codes, true));
 
-        // Named only for the resigned case — that is the one message that is useless
-        // without knowing whose record to go and fix.
+        // Named only for the resigned case, which is useless without whose record to fix
         $resigned = $reason === ChainBlockReason::ApproverResigned->value
             ? $chain->chainFor($prospect)->filter(fn (Employee $manager) => $manager->status === EmployeeStatus::Resigned)->values()
             : collect();
@@ -558,14 +432,7 @@ class EmployeeController extends Controller
         ]);
     }
 
-    /**
-     * Creates the employee, then — for the day-one services ticked on the form —
-     * files one service request per service on their behalf.
-     *
-     * The requests come after the employee is saved and never roll it back: a
-     * service whose workflow is closed is reported under `onboarding.failed` so the
-     * form can say which one did not go out, while the person stays hired.
-     */
+    /** Creates the employee, then files the ticked day-one requests; a failed request never undoes the hire. */
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
         $data = $this->handlePhoto($request, $request->validated());
@@ -597,12 +464,7 @@ class EmployeeController extends Controller
     /** One employee's full record: the Employee module's detail view, or your own profile. */
     public function show(Request $request, Employee $employee): JsonResponse
     {
-        $user = $request->user();
-        abort_unless(
-            (bool) $user?->hasPermission('employees.view')
-                || ($user?->employee_id !== null && (int) $user->employee_id === (int) $employee->id),
-            403,
-        );
+        $this->guard->canShow($request->user(), $employee)->authorize();
 
         $employee->load(['department', 'position', 'section', 'manager', 'creator.employee', 'updater.employee'])
             ->loadCount('activeSubordinates as direct_reports_count');
@@ -610,17 +472,10 @@ class EmployeeController extends Controller
         return (new EmployeeResource($employee))->response();
     }
 
-    /**
-     * Read-only list of the assets this employee currently holds, for the Employee detail's
-     * Assets tab. Gated by employees.view (an Employee-module read) — NOT assets.view — since
-     * it only surfaces what the person holds, scoped to that one employee. Mirrors the
-     * own-module "peek" pattern used by the asset → contract view.
-     *
-     * @return array<string, mixed>
-     */
+    /** Assets the employee holds, for the detail's Assets tab (employees.view peek). */
     public function assets(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        $this->guard->canView($request->user())->authorize();
 
         $assets = Asset::query()
             ->with(['category', 'model'])
@@ -642,15 +497,10 @@ class EmployeeController extends Controller
         return response()->json(['data' => $assets]);
     }
 
-    /**
-     * Read-only view of the access memberships this employee holds, for the Employee detail's
-     * Access tab. Gated by employees.view (an Employee-module read) — NOT access.module — since
-     * it only surfaces what this one person can reach. Mirrors the own-module "peek" pattern
-     * used by the Assets tab above.
-     */
+    /** Access memberships the employee holds, for the detail's Access tab (employees.view peek). */
     public function access(Request $request, Employee $employee, AccessService $accessService): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        $this->guard->canView($request->user())->authorize();
 
         $grouped = $accessService->employeeAccess($employee);
         // Let the resource flag rows this employee owns (approver / share owner).
@@ -662,14 +512,10 @@ class EmployeeController extends Controller
         return (new EmployeeAccessResource($grouped))->response();
     }
 
-    /**
-     * Read-only list of the tickets this employee has requested, for the Employee detail's
-     * Tickets tab. Gated by employees.view (an Employee-module read) — NOT tickets permissions —
-     * same own-module "peek" pattern as the Assets and Access tabs above.
-     */
+    /** Tickets the employee raised, for the detail's Tickets tab (employees.view peek). */
     public function tickets(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        $this->guard->canView($request->user())->authorize();
 
         $tickets = Ticket::query()
             ->where('requester_id', $employee->id)
@@ -688,22 +534,10 @@ class EmployeeController extends Controller
         return response()->json(['data' => $tickets]);
     }
 
-    /**
-     * Read-only list of the service requests this employee owns, for the Employee detail's
-     * Requests tab. Gated by employees.view — same own-module "peek" pattern as the tabs above.
-     *
-     * Ownership spans two columns because a request can be filed before its owner has a login:
-     * `employee_id` holds the person it is for (how onboarding requests HR filed are found) and
-     * `user_id` holds the account that filed it for themselves. Requests this person merely
-     * submitted for somebody else (`submitted_by_user_id`) belong on that person's tab, not here.
-     *
-     * `title` is deliberately absent: the column stores one canonical English string for the
-     * ticket subject and the approval emails, while the screen writes the name in the reader's
-     * language via `requestTitle()`. Sending it would put the filer's language in the table.
-     */
+    /** Requests the employee owns (employee_id or their own user_id), for the detail's Requests tab. */
     public function requests(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        $this->guard->canView($request->user())->authorize();
 
         $userId = $employee->user()->value('id');
 
@@ -715,8 +549,7 @@ class EmployeeController extends Controller
                     $query->orWhere('user_id', $userId);
                 }
             })
-            // `id` breaks the tie: several onboarding requests are filed in the same second,
-            // and without it the newest of them lands wherever the database felt like.
+            // Onboarding requests share a second; id breaks the tie
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get()
@@ -732,15 +565,10 @@ class EmployeeController extends Controller
         return response()->json(['data' => $requests]);
     }
 
-    /**
-     * Returns active employees as a flat list of org-chart nodes (resigned
-     * excluded). The frontend assembles the reporting forest from manager_id;
-     * reports_count is the number of active direct reports.
-     * Requires the employees.view_org permission.
-     */
+    /** Working employees as flat org-chart nodes; the SPA builds the tree from manager_id. */
     public function orgChart(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view_org'), 403);
+        $this->guard->canViewOrgChart($request->user())->authorize();
 
         $employees = Employee::query()
             ->where('status', EmployeeStatus::Active)
@@ -756,7 +584,7 @@ class EmployeeController extends Controller
     /** Returns the employee's approval chain (direct manager first, up to the root of the reporting tree). */
     public function approvalChain(Request $request, Employee $employee, ApprovalChainService $chain): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        $this->guard->canView($request->user())->authorize();
 
         // chainFor() already eager-loads each approver's position + department.
         $approvers = $chain->chainFor($employee);
@@ -766,13 +594,6 @@ class EmployeeController extends Controller
 
     public function update(StoreEmployeeRequest $request, Employee $employee): JsonResponse
     {
-        // Super admin employees are edited by a Super admin only
-        abort_if(
-            $employee->isSuperAdmin() && ! $request->user()?->isSuper(),
-            403,
-            'Only an Administrator can edit an Administrator account.'
-        );
-
         $before = $employee->getOriginal();
         $employee = $this->service->update($employee, $this->handlePhoto($request, $request->validated(), $employee->photo_path));
         AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})", AuditLog::changes($before, $employee), subject: $employee);
@@ -781,57 +602,16 @@ class EmployeeController extends Controller
     }
 
     /** Renames an existing login (employees.set_credentials) and/or resets its password (employees.reset_password). */
-    public function updateCredentials(Request $request, Employee $employee): JsonResponse
+    public function updateCredentials(UpdateEmployeeCredentialsRequest $request, Employee $employee): JsonResponse
     {
-        $user = $employee->user;
-        if (! $user) {
-            return response()->json(['message' => 'no_account'], 422);
-        }
-        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
-            return response()->json(['message' => 'super_account'], 403);
-        }
-
-        $this->normalizeUsername($request);
-
-        $data = $request->validate([
-            'username' => ['sometimes', ...self::USERNAME_RULES, Rule::unique('users', 'username')->ignore($user->id)],
-            'reset_password' => ['sometimes', 'boolean'],
-            'password' => ['nullable', 'string', self::passwordRule()],
-            'force_change' => ['sometimes', 'boolean'],
-        ]);
-
-        $changingUsername = array_key_exists('username', $data);
-        $resetting = $request->boolean('reset_password');
-        abort_unless($changingUsername || $resetting, 422, 'Nothing to update.');
-
-        // Both permission checks come before the first write
-        if ($changingUsername) {
-            abort_unless((bool) $request->user()?->hasPermission('employees.set_credentials'), 403);
-        }
-        if ($resetting) {
-            abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
-        }
-
-        if ($changingUsername) {
-            $user->update(['username' => $data['username']]);
-            // Mirror onto the employee for display/search (same as account creation).
-            $employee->update(['username' => $data['username']]);
+        if ($request->renaming()) {
+            $this->service->changeUsername($employee, $request->validated('username'));
             AuditLog::record('Changed username', "{$employee->name} ({$employee->code})", subject: $employee);
         }
 
         $newPassword = null;
-        if ($resetting) {
-            $force = $request->boolean('force_change');
-            // No password supplied → generate one. The employee code was the old fallback, but
-            // it is public knowledge and fails the very policy this endpoint enforces.
-            $newPassword = filled($data['password'] ?? null) ? $data['password'] : $this->generatePassword();
-            $user->forceFill([
-                'password' => Hash::make($newPassword),
-                // null marks the password as "never set by the user" while forcing a change.
-                'password_changed_at' => $force ? null : now(),
-                'must_change_password' => $force,
-            ])->save();
-            $user->signOutEverywhere();
+        if ($request->resetting()) {
+            $newPassword = $this->service->resetPassword($employee, $request->validated('password'), $request->boolean('force_change'));
             AuditLog::record('Reset password', "{$employee->name} ({$employee->code})", subject: $employee);
         }
 
@@ -839,26 +619,9 @@ class EmployeeController extends Controller
     }
 
     /** Provisions a login account for an employee who has none yet (employees.set_credentials). */
-    public function credentials(Request $request, Employee $employee): JsonResponse
+    public function credentials(StoreEmployeeCredentialsRequest $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.set_credentials'), 403);
-
-        if ($employee->user()->exists()) {
-            return response()->json(['message' => 'Employee already has a login account.'], 422);
-        }
-        // An Administrator-group member's new login would be super
-        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
-            return response()->json(['message' => 'super_account'], 403);
-        }
-
-        $this->normalizeUsername($request);
-
-        $data = $request->validate([
-            'username' => [...self::USERNAME_RULES, 'unique:users,username'],
-            'password' => ['required', 'string', 'confirmed', self::passwordRule()],
-            'force_change' => ['sometimes', 'boolean'],
-        ]);
-
+        $data = $request->validated();
         $this->service->createUserWithCredentials($employee, $data['username'], $data['password'], $request->boolean('force_change'));
 
         AuditLog::record('Created user account', "{$employee->name} ({$employee->code})", subject: $employee);
@@ -866,27 +629,9 @@ class EmployeeController extends Controller
         return response()->json(['message' => 'success'], 201);
     }
 
-    public function resign(Request $request, Employee $employee): JsonResponse
+    public function resign(ResignEmployeeRequest $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.resign'), 403);
-        if (in_array($employee->id, $request->user()->linkedEmployeeIds(), true)) {
-            return response()->json(['message' => 'own_account', 'code' => 'own_account_resign'], 403);
-        }
-        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
-            return response()->json(['message' => 'super_account'], 403);
-        }
-        if ($employee->status === EmployeeStatus::Resigned) {
-            return response()->json(['message' => 'already_resigned'], 422);
-        }
-        if ($employee->isSuperAdmin() && ! SuperAdmins::keeperRemainsBesides($employee)) {
-            return response()->json(['message' => 'last_super_admin', 'code' => 'last_super_admin'], 422);
-        }
-
-        $data = $request->validate([
-            'reason' => ['nullable', 'string', 'max:500'],
-            'last_day' => ['nullable', 'date', ...($employee->joined_at ? ['after:'.$employee->joined_at->toDateString()] : [])],
-        ]);
-
+        $data = $request->validated();
         $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null);
         AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})", subject: $employee);
 
@@ -896,13 +641,7 @@ class EmployeeController extends Controller
     /** Deletes an employee entered by mistake, with their login; a departure is resign, not this. */
     public function destroy(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.delete'), 403);
-        if (in_array($employee->id, $request->user()->linkedEmployeeIds(), true)) {
-            return response()->json(['message' => 'own_account', 'code' => 'own_account_delete'], 403);
-        }
-        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
-            return response()->json(['message' => 'super_account'], 403);
-        }
+        $this->guard->canDelete($request->user(), $employee)->authorize();
 
         // Refused while anything refers to them, see EmployeeService::deletionBlockers
         $blockers = $this->service->deletionBlockers($employee);
@@ -926,11 +665,7 @@ class EmployeeController extends Controller
     /** Cancels a resignation by reverting the employee's status back to Active. */
     public function cancelResign(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.cancel_resign'), 403);
-        if ($employee->isSuperAdmin() && ! $request->user()->isSuper()) {
-            return response()->json(['message' => 'super_account'], 403);
-        }
-        abort_unless($employee->status->value === 'resigned', 422, 'Employee is not resigned.');
+        $this->guard->canCancelResign($request->user(), $employee)->authorize();
 
         $employee = $this->service->cancelResign($employee);
         AuditLog::record('Cancelled resignation', "{$employee->name} ({$employee->code})", subject: $employee);

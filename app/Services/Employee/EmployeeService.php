@@ -155,6 +155,50 @@ class EmployeeService
         return $user;
     }
 
+    /** Renames the employee's login and mirrors it onto the employee for display and search. */
+    public function changeUsername(Employee $employee, string $username): void
+    {
+        $employee->user->update(['username' => $username]);
+        $employee->update(['username' => $username]);
+    }
+
+    /**
+     * Sets a new password on the employee's login and signs it out everywhere. With no password
+     * given one is generated; the one set is returned so the screen can show it once.
+     */
+    public function resetPassword(Employee $employee, ?string $password, bool $mustChangePassword): string
+    {
+        $password = filled($password) ? $password : $this->generatePassword();
+        $user = $employee->user;
+        $user->forceFill([
+            'password' => Hash::make($password),
+            // null marks the password as "never set by the user" while forcing a change
+            'password_changed_at' => $mustChangePassword ? null : now(),
+            'must_change_password' => $mustChangePassword,
+        ])->save();
+        $user->signOutEverywhere();
+
+        return $password;
+    }
+
+    /**
+     * A temporary password that always meets the admin password policy: one character from each
+     * class first, then filled and shuffled. 0/O and 1/l/I are left out so it can be read aloud.
+     */
+    private function generatePassword(int $length = 14): string
+    {
+        $pools = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789', '!@#$%&*?'];
+        $combined = implode('', $pools);
+
+        $chars = array_map(fn (string $pool) => $pool[random_int(0, strlen($pool) - 1)], $pools);
+        while (count($chars) < $length) {
+            $chars[] = $combined[random_int(0, strlen($combined) - 1)];
+        }
+        shuffle($chars);
+
+        return implode('', $chars);
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
