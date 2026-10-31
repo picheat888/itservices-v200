@@ -2,7 +2,7 @@
 
 // Sample values for the email preview and test sends, one for every placeholder any template offers.
 
-namespace App\Support;
+namespace App\Services\Email;
 
 use App\Models\Settings\AppSetting;
 use App\Models\User;
@@ -11,6 +11,8 @@ use App\Services\Contract\ContractDigestService;
 use App\Services\Request\RequestNotificationService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Ticket\TicketDigestService;
+use App\Support\DateDisplay;
+use App\Support\EmailTable;
 
 class EmailSampleVars
 {
@@ -198,7 +200,8 @@ first day 01-09-2026.',
                 ],
                 ContractDigestService::NUMERIC,
                 ContractDigestService::WIDTHS,
-            ),            'digest.open_table' => EmailTable::render(
+            ),
+            'digest.open_table' => EmailTable::render(
                 TicketDigestService::HEADERS_OPEN,
                 [
                     [EmailTable::link('#', 'TKT-2856'), 'Printer not responding', 'Hardware', 'Somchai Suksawat', '4'],

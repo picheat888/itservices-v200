@@ -68,7 +68,7 @@ import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemp
 import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '../hooks/use-email-templates';
 import { findHtmlIssues, htmlIssueMessage, type HtmlIssue } from '../lib/html-issues';
 
-// Sample values for {{variables}} in the preview; mirrors EmailTemplateController::sampleVars().
+// Sample values for {{variables}} in the preview; mirrors App\Services\Email\EmailSampleVars::for().
 const SAMPLE_VARS: Record<string, string> = {
     'user.first_name': 'Thanapon',
     'user.email': 'thanapon@abcd.co.th',

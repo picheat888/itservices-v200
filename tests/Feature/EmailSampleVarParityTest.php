@@ -4,14 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Settings\AppSetting;
 use App\Models\User;
-use App\Support\EmailSampleVars;
+use App\Services\Email\EmailSampleVars;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
  * The sample values behind the preview live in TWO maps and both have to know every variable.
  *
- * EmailTemplateController::sampleVars() renders the message BODY (the API builds that HTML),
+ * EmailSampleVars::for() renders the message BODY (the API builds that HTML),
  * while the SPA's own SAMPLE_VARS renders the SUBJECT line above the preview frame and — more
  * importantly — is the entire variable-chip menu, the only place an author finds out a
  * variable exists.
@@ -50,11 +50,11 @@ class EmailSampleVarParityTest extends TestCase
 
     public function test_the_editor_offers_a_sample_for_every_variable_the_preview_can_fill(): void
     {
-        $this->assertNotEmpty($this->serverKeys(), 'sampleVars() could not be read.');
+        $this->assertNotEmpty($this->serverKeys(), 'EmailSampleVars::for() could not be read.');
         $this->assertSame(
             $this->serverKeys(),
             $this->clientKeys(),
-            'SAMPLE_VARS in email-templates/pages/index.tsx and EmailTemplateController::sampleVars() must list the same variables.',
+            'SAMPLE_VARS in email-templates/pages/index.tsx and App\Services\Email\EmailSampleVars::for() must list the same variables.',
         );
     }
 

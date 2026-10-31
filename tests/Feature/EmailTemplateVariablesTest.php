@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
 use App\Models\User;
-use App\Support\EmailSampleVars;
+use App\Services\Email\EmailSampleVars;
 use App\Support\EmailTemplates;
 use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;

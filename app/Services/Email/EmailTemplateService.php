@@ -9,7 +9,6 @@ use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
 use App\Models\User;
-use App\Support\EmailSampleVars;
 use App\Support\EmailTemplates;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -73,13 +72,11 @@ class EmailTemplateService
     }
 
     /** @param  array<string, mixed>  $data */
-    public function update(EmailTemplate $template, array $data): EmailTemplate
+    public function update(EmailTemplate $template, array $data): void
     {
         $before = $template->getOriginal();
         $template->update($data);
         AuditLog::record('Updated email template', $template->name, AuditLog::changes($before, $template), subject: $template);
-
-        return $template;
     }
 
     /** Back to the standard wording and switch; false when the template has no standard. */
