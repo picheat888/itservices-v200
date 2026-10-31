@@ -10,12 +10,15 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
 use App\Models\User;
 use App\Support\Refusal;
+use App\Support\SearchTerms;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class StockRequestService
 {
     public function __construct(
         private readonly StockNotificationService $notifications,
+        private readonly StockIssueService $issues,
     ) {}
 
     /**
@@ -147,5 +150,56 @@ class StockRequestService
     {
         $stockRequest->setRawAttributes(StockRequest::lockForUpdate()->findOrFail($stockRequest->id)->getAttributes(), true);
         $this->assertStatus($stockRequest, $expected);
+    }
+
+    /**
+     * Requests the viewer may see, actionable first then newest; pending and outstanding count the whole visible set, not the filter.
+     *
+     * @return array{page: LengthAwarePaginator, pending: int, outstanding: int}
+     */
+    public function page(User $viewer, mixed $status, mixed $search, int $perPage): array
+    {
+        $query = StockRequest::with(['item.unit', 'user.employee', 'approver.employee', 'fulfiller.employee', 'issueMovements'])
+            ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
+            ->latest();
+
+        $query->visibleTo($viewer);
+
+        // The sidebar badge and the tab chip, independent of the page
+        $pending = (clone $query)->where('status', 'pending')->count();
+        $outstanding = (clone $query)->whereIn('status', ['pending', 'approved'])->count();
+
+        if (in_array($status, ['pending', 'approved', 'fulfilled', 'rejected', 'cancelled'], true)) {
+            $query->where('status', $status);
+        }
+
+        SearchTerms::apply($query, $search, [
+            'reference', 'requester_name',
+            SearchTerms::related('item', ['sku', 'name']),
+            SearchTerms::related('user', [SearchTerms::related('employee', ['code', ...SearchTerms::personName()])]),
+        ]);
+
+        return ['page' => $query->paginate($perPage), 'pending' => $pending, 'outstanding' => $outstanding];
+    }
+
+    /** Nobody decides their own requisition, holding stock.approve included. */
+    public function assertNotOwn(StockRequest $stockRequest, ?User $user): void
+    {
+        abort_if((int) $stockRequest->user_id === (int) $user?->id, 403, 'You cannot decide your own requisition.');
+    }
+
+    /**
+     * Issues the stock, then the stock-level alert, the audit row and the requester's notice, in that order.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function fulfil(StockRequest $stockRequest, User $user, array $data): void
+    {
+        $this->issues->fulfil($stockRequest, $user, $data);
+
+        $this->notifications->alert(StockItem::find($stockRequest->stock_item_id));
+
+        AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}", subject: $stockRequest);
+        $this->notifications->requestResponded($stockRequest->load('item'), 'fulfilled');
     }
 }

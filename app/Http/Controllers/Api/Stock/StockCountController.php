@@ -11,7 +11,6 @@ use App\Models\Stock\StockCount;
 use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockCountPdf;
 use App\Services\Stock\StockCountService;
-use App\Services\Stock\StockNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -139,12 +138,7 @@ class StockCountController extends Controller
 
         $count = $this->service->commit($stockCount, $request->user());
 
-        // Stock-level alerts for the items whose on-hand changed
-        foreach ($count->lines()->with('item')->get() as $line) {
-            if ($line->item && ($line->variance() ?? 0) !== 0) {
-                app(StockNotificationService::class)->alert($line->item->fresh());
-            }
-        }
+        $this->service->alertChangedItems($count);
 
         return (new StockCountResource($count->load(['countedBy.employee', 'committedBy.employee', 'recountOf', 'lines.item'])))
             ->additional(['message' => 'success'])->response();

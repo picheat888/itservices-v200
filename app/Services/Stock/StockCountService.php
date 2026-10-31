@@ -26,6 +26,7 @@ class StockCountService
         private readonly StockLotService $lotService,
         private readonly StockBalanceService $balanceService,
         private readonly StockCountLock $countLock,
+        private readonly StockNotificationService $notifications,
     ) {}
 
     /**
@@ -443,5 +444,15 @@ class StockCountService
         $count->update(['status' => StockCountStatus::Canceled]);
 
         return $count;
+    }
+
+    /** Stock-level alerts for the committed count's items whose on-hand changed. */
+    public function alertChangedItems(StockCount $count): void
+    {
+        foreach ($count->lines()->with('item')->get() as $line) {
+            if ($line->item && ($line->variance() ?? 0) !== 0) {
+                $this->notifications->alert($line->item->fresh());
+            }
+        }
     }
 }

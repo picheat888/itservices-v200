@@ -4,15 +4,12 @@ namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Stock\StockRequestResource;
-use App\Models\AuditLog;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
 use App\Services\Stock\StockIssuePdf;
 use App\Services\Stock\StockIssueService;
 use App\Services\Stock\StockLotReader;
-use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockRequestService;
-use App\Support\SearchTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -34,32 +31,12 @@ class StockRequestController extends Controller
         $user = $request->user();
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
-        // Actionable first (await approval → await fulfillment → done), newest within each group.
-        $query = StockRequest::with(['item.unit', 'user.employee', 'approver.employee', 'fulfiller.employee', 'issueMovements'])
-            ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
-            ->latest();
-
-        $query->visibleTo($user);
-
-        // Aggregate counts over the full (visibility-scoped) set — feed the sidebar
-        // badge and the Requests tab chip, which must not depend on the current page.
-        $pending = (clone $query)->where('status', 'pending')->count();
-        $outstanding = (clone $query)->whereIn('status', ['pending', 'approved'])->count();
-
-        // The status filter narrows the list only; the totals above stay across every status.
-        $status = $request->query('status');
-        if (in_array($status, ['pending', 'approved', 'fulfilled', 'rejected', 'cancelled'], true)) {
-            $query->where('status', $status);
-        }
-
-        SearchTerms::apply($query, $request->query('search'), [
-            'reference', 'requester_name',
-            SearchTerms::related('item', ['sku', 'name']),
-            SearchTerms::related('user', [SearchTerms::related('employee', ['code', ...SearchTerms::personName()])]),
-        ]);
-
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $paginator = $query->paginate($perPage);
+        ['page' => $paginator, 'pending' => $pending, 'outstanding' => $outstanding] = $this->requests->page(
+            $user,
+            $request->query('status'),
+            $request->query('search'),
+            max(10, min(100, (int) $request->query('per_page', 20))),
+        );
 
         return response()->json([
             'data' => StockRequestResource::collection($paginator->items()),
@@ -154,7 +131,7 @@ class StockRequestController extends Controller
     public function approve(Request $request, StockRequest $stockRequest): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.approve'), 403);
-        $this->assertNotOwn($request, $stockRequest);
+        $this->requests->assertNotOwn($stockRequest, $request->user());
 
         $this->requests->approve($stockRequest, $request->user());
 
@@ -165,7 +142,7 @@ class StockRequestController extends Controller
     public function reject(Request $request, StockRequest $stockRequest): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.approve'), 403);
-        $this->assertNotOwn($request, $stockRequest);
+        $this->requests->assertNotOwn($stockRequest, $request->user());
 
         $this->requests->reject($stockRequest, $request->user());
 
@@ -201,22 +178,10 @@ class StockRequestController extends Controller
             'from_warehouse' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $this->issues->fulfil($stockRequest, $user, $data);
-
-        // Fire a real-time stock-level alert now that on-hand has been decremented.
-        app(StockNotificationService::class)->alert(StockItem::find($stockRequest->stock_item_id));
-
-        AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}", subject: $stockRequest);
-        app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'fulfilled');
+        $this->requests->fulfil($stockRequest, $user, $data);
 
         return (new StockRequestResource($stockRequest->load(['item', 'approver.employee', 'fulfiller.employee', 'issueMovements'])))
             ->additional(['issue' => $this->issues->summary($stockRequest)])
             ->response();
-    }
-
-    /** Nobody decides their own requisition — holding stock.approve included. */
-    private function assertNotOwn(Request $request, StockRequest $stockRequest): void
-    {
-        abort_if((int) $stockRequest->user_id === (int) $request->user()?->id, 403, 'You cannot decide your own requisition.');
     }
 }
