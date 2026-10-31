@@ -432,7 +432,7 @@ export function ContractFormDrawer({
                 setStep(1);
                 return;
             }
-            setFormError(data?.message || t('contract_save_failed'));
+            setFormError(reasonWords(e, t, 'contract_refusal_') || data?.message || t('contract_save_failed'));
             setFormErrorCount((n) => n + 1);
         }
     };

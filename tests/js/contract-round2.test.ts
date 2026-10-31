@@ -63,3 +63,9 @@ test('the cancel reason stops at 500 characters and a refusal shows its own word
         for (const code of ['term_ended', 'term_running', 'assets_pending']) assert.match(words, new RegExp(`contract_refusal_${code}: '`));
     }
 });
+
+test('a save refused because the contract closed meanwhile says so in Thai, not as a code', () => {
+    const form = read('modules/contract/components/contract-form-drawer.tsx');
+    assert.match(form, /setFormError\(reasonWords\(e, t, 'contract_refusal_'\) \|\| data\?\.message \|\| t\('contract_save_failed'\)\);/);
+    for (const lang of ['th', 'en']) assert.match(read(`lang/${lang}/contract.ts`), /contract_refusal_contract_closed: '/);
+});
