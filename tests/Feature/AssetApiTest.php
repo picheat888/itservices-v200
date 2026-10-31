@@ -173,7 +173,7 @@ class AssetApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['contract_id' => 'contract_closed']);
 
-        $kept = Asset::factory()->create(['source' => 'rented', 'contract_id' => $cancelled->id, 'value' => 0, 'vendor_id' => null]);
+        $kept = Asset::factory()->create(['status' => 'ready', 'source' => 'rented', 'contract_id' => $cancelled->id, 'value' => 0, 'vendor_id' => null]);
         $this->putJson("/api/assets/{$kept->id}", [...$rented, 'contract_id' => $cancelled->id])->assertOk();
     }
 
