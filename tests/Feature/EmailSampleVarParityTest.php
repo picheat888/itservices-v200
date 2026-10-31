@@ -2,12 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Api\Email\EmailTemplateController;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\EmailSampleVars;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
-use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -29,13 +27,7 @@ class EmailSampleVarParityTest extends TestCase
     /** @return list<string> */
     private function serverKeys(): array
     {
-        $method = new ReflectionMethod(EmailTemplateController::class, 'sampleVars');
-        $method->setAccessible(true);
-
-        $request = Request::create('/');
-        $request->setUserResolver(fn () => new User(['name' => 'Test User', 'email' => 'test@example.com']));
-
-        $keys = array_keys($method->invoke(app(EmailTemplateController::class), $request));
+        $keys = array_keys(EmailSampleVars::for(new User(['name' => 'Test User', 'email' => 'test@example.com'])));
         sort($keys);
 
         return $keys;
@@ -69,12 +61,7 @@ class EmailSampleVarParityTest extends TestCase
     public function test_sample_dates_follow_the_date_setting(): void
     {
         AppSetting::put('date_format', 'd_mon_y');
-        $method = new ReflectionMethod(EmailTemplateController::class, 'sampleVars');
-        $method->setAccessible(true);
-        $request = Request::create('/');
-        $request->setUserResolver(fn () => new User(['name' => 'Test User', 'email' => 'test@example.com']));
-
-        $vars = $method->invoke(app(EmailTemplateController::class), $request);
+        $vars = EmailSampleVars::for(new User(['name' => 'Test User', 'email' => 'test@example.com']));
 
         $this->assertSame('18 Aug 2026', $vars['request.date']);
         $this->assertSame('31 Dec 2026', $vars['contract.end_date']);

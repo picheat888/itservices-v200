@@ -4,26 +4,16 @@ namespace App\Http\Controllers\Api\Email;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Email\EmailTemplateResource;
-use App\Models\AuditLog;
 use App\Models\Email\EmailTemplate;
-use App\Models\Settings\AppSetting;
-use App\Models\Settings\MailSetting;
-use App\Services\Access\AccessService;
-use App\Services\Contract\ContractDigestService;
-use App\Services\Email\EmailNotificationService;
-use App\Services\Request\RequestNotificationService;
-use App\Services\Stock\StockNotificationService;
-use App\Services\Ticket\TicketDigestService;
-use App\Support\DateDisplay;
-use App\Support\EmailTable;
-use App\Support\EmailTemplates;
+use App\Services\Email\EmailTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
+/** The email template page. No store(): templates arrive with the code that sends them (App\Support\EmailTemplates). */
 class EmailTemplateController extends Controller
 {
-    public function __construct(private readonly EmailNotificationService $service) {}
+    public function __construct(private readonly EmailTemplateService $templates) {}
 
     /** Opening the page at all. Every read below needs this and nothing more. */
     private function gate(Request $request): void
@@ -31,68 +21,28 @@ class EmailTemplateController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('notifications.module'), 403);
     }
 
-    /**
-     * One of the module's finer rights, master included.
-     *
-     * Rewording a template and switching it off are separate permissions: turning one off
-     * stops it reaching anybody, which is a decision about who hears what, while rewording
-     * is a decision about how it reads.
-     */
+    /** One of the module's finer rights, master included (rewording and switching off are separate rights). */
     private function allow(Request $request, string $key): void
     {
         $this->gate($request);
         abort_unless((bool) $request->user()?->hasPermission($key), 403);
     }
 
-    /** Returns all templates plus the four header stats. */
+    /** Returns all templates plus the header stats. */
     public function index(Request $request): JsonResponse
     {
         $this->gate($request);
 
-        $templates = EmailTemplate::with('updater.employee')->orderBy('id')->get();
+        $templates = $this->templates->templates();
 
         return response()->json([
             'data' => EmailTemplateResource::collection($templates),
-            'stats' => [
-                'templates' => $templates->count(),
-                'enabled' => $templates->where('enabled', true)->count(),
-                ...$this->service->deliveryStats(),
-            ],
-            'mail' => $this->fromIdentity(),
+            'stats' => $this->templates->stats($templates),
+            'mail' => $this->templates->fromIdentity(),
         ]);
     }
 
-    /**
-     * The address recipients will actually see this mail come from.
-     *
-     * The preview drew its own `no-reply@brandname` instead, which is a plausible address
-     * and not the configured one — the one line of a preview that promises accuracy was
-     * the one line making something up. Resolved exactly as MailConfigService does at send
-     * time, so an unconfigured install shows the .env fallback rather than a guess.
-     *
-     * @return array{from_address: ?string, from_name: ?string}
-     */
-    private function fromIdentity(): array
-    {
-        $settings = MailSetting::current();
-        $configured = $settings->isConfigured();
-
-        return [
-            'from_address' => $configured ? $settings->from_address : (string) config('mail.from.address'),
-            'from_name' => ($configured ? $settings->from_name : null) ?: (string) config('mail.from.name'),
-        ];
-    }
-
-    /** Creates a new template. */
-    /*
-     * No store(): a template is only ever sent by code calling sendTemplate() with its key,
-     * and every one of those keys is written in App\Support\EmailTemplates. A row created
-     * through the API would be editable, switchable and testable, and nothing would ever
-     * send it. Templates arrive with the code that sends them (see the migration that copies
-     * missing standard templates into installations seeded before they existed).
-     */
-
-    /** Updates a template — used for both inline enable toggle and full edit. */
+    /** Inline switch and full edit; the rights come from what the save changes, not from what the form sent. */
     public function update(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
         $this->gate($request);
@@ -104,110 +54,40 @@ class EmailTemplateController extends Controller
             'enabled' => ['sometimes', 'boolean'],
         ]);
 
-        // Decided from what the save CHANGES, not from what the form sent: the edit drawer
-        // posts every field every time, so trusting the payload's shape would let anyone who
-        // may reword also flip the switch by resubmitting the row unchanged.
-        $this->requireRightsFor($request, $emailTemplate, $data);
+        foreach ($this->templates->requiredRights($emailTemplate, $data) as $right) {
+            abort_unless((bool) $request->user()?->hasPermission($right), 403);
+        }
 
-        $before = $emailTemplate->getOriginal();
-        $emailTemplate->update($data);
-        AuditLog::record('Updated email template', $emailTemplate->name, AuditLog::changes($before, $emailTemplate), subject: $emailTemplate);
+        $this->templates->update($emailTemplate, $data);
 
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
     }
 
-    /**
-     * Demand a right per kind of change the save actually makes.
-     *
-     * `enabled` moving needs the toggle right; any wording field moving needs the edit right;
-     * a save that changes nothing needs neither. Compared against what is stored, so the same
-     * endpoint serves the inline switch and the full editor without either being able to do
-     * the other's job by sending extra fields.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function requireRightsFor(Request $request, EmailTemplate $template, array $data): void
-    {
-        $togglesIt = array_key_exists('enabled', $data) && (bool) $data['enabled'] !== (bool) $template->enabled;
-        $rewordsIt = collect(['name', 'subject', 'body_html'])
-            ->contains(fn (string $field) => array_key_exists($field, $data) && $data[$field] !== $template->{$field});
-
-        if ($togglesIt) {
-            abort_unless((bool) $request->user()?->hasPermission('notifications.email_toggle'), 403);
-        }
-        if ($rewordsIt) {
-            abort_unless((bool) $request->user()?->hasPermission('notifications.email_edit'), 403);
-        }
-    }
-
-    /** Restores one template to its standard definition. 422 if it has no standard. */
+    /** Restores one template to its standard; 422 when it has none. Rewrites wording and switch, so it needs both rights. */
     public function reset(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
-        // Reset rewrites the wording AND restores the on/off state, so it needs both (as the bell's reset).
         $this->allow($request, 'notifications.email_edit');
         abort_unless((bool) $request->user()?->hasPermission('notifications.email_toggle'), 403);
 
-        $standard = EmailTemplates::find($emailTemplate->key);
-        if ($standard === null) {
+        if (! $this->templates->reset($emailTemplate)) {
             return response()->json(['message' => 'This template has no standard to reset to.'], 422);
         }
-
-        $before = $emailTemplate->getOriginal();
-        $emailTemplate->update([
-            'name' => $standard['name'],
-            'subject' => $standard['subject'],
-            'body_html' => $standard['body_html'],
-            'enabled' => $standard['enabled'],
-            'cadence' => $standard['cadence'],
-        ]);
-        AuditLog::record('Reset email template to standard', $emailTemplate->name, AuditLog::changes($before, $emailTemplate), subject: $emailTemplate);
 
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
     }
 
-    /** Restores every standard template to its standard definition in one pass. */
+    /** Restores every standard template in one pass. */
     public function resetAll(Request $request): JsonResponse
     {
         $this->allow($request, 'notifications.email_edit');
         abort_unless((bool) $request->user()?->hasPermission('notifications.email_toggle'), 403);
 
-        $count = 0;
-        foreach (EmailTemplates::all() as $standard) {
-            $template = EmailTemplate::where('key', $standard['key'])->first();
-            if ($template === null) {
-                continue;
-            }
-
-            $before = $template->getOriginal();
-            $template->update([
-                'name' => $standard['name'],
-                'subject' => $standard['subject'],
-                'body_html' => $standard['body_html'],
-                'enabled' => $standard['enabled'],
-                'cadence' => $standard['cadence'],
-            ]);
-            // One entry per template it actually changed, like the single reset, so each template's own
-            // history shows it (and who did it, in updated_by).
-            if ($template->wasChanged()) {
-                AuditLog::record('Reset email template to standard', $template->name, AuditLog::changes($before, $template), subject: $template);
-            }
-            $count++;
-        }
-
-        return response()->json(['message' => 'success', 'reset' => $count]);
+        return response()->json(['message' => 'success', 'reset' => $this->templates->resetAll()]);
     }
 
-    /**
-     * Sends a test render of one template to the current user (synchronous).
-     *
-     * Takes the editor's UNSAVED wording when it is posted, and falls back to the stored
-     * row otherwise. Sending the saved copy while the editor showed the new one made the
-     * button answer a question nobody asked: the reader compared the mail in their inbox
-     * against the words on screen and found them different, with nothing saying why.
-     */
+    /** Sends a test render to the current user, from the editor's unsaved wording when posted (synchronous). */
     public function test(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
-        // Sending real mail, even to yourself, is its own right.
         $this->allow($request, 'notifications.email_test');
 
         $draft = $request->validate([
@@ -223,285 +103,27 @@ class EmailTemplateController extends Controller
             return response()->json(['message' => 'Your account has no email address.'], 422);
         }
 
-        $vars = $this->sampleVars($request);
-        $subject = $this->service->render($draft['subject'] ?? $emailTemplate->subject, $vars);
-        $html = $this->service->render($draft['body_html'] ?? $emailTemplate->body_html, $vars);
+        $ok = $this->templates->sendTest($emailTemplate, $draft, $request->user(), $to);
 
-        // Every test send carries the time it was sent. Two test sends of one template are
-        // otherwise identical down to the character, and a mailbox that groups by subject
-        // then files the second one into the first one's conversation and hides the repeated
-        // body behind a "show trimmed content" toggle — which reads as an email that arrived
-        // empty. The stamp also tells the reader which press of the button they are looking at.
-        $subject .= ' (test '.now()->format('H:i').')';
-
-        // Match the real send: branded wrapper + eyebrow + a sample Quick link.
-        $ok = $this->service->deliver(
-            $to,
-            $subject,
-            $html,
-            $emailTemplate->key,
-            rtrim((string) config('app.url'), '/').'/',
-            'Open in portal',
-            $draft['name'] ?? $emailTemplate->name,
-            isTest: true,
-        );
-
-        // 200 either way. A rejected address or an unreachable SMTP host is an answer to
-        // the question the button asked, not a broken server: a 5xx here trips the client's
-        // "Something went wrong" takeover, which hides the very screen holding the settings
-        // that need fixing. The caller reads `sent`.
+        // 200 either way: a failed delivery is the answer, not a server fault; the caller reads `sent`
         return response()->json([
             'message' => $ok ? 'success' : 'failed',
             'sent' => $ok,
         ]);
     }
 
-    /**
-     * Live preview of UNSAVED edit-drawer content: renders the supplied subject/body
-     * through the branded layout with sample data + an inert Quick link, so the Edit
-     * screen shows exactly what the Preview / recipient will see as you type.
-     */
+    /** Live preview of unsaved editor content, drawn at the saved template's width. */
     public function renderPreview(Request $request): Response
     {
         $this->gate($request);
 
         $data = $request->validate([
-            // The key is not edited here — it is sent so the live preview is drawn at the
-            // same width the saved template and the real mail are.
             'key' => ['nullable', 'string', 'max:100'],
             'name' => ['nullable', 'string', 'max:150'],
             'subject' => ['nullable', 'string', 'max:255'],
             'body_html' => ['nullable', 'string'],
         ]);
 
-        $vars = $this->sampleVars($request);
-
-        $html = view('emails.templated', [
-            'subjectLine' => $this->service->render($data['subject'] ?? '', $vars),
-            'bodyHtml' => $this->service->render($data['body_html'] ?? '', $vars),
-            'eyebrow' => $data['name'] ?? null,
-            'width' => EmailTemplates::widthFor($data['key'] ?? null),
-            'actionUrl' => rtrim((string) config('app.url'), '/').'/',
-            'actionLabel' => 'Open in portal',
-            'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
-            'logoData' => $this->service->brandLogoDataUri(),
-            'preview' => true,
-        ])->render();
-
-        return response($html)->header('Content-Type', 'text/html');
-    }
-
-    /**
-     * Realistic sample values for previews / test sends, covering the placeholders
-     * used across all modules (including stock digest {{items}} / {{count}}).
-     *
-     * @return array<string, mixed>
-     */
-    private function sampleVars(Request $request): array
-    {
-        $name = (string) ($request->user()->name ?? 'Kanya Phakdee');
-
-        return [
-            // Same value the send path injects, so the preview names the installation the
-            // way a delivered email does.
-            'app.name' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
-            'user.first_name' => explode(' ', $name)[0] ?: 'there',
-            'user.email' => $request->user()->email ?? 'user@example.com',
-            'count' => 3,
-            // report.scheduled — a weekly schedule set by the person previewing.
-            'report.name' => 'ทะเบียนทรัพย์สิน',
-            'report.period' => DateDisplay::range('2026-09-21', '2026-09-27', null, 'en'),
-            'report.rows' => '1,248',
-            'report.frequency' => 'Every Monday at 07:00',
-            'report.owner' => $name,
-            'report.attachment_note' => 'The report file is attached.',
-            'report.format' => 'Excel',
-            'report.file' => 'Report_assets-overview_2026-10-18.xlsx',
-            'report.expires' => '17 Nov 2026',
-            'stock.sku' => 'SKU-1042',
-            'stock.name' => 'USB-C Docking Station',
-            'stock.qty' => 2,
-            'stock.min' => 5,
-            'stock.max' => 40,
-            'stock.request_no' => 'REQ-2026-0001',
-            'stock.request_by' => 'Piches Srisuk',
-            'stock.request_reason' => 'Replacing the dock on the 3rd floor meeting room.',
-            'stock.request_date' => DateDisplay::emailDate('2026-08-18'),
-            'stock.approver' => 'Anong Wattana',
-            'stock.fulfilled_by' => 'Kankanok P',
-            'stock.fulfilled_date' => DateDisplay::emailDate('2026-08-20'),
-            'stock.request_summary_table' => EmailTable::render(
-                StockNotificationService::REQUEST_SUMMARY_HEADERS,
-                [['Pending Approval', '2'], ['Awaiting Completion', '1']],
-                [1],
-                StockNotificationService::REQUEST_SUMMARY_WIDTHS,
-            ),
-            'stock.requests_table' => EmailTable::render(
-                StockNotificationService::REQUEST_HEADERS,
-                [
-                    ['REQ-2026-0001', 'Piches Srisuk', DateDisplay::emailDate('2026-08-18'), 'USB-C Docking Station ×2', 'Pending Approval'],
-                    ['REQ-2026-0004', 'Manee Jaidee', DateDisplay::emailDate('2026-08-24'), 'Wireless mouse ×1', 'Awaiting Completion'],
-                ],
-                [],
-                StockNotificationService::REQUEST_WIDTHS,
-                [3],
-            ),
-            'stock.summary_table' => EmailTable::render(
-                StockNotificationService::SUMMARY_HEADERS,
-                [['Out of Stock', '1'], ['Low Stock', '2'], ['Overstock', '0']],
-                [1],
-                StockNotificationService::SUMMARY_WIDTHS,
-            ),
-            'stock.items_table' => EmailTable::render(
-                StockNotificationService::ITEM_HEADERS,
-                [
-                    ['SKU-1088', 'HDMI cable 2 m', '0', '10', '80', 'Out of Stock'],
-                    ['SKU-1042', 'USB-C Docking Station', '2', '5', '40', 'Low Stock'],
-                    ['SKU-1103', 'Wireless mouse', '4', '6', '60', 'Low Stock'],
-                ],
-                StockNotificationService::ITEM_NUMERIC,
-                StockNotificationService::ITEM_WIDTHS,
-                [1],
-            ),
-            'asset.code' => 'INK-IT-26-0042',
-            'asset.model' => 'ThinkCentre Neo 55a 24 G6',
-            'asset.tag' => 'PC042',
-            'asset.type' => 'Computer',
-            'asset.from' => 'Store IT',
-            'asset.holder' => 'Somchai Suksawat',
-            'asset.count' => 3,
-            'employee.last_working' => DateDisplay::emailDate('2026-12-31'),
-            // Built in PHP by AssetService, so the preview needs a stand-in — same reason
-            // the digests below carry one.
-            'asset.table' => EmailTable::render(
-                ['Device', 'Type', 'Serial', 'Tag'],
-                [
-                    ['ThinkCentre Neo 55a 24 G6', 'Computer', 'DN2312123', 'PC042'],
-                    ['ThinkPad E14 Gen 5', 'Notebook', 'PF3X9K21', 'NB018'],
-                    ['Dell P2422H 24"', 'Monitor', 'CN0J7T44', 'MN107'],
-                ],
-                [],
-                ['38%', '20%', '24%', '18%'],
-            ),
-            'access.count' => 4,
-            'access.table' => EmailTable::render(
-                AccessService::ACCESS_HEADERS,
-                [
-                    ['MG-0007', 'Email group', 'Sales TH', 'sales-th@inaba-foods.co.th', 'Member'],
-                    ['FS-0012', 'File share', 'Sales reports', '\\server\sales\reports', 'Read/Write'],
-                    ['SM-0003', 'Social platform', 'Company LINE OA', 'https://line.me/R/ti/p/@inaba', 'Member'],
-                    ['SW-0021', 'Software', 'Microsoft 365 E3', '-', 'Member'],
-                ],
-                [],
-                AccessService::ACCESS_WIDTHS,
-                AccessService::ACCESS_WRAP,
-            ),
-            'ticket.id' => 'TKT-2856',
-            'ticket.subject' => 'Printer not responding',
-            'ticket.category' => 'Hardware',
-            'ticket.details' => 'The printer on the 3rd floor shows a paper jam error,<br>but there is no paper stuck inside.',
-            'ticket.resolution' => 'Replaced the fuser roller and cleared the jam sensor.',
-            'ticket.update' => 'The replacement fuser roller is on order,<br>expected within three working days.',
-            'ticket.requester' => 'Somchai Suksawat',
-            'ticket.assignee' => 'Piches Srisuk',
-            'from.name' => 'Anong Wattana',
-            'contract.vendor' => 'Acme Co.',
-            'contract.name' => 'Annual support',
-            'contract.code' => 'CT-2026-014',
-            'contract.days_remaining' => 30,
-            'contract.expires_in' => 'in 30 days',
-            'contract.days_overdue' => 5,
-            'contract.end_date' => DateDisplay::emailDate('2026-12-31'),
-            'contract.details' => 'Microsoft 365 E3 License Agreement, 320 seats',
-            'reference.id' => 'REF-0001',
-            'request.title' => 'Request: Mail group',
-            'request.type' => 'Email group',
-            'request.date' => DateDisplay::emailDate('2026-08-18'),
-            'request.approved_date' => DateDisplay::emailDate('2026-08-20'),
-            'request.rejected_date' => DateDisplay::emailDate('2026-08-20'),
-            'request.cancelled_date' => DateDisplay::emailDate('2026-08-22'),
-            'request.ticket_no' => 'TKT-2856',
-            'request.completed_date' => DateDisplay::emailDate('2026-08-22'),
-            'request.completed_by' => 'Kankanok P',
-            'request.reason' => 'Onboarding request with the new employee,<br />
-first day 01-09-2026.',
-            'request.details' => 'Device type: Desktop PC<br>Mailbox address: somchai@inaba-foods.co.th',
-            'request.approval_history' => EmailTable::render(
-                RequestNotificationService::HISTORY_HEADERS,
-                [
-                    ['Supervisor', '⏭️ Skipped - the requester has no manager', '-', '-'],
-                    ['Department Manager', '✅ Approved', 'Anong Wattana', DateDisplay::emailDate('2026-08-19')],
-                ],
-                [],
-                RequestNotificationService::HISTORY_WIDTHS,
-                [1],
-            ),
-            'approver.name' => 'Anong Wattana',
-            'approver.position' => 'Manager',
-            'approver.department' => 'Information Technology',
-            'requester.name' => 'Manee Jaidee',
-            'actor.name' => 'Anong Wattana',
-            'step.label' => 'Department manager',
-            'remark' => 'The licence is not available on the current agreement.',
-            'employee.name' => 'Somchai Suksawat',
-            'employee.code' => 'EMP-1042',
-            'employee.position' => 'Asst. Manager',
-            'employee.section' => 'System analyst',
-            'employee.department' => 'Information Technology',
-            'employee.working' => DateDisplay::emailDate('2026-09-01'),
-            'digest.count' => 2,
-            'digest.open_count' => 2,
-            'digest.working_count' => 1,
-            // open_count + working_count.
-            'digest.total' => 3,
-            // Every digest builds its rows in PHP, so the preview needs stand-ins. Without
-            // them an administrator rewording the mail sees a literal {{digest.table}} and
-            // cannot tell what they are writing around. Built through the same renderer the
-            // real mail uses, so the preview cannot drift away from what gets sent.
-            'digest.table' => EmailTable::render(
-                ['Reference', 'Request', 'Requested by', 'Days waiting'],
-                [
-                    [EmailTable::link('#', 'RQ-2026-0018'), 'Request: Mail group', 'Somchai Suksawat', '14'],
-                    [EmailTable::link('#', 'RQ-2026-0021'), 'Request: Computer', 'Manee Jaidee', '9'],
-                ],
-                [3],
-                ['18%', '40%', '26%', '16%'],
-            ),
-            'digest.expiring_count' => 2,
-            'digest.overdue_count' => 1,
-            'digest.expiring_table' => EmailTable::render(
-                ContractDigestService::HEADERS,
-                [
-                    [EmailTable::link('#', 'CT-2026-014'), 'Acme Co.', 'Annual support', '฿120,000.00', DateDisplay::emailDate('2026-09-29'), '90, 30, 7 days'],
-                    [EmailTable::link('#', 'CT-2026-021'), 'Lenovo (Thailand)', 'Notebook rental', '฿1,450,000.00', DateDisplay::emailDate('2026-10-31'), '150, 60, 30 days'],
-                ],
-                ContractDigestService::NUMERIC,
-                ContractDigestService::WIDTHS,
-            ),
-            'digest.overdue_table' => EmailTable::render(
-                ContractDigestService::HEADERS,
-                [
-                    [EmailTable::link('#', 'CT-2025-008'), 'Microsoft', 'Microsoft 365 E3', '฿980,000.00', DateDisplay::emailDate('2026-08-25'), '30, 7 days'],
-                ],
-                ContractDigestService::NUMERIC,
-                ContractDigestService::WIDTHS,
-            ),            'digest.open_table' => EmailTable::render(
-                TicketDigestService::HEADERS_OPEN,
-                [
-                    [EmailTable::link('#', 'TKT-2856'), 'Printer not responding', 'Hardware', 'Somchai Suksawat', '4'],
-                    [EmailTable::link('#', 'TKT-2861'), 'Cannot open shared drive', 'Network', 'Manee Jaidee', '2'],
-                ],
-                TicketDigestService::NUMERIC,
-                TicketDigestService::WIDTHS,
-            ),
-            'digest.working_table' => EmailTable::render(
-                TicketDigestService::HEADERS_WORKING,
-                [
-                    [EmailTable::link('#', 'TKT-2840'), 'Email signature missing', 'Software', 'Thanapon', '7'],
-                ],
-                TicketDigestService::NUMERIC,
-                TicketDigestService::WIDTHS,
-            ),
-        ];
+        return response($this->templates->preview($data, $request->user()))->header('Content-Type', 'text/html');
     }
 }

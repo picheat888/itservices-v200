@@ -2,15 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Api\Email\EmailTemplateController;
 use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
 use App\Models\User;
+use App\Support\EmailSampleVars;
 use App\Support\EmailTemplates;
 use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
-use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -40,10 +38,7 @@ class EmailTemplateVariablesTest extends TestCase
     /** Whatever a template offers must be fillable in the preview, or inserting it shows nothing. */
     public function test_every_offered_variable_has_a_preview_sample(): void
     {
-        $method = new ReflectionMethod(EmailTemplateController::class, 'sampleVars');
-        $request = Request::create('/');
-        $request->setUserResolver(fn () => new User(['name' => 'Test User', 'email' => 'test@example.com']));
-        $samples = array_keys($method->invoke(app(EmailTemplateController::class), $request));
+        $samples = array_keys(EmailSampleVars::for(new User(['name' => 'Test User', 'email' => 'test@example.com'])));
 
         foreach (EmailTemplates::keys() as $key) {
             $missing = array_diff(EmailTemplates::variablesFor($key), $samples);
