@@ -23,6 +23,7 @@ import {
     HOLIDAY_NAME_MAX,
     HOLIDAYS_PER_YEAR_MAX,
     isoWeekday,
+    localIsoDate,
     rowErrors,
     serverRowErrors,
     tooManyHolidays,
@@ -81,6 +82,9 @@ export function SlaHolidayEditorDialog({
     const failed = useSaveFailed();
     const year = useHeldWhileOpen(liveYear, open);
     const yearText = fmt.year(year);
+    // An empty date opens on this month in the current year, on January in any other
+    const today = localIsoDate(new Date());
+    const openMonth = today.startsWith(`${year}-`) ? today : `${year}-01-01`;
 
     const [rows, setRows] = useState<HolidayRow[]>([]);
     const [base, setBase] = useState<HolidayRow[]>([]);
@@ -312,6 +316,9 @@ export function SlaHolidayEditorDialog({
                                                     id={`hol-d-${r.key}`}
                                                     value={r.date}
                                                     onChange={(date) => setRow(r.key, { date })}
+                                                    min={`${year}-01-01`}
+                                                    max={`${year}-12-31`}
+                                                    defaultMonth={openMonth}
                                                     aria-invalid={!!e?.date || undefined}
                                                     aria-describedby={e?.date ? `hol-d-${r.key}-error` : undefined}
                                                     className={cn(e?.date && SLA_ERROR_BORDER)}

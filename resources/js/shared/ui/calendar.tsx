@@ -23,8 +23,13 @@ interface CalendarProps {
     locale?: Locale;
     /** Month shown on first open (defaults to the selected day or today). */
     defaultMonth?: Date;
+    /** First and last day that can be picked; paging stops at their months. */
+    min?: Date;
+    max?: Date;
     className?: string;
 }
+
+const monthIndex = (date: Date) => date.getFullYear() * 12 + date.getMonth();
 
 /** A month/year cell button shared by the months and years grids. */
 function GridCell({
@@ -104,13 +109,23 @@ function ViewHeader({
  * click the caption to zoom OUT day → months grid → years grid, click a cell to zoom
  * back IN. No base CSS import — fully restyled via classNames + theme tokens.
  */
-export function Calendar({ selected, onSelect, locale, defaultMonth, className }: CalendarProps) {
+export function Calendar({ selected, onSelect, locale, defaultMonth, min, max, className }: CalendarProps) {
     const base = getDefaultClassNames();
     const fmt = useDateFormat();
     const today = new Date();
+    const lowYear = min?.getFullYear() ?? MIN_YEAR;
+    const highYear = max?.getFullYear() ?? MAX_YEAR;
+    const outOfRange = [...(min ? [{ before: min }] : []), ...(max ? [{ after: max }] : [])];
+    const monthOutside = (y: number, m: number) =>
+        (min !== undefined && y * 12 + m < monthIndex(min)) || (max !== undefined && y * 12 + m > monthIndex(max));
 
     // The month currently shown in the day view; also the anchor for the grids.
-    const [month, setMonthState] = React.useState<Date>(() => defaultMonth ?? selected ?? today);
+    const [month, setMonthState] = React.useState<Date>(() => {
+        const start = defaultMonth ?? selected ?? today;
+        if (min && monthIndex(start) < monthIndex(min)) return min;
+        if (max && monthIndex(start) > monthIndex(max)) return max;
+        return start;
+    });
     const [view, setView] = React.useState<View>('days');
     // First year of the visible years-grid page.
     const [yearPage, setYearPage] = React.useState<number>(() => month.getFullYear() - (month.getFullYear() % YEAR_STEP));
@@ -125,6 +140,9 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                     showOutsideDays
                     month={month}
                     onMonthChange={setMonthState}
+                    startMonth={min}
+                    endMonth={max}
+                    disabled={outOfRange}
                     selected={selected}
                     onSelect={onSelect}
                     locale={locale}
@@ -205,8 +223,8 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                         }}
                         onPrev={() => setMonthState(setYear(month, viewYear - 1))}
                         onNext={() => setMonthState(setYear(month, viewYear + 1))}
-                        prevDisabled={viewYear <= MIN_YEAR}
-                        nextDisabled={viewYear >= MAX_YEAR}
+                        prevDisabled={viewYear <= lowYear}
+                        nextDisabled={viewYear >= highYear}
                     />
                     <div className="grid grid-cols-3 gap-1.5">
                         {Array.from({ length: 12 }, (_, i) => (
@@ -215,6 +233,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                                 label={format(new Date(viewYear, i, 1), 'MMM', { locale })}
                                 active={selected?.getFullYear() === viewYear && selected?.getMonth() === i}
                                 current={today.getFullYear() === viewYear && today.getMonth() === i}
+                                disabled={monthOutside(viewYear, i)}
                                 onClick={() => {
                                     setMonthState(setMonth(month, i));
                                     setView('days');
@@ -231,8 +250,8 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                         title={`${fmt.year(yearPage)} – ${fmt.year(yearPage + YEARS_PER_PAGE - 1)}`}
                         onPrev={() => setYearPage((p) => p - YEAR_STEP)}
                         onNext={() => setYearPage((p) => p + YEAR_STEP)}
-                        prevDisabled={yearPage <= MIN_YEAR}
-                        nextDisabled={yearPage + YEAR_STEP > MAX_YEAR}
+                        prevDisabled={yearPage <= lowYear}
+                        nextDisabled={yearPage + YEAR_STEP > highYear}
                     />
                     <div className="grid grid-cols-3 gap-1.5">
                         {Array.from({ length: YEARS_PER_PAGE }, (_, i) => yearPage + i).map((y) => (
@@ -241,7 +260,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                                 label={fmt.year(y)}
                                 active={selected?.getFullYear() === y}
                                 current={today.getFullYear() === y}
-                                disabled={y < MIN_YEAR || y > MAX_YEAR}
+                                disabled={y < lowYear || y > highYear}
                                 onClick={() => {
                                     setMonthState(setYear(month, y));
                                     setView('months');

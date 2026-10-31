@@ -150,6 +150,40 @@ test('serverRowErrors maps 422 codes to the rows sent, by position', () => {
     });
 });
 
+test('a pasted line drops its list number and weekday, never the holiday name', () => {
+    const named = (line: string, year: number) => parseHolidayLine(line, year);
+    assert.deepEqual(named('1. 13/04/2570 วันสงกรานต์', 2027), { date: '2027-04-13', name: 'วันสงกรานต์' });
+    assert.deepEqual(named('วันจันทร์ที่ 13 เมษายน 2569 วันสงกรานต์', 2026), { date: '2026-04-13', name: 'วันสงกรานต์' });
+    assert.deepEqual(named('13 เมษายน 2569 (วันจันทร์) วันสงกรานต์', 2026), { date: '2026-04-13', name: 'วันสงกรานต์' });
+    assert.deepEqual(named('วันที่ 6 เมษายน 2569 วันจักรี', 2026), { date: '2026-04-06', name: 'วันจักรี' });
+    assert.deepEqual(named('- 12 สิงหาคม 2569 วันแม่แห่งชาติ', 2026), { date: '2026-08-12', name: 'วันแม่แห่งชาติ' });
+    assert.deepEqual(named('2) Monday, 2026-01-05 Company day', 2026), { date: '2026-01-05', name: 'Company day' });
+    assert.deepEqual(named('5 ธันวาคม 2569 วันพ่อแห่งชาติ', 2026), { date: '2026-12-05', name: 'วันพ่อแห่งชาติ' });
+    assert.deepEqual(named('วันจักรี 6 เมษายน 2569', 2026), { date: '2026-04-06', name: 'วันจักรี' });
+    assert.deepEqual(named('Sunday Fun Day 2026-03-01', 2026), { date: '2026-03-01', name: 'Sunday Fun Day' });
+    assert.deepEqual(named('วันจันทร์ที่ 13 เมษายน 2569', 2026), { error: 'no_name' });
+    assert.deepEqual(parseHolidayText('1. 13-15 เมษายน 2569 (วันจันทร์) วันสงกรานต์', 2026, []).ok, [
+        { date: '2026-04-13', name: 'วันสงกรานต์' },
+        { date: '2026-04-14', name: 'วันสงกรานต์' },
+        { date: '2026-04-15', name: 'วันสงกรานต์' },
+    ]);
+});
+
+test('the holiday date picker opens on the edited year and stays inside it', () => {
+    const editor = readFileSync(new URL('../../resources/js/modules/settings/components/sla-holiday-editor-dialog.tsx', import.meta.url), 'utf8');
+    const input = readFileSync(new URL('../../resources/js/shared/ui/date-input.tsx', import.meta.url), 'utf8');
+    const calendar = readFileSync(new URL('../../resources/js/shared/ui/calendar.tsx', import.meta.url), 'utf8');
+    assert.match(editor, /const openMonth = today\.startsWith\(`\$\{year\}-`\) \? today : `\$\{year\}-01-01`/);
+    assert.match(editor, /min=\{`\$\{year\}-01-01`\}\s*max=\{`\$\{year\}-12-31`\}\s*defaultMonth=\{openMonth\}/);
+    assert.match(
+        input,
+        /min=\{toDate\(min \?\? ''\)\}\s*max=\{toDate\(max \?\? ''\)\}\s*defaultMonth=\{selected \?\? toDate\(defaultMonth \?\? ''\)\}/,
+    );
+    assert.match(calendar, /startMonth=\{min\}\s*endMonth=\{max\}\s*disabled=\{outOfRange\}/);
+    assert.match(calendar, /disabled=\{monthOutside\(viewYear, i\)\}/);
+    assert.match(calendar, /disabled=\{y < lowYear \|\| y > highYear\}/);
+});
+
 test('tooManyHolidays reads the year-wide refusal that no row carries', () => {
     assert.equal(tooManyHolidays({ holidays: ['holiday_too_many'] }), true);
     assert.equal(tooManyHolidays({ 'holidays.0.date': ['holiday_date_taken'] }), false);

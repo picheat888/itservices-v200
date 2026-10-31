@@ -52,6 +52,20 @@ const RE_YMD = /(\d{4})-(\d{1,2})-(\d{1,2})/;
 const RE_THAI = new RegExp(`(\\d{1,2})\\s*(${MONTH_PATTERN})\\s*(\\d{4})`);
 const RE_THAI_RANGE = new RegExp(`(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})\\s*(${MONTH_PATTERN})\\s*(\\d{4})`);
 const MAX_RANGE_DAYS = 31;
+const WEEKDAY_TH = '(?:วัน)?(?:จันทร์|อังคาร|พุธ|พฤหัสบดี|พฤหัส|ศุกร์|เสาร์|อาทิตย์)(?:ที่)?';
+const WEEKDAY_EN = '(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tues|Tue|Wed|Thurs|Thu|Fri|Sat|Sun)\\.?(?![A-Za-z])';
+const WEEKDAY = `(?:${WEEKDAY_TH}|${WEEKDAY_EN})`;
+const RE_LIST_MARK = /^(?:\d{1,3}[.)]|[-–•*])\s+/;
+const RE_BEFORE_DATE = new RegExp(`(?:${WEEKDAY}|วันที่|ที่)[\\s,]*$`);
+const RE_AFTER_DATE = new RegExp(`^[\\s,]*(?:[(（]\\s*${WEEKDAY}\\s*[)）]|${WEEKDAY}(?=[\\s,]))`);
+
+// The text around the date, less a list number in front and the weekday beside the date
+function nameAround(line: string, date: string): string {
+    const at = line.indexOf(date);
+    const before = line.slice(0, at).replace(RE_LIST_MARK, '').replace(RE_BEFORE_DATE, '');
+    const after = line.slice(at + date.length).replace(RE_AFTER_DATE, '');
+    return `${before} ${after}`.replace(/\s+/g, ' ').replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '');
+}
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 const isoOf = (y: number, m: number, d: number): string => `${y}-${pad(m)}-${pad(d)}`;
@@ -97,7 +111,7 @@ export function parseHolidayLine(rawLine: string, year: number): { date: string;
     if (!isValidDate(y, mo, d)) {
         return { error: 'bad_date' };
     }
-    const name = line.replace(matched, '').replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '');
+    const name = nameAround(line, matched);
     if (!name) {
         return { error: 'no_name' };
     }
@@ -124,7 +138,7 @@ export function parseHolidayRange(rawLine: string, year: number): ParsedLine {
         if (from > to || to - from + 1 > MAX_RANGE_DAYS || !isValidDate(y, mo, from) || !isValidDate(y, mo, to)) {
             return { error: 'bad_date' };
         }
-        const name = line.replace(m[0], '').replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '');
+        const name = nameAround(line, m[0]);
         if (!name) {
             return { error: 'no_name' };
         }

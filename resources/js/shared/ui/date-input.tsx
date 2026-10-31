@@ -21,6 +21,11 @@ interface DateInputProps {
     disabled?: boolean;
     className?: string;
     placeholder?: string;
+    /** First and last ISO day that can be picked. */
+    min?: string;
+    max?: string;
+    /** ISO day whose month the calendar opens on while the field is empty. */
+    defaultMonth?: string;
 }
 
 /** Parse "YYYY-MM-DD" as a LOCAL date (no timezone shift). */
@@ -45,6 +50,9 @@ export function DateInput({
     disabled,
     className,
     placeholder,
+    min,
+    max,
+    defaultMonth,
 }: DateInputProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -90,7 +98,9 @@ export function DateInput({
             <PopoverContent container={container} align="start" className="w-auto">
                 <Calendar
                     selected={selected}
-                    defaultMonth={selected}
+                    min={toDate(min ?? '')}
+                    max={toDate(max ?? '')}
+                    defaultMonth={selected ?? toDate(defaultMonth ?? '')}
                     locale={lang === 'th' ? th : enUS}
                     onSelect={(date) => {
                         onChange(date ? format(date, 'yyyy-MM-dd') : '');
