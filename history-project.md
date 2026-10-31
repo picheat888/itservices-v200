@@ -8091,3 +8091,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - รีวิวไม่พบปัญหา ข้อสังเกตที่มีมาก่อน หลังปิดเพราะโหลดใบใหม่ไม่ได้ ถ้าเปิดแถวเดิมก่อนโหลดสำเร็จจะเห็นร่างแวบหนึ่ง บันทึกแล้วได้ `count_not_editable`
 
 ผลเทสต์ JS 1,157 ข้อ PHP ที่เกี่ยวกับสต็อก 498 ข้อ และวันหยุด/SLA 93 ข้อผ่าน tsc ESLint Pint ผ่าน ไม่มี migration ยังไม่ได้เปิดดูในเบราว์เซอร์
+
+## UI-11 ปิด: CLAUDE.md ตรงกับโค้ดจริง (2026-10-31)
+
+- ตาราง Tech Stack บอกตามจริง ฟอร์มเขียนเอง (`useFormError` / `SaveButton` / `useDiscardGuard`) ไม่ใช้ React Hook Form หรือ Zod ตารางใช้ `DataTable` ของโปรเจกต์ ไม่ใช้ TanStack Table เพิ่มแถว Routing (React Router กับ `lazyPage`)
+- โครงโฟลเดอร์เขียนใหม่ตามของจริง `app/App.tsx` กับ `route-pages.ts` แทน `router.tsx` และ `providers.tsx` ที่ไม่มีอยู่ เพิ่ม `lib/` ของโมดูล, store `new-rows`, `lang/translate.ts`, `tests/js`, `routes/console.php`, `Exports/`, `Listeners/`, `Controllers/File` รายชื่อในวงเล็บเปลี่ยนเป็นตัวอย่างพร้อมบอกให้เช็คด้วย `ls` จะได้ไม่ล้าสมัยอีก
+- กฎ type ตามที่ผู้ใช้เลือก type ข้อมูลจาก API ที่ใช้ร่วมอยู่ `shared/types` และ `types.ts` ของโมดูลมีเฉพาะ type ที่ใช้แค่ในโมดูลนั้น ไม่ย้าย type เดิม 119 ตัว (import ราว 180 ไฟล์) เว้นแต่กำลังแก้โมดูลนั้นอยู่แล้ว
+- CLAUDE.md อยู่ใน gitignore จึงไม่มี commit ฉบับก่อนแก้สำรองไว้ใน scratchpad ของ session 23a3f8cf (`CLAUDE.md.before-ui11`) ไม่แตะโค้ด
