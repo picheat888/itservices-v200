@@ -2,182 +2,43 @@
 
 namespace App\Http\Controllers\Api\Request;
 
-use App\Enums\Request\ApprovalStatus;
-use App\Enums\Request\RequestStatus;
-use App\Enums\Request\RequestType;
-use App\Enums\Request\WorkflowStepKind;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Request\RequestIndexRequest;
 use App\Http\Requests\Request\StoreServiceRequestRequest;
 use App\Http\Resources\Request\ServiceRequestResource;
 use App\Models\AuditLog;
-use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
-use App\Services\Request\RequestPeriodStats;
+use App\Services\Request\RequestListService;
 use App\Services\Request\RequestService;
 use App\Support\OverviewPeriod;
-use App\Support\SearchTerms;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 /**
- * Service requests: list/show scoped to what the viewer participates in,
- * submit, and the four workflow transitions (approve / reject / complete /
- * cancel). All state logic lives in RequestService.
+ * Service requests: the list (RequestListService), show, submit, and the four workflow
+ * transitions (approve / reject / complete / cancel) in RequestService.
  */
 class RequestController extends Controller
 {
     /**
-     * What one request needs to render on its own: the frozen chain (with each
-     * approver's account, to report who still cannot sign in), the linked ticket,
-     * the route it took, and the requester's live employee record for the
-     * identity card (code / position / photo).
+     * What one request needs to render on its own: chain with approver accounts, ticket and holder, route, requester card.
      *
      * @var list<string>
      */
-    // ticket.assignee: the trail says who is working the case, not just that one exists.
     private const DETAIL_RELATIONS = ['approvals.approver.user', 'approvals.actedBy.employee', 'ticket.assignee.employee', 'submittedBy.employee', 'workflow', 'employee.position', 'employee.department', 'attachments'];
 
-    public function __construct(private readonly RequestService $service, private readonly RequestPeriodStats $periodStats) {}
+    public function __construct(private readonly RequestService $service) {}
 
-    /**
-     * Visibility: view_all (or super) sees everything; everyone else sees the
-     * requests they submitted, the ones they appear in as an approver, and —
-     * with requests.complete — the approved queue.
-     */
-    public function index(Request $request): JsonResponse
+    public function index(RequestIndexRequest $request, RequestListService $list): JsonResponse
     {
         $user = $request->user();
-        abort_unless((bool) $user?->hasPermission('requests.module'), 403);
-
-        $seesAll = $user->isSuper() || $user->hasPermission('requests.view_all');
-        $canComplete = (bool) $user->hasPermission('requests.complete');
-        $employeeId = $user->employee_id;
-        // The employee record, not just the id: a step open to a group is matched on this
-        // person's department and position as well as on their name.
-        $employee = $user->employee;
-
-        $visible = function ($query) use ($seesAll, $canComplete, $user, $employeeId, $employee) {
-            if ($seesAll) {
-                return $query;
-            }
-
-            return $query->where(function ($q) use ($user, $employeeId, $employee, $canComplete) {
-                // Own requests, plus the ones filed on somebody else's behalf — an
-                // onboarding request has no owner account to match on.
-                $q->where('user_id', $user->id)
-                    ->orWhere('submitted_by_user_id', $user->id);
-                if ($employeeId !== null) {
-                    // Requests that are ABOUT this person, whoever filed them: their own
-                    // onboarding was filed before they had an account, so `user_id` is
-                    // null on it and without this they cannot read their own history.
-                    $q->orWhere('employee_id', $employeeId)
-                        ->orWhereHas('approvals', fn ($a) => $a->actionableBy($employee));
-                }
-                if ($canComplete) {
-                    $q->orWhereIn('status', [RequestStatus::Approved->value, RequestStatus::Completed->value]);
-                }
-            });
-        };
-
-        // Actionable first (pending → approved → completed → the rest), newest within each group.
-        // approver.user comes along because each row reports whether its approver still
-        // lacks a login — without it that is one extra query per approval row. Same for
-        // ticket.assignee: every row with a case serializes who holds it.
-        $query = $visible(ServiceRequest::with([...self::approvalsWithParent(), 'approvals.approver.user', 'approvals.actedBy.employee', 'ticket.assignee.employee', 'employee.position', 'employee.department']));
-        // Two orders, because the two readers want different things. The list wants what is
-        // actionable first; the dashboard's activity feed wants what moved last — and under
-        // the actionable order a request approved five minutes ago sat below one that has
-        // been pending since last month, which is not what "recent activity" means.
-        //
-        // Both end on the id so the order is total: two requests filed in the same second
-        // otherwise tie, and this list is paginated server-side, where an unstable tie can
-        // repeat a row on one page and drop it from the next.
-        match ($request->query('sort')) {
-            'activity' => $query->orderByDesc('last_activity_at')->latest('id'),
-            // Overview "waiting on you" card: longest-waiting first.
-            'oldest' => $query->oldest()->oldest('id'),
-            default => $query
-                ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'completed' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
-                ->latest()
-                ->latest('id'),
-        };
-
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-        if ($type = $request->query('type')) {
-            $query->where('type', $type);
-        }
-        $this->applyFiledFilter($query, $request);
-        // Each word also matches the service name in either language through the TYPE (the stored title is English only).
-        SearchTerms::apply($query, $request->query('search'), [
-            'reference', 'title', 'requester_name', 'department_name',
-            SearchTerms::related('employee', ['code', ...SearchTerms::personName(), SearchTerms::related('department', ['name', 'name_th'])]),
-            function ($q, string $like, string $word) {
-                if ($types = RequestType::matching($word)) {
-                    $q->orWhereIn('type', $types);
-                }
-            },
-        ]);
-        // Tab scopes: awaiting my decision / the IT completion queue / only my own.
-        if ($request->query('scope') === 'approvals') {
-            // An account with no employee record cannot be anybody's approver, so the answer
-            // is nothing — NOT the unfiltered list. The condition used to sit in the `if`,
-            // which meant the administrator (employee_id null) asked for "waiting on me" and
-            // got every request in the system back under that heading, each with
-            // can_approve false and a meta.awaiting_me of 0 contradicting the rows beside it.
-            $employeeId === null
-                ? $query->whereIn('id', [])
-                : $query->whereHas('approvals', fn ($a) => $a
-                    ->actionableBy($employee)
-                    ->where('status', ApprovalStatus::Current->value));
-        } elseif ($request->query('scope') === 'queue' && $canComplete) {
-            $query->where('status', RequestStatus::Approved->value);
-        } elseif ($request->query('scope') === 'mine') {
-            // "Mine" means about me or by me: the request I filed, the one I filed for
-            // somebody else, and the one somebody filed for me.
-            $query->where(function ($q) use ($user, $employeeId) {
-                $q->where('user_id', $user->id)->orWhere('submitted_by_user_id', $user->id);
-                if ($employeeId !== null) {
-                    $q->orWhere('employee_id', $employeeId);
-                }
-            });
-        }
-
-        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
-        $paginator = $query->paginate($perPage);
-        RequestApproval::preloadGroupNames($paginator->getCollection()->flatMap->approvals);
-        RequestApproval::preloadGroupCandidates($paginator->getCollection()->flatMap->approvals);
+        $page = $list->page($user, $request->filters());
 
         return response()->json([
-            'data' => ServiceRequestResource::collection($paginator->items()),
-            'meta' => $this->meta($paginator, $visible, $canComplete, $employee, OverviewPeriod::fromRequest($request)),
+            'data' => ServiceRequestResource::collection($page->items()),
+            'meta' => $list->meta($user, $page, OverviewPeriod::fromRequest($request)),
         ]);
-    }
-
-    /**
-     * Filed-date filter, named apart from the overview's from/to: ?filed_from=&filed_to= (inclusive days)
-     * or ?filed_days=N (the last N days to the minute, as the overview presets and the dashboard count).
-     */
-    private function applyFiledFilter(Builder $query, Request $request): void
-    {
-        if ($request->filled('filed_from') || $request->filled('filed_to')) {
-            $request->validate([
-                'filed_from' => ['required', 'date_format:Y-m-d'],
-                'filed_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:filed_from'],
-            ]);
-            $query->whereBetween('created_at', [
-                Carbon::parse($request->query('filed_from'))->startOfDay(),
-                Carbon::parse($request->query('filed_to'))->endOfDay(),
-            ]);
-        } elseif ($request->filled('filed_days')) {
-            $request->validate(['filed_days' => ['integer', 'min:1', 'max:366']]);
-            $query->where('created_at', '>=', now()->subDays((int) $request->query('filed_days')));
-        }
     }
 
     public function store(StoreServiceRequestRequest $request): JsonResponse
@@ -194,8 +55,7 @@ class RequestController extends Controller
 
     public function show(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        // The same rule the attachment download route answers to — see
-        // ServiceRequest::isVisibleTo.
+        // Same rule as the attachment download route (ServiceRequest::isVisibleTo)
         abort_unless($serviceRequest->isVisibleTo($request->user()), 403);
 
         return $this->detail($serviceRequest);
@@ -251,61 +111,10 @@ class RequestController extends Controller
     /** One request with everything its detail view renders, group-step names included. */
     private function detail(ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        $serviceRequest->load([...self::approvalsWithParent(), ...self::DETAIL_RELATIONS]);
+        $serviceRequest->load([...RequestListService::approvalsWithParent(), ...self::DETAIL_RELATIONS]);
         RequestApproval::preloadGroupNames($serviceRequest->approvals);
         RequestApproval::preloadGroupCandidates($serviceRequest->approvals);
 
         return new ServiceRequestResource($serviceRequest);
-    }
-
-    /**
-     * Approvals with their request set back on each row, so can_approve does not re-query it.
-     *
-     * @return array<string, \Closure(HasMany): HasMany>
-     */
-    private static function approvalsWithParent(): array
-    {
-        return ['approvals' => fn (HasMany $approvals) => $approvals->chaperone('request')];
-    }
-
-    /**
-     * KPI aggregates over the viewer's full visible set — independent of the
-     * current page, search box and filters, so the stat cards stay stable. `period`
-     * holds the Overview's figures: requests filed in the chosen period, by status.
-     *
-     * @param  callable(Builder): Builder  $visible
-     * @return array<string, mixed>
-     */
-    private function meta($paginator, callable $visible, bool $canComplete, ?Employee $employee, OverviewPeriod $period): array
-    {
-        $counts = $visible(ServiceRequest::query())
-            ->selectRaw('status, count(*) as n')
-            ->groupBy('status')
-            ->pluck('n', 'status');
-
-        // Counted the way the "waiting on me" tab filters, group steps included — the card
-        // and the list it heads must not disagree about how many there are.
-        $awaitingMe = $employee === null ? 0 : RequestApproval::query()
-            ->actionableBy($employee)
-            ->where('status', ApprovalStatus::Current->value)
-            ->where('kind', WorkflowStepKind::Approval->value)
-            ->count();
-        // Filed in the period: counts by status and mean days to a decision.
-        $filed = $this->periodStats->for($period->apply($visible(ServiceRequest::query()), 'created_at'));
-
-        return [
-            'total' => $paginator->total(),
-            'per_page' => $paginator->perPage(),
-            'current_page' => $paginator->currentPage(),
-            'last_page' => $paginator->lastPage(),
-            'pending' => (int) ($counts[RequestStatus::Pending->value] ?? 0),
-            'approved' => (int) ($counts[RequestStatus::Approved->value] ?? 0),
-            'rejected' => (int) ($counts[RequestStatus::Rejected->value] ?? 0),
-            'completed' => (int) ($counts[RequestStatus::Completed->value] ?? 0),
-            'cancelled' => (int) ($counts[RequestStatus::Cancelled->value] ?? 0),
-            'awaiting_me' => $awaitingMe,
-            'to_complete' => $canComplete ? (int) ($counts[RequestStatus::Approved->value] ?? 0) : 0,
-            'period' => $filed,
-        ];
     }
 }
