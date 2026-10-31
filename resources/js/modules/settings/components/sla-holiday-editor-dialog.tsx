@@ -210,21 +210,23 @@ export function SlaHolidayEditorDialog({
                 },
                 onError: (error) => {
                     const res = (error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } })?.response;
-                    if (res?.status === 422 && tooManyHolidays(res.data?.errors ?? {})) {
+                    const fieldErrors = res?.status === 422 ? (res.data?.errors ?? {}) : {};
+                    const mapped = serverRowErrors(
+                        fieldErrors,
+                        sent.map((r) => r.key),
+                    );
+                    const tooMany = tooManyHolidays(fieldErrors);
+                    if (tooMany) {
                         useToastStore
                             .getState()
                             .push(fillText(t('set_hol_err_too_many'), { n: fmtN(HOLIDAYS_PER_YEAR_MAX) }), 'error', t('settings_save_failed_title'));
-                        return;
                     }
-                    const mapped =
-                        res?.status === 422
-                            ? serverRowErrors(
-                                  res.data?.errors ?? {},
-                                  sent.map((r) => r.key),
-                              )
-                            : {};
                     if (Object.keys(mapped).length === 0) {
-                        failed(error);
+                        if (tooMany) {
+                            setServerErrors({});
+                        } else {
+                            failed(error);
+                        }
                         return;
                     }
                     setServerErrors(mapped);

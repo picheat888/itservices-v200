@@ -159,9 +159,12 @@ test('tooManyHolidays reads the year-wide refusal that no row carries', () => {
 test('the editor names the year cap in both languages and the save refreshes the SLA figures elsewhere', () => {
     const editor = readFileSync(new URL('../../resources/js/modules/settings/components/sla-holiday-editor-dialog.tsx', import.meta.url), 'utf8');
     const hooks = readFileSync(new URL('../../resources/js/modules/settings/hooks/use-settings.ts', import.meta.url), 'utf8');
-    assert.match(editor, /tooManyHolidays\(/);
+    const rules = readFileSync(new URL('../../app/Http/Requests/Settings/SaveSlaHolidaysRequest.php', import.meta.url), 'utf8');
+    assert.match(editor, /const tooMany = tooManyHolidays\(fieldErrors\)/);
     assert.match(editor, /fillText\(t\('set_hol_err_too_many'\), \{ n: fmtN\(HOLIDAYS_PER_YEAR_MAX\) \}\)/);
-    assert.equal(HOLIDAYS_PER_YEAR_MAX, 60);
+    // Rows the server refused are still marked when the year is over the cap too
+    assert.match(editor, /if \(tooMany\) \{\s*setServerErrors\(\{\}\);\s*\} else \{\s*failed\(error\);/);
+    assert.match(rules, new RegExp(`'holidays' => \\['present', 'array', 'max:${HOLIDAYS_PER_YEAR_MAX}'\\]`));
     assert.equal(th.set_hol_err_too_many, 'ใส่วันหยุดได้ไม่เกินปีละ {n} วัน');
     assert.equal(en.set_hol_err_too_many, 'Keep each year to {n} holidays');
     assert.match(hooks, /invalidateQueries\(\{ queryKey: \['dashboard-summary'\] \}\)/);
