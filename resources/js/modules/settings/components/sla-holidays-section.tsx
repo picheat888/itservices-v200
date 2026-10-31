@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Pencil } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import type { SlaHoliday } from '../api/settingsApi';
 import { useSlaHolidays } from '../hooks/use-settings';
 import { holidayYears, localIsoDate, monthSummary } from '../lib/sla-holidays';
@@ -20,6 +20,8 @@ import { OPENER_ID, SlaHolidayEditorDialog } from './sla-holiday-editor-dialog';
 import { fillText, jumpTo, SECTION, SectionHead, TABLE } from './sla-parts';
 
 const HOLIDAYS_SECTION_ID = 'sla-sec-holidays';
+// History entries whose ?holidays= link already scrolled here, so Back to one does not scroll again
+const SHOWN_ENTRIES = new Set<string>();
 const YEAR_PARAM = 'holidays';
 const EDIT_PARAM = 'holidays_edit';
 
@@ -68,11 +70,15 @@ export function SlaHolidaysSection({ workDays }: { workDays: number[] }) {
     // A link that names a year (the bell, the summary card) brings the section into view once the list is in
     const paramText = params.get(YEAR_PARAM);
     const shownFor = useRef<string | null>(null);
+    const location = useLocation();
     useEffect(() => {
-        if (!paramText || !data || shownFor.current === paramText) return;
+        if (!paramText || !data) return;
+        const entry = `${location.key}|${paramText}`;
+        const seen = shownFor.current === paramText || SHOWN_ENTRIES.has(entry);
         shownFor.current = paramText;
-        jumpTo(HOLIDAYS_SECTION_ID, 'start');
-    }, [paramText, data]);
+        SHOWN_ENTRIES.add(entry);
+        if (!seen) jumpTo(HOLIDAYS_SECTION_ID, 'start');
+    }, [paramText, data, location.key]);
 
     const pickYear = (next: number) => {
         shownFor.current = String(next);

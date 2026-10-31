@@ -137,6 +137,11 @@ test('the holiday screen keeps focus, names the picked date and leaves the year 
     assert.match(editor, /\{r\.date && `, \$\{fmt\.date\(r\.date\)\}`\}/);
     assert.match(editor, /existing=\{tableDates\}/);
     assert.match(page, /for \(const key of \['search', 'page', 'list', 'holidays'\]\) params\.delete\(key\);/);
+    // Back to an entry that already scrolled does not scroll again
+    const section = readFileSync(new URL('../../resources/js/modules/settings/components/sla-holidays-section.tsx', import.meta.url), 'utf8');
+    assert.match(section, /const entry = `\$\{location\.key\}\|\$\{paramText\}`;/);
+    assert.match(section, /const seen = shownFor\.current === paramText \|\| SHOWN_ENTRIES\.has\(entry\);/);
+    assert.match(section, /if \(!seen\) jumpTo\(HOLIDAYS_SECTION_ID, 'start'\);/);
 });
 
 test('fixedDateRows copies only fixed month-days into the new year', () => {

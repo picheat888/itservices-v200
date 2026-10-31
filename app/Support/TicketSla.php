@@ -131,7 +131,7 @@ class TicketSla
             return self::$hoursMemo = $defaults;
         }
 
-        // Break: saved null means none, a missing key means the default lunch, an unusable one is dropped
+        // Break: saved null or '' means none, a missing key means the default lunch, an unusable one is dropped
         $breakStart = self::timeOrNull(array_key_exists('break_start', $stored) ? $stored['break_start'] : $defaults['break_start']);
         $breakEnd = self::timeOrNull(array_key_exists('break_end', $stored) ? $stored['break_end'] : $defaults['break_end']);
         if ($breakStart === null || $breakEnd === null || $breakStart >= $breakEnd || $breakStart < $start || $breakEnd > $end) {
