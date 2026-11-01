@@ -260,25 +260,27 @@ export default function LoginPage() {
                                 error={fieldErrors.password && t(fieldErrors.password)}
                             >
                                 {(control) => (
-                                    <div className="relative" onKeyDown={readCaps} onKeyUp={readCaps} onBlur={() => setCapsOn(false)}>
-                                        <Lock className={FIELD_ICON} aria-hidden />
-                                        <PasswordInput
-                                            {...control}
-                                            aria-describedby={
-                                                [control['aria-describedby'], capsOn ? capsId : null].filter(Boolean).join(' ') || undefined
-                                            }
-                                            large
-                                            inputClassName={INPUT}
-                                            value={password}
-                                            visible={showPassword}
-                                            onToggle={() => setShowPassword((v) => !v)}
-                                            onChange={(value) => {
-                                                setPassword(value);
-                                                if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
-                                            }}
-                                            autoComplete="current-password"
-                                            placeholder={t('login_password')}
-                                        />
+                                    <div onKeyDown={readCaps} onKeyUp={readCaps} onBlur={() => setCapsOn(false)}>
+                                        <div className="relative">
+                                            <Lock className={FIELD_ICON} aria-hidden />
+                                            <PasswordInput
+                                                {...control}
+                                                aria-describedby={
+                                                    [control['aria-describedby'], capsOn ? capsId : null].filter(Boolean).join(' ') || undefined
+                                                }
+                                                large
+                                                inputClassName={INPUT}
+                                                value={password}
+                                                visible={showPassword}
+                                                onToggle={() => setShowPassword((v) => !v)}
+                                                onChange={(value) => {
+                                                    setPassword(value);
+                                                    if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
+                                                }}
+                                                autoComplete="current-password"
+                                                placeholder={t('login_password')}
+                                            />
+                                        </div>
                                         {capsOn && (
                                             <p id={capsId} className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-xs">
                                                 <ArrowBigUpDash className="h-3.5 w-3.5 shrink-0" aria-hidden />
