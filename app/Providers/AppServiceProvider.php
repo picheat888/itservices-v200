@@ -29,8 +29,8 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -55,8 +55,8 @@ class AppServiceProvider extends ServiceProvider
         // Settings cache per application instance (one request, one test)
         AppSetting::flushCache();
         AppVersion::flush();
-        // Every log line (backend, queue, schedule, frontend) names the release that wrote it
-        Context::add(['version' => AppVersion::number(), 'build' => AppVersion::builtAt()]);
+        // Every log line names the release of the process that wrote it (a queue worker keeps its own, not the dispatcher's)
+        Log::shareContext(['version' => AppVersion::number(), 'build' => AppVersion::builtAt()]);
         // A long-lived queue worker boots once; each job reads settings fresh.
         Event::listen(JobProcessing::class, function () {
             AppSetting::flushCache();

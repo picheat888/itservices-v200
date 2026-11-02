@@ -14,40 +14,50 @@ function localMinute(date) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-// One build time, baked into the bundle and written to public/build/build-info.json for the server
-function buildInfo(builtAt) {
+// Each build (watch rebuilds too) stamps one time: virtual:app-build for the bundle, public/build/build-info.json for the server
+function buildStamp() {
+    const VIRTUAL_ID = 'virtual:app-build';
+    let isBuild = false;
+    let builtAt = null;
+
     return {
-        name: 'build-info',
-        apply: 'build',
+        name: 'build-stamp',
+        configResolved(config) {
+            isBuild = config.command === 'build';
+        },
+        buildStart() {
+            builtAt = isBuild ? localMinute(new Date()) : null;
+        },
+        resolveId(id) {
+            return id === VIRTUAL_ID ? `\0${VIRTUAL_ID}` : null;
+        },
+        load(id) {
+            return id === `\0${VIRTUAL_ID}` ? `export const APP_BUILT_AT = ${JSON.stringify(builtAt)};` : null;
+        },
         generateBundle() {
-            this.emitFile({ type: 'asset', fileName: 'build-info.json', source: JSON.stringify({ built_at: builtAt }) });
+            if (isBuild) {
+                this.emitFile({ type: 'asset', fileName: 'build-info.json', source: JSON.stringify({ built_at: builtAt }) });
+            }
         },
     };
 }
 
-export default defineConfig(({ command }) => {
-    const builtAt = command === 'build' ? localMinute(new Date()) : null;
-
-    return {
-        plugins: [
-            laravel({
-                input: ['resources/css/app.css', 'resources/js/app/App.tsx'],
-                refresh: true,
-            }),
-            react(),
-            tailwindcss(),
-            buildInfo(builtAt),
-        ],
-        define: {
-            __APP_BUILT_AT__: JSON.stringify(builtAt),
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app/App.tsx'],
+            refresh: true,
+        }),
+        react(),
+        tailwindcss(),
+        buildStamp(),
+    ],
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, 'resources/js'),
         },
-        resolve: {
-            alias: {
-                '@': resolve(__dirname, 'resources/js'),
-            },
-        },
-        esbuild: {
-            jsx: 'automatic',
-        },
-    };
+    },
+    esbuild: {
+        jsx: 'automatic',
+    },
 });

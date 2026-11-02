@@ -18,6 +18,8 @@ export function AboutSystemSection() {
     const formatDate = useDateFormat();
     const { data, isLoading, isError, refetch } = useQuery({ queryKey: SYSTEM_INFO_KEY, queryFn: settingsApi.getSystemInfo, ...FRESH_VIEW });
     const [copied, setCopied] = useState(false);
+    // No clipboard on a plain-http address: hide the button rather than let it do nothing
+    const canCopy = typeof navigator.clipboard?.writeText === 'function';
 
     useEffect(() => {
         if (!copied) return;
@@ -51,10 +53,12 @@ export function AboutSystemSection() {
                     <h2 className="text-lg font-semibold">{t('set_about')}</h2>
                     <p className="text-muted-foreground text-sm">{t('set_about_desc')}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={copy} disabled={!data} className="shrink-0">
-                    {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
-                    {copied ? t('set_about_copied') : t('set_about_copy')}
-                </Button>
+                {canCopy && (
+                    <Button variant="outline" size="sm" onClick={copy} disabled={!data} className="shrink-0">
+                        {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+                        {copied ? t('set_about_copied') : t('set_about_copy')}
+                    </Button>
+                )}
             </div>
 
             {isError ? (

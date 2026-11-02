@@ -100,12 +100,12 @@ class SettingsController extends Controller
         return $this->show();
     }
 
-    /** Any signed-in user may read these: the session-timeout hook needs the timeout on every load. */
     public function systemInfo(SystemInfoService $info): JsonResponse
     {
         return response()->json(['data' => $info->payload(), 'message' => 'success']);
     }
 
+    /** Any signed-in user may read these: the session-timeout hook needs the timeout on every load. */
     public function security(SecuritySettingsService $security): JsonResponse
     {
         return response()->json(['data' => $security->payload(), 'message' => 'success']);

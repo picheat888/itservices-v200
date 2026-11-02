@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\AppVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class AppVersionTest extends TestCase
@@ -95,6 +96,14 @@ class AppVersionTest extends TestCase
         $this->assertStringContainsString('"client_build":"2026-11-02 14:05"', $log);
         $this->assertStringContainsString('"version":"'.config('app.version').'"', $log);
         $this->assertStringContainsString('"build":', $log);
+    }
+
+    public function test_every_channel_shares_the_release_of_this_process(): void
+    {
+        $this->assertSame(
+            ['version' => config('app.version'), 'build' => AppVersion::builtAt()],
+            array_intersect_key(Log::sharedContext(), ['version' => true, 'build' => true]),
+        );
     }
 
     public function test_a_browser_build_longer_than_a_timestamp_is_refused(): void
