@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Stock\StockItemController;
 use App\Http\Controllers\Api\Stock\StockLotController;
 use App\Http\Controllers\Api\Stock\StockMovementController;
 use App\Http\Controllers\Api\Stock\StockRequestController;
+use App\Http\Controllers\AppIconController;
 use App\Http\Controllers\File\FileController;
 use App\Http\Controllers\ServiceWorkerController;
 use App\Http\Controllers\WebManifestController;
@@ -14,6 +15,7 @@ use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Middleware\TrackDevice;
 use App\Models\Settings\AppSetting;
+use App\Services\Settings\AppIconService;
 use Illuminate\Support\Facades\Route;
 
 // Same sign-in checks as the API group: timeout, signed-out devices, closed accounts and owed password changes
@@ -42,8 +44,9 @@ Route::middleware([...$signedIn, 'throttle:files'])->prefix('files')->group(func
 // Service worker and web app manifest, served from the root (before the SPA catch-all)
 Route::get('/sw.js', ServiceWorkerController::class)->name('service-worker');
 Route::get('/manifest.webmanifest', WebManifestController::class)->name('web-manifest');
+Route::get('/app-icons/{name}.png', AppIconController::class)->whereIn('name', array_keys(AppIconService::ICONS))->name('app-icon');
 
 // SPA entry for every other path; the brand travels with the page (read here, not in the Blade view)
-Route::get('/{any?}', function () {
-    return view('app', ['brand' => AppSetting::brand()]);
-})->where('any', '^(?!api|sanctum|storage|build|pdf|files).*$')->middleware('throttle:page')->name('spa');
+Route::get('/{any?}', function (AppIconService $icons) {
+    return view('app', ['brand' => AppSetting::brand(), 'appleTouchIcon' => $icons->url('apple-touch')]);
+})->where('any', '^(?!api|sanctum|storage|build|pdf|files|app-icons).*$')->middleware('throttle:page')->name('spa');

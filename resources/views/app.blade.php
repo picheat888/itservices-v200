@@ -15,7 +15,7 @@
 
         {{-- Add to Home Screen (web push on iPad needs the installed app) --}}
         <link rel="manifest" href="/manifest.webmanifest">
-        <link rel="apple-touch-icon" href="{{ $brand['logo_url'] ?: asset('logo.png') }}">
+        <link rel="apple-touch-icon" href="{{ $appleTouchIcon }}">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
 

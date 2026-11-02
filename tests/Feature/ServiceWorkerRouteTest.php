@@ -55,7 +55,7 @@ class ServiceWorkerRouteTest extends TestCase
         $response->assertJsonPath('short_name', 'INA Tech');
         $response->assertJsonPath('display', 'standalone');
         $response->assertJsonPath('start_url', '/');
-        $response->assertJsonPath('icons.0.src', '/logo.png');
+        $this->assertStringStartsWith('/app-icons/any-192.png?v=', $response->json('icons.0.src'));
     }
 
     public function test_the_page_asks_for_a_full_screen_home_screen_app_under_both_names(): void

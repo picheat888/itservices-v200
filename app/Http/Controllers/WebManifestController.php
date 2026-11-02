@@ -5,23 +5,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\Settings\AppSetting;
+use App\Services\Settings\AppIconService;
 use Illuminate\Http\JsonResponse;
 
 class WebManifestController extends Controller
 {
-    public function __invoke(): JsonResponse
+    public function __invoke(AppIconService $icons): JsonResponse
     {
         $brand = AppSetting::brand();
-        $icon = $brand['logo_url']
-            ? ['src' => $brand['logo_url'], 'sizes' => 'any']
-            : ['src' => '/logo.png', 'sizes' => '512x512', 'type' => 'image/png'];
 
         return response()->json([
             'name' => $brand['name'],
             'short_name' => $brand['name'],
             'start_url' => '/',
             'display' => 'standalone',
-            'icons' => [$icon],
+            'background_color' => AppIconService::BACKGROUND,
+            'icons' => $icons->manifestIcons(),
         ], 200, ['Content-Type' => 'application/manifest+json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }
