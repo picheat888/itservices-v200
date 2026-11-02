@@ -882,3 +882,25 @@
         animation: fade-out-only 120ms linear forwards;
     }
 }
+
+/* ── iOS home-screen app: a fixed top band so WebKit fills the status bar with the app colour instead of a blur ── */
+.ios-status-bar-band {
+    display: none;
+}
+
+@media (display-mode: standalone) {
+    @supports (-webkit-touch-callout: none) {
+        .ios-status-bar-band {
+            display: block;
+            position: fixed;
+            inset: 0 0 auto 0;
+            height: 12px;
+            z-index: 2147483647;
+            pointer-events: none;
+            background-color: var(--background);
+            /* Colour is read by WebKit but nothing paints (no text to clip to) */
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+    }
+}

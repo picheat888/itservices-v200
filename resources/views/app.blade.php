@@ -37,6 +37,8 @@
         @vite(['resources/css/app.css', 'resources/js/app/App.tsx'])
     </head>
     <body class="font-sans antialiased">
+        {{-- iPadOS paints the status bar this colour instead of blurring over the top bar (CSS in app.css) --}}
+        <div class="ios-status-bar-band" aria-hidden="true"></div>
         <div id="app"></div>
     </body>
 </html>

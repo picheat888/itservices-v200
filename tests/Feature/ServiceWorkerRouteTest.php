@@ -66,4 +66,15 @@ class ServiceWorkerRouteTest extends TestCase
             ->assertSee('<meta name="mobile-web-app-capable" content="yes">', false)
             ->assertSee('<meta name="apple-mobile-web-app-capable" content="yes">', false);
     }
+
+    public function test_the_page_carries_an_invisible_fixed_band_that_stops_the_ipados_status_bar_blur(): void
+    {
+        $this->get('/login')->assertOk()->assertSee('<div class="ios-status-bar-band" aria-hidden="true"></div>', false);
+
+        $css = (string) file_get_contents(resource_path('css/app.css'));
+        $this->assertMatchesRegularExpression(
+            '/@media \(display-mode: standalone\) \{\s*@supports \(-webkit-touch-callout: none\) \{\s*\.ios-status-bar-band \{[^}]*position: fixed;[^}]*height: 12px;[^}]*pointer-events: none;[^}]*background-color: var\(--background\);[^}]*background-clip: text;/',
+            $css,
+        );
+    }
 }
