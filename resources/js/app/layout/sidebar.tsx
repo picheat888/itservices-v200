@@ -303,6 +303,7 @@ function NavScrollCue({ edges, open, onPageDown }: { edges: { above: boolean; be
                 type="button"
                 tabIndex={-1}
                 aria-hidden="true"
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={onPageDown}
                 className={cn(
                     'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute bottom-1 flex h-7 w-12 items-center justify-center rounded-md transition-opacity duration-150 motion-reduce:transition-none',

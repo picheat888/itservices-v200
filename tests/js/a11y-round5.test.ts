@@ -57,3 +57,8 @@ test("weekly chart lists every week's numbers for screen readers", () => {
     assert.equal((src.match(/tip\(w, i\)/g) ?? []).length, 2);
     assert.match(src, /<title>\{tip\(w, i\)\}<\/title>/);
 });
+
+test('sidebar page-down arrow is hidden from screen readers and never takes focus on click', () => {
+    const src = read('app/layout/sidebar.tsx');
+    assert.match(src, /tabIndex=\{-1\}\s*aria-hidden="true"\s*onMouseDown=\{\(event\) => event\.preventDefault\(\)\}\s*onClick=\{onPageDown\}/);
+});
