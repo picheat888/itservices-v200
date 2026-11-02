@@ -63,6 +63,7 @@ import {
     type SecurityPolicyKey,
     type SecuritySettings,
 } from '../api/settingsApi';
+import { AboutSystemSection } from '../components/about-system-section';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
 import { DateTimeSection } from '../components/datetime-section';
@@ -1886,6 +1887,10 @@ function SystemTab({
 
             <div className="mt-5">
                 <SaveRow onSave={save} saving={saving} saved={saved} disabled={!dirty || (brandStatus.dirty && brandStatus.blocked)} />
+            </div>
+
+            <div className="border-border mt-8 border-t pt-8">
+                <AboutSystemSection />
             </div>
         </div>
     );

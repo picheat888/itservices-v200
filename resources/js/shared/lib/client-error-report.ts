@@ -1,4 +1,5 @@
 // Sends browser errors to POST /api/client-errors (logs/frontend) and reloads once when a stale build's files are gone.
+import { APP_BUILT_AT } from '@/shared/lib/app-build';
 import { isPageLoadWaiting, reloadForNewBuild } from '@/shared/lib/chunk-reload';
 import { createReportCache } from '@/shared/lib/report-cache';
 import axios, { isAxiosError } from 'axios';
@@ -58,6 +59,7 @@ export function reportClientError(
             source: source?.slice(0, 300) ?? null,
             url: `${window.location.pathname}${window.location.search}`.slice(0, 500),
             request_id: lastRequestId,
+            build: APP_BUILT_AT,
         });
         const id: unknown = response.headers['x-request-id'];
         return typeof id === 'string' && id !== '' ? id : null;

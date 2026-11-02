@@ -14,19 +14,8 @@ const DEFAULT_ASSET_STATUS_COLORS: AssetStatusColors = {
     writeoff: '#dc2626',
 };
 
-/**
- * The brand the server put in the page (see routes/web.php → app.blade.php).
- *
- * Read once at module load, so the very first render already shows this
- * installation's own name and logo. The store used to start from VITE_APP_NAME
- * instead — a value frozen into the bundle by `npm run build` — and correct itself
- * once /api/settings answered, which meant every reload flashed a build-time name
- * and a placeholder icon, and editing the brand in Settings changed neither until
- * somebody rebuilt.
- *
- * The fallbacks below are only for a page served without the block at all.
- */
-function brandFromDocument(): { name?: string; sub?: string; logo_url?: string | null } {
+// The brand and release the server put in the page (routes/web.php → app.blade.php), read once before the first render.
+function brandFromDocument(): { name?: string; sub?: string; logo_url?: string | null; version?: string } {
     try {
         return JSON.parse(document.getElementById('brand')?.textContent ?? '{}');
     } catch {
@@ -35,6 +24,9 @@ function brandFromDocument(): { name?: string; sub?: string; logo_url?: string |
 }
 
 const SERVER_BRAND = brandFromDocument();
+
+/** The release number from config/app.php ("2.0.0"); null on a page served without the brand block. */
+export const APP_VERSION: string | null = SERVER_BRAND.version ?? null;
 
 interface UiState {
     dark: boolean;

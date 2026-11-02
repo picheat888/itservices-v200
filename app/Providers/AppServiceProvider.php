@@ -13,6 +13,7 @@ use App\Services\Auth\CurrentDevice;
 use App\Services\Auth\DbIpLookup;
 use App\Services\Auth\DeviceUserProvider;
 use App\Services\Auth\GeoIpLookup;
+use App\Support\AppVersion;
 use App\Support\Cidr;
 use App\Support\ErrorPage;
 use App\Support\NotificationCatalogue;
@@ -28,6 +29,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
@@ -52,6 +54,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Settings cache per application instance (one request, one test)
         AppSetting::flushCache();
+        AppVersion::flush();
+        // Every log line (backend, queue, schedule, frontend) names the release that wrote it
+        Context::add(['version' => AppVersion::number(), 'build' => AppVersion::builtAt()]);
         // A long-lived queue worker boots once; each job reads settings fresh.
         Event::listen(JobProcessing::class, function () {
             AppSetting::flushCache();

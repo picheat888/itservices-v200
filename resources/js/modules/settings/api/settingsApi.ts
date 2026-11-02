@@ -80,6 +80,15 @@ export interface TicketSlaWorkClassTarget {
     enabled: boolean;
 }
 
+// Settings → System "About this system"; built_at is "YYYY-MM-DD HH:mm" or null before the first build
+export interface SystemInfo {
+    version: string;
+    built_at: string | null;
+    php: string;
+    laravel: string;
+    database: string;
+}
+
 // Working window the SLA clocks count against (days: ISO weekday 1–7 = Mon–Sun).
 // break_* is an optional pause (e.g. lunch) the clocks skip — null on both = no break.
 export interface TicketSlaHours {
@@ -296,6 +305,8 @@ export const settingsApi = {
         await ensureCsrf();
         await http.delete(`/settings/network-names/${id}`);
     },
+
+    getSystemInfo: () => http.get<ApiEnvelope<SystemInfo>>('/settings/system-info').then((r) => r.data.data),
 
     getMail: () => http.get<ApiEnvelope<MailSettingsData>>('/settings/mail').then((r) => r.data.data),
 

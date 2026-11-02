@@ -430,4 +430,15 @@ export const settings: Dict = {
     set_sound_list: 'Sound list, scrollable',
     set_sound_play: 'Play {name}',
     set_sound_note: "Notifications that show on screen while the system isn't open use the Windows or iPad sound, which can't be chosen here.",
+
+    // components/about-system-section.tsx — System tab, about this system
+    set_about: 'About this system',
+    set_about_desc: 'The installed release. Quote it when reporting a problem.',
+    set_about_version: 'Version',
+    set_about_build: 'Build',
+    set_about_php: 'PHP',
+    set_about_laravel: 'Laravel',
+    set_about_database: 'Database',
+    set_about_copy: 'Copy',
+    set_about_copied: 'Copied',
 };

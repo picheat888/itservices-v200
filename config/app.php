@@ -15,6 +15,12 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Release number shown on the login page, in Settings → System and in every log line
+    'version' => '2.0.0',
+
+    // Written by `npm run build` (vite.config.js): {"built_at": "YYYY-MM-DD HH:mm"}
+    'build_info_path' => public_path('build/build-info.json'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

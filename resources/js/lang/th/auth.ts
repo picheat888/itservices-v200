@@ -77,4 +77,8 @@ export const auth: Dict = {
     login_reason_account_closed: 'บัญชีถูกปิด',
     login_reason_remembered: 'เข้าอัตโนมัติ (จดจำฉันไว้)',
     login_reason_unknown_account: 'ไม่พบบัญชี',
+
+    // components/app-version-line.tsx — release under the login form and in the brand panel
+    login_version: 'Version {version}',
+    login_version_build: 'Version {version} Build {build}',
 };

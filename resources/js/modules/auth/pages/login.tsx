@@ -16,6 +16,7 @@ import { ArrowBigUpDash, Clock, Lock, LogOut, MonitorSmartphone, Shield, User, t
 import { useEffect, useId, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { DeviceLimitResponse } from '../api/authApi';
+import { AppVersionLine } from '../components/app-version-line';
 import { DeviceLimitDialog } from '../components/device-limit-dialog';
 import { LoginBrandPanel } from '../components/login-brand-panel';
 import { LoginToolbar } from '../components/login-toolbar';
@@ -328,8 +329,11 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <div className="split:hidden text-muted-foreground pb-5 text-center text-xs">
-                    © {new Date().getFullYear()} {brandName}
+                <div className="split:hidden text-muted-foreground flex flex-wrap justify-center gap-x-3 pb-5 text-xs">
+                    <span>
+                        © {new Date().getFullYear()} {brandName}
+                    </span>
+                    <AppVersionLine />
                 </div>
             </main>
 

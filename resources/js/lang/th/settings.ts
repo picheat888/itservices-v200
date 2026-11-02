@@ -426,4 +426,15 @@ export const settings: Dict = {
     set_sound_list: 'รายการเสียง เลื่อนดูได้',
     set_sound_play: 'ลองฟัง {name}',
     set_sound_note: 'แจ้งเตือนที่ขึ้นบนจอตอนไม่ได้เปิดระบบ ใช้เสียงของ Windows หรือ iPad เลือกจากที่นี่ไม่ได้',
+
+    // components/about-system-section.tsx — System tab, about this system
+    set_about: 'เกี่ยวกับระบบ',
+    set_about_desc: 'เวอร์ชันที่ติดตั้งอยู่ แจ้งข้อมูลนี้เมื่อรายงานปัญหาให้ทีมพัฒนา',
+    set_about_version: 'Version',
+    set_about_build: 'Build',
+    set_about_php: 'PHP',
+    set_about_laravel: 'Laravel',
+    set_about_database: 'ฐานข้อมูล',
+    set_about_copy: 'คัดลอก',
+    set_about_copied: 'คัดลอกแล้ว',
 };

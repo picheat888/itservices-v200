@@ -20,6 +20,7 @@ use App\Services\Settings\MailSettingsService;
 use App\Services\Settings\SecuritySettingsService;
 use App\Services\Settings\SettingsService;
 use App\Services\Settings\SlaSettingsService;
+use App\Services\Settings\SystemInfoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -100,6 +101,11 @@ class SettingsController extends Controller
     }
 
     /** Any signed-in user may read these: the session-timeout hook needs the timeout on every load. */
+    public function systemInfo(SystemInfoService $info): JsonResponse
+    {
+        return response()->json(['data' => $info->payload(), 'message' => 'success']);
+    }
+
     public function security(SecuritySettingsService $security): JsonResponse
     {
         return response()->json(['data' => $security->payload(), 'message' => 'success']);

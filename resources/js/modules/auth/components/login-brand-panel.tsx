@@ -2,6 +2,7 @@
 // Dark mode mixes the brand into a deep ground instead of filling half the screen with the light dark-mode brand.
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
+import { AppVersionLine } from './app-version-line';
 import { LoginGridLens } from './login-grid-lens';
 import { SampleTicketCard } from './sample-ticket-card';
 
@@ -43,8 +44,11 @@ export function LoginBrandPanel() {
                 <SampleTicketCard />
             </div>
 
-            <div className="mt-auto pt-8 text-xs dark:text-[hsl(220_30%_84%)]">
-                © {new Date().getFullYear()} {brandName}
+            <div className="mt-auto flex items-baseline justify-between gap-4 pt-8 text-xs dark:text-[hsl(220_30%_84%)]">
+                <span>
+                    © {new Date().getFullYear()} {brandName}
+                </span>
+                <AppVersionLine className="opacity-85" />
             </div>
         </aside>
     );

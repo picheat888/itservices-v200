@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 class ClientErrorLogService
 {
     /**
-     * @param  array{kind: string, message: string, stack?: ?string, source?: ?string, url?: ?string, request_id?: ?string}  $report
+     * @param  array{kind: string, message: string, stack?: ?string, source?: ?string, url?: ?string, request_id?: ?string, build?: ?string}  $report
      */
     public function record(array $report, ?int $userId, ?string $userAgent): void
     {
@@ -18,6 +18,7 @@ class ClientErrorLogService
             'source' => self::oneLine($report['source'] ?? null),
             'url' => self::oneLine($report['url'] ?? null),
             'server_request_id' => $report['request_id'] ?? null,
+            'client_build' => self::oneLine($report['build'] ?? null),
             'user_id' => $userId,
             'user_agent' => $userAgent !== null ? mb_substr($userAgent, 0, 300) : null,
             'stack' => $report['stack'] ?? null,

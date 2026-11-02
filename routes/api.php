@@ -194,6 +194,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         ->middleware('permission:settings.company')->name('api.settings.company');
     Route::put('settings/branding', [SettingsController::class, 'updateBranding'])
         ->middleware('permission:settings.system')->name('api.settings.branding');
+    Route::get('settings/system-info', [SettingsController::class, 'systemInfo'])
+        ->middleware('permission:settings.system')->name('api.settings.system-info');
     Route::put('settings/display', [SettingsController::class, 'updateDisplay'])
         ->middleware('permission:settings.system')->name('api.settings.display');
     Route::put('settings/datetime', [SettingsController::class, 'updateDateTime'])

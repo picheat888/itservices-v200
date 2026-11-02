@@ -27,6 +27,7 @@ class StoreClientErrorRequest extends FormRequest
             'source' => ['nullable', 'string', 'max:300'],
             'url' => ['nullable', 'string', 'max:500'],
             'request_id' => ['nullable', 'string', 'max:64'],
+            'build' => ['nullable', 'string', 'max:32'],
         ];
     }
 }

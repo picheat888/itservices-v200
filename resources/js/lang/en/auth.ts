@@ -77,4 +77,8 @@ export const auth: Dict = {
     login_reason_account_closed: 'Account closed',
     login_reason_remembered: 'Signed in automatically (Remember me)',
     login_reason_unknown_account: 'Account not found',
+
+    // components/app-version-line.tsx — release under the login form and in the brand panel
+    login_version: 'Version {version}',
+    login_version_build: 'Version {version} Build {build}',
 };

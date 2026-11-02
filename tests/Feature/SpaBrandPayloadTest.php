@@ -39,6 +39,7 @@ class SpaBrandPayloadTest extends TestCase
             'name' => 'Inaba Service Desk',
             'sub' => 'IT Helpdesk',
             'logo_url' => null,
+            'version' => config('app.version'),
         ], $this->payload());
     }
 
@@ -99,6 +100,7 @@ class SpaBrandPayloadTest extends TestCase
             'name' => 'Fallback Name',
             'sub' => 'Service Desk',
             'logo_url' => null,
+            'version' => config('app.version'),
         ], $this->payload());
     }
 }

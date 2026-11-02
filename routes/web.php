@@ -16,6 +16,7 @@ use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Middleware\TrackDevice;
 use App\Models\Settings\AppSetting;
 use App\Services\Settings\AppIconService;
+use App\Support\AppVersion;
 use Illuminate\Support\Facades\Route;
 
 // Same sign-in checks as the API group: timeout, signed-out devices, closed accounts and owed password changes
@@ -48,5 +49,5 @@ Route::get('/app-icons/{name}.png', AppIconController::class)->whereIn('name', a
 
 // SPA entry for every other path; the brand travels with the page (read here, not in the Blade view)
 Route::get('/{any?}', function (AppIconService $icons) {
-    return view('app', ['brand' => AppSetting::brand(), 'appleTouchIcon' => $icons->url('apple-touch')]);
+    return view('app', ['brand' => AppSetting::brand() + ['version' => AppVersion::number()], 'appleTouchIcon' => $icons->url('apple-touch')]);
 })->where('any', '^(?!api|sanctum|storage|build|pdf|files|app-icons).*$')->middleware('throttle:page')->name('spa');
