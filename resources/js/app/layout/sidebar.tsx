@@ -183,7 +183,7 @@ function SidebarPanel({ open, toggleSlot = false, onPick, onProfile }: SidebarPa
                     <img
                         src={logoUrl || '/logo.svg'}
                         alt=""
-                        className="group-focus-visible:ring-ring group-focus-visible:ring-offset-sidebar h-9 w-9 shrink-0 rounded-lg object-contain group-focus-visible:ring-2 group-focus-visible:ring-offset-2"
+                        className="group-focus-visible:ring-ring group-focus-visible:ring-offset-sidebar dark:logo-glass h-9 w-9 shrink-0 rounded-lg object-contain group-focus-visible:ring-2 group-focus-visible:ring-offset-2 dark:rounded-[10px] dark:p-[3px]"
                     />
                     <div className="nav-label min-w-0">
                         <div className="text-sidebar-foreground truncate text-sm font-bold">{brandName}</div>

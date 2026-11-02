@@ -195,7 +195,11 @@ export default function LoginPage() {
                     <div className="animate-in fade-in split:max-w-[25rem] w-full max-w-[30rem] [animation-duration:var(--motion-open)]">
                         {/* Brand header where the panel is hidden (iPad, narrow windows); short screens tighten the gaps */}
                         <div className="split:hidden mb-10 flex items-center gap-4 [@media(max-height:50rem)]:mb-7">
-                            <img src={logoUrl || '/logo.svg'} alt="" className="size-16 shrink-0 object-contain" />
+                            <img
+                                src={logoUrl || '/logo.svg'}
+                                alt=""
+                                className="dark:logo-glass size-16 shrink-0 object-contain dark:rounded-[18px] dark:p-2"
+                            />
                             <div>
                                 <div className="text-2xl leading-tight font-bold">{brandName}</div>
                                 <div className="text-muted-foreground text-base">{brandSub}</div>

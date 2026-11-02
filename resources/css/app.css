@@ -24,6 +24,17 @@
     }
 }
 
+/* Brand logo on a coloured or dark ground: frosted glass, 92% white so any logo colour stays readable */
+@utility logo-glass {
+    background-color: rgb(255 255 255 / 0.92);
+    border: 1px solid rgb(255 255 255 / 0.75);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.9),
+        0 6px 18px rgb(8 15 40 / 0.22);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
 @theme {
     --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 

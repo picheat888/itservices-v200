@@ -14,7 +14,7 @@ export function LoginBrandPanel() {
     const dark = useUiStore((s) => s.dark);
 
     return (
-        <aside className="group/panel bg-brand text-brand-foreground split:flex relative isolate hidden min-w-0 flex-col overflow-hidden px-16 pt-12 pb-9 [--edge:rgb(255_255_255/0.26)] [--grid:rgb(255_255_255/0.13)] [--tile:rgb(255_255_255/0.14)] dark:bg-[color-mix(in_oklab,var(--brand)_30%,hsl(225_42%_7%))] dark:text-[hsl(220_40%_97%)] dark:[--edge:rgb(175_195_245/0.18)] dark:[--grid:rgb(175_195_245/0.085)] dark:[--tile:rgb(175_195_245/0.08)]">
+        <aside className="group/panel bg-brand text-brand-foreground split:flex relative isolate hidden min-w-0 flex-col overflow-hidden px-16 pt-12 pb-9 [--grid:rgb(255_255_255/0.13)] [--tile:rgb(255_255_255/0.14)] dark:bg-[color-mix(in_oklab,var(--brand)_30%,hsl(225_42%_7%))] dark:text-[hsl(220_40%_97%)] dark:[--grid:rgb(175_195_245/0.085)] dark:[--tile:rgb(175_195_245/0.08)]">
             {/* Still grid; the lens canvas takes over under a mouse */}
             <div
                 aria-hidden
@@ -23,7 +23,7 @@ export function LoginBrandPanel() {
             <LoginGridLens dark={dark} />
 
             <div className="flex items-center gap-3.5">
-                <div className="grid size-[52px] shrink-0 place-items-center rounded-[14px] border border-(--edge) bg-(--tile)">
+                <div className="logo-glass grid size-[52px] shrink-0 place-items-center rounded-[15px]">
                     <img src={logoUrl || '/logo.svg'} alt="" className="size-9 object-contain" />
                 </div>
                 <div>
