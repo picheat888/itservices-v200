@@ -28,9 +28,9 @@ class AuditLogListService
             'Transferred%', 'Received%', 'Accepted%', 'Requested asset%', 'Recalled%', 'Force-recalled%',
             'Wrote off%', 'Bulk asset%', 'Returned asset%', 'Cancelled asset%', 'Stock %', 'Opened stock%', 'Committed stock%',
         ],
-        'created' => ['Created%', 'Duplicated%', 'Registered%', 'Imported%', 'Uploaded%'],
+        'created' => ['Created%', 'Duplicated%', 'Registered%', 'Imported%', 'Uploaded%', 'Paired%'],
         'updated' => ['Updated%', 'Changed%', 'Set%', 'Reset%', 'Reordered%', 'Reactivated%', 'Recorded%', 'Cancelled%', 'Resumed%', 'Paused%'],
-        'deleted' => ['Deleted%', 'Removed%'],
+        'deleted' => ['Deleted%', 'Removed%', 'Unpaired%'],
     ];
 
     private const OTHER = 'other';
