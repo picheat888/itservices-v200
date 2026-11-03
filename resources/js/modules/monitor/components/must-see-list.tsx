@@ -28,7 +28,7 @@ export function MustSeeList({
 
     return (
         <section className="bg-card flex min-h-0 flex-col overflow-hidden rounded-2xl border shadow-sm dark:shadow-none">
-            <div className="flex items-center justify-between border-b px-7 pt-4 pb-3">
+            <div className="dark:bg-muted/70 flex items-center justify-between border-b px-7 pt-4 pb-3">
                 <h2 className="text-[32px] font-bold">{t('mon_list_title')}</h2>
                 {pageCount > 1 && (
                     <div className="text-muted-foreground flex items-center gap-4.5 text-[26px] font-semibold">
