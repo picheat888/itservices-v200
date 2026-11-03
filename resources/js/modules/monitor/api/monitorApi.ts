@@ -16,12 +16,8 @@ const tv = axios.create({
 });
 
 export const monitorApi = {
-    // A paired TV sends its token; a signed-in viewer reads the session route
-    board: (token: string | null) =>
-        (token
-            ? tv.get<ApiEnvelope<MonitorBoard>>('/monitor/board', { headers: { [MONITOR_TOKEN_HEADER]: token } })
-            : tv.get<ApiEnvelope<MonitorBoard>>('/monitor/live')
-        ).then((r) => r.data.data),
+    board: (token: string) =>
+        tv.get<ApiEnvelope<MonitorBoard>>('/monitor/board', { headers: { [MONITOR_TOKEN_HEADER]: token } }).then((r) => r.data.data),
     requestCode: async () => {
         await ensureCsrf();
         const post = () => tv.post<ApiEnvelope<MonitorPairingCode>>('/monitor/pairings').then((r) => r.data.data);
@@ -43,6 +39,3 @@ export const monitorApi = {
 
 /** True when the server no longer knows this TV's token. */
 export const isUnpaired = (error: unknown) => axios.isAxiosError(error) && error.response?.status === 401;
-
-/** The board refused this viewer outright (401 unpaired or signed out, 403 no longer allowed): stop polling. */
-export const isRefused = (error: unknown) => axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);

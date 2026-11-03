@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import axios from 'axios';
-import { AlertCircle, ExternalLink } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useId, useState } from 'react';
 import { PAIR_CODE_LENGTH } from '../lib/pair-code';
 import { PairCodeInput } from './pair-code-input';
@@ -140,12 +140,6 @@ function PairedCard({ status }: { status: MonitorDeviceStatus }) {
                         <span className={cn('size-2.5 rounded-full', online ? 'bg-emerald-500' : 'bg-muted-foreground')} aria-hidden />
                         {t('set_monitor_paired')}
                     </div>
-                    <Button variant="outline" size="sm" asChild>
-                        <a href="/monitor" target="_blank" rel="noopener">
-                            {t('set_monitor_open')}
-                            <ExternalLink className="size-3.5" aria-hidden />
-                        </a>
-                    </Button>
                 </div>
                 <dl className="grid grid-cols-[150px_minmax(0,1fr)] gap-x-4 gap-y-3 px-4.5 py-4 text-sm">
                     <dt className="text-muted-foreground">{t('set_monitor_status')}</dt>

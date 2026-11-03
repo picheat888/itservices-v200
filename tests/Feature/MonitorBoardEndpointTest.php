@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Services\Monitor\MonitorPairingService;
@@ -72,26 +71,7 @@ class MonitorBoardEndpointTest extends TestCase
         $this->assertNotNull($this->lastSeen());
     }
 
-    public function test_signed_in_user_with_view_all_reads_the_live_board_without_marking_the_tv_seen(): void
-    {
-        $this->pairedToken();
-
-        $this->actingAs($this->userWith('desk', 'tickets.module', 'tickets.view_all'))
-            ->getJson('/api/monitor/live')
-            ->assertOk()
-            ->assertJsonStructure(['data' => ['generated_at', 'kpis', 'rows', 'team']]);
-
-        $this->assertNull($this->lastSeen());
-    }
-
-    public function test_signed_in_user_without_view_all_is_forbidden(): void
-    {
-        $this->actingAs($this->userWith('plain', 'tickets.module'))
-            ->getJson('/api/monitor/live')
-            ->assertForbidden();
-    }
-
-    public function test_the_token_route_never_falls_back_to_a_session(): void
+    public function test_a_signed_in_user_still_has_to_pair(): void
     {
         $this->actingAs($this->userWith('desk', 'tickets.module', 'tickets.view_all'))
             ->getJson('/api/monitor/board')
@@ -99,15 +79,10 @@ class MonitorBoardEndpointTest extends TestCase
             ->assertJsonPath('message', 'monitor_unpaired');
     }
 
-    public function test_a_resigned_viewer_is_signed_out_like_on_the_rest_of_the_api(): void
+    public function test_there_is_no_signed_in_board_route(): void
     {
-        $user = $this->userWith('desk', 'tickets.module', 'tickets.view_all');
-        $user->update(['employee_id' => Employee::create([
-            'first_name' => 'Gone', 'last_name' => 'Away', 'status' => 'resigned', 'last_day' => now()->subDay()->toDateString(),
-        ])->id]);
-
-        $this->actingAs($user)->getJson('/api/monitor/live')
-            ->assertStatus(401)
-            ->assertJsonPath('message', 'account_closed');
+        $this->actingAs($this->userWith('desk', 'tickets.module', 'tickets.view_all'))
+            ->getJson('/api/monitor/live')
+            ->assertNotFound();
     }
 }

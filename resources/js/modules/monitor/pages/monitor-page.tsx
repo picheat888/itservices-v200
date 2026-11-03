@@ -1,6 +1,5 @@
-// /monitor: a paired TV or a signed-in user with tickets.view_all sees the board; any other browser shows a pairing code.
+// /monitor: only a paired device sees the board; every other browser, signed in or not, shows a pairing code.
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { unlockSoundOnFirstGesture } from '@/modules/notification';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useEffect, useState } from 'react';
@@ -15,7 +14,6 @@ import { codeLeftMs, monitorMode } from '../lib/monitor-mode';
 export default function MonitorPage() {
     useDocumentTitle('mon_tab_title');
     const t = useT();
-    const { isLoading, isError, isAuthenticated, can } = useAuth();
     const [token, setToken] = useState<string | null>(readMonitorToken);
     const [wasUnpaired, setWasUnpaired] = useState(false);
     const [justPaired, setJustPaired] = useState(false);
@@ -24,23 +22,17 @@ export default function MonitorPage() {
 
     useEffect(() => unlockSoundOnFirstGesture(), []);
 
-    const viaSession = isAuthenticated && can('tickets.view_all');
-    const [sessionLost, setSessionLost] = useState(false);
-    const mode = monitorMode({ token, authSettled: !isLoading || isError, viaSession, sessionLost });
-    const board = useMonitorBoard(token, mode === 'board');
+    const mode = monitorMode(token);
+    const board = useMonitorBoard(token);
 
-    // Refused: a TV the server forgot goes back to the code screen; a signed-in viewer who lost access does too
+    // The server forgot this device: drop the token and go back to the code screen
     useEffect(() => {
-        if (!board.refused) return;
+        if (!board.unpaired || token === null) return;
+        writeMonitorToken(null);
+        setToken(null);
         setStarted(false);
-        if (token !== null) {
-            writeMonitorToken(null);
-            setToken(null);
-            setWasUnpaired(true);
-        } else {
-            setSessionLost(true);
-        }
-    }, [board.refused, token]);
+        setWasUnpaired(true);
+    }, [board.unpaired, token]);
 
     const code = usePairingCode(mode === 'pairing');
     const poll = usePairingPoll(mode === 'pairing' ? (code.data?.pairing_id ?? null) : null);

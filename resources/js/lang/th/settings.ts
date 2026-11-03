@@ -453,7 +453,6 @@ export const settings: Dict = {
     set_monitor_step3_title: 'กดเริ่มใช้งานบนทีวีหนึ่งครั้ง',
     set_monitor_step3_hint: 'เบราว์เซอร์จะยอมเล่นเสียงเคสใหม่หลังมีคนกดหนึ่งครั้ง',
     set_monitor_paired: 'จับคู่ทีวีแล้ว',
-    set_monitor_open: 'ดูหน้าจอ',
     set_monitor_status: 'สถานะจอ',
     set_monitor_online: 'ออนไลน์ ดึงข้อมูลล่าสุดเมื่อ {t}',
     set_monitor_offline: 'ออฟไลน์ ดึงข้อมูลล่าสุดเมื่อ {t}',

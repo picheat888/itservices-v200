@@ -457,7 +457,6 @@ export const settings: Dict = {
     set_monitor_step3_title: 'Press start on the TV once',
     set_monitor_step3_hint: 'Browsers play the new-case sound only after someone presses once',
     set_monitor_paired: 'TV paired',
-    set_monitor_open: 'View screen',
     set_monitor_status: 'Screen status',
     set_monitor_online: 'Online, last fetched {t}',
     set_monitor_offline: 'Offline, last fetched {t}',

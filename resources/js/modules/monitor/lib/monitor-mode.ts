@@ -1,20 +1,10 @@
 // Monitor TV decisions kept pure for node tests: which screen to show, the pairing countdown, the one CSRF retry.
 
-export type MonitorMode = 'wait' | 'pairing' | 'board';
+export type MonitorMode = 'pairing' | 'board';
 
-interface ModeInput {
-    token: string | null;
-    /** /me has answered, or failed for good: the TV must not wait on it forever. */
-    authSettled: boolean;
-    viaSession: boolean;
-    /** The signed-in board answered 401/403: that session can no longer read it. */
-    sessionLost: boolean;
-}
-
-export function monitorMode({ token, authSettled, viaSession, sessionLost }: ModeInput): MonitorMode {
-    if (token !== null) return 'board';
-    if (viaSession && !sessionLost) return 'board';
-    return authSettled ? 'pairing' : 'wait';
+/** Only a paired device sees the board; a signed-in browser pairs like a TV. */
+export function monitorMode(token: string | null): MonitorMode {
+    return token !== null ? 'board' : 'pairing';
 }
 
 /** Time left on a pairing code, counted from when its reply arrived (the TV clock may be wrong). */

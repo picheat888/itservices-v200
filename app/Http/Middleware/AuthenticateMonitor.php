@@ -1,6 +1,6 @@
 <?php
 
-// Lets only the paired monitor TV (X-Monitor-Token) read the board; signed-in viewers use /monitor/live inside the signed-in API.
+// Lets only the paired monitor TV (X-Monitor-Token) read the board; a signed-in browser has to be paired as well.
 
 namespace App\Http\Middleware;
 

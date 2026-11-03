@@ -1,7 +1,7 @@
 // React Query hooks for the monitor TV (board, pairing) and Settings → จอ Monitor, plus the TV's stored device token.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
-import { isRefused, isUnpaired, monitorApi } from '../api/monitorApi';
+import { isUnpaired, monitorApi } from '../api/monitorApi';
 import { codeLeftMs } from '../lib/monitor-mode';
 import type { MonitorDeviceStatus } from '../types';
 
@@ -28,15 +28,15 @@ export function writeMonitorToken(token: string | null): void {
 }
 
 /** The board every 10 s; keeps the last good board through failures and counts them. */
-export function useMonitorBoard(token: string | null, enabled = true) {
+export function useMonitorBoard(token: string | null) {
     const failures = useRef(0);
     const [lastOkAt, setLastOkAt] = useState<number | null>(null);
 
     const query = useQuery({
-        queryKey: ['monitor', 'board', token ?? 'session'],
+        queryKey: ['monitor', 'board', token],
         queryFn: async () => {
             try {
-                const board = await monitorApi.board(token);
+                const board = await monitorApi.board(token as string);
                 failures.current = 0;
                 setLastOkAt(Date.now());
                 return board;
@@ -45,15 +45,15 @@ export function useMonitorBoard(token: string | null, enabled = true) {
                 throw error;
             }
         },
-        enabled,
-        refetchInterval: (q) => (isRefused(q.state.error) ? false : BOARD_EVERY_MS),
+        enabled: token !== null,
+        refetchInterval: (q) => (isUnpaired(q.state.error) ? false : BOARD_EVERY_MS),
         refetchIntervalInBackground: true,
         refetchOnWindowFocus: false,
         retry: false,
         placeholderData: (previous) => previous,
     });
 
-    return { ...query, failures: failures.current, lastOkAt, unpaired: isUnpaired(query.error), refused: isRefused(query.error) };
+    return { ...query, failures: failures.current, lastOkAt, unpaired: isUnpaired(query.error) };
 }
 
 /** A pairing code for this TV, re-requested when it expires. */

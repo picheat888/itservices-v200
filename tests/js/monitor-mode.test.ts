@@ -1,25 +1,14 @@
-// Monitor TV: which screen /monitor shows, the pairing countdown on a wrong clock, and the one CSRF retry.
+// Monitor TV: board only with a device token, the pairing countdown on a wrong clock, and the one CSRF retry.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { codeLeftMs, monitorMode, withCsrfRetry } from '../../resources/js/modules/monitor/lib/monitor-mode.ts';
 
-const base = { token: null, authSettled: true, viaSession: false, sessionLost: false };
-
-test('a stored token shows the board even before /me answers', () => {
-    assert.equal(monitorMode({ ...base, token: 'abc', authSettled: false }), 'board');
+test('a stored device token shows the board', () => {
+    assert.equal(monitorMode('abc'), 'board');
 });
 
-test('a signed-in viewer with access shows the board', () => {
-    assert.equal(monitorMode({ ...base, viaSession: true }), 'board');
-});
-
-test('a viewer whose session ended falls back to the code screen', () => {
-    assert.equal(monitorMode({ ...base, viaSession: true, sessionLost: true }), 'pairing');
-});
-
-test('the code screen waits for /me, but not forever', () => {
-    assert.equal(monitorMode({ ...base, authSettled: false }), 'wait');
-    assert.equal(monitorMode(base), 'pairing');
+test('without a token every browser pairs, signed in or not', () => {
+    assert.equal(monitorMode(null), 'pairing');
 });
 
 test('the code countdown runs from when the reply arrived, not the TV clock', () => {

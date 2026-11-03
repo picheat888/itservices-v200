@@ -99,7 +99,7 @@ Route::get('settings', [SettingsController::class, 'show'])
 Route::post('client-errors', [ClientErrorController::class, 'store'])
     ->middleware('throttle:client-errors')->name('api.client-errors.store');
 
-// Monitor TV: pairing by code (guest) and the board for the paired TV; signed-in viewers read /monitor/live below
+// Monitor TV: pairing by code (guest) and the board, for a paired TV only
 Route::post('monitor/pairings', [MonitorController::class, 'requestCode'])->middleware('throttle:monitor-code')->name('api.monitor.pairings.store');
 Route::get('monitor/pairings/{pairingId}', [MonitorController::class, 'pollPairing'])
     ->where('pairingId', '[A-Za-z0-9]{40}')->middleware('throttle:monitor')->name('api.monitor.pairings.show');
@@ -227,8 +227,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])
         ->middleware('permission:settings.security')->name('api.settings.security.update');
-    // Monitor board for a signed-in viewer, behind the same session, device and account checks as the rest of the API
-    Route::get('monitor/live', [MonitorController::class, 'board'])->middleware('permission:tickets.view_all')->name('api.monitor.live');
     Route::middleware('permission:settings.monitor')->prefix('settings/monitor')->group(function () {
         Route::get('/', [MonitorDeviceController::class, 'show'])->name('api.settings.monitor');
         Route::post('pair', [MonitorDeviceController::class, 'pair'])->middleware('throttle:monitor-pair')->name('api.settings.monitor.pair');
