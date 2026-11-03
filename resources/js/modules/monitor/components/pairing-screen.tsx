@@ -29,7 +29,7 @@ export function PairingScreen({
                     {t('mon_unpaired_banner')}
                 </div>
             )}
-            <div className="bg-card flex w-[1120px] flex-col items-center gap-4.5 rounded-[28px] border px-18 pt-15 pb-13 text-center">
+            <div className="bg-card flex w-[1120px] flex-col items-center gap-4.5 rounded-[28px] border px-18 pt-15 pb-13 text-center shadow-sm dark:shadow-none">
                 <MonitorBrand />
                 <div className="text-muted-foreground mt-3 text-[32px]">{t('mon_pair_label')}</div>
                 {pairing ? (

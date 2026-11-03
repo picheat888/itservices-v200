@@ -27,7 +27,7 @@ export function MustSeeList({
     const t = useMonitorT();
 
     return (
-        <section className="bg-card flex min-h-0 flex-col overflow-hidden rounded-2xl border">
+        <section className="bg-card flex min-h-0 flex-col overflow-hidden rounded-2xl border shadow-sm dark:shadow-none">
             <div className="flex items-center justify-between border-b px-7 pt-4 pb-3">
                 <h2 className="text-[32px] font-bold">{t('mon_list_title')}</h2>
                 {pageCount > 1 && (
@@ -64,7 +64,10 @@ export function MustSeeList({
                         entry.kind === 'head' ? (
                             <div
                                 key={`head-${entry.group}`}
-                                className={cn('bg-background/60 flex h-10 items-center gap-3 px-7 text-[21px] font-semibold', GROUP_INK[entry.group])}
+                                className={cn(
+                                    'dark:bg-background/60 flex h-10 items-center gap-3 bg-slate-100 px-7 text-[21px] font-semibold',
+                                    GROUP_INK[entry.group],
+                                )}
                             >
                                 <span className={cn('size-3 rounded-full', GROUP_DOT[entry.group])} aria-hidden />
                                 <span>{t(`mon_group_${entry.group}`)}</span>

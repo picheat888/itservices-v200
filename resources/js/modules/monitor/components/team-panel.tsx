@@ -9,7 +9,7 @@ export function TeamPanel({ team }: { team: MonitorMember[] }) {
     const peak = Math.max(1, ...team.map((m) => m.count));
 
     return (
-        <section className="bg-card flex min-h-0 flex-col gap-6 overflow-hidden rounded-2xl border px-6.5 py-4">
+        <section className="bg-card flex min-h-0 flex-col gap-6 overflow-hidden rounded-2xl border px-6.5 py-4 shadow-sm dark:shadow-none">
             <div className="flex items-baseline justify-between pb-1">
                 <h2 className="text-[32px] font-bold">{t('mon_team_title')}</h2>
                 <span className="text-muted-foreground text-[20px]">{t('mon_team_hint')}</span>

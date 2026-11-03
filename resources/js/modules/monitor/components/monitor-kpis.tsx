@@ -77,7 +77,7 @@ function KpiTile({ tile }: { tile: Tile }) {
     return (
         <div
             className={cn(
-                'bg-card relative flex flex-col gap-1 rounded-2xl border-2 px-6 py-4',
+                'bg-card relative flex flex-col gap-1 rounded-2xl border-2 px-6 py-4 shadow-sm dark:shadow-none',
                 tile.tone === 'late' && 'border-red-400 dark:border-red-900',
                 tile.tone === 'near' && 'border-amber-500 dark:border-amber-900',
             )}

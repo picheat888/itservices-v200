@@ -11,7 +11,7 @@ export function StartScreen({ justPaired, onStart }: { justPaired: boolean; onSt
 
     return (
         <div className="flex flex-1 items-center justify-center">
-            <div className="bg-card flex w-[1040px] flex-col items-center gap-5.5 rounded-[28px] border px-18 py-16 text-center">
+            <div className="bg-card flex w-[1040px] flex-col items-center gap-5.5 rounded-[28px] border px-18 py-16 text-center shadow-sm dark:shadow-none">
                 <span
                     className={`grid size-24 place-items-center rounded-3xl ${justPaired ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'}`}
                 >
