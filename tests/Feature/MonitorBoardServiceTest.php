@@ -166,12 +166,11 @@ class MonitorBoardServiceTest extends TestCase
     {
         $busy = $this->resolver('Somchai', 'สมชาย', 'กิตติ');
         $idle = $this->resolver('Wipa', null, null);
-        $left = $this->resolver('Gone', 'ออก', 'ไป', 'resigned', '2026-01-01');
+        $this->resolver('Gone', 'ออก', 'ไป', 'resigned', '2026-01-01');
         User::factory()->create(['role' => 'user']);
         $this->calmInProgress($busy);
         $this->calmInProgress($busy);
         $this->nearDueInProgress($busy);
-        $this->calmInProgress($left);
         $this->freshOpen('2026-01-14 11:30:00');
 
         $team = $this->board()['team'];
@@ -181,6 +180,30 @@ class MonitorBoardServiceTest extends TestCase
         $this->assertSame('สมชาย ก.', $team[0]['name']);
         $this->assertSame('Wipa T.', $team[1]['name']);
         $this->assertSame('WT', $team[1]['initials']);
+    }
+
+    public function test_a_resigned_resolver_still_holding_a_case_stays_on_the_team(): void
+    {
+        $left = $this->resolver('Gone', 'ออก', 'ไป', 'resigned', '2026-01-01');
+        $this->calmInProgress($left);
+
+        $this->assertSame([[$left->id, 1]], array_map(fn (array $m) => [$m['id'], $m['count']], $this->board()['team']));
+    }
+
+    public function test_team_includes_anyone_holding_a_case_without_the_resolve_key(): void
+    {
+        $resolver = $this->resolver();
+        $holder = User::factory()->create([
+            'role' => 'helper',
+            'employee_id' => Employee::create(['first_name' => 'Help', 'last_name' => 'Desk', 'first_name_th' => 'ไอที', 'status' => 'active'])->id,
+        ]);
+        $this->calmInProgress($holder);
+        $this->calmInProgress($holder);
+
+        $team = $this->board()['team'];
+
+        $this->assertSame([$holder->id, $resolver->id], array_column($team, 'id'));
+        $this->assertSame([2, 0], array_column($team, 'count'));
     }
 
     public function test_short_names_skip_thai_leading_vowels(): void

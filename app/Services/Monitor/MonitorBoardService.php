@@ -158,7 +158,7 @@ class MonitorBoardService
     }
 
     /**
-     * Every working resolver with the in-progress cases they hold, most first.
+     * Every working resolver and anyone holding an in-progress case, with that count, most first.
      *
      * @param  Collection<int, Ticket>  $live
      * @return list<array{id: int, name: string, initials: string, count: int}>
@@ -169,9 +169,10 @@ class MonitorBoardService
             ->filter(fn (Ticket $t) => $t->status === TicketStatus::InProgress && $t->assignee_id !== null)
             ->countBy('assignee_id');
 
+        // Working resolvers, plus anyone still holding a case, so the team matches the in-progress count
         return User::query()
-            ->holdingPermission('tickets.resolve')
-            ->stillWorking()
+            ->where(fn ($q) => $q->holdingPermission('tickets.resolve')->stillWorking())
+            ->orWhereIn('id', $held->keys()->all())
             ->with('employee')
             ->get()
             ->map(fn (User $user) => [...$this->person($user), 'count' => (int) ($held[$user->id] ?? 0)])
