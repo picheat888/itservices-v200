@@ -89,8 +89,14 @@ function CaseRow({ row, now, isNew }: { row: MonitorRow; now: number; isNew: boo
                 <span className="text-muted-foreground text-[19px]">{t(row.clock === 'response' ? 'mon_clock_response' : 'mon_clock_resolve')}</span>
             </div>
             <div className="flex items-center gap-2.5 text-[25px] font-semibold">
-                <span className={cn('size-3.5 shrink-0 rounded-full', priorityDot(row.priority))} aria-hidden />
-                {prio ? t(prio) : null}
+                {prio ? (
+                    <>
+                        <span className={cn('size-3.5 shrink-0 rounded-full', priorityDot(row.priority))} aria-hidden />
+                        {t(prio)}
+                    </>
+                ) : (
+                    <span className="text-muted-foreground font-normal">{t('mon_no_priority')}</span>
+                )}
             </div>
             <div className="min-w-0">
                 <b className="block truncate text-[31px] leading-[1.25] font-semibold">

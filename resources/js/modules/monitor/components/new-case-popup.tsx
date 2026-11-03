@@ -42,8 +42,14 @@ function Priority({ row, className }: { row: MonitorRow; className?: string }) {
     const prio = priorityKey(row.priority);
     return (
         <div className={cn('flex items-center gap-3.5 font-semibold', className)}>
-            <span className={cn('size-[18px] shrink-0 rounded-full', priorityDot(row.priority))} aria-hidden />
-            {prio ? t(prio) : null}
+            {prio ? (
+                <>
+                    <span className={cn('size-[18px] shrink-0 rounded-full', priorityDot(row.priority))} aria-hidden />
+                    {t(prio)}
+                </>
+            ) : (
+                <span className="text-muted-foreground font-normal">{t('mon_no_priority')}</span>
+            )}
         </div>
     );
 }

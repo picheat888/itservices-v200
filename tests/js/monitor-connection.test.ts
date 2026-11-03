@@ -13,7 +13,7 @@ test('one missed poll is not worth a warning', () => {
 });
 
 test('two missed polls say when the data is from', () => {
-    assert.equal(connectionLabel(2, at('10:42:15'), t), 'ขาดการเชื่อมต่อ ข้อมูลล่าสุด 10:42:15');
+    assert.equal(connectionLabel(2, at('10:42:15'), t), 'ขาดการเชื่อมต่อ ข้อมูลเมื่อ 10:42:15');
 });
 
 test('no board yet has no time to show', () => {
