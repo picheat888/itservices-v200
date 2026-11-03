@@ -12,7 +12,7 @@ export const monitor: Dict = {
 
     // components/monitor-board.tsx — header
     mon_tab_title: 'Monitoring Screen',
-    mon_title: 'IT case monitor',
+    mon_title: 'Ticket Monitoring Screen',
     mon_subtitle: 'Cases right now',
     mon_updated: 'Updated {t}',
     mon_offline: 'Offline, data from {t}',

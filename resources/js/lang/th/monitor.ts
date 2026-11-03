@@ -12,7 +12,7 @@ export const monitor: Dict = {
 
     // components/monitor-board.tsx — หัวจอ
     mon_tab_title: 'Monitoring Screen',
-    mon_title: 'จอ Monitor เคส IT',
+    mon_title: 'Ticket Monitoring Screen',
     mon_subtitle: 'สถานะเคสตอนนี้',
     mon_updated: 'อัปเดต {t}',
     mon_offline: 'ขาดการเชื่อมต่อ ข้อมูลเมื่อ {t}',
