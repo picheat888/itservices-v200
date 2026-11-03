@@ -1,5 +1,7 @@
 // The five big numbers along the top of the monitor TV.
+import { useCountRises } from '@/shared/hooks/use-count-rises';
 import { cn } from '@/shared/lib/utils';
+import { useChangeCount } from '../hooks/use-change-count';
 import { useMonitorT } from '../hooks/use-monitor-prefs';
 import { spanWords } from '../lib/monitor-time';
 import type { MonitorKpis as Kpis } from '../types';
@@ -61,30 +63,51 @@ export function MonitorKpis({ kpis, now }: { kpis: Kpis; now: number }) {
     return (
         <section className="grid grid-cols-5 gap-5">
             {tiles.map((tile) => (
-                <div
-                    key={tile.key}
-                    className={cn(
-                        'bg-card flex flex-col gap-1 rounded-2xl border-2 px-6 py-4',
-                        tile.tone === 'late' && 'border-red-400 dark:border-red-900',
-                        tile.tone === 'near' && 'border-amber-500 dark:border-amber-900',
-                    )}
-                >
-                    <div className="text-muted-foreground flex items-center gap-2.5 text-[24px]">
-                        <span className={cn('size-3.5 shrink-0 rounded-full', tile.dot)} aria-hidden />
-                        {tile.label}
-                    </div>
-                    <div
-                        className={cn(
-                            'text-[80px] leading-[1.05] font-bold',
-                            tile.tone === 'late' && 'text-red-700 dark:text-red-400',
-                            tile.tone === 'near' && 'text-amber-800 dark:text-amber-400',
-                        )}
-                    >
-                        {tile.value}
-                    </div>
-                    <div className="text-muted-foreground text-[20px]">{tile.foot}</div>
-                </div>
+                <KpiTile key={tile.key} tile={tile} />
             ))}
         </section>
+    );
+}
+
+/** One KPI card: the number pops when it changes; an overdue or due-soon card's ring glows once when its count rises. */
+function KpiTile({ tile }: { tile: Tile }) {
+    const changes = useChangeCount(tile.value);
+    const rises = useCountRises(tile.value);
+
+    return (
+        <div
+            className={cn(
+                'bg-card relative flex flex-col gap-1 rounded-2xl border-2 px-6 py-4',
+                tile.tone === 'late' && 'border-red-400 dark:border-red-900',
+                tile.tone === 'near' && 'border-amber-500 dark:border-amber-900',
+            )}
+        >
+            {tile.tone && rises > 0 && (
+                <span
+                    key={rises}
+                    aria-hidden
+                    className={cn(
+                        'monitor-glow pointer-events-none absolute -inset-0.5 rounded-2xl',
+                        tile.tone === 'late' ? 'text-red-500' : 'text-amber-500',
+                    )}
+                />
+            )}
+            <div className="text-muted-foreground flex items-center gap-2.5 text-[24px]">
+                <span className={cn('size-3.5 shrink-0 rounded-full', tile.dot)} aria-hidden />
+                {tile.label}
+            </div>
+            <div
+                className={cn(
+                    'text-[80px] leading-[1.05] font-bold',
+                    tile.tone === 'late' && 'text-red-700 dark:text-red-400',
+                    tile.tone === 'near' && 'text-amber-800 dark:text-amber-400',
+                )}
+            >
+                <span key={changes} className={cn('inline-block origin-left', changes > 0 && 'badge-pop')}>
+                    {tile.value}
+                </span>
+            </div>
+            <div className="text-muted-foreground text-[20px]">{tile.foot}</div>
+        </div>
     );
 }

@@ -519,6 +519,33 @@
     animation: row-in 0.3s ease-out both;
 }
 
+/* Monitor TV: a KPI card's ring glows once when its count rises; a row that just went overdue flashes once */
+@keyframes monitor-glow {
+    from {
+        box-shadow: 0 0 0 6px color-mix(in oklab, currentColor 35%, transparent);
+    }
+    to {
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+.monitor-glow {
+    animation: monitor-glow 1.6s ease-out;
+}
+
+@keyframes monitor-flash {
+    from {
+        background-color: color-mix(in oklab, var(--color-red-500) 22%, transparent);
+    }
+    to {
+        background-color: transparent;
+    }
+}
+
+.monitor-flash {
+    animation: monitor-flash 2s ease-out;
+}
+
 /* Lot scan result card: a violet ring that fades once per scan */
 @keyframes lot-hit {
     from {
@@ -590,7 +617,9 @@
         animation: none;
     }
 
-    .row-in {
+    .row-in,
+    .monitor-glow,
+    .monitor-flash {
         animation: none;
     }
 }

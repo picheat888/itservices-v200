@@ -45,3 +45,13 @@ export function newArrivals(previousIds: Set<number> | null, board: MonitorBoard
 export function popupOrder(rows: MonitorRow[]): MonitorRow[] {
     return [...rows].sort((a, b) => Date.parse(a.due_at) - Date.parse(b.due_at));
 }
+
+/** What moved since the previous board: rows that are new to it, and rows that have just crossed into overdue. */
+export function boardChanges(previous: MonitorBoard | null, next: MonitorBoard): { freshIds: number[]; justOverdueIds: number[] } {
+    if (previous === null) return { freshIds: [], justOverdueIds: [] };
+    const before = new Map(previous.rows.map((r) => [r.id, r.group]));
+    return {
+        freshIds: next.rows.filter((r) => !before.has(r.id)).map((r) => r.id),
+        justOverdueIds: next.rows.filter((r) => r.group === 'overdue' && before.has(r.id) && before.get(r.id) !== 'overdue').map((r) => r.id),
+    };
+}

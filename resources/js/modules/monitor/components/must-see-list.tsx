@@ -14,12 +14,15 @@ export function MustSeeList({
     pageCount,
     now,
     isNew,
+    motionFor,
 }: {
     page: PageEntry[];
     pageIndex: number;
     pageCount: number;
     now: number;
     isNew: (id: number) => boolean;
+    /** row-in for a row new since the last board, monitor-flash for one that just went overdue */
+    motionFor: (id: number) => string | undefined;
 }) {
     const t = useMonitorT();
 
@@ -55,28 +58,31 @@ export function MustSeeList({
                     <span className="text-[24px]">{t('mon_calm_hint')}</span>
                 </div>
             ) : (
-                page.map((entry) =>
-                    entry.kind === 'head' ? (
-                        <div
-                            key={`head-${entry.group}`}
-                            className={cn('bg-background/60 flex h-10 items-center gap-3 px-7 text-[21px] font-semibold', GROUP_INK[entry.group])}
-                        >
-                            <span className={cn('size-3 rounded-full', GROUP_DOT[entry.group])} aria-hidden />
-                            <span>{t(`mon_group_${entry.group}`)}</span>
-                            <span className="text-muted-foreground font-normal">
-                                {t(entry.count === 1 ? 'mon_group_count_one' : 'mon_group_count').replace('{n}', String(entry.count))}
-                            </span>
-                        </div>
-                    ) : (
-                        <CaseRow key={entry.row.id} row={entry.row} now={now} isNew={isNew(entry.row.id)} />
-                    ),
-                )
+                // Keyed by page, so a new page fades in instead of cutting
+                <div key={pageIndex} className="animate-in fade-in-0 flex min-h-0 flex-col duration-200 motion-reduce:animate-none">
+                    {page.map((entry) =>
+                        entry.kind === 'head' ? (
+                            <div
+                                key={`head-${entry.group}`}
+                                className={cn('bg-background/60 flex h-10 items-center gap-3 px-7 text-[21px] font-semibold', GROUP_INK[entry.group])}
+                            >
+                                <span className={cn('size-3 rounded-full', GROUP_DOT[entry.group])} aria-hidden />
+                                <span>{t(`mon_group_${entry.group}`)}</span>
+                                <span className="text-muted-foreground font-normal">
+                                    {t(entry.count === 1 ? 'mon_group_count_one' : 'mon_group_count').replace('{n}', String(entry.count))}
+                                </span>
+                            </div>
+                        ) : (
+                            <CaseRow key={entry.row.id} row={entry.row} now={now} isNew={isNew(entry.row.id)} motion={motionFor(entry.row.id)} />
+                        ),
+                    )}
+                </div>
             )}
         </section>
     );
 }
 
-function CaseRow({ row, now, isNew }: { row: MonitorRow; now: number; isNew: boolean }) {
+function CaseRow({ row, now, isNew, motion }: { row: MonitorRow; now: number; isNew: boolean; motion?: string }) {
     const t = useMonitorT();
     const time = dueWords(Date.parse(row.due_at), now, t);
     const timeInk =
@@ -84,7 +90,7 @@ function CaseRow({ row, now, isNew }: { row: MonitorRow; now: number; isNew: boo
     const prio = priorityKey(row.priority);
 
     return (
-        <div className="border-border/60 grid h-[84px] grid-cols-[300px_140px_minmax(0,1fr)_250px] items-center gap-5 border-b px-7">
+        <div className={cn('border-border/60 grid h-[84px] grid-cols-[300px_140px_minmax(0,1fr)_250px] items-center gap-5 border-b px-7', motion)}>
             <div>
                 <b className={cn('block leading-[1.1] whitespace-nowrap', time.length >= LONG_TIME_CHARS ? 'text-[30px]' : 'text-[38px]', timeInk)}>
                     {time}

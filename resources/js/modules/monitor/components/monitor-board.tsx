@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/utils';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMonitorT } from '../hooks/use-monitor-prefs';
 import { useNow } from '../hooks/use-now';
-import { newArrivals, paginateRows, popupOrder } from '../lib/monitor-rows';
+import { boardChanges, newArrivals, paginateRows, popupOrder } from '../lib/monitor-rows';
 import { serverNow } from '../lib/monitor-time';
 import type { MonitorBoard as Board, MonitorRow } from '../types';
 import { clockTime, connectionLabel } from './connection-label';
@@ -19,6 +19,7 @@ import { TeamPanel } from './team-panel';
 const PAGE_EVERY_MS = 15_000;
 const POPUP_MS = 15_000;
 const NEW_TAG_MS = 60_000;
+const MOTION_MS = 2_500;
 
 interface Popup {
     rows: MonitorRow[];
@@ -55,9 +56,18 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
     // New cases since the previous board: popup, sound, "ใหม่" tag, one announcement
     const seenIds = useRef<Set<number> | null>(null);
     const newUntil = useRef(new Map<number, number>());
+    // Rows to animate for a moment after the board that brought them: slide in when new, flash when just overdue
+    const previousBoard = useRef<Board | null>(null);
+    const motionUntil = useRef(new Map<number, { cls: string; until: number }>());
     const [popup, setPopup] = useState<Popup | null>(null);
     const [announcement, setAnnouncement] = useState('');
     useEffect(() => {
+        const moved = boardChanges(previousBoard.current, board);
+        previousBoard.current = board;
+        const movedAt = Date.now();
+        moved.freshIds.forEach((id) => motionUntil.current.set(id, { cls: 'row-in', until: movedAt + MOTION_MS }));
+        moved.justOverdueIds.forEach((id) => motionUntil.current.set(id, { cls: 'monitor-flash', until: movedAt + MOTION_MS }));
+
         const fresh = newArrivals(seenIds.current, board);
         seenIds.current = new Set(board.rows.map((r) => r.id));
         if (fresh.length === 0) return;
@@ -131,6 +141,10 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
                     pageCount={pages.length}
                     now={now}
                     isNew={(id) => (newUntil.current.get(id) ?? 0) > tick}
+                    motionFor={(id) => {
+                        const motion = motionUntil.current.get(id);
+                        return motion && motion.until > tick ? motion.cls : undefined;
+                    }}
                 />
                 <TeamPanel team={board.team} />
             </div>

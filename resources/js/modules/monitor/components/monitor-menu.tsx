@@ -6,6 +6,7 @@ import { useMonitorPrefs, useMonitorT } from '../hooks/use-monitor-prefs';
 import type { MonitorPrefs } from '../lib/monitor-prefs';
 
 const IDLE_MS = 3000;
+const CLOSE_MS = 150;
 
 type Choice<K extends keyof MonitorPrefs> = [MonitorPrefs[K], string];
 
@@ -13,6 +14,13 @@ export function MonitorMenu({ className }: { className?: string }) {
     const t = useMonitorT();
     const prefs = useMonitorPrefs();
     const [open, setOpen] = useState(false);
+    // The menu stays mounted for its 150 ms close animation
+    const [closingUntil, setClosingUntil] = useState(0);
+    const close = () => {
+        setOpen(false);
+        setClosingUntil(Date.now() + CLOSE_MS);
+        window.setTimeout(() => setClosingUntil(0), CLOSE_MS);
+    };
     const [awake, setAwake] = useState(false);
     const wrapRef = useRef<HTMLDivElement>(null);
     const gearRef = useRef<HTMLButtonElement>(null);
@@ -38,11 +46,11 @@ export function MonitorMenu({ className }: { className?: string }) {
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return;
             e.stopPropagation();
-            setOpen(false);
+            close();
             gearRef.current?.focus();
         };
         const onPointer = (e: PointerEvent) => {
-            if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+            if (!wrapRef.current?.contains(e.target as Node)) close();
         };
         window.addEventListener('keydown', onKey, true);
         window.addEventListener('pointerdown', onPointer);
@@ -59,23 +67,26 @@ export function MonitorMenu({ className }: { className?: string }) {
             <button
                 ref={gearRef}
                 type="button"
-                onClick={() => setOpen((o) => !o)}
+                onClick={() => (open ? close() : setOpen(true))}
                 aria-label={t('mon_settings')}
                 aria-expanded={open}
                 className={cn(
-                    'bg-card text-foreground grid size-14 place-items-center rounded-[14px] border-2 transition-opacity duration-300 motion-reduce:transition-none',
+                    'bg-card text-foreground grid size-14 place-items-center rounded-[14px] border-2 transition-[opacity,translate] duration-300 motion-reduce:transition-none',
                     'focus-visible:opacity-100 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400',
-                    shown ? 'opacity-100' : 'opacity-0',
+                    shown ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0 focus-visible:translate-x-0',
                 )}
             >
                 <Settings className="size-7" aria-hidden />
             </button>
 
-            {open && (
+            {(open || closingUntil > 0) && (
                 <div
                     role="dialog"
                     aria-label={t('mon_settings')}
-                    className="bg-card absolute top-[70px] right-0 z-10 flex w-[440px] flex-col gap-4.5 rounded-[18px] border px-6 py-5.5 shadow-2xl"
+                    className={cn(
+                        'bg-card absolute top-[70px] right-0 z-10 flex w-[440px] origin-top-right flex-col gap-4.5 rounded-[18px] border px-6 py-5.5 shadow-2xl duration-150 motion-reduce:animate-none',
+                        open ? 'animate-in fade-in-0 zoom-in-95' : 'animate-out fade-out-0 zoom-out-95 fill-mode-forwards pointer-events-none',
+                    )}
                 >
                     <Row label={t('mon_lang')}>
                         <Chips<'lang'>

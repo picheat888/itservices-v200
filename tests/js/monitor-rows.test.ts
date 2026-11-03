@@ -1,7 +1,7 @@
 // Monitor TV rows: pages that fit the list height, new arrivals and the popup order.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { newArrivals, paginateRows, popupOrder } from '../../resources/js/modules/monitor/lib/monitor-rows.ts';
+import { boardChanges, newArrivals, paginateRows, popupOrder } from '../../resources/js/modules/monitor/lib/monitor-rows.ts';
 import type { MonitorBoard, MonitorRow } from '../../resources/js/modules/monitor/types.ts';
 
 let nextId = 1;
@@ -77,4 +77,23 @@ test('the popup lists the least time left first', () => {
     const sooner = row('waiting', '2026-01-14T12:14:00+07:00');
 
     assert.deepEqual(popupOrder([later, sooner]), [sooner, later]);
+});
+
+test('no previous board means nothing new and nothing just overdue', () => {
+    const a = row('waiting', '2026-01-14T13:00:00+07:00');
+    assert.deepEqual(boardChanges(null, board([a])), { freshIds: [], justOverdueIds: [] });
+});
+
+test('rows absent from the previous board are fresh, any group', () => {
+    const kept = row('near', '2026-01-14T12:30:00+07:00');
+    const newWaiting = row('waiting', '2026-01-14T13:00:00+07:00');
+    const newWork = row('near', '2026-01-14T12:40:00+07:00');
+    assert.deepEqual(boardChanges(board([kept]), board([kept, newWaiting, newWork])).freshIds, [newWaiting.id, newWork.id]);
+});
+
+test('a row that moved into overdue since the previous board is just overdue', () => {
+    const was = row('near', '2026-01-14T12:30:00+07:00');
+    const stillLate = row('overdue', '2026-01-14T10:00:00+07:00');
+    const now = { ...was, group: 'overdue' as const };
+    assert.deepEqual(boardChanges(board([was, stillLate]), board([now, stillLate])).justOverdueIds, [was.id]);
 });
