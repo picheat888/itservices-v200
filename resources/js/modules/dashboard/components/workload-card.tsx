@@ -49,7 +49,7 @@ export function WorkloadCard({
             {total === 0 ? (
                 <CardEmpty kind="empty" title={t('dash_empty_it_workload')} hint={t('dash_empty_it_workload_hint')} />
             ) : (
-                <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
+                <ul className="flex flex-1 flex-col gap-3 px-5 py-3">
                     <HBarRow label={t('dash_no_assignee')} value={it.unassigned} scale={scale} fill={FILL.blue} index={0} strong to={links.pickup} />
                     {shown.map((row, i) => (
                         <HBarRow

@@ -88,7 +88,7 @@ function DepartmentsCard({
             {hr.headcount === 0 ? (
                 <CardEmpty kind="empty" title={t('dash_empty_people_by_department')} hint={t('dash_empty_people_by_department_hint')} />
             ) : (
-                <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
+                <ul className="flex flex-1 flex-col gap-3 px-5 py-3">
                     {shown.map((d, i) => (
                         <HBarRow key={d.id} label={localName(d, lang)} value={d.count} scale={scale} fill={FILL.violet} index={i} />
                     ))}

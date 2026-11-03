@@ -236,7 +236,7 @@ function ByTypeCard({
             {total === 0 ? (
                 <CardEmpty kind="empty" title={t('dash_empty_requests_by_type')} hint={t('dash_empty_requests_by_type_hint')} />
             ) : (
-                <ul className="flex flex-1 flex-col justify-between gap-1.5 px-5 py-3">
+                <ul className="flex flex-1 flex-col gap-3 px-5 py-3">
                     {shown.map((item, i) => (
                         <HBarRow key={item.type} label={t(`req_${item.type}`)} value={item.count} scale={scale} fill={FILL.blue} index={i} />
                     ))}
