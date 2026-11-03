@@ -1,10 +1,10 @@
 // "ทีม IT ตอนนี้": each resolver's held in-progress cases, most first.
-import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { useMonitorT } from '../hooks/use-monitor-prefs';
 import type { MonitorMember } from '../types';
 
 export function TeamPanel({ team }: { team: MonitorMember[] }) {
-    const t = useT();
+    const t = useMonitorT();
     const peak = Math.max(1, ...team.map((m) => m.count));
 
     return (
@@ -20,7 +20,7 @@ export function TeamPanel({ team }: { team: MonitorMember[] }) {
                         <b className="block truncate text-[25px] leading-[1.2]">{member.name}</b>
                         <div className="bg-muted mt-2 h-2.5 overflow-hidden rounded-full">
                             <div
-                                className="h-full rounded-full bg-violet-400 transition-[width] duration-500 motion-reduce:transition-none"
+                                className="h-full rounded-full bg-violet-600 transition-[width] duration-500 motion-reduce:transition-none dark:bg-violet-400"
                                 style={{ width: `${(member.count / peak) * 100}%` }}
                             />
                         </div>

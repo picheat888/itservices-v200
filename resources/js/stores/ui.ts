@@ -55,9 +55,9 @@ interface UiState {
     pageMissing: boolean;
     // Transient (not persisted): unread bells shown in the tab title; the signed-in shell sets it, 0 elsewhere
     titleUnread: number;
-    // Transient (not persisted): the monitor TV page shows dark whatever the saved mode is
-    forceDark: boolean;
-    setForceDark: (on: boolean) => void;
+    // Transient (not persisted): the monitor TV page shows its own mode whatever the saved one is
+    forceTheme: 'dark' | 'light' | null;
+    setForceTheme: (theme: 'dark' | 'light' | null) => void;
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
@@ -97,8 +97,8 @@ export const useUiStore = create<UiState>()(
             crumbTail: null,
             pageMissing: false,
             titleUnread: 0,
-            forceDark: false,
-            setForceDark: (forceDark) => set({ forceDark }),
+            forceTheme: null,
+            setForceTheme: (forceTheme) => set({ forceTheme }),
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),

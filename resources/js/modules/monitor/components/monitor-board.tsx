@@ -1,10 +1,9 @@
 // The monitor TV board: header, KPI row, rotating must-see list, team panel and the new-case popup with sound.
-import { useT } from '@/lang';
 import { playNotificationSound } from '@/modules/notification';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
-import { Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMonitorT } from '../hooks/use-monitor-prefs';
 import { useNow } from '../hooks/use-now';
 import { newArrivals, paginateRows, popupOrder } from '../lib/monitor-rows';
 import { serverNow } from '../lib/monitor-time';
@@ -12,6 +11,7 @@ import type { MonitorBoard as Board, MonitorRow } from '../types';
 import { clockTime, connectionLabel } from './connection-label';
 import { MonitorBrand } from './monitor-brand';
 import { MonitorKpis } from './monitor-kpis';
+import { MonitorMenu } from './monitor-menu';
 import { MustSeeList } from './must-see-list';
 import { NewCasePopup } from './new-case-popup';
 import { TeamPanel } from './team-panel';
@@ -32,11 +32,10 @@ interface Props {
     failures: number;
     lastOkAt: number | null;
     soundOn: boolean;
-    onToggleSound: () => void;
 }
 
-export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn, onToggleSound }: Props) {
-    const t = useT();
+export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: Props) {
+    const t = useMonitorT();
     const fmt = useDateFormat();
     const tick = useNow(1000);
     const offset = useMemo(() => Date.parse(board.generated_at) - fetchedAt, [board, fetchedAt]);
@@ -102,20 +101,18 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn, on
             <header className="flex h-16 items-center justify-between">
                 <MonitorBrand sub={t('mon_subtitle')} />
                 <div className="flex items-center gap-7">
-                    {paused && <span className="text-[20px] text-amber-300">{t('mon_paused')}</span>}
-                    <button
-                        type="button"
-                        onClick={onToggleSound}
+                    {paused && <span className="text-[20px] text-amber-800 dark:text-amber-300">{t('mon_paused')}</span>}
+                    <MonitorMenu />
+                    <div
                         className={cn(
-                            'flex h-12 items-center gap-2.5 rounded-xl border-2 px-4.5 text-[20px] font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white',
-                            soundOn ? 'text-muted-foreground border-border' : 'border-blue-400 text-blue-300',
+                            'flex items-center gap-2.5 text-[20px]',
+                            offline ? 'text-amber-800 dark:text-amber-300' : 'text-muted-foreground',
                         )}
                     >
-                        {soundOn ? <Volume2 className="size-6" aria-hidden /> : <VolumeX className="size-6" aria-hidden />}
-                        {soundOn ? t('mon_sound_on') : t('mon_sound_off')}
-                    </button>
-                    <div className={cn('flex items-center gap-2.5 text-[20px]', offline ? 'text-amber-300' : 'text-muted-foreground')}>
-                        <span className={cn('size-3 rounded-full', offline ? 'bg-amber-400' : 'bg-emerald-400')} aria-hidden />
+                        <span
+                            className={cn('size-3 rounded-full', offline ? 'bg-amber-600 dark:bg-amber-400' : 'bg-emerald-600 dark:bg-emerald-400')}
+                            aria-hidden
+                        />
                         {offline ?? t('mon_updated').replace('{t}', clockTime(Date.parse(board.generated_at)))}
                     </div>
                     <div className="text-right">

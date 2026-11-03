@@ -1,8 +1,9 @@
 // The TV's pairing screen: a big 6-digit code that changes every 5 minutes, and where to type it.
-import { useT } from '@/lang';
 import { Unlink } from 'lucide-react';
+import { useMonitorT } from '../hooks/use-monitor-prefs';
 import type { MonitorPairingCode } from '../types';
 import { MonitorBrand } from './monitor-brand';
+import { MonitorMenu } from './monitor-menu';
 
 export function PairingScreen({
     pairing,
@@ -15,14 +16,15 @@ export function PairingScreen({
     unpaired: boolean;
     failed: boolean;
 }) {
-    const t = useT();
+    const t = useMonitorT();
     const leftSec = Math.ceil(leftMs / 1000);
     const countdown = `${Math.floor(leftSec / 60)}:${String(leftSec % 60).padStart(2, '0')}`;
 
     return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-7">
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-7">
+            <MonitorMenu className="absolute top-0 right-0" />
             {unpaired && (
-                <div className="flex items-center gap-3.5 rounded-2xl bg-red-950 px-7 py-4 text-[26px] text-red-300">
+                <div className="flex items-center gap-3.5 rounded-2xl bg-red-50 px-7 py-4 text-[26px] text-red-800 dark:bg-red-950 dark:text-red-300">
                     <Unlink className="size-[30px]" aria-hidden />
                     {t('mon_unpaired_banner')}
                 </div>

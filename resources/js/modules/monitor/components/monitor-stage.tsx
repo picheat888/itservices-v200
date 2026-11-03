@@ -1,6 +1,7 @@
-// A fixed 1920×1080 dark stage scaled to fit the window, so the TV layout is the same on any screen.
+// A fixed 1920×1080 stage scaled to fit the window, in the TV's own mode, so the layout is the same on any screen.
 import { useUiStore } from '@/stores/ui';
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useMonitorPrefs } from '../hooks/use-monitor-prefs';
 
 const STAGE_W = 1920;
 const STAGE_H = 1080;
@@ -11,12 +12,18 @@ function fitScale(): number {
 
 export function MonitorStage({ children }: { children: ReactNode }) {
     const [scale, setScale] = useState(fitScale);
-    const setForceDark = useUiStore((s) => s.setForceDark);
+    const setForceTheme = useUiStore((s) => s.setForceTheme);
+    const theme = useMonitorPrefs((s) => s.theme);
+    const lang = useMonitorPrefs((s) => s.lang);
 
+    // The TV's own mode and language, never the saved app ones
     useLayoutEffect(() => {
-        setForceDark(true);
-        return () => setForceDark(false);
-    }, [setForceDark]);
+        setForceTheme(theme);
+        return () => setForceTheme(null);
+    }, [setForceTheme, theme]);
+    useLayoutEffect(() => {
+        document.documentElement.lang = lang;
+    }, [lang]);
 
     useEffect(() => {
         const onResize = () => setScale(fitScale());

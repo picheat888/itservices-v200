@@ -1,5 +1,4 @@
 // /monitor: only a paired device sees the board; every other browser, signed in or not, shows a pairing code.
-import { useT } from '@/lang';
 import { unlockSoundOnFirstGesture } from '@/modules/notification';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useEffect, useState } from 'react';
@@ -8,17 +7,19 @@ import { MonitorStage } from '../components/monitor-stage';
 import { PairingScreen } from '../components/pairing-screen';
 import { StartScreen } from '../components/start-screen';
 import { readMonitorToken, useMonitorBoard, usePairingCode, usePairingPoll, writeMonitorToken } from '../hooks/use-monitor';
+import { useMonitorPrefs, useMonitorT } from '../hooks/use-monitor-prefs';
 import { useNow } from '../hooks/use-now';
 import { codeLeftMs, monitorMode } from '../lib/monitor-mode';
 
 export default function MonitorPage() {
     useDocumentTitle('mon_tab_title');
-    const t = useT();
+    const t = useMonitorT();
     const [token, setToken] = useState<string | null>(readMonitorToken);
     const [wasUnpaired, setWasUnpaired] = useState(false);
     const [justPaired, setJustPaired] = useState(false);
     const [started, setStarted] = useState(false);
-    const [soundOn, setSoundOn] = useState(false);
+    const soundOn = useMonitorPrefs((s) => s.sound);
+    const setPrefs = useMonitorPrefs((s) => s.set);
 
     useEffect(() => unlockSoundOnFirstGesture(), []);
 
@@ -58,7 +59,7 @@ export default function MonitorPage() {
                 <StartScreen
                     justPaired={justPaired}
                     onStart={(withSound) => {
-                        setSoundOn(withSound);
+                        setPrefs({ sound: withSound });
                         setStarted(true);
                     }}
                 />
@@ -70,7 +71,6 @@ export default function MonitorPage() {
                     failures={board.failures}
                     lastOkAt={board.lastOkAt}
                     soundOn={soundOn}
-                    onToggleSound={() => setSoundOn((on) => !on)}
                 />
             )}
             {mode === 'board' && started && !board.data && (
