@@ -65,7 +65,7 @@ export const monitor: Dict = {
     // components/pairing-screen.tsx — หน้ารหัสจับคู่
     mon_pair_label: 'รหัสจับคู่จอ',
     mon_pair_changes_in: 'รหัสเปลี่ยนใน {t}',
-    mon_pair_hint: 'ผู้ดูแลระบบกรอกรหัสนี้ที่ ตั้งค่า > จอ Monitor',
+    mon_pair_hint: 'แจ้งผู้ดูแลระบบให้กรอกรหัสนี้',
     mon_pair_retry: 'ขอรหัสไม่ได้ กำลังลองใหม่',
     mon_unpaired_banner: 'จอนี้ถูกยกเลิกการจับคู่แล้ว จับคู่ใหม่ได้ด้วยรหัสด้านล่าง',
 

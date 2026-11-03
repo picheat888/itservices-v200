@@ -65,7 +65,7 @@ export const monitor: Dict = {
     // components/pairing-screen.tsx — pairing code
     mon_pair_label: 'Screen pairing code',
     mon_pair_changes_in: 'Code changes in {t}',
-    mon_pair_hint: 'An administrator enters this code in Settings > Monitor screen',
+    mon_pair_hint: 'Ask an administrator to enter this code',
     mon_pair_retry: 'Could not get a code, trying again',
     mon_unpaired_banner: 'This screen was unpaired. Pair it again with the code below',
 
