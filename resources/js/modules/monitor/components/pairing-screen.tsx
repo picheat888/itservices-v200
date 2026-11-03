@@ -1,22 +1,27 @@
 // The TV's pairing screen: a big 6-digit code that changes every 5 minutes, and where to type it.
 import { Unlink } from 'lucide-react';
 import { useMonitorT } from '../hooks/use-monitor-prefs';
+import { useNow } from '../hooks/use-now';
+import { codeLeftMs } from '../lib/monitor-mode';
 import type { MonitorPairingCode } from '../types';
 import { MonitorBrand } from './monitor-brand';
 import { MonitorMenu } from './monitor-menu';
 
 export function PairingScreen({
     pairing,
-    leftMs,
+    receivedAt,
     unpaired,
     failed,
 }: {
     pairing: MonitorPairingCode | undefined;
-    leftMs: number;
+    receivedAt: number;
     unpaired: boolean;
     failed: boolean;
 }) {
     const t = useMonitorT();
+    // The countdown ticks here only, so the board never re-renders for it
+    const now = useNow(1000);
+    const leftMs = pairing ? codeLeftMs(receivedAt, pairing.expires_in, now) : 0;
     const leftSec = Math.ceil(leftMs / 1000);
     const countdown = `${Math.floor(leftSec / 60)}:${String(leftSec % 60).padStart(2, '0')}`;
 

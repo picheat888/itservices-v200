@@ -22,7 +22,11 @@ export function MonitorStage({ children }: { children: ReactNode }) {
         return () => setForceTheme(null);
     }, [setForceTheme, theme]);
     useLayoutEffect(() => {
+        const before = document.documentElement.lang;
         document.documentElement.lang = lang;
+        return () => {
+            document.documentElement.lang = before;
+        };
     }, [lang]);
 
     useEffect(() => {

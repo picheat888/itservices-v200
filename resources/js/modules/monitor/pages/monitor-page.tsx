@@ -1,19 +1,25 @@
 // /monitor: only a paired device sees the board; every other browser, signed in or not, shows a pairing code.
 import { unlockSoundOnFirstGesture } from '@/modules/notification';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 import { MonitorBoard } from '../components/monitor-board';
 import { MonitorStage } from '../components/monitor-stage';
 import { PairingScreen } from '../components/pairing-screen';
 import { StartScreen } from '../components/start-screen';
 import { readMonitorToken, useMonitorBoard, usePairingCode, usePairingPoll, writeMonitorToken } from '../hooks/use-monitor';
 import { useMonitorPrefs, useMonitorT } from '../hooks/use-monitor-prefs';
-import { useNow } from '../hooks/use-now';
-import { codeLeftMs, monitorMode } from '../lib/monitor-mode';
+import { monitorMode } from '../lib/monitor-mode';
 
 export default function MonitorPage() {
     useDocumentTitle('mon_tab_title');
     const t = useMonitorT();
+    const queryClient = useQueryClient();
+    // A used code and its hand-over must never be read again, or a TV unpaired soon after pairing bounces between screens
+    const forgetPairing = useCallback(() => {
+        queryClient.removeQueries({ queryKey: ['monitor', 'pairing-code'] });
+        queryClient.removeQueries({ queryKey: ['monitor', 'pairing'] });
+    }, [queryClient]);
     const [token, setToken] = useState<string | null>(readMonitorToken);
     const [wasUnpaired, setWasUnpaired] = useState(false);
     const [justPaired, setJustPaired] = useState(false);
@@ -30,16 +36,18 @@ export default function MonitorPage() {
     useEffect(() => {
         if (!board.unpaired || token === null) return;
         writeMonitorToken(null);
+        forgetPairing();
         setToken(null);
         setStarted(false);
         setWasUnpaired(true);
-    }, [board.unpaired, token]);
+    }, [board.unpaired, token, forgetPairing]);
 
     const code = usePairingCode(mode === 'pairing');
     const poll = usePairingPoll(mode === 'pairing' ? (code.data?.pairing_id ?? null) : null);
     useEffect(() => {
         if (poll.data?.status === 'paired') {
             writeMonitorToken(poll.data.device_token);
+            forgetPairing();
             setToken(poll.data.device_token);
             setWasUnpaired(false);
             setJustPaired(true);
@@ -49,12 +57,9 @@ export default function MonitorPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the poll answer only
     }, [poll.data]);
 
-    const now = useNow(1000);
-    const codeLeft = code.data ? codeLeftMs(code.dataUpdatedAt, code.data.expires_in, now) : 0;
-
     return (
         <MonitorStage>
-            {mode === 'pairing' && <PairingScreen pairing={code.data} leftMs={codeLeft} unpaired={wasUnpaired} failed={code.isError} />}
+            {mode === 'pairing' && <PairingScreen pairing={code.data} receivedAt={code.dataUpdatedAt} unpaired={wasUnpaired} failed={code.isError} />}
             {mode === 'board' && !started && (
                 <StartScreen
                     justPaired={justPaired}

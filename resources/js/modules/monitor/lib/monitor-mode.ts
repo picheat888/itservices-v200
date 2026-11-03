@@ -24,3 +24,10 @@ export async function withCsrfRetry<T>(call: () => Promise<T>, refreshCsrf: () =
         return call();
     }
 }
+
+const CONTROLS = new Set(['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A']);
+
+/** Space pauses the page rotation, unless it is pressing a button or typing in a field. */
+export function togglesPause(key: string, targetTag: string): boolean {
+    return key === ' ' && !CONTROLS.has(targetTag.toUpperCase());
+}

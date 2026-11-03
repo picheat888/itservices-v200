@@ -1,31 +1,33 @@
-// Gear menu for the TV's language, mode and sound. The gear shows while the mouse moves or it has focus, then hides after 3 s.
+// Gear menu for the TV's language, mode, sound and (on the board) page rotation. The gear shows on pointer, touch or key, then hides after 3 s.
+import { usePresence } from '@/shared/hooks/use-presence';
 import { cn } from '@/shared/lib/utils';
 import { Settings } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useMonitorPrefs, useMonitorT } from '../hooks/use-monitor-prefs';
-import type { MonitorPrefs } from '../lib/monitor-prefs';
 
 const IDLE_MS = 3000;
-const CLOSE_MS = 150;
 
-type Choice<K extends keyof MonitorPrefs> = [MonitorPrefs[K], string];
+type Choice<V> = [V, string];
 
-export function MonitorMenu({ className }: { className?: string }) {
+interface Props {
+    className?: string;
+    /** Board only: page rotation on/off */
+    paused?: boolean;
+    onPausedChange?: (paused: boolean) => void;
+}
+
+export function MonitorMenu({ className, paused, onPausedChange }: Props) {
     const t = useMonitorT();
     const prefs = useMonitorPrefs();
+    const menuId = useId();
     const [open, setOpen] = useState(false);
-    // The menu stays mounted for its 150 ms close animation
-    const [closingUntil, setClosingUntil] = useState(0);
-    const close = () => {
-        setOpen(false);
-        setClosingUntil(Date.now() + CLOSE_MS);
-        window.setTimeout(() => setClosingUntil(0), CLOSE_MS);
-    };
+    const { mounted, closing } = usePresence(open);
     const [awake, setAwake] = useState(false);
+    const [hovered, setHovered] = useState(false);
     const wrapRef = useRef<HTMLDivElement>(null);
     const gearRef = useRef<HTMLButtonElement>(null);
 
-    // Wake on mouse movement, sleep after 3 s still
+    // Wake on any pointer movement, tap or key; sleep after 3 s without one
     useEffect(() => {
         let timer = 0;
         const wake = () => {
@@ -33,24 +35,25 @@ export function MonitorMenu({ className }: { className?: string }) {
             window.clearTimeout(timer);
             timer = window.setTimeout(() => setAwake(false), IDLE_MS);
         };
-        window.addEventListener('mousemove', wake);
+        const events = ['pointermove', 'pointerdown', 'keydown'] as const;
+        events.forEach((name) => window.addEventListener(name, wake, { passive: true }));
         return () => {
-            window.removeEventListener('mousemove', wake);
+            events.forEach((name) => window.removeEventListener(name, wake));
             window.clearTimeout(timer);
         };
     }, []);
 
-    // Esc or a click outside closes the menu
+    // Esc or a press outside closes the menu
     useEffect(() => {
         if (!open) return;
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return;
             e.stopPropagation();
-            close();
+            setOpen(false);
             gearRef.current?.focus();
         };
         const onPointer = (e: PointerEvent) => {
-            if (!wrapRef.current?.contains(e.target as Node)) close();
+            if (e.target instanceof Node && !wrapRef.current?.contains(e.target)) setOpen(false);
         };
         window.addEventListener('keydown', onKey, true);
         window.addEventListener('pointerdown', onPointer);
@@ -60,18 +63,20 @@ export function MonitorMenu({ className }: { className?: string }) {
         };
     }, [open]);
 
-    const shown = awake || open;
+    const shown = awake || hovered || open;
 
     return (
-        <div ref={wrapRef} className={cn('relative', className)}>
+        <div ref={wrapRef} className={cn('relative', className)} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
             <button
                 ref={gearRef}
                 type="button"
-                onClick={() => (open ? close() : setOpen(true))}
+                onClick={() => setOpen((o) => !o)}
                 aria-label={t('mon_settings')}
+                aria-haspopup="dialog"
                 aria-expanded={open}
+                aria-controls={open ? menuId : undefined}
                 className={cn(
-                    'bg-card text-foreground grid size-14 place-items-center rounded-[14px] border-2 transition-[opacity,translate] duration-300 motion-reduce:transition-none',
+                    'bg-card text-foreground hover:bg-muted grid size-14 place-items-center rounded-[14px] border-2 transition-[opacity,translate] duration-200 motion-reduce:transition-none',
                     'focus-visible:opacity-100 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400',
                     shown ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0 focus-visible:translate-x-0',
                 )}
@@ -79,28 +84,29 @@ export function MonitorMenu({ className }: { className?: string }) {
                 <Settings className="size-7" aria-hidden />
             </button>
 
-            {(open || closingUntil > 0) && (
+            {mounted && (
                 <div
+                    id={menuId}
                     role="dialog"
                     aria-label={t('mon_settings')}
                     className={cn(
-                        'bg-card absolute top-[70px] right-0 z-10 flex w-[440px] origin-top-right flex-col gap-4.5 rounded-[18px] border px-6 py-5.5 shadow-2xl duration-150 motion-reduce:animate-none',
-                        open ? 'animate-in fade-in-0 zoom-in-95' : 'animate-out fade-out-0 zoom-out-95 fill-mode-forwards pointer-events-none',
+                        'bg-card absolute top-[70px] right-0 z-10 flex w-[460px] origin-top-right flex-col gap-4.5 rounded-[18px] border px-6 py-5.5 shadow-2xl',
+                        closing ? 'motion-pop-out' : 'motion-pop-in',
                     )}
                 >
                     <Row label={t('mon_lang')}>
-                        <Chips<'lang'>
+                        <Chips
                             label={t('mon_lang')}
                             value={prefs.lang}
                             choices={[
-                                ['th', 'ไทย'],
-                                ['en', 'EN'],
+                                ['th', t('mon_lang_th')],
+                                ['en', t('mon_lang_en')],
                             ]}
                             onPick={(lang) => prefs.set({ lang })}
                         />
                     </Row>
                     <Row label={t('mon_mode')}>
-                        <Chips<'theme'>
+                        <Chips
                             label={t('mon_mode')}
                             value={prefs.theme}
                             choices={[
@@ -111,7 +117,7 @@ export function MonitorMenu({ className }: { className?: string }) {
                         />
                     </Row>
                     <Row label={t('mon_sound')}>
-                        <Chips<'sound'>
+                        <Chips
                             label={t('mon_sound')}
                             value={prefs.sound}
                             choices={[
@@ -121,6 +127,19 @@ export function MonitorMenu({ className }: { className?: string }) {
                             onPick={(sound) => prefs.set({ sound })}
                         />
                     </Row>
+                    {onPausedChange && (
+                        <Row label={t('mon_rotate')}>
+                            <Chips
+                                label={t('mon_rotate')}
+                                value={!paused}
+                                choices={[
+                                    [true, t('mon_rotate_on')],
+                                    [false, t('mon_rotate_off')],
+                                ]}
+                                onPick={(rotating) => onPausedChange(!rotating)}
+                            />
+                        </Row>
+                    )}
                     <p className="text-muted-foreground m-0 text-[17px]">{t('mon_prefs_note')}</p>
                 </div>
             )}
@@ -130,23 +149,23 @@ export function MonitorMenu({ className }: { className?: string }) {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
     return (
-        <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-4">
+        <div className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-4">
             <span className="text-muted-foreground text-[22px]">{label}</span>
             {children}
         </div>
     );
 }
 
-function Chips<K extends keyof MonitorPrefs>({
+function Chips<V extends string | boolean>({
     label,
     value,
     choices,
     onPick,
 }: {
     label: string;
-    value: MonitorPrefs[K];
-    choices: Choice<K>[];
-    onPick: (value: MonitorPrefs[K]) => void;
+    value: V;
+    choices: Choice<V>[];
+    onPick: (value: V) => void;
 }) {
     return (
         <div role="group" aria-label={label} className="bg-muted grid grid-cols-2 gap-1.5 rounded-xl p-1.5">
@@ -158,7 +177,7 @@ function Chips<K extends keyof MonitorPrefs>({
                     onClick={() => onPick(choice)}
                     className={cn(
                         'h-12 rounded-[9px] text-[22px] font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400',
-                        choice === value ? 'bg-foreground text-background' : 'text-foreground',
+                        choice === value ? 'bg-foreground text-background' : 'text-foreground hover:bg-background',
                     )}
                 >
                     {text}

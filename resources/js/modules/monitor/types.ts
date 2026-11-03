@@ -41,6 +41,7 @@ export interface MonitorMember extends MonitorPerson {
 
 export interface MonitorBoard {
     generated_at: string;
+    server_now: string;
     sound: { key: string; enabled: boolean };
     kpis: MonitorKpis;
     rows: MonitorRow[];

@@ -27,6 +27,7 @@ export function PairCodeInput({ value, onChange, onSubmit, invalid, label, descr
                         'grid h-12.5 w-11 place-items-center rounded-lg border text-[22px] font-semibold tabular-nums',
                         i === 3 && 'ml-2.5',
                         invalid ? 'border-destructive border-[1.5px]' : focused && i === caret ? 'border-brand border-2' : 'border-input',
+                        invalid && focused && i === caret && 'ring-destructive/40 ring-2',
                     )}
                 >
                     {value[i] ?? ''}
@@ -35,7 +36,7 @@ export function PairCodeInput({ value, onChange, onSubmit, invalid, label, descr
             <input
                 type="text"
                 inputMode="numeric"
-                autoComplete="one-time-code"
+                autoComplete="off"
                 name="monitor_code"
                 aria-label={label}
                 aria-invalid={invalid || undefined}

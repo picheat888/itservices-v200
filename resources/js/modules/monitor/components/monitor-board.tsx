@@ -2,9 +2,10 @@
 import { playNotificationSound } from '@/modules/notification';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMonitorT } from '../hooks/use-monitor-prefs';
 import { useNow } from '../hooks/use-now';
+import { togglesPause } from '../lib/monitor-mode';
 import { boardChanges, newArrivals, paginateRows, popupOrder } from '../lib/monitor-rows';
 import { serverNow } from '../lib/monitor-time';
 import type { MonitorBoard as Board, MonitorRow } from '../types';
@@ -18,11 +19,13 @@ import { TeamPanel } from './team-panel';
 
 const PAGE_EVERY_MS = 15_000;
 const POPUP_MS = 15_000;
+const POPUP_MAX_MS = 30_000;
 const NEW_TAG_MS = 60_000;
 const MOTION_MS = 2_500;
 
 interface Popup {
     rows: MonitorRow[];
+    start: number;
     until: number;
     shownAt: string;
 }
@@ -39,7 +42,7 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
     const t = useMonitorT();
     const fmt = useDateFormat();
     const tick = useNow(1000);
-    const offset = useMemo(() => Date.parse(board.generated_at) - fetchedAt, [board, fetchedAt]);
+    const offset = useMemo(() => Date.parse(board.server_now) - fetchedAt, [board, fetchedAt]);
     const now = serverNow(offset, tick);
 
     // Pages rotate every 15 s; Space pauses
@@ -58,29 +61,42 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
     const newUntil = useRef(new Map<number, number>());
     // Rows to animate for a moment after the board that brought them: slide in when new, flash when just overdue
     const previousBoard = useRef<Board | null>(null);
-    const motionUntil = useRef(new Map<number, { cls: string; until: number }>());
+    const [motions, setMotions] = useState(() => new Map<number, { cls: string; until: number }>());
+    // Before paint, so a new row never shows once and then blinks into its slide-in
+    useLayoutEffect(() => {
+        const moved = boardChanges(previousBoard.current, board);
+        previousBoard.current = board;
+        if (moved.freshIds.length === 0 && moved.justOverdueIds.length === 0) return;
+        const until = Date.now() + MOTION_MS;
+        setMotions((current) => {
+            const next = new Map(current);
+            moved.freshIds.forEach((id) => next.set(id, { cls: 'row-in', until }));
+            moved.justOverdueIds.forEach((id) => next.set(id, { cls: 'monitor-flash', until }));
+            return next;
+        });
+    }, [board]);
     const [popup, setPopup] = useState<Popup | null>(null);
     const [announcement, setAnnouncement] = useState('');
     useEffect(() => {
-        const moved = boardChanges(previousBoard.current, board);
-        previousBoard.current = board;
-        const movedAt = Date.now();
-        moved.freshIds.forEach((id) => motionUntil.current.set(id, { cls: 'row-in', until: movedAt + MOTION_MS }));
-        moved.justOverdueIds.forEach((id) => motionUntil.current.set(id, { cls: 'monitor-flash', until: movedAt + MOTION_MS }));
-
         const fresh = newArrivals(seenIds.current, board);
         seenIds.current = new Set(board.rows.map((r) => r.id));
         if (fresh.length === 0) return;
 
         const at = Date.now();
         fresh.forEach((r) => newUntil.current.set(r.id, at + NEW_TAG_MS));
-        setPopup((current) => ({
-            rows: popupOrder([...(current && current.until > at ? current.rows : []), ...fresh]),
-            until: at + POPUP_MS,
-            shownAt: clockTime(at).slice(0, 5),
-        }));
+        // A burst of new cases extends the popup, but never past 30 s from when it opened
+        setPopup((current) => {
+            const open = current !== null && current.until > at;
+            const start = open ? current.start : at;
+            return {
+                rows: popupOrder([...(open ? current.rows : []), ...fresh]),
+                start,
+                until: Math.min(at + POPUP_MS, start + POPUP_MAX_MS),
+                shownAt: open ? current.shownAt : clockTime(at).slice(0, 5),
+            };
+        });
         setAnnouncement(
-            t('mon_announce_new')
+            t(fresh.length === 1 ? 'mon_announce_new_one' : 'mon_announce_new')
                 .replace('{n}', String(fresh.length))
                 .replace('{title}', fresh.map((r) => r.subject).join(', ')),
         );
@@ -92,7 +108,7 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
 
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === ' ' || event.code === 'Space') {
+            if (togglesPause(event.key, (event.target as HTMLElement | null)?.tagName ?? '')) {
                 event.preventDefault();
                 setPaused((p) => !p);
             } else if (event.key === 'Escape') {
@@ -111,8 +127,10 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
             <header className="flex h-16 items-center justify-between">
                 <MonitorBrand sub={t('mon_subtitle')} />
                 <div className="flex items-center gap-7">
-                    {paused && <span className="text-[20px] text-amber-800 dark:text-amber-300">{t('mon_paused')}</span>}
-                    <MonitorMenu />
+                    <span role="status" className="text-[20px] text-amber-800 dark:text-amber-300">
+                        {paused ? t('mon_paused') : ''}
+                    </span>
+                    <MonitorMenu paused={paused} onPausedChange={setPaused} />
                     <div
                         className={cn(
                             'flex items-center gap-2.5 text-[20px]',
@@ -142,7 +160,7 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
                     now={now}
                     isNew={(id) => (newUntil.current.get(id) ?? 0) > tick}
                     motionFor={(id) => {
-                        const motion = motionUntil.current.get(id);
+                        const motion = motions.get(id);
                         return motion && motion.until > tick ? motion.cls : undefined;
                     }}
                 />
@@ -153,7 +171,15 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn }: 
                 {announcement}
             </div>
 
-            {popupOpen && <NewCasePopup rows={popup.rows} now={now} shownAt={popup.shownAt} leftRatio={(popup.until - tick) / POPUP_MS} />}
+            {popupOpen && (
+                <NewCasePopup
+                    rows={popup.rows}
+                    now={now}
+                    shownAt={popup.shownAt}
+                    leftRatio={(popup.until - tick) / (popup.until - popup.start)}
+                    onClose={() => setPopup(null)}
+                />
+            )}
         </div>
     );
 }

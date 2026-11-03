@@ -1,6 +1,8 @@
-// Settings → จอ Monitor: pair the IT-room TV by the code it shows, then see whether it is online, re-pair or unpair it.
+// Settings → Monitor screen: pair the IT-room TV by the code it shows, then see whether it is online, re-pair or unpair it.
 import { useT } from '@/lang';
 import { useMonitorDevice, usePairMonitor, useUnpairMonitor, type MonitorDeviceStatus } from '@/modules/monitor';
+import { LoadFailed } from '@/shared/components/load-failed';
+import { SaveButton } from '@/shared/components/save-button';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -8,7 +10,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import axios from 'axios';
 import { AlertCircle } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { PAIR_CODE_LENGTH } from '../lib/pair-code';
 import { PairCodeInput } from './pair-code-input';
 
@@ -17,18 +19,35 @@ const ONLINE_WITHIN_MS = 60_000;
 export function MonitorSection() {
     const t = useT();
     const titleId = useId();
-    const { data, isLoading } = useMonitorDevice();
+    const { data, isLoading, isError, refetch } = useMonitorDevice();
+    // After pairing or unpairing the focused control is gone; move focus to the heading so keyboard and reader users keep their place
+    const headingRef = useRef<HTMLHeadingElement>(null);
+    const paired = data?.paired;
+    const seenPaired = useRef<boolean | undefined>(undefined);
+    useEffect(() => {
+        if (paired === undefined) return;
+        if (seenPaired.current !== undefined && seenPaired.current !== paired) headingRef.current?.focus();
+        seenPaired.current = paired;
+    }, [paired]);
 
     return (
         <section aria-labelledby={titleId} className="flex max-w-[42.5rem] flex-col gap-5">
             <div>
-                <h2 id={titleId} className="text-lg font-semibold">
+                <h2 id={titleId} ref={headingRef} tabIndex={-1} className="text-lg font-semibold focus:outline-none">
                     {t('set_monitor')}
                 </h2>
                 <p className="text-muted-foreground text-sm">{t('set_monitor_desc')}</p>
             </div>
 
-            {isLoading || !data ? <Skeleton className="h-40 w-full rounded-xl" /> : data.paired ? <PairedCard status={data} /> : <PairForm />}
+            {isError && !data ? (
+                <LoadFailed onRetry={() => void refetch()} />
+            ) : isLoading || !data ? (
+                <Skeleton className="h-40 w-full rounded-xl" />
+            ) : data.paired ? (
+                <PairedCard status={data} />
+            ) : (
+                <PairForm />
+            )}
         </section>
     );
 }
@@ -38,14 +57,19 @@ function PairForm() {
     const hintId = useId();
     const pair = usePairMonitor();
     const [code, setCode] = useState('');
-    const [invalid, setInvalid] = useState(false);
+    // short: fewer than 6 digits; unknown: the server knows no such code
+    const [invalid, setInvalid] = useState<'short' | 'unknown' | null>(null);
     const ready = code.length === PAIR_CODE_LENGTH;
 
     const submit = () => {
-        if (!ready || pair.isPending) return;
+        if (pair.isPending) return;
+        if (!ready) {
+            setInvalid('short');
+            return;
+        }
         pair.mutate(code, {
             onError: (error) => {
-                if (axios.isAxiosError(error) && error.response?.status === 422) setInvalid(true);
+                if (axios.isAxiosError(error) && error.response?.status === 422) setInvalid('unknown');
             },
         });
     };
@@ -66,16 +90,16 @@ function PairForm() {
                         value={code}
                         onChange={(next) => {
                             setCode(next);
-                            setInvalid(false);
+                            setInvalid(null);
                         }}
                         onSubmit={submit}
-                        invalid={invalid}
+                        invalid={invalid !== null}
                         label={t('set_monitor_code_label')}
                         describedBy={hintId}
                     />
-                    <Button onClick={submit} disabled={!ready || pair.isPending}>
+                    <SaveButton onClick={submit} loading={pair.isPending} loadingLabel={t('set_monitor_pairing')}>
                         {t('set_monitor_pair')}
-                    </Button>
+                    </SaveButton>
                 </div>
                 <p
                     id={hintId}
@@ -83,7 +107,7 @@ function PairForm() {
                     role={invalid ? 'alert' : undefined}
                 >
                     {invalid && <AlertCircle className="size-4 shrink-0" aria-hidden />}
-                    {invalid ? t('set_monitor_code_invalid') : t('set_monitor_code_hint')}
+                    {invalid === 'short' ? t('set_monitor_code_short') : invalid ? t('set_monitor_code_invalid') : t('set_monitor_code_hint')}
                 </p>
             </div>
 
@@ -161,7 +185,7 @@ function PairedCard({ status }: { status: MonitorDeviceStatus }) {
                     <Button variant="outline" size="sm" onClick={() => void ask('repair')}>
                         {t('set_monitor_repair')}
                     </Button>
-                    <Button variant="outline" size="sm" className="text-destructive" onClick={() => void ask('unpair')}>
+                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => void ask('unpair')}>
                         {t('set_monitor_unpair')}
                     </Button>
                 </div>

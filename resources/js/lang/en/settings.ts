@@ -449,6 +449,8 @@ export const settings: Dict = {
     set_monitor_code_hint: 'The 6 digits on the TV change every 5 minutes',
     set_monitor_pair: 'Pair screen',
     set_monitor_code_invalid: 'This code matches no screen or has expired. Check the latest code on the TV and type it again',
+    set_monitor_code_short: 'Enter all 6 digits',
+    set_monitor_pairing: 'Pairing…',
     set_monitor_steps: 'Setting up the screen',
     set_monitor_step1_title: 'Open {url} on the TV',
     set_monitor_step1_hint: 'The TV shows a large 6-digit code. Type this link once; the TV remembers it after that',

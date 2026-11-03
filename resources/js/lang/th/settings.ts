@@ -445,6 +445,8 @@ export const settings: Dict = {
     set_monitor_code_hint: 'ตัวเลข 6 หลักบนทีวี รหัสเปลี่ยนเองทุก 5 นาที',
     set_monitor_pair: 'จับคู่จอ',
     set_monitor_code_invalid: 'รหัสนี้ไม่ตรงกับจอไหน หรือหมดอายุแล้ว ดูรหัสล่าสุดบนทีวีแล้วกรอกใหม่',
+    set_monitor_code_short: 'กรอกรหัสให้ครบ 6 หลัก',
+    set_monitor_pairing: 'กำลังจับคู่…',
     set_monitor_steps: 'ขั้นตอนตั้งจอ',
     set_monitor_step1_title: 'เปิด {url} บนทีวี',
     set_monitor_step1_hint: 'ทีวีจะขึ้นรหัส 6 หลักตัวใหญ่ พิมพ์ลิงก์นี้ครั้งเดียว ครั้งต่อไปเครื่องจะจำเอง',

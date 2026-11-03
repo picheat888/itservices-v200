@@ -18,7 +18,7 @@ interface Tile {
 export function MonitorKpis({ kpis, now }: { kpis: Kpis; now: number }) {
     const t = useMonitorT();
     const oldest = kpis.waiting_oldest_at ? now - Date.parse(kpis.waiting_oldest_at) : null;
-    const met = kpis.closed_today > 0 ? Math.round((kpis.closed_today_met / kpis.closed_today) * 100) : 100;
+    const met = kpis.closed_today > 0 ? Math.round((kpis.closed_today_met / kpis.closed_today) * 100) : null;
 
     const tiles: Tile[] = [
         {
@@ -55,7 +55,7 @@ export function MonitorKpis({ kpis, now }: { kpis: Kpis; now: number }) {
             key: 'closed',
             label: t('mon_kpi_closed'),
             value: kpis.closed_today,
-            foot: t('mon_kpi_closed_foot').replace('{p}', String(met)),
+            foot: met === null ? t('mon_kpi_closed_none') : t('mon_kpi_closed_foot').replace('{p}', String(met)),
             dot: 'bg-emerald-600 dark:bg-emerald-400',
         },
     ];

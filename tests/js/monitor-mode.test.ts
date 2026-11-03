@@ -1,7 +1,7 @@
 // Monitor TV: board only with a device token, the pairing countdown on a wrong clock, and the one CSRF retry.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { codeLeftMs, monitorMode, withCsrfRetry } from '../../resources/js/modules/monitor/lib/monitor-mode.ts';
+import { codeLeftMs, monitorMode, togglesPause, withCsrfRetry } from '../../resources/js/modules/monitor/lib/monitor-mode.ts';
 
 test('a stored device token shows the board', () => {
     assert.equal(monitorMode('abc'), 'board');
@@ -45,4 +45,11 @@ test('other errors are not retried', async () => {
         ),
     );
     assert.equal(calls, 1);
+});
+
+test('Space pauses the rotation only when it is not pressing a control', () => {
+    assert.equal(togglesPause(' ', 'BODY'), true);
+    assert.equal(togglesPause(' ', 'BUTTON'), false);
+    assert.equal(togglesPause(' ', 'INPUT'), false);
+    assert.equal(togglesPause('Enter', 'BODY'), false);
 });
