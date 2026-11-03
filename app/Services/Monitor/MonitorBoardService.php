@@ -5,6 +5,7 @@
 namespace App\Services\Monitor;
 
 use App\Enums\Ticket\TicketStatus;
+use App\Models\Employee\Employee;
 use App\Models\Settings\AppSetting;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -135,6 +136,7 @@ class MonitorBoardService
                 /** @var Ticket $ticket */
                 $ticket = $e['ticket'];
                 $department = $ticket->requester?->department;
+                $requester = $this->nameParts($ticket->requester);
 
                 return [
                     'id' => $ticket->id,
@@ -142,6 +144,7 @@ class MonitorBoardService
                     'subject' => $ticket->subject,
                     'priority' => $ticket->priority?->value,
                     'department' => $department ? ($department->name_th ?: $department->name) : null,
+                    'requester' => $requester !== null ? $this->shortName(...$requester) : null,
                     'group' => $e['group'],
                     'clock' => $e['clock'],
                     'due_at' => $e['due']->toIso8601String(),
@@ -183,21 +186,33 @@ class MonitorBoardService
      */
     private function person(User $user): array
     {
-        $employee = $user->employee;
-        [$first, $last] = match (true) {
-            $employee !== null && filled($employee->first_name_th) => [$employee->first_name_th, (string) $employee->last_name_th],
-            $employee !== null && filled($employee->first_name) => [$employee->first_name, (string) $employee->last_name],
-            default => array_pad(explode(' ', trim((string) $user->name), 2), 2, ''),
-        };
-
-        // Thai leading vowels (เ แ โ ใ ไ) are written before the consonant they follow
-        $initial = fn (string $word) => mb_substr(preg_replace('/^[เแโใไ]/u', '', trim($word)), 0, 1);
-        $name = trim($first.($last !== '' ? ' '.$initial($last).'.' : ''));
+        [$first, $last] = $this->nameParts($user->employee) ?? array_pad(explode(' ', trim((string) $user->name), 2), 2, '');
 
         return [
             'id' => $user->id,
-            'name' => $name,
-            'initials' => mb_strtoupper($initial($first).$initial($last)),
+            'name' => $this->shortName($first, $last),
+            'initials' => mb_strtoupper($this->initial($first).$this->initial($last)),
         ];
+    }
+
+    /** @return array{0: string, 1: string}|null */
+    private function nameParts(?Employee $employee): ?array
+    {
+        return match (true) {
+            $employee !== null && filled($employee->first_name_th) => [$employee->first_name_th, (string) $employee->last_name_th],
+            $employee !== null && filled($employee->first_name) => [$employee->first_name, (string) $employee->last_name],
+            default => null,
+        };
+    }
+
+    private function shortName(string $first, string $last): string
+    {
+        return trim($first.($last !== '' ? ' '.$this->initial($last).'.' : ''));
+    }
+
+    private function initial(string $word): string
+    {
+        // Thai leading vowels (เ แ โ ใ ไ) are written before the consonant they follow
+        return mb_substr((string) preg_replace('/^[เแโใไ]/u', '', trim($word)), 0, 1);
     }
 }

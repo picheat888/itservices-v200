@@ -104,7 +104,10 @@ class MonitorBoardServiceTest extends TestCase
     public function test_row_carries_ticket_fields_and_requester_department(): void
     {
         $department = Department::create(['code' => 'ACC', 'name' => 'Accounting', 'name_th' => 'บัญชี']);
-        $requester = Employee::create(['first_name' => 'Nok', 'last_name' => 'Test', 'status' => 'active', 'department_id' => $department->id]);
+        $requester = Employee::create([
+            'first_name' => 'Nok', 'last_name' => 'Test', 'first_name_th' => 'วรรณา', 'last_name_th' => 'ทองดี',
+            'status' => 'active', 'department_id' => $department->id,
+        ]);
         $ticket = Ticket::factory()->create([
             'status' => 'open', 'priority' => 'high', 'subject' => 'Printer jam',
             'requester_id' => $requester->id, 'created_at' => '2026-01-14 11:30:00',
@@ -116,6 +119,7 @@ class MonitorBoardServiceTest extends TestCase
         $this->assertSame('Printer jam', $row['subject']);
         $this->assertSame('high', $row['priority']);
         $this->assertSame('บัญชี', $row['department']);
+        $this->assertSame('วรรณา ท.', $row['requester']);
         $this->assertSame(TicketSla::forTicket($ticket->fresh())['response_due_at'], $row['due_at']);
     }
 
