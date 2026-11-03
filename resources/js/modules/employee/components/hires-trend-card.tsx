@@ -30,6 +30,7 @@ export function HiresTrendCard({ trend, highlightLast }: { trend: { unit: BarUni
                     data={trend.data}
                     unit={trend.unit}
                     highlightLast={highlightLast}
+                    guides
                     empty={{ kind: 'empty', title: t('emp_empty_overview_hires_trend'), hint: t('emp_empty_overview_hires_trend_hint') }}
                 />
             </div>
