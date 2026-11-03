@@ -2,6 +2,7 @@
 import { useT } from '@/lang';
 import { Unlink } from 'lucide-react';
 import type { MonitorPairingCode } from '../types';
+import { MonitorBrand } from './monitor-brand';
 
 export function PairingScreen({
     pairing,
@@ -27,12 +28,7 @@ export function PairingScreen({
                 </div>
             )}
             <div className="bg-card flex w-[1120px] flex-col items-center gap-4.5 rounded-[28px] border px-18 pt-15 pb-13 text-center">
-                <h1 className="flex items-center gap-4 text-[30px] font-bold">
-                    <span className="bg-brand text-brand-foreground grid size-[52px] place-items-center rounded-xl text-[22px]" aria-hidden>
-                        IT
-                    </span>
-                    {t('mon_title')}
-                </h1>
+                <MonitorBrand sub={t('mon_title')} />
                 <div className="text-muted-foreground mt-3 text-[32px]">{t('mon_pair_label')}</div>
                 {pairing ? (
                     <>

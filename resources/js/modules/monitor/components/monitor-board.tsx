@@ -10,6 +10,7 @@ import { newArrivals, paginateRows, popupOrder } from '../lib/monitor-rows';
 import { serverNow } from '../lib/monitor-time';
 import type { MonitorBoard as Board, MonitorRow } from '../types';
 import { clockTime, connectionLabel } from './connection-label';
+import { MonitorBrand } from './monitor-brand';
 import { MonitorKpis } from './monitor-kpis';
 import { MustSeeList } from './must-see-list';
 import { NewCasePopup } from './new-case-popup';
@@ -99,15 +100,7 @@ export function MonitorBoard({ board, fetchedAt, failures, lastOkAt, soundOn, on
     return (
         <div className="relative flex flex-1 flex-col gap-5.5 px-10 py-8">
             <header className="flex h-16 items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <span className="bg-brand text-brand-foreground grid size-[52px] place-items-center rounded-xl text-[22px] font-bold" aria-hidden>
-                        IT
-                    </span>
-                    <div>
-                        <h1 className="text-[30px] leading-[1.2] font-bold">{t('mon_brand')}</h1>
-                        <span className="text-muted-foreground text-[20px]">{t('mon_subtitle')}</span>
-                    </div>
-                </div>
+                <MonitorBrand sub={t('mon_subtitle')} />
                 <div className="flex items-center gap-7">
                     {paused && <span className="text-[20px] text-amber-300">{t('mon_paused')}</span>}
                     <button

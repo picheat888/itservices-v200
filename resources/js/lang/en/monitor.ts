@@ -11,7 +11,7 @@ export const monitor: Dict = {
     mon_just_in: 'Just in',
 
     // components/monitor-board.tsx — header
-    mon_brand: 'IT Service Desk',
+    mon_tab_title: 'Monitoring Screen',
     mon_title: 'IT case monitor',
     mon_subtitle: 'Cases right now',
     mon_updated: 'Updated {t}',

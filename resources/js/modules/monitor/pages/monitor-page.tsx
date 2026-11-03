@@ -13,7 +13,7 @@ import { useNow } from '../hooks/use-now';
 import { codeLeftMs, monitorMode } from '../lib/monitor-mode';
 
 export default function MonitorPage() {
-    useDocumentTitle('mon_title');
+    useDocumentTitle('mon_tab_title');
     const t = useT();
     const { isLoading, isError, isAuthenticated, can } = useAuth();
     const [token, setToken] = useState<string | null>(readMonitorToken);
