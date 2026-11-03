@@ -1,0 +1,74 @@
+import type { Dict } from '@/lang/types';
+
+export const monitor: Dict = {
+    // lib/monitor-time.ts — คำบอกเวลา
+    mon_min: '{n} น.',
+    mon_hour: '{n} ชม.',
+    mon_day: '{n} วัน',
+    mon_over: 'เกิน {t}',
+    mon_left: 'เหลือ {t}',
+    mon_waited: 'รอมา {t}',
+    mon_just_in: 'เพิ่งเข้ามา',
+
+    // components/monitor-board.tsx — หัวจอ
+    mon_title: 'จอ Monitor เคส IT',
+    mon_subtitle: 'สถานะเคสตอนนี้',
+    mon_updated: 'อัปเดต {t}',
+    mon_offline: 'ขาดการเชื่อมต่อ ข้อมูลล่าสุด {t}',
+    mon_sound_on: 'เสียงเปิดอยู่',
+    mon_sound_off: 'กดเพื่อเปิดเสียง',
+    mon_paused: 'หยุดสลับหน้าอยู่ กด Space เพื่อเล่นต่อ',
+
+    // components/monitor-kpis.tsx — ตัวเลขด้านบน
+    mon_kpi_waiting: 'รอรับเคส',
+    mon_kpi_waiting_foot: 'รอนานสุด {t}',
+    mon_kpi_waiting_none: 'ไม่มีเคสรอ',
+    mon_kpi_in_progress: 'กำลังดำเนินการ',
+    mon_kpi_in_progress_foot: 'IT {n} คนกำลังทำ',
+    mon_kpi_overdue: 'เกินกำหนด',
+    mon_kpi_overdue_foot: 'รับเคสช้า {a} ปิดเคสช้า {b}',
+    mon_kpi_near: 'ใกล้ครบกำหนด',
+    mon_kpi_near_foot: 'เคสที่รับแล้ว',
+    mon_kpi_closed: 'ปิดเคสวันนี้',
+    mon_kpi_closed_foot: 'ทัน SLA {p}%',
+
+    // components/must-see-list.tsx — รายการต้องดูตอนนี้
+    mon_list_title: 'ต้องดูตอนนี้',
+    mon_page: 'หน้า {a} จาก {b}',
+    mon_group_overdue: 'เกินกำหนด',
+    mon_group_near: 'ใกล้ครบกำหนด',
+    mon_group_waiting: 'รอรับเคส',
+    mon_group_count: '{n} เคส',
+    mon_clock_response: 'กำหนดรับเคส',
+    mon_clock_resolve: 'กำหนดปิดเคส',
+    mon_unassigned: 'ยังไม่มีผู้รับผิดชอบ',
+    mon_new_tag: 'ใหม่',
+    mon_calm_title: 'ไม่มีเคสที่ต้องดูตอนนี้',
+    mon_calm_hint: 'ไม่มีเคสเกินกำหนด ใกล้ครบกำหนด หรือรอรับเคส',
+
+    // components/team-panel.tsx — ทีม IT
+    mon_team_title: 'ทีม IT ตอนนี้',
+    mon_team_hint: 'เคสที่ถืออยู่',
+
+    // components/new-case-popup.tsx — popup เคสใหม่
+    mon_popup_one: 'เคสใหม่',
+    mon_popup_many: 'เคสใหม่ {n} เคส',
+    mon_popup_more: 'อีก {n} เคส',
+    mon_popup_department: 'แผนก',
+    mon_popup_requester: 'ผู้แจ้ง',
+    mon_announce_new: 'เคสใหม่ {n} เคส {title}',
+
+    // components/pairing-screen.tsx — หน้ารหัสจับคู่
+    mon_pair_label: 'รหัสจับคู่จอ',
+    mon_pair_changes_in: 'รหัสเปลี่ยนใน {t}',
+    mon_pair_hint: 'ให้ผู้ดูแลระบบเปิด ตั้งค่า แล้วเลือก จอ Monitor จากนั้นกรอกรหัสนี้ แล้วกดจับคู่จอ',
+    mon_pair_retry: 'ขอรหัสไม่ได้ กำลังลองใหม่',
+    mon_unpaired_banner: 'เครื่องนี้ถูกยกเลิกการจับคู่แล้ว ถ้าจะใช้ต่อ ให้จับคู่ใหม่ด้วยรหัสด้านล่าง',
+
+    // components/start-screen.tsx — หน้าเริ่มใช้งาน
+    mon_paired_title: 'จับคู่จอแล้ว',
+    mon_start_hint: 'กดปุ่มด้านล่างหนึ่งครั้ง เพื่อให้จอเล่นเสียงตอนมีเคสใหม่ได้',
+    mon_start_sound: 'เริ่มใช้งานและเปิดเสียง',
+    mon_start_enter: 'กด Enter บนคีย์บอร์ดก็ได้',
+    mon_start_silent: 'เริ่มแบบไม่มีเสียง',
+};

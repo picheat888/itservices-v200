@@ -9,6 +9,7 @@ import { contract as enContracts } from '@/lang/en/contract';
 import { dashboard as enDashboard } from '@/lang/en/dashboard';
 import { email as enEmail } from '@/lang/en/email';
 import { employee as enEmployees } from '@/lang/en/employee';
+import { monitor as enMonitor } from '@/lang/en/monitor';
 import { notification as enNotifications } from '@/lang/en/notification';
 import { permission as enPermissions } from '@/lang/en/permission';
 import { profile as enProfile } from '@/lang/en/profile';
@@ -27,6 +28,7 @@ import { contract as thContracts } from '@/lang/th/contract';
 import { dashboard as thDashboard } from '@/lang/th/dashboard';
 import { email as thEmail } from '@/lang/th/email';
 import { employee as thEmployees } from '@/lang/th/employee';
+import { monitor as thMonitor } from '@/lang/th/monitor';
 import { notification as thNotifications } from '@/lang/th/notification';
 import { permission as thPermissions } from '@/lang/th/permission';
 import { profile as thProfile } from '@/lang/th/profile';
@@ -55,6 +57,7 @@ const en: Dict = {
     ...enProfile,
     ...enDashboard,
     ...enReport,
+    ...enMonitor,
 };
 const th: Dict = {
     ...thCommon,
@@ -74,6 +77,7 @@ const th: Dict = {
     ...thProfile,
     ...thDashboard,
     ...thReport,
+    ...thMonitor,
 };
 
 export const dictionaries: Record<Lang, Dict> = { en, th };
