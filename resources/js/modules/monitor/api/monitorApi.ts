@@ -15,8 +15,12 @@ const tv = axios.create({
 });
 
 export const monitorApi = {
+    // A paired TV sends its token; a signed-in viewer reads the session route
     board: (token: string | null) =>
-        tv.get<ApiEnvelope<MonitorBoard>>('/monitor/board', { headers: token ? { [MONITOR_TOKEN_HEADER]: token } : {} }).then((r) => r.data.data),
+        (token
+            ? tv.get<ApiEnvelope<MonitorBoard>>('/monitor/board', { headers: { [MONITOR_TOKEN_HEADER]: token } })
+            : tv.get<ApiEnvelope<MonitorBoard>>('/monitor/live')
+        ).then((r) => r.data.data),
     requestCode: async () => {
         await ensureCsrf();
         return tv.post<ApiEnvelope<MonitorPairingCode>>('/monitor/pairings').then((r) => r.data.data);

@@ -1,6 +1,6 @@
 <?php
 
-// Lets the paired monitor TV (X-Monitor-Token) or a signed-in user with tickets.view_all read the monitor board.
+// Lets only the paired monitor TV (X-Monitor-Token) read the board; signed-in viewers use /monitor/live inside the signed-in API.
 
 namespace App\Http\Middleware;
 
@@ -17,28 +17,11 @@ class AuthenticateMonitor
 
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $request->header(self::HEADER);
-
-        if ($token !== null) {
-            if (! $this->pairing->deviceMatches($token)) {
-                return $this->unpaired();
-            }
-            $this->pairing->touchLastSeen();
-
-            return $next($request);
+        if (! $this->pairing->deviceMatches($request->header(self::HEADER))) {
+            return response()->json(['message' => 'monitor_unpaired'], 401);
         }
-
-        $user = $request->user('sanctum');
-        if ($user === null) {
-            return $this->unpaired();
-        }
-        abort_unless($user->hasPermission('tickets.view_all'), 403);
+        $this->pairing->touchLastSeen();
 
         return $next($request);
-    }
-
-    private function unpaired(): Response
-    {
-        return response()->json(['message' => 'monitor_unpaired'], 401);
     }
 }
