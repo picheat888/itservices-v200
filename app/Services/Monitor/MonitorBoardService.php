@@ -40,7 +40,7 @@ class MonitorBoardService
     private function build(): array
     {
         $live = Ticket::query()
-            ->with(['requester.department', 'assignee.employee'])
+            ->with(['requester.department', 'assignee.employee', 'serviceRequest'])
             ->whereIn('status', TicketStatus::liveValues())
             ->get();
 
@@ -102,6 +102,7 @@ class MonitorBoardService
         $working = $live->filter(fn (Ticket $t) => $t->status === TicketStatus::InProgress);
         $overdue = $entries->where('state', 'over_sla');
         $closedToday = Ticket::query()
+            ->with('serviceRequest')
             ->where('status', TicketStatus::Completed->value)
             ->whereBetween('resolved_at', [today(), today()->endOfDay()])
             ->get();

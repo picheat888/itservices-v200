@@ -190,6 +190,32 @@ class MonitorBoardServiceTest extends TestCase
         $this->assertSame(['id' => $user->id, 'name' => 'เกียรติ จ.', 'initials' => 'กจ', 'count' => 0], $this->board()['team'][0]);
     }
 
+    public function test_query_count_does_not_grow_with_the_number_of_cases(): void
+    {
+        $count = function (): int {
+            Cache::flush();
+            TicketSla::flush();
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $this->board();
+            DB::disableQueryLog();
+
+            return count(DB::getQueryLog());
+        };
+        $staff = $this->resolver();
+        $this->freshOpen('2026-01-14 11:30:00');
+        $this->calmInProgress($staff);
+        $few = $count();
+
+        foreach (range(1, 5) as $i) {
+            $this->freshOpen('2026-01-14 11:4'.$i.':00');
+            $this->calmInProgress($staff);
+            Ticket::factory()->create(['status' => 'completed', 'priority' => 'low', 'created_at' => '2026-01-14 08:00:00', 'responded_at' => '2026-01-14 08:10:00', 'resolved_at' => '2026-01-14 09:0'.$i.':00']);
+        }
+
+        $this->assertSame($few, $count());
+    }
+
     public function test_board_is_cached_for_five_seconds(): void
     {
         $this->freshOpen('2026-01-14 11:30:00');
