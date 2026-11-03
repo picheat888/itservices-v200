@@ -24,7 +24,7 @@ export const monitor: Dict = {
     mon_sound: 'Sound',
     mon_on: 'On',
     mon_off: 'Off',
-    mon_prefs_note: 'This screen remembers these itself; no account is changed',
+    mon_prefs_note: 'Saved on this screen only',
     mon_connecting: 'Connecting…',
     mon_connect_retry: 'Cannot connect, trying again',
     mon_paused: 'Paused, press Space to resume',

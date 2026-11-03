@@ -24,7 +24,7 @@ export const monitor: Dict = {
     mon_sound: 'เสียง',
     mon_on: 'เปิด',
     mon_off: 'ปิด',
-    mon_prefs_note: 'จอนี้จำค่าที่ตั้งไว้เอง ไม่เกี่ยวกับบัญชีของใคร',
+    mon_prefs_note: 'บันทึกไว้ในเครื่องนี้เท่านั้น',
     mon_connecting: 'กำลังเชื่อมต่อ…',
     mon_connect_retry: 'เชื่อมต่อไม่ได้ กำลังลองใหม่',
     mon_paused: 'หยุดสลับหน้า กด Space เพื่อสลับต่อ',
