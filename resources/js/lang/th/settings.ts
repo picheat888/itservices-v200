@@ -438,7 +438,7 @@ export const settings: Dict = {
     set_about_copy: 'คัดลอก',
     set_about_copied: 'คัดลอกแล้ว',
     // monitor-section.tsx — หมวดจอ Monitor
-    set_monitor: 'จอ Monitor',
+    set_monitor: 'Monitor screen',
     set_monitor_desc: 'จับคู่ทีวีให้เปิดจอ Monitor ได้โดยไม่ต้องเข้าสู่ระบบ ทีวีดูได้อย่างเดียว และจับคู่ได้ทีละเครื่อง',
     set_monitor_code_title: 'กรอกรหัสที่ขึ้นบนทีวี',
     set_monitor_code_label: 'รหัสจับคู่จอ 6 หลัก',
