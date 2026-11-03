@@ -65,7 +65,7 @@ export function MustSeeList({
                             <div
                                 key={`head-${entry.group}`}
                                 className={cn(
-                                    'bg-muted dark:bg-background/60 flex h-10 items-center gap-3 px-7 text-[21px] font-semibold',
+                                    'bg-muted dark:bg-muted/40 flex h-10 items-center gap-3 px-7 text-[21px] font-semibold',
                                     GROUP_INK[entry.group],
                                 )}
                             >
