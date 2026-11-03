@@ -67,10 +67,11 @@ class MonitorPairingTest extends TestCase
         $this->assertMatchesRegularExpression('/^\d{6}$/', $pairing['code']);
         $this->assertSame(40, strlen($pairing['pairing_id']));
         $this->assertNotEmpty($pairing['expires_at']);
+        $this->assertSame(300, $pairing['expires_in']);
         $this->assertSame(['status' => 'pending'], $this->tvPolls($pairing['pairing_id']));
     }
 
-    public function test_admin_pairs_with_the_code_and_tv_receives_token_once(): void
+    public function test_admin_pairs_with_the_code_and_tv_can_collect_the_token_for_two_minutes(): void
     {
         $admin = $this->admin();
         $pairing = $this->tvAsksForCode();
@@ -86,6 +87,9 @@ class MonitorPairingTest extends TestCase
         $this->assertSame('paired', $first['status']);
         $this->assertSame(64, strlen($first['device_token']));
 
+        // A lost reply can be fetched again for two minutes, then the pairing is gone
+        $this->assertSame($first, $this->tvPolls($pairing['pairing_id']));
+        $this->travel(121)->seconds();
         $this->assertSame(['status' => 'expired'], $this->tvPolls($pairing['pairing_id']));
     }
 

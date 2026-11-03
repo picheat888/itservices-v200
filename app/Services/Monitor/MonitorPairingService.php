@@ -23,7 +23,7 @@ class MonitorPairingService
     /**
      * A fresh code for a TV waiting to be paired.
      *
-     * @return array{pairing_id: string, code: string, expires_at: string}
+     * @return array{pairing_id: string, code: string, expires_at: string, expires_in: int}
      */
     public function issueCode(string $userAgent): array
     {
@@ -41,11 +41,12 @@ class MonitorPairingService
             'user_agent' => Str::limit($userAgent, 500, ''),
         ], $expiresAt);
 
-        return ['pairing_id' => $pairingId, 'code' => $code, 'expires_at' => $expiresAt->toIso8601String()];
+        // expires_in lets a TV with a wrong clock count down from when the reply arrived
+        return ['pairing_id' => $pairingId, 'code' => $code, 'expires_at' => $expiresAt->toIso8601String(), 'expires_in' => self::CODE_SECONDS];
     }
 
     /**
-     * Where the TV's pairing stands; the device token is handed over on the first "paired" read only.
+     * Where the TV's pairing stands; once paired, the device token can be collected until the short hand-over window ends.
      *
      * @return array{status: string, device_token?: string}
      */
@@ -59,8 +60,6 @@ class MonitorPairingService
         if ($pairing['status'] !== 'paired') {
             return ['status' => 'pending'];
         }
-
-        Cache::forget($this->pairingKey($pairingId));
 
         return ['status' => 'paired', 'device_token' => $pairing['token']];
     }
