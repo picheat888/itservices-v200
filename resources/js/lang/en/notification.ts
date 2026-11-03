@@ -316,10 +316,10 @@ export const notification: Dict = {
     notification_summary_open: 'Tap to open',
 
     // components/push-invite-row.tsx — แถวชวนเปิดการแจ้งเตือนในกระดิ่ง
-    notification_invite_title: 'Get notifications on this device, even when the system is closed',
-    notification_invite_text: 'New items appear on screen with a sound.',
-    notification_invite_text_ask: 'Your browser will ask next. Choose "Allow".',
-    notification_invite_enable: 'Turn on notifications',
+    notification_invite_title: 'Get notifications on this device',
+    notification_invite_text: "See new items on screen even when the system isn't open",
+    notification_invite_enable: 'Turn on',
+    notification_invite_enable_label: 'Turn on notifications',
     notification_invite_later: 'Not now',
     notification_invite_home_title: 'Add the system icon to your Home Screen to get notifications',
     notification_invite_home_text: 'Tap Share in Safari, choose "Add to Home Screen", and open the system from that icon from now on.',

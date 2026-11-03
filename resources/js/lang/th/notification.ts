@@ -315,10 +315,10 @@ export const notification: Dict = {
     notification_summary_open: 'แตะเพื่อเปิด',
 
     // components/push-invite-row.tsx — แถวชวนเปิดการแจ้งเตือนในกระดิ่ง
-    notification_invite_title: 'รับแจ้งเตือนบนเครื่องนี้ แม้ไม่ได้เปิดระบบอยู่',
-    notification_invite_text: 'มีเรื่องใหม่จะขึ้นบนจอพร้อมเสียง',
-    notification_invite_text_ask: 'กดปุ่มแล้วเบราว์เซอร์จะถามอีกครั้ง ให้เลือก "อนุญาต"',
-    notification_invite_enable: 'เปิดการแจ้งเตือน',
+    notification_invite_title: 'รับแจ้งเตือนบนเครื่องนี้',
+    notification_invite_text: 'ไม่ได้เปิดระบบอยู่ก็ยังเห็นเรื่องใหม่บนจอ',
+    notification_invite_enable: 'เปิดใช้',
+    notification_invite_enable_label: 'เปิดใช้การแจ้งเตือน',
     notification_invite_later: 'ไว้ทีหลัง',
     notification_invite_home_title: 'เพิ่มไอคอนระบบไว้ที่หน้าจอโฮม แล้วจะรับแจ้งเตือนได้',
     notification_invite_home_text: 'แตะปุ่มแชร์ใน Safari เลือก "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดระบบจากไอคอนนั้นทุกครั้ง',

@@ -10,7 +10,7 @@ import { usePushState } from '../hooks/use-push';
 import { enablePush, inviteSnoozedUntil, notificationPermission, pushAnswer, snoozeInvite } from '../lib/push-client';
 import { showInvite } from '../lib/push-rules';
 
-const ROW_BUTTON = 'h-9 px-3.5 text-[13px] [@media(pointer:coarse)]:h-11';
+const ROW_BUTTON = 'h-7 shrink-0 text-xs [@media(pointer:coarse)]:h-11';
 
 export function PushInviteRow() {
     const t = useT();
@@ -44,31 +44,32 @@ export function PushInviteRow() {
     const Icon = homeScreen ? Share : Bell;
 
     return (
-        <div className="border-border bg-muted/40 flex gap-3 border-b px-4 py-3.5">
-            <span className="border-border bg-background text-brand-ink flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border">
-                <Icon className="h-4 w-4" aria-hidden />
-            </span>
-            <div className="min-w-0">
-                <p className="text-[13px] font-semibold">{t(homeScreen ? 'notification_invite_home_title' : 'notification_invite_title')}</p>
-                <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs leading-relaxed">
-                    {homeScreen
-                        ? t('notification_invite_home_text')
-                        : permission === 'granted'
-                          ? t('notification_invite_text')
-                          : `${t('notification_invite_text')} ${t('notification_invite_text_ask')}`}
+        <div className="border-border bg-muted/40 flex items-center gap-2.5 border-b py-2.5 pr-3 pl-4">
+            <Icon className="text-brand-ink mt-0.5 h-4 w-4 shrink-0 self-start" aria-hidden />
+            <div className="min-w-0 flex-1">
+                <p className="text-[13px] leading-5 font-semibold">
+                    {t(homeScreen ? 'notification_invite_home_title' : 'notification_invite_title')}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                    {!homeScreen && (
-                        <Button type="button" size="sm" className={ROW_BUTTON} onClick={enable} disabled={busy}>
-                            {busy && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />}
-                            {t('notification_invite_enable')}
-                        </Button>
-                    )}
-                    <Button type="button" size="sm" variant="outline" className={ROW_BUTTON} onClick={later} disabled={busy}>
-                        {t('notification_invite_later')}
-                    </Button>
-                </div>
+                <p className="text-muted-foreground text-xs leading-[18px]">
+                    {t(homeScreen ? 'notification_invite_home_text' : 'notification_invite_text')}
+                </p>
             </div>
+            {!homeScreen && (
+                <Button
+                    type="button"
+                    size="sm"
+                    className={`${ROW_BUTTON} px-3.5 font-semibold`}
+                    onClick={enable}
+                    disabled={busy}
+                    aria-label={t('notification_invite_enable_label')}
+                >
+                    {busy && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />}
+                    {t('notification_invite_enable')}
+                </Button>
+            )}
+            <Button type="button" size="sm" variant="ghost" className={`${ROW_BUTTON} text-muted-foreground px-2`} onClick={later} disabled={busy}>
+                {t('notification_invite_later')}
+            </Button>
         </div>
     );
 }
