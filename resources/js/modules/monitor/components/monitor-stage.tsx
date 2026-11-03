@@ -32,7 +32,7 @@ export function MonitorStage({ children }: { children: ReactNode }) {
     }, []);
 
     return (
-        <div className="text-foreground dark:bg-content fixed inset-0 overflow-hidden bg-slate-200">
+        <div className="bg-content text-foreground fixed inset-0 overflow-hidden">
             <div
                 className="absolute top-1/2 left-1/2 flex h-[1080px] w-[1920px] origin-center flex-col tabular-nums"
                 style={{ transform: `translate(-50%, -50%) scale(${scale})` }}
