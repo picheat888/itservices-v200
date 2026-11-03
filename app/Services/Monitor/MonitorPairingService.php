@@ -20,6 +20,10 @@ class MonitorPairingService
 
     private const LAST_SEEN_KEY = 'monitor:last_seen';
 
+    private const HANDOVER_KEY = 'monitor:handover';
+
+    private const HANDOVER_SECONDS = 120;
+
     /**
      * A fresh code for a TV waiting to be paired.
      *
@@ -89,8 +93,10 @@ class MonitorPairingService
         ], JSON_UNESCAPED_UNICODE));
         Cache::forget(self::LAST_SEEN_KEY);
 
-        // Short window for the TV's next poll to collect the token
-        Cache::put($this->pairingKey($pairingId), [...$pairing, 'status' => 'paired', 'token' => $token], 120);
+        // Short window for the TV's next poll to collect the token; an earlier hand-over ends now
+        $this->endHandover();
+        Cache::put($this->pairingKey($pairingId), [...$pairing, 'status' => 'paired', 'token' => $token], self::HANDOVER_SECONDS);
+        Cache::put(self::HANDOVER_KEY, $pairingId, self::HANDOVER_SECONDS);
 
         AuditLog::record('Paired monitor screen', "{$agent['browser']} on {$agent['os']}");
 
@@ -102,6 +108,7 @@ class MonitorPairingService
         $device = $this->device();
         AppSetting::put(self::DEVICE_KEY, null);
         Cache::forget(self::LAST_SEEN_KEY);
+        $this->endHandover();
 
         if ($device !== null) {
             AuditLog::record('Unpaired monitor screen', "{$device['browser']} on {$device['os']}");
@@ -135,7 +142,7 @@ class MonitorPairingService
 
     public function touchLastSeen(): void
     {
-        Cache::put(self::LAST_SEEN_KEY, now()->toIso8601String(), now()->addDay());
+        Cache::forever(self::LAST_SEEN_KEY, now()->toIso8601String());
     }
 
     /** @return array{token_hash: string, paired_at: string, paired_by: string, browser: string, os: string}|null */
@@ -145,6 +152,15 @@ class MonitorPairingService
         $device = is_string($stored) && $stored !== '' ? json_decode($stored, true) : null;
 
         return is_array($device) && isset($device['token_hash']) ? $device : null;
+    }
+
+    /** A TV still able to collect an old token would bounce between screens, so its hand-over is dropped. */
+    private function endHandover(): void
+    {
+        $pairingId = Cache::pull(self::HANDOVER_KEY);
+        if (is_string($pairingId)) {
+            Cache::forget($this->pairingKey($pairingId));
+        }
     }
 
     private function codeKey(string $code): string

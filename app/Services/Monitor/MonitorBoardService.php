@@ -26,6 +26,7 @@ class MonitorBoardService
     /**
      * @return array{
      *     generated_at: string,
+     *     server_now: string,
      *     sound: array{key: string, enabled: bool},
      *     kpis: array<string, int|string|null>,
      *     rows: list<array<string, mixed>>,
@@ -34,7 +35,8 @@ class MonitorBoardService
      */
     public function board(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_SECONDS, fn () => $this->build());
+        // server_now is stamped outside the cache so the TV's clock offset is never up to 5 s stale
+        return [...Cache::remember(self::CACHE_KEY, self::CACHE_SECONDS, fn () => $this->build()), 'server_now' => now()->toIso8601String()];
     }
 
     private function build(): array

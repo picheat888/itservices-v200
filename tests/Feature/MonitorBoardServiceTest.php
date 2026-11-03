@@ -254,6 +254,17 @@ class MonitorBoardServiceTest extends TestCase
         $this->assertNotEmpty(DB::getQueryLog());
     }
 
+    public function test_server_now_is_fresh_even_when_the_board_comes_from_cache(): void
+    {
+        $this->board();
+        $this->travel(4)->seconds();
+
+        $board = $this->board();
+
+        $this->assertSame('2026-01-14T12:00:00+07:00', $board['generated_at']);
+        $this->assertSame('2026-01-14T12:00:04+07:00', $board['server_now']);
+    }
+
     public function test_board_reports_server_time_and_bell_sound(): void
     {
         $board = $this->board();

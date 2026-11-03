@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Services\Monitor\MonitorPairingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -205,5 +206,47 @@ class MonitorPairingTest extends TestCase
         $this->assertSame('Chrome', $status['browser']);
         $this->assertNotNull($status['paired_at']);
         $this->assertNotNull($status['last_seen_at']);
+    }
+
+    public function test_unpairing_ends_the_token_hand_over_at_once(): void
+    {
+        $admin = $this->admin();
+        $pairing = $this->tvAsksForCode();
+        $this->actingAs($admin)->postJson('/api/settings/monitor/pair', ['code' => $pairing['code']])->assertOk();
+        $this->deleteJson('/api/settings/monitor/device')->assertOk();
+
+        $this->assertSame(['status' => 'expired'], $this->tvPolls($pairing['pairing_id']));
+    }
+
+    public function test_pairing_another_tv_ends_the_previous_hand_over(): void
+    {
+        $admin = $this->admin();
+        $first = $this->tvAsksForCode();
+        $this->actingAs($admin)->postJson('/api/settings/monitor/pair', ['code' => $first['code']])->assertOk();
+        $second = $this->tvAsksForCode();
+        $this->postJson('/api/settings/monitor/pair', ['code' => $second['code']])->assertOk();
+
+        $this->assertSame(['status' => 'expired'], $this->tvPolls($first['pairing_id']));
+        $this->assertSame('paired', $this->tvPolls($second['pairing_id'])['status']);
+    }
+
+    public function test_random_tokens_share_one_rate_limit_per_network(): void
+    {
+        for ($i = 0; $i < 120; $i++) {
+            $this->withHeader('X-Monitor-Token', 'guess-'.$i)->getJson('/api/monitor/board')->assertStatus(401);
+        }
+
+        $this->withHeader('X-Monitor-Token', 'guess-last')->getJson('/api/monitor/board')->assertStatus(429);
+    }
+
+    public function test_last_seen_survives_a_long_weekend(): void
+    {
+        $token = $this->pairTv($this->admin());
+        auth()->forgetGuards();
+        $this->withHeader('X-Monitor-Token', $token)->getJson('/api/monitor/board')->assertOk();
+
+        $this->travel(3)->days();
+
+        $this->assertNotNull(app(MonitorPairingService::class)->status()['last_seen_at']);
     }
 }
