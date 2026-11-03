@@ -4,7 +4,7 @@ import type { MonitorBoard, MonitorGroup, MonitorRow } from '../types.ts';
 export type PageEntry = { kind: 'head'; group: MonitorGroup; count: number } | { kind: 'row'; row: MonitorRow };
 
 /** Splits the ordered rows into pages; a group continued on a new page gets its head again. */
-export function paginateRows(rows: MonitorRow[], budgetPx = 630, groupPx = 40, rowPx = 85): PageEntry[][] {
+export function paginateRows(rows: MonitorRow[], budgetPx = 634, groupPx = 40, rowPx = 84): PageEntry[][] {
     const counts = new Map<MonitorGroup, number>();
     rows.forEach((r) => counts.set(r.group, (counts.get(r.group) ?? 0) + 1));
 

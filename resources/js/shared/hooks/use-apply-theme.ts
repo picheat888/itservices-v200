@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect } from 'react';
 // root so the whole app reacts to them.
 export function useApplyTheme() {
     const lang = useUiStore((s) => s.lang);
-    const dark = useUiStore((s) => s.dark);
+    const dark = useUiStore((s) => s.dark || s.forceDark);
     const radius = useUiStore((s) => s.radius);
     const accent = useUiStore((s) => s.accent);
     const assetStatusColors = useUiStore((s) => s.assetStatusColors);

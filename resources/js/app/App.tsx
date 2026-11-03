@@ -9,6 +9,7 @@ import { ContractsPage } from '@/modules/contract';
 import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
+import { MonitorPage } from '@/modules/monitor';
 import { useServiceWorkerBridge } from '@/modules/notification';
 import { PermissionsPage } from '@/modules/permission';
 import { preloadReportPage, ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
@@ -62,6 +63,7 @@ function App() {
             >
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/monitor" element={<MonitorPage />} />
                     <Route element={<ProtectedRoute />}>
                         {/* Each gate accepts every key nav.ts shows the entry for (SidebarRouteGateTest) */}
                         <Route element={<AppShell />}>

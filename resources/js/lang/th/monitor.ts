@@ -11,6 +11,7 @@ export const monitor: Dict = {
     mon_just_in: 'เพิ่งเข้ามา',
 
     // components/monitor-board.tsx — หัวจอ
+    mon_brand: 'IT Service Desk',
     mon_title: 'จอ Monitor เคส IT',
     mon_subtitle: 'สถานะเคสตอนนี้',
     mon_updated: 'อัปเดต {t}',
