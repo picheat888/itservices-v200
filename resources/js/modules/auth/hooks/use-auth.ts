@@ -31,6 +31,8 @@ export function useAuth() {
         // Still unknown while /me has not answered, or failed for a reason other than 401 (the error screen covers it)
         isLoading: query.data === undefined,
         isAuthenticated: !!user,
+        // /me failed for a reason other than 401 (outage, 429); callers that cannot wait on it read this
+        isError: query.isError,
         isSuper,
         can: (permission: string) => isSuper || !!user?.permissions?.includes(permission),
     };

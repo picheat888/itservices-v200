@@ -1,4 +1,5 @@
-// /monitor: a signed-in user with tickets.view_all or a paired TV sees the board; any other browser shows a pairing code.
+// /monitor: a paired TV or a signed-in user with tickets.view_all sees the board; any other browser shows a pairing code.
+import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { unlockSoundOnFirstGesture } from '@/modules/notification';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
@@ -9,10 +10,12 @@ import { PairingScreen } from '../components/pairing-screen';
 import { StartScreen } from '../components/start-screen';
 import { readMonitorToken, useMonitorBoard, usePairingCode, usePairingPoll, writeMonitorToken } from '../hooks/use-monitor';
 import { useNow } from '../hooks/use-now';
+import { codeLeftMs, monitorMode } from '../lib/monitor-mode';
 
 export default function MonitorPage() {
     useDocumentTitle('mon_title');
-    const { isLoading, isAuthenticated, can } = useAuth();
+    const t = useT();
+    const { isLoading, isError, isAuthenticated, can } = useAuth();
     const [token, setToken] = useState<string | null>(readMonitorToken);
     const [wasUnpaired, setWasUnpaired] = useState(false);
     const [justPaired, setJustPaired] = useState(false);
@@ -22,22 +25,25 @@ export default function MonitorPage() {
     useEffect(() => unlockSoundOnFirstGesture(), []);
 
     const viaSession = isAuthenticated && can('tickets.view_all');
-    const showsBoard = token !== null || viaSession;
-    const board = useMonitorBoard(token, showsBoard && !(isLoading && token === null));
+    const [sessionLost, setSessionLost] = useState(false);
+    const mode = monitorMode({ token, authSettled: !isLoading || isError, viaSession, sessionLost });
+    const board = useMonitorBoard(token, mode === 'board');
 
-    // The server forgot this TV: drop the token and go back to the code screen
+    // Refused: a TV the server forgot goes back to the code screen; a signed-in viewer who lost access does too
     useEffect(() => {
-        if (board.unpaired && token !== null) {
+        if (!board.refused) return;
+        setStarted(false);
+        if (token !== null) {
             writeMonitorToken(null);
             setToken(null);
-            setStarted(false);
             setWasUnpaired(true);
+        } else {
+            setSessionLost(true);
         }
-    }, [board.unpaired, token]);
+    }, [board.refused, token]);
 
-    const pairingMode = !showsBoard && !isLoading;
-    const code = usePairingCode(pairingMode);
-    const poll = usePairingPoll(pairingMode ? (code.data?.pairing_id ?? null) : null);
+    const code = usePairingCode(mode === 'pairing');
+    const poll = usePairingPoll(mode === 'pairing' ? (code.data?.pairing_id ?? null) : null);
     useEffect(() => {
         if (poll.data?.status === 'paired') {
             writeMonitorToken(poll.data.device_token);
@@ -51,11 +57,12 @@ export default function MonitorPage() {
     }, [poll.data]);
 
     const now = useNow(1000);
+    const codeLeft = code.data ? codeLeftMs(code.dataUpdatedAt, code.data.expires_in, now) : 0;
 
     return (
         <MonitorStage>
-            {pairingMode && <PairingScreen pairing={code.data} now={now} unpaired={wasUnpaired} failed={code.isError} />}
-            {showsBoard && !started && (
+            {mode === 'pairing' && <PairingScreen pairing={code.data} leftMs={codeLeft} unpaired={wasUnpaired} failed={code.isError} />}
+            {mode === 'board' && !started && (
                 <StartScreen
                     justPaired={justPaired}
                     onStart={(withSound) => {
@@ -64,7 +71,7 @@ export default function MonitorPage() {
                     }}
                 />
             )}
-            {showsBoard && started && board.data && (
+            {mode === 'board' && started && board.data && (
                 <MonitorBoard
                     board={board.data}
                     fetchedAt={board.dataUpdatedAt}
@@ -73,6 +80,11 @@ export default function MonitorPage() {
                     soundOn={soundOn}
                     onToggleSound={() => setSoundOn((on) => !on)}
                 />
+            )}
+            {mode === 'board' && started && !board.data && (
+                <div className="text-muted-foreground flex flex-1 items-center justify-center text-[32px]" role="status">
+                    {board.isError ? t('mon_connect_retry') : t('mon_connecting')}
+                </div>
             )}
         </MonitorStage>
     );

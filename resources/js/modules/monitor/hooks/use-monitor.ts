@@ -1,7 +1,8 @@
 // React Query hooks for the monitor TV (board, pairing) and Settings → จอ Monitor, plus the TV's stored device token.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
-import { isUnpaired, monitorApi } from '../api/monitorApi';
+import { isRefused, isUnpaired, monitorApi } from '../api/monitorApi';
+import { codeLeftMs } from '../lib/monitor-mode';
 import type { MonitorDeviceStatus } from '../types';
 
 const BOARD_EVERY_MS = 10_000;
@@ -45,14 +46,14 @@ export function useMonitorBoard(token: string | null, enabled = true) {
             }
         },
         enabled,
-        refetchInterval: (q) => (isUnpaired(q.state.error) ? false : BOARD_EVERY_MS),
+        refetchInterval: (q) => (isRefused(q.state.error) ? false : BOARD_EVERY_MS),
         refetchIntervalInBackground: true,
         refetchOnWindowFocus: false,
         retry: false,
         placeholderData: (previous) => previous,
     });
 
-    return { ...query, failures: failures.current, lastOkAt, unpaired: isUnpaired(query.error) };
+    return { ...query, failures: failures.current, lastOkAt, unpaired: isUnpaired(query.error), refused: isRefused(query.error) };
 }
 
 /** A pairing code for this TV, re-requested when it expires. */
@@ -63,8 +64,8 @@ export function usePairingCode(enabled: boolean) {
         enabled,
         staleTime: Infinity,
         refetchInterval: (q) => {
-            const expires = q.state.data ? Date.parse(q.state.data.expires_at) - Date.now() : 5_000;
-            return Math.max(1_000, expires);
+            const left = q.state.data ? codeLeftMs(q.state.dataUpdatedAt, q.state.data.expires_in, Date.now()) : 5_000;
+            return Math.max(1_000, left);
         },
         refetchIntervalInBackground: true,
         refetchOnWindowFocus: false,

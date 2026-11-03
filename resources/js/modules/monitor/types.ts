@@ -51,6 +51,7 @@ export interface MonitorPairingCode {
     pairing_id: string;
     code: string;
     expires_at: string;
+    expires_in: number;
 }
 
 export type MonitorPairingState = { status: 'pending' | 'expired' } | { status: 'paired'; device_token: string };

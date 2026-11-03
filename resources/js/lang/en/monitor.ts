@@ -18,6 +18,8 @@ export const monitor: Dict = {
     mon_offline: 'Connection lost, last data {t}',
     mon_sound_on: 'Sound on',
     mon_sound_off: 'Tap to turn on sound',
+    mon_connecting: 'Connecting…',
+    mon_connect_retry: 'Cannot connect, trying again',
     mon_paused: 'Page rotation paused, press Space to resume',
 
     // components/monitor-kpis.tsx — numbers on top

@@ -18,6 +18,8 @@ export const monitor: Dict = {
     mon_offline: 'ขาดการเชื่อมต่อ ข้อมูลล่าสุด {t}',
     mon_sound_on: 'เสียงเปิดอยู่',
     mon_sound_off: 'กดเพื่อเปิดเสียง',
+    mon_connecting: 'กำลังเชื่อมต่อ…',
+    mon_connect_retry: 'เชื่อมต่อไม่ได้ กำลังลองใหม่',
     mon_paused: 'หยุดสลับหน้าอยู่ กด Space เพื่อเล่นต่อ',
 
     // components/monitor-kpis.tsx — ตัวเลขด้านบน

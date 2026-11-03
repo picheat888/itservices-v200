@@ -2,6 +2,7 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope } from '@/shared/types';
 import axios from 'axios';
+import { withCsrfRetry } from '../lib/monitor-mode';
 import type { MonitorBoard, MonitorDeviceStatus, MonitorPairingCode, MonitorPairingState } from '../types';
 
 export const MONITOR_TOKEN_HEADER = 'X-Monitor-Token';
@@ -23,7 +24,8 @@ export const monitorApi = {
         ).then((r) => r.data.data),
     requestCode: async () => {
         await ensureCsrf();
-        return tv.post<ApiEnvelope<MonitorPairingCode>>('/monitor/pairings').then((r) => r.data.data);
+        const post = () => tv.post<ApiEnvelope<MonitorPairingCode>>('/monitor/pairings').then((r) => r.data.data);
+        return withCsrfRetry(post, () => tv.get('/sanctum/csrf-cookie', { baseURL: '/' }).then(() => undefined));
     },
     pollPairing: (pairingId: string) => tv.get<ApiEnvelope<MonitorPairingState>>(`/monitor/pairings/${pairingId}`).then((r) => r.data.data),
 
@@ -41,3 +43,6 @@ export const monitorApi = {
 
 /** True when the server no longer knows this TV's token. */
 export const isUnpaired = (error: unknown) => axios.isAxiosError(error) && error.response?.status === 401;
+
+/** The board refused this viewer outright (401 unpaired or signed out, 403 no longer allowed): stop polling. */
+export const isRefused = (error: unknown) => axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);

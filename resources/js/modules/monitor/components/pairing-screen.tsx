@@ -5,17 +5,16 @@ import type { MonitorPairingCode } from '../types';
 
 export function PairingScreen({
     pairing,
-    now,
+    leftMs,
     unpaired,
     failed,
 }: {
     pairing: MonitorPairingCode | undefined;
-    now: number;
+    leftMs: number;
     unpaired: boolean;
     failed: boolean;
 }) {
     const t = useT();
-    const leftMs = pairing ? Math.max(0, Date.parse(pairing.expires_at) - now) : 0;
     const leftSec = Math.ceil(leftMs / 1000);
     const countdown = `${Math.floor(leftSec / 60)}:${String(leftSec % 60).padStart(2, '0')}`;
 
@@ -42,7 +41,7 @@ export function PairingScreen({
                             <span>{pairing.code.slice(3)}</span>
                         </div>
                         <div className="bg-muted mt-4.5 h-2 w-[520px] overflow-hidden rounded-full" aria-hidden>
-                            <div className="bg-muted-foreground h-full" style={{ width: `${(leftMs / 300_000) * 100}%` }} />
+                            <div className="bg-muted-foreground h-full" style={{ width: `${(leftMs / (pairing.expires_in * 1000)) * 100}%` }} />
                         </div>
                         <div className="text-muted-foreground text-[24px]">{t('mon_pair_changes_in').replace('{t}', countdown)}</div>
                     </>
