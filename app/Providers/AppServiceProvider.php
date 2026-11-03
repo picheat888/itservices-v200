@@ -120,6 +120,13 @@ class AppServiceProvider extends ServiceProvider
             ->by('password-change:'.$request->user()?->getAuthIdentifier())
             ->response(self::tooManyAttempts(...)));
 
+        // Monitor TV: codes per network, board and pairing polls per TV, user or network, typed codes per admin
+        RateLimiter::for('monitor-code', fn (Request $request) => Limit::perMinute(10)->by('monitor-code:'.Cidr::clientNetwork($request->ip())));
+        RateLimiter::for('monitor', fn (Request $request) => Limit::perMinute(120)->by('monitor:'.($request->header('X-Monitor-Token') !== null
+            ? hash('sha256', (string) $request->header('X-Monitor-Token'))
+            : (self::signedInId($request) ?? Cidr::clientNetwork($request->ip())))));
+        RateLimiter::for('monitor-pair', fn (Request $request) => Limit::perMinute(10)->by('monitor-pair:'.self::signedInId($request)));
+
         // Scheduled report mails: a backlog goes out one run per minute
         RateLimiter::for(SendScheduledReport::LIMITER, fn () => Limit::perMinute(1));
     }

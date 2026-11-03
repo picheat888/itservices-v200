@@ -94,7 +94,7 @@ class Permissions
                 'tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access',
                 'export', 'schedule', 'schedule_manage',
             ],
-            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sound', 'sla', 'requestdata', 'assets', 'security'],
+            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sound', 'sla', 'monitor', 'requestdata', 'assets', 'security'],
         ];
     }
 

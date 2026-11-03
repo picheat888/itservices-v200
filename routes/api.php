@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Employee\DepartmentController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
 use App\Http\Controllers\Api\Employee\PositionController;
 use App\Http\Controllers\Api\Employee\SectionController;
+use App\Http\Controllers\Api\Monitor\MonitorController;
 use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\Notification\NotificationTemplateController;
 use App\Http\Controllers\Api\Notification\PushSubscriptionController;
@@ -60,6 +61,7 @@ use App\Http\Controllers\Api\Settings\BrandController;
 use App\Http\Controllers\Api\Settings\CategoryController;
 use App\Http\Controllers\Api\Settings\ClientErrorController;
 use App\Http\Controllers\Api\Settings\LocationController;
+use App\Http\Controllers\Api\Settings\MonitorDeviceController;
 use App\Http\Controllers\Api\Settings\NetworkNameController;
 use App\Http\Controllers\Api\Settings\RequestOptionController;
 use App\Http\Controllers\Api\Settings\SettingsController;
@@ -78,6 +80,7 @@ use App\Http\Controllers\Api\Stock\WarehouseController;
 use App\Http\Controllers\Api\Ticket\TicketAttachmentController;
 use App\Http\Controllers\Api\Ticket\TicketController;
 use App\Http\Controllers\Api\Workflow\WorkflowController;
+use App\Http\Middleware\AuthenticateMonitor;
 use App\Http\Middleware\BlockResignedEmployees;
 use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
@@ -95,6 +98,12 @@ Route::get('settings', [SettingsController::class, 'show'])
 // Browser errors from the SPA, guests included (logs/frontend)
 Route::post('client-errors', [ClientErrorController::class, 'store'])
     ->middleware('throttle:client-errors')->name('api.client-errors.store');
+
+// Monitor TV: pairing by code (guest) and the board (paired TV or a signed-in user with tickets.view_all)
+Route::post('monitor/pairings', [MonitorController::class, 'requestCode'])->middleware('throttle:monitor-code')->name('api.monitor.pairings.store');
+Route::get('monitor/pairings/{pairingId}', [MonitorController::class, 'pollPairing'])
+    ->where('pairingId', '[A-Za-z0-9]{40}')->middleware('throttle:monitor')->name('api.monitor.pairings.show');
+Route::get('monitor/board', [MonitorController::class, 'board'])->middleware([AuthenticateMonitor::class, 'throttle:monitor'])->name('api.monitor.board');
 
 // Signed-in API; me, password, logout and the ping opt out of the owed-password lock so it has an exit
 Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::class, BlockResignedEmployees::class, CheckPasswordExpiry::class])->group(function () {
@@ -218,6 +227,11 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])
         ->middleware('permission:settings.security')->name('api.settings.security.update');
+    Route::middleware('permission:settings.monitor')->prefix('settings/monitor')->group(function () {
+        Route::get('/', [MonitorDeviceController::class, 'show'])->name('api.settings.monitor');
+        Route::post('pair', [MonitorDeviceController::class, 'pair'])->middleware('throttle:monitor-pair')->name('api.settings.monitor.pair');
+        Route::delete('device', [MonitorDeviceController::class, 'destroy'])->name('api.settings.monitor.unpair');
+    });
     // Network names — what a sign-in IP is called in the Login log
     Route::middleware('permission:settings.security')->prefix('settings/network-names')->group(function () {
         Route::get('/', [NetworkNameController::class, 'index'])->name('api.settings.network-names.index');
