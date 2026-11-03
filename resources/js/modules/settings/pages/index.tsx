@@ -41,6 +41,7 @@ import {
     Loader2,
     Mail,
     MapPin,
+    MonitorPlay,
     MonitorSmartphone,
     Pencil,
     Plus,
@@ -71,6 +72,7 @@ import { FIELD_ROW, FORM_STACK, FORM_WIDTH } from '../components/form-layout';
 import { LocationModal } from '../components/location-modal';
 import { LookupSection, masterDataEmpty } from '../components/lookup-section';
 import { ModelModal } from '../components/model-modal';
+import { MonitorSection } from '../components/monitor-section';
 import { NetworkNamesSection } from '../components/network-names-section';
 import { RequestDataSection } from '../components/request-data-section';
 import { SEGMENT_LEGEND } from '../components/segmented-radio';
@@ -113,7 +115,7 @@ import { IDLE_SECTION, type SavedSectionProps, type SectionSaver, type SectionSt
 /** A section tells the page whether it holds unsaved local edits. */
 type OnDirtyChange = (dirty: boolean) => void;
 
-type Section = 'system' | 'company' | 'master-data' | 'email' | 'sound' | 'tickets' | 'request-data' | 'assets' | 'security';
+type Section = 'system' | 'company' | 'master-data' | 'email' | 'sound' | 'tickets' | 'monitor' | 'request-data' | 'assets' | 'security';
 
 // Theme accent options (4.5:1 on white and on their own buttons)
 const THEME_ACCENTS: { hex: string; nameKey: string }[] = [
@@ -157,7 +159,7 @@ function fieldsOf<K extends keyof SettingsForm>(source: Pick<SettingsForm, K>, k
 /** True when any of the given fields differs from the loaded values. */
 const differs = (form: SettingsForm, loaded: SettingsForm, keys: readonly (keyof SettingsForm)[]) => keys.some((key) => form[key] !== loaded[key]);
 
-const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'sound', 'tickets', 'request-data', 'assets', 'security'];
+const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'sound', 'tickets', 'monitor', 'request-data', 'assets', 'security'];
 
 /** A ?tab= value this page has — checked, never cast, so ?tab=garbage falls back instead of opening nothing. */
 const isSection = (v: string | null): v is Section => VALID_SECTIONS.includes(v as Section);
@@ -247,6 +249,7 @@ export default function SettingsPage() {
         { id: 'email', label: t('set_email'), icon: Mail, perm: 'settings.email' },
         { id: 'sound', label: t('set_sound'), icon: Volume2, perm: 'settings.sound' },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket, perm: 'settings.sla' },
+        { id: 'monitor', label: t('set_monitor'), icon: MonitorPlay, perm: 'settings.monitor' },
         { id: 'request-data', label: t('set_request_data'), icon: Inbox, perm: 'settings.requestdata' },
         { id: 'assets', label: t('set_assets'), icon: Box, perm: 'settings.assets' },
         { id: 'security', label: t('set_security'), icon: Shield, perm: 'settings.security' },
@@ -318,6 +321,7 @@ export default function SettingsPage() {
                     {activeSection === 'sound' && <SoundSection onDirtyChange={setSectionDirty} />}
                     {activeSection === 'assets' && <AssetsTab onDirtyChange={setSectionDirty} onOpenSection={openSection} />}
                     {activeSection === 'tickets' && <TicketsSlaTab onDirtyChange={setSectionDirty} />}
+                    {activeSection === 'monitor' && <MonitorSection />}
                     {activeSection === 'request-data' && <RequestDataTab />}
                     {activeSection === 'security' && <SecurityTab onDirtyChange={setSectionDirty} />}
                 </div>

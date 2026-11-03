@@ -98,4 +98,4 @@ function useDeviceWrite<A>(write: (arg: A) => Promise<MonitorDeviceStatus>) {
 
 export const usePairMonitor = () => useDeviceWrite((code: string) => monitorApi.pair(code));
 
-export const useUnpairMonitor = () => useDeviceWrite(() => monitorApi.unpair());
+export const useUnpairMonitor = () => useDeviceWrite<void>(() => monitorApi.unpair());
