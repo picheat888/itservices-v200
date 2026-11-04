@@ -8188,3 +8188,9 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - จับคู่และยกเลิกจับคู่ทำทีละรายการด้วย cache lock (`monitor:pair`) แอดมินสองคนกรอกรหัสเดียวกันพร้อมกัน คนแรกได้จับคู่ อีกคนได้ข้อความรหัสใช้ไม่ได้ ไม่เกิดรหัสเครื่องสองชุดที่ทำให้ทีวีเด้งกลับหน้ารหัส
 - รวม `useChangeCount` ของโมดูล monitor เข้ากับ `useCountRises` ใน shared เป็น `useCountChanges` ตัวเดียว คืนทั้งจำนวนครั้งที่เพิ่มและที่เปลี่ยน (`countChanged` ใน count-rise.ts มีเทสต์) เทสต์ PHP monitor ผ่าน JS ทั้งชุด 1,206 ข้อผ่าน
 - ระยะเวลาแอนิเมชันของจอ Monitor ใช้ค่ากลางของแอปแล้ว ปุ่มเฟืองเลื่อนเข้า 240ms (--motion-open, --ease-enter) และเลื่อนออก 180ms (--motion-close, --ease-exit) ส่วนการจางเข้าตอนสลับหน้าใช้ motion-content-in (160ms) แบบเดียวกับเนื้อหาใน dialog ส่วนแอนิเมชันเรืองหรือกะพริบที่ยาวกว่าแอป (1.6 และ 2 วินาที) คงไว้เพราะต้องมองเห็นจากระยะ 5 เมตร
+
+## อัปเดต dependency ด้านความปลอดภัย (2026-11-04)
+
+- อัปเดตเฉพาะ lock file: `symfony/mime` 7.4.19 → 7.4.22 (CVE-2026-45070), `vite` 6.4.4 → 6.4.5 (GHSA-8g5g-mxqh-grgj), `follow-redirects` 1.16.1 → 1.16.2 (GHSA-mrwp-f3q8-3g9p); ไม่เปลี่ยน `composer.json` หรือ `package.json`
+- ตรวจ `composer audit --locked` และ `npm audit --omit=dev`: ไม่พบ advisory; security feature tests 80 ผ่าน 379 assertions; `npm run build` ผ่านทั้ง frontend และ service worker
+- `npm audit` แบบรวม dev dependencies ยังแจ้ง 13 moderate ซึ่งสืบต่อจาก `minimatch` ในเครื่องมือ lint; ไม่อยู่ใน production runtime ที่ตรวจด้วย `--omit=dev`
