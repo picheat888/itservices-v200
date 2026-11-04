@@ -3,6 +3,11 @@ export function countRose(seen: number | null, count: number): boolean {
     return seen !== null && count > seen;
 }
 
+/** Whether a live count moved either way: false on its first load (null → n). */
+export function countChanged(seen: number | null, count: number): boolean {
+    return seen !== null && count !== seen;
+}
+
 /** A late count fades in quietly when it first lands, and pops each time it rises (key the element by its rises). */
 export function badgeMotion(rises: number): string {
     return rises > 0 ? 'badge-pop' : 'motion-pop-in';

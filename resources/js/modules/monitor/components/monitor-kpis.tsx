@@ -1,7 +1,6 @@
 // The five big numbers along the top of the monitor TV.
-import { useCountRises } from '@/shared/hooks/use-count-rises';
+import { useCountChanges } from '@/shared/hooks/use-count-rises';
 import { cn } from '@/shared/lib/utils';
-import { useChangeCount } from '../hooks/use-change-count';
 import { useMonitorT } from '../hooks/use-monitor-prefs';
 import { spanWords } from '../lib/monitor-time';
 import type { MonitorKpis as Kpis } from '../types';
@@ -71,8 +70,7 @@ export function MonitorKpis({ kpis, now }: { kpis: Kpis; now: number }) {
 
 /** One KPI card: the number pops when it changes; an overdue or due-soon card's ring glows once when its count rises. */
 function KpiTile({ tile }: { tile: Tile }) {
-    const changes = useChangeCount(tile.value);
-    const rises = useCountRises(tile.value);
+    const { changes, rises } = useCountChanges(tile.value);
 
     return (
         <div

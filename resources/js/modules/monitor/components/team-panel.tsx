@@ -1,6 +1,6 @@
 // "ทีม IT ตอนนี้": each resolver's held in-progress cases, most first.
+import { useCountChanges } from '@/shared/hooks/use-count-rises';
 import { cn } from '@/shared/lib/utils';
-import { useChangeCount } from '../hooks/use-change-count';
 import { useMonitorT } from '../hooks/use-monitor-prefs';
 import type { MonitorMember } from '../types';
 
@@ -30,7 +30,7 @@ export function TeamPanel({ team }: { team: MonitorMember[] }) {
 
 /** One team member; the count pops when it changes. */
 function MemberRow({ member, peak }: { member: MonitorMember; peak: number }) {
-    const changes = useChangeCount(member.count);
+    const { changes } = useCountChanges(member.count);
 
     return (
         <div className="grid grid-cols-[50px_minmax(0,1fr)_64px] items-center gap-4">
