@@ -7,8 +7,10 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Monitor\MonitorPairingService;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
 class MonitorPairingTest extends TestCase
@@ -237,6 +239,27 @@ class MonitorPairingTest extends TestCase
         }
 
         $this->withHeader('X-Monitor-Token', 'guess-last')->getJson('/api/monitor/board')->assertStatus(429);
+    }
+
+    public function test_pairing_waits_while_another_pairing_is_running(): void
+    {
+        $pairing = $this->tvAsksForCode();
+        $service = app(MonitorPairingService::class);
+        $admin = $this->admin();
+        $running = Cache::lock(MonitorPairingService::PAIR_LOCK, 10);
+        $running->get();
+        Sleep::fake(syncWithCarbon: true);
+
+        try {
+            $service->pair($pairing['code'], $admin);
+            $this->fail('Pairing did not wait for the running one');
+        } catch (LockTimeoutException) {
+            // The code is left for the pairing that holds the lock
+        }
+
+        $running->release();
+        $this->assertTrue($service->pair($pairing['code'], $admin)['paired']);
+        $this->assertCount(1, AuditLog::query()->where('action', 'Paired monitor screen')->get());
     }
 
     public function test_last_seen_survives_a_long_weekend(): void

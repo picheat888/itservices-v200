@@ -16,6 +16,13 @@ class MonitorPairingService
 {
     public const DEVICE_KEY = 'monitor_device';
 
+    /** Pairing and unpairing run one at a time, so two admins typing the same code never both use it. */
+    public const PAIR_LOCK = 'monitor:pair';
+
+    private const LOCK_SECONDS = 10;
+
+    private const LOCK_WAIT_SECONDS = 5;
+
     private const CODE_SECONDS = 300;
 
     private const LAST_SEEN_KEY = 'monitor:last_seen';
@@ -75,6 +82,17 @@ class MonitorPairingService
      */
     public function pair(string $code, User $by): array
     {
+        return Cache::lock(self::PAIR_LOCK, self::LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, fn () => $this->pairLocked($code, $by));
+    }
+
+    public function unpair(): void
+    {
+        Cache::lock(self::PAIR_LOCK, self::LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, fn () => $this->unpairLocked());
+    }
+
+    /** @return array<string, mixed> */
+    private function pairLocked(string $code, User $by): array
+    {
         $pairingId = Cache::pull($this->codeKey($code));
         $pairing = is_string($pairingId) ? Cache::get($this->pairingKey($pairingId)) : null;
         if (! is_array($pairing) || $pairing['status'] !== 'pending') {
@@ -103,7 +121,7 @@ class MonitorPairingService
         return $this->status();
     }
 
-    public function unpair(): void
+    private function unpairLocked(): void
     {
         $device = $this->device();
         AppSetting::put(self::DEVICE_KEY, null);
