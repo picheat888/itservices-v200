@@ -21,7 +21,8 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useReportRights } from '../hooks/use-report-rights';
 import { useDeleteAllExports, useDeleteExport, useDownloadExport, useMyExports, useRetryExport } from '../hooks/use-reports';
 import type { ReportExportItem, ReportExportStatus } from '../types';
@@ -34,6 +35,14 @@ const KEEP_DAYS = 7;
 
 /** A file still queued after this long most likely has no worker picking it up. */
 const SLOW_QUEUE_MS = 2 * 60 * 1000;
+
+/** The download spinner stays at least this long, so a fast file still shows the tap was taken. */
+const MIN_BUSY_MS = 400;
+
+/** How long the check stays after a download before the icon returns (as SaveButton). */
+const DONE_MS = 2000;
+
+type DownloadPhase = 'idle' | 'busy' | 'done';
 
 const STATUS_META: Record<ReportExportStatus, { Icon: typeof Clock; tone: string; spin?: boolean }> = {
     queued: { Icon: Clock, tone: 'text-slate-600 dark:text-slate-300 bg-slate-500/10' },
@@ -67,10 +76,25 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     // The panel heading already says how long files are kept; the exact day sits in the tooltip.
     const keptUntil = t('rep_my_exports_kept_until').replace('{date}', fmt.date(item.listed_until));
 
-    const onDownload = () =>
+    const [downloadPhase, setDownloadPhase] = useState<DownloadPhase>('idle');
+
+    useEffect(() => {
+        if (downloadPhase !== 'done') return;
+        const id = setTimeout(() => setDownloadPhase('idle'), DONE_MS);
+        return () => clearTimeout(id);
+    }, [downloadPhase]);
+
+    const onDownload = () => {
+        const startedAt = Date.now();
+        setDownloadPhase('busy');
         download.mutate(item, {
-            onError: () => useToastStore.getState().push(t('rep_my_exports_download_failed'), 'error'),
+            onSuccess: () => setTimeout(() => setDownloadPhase('done'), Math.max(0, MIN_BUSY_MS - (Date.now() - startedAt))),
+            onError: () => {
+                setDownloadPhase('idle');
+                useToastStore.getState().push(t('rep_my_exports_download_failed'), 'error');
+            },
         });
+    };
 
     const onRetry = () =>
         retry.mutate(item.id, {
@@ -87,7 +111,8 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     };
 
     const building = item.status === 'queued' || item.status === 'running';
-    const iconButton = 'text-muted-foreground hover:text-foreground h-7 w-7';
+    // press-icon + active background: a tap on iPad has no hover, so the press itself must show
+    const iconButton = 'press-icon active:bg-accent text-muted-foreground hover:text-foreground h-7 w-7';
 
     return (
         <div className="border-border flex items-start gap-3 border-b px-4 py-3 last:border-b-0">
@@ -129,11 +154,9 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 ) : building ? (
                     <>
                         <div className="text-muted-foreground mt-0.5 text-xs">{`${t(`rep_my_exports_st_${item.status}`)}…`}</div>
-                        {/* Indeterminate: the queue gives no percentage. Still under reduced motion. */}
+                        {/* No percentage exists: an empty track while queued, a sliding bar while built */}
                         <div className="dark:bg-muted mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
-                            <span
-                                className={cn('bg-brand block h-full w-3/5 animate-pulse rounded-full motion-reduce:animate-none', spin && 'w-4/5')}
-                            />
+                            {spin && <span className="bg-brand progress-indeterminate block h-full w-1/3 rounded-full" />}
                         </div>
                     </>
                 ) : (
@@ -153,12 +176,19 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                             size="icon"
                             variant="ghost"
                             onClick={onDownload}
-                            disabled={download.isPending}
+                            disabled={downloadPhase === 'busy'}
+                            aria-busy={downloadPhase === 'busy' || undefined}
                             aria-label={t('rep_my_exports_download')}
                             title={t('rep_my_exports_download')}
-                            className="text-brand hover:text-brand h-7 w-7"
+                            className="press-icon active:bg-accent text-brand hover:text-brand h-7 w-7 disabled:opacity-100"
                         >
-                            {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            {downloadPhase === 'busy' ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : downloadPhase === 'done' ? (
+                                <Check className="animate-in zoom-in-50 fade-in h-4 w-4 text-emerald-600 duration-300 dark:text-emerald-400" />
+                            ) : (
+                                <Download className="h-4 w-4" />
+                            )}
                         </Button>
                     )}
                     {item.status === 'failed' && canExport && (
