@@ -39,14 +39,16 @@ class CompanyProfile
         return $profile['legal_name'] ?: ($profile['name'] ?: $profile['app_name']);
     }
 
-    /** The logo as a data URI, so dompdf needs no remote or chroot access. */
+    /** The uploaded logo, or the bundled one when none is uploaded or its file is gone, as a data URI so dompdf needs no remote or chroot access. */
     private static function logoDataUri(): ?string
     {
         $path = AppSetting::get('logo_path');
-        if (! $path || ! Storage::disk('public')->exists($path)) {
-            return null;
+        if ($path && Storage::disk('public')->exists($path)) {
+            return 'data:'.Storage::disk('public')->mimeType($path).';base64,'.base64_encode(Storage::disk('public')->get($path));
         }
 
-        return 'data:'.Storage::disk('public')->mimeType($path).';base64,'.base64_encode(Storage::disk('public')->get($path));
+        $bundled = public_path('logo.png');
+
+        return is_file($bundled) ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($bundled)) : null;
     }
 }

@@ -8194,3 +8194,8 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - อัปเดตเฉพาะ lock file: `symfony/mime` 7.4.19 → 7.4.22 (CVE-2026-45070), `vite` 6.4.4 → 6.4.5 (GHSA-8g5g-mxqh-grgj), `follow-redirects` 1.16.1 → 1.16.2 (GHSA-mrwp-f3q8-3g9p); ไม่เปลี่ยน `composer.json` หรือ `package.json`
 - ตรวจ `composer audit --locked` และ `npm audit --omit=dev`: ไม่พบ advisory; security feature tests 80 ผ่าน 379 assertions; `npm run build` ผ่านทั้ง frontend และ service worker
 - `npm audit` แบบรวม dev dependencies ยังแจ้ง 13 moderate ซึ่งสืบต่อจาก `minimatch` ในเครื่องมือ lint; ไม่อยู่ใน production runtime ที่ตรวจด้วย `--omit=dev`
+
+## โลโก้ตั้งต้นบนเอกสาร PDF (2026-11-04)
+
+- `CompanyProfile::logoDataUri()` ใช้ `public/logo.png` เมื่อยังไม่ได้อัปโหลดโลโก้ใน Settings หรือไฟล์ที่อัปโหลดหายไป ก่อนหน้านี้คืน null ทำให้หัวกระดาษ PDF ไม่มีโลโก้ ขณะที่ Sidebar หน้า Login อีเมล และไอคอนแอปใช้โลโก้ตั้งต้นอยู่แล้ว ครอบคลุมรายงาน PDF ทุกตัว ใบตรวจนับ ใบเบิก ประวัติสต็อก และใบทบทวนสิทธิ์
+- เทสต์ `CompanyProfileLogoTest` 4 ข้อ (ไม่อัปโหลด อัปโหลด ไฟล์หาย หัวกระดาษแสดงรูป) และเทสต์รายงานทั้งโฟลเดอร์ 498 ข้อผ่าน

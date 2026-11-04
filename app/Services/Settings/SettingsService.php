@@ -177,7 +177,7 @@ class SettingsService
         AuditLog::record('Uploaded logo', 'Branding');
     }
 
-    /** Back to the text-based default; nothing is written when there was no logo. */
+    /** Back to the bundled default logo; nothing is written when there was no logo. */
     public function deleteLogo(): void
     {
         if ($old = AppSetting::get('logo_path')) {
