@@ -76,9 +76,11 @@ export function MonitorMenu({ className, paused, onPausedChange }: Props) {
                 aria-expanded={open}
                 aria-controls={open ? menuId : undefined}
                 className={cn(
-                    'bg-card text-foreground hover:bg-muted grid size-14 place-items-center rounded-[14px] border-2 transition-[opacity,translate] duration-200 motion-reduce:transition-none',
+                    'bg-card text-foreground hover:bg-muted grid size-14 place-items-center rounded-[14px] border-2 transition-[opacity,translate] motion-reduce:transition-none',
                     'focus-visible:opacity-100 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400',
-                    shown ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0 focus-visible:translate-x-0',
+                    shown
+                        ? 'translate-x-0 opacity-100 duration-(--motion-open) ease-(--ease-enter)'
+                        : 'translate-x-3 opacity-0 duration-(--motion-close) ease-(--ease-exit) focus-visible:translate-x-0',
                 )}
             >
                 <Settings className="size-7" aria-hidden />

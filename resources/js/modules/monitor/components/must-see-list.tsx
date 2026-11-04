@@ -59,7 +59,7 @@ export function MustSeeList({
                 </div>
             ) : (
                 // Keyed by page, so a new page fades in instead of cutting
-                <div key={pageIndex} className="animate-in fade-in-0 flex min-h-0 flex-col duration-200 motion-reduce:animate-none">
+                <div key={pageIndex} className="motion-content-in flex min-h-0 flex-col motion-reduce:animate-none">
                     {page.map((entry) =>
                         entry.kind === 'head' ? (
                             <div
