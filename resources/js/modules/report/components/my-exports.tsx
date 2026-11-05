@@ -44,9 +44,9 @@ const DONE_MS = 2000;
 
 type DownloadPhase = 'idle' | 'busy' | 'done';
 
-const STATUS_META: Record<ReportExportStatus, { Icon: typeof Clock; tone: string; spin?: boolean }> = {
+const STATUS_META: Record<ReportExportStatus, { Icon: typeof Clock; tone: string }> = {
     queued: { Icon: Clock, tone: 'text-slate-600 dark:text-slate-300 bg-slate-500/10' },
-    running: { Icon: Loader2, tone: 'text-blue-600 dark:text-blue-400 bg-blue-500/10', spin: true },
+    running: { Icon: Loader2, tone: 'text-blue-600 dark:text-blue-400 bg-blue-500/10' },
     ready: { Icon: CheckCircle2, tone: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' },
     failed: { Icon: AlertCircle, tone: 'text-red-600 dark:text-red-400 bg-red-500/10' },
 };
@@ -67,7 +67,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     const retry = useRetryExport();
     const remove = useDeleteExport();
     const { canExport } = useReportRights();
-    const { Icon, tone, spin } = STATUS_META[item.status];
+    const { Icon, tone } = STATUS_META[item.status];
     const title = t(`rep_${reportStem(item.report_key)}_title`);
     const slow = item.status === 'queued' && Date.now() - new Date(item.created_at).getTime() > SLOW_QUEUE_MS;
 
@@ -154,9 +154,9 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 ) : building ? (
                     <>
                         <div className="text-muted-foreground mt-0.5 text-xs">{`${t(`rep_my_exports_st_${item.status}`)}…`}</div>
-                        {/* No percentage exists: an empty track while queued, a sliding bar while built */}
+                        {/* No percentage exists: a sliding bar until the file is ready, queued or built */}
                         <div className="dark:bg-muted mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
-                            {spin && <span className="bg-brand progress-indeterminate block h-full w-1/3 rounded-full" />}
+                            <span className="bg-brand progress-indeterminate block h-full w-1/3 rounded-full" />
                         </div>
                     </>
                 ) : (

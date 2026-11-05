@@ -8211,3 +8211,4 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 - `typescript-eslint` ^8.72.1 และ `overrides` บังคับ `minimatch ^11.0.4` เฉพาะใน typescript-estree (ใช้แค่ตอน allowDefaultProject ซึ่ง eslint.config.js ไม่ได้ตั้ง; ต้อง Node 20 ขึ้นไป) ลบ overrides ได้เมื่อ typescript-eslint ใช้ minimatch 11 เอง
 - `npm audit` 0, `npm audit --omit=dev` 0, lint resources/js ผ่าน, tsc ผ่าน, JS 1,206 ข้อผ่าน, build ผ่าน; แพ็กเกจ Linux ใน optionalDependencies ยังอยู่ใน lock
 - บน Server ห้ามรัน `npm audit fix` / `npm install` ใช้ `git pull` แล้ว `npm ci` เท่านั้น
+- (2026-11-05) แท่งวิ่งแสดงทั้งรอคิวและกำลังสร้าง (เดิมรอคิวเป็นรางว่าง) บน itdemo ไฟล์รอคิวราว 2–3 วินาที (worker --sleep=3) แต่สร้างไม่ถึง 1 วินาที หน้าเว็บดึงทุก 3 วินาทีจึงแทบเห็นแต่ "รอคิว" ผู้ใช้เลยไม่เคยเห็นแท่ง เลือกจาก mockup (artifact 6tmFZynivZeis5j66hBP2u)
