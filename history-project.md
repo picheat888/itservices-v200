@@ -8204,3 +8204,10 @@ tsc + eslint ผ่าน · ตรวจใน Chrome: "ไตรมาสน�
 
 - แท่งสถานะไม่แสดงความยาวคงที่ 60% / 80% ที่กะพริบอีกแล้ว (ผู้ใช้อ่านเป็นเปอร์เซ็นต์ที่ค้าง) รอคิวเป็นรางเปล่า กำลังสร้างเป็นแท่งสั้นวิ่งซ้ายไปขวา (`.progress-indeterminate` ใน app.css) ผู้ใช้ที่ลด animation เห็นแท่งเต็มรางสีจางนิ่ง
 - ปุ่มดาวน์โหลด spinner ค้างอย่างน้อย 400ms แล้วเปลี่ยนเป็นเครื่องหมายถูกสีเขียว 2 วินาที (แบบ SaveButton) ปุ่มไอคอนทั้ง 3 ใช้ `press-icon` และ `active:bg-accent` ให้การแตะบน iPad เห็นผล
+
+## ปิดช่องโหว่ npm ฝั่งเครื่องมือ lint (2026-11-05)
+
+- `npm audit` แจ้ง 7 moderate จาก `minimatch` 10.2.6 (GHSA-g3hv-75wg-m249) ที่ `@typescript-eslint/typescript-estree` ใช้ `npm audit fix` แก้ไม่ได้เพราะ typescript-eslint ทุกเวอร์ชันยังผูก `minimatch ^10.2.2`
+- `typescript-eslint` ^8.72.1 และ `overrides` บังคับ `minimatch ^11.0.4` เฉพาะใน typescript-estree (ใช้แค่ตอน allowDefaultProject ซึ่ง eslint.config.js ไม่ได้ตั้ง; ต้อง Node 20 ขึ้นไป) ลบ overrides ได้เมื่อ typescript-eslint ใช้ minimatch 11 เอง
+- `npm audit` 0, `npm audit --omit=dev` 0, lint resources/js ผ่าน, tsc ผ่าน, JS 1,206 ข้อผ่าน, build ผ่าน; แพ็กเกจ Linux ใน optionalDependencies ยังอยู่ใน lock
+- บน Server ห้ามรัน `npm audit fix` / `npm install` ใช้ `git pull` แล้ว `npm ci` เท่านั้น
