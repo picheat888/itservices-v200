@@ -47,6 +47,15 @@ export function defaultOffReasonKey(
     return role && isOverCeiling(role, isSuper, myPermissions) ? 'perm_refusal_grant_ceiling' : null;
 }
 
+/** Lang key of why a group cannot be deleted: it holds the caller, or it is the default group. */
+export function groupDeleteBlockKey(
+    group: { id: number; includes_me: boolean },
+    defaultGroupId: number | null,
+): 'perm_refusal_own_access' | 'perm_refusal_default_group_delete' | null {
+    if (group.includes_me) return 'perm_refusal_own_access';
+    return group.id === defaultGroupId ? 'perm_refusal_default_group_delete' : null;
+}
+
 /** Lang key of why "Everyone in {dept}" is greyed out, or null while someone in it can be added. */
 export function departmentLockKey(addable: number, groupOverCeiling: boolean, onlyMe: boolean): string | null {
     if (addable > 0) return null;

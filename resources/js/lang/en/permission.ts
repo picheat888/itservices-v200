@@ -121,7 +121,6 @@ export const permission: Dict = {
     gr_delete_title: 'Delete {name}?',
     gr_delete_members: '{n} members: {where}',
     gr_delete_members_one: '1 member: {where}',
-    gr_delete_default: 'This is the default group. After deleting there is no default group',
     gr_delete_desc: 'This action is permanent and cannot be undone.',
     gr_view: 'View Role Group',
     audit_time: 'Time',
@@ -582,6 +581,7 @@ export const permission: Dict = {
     perm_refusal_admin_members_protected: 'This list includes a Super admin. Only a Super admin can move them.',
     perm_refusal_last_super_admin: "Can't save: this would leave no Super admin.",
     perm_refusal_own_access: "You can't change your own access.",
+    perm_refusal_default_group_delete: 'The default group for new employees cannot be deleted. Make another group the default first.',
     perm_refusal_grant_ceiling: 'You can only grant permissions you have yourself.',
     perm_refusal_role_changed:
         'Someone else saved this Role Template while you were editing, so your changes were not saved. The latest version is loaded. Make your changes again.',

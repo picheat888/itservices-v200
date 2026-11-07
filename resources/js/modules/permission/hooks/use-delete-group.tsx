@@ -20,7 +20,6 @@ export function useDeleteGroup(defaultGroup: GroupRole | null): (group: GroupRol
         const lines = [
             group.member_count > 0 &&
                 t(countKey('gr_delete_members', group.member_count)).replace('{n}', fmtN(group.member_count)).replace('{where}', where),
-            defaultGroup?.id === group.id && t('gr_delete_default'),
             t('gr_delete_desc'),
         ].filter((line): line is string => !!line);
 

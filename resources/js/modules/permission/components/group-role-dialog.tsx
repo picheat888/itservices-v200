@@ -18,7 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GroupMember, GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useBaseRoleLabel, useGroupRoleMutations, useGroupRoleOptions, useGroupRoles } from '../hooks/use-permissions';
-import { countKey, findRole, isOverCeiling, removeLine, roleLabel } from '../lib/group-rules';
+import { countKey, findRole, groupDeleteBlockKey, isOverCeiling, removeLine, roleLabel } from '../lib/group-rules';
 import { CenteredAlert } from './centered-alert';
 import { GroupMemberList } from './group-member-list';
 import { GroupMemberPicker } from './group-member-picker';
@@ -219,7 +219,8 @@ export function GroupRoleDialog({
     const showNameError = tried && nameError !== null;
     const showRoleError = tried && roleError !== null;
     const roleHelp = roleLocked && !readOnly ? t('perm_refusal_own_access') : !isSuper ? t('gr_role_ceiling') : null;
-    const deleteBlocked = group?.includes_me ? t('perm_refusal_own_access') : null;
+    const deleteBlockedKey = group ? groupDeleteBlockKey(group, defaultGroup?.id ?? null) : null;
+    const deleteBlocked = deleteBlockedKey ? t(deleteBlockedKey) : null;
 
     return (
         <>

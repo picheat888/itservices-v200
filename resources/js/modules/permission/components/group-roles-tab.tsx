@@ -25,7 +25,7 @@ import { useMemo, useState } from 'react';
 import type { GroupRole } from '../api/permissionApi';
 import { useDeleteGroup } from '../hooks/use-delete-group';
 import { useGroupRoles, useSetDefaultGroup } from '../hooks/use-permissions';
-import { countKey, defaultOffReasonKey, findRole, roleLabel } from '../lib/group-rules';
+import { countKey, defaultOffReasonKey, findRole, groupDeleteBlockKey, roleLabel } from '../lib/group-rules';
 import { CenteredAlert } from './centered-alert';
 import { LockHint } from './group-pane';
 import { GroupRoleDialog } from './group-role-dialog';
@@ -66,6 +66,10 @@ export function GroupRolesTab() {
     // No role is the base role, as the server ceiling-checks it
     const roleOf = (key: string | null) => findRole(roleOptions, key);
     const myPermissions = new Set(user?.permissions ?? []);
+    const deleteBlockedText = (g: GroupRole) => {
+        const key = groupDeleteBlockKey(g, defaultGroupId);
+        return key ? t(key) : null;
+    };
     const defaultOffReason = (g: GroupRole) => {
         const key = defaultOffReasonKey(g, defaultGroupId, roleOf(g.role), isSuper, myPermissions);
         return key ? t(key) : null;
@@ -153,7 +157,7 @@ export function GroupRolesTab() {
                 <GroupRowMenu
                     group={g}
                     locked={g.role === SUPER_ROLE && !isSuper}
-                    deleteBlocked={g.includes_me ? t('perm_refusal_own_access') : null}
+                    deleteBlocked={deleteBlockedText(g)}
                     onOpen={() => openGroup(g)}
                     onDelete={() => void deleteGroup(g)}
                 />

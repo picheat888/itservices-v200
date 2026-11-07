@@ -44,6 +44,7 @@ import { isOwnRole } from '../lib/own-role';
 import { countGranted, hiddenHitCount, specKeys } from '../lib/permission-count';
 import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { isRoleChanged } from '../lib/refusal';
+import { roleDeleteBlockKey } from '../lib/role-delete-block';
 
 /** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
 const TABS = ['templates', 'groups', 'logs', 'logins'] as const;
@@ -187,13 +188,8 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
 
     /** Delete a role template, or say up front why the API would refuse it. */
     const handleDeleteRole = (r: RoleRow) => {
-        const blocked = r.is_system
-            ? t('role_del_blocked_system')
-            : r.members > 0
-              ? t('role_del_blocked_members').replace('{n}', fmtN(r.members))
-              : r.groups > 0
-                ? t('role_del_blocked_group').replace('{n}', fmtN(r.groups))
-                : null;
+        const key = roleDeleteBlockKey(r);
+        const blocked = key && t(key).replace('{n}', fmtN(key === 'role_del_blocked_group' ? r.groups : r.members));
 
         if (blocked) {
             confirm({

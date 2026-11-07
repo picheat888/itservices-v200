@@ -103,6 +103,35 @@ class RoleReferenceTest extends TestCase
         $this->assertDatabaseHas('roles', ['id' => $inUse->id]);
     }
 
+    public function test_a_role_used_by_a_group_and_held_by_accounts_names_the_group(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $inUse = Role::create(['key' => 'inuse', 'name' => 'In Use', 'color' => '#111', 'is_system' => false]);
+        GroupRole::create(['name' => 'All Staff', 'role_id' => $inUse->id]);
+        User::factory()->create(['role' => 'inuse']);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->deleteJson('/api/roles/inuse')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Role is still used by a Role Group. Reassign it first.');
+
+        $this->assertDatabaseHas('roles', ['id' => $inUse->id]);
+    }
+
+    public function test_a_role_held_only_by_accounts_says_it_still_has_members(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $held = Role::create(['key' => 'held', 'name' => 'Held', 'color' => '#111', 'is_system' => false]);
+        User::factory()->create(['role' => 'held']);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->deleteJson('/api/roles/held')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Role still has members. Reassign them first.');
+
+        $this->assertDatabaseHas('roles', ['id' => $held->id]);
+    }
+
     public function test_the_matrix_counts_the_groups_using_each_role(): void
     {
         Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);

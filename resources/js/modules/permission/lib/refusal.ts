@@ -3,6 +3,7 @@ const REFUSAL_KEYS: Record<string, string> = {
     default_group_super: 'perm_refusal_default_group_super',
     admin_members_protected: 'perm_refusal_admin_members_protected',
     last_super_admin: 'perm_refusal_last_super_admin',
+    default_group_delete: 'perm_refusal_default_group_delete',
     own_access: 'perm_refusal_own_access',
     grant_ceiling: 'perm_refusal_grant_ceiling',
     role_changed: 'perm_refusal_role_changed',

@@ -8,6 +8,7 @@ import {
     defaultOffReasonKey,
     departmentLockKey,
     findRole,
+    groupDeleteBlockKey,
     isOverCeiling,
     leaversWhere,
     paneBusy,
@@ -142,4 +143,11 @@ test('a first load, a new page or a retry after a failure shows the skeleton', (
     assert.equal(paneBusy({ ...pane, isLoading: true }, false), true);
     assert.equal(paneBusy({ ...pane, isPlaceholderData: true }, false), true);
     assert.equal(paneBusy({ ...pane, isFetching: true, isFetchedAfterMount: true }, true), true);
+});
+
+test('a group cannot be deleted while it is the default or holds the caller', () => {
+    assert.equal(groupDeleteBlockKey({ id: 7, includes_me: false }, 7), 'perm_refusal_default_group_delete');
+    assert.equal(groupDeleteBlockKey({ id: 7, includes_me: false }, null), null);
+    assert.equal(groupDeleteBlockKey({ id: 7, includes_me: false }, 8), null);
+    assert.equal(groupDeleteBlockKey({ id: 7, includes_me: true }, 7), 'perm_refusal_own_access');
 });

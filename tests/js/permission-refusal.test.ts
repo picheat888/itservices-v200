@@ -53,3 +53,7 @@ test('the refusal code is read from the response, or missing', () => {
     assert.equal(refusalCode(new Error('Network Error')), undefined);
     assert.equal(refusalCode(undefined), undefined);
 });
+
+test('default_group_delete maps to its refusal key', () => {
+    assert.equal(refusalKey('default_group_delete'), 'perm_refusal_default_group_delete');
+});

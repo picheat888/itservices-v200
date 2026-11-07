@@ -126,6 +126,7 @@ class GroupRoleService
     {
         SuperAdmins::keepAtLeastOne(function () use ($caller, $groupRole) {
             $group = $this->lockGroup($groupRole);
+            $this->guards->guardNotDefaultGroup($group);
             $memberIds = $this->lockMembers($group);
             $this->guards->guardSuperGroup($caller, $group->role?->key);
             $this->guards->guardOwnAccess($caller, $memberIds);
@@ -133,7 +134,6 @@ class GroupRoleService
 
             $rolesBefore = $this->auditDetails->accountRoles($memberIds);
 
-            // A deleted group stops being the default
             if ((int) AppSetting::get('default_employee_group_id', 0) === $group->id) {
                 AppSetting::put('default_employee_group_id', null);
             }

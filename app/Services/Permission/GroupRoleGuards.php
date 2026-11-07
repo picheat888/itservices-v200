@@ -116,6 +116,19 @@ class GroupRoleGuards
         ], 422));
     }
 
+    /** Refuses deleting the group new employees join, for every caller. */
+    public function guardNotDefaultGroup(GroupRole $group): void
+    {
+        if (GroupRole::defaultForNewEmployees()?->id !== $group->id) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => 'The default group for new employees cannot be deleted.',
+            'code' => 'default_group_delete',
+        ], 422));
+    }
+
     /** Whether a non-super caller is refused every add to this group: a super-role group, or a role above their ceiling. */
     public function refusesEveryAdd(User $caller, ?GroupRole $group): bool
     {
