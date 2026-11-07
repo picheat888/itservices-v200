@@ -370,7 +370,7 @@ export const employee: Dict = {
     emp_v_tab_assets: 'Assets',
     emp_v_tab_tickets: 'Tickets',
     emp_v_tab_access: 'Access',
-    emp_v_access_outstanding: 'This employee has resigned, but this access is still open. Revoke it in the Access Directory.',
+    emp_v_access_outstanding: 'This employee has resigned, but this access is still open. Revoke it on the Access page.',
     emp_v_col_device: 'Device',
     emp_v_col_received: 'Received',
     emp_v_st_deployed: 'In use',

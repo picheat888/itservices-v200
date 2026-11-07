@@ -14,7 +14,7 @@ export const notification: Dict = {
     notif_end: 'ไม่มีแจ้งเตือนเก่ากว่านี้',
     notif_group_system: 'อื่น ๆ',
     notif_password_title: 'บัญชีของคุณ',
-    notif_password_expiring: 'รหัสผ่านจะหมดอายุในอีก {days} วัน เปลี่ยนก่อนเข้าระบบไม่ได้',
+    notif_password_expiring: 'รหัสผ่านจะหมดอายุในอีก {days} วัน เปลี่ยนรหัสผ่านก่อนหมดอายุ ถ้าหมดอายุแล้ว ระบบจะให้ตั้งรหัสใหม่ตอนเข้าสู่ระบบ',
     notif_sla_holidays_title: 'ยังไม่มีวันหยุดปี {year}',
     notif_sla_holidays_missing: 'เพิ่มตามประกาศวันหยุดของบริษัทก่อน 1 ม.ค. {year} ไม่อย่างนั้นวันหยุดจะถูกนับเป็นวันทำการ',
     notif_sla_holidays_started: 'ปี {year} เริ่มแล้วแต่ยังไม่มีวันหยุด เพิ่มตามประกาศของบริษัท',

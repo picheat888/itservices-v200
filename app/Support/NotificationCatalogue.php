@@ -560,8 +560,8 @@ class NotificationCatalogue
                 'name' => 'Password expiring',
                 'trigger' => 'Signing in with fewer than 14 days left on the password expiry policy',
                 'audience' => 'The account itself',
-                'message_en' => 'Your password expires in {days} days. Change it before you are locked out.',
-                'message_th' => 'รหัสผ่านจะหมดอายุในอีก {days} วัน เปลี่ยนก่อนเข้าระบบไม่ได้',
+                'message_en' => 'Your password expires in {days} days. Change it before then, or you will be asked to set a new one when you sign in.',
+                'message_th' => 'รหัสผ่านจะหมดอายุในอีก {days} วัน เปลี่ยนรหัสผ่านก่อนหมดอายุ ถ้าหมดอายุแล้ว ระบบจะให้ตั้งรหัสใหม่ตอนเข้าสู่ระบบ',
                 'enabled' => true,
             ],
             [

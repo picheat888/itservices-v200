@@ -108,7 +108,7 @@ export const common: Dict = {
     add_department: 'เพิ่มแผนก',
     edit_department: 'แก้ไขแผนก',
     cancel_resign: 'ยกเลิกการลาออก',
-    cancel_resign_confirm: 'ยืนยันยกเลิกการลาออก และคืนสถานะพนักงานเป็น "ปกติ"?',
+    cancel_resign_confirm: 'ยืนยันยกเลิกการลาออก และคืนสถานะพนักงานเป็น "ใช้งาน"?',
     coming_soon: 'เร็ว ๆ นี้',
     assigned_assets: 'อุปกรณ์ที่ได้รับมอบหมาย',
     confirm_delete: 'ลบรายการนี้?',

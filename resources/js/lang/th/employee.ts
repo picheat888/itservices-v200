@@ -368,7 +368,7 @@ export const employee: Dict = {
     emp_v_tab_assets: 'ทรัพย์สิน',
     emp_v_tab_tickets: 'Ticket',
     emp_v_tab_access: 'สิทธิ์เข้าถึง',
-    emp_v_access_outstanding: 'พนักงานลาออกแล้ว แต่สิทธิ์เหล่านี้ยังเปิดอยู่ ถอนสิทธิ์ได้ที่หน้าการเข้าถึง',
+    emp_v_access_outstanding: 'พนักงานลาออกแล้ว แต่สิทธิ์เหล่านี้ยังเปิดอยู่ ถอนสิทธิ์ได้ที่หน้า "สิทธิ์การเข้าถึง"',
     emp_v_col_device: 'อุปกรณ์',
     emp_v_col_received: 'รับเมื่อ',
     emp_v_st_deployed: 'ใช้งานอยู่',

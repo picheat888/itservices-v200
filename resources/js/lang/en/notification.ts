@@ -14,7 +14,7 @@ export const notification: Dict = {
     notif_end: 'No older notifications',
     notif_group_system: 'Other',
     notif_password_title: 'Your account',
-    notif_password_expiring: 'Your password expires in {days} days. Change it before you are locked out.',
+    notif_password_expiring: 'Your password expires in {days} days. Change it before then, or you will be asked to set a new one when you sign in.',
     notif_sla_holidays_title: 'No holidays set for {year}',
     notif_sla_holidays_missing: 'Add the company holidays before 1 Jan {year}, or they will be counted as working days.',
     notif_sla_holidays_started: '{year} has started but has no holidays yet. Add them from the company announcement.',

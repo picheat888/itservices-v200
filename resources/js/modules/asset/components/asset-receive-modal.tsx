@@ -8,13 +8,14 @@ import { useFormError } from '@/shared/hooks/use-form-error';
 import { useHeldWhileOpen } from '@/shared/hooks/use-held-while-open';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
-import { serverMessage } from '@/shared/lib/api-errors';
+import { refusalReason, serverMessage } from '@/shared/lib/api-errors';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogBody, DialogFooterBar, FormDialogContent } from '@/shared/ui/dialog';
 import { Box, Check, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssetMutations } from '../hooks/use-assets';
+import { recipientAcceptedFirst } from '../lib/recall-refusal';
 
 /** Put assets back into a warehouse: 'receive' a returned asset, or 'recall' a hand-over; single (`asset`) or bulk (`ids` + `open`). */
 export function AssetReceiveModal({
@@ -78,13 +79,8 @@ export function AssetReceiveModal({
             await single.mutateAsync({ id: asset.id, warehouse: warehouse.trim() });
             onClose();
         } catch (err) {
-            // A 422 on a single recall: the recipient accepted before IT pulled it back
-            const status = (err as { response?: { status?: number } }).response?.status;
-            if (isRecall && !isBulk && status === 422) {
-                formError.show(t('asset_recall_stale'));
-            } else {
-                formError.show(serverMessage(err, t, 'asset_refusal_') ?? t('asset_action_failed'));
-            }
+            const accepted = isRecall && !isBulk && recipientAcceptedFirst(refusalReason(err)?.reason, asset?.status);
+            formError.show(accepted ? t('asset_recall_stale') : (serverMessage(err, t, 'asset_refusal_') ?? t('asset_action_failed')));
         }
     };
 
