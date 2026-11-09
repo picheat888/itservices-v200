@@ -52,7 +52,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { NotificationTemplate } from '../api/notificationApi';
-import { NOTIFICATION_GROUPS, notificationGroupLabel } from '../groups';
+import { NOTIFICATION_GROUPS, notificationGroupLabel } from '../lib/groups';
 import { useNotificationTemplateMutations, useNotificationTemplates } from '../hooks/use-notifications';
 
 // Icon per module, matching the sidebar

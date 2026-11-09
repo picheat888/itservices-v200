@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 const catalogue = readFileSync(new URL('../../app/Support/ReportCatalogue.php', import.meta.url), 'utf8');
-const routes = readFileSync(new URL('../../resources/js/modules/report/routes.tsx', import.meta.url), 'utf8');
+const routes = readFileSync(new URL('../../resources/js/modules/report/pages/routes.ts', import.meta.url), 'utf8');
 
 const list = (body: string) => [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]).sort();
 

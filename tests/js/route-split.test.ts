@@ -25,9 +25,9 @@ test('no module barrel exports a page statically, except the login page', () => 
 });
 
 test('report pages load one file each', () => {
-    const routes = read('resources/js/modules/report/routes.tsx');
-    assert.doesNotMatch(routes, /^import \w+ from '\.\/pages\//m);
-    assert.equal(routes.match(/= lazyPage\(\(\) => import\('\.\/pages\/[a-z-]+'\)\);/g)?.length, 22);
+    const routes = read('resources/js/modules/report/pages/routes.ts');
+    assert.doesNotMatch(routes, /^import \w+ from '\.\//m);
+    assert.equal(routes.match(/= lazyPage\(\(\) => import\('\.\/[a-z-]+'\)\);/g)?.length, 22);
 });
 
 test('the shell and the standalone pages wait for page code inside Suspense', () => {
@@ -51,7 +51,7 @@ test('the loading fallback waits 300ms before it shows', () => {
 });
 
 test('report hub cards preload their report page', () => {
-    assert.match(read('resources/js/modules/report/routes.tsx'), /export function preloadReportPage\(path: string\)/);
+    assert.match(read('resources/js/modules/report/pages/routes.ts'), /export function preloadReportPage\(path: string\)/);
     assert.match(
         read('resources/js/modules/report/components/report-catalogue.tsx'),
         /onPointerEnter=\{\(\) => preloadReportPage\(reportSlug\(report\.key\)\)\}/,

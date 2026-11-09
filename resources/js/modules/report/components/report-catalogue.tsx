@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { useReportRights } from '../hooks/use-report-rights';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import { periodRange } from '../lib/period-range';
-import { preloadReportPage } from '../routes';
+import { preloadReportPage } from '../pages/routes';
 import type { ReportDefinition, ReportDomain, ReportExportItem, SnapshotRange } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 

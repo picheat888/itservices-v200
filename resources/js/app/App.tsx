@@ -168,7 +168,7 @@ function App() {
                                     </RequirePermission>
                                 }
                             />
-                            {/* One route per report page, each with its own gate — modules/report/routes.tsx. */}
+                            {/* One route per report page, each with its own gate — modules/report/pages/routes.ts. */}
                             {reportPageRoutes.map(({ path, allOf, Page }) => (
                                 <Route
                                     key={path}

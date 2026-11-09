@@ -61,7 +61,7 @@ import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { ContractRowMenu } from '../components/contract-row-menu';
 import { useContractActions } from '../hooks/use-contract-actions';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
-import { CONTRACT_TYPE_TONE } from '../tones';
+import { CONTRACT_TYPE_TONE } from '../lib/tones';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'all'] as const;
