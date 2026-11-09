@@ -16,7 +16,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
-/storage/fonts
+/storage/fonts/*
+!/storage/fonts/Sarabun-*.ttf
 /vendor
 auth.json
 Homestead.json
@@ -45,3 +46,4 @@ yarn-error.log
 
 /storage/perf
 /storage/app/geoip/
+/history-project.md
