@@ -36,8 +36,8 @@
     <meta charset="utf-8">
     <title>{{ $report->title() }} - {{ \App\Support\CompanyProfile::issuer($company) }}</title>
     <style>
-        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/Sarabun-Regular.ttf') }}") format('truetype'); }
-        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/Sarabun-Bold.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/SarabunPdf-Regular.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/SarabunPdf-Bold.ttf') }}") format('truetype'); }
         * { font-family: 'Sarabun', sans-serif; }
         @page { margin: 28px 32px 46px; }
         body { margin: 0; color: #0f172a; font-size: 10.5px; }

@@ -11,8 +11,8 @@
     <meta charset="utf-8">
     <title>Lot labels - {{ $lot->lot_no }}</title>
     <style>
-        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/Sarabun-Regular.ttf') }}") format('truetype'); }
-        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/Sarabun-Bold.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/SarabunPdf-Regular.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/SarabunPdf-Bold.ttf') }}") format('truetype'); }
         * { font-family: 'Sarabun', sans-serif; }
         @page { margin: 8mm; }
         body { margin: 0; color: #000; }

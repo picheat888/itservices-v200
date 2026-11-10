@@ -18,6 +18,7 @@ use App\Support\Cidr;
 use App\Support\ErrorPage;
 use App\Support\NotificationCatalogue;
 use App\Support\NotificationKind;
+use App\Support\Pdf\ThaiPdfCanvas;
 use App\Support\RequestSchemas;
 use App\Support\TicketSla;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -45,6 +46,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(GeoIpLookup::class, DbIpLookup::class);
         $this->app->scoped(CurrentDevice::class);
+        // dompdf looks up its pdf_backend class with autoloading off
+        class_exists(ThaiPdfCanvas::class);
     }
 
     /**
@@ -149,10 +152,7 @@ class AppServiceProvider extends ServiceProvider
         ];
     }
 
-    /**
-     * The account this request is already signed in as, read without signing anyone in: a remember cookie
-     * is left to the API, where TrackDevice moves its device and replaces its token.
-     */
+    /** The account this request is already signed in as, read without signing in (remember cookies stay with the API's TrackDevice). */
     private static function signedInId(Request $request): int|string|null
     {
         if (Auth::hasUser()) {

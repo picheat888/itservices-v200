@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\Pdf\ThaiPdfCanvas;
+
 return [
 
     /*
@@ -112,35 +114,8 @@ return [
          */
         'enable_font_subsetting' => false,
 
-        /**
-         * The PDF rendering backend to use
-         *
-         * Valid settings are 'PDFLib', 'CPDF' (the bundled R&OS PDF class), 'GD' and
-         * 'auto'. 'auto' will look for PDFLib and use it if found, or if not it will
-         * fall back on CPDF. 'GD' renders PDFs to graphic files.
-         * {@link * Canvas_Factory} ultimately determines which rendering class to
-         * instantiate based on this setting.
-         *
-         * Both PDFLib & CPDF rendering backends provide sufficient rendering
-         * capabilities for dompdf, however additional features (e.g. object,
-         * image and font support, etc.) differ between backends.  Please see
-         * {@link PDFLib_Adapter} for more information on the PDFLib backend
-         * and {@link CPDF_Adapter} and lib/class.pdf.php for more information
-         * on CPDF. Also see the documentation for each backend at the links
-         * below.
-         *
-         * The GD rendering backend is a little different than PDFLib and
-         * CPDF. Several features of CPDF and PDFLib are not supported or do
-         * not make any sense when creating image files.  For example,
-         * multiple pages are not supported, nor are PDF 'objects'.  Have a
-         * look at {@link GD_Adapter} for more information.  GD support is
-         * experimental, so use it at your own risk.
-         *
-         * @link http://www.pdflib.com
-         * @link http://www.ros.co.nz/pdf
-         * @link http://www.php.net/image
-         */
-        'pdf_backend' => 'CPDF',
+        // Rendering backend: dompdf's CPDF plus Thai mark shaping (App\Support\Pdf\ThaiPdfCanvas)
+        'pdf_backend' => ThaiPdfCanvas::class,
 
         /**
          * html target media view which should be rendered into pdf.

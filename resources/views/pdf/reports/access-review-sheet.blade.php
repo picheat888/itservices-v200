@@ -13,8 +13,8 @@
     <meta charset="utf-8">
     <title>ใบทบทวนสมาชิก - {{ $sheet['code'] }} - {{ $company }}</title>
     <style>
-        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/Sarabun-Regular.ttf') }}") format('truetype'); }
-        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/Sarabun-Bold.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/SarabunPdf-Regular.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/SarabunPdf-Bold.ttf') }}") format('truetype'); }
         * { font-family: 'Sarabun', sans-serif; }
         body { margin: 0; color: #111; font-size: 11px; }
         .head { width: 100%; border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 10px; }

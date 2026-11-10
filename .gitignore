@@ -18,6 +18,7 @@
 /storage/pail
 /storage/fonts/*
 !/storage/fonts/Sarabun-*.ttf
+!/storage/fonts/SarabunPdf-*.ttf
 /vendor
 auth.json
 Homestead.json

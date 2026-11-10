@@ -66,8 +66,8 @@
     {{-- dompdf embeds this as the PDF Title metadata → shown as the browser tab name. --}}
     <title>{{ $titles[$view] }} - {{ $item['sku'] }}{{ \App\Support\CompanyProfile::issuer($company) ? ' - '.\App\Support\CompanyProfile::issuer($company) : '' }}</title>
     <style>
-        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/Sarabun-Regular.ttf') }}") format('truetype'); }
-        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/Sarabun-Bold.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/SarabunPdf-Regular.ttf') }}") format('truetype'); }
+        @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/SarabunPdf-Bold.ttf') }}") format('truetype'); }
         * { font-family: 'Sarabun', sans-serif; }
         @page { margin: 30px 34px 46px; }
         body { margin: 0; color: #0f172a; font-size: 10.5px; }
