@@ -10,35 +10,33 @@ use Dompdf\Dompdf;
 
 class ThaiPdfCanvas extends CPDF
 {
+    /** @var array<string, bool> dompdf font path => whether it carries the PUA glyphs */
+    private array $thaiFonts = [];
+
+    private ThaiCpdf $thaiPdf;
+
     public function __construct($paper = 'letter', string $orientation = 'portrait', ?Dompdf $dompdf = null)
     {
         parent::__construct($paper, $orientation, $dompdf);
-
-        // Same set-up as the parent, on a ThaiCpdf
-        $options = $this->_dompdf->getOptions();
-        $this->_pdf = new ThaiCpdf([0, 0, $this->_width, $this->_height], true, $options->getFontCache(), $options->getTempDir());
-        $this->_pdf->addInfo('Producer', sprintf('%s + CPDF', $this->_dompdf->version));
-        $time = substr_replace(date('YmdHisO'), '\'', -2, 0).'\'';
-        $this->_pdf->addInfo('CreationDate', "D:$time");
-        $this->_pdf->addInfo('ModDate', "D:$time");
-        if ($options->isPdfAEnabled()) {
-            $this->_pdf->enablePdfACompliance();
-        }
-        $this->_pages = [$this->_pdf->getFirstPageId()];
+        $this->_pdf = $this->thaiPdf = ThaiCpdf::takeOver($this->_pdf);
     }
 
-    public function text($x, $y, $text, $font, $size, $color = [0, 0, 0], $word_space = 0.0, $char_space = 0.0, $angle = 0.0)
+    public function text($x, $y, $text, $font, $size, $color = [0, 0, 0], $word_space = 0.0, $char_space = 0.0, $angle = 0.0): void
     {
-        $this->_pdf->selectFont($font, '', true, $this->_dompdf->getOptions()->getIsFontSubsettingEnabled());
-        if ($this->fontHasThaiPuaGlyphs()) {
+        if ($this->fontHasThaiPuaGlyphs($font)) {
             $text = ThaiPua::shape($text);
         }
 
         parent::text($x, $y, $text, $font, $size, $color, $word_space, $char_space, $angle);
     }
 
-    private function fontHasThaiPuaGlyphs(): bool
+    private function fontHasThaiPuaGlyphs(string $font): bool
     {
-        return isset($this->_pdf->fonts[$this->_pdf->currentFont]['C'][0xF70A]);
+        if (! isset($this->thaiFonts[$font])) {
+            $this->thaiPdf->selectFont($font, '', true, $this->_dompdf->getOptions()->getIsFontSubsettingEnabled());
+            $this->thaiFonts[$font] = $this->thaiPdf->hasThaiPuaGlyphs($this->thaiPdf->currentFont);
+        }
+
+        return $this->thaiFonts[$font];
     }
 }

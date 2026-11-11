@@ -46,8 +46,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(GeoIpLookup::class, DbIpLookup::class);
         $this->app->scoped(CurrentDevice::class);
-        // dompdf looks up its pdf_backend class with autoloading off
-        class_exists(ThaiPdfCanvas::class);
+        // dompdf looks up its pdf_backend class with autoloading off, so load it before a Dompdf is built
+        $this->app->beforeResolving('dompdf', fn () => class_exists(ThaiPdfCanvas::class));
     }
 
     /**

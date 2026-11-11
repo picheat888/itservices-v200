@@ -80,8 +80,8 @@ final class ThaiPua
             [$belowAction, $below] = self::BELOW[$below][$mark];
             $action = $aboveAction ?? $belowAction;
 
-            // A tone before ำ stays high, over its ring
-            if ($mark === 'tone' && ($chars[$i + 1] ?? '') === 'ำ') {
+            // A tone before ำ, or a typed ํ + า, stays high over the ring
+            if ($mark === 'tone' && in_array($chars[$i + 1] ?? '', ["\u{0E33}", "\u{0E4D}"], true)) {
                 $action = null;
             }
 

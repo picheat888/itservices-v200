@@ -20,6 +20,7 @@ class ThaiPuaTest extends TestCase
         yield 'tone over an upper vowel stays high' => ['ที่ เรื่อง ตั้ง สิทธิ์', 'ที่ เรื่อง ตั้ง สิทธิ์'];
         yield 'tone after a lower vowel goes down' => ['ผู้ใช้', "ผู\u{F70B}ใช\u{F70B}"];
         yield 'tone before sara am stays high' => ['น้ำ ค่ำ', 'น้ำ ค่ำ'];
+        yield 'tone before a typed nikhahit and sara aa stays high' => ["น\u{0E49}\u{0E4D}\u{0E32} ป\u{0E48}\u{0E4D}\u{0E32}", "น\u{0E49}\u{0E4D}\u{0E32} ป\u{0E48}\u{0E4D}\u{0E32}"];
         yield 'mai taikhu and nikhahit stay' => ['ก็ กํ', 'ก็ กํ'];
         yield 'lo chula is not a tall consonant' => ['ฬี่ ฬ่', "ฬี่ ฬ\u{F70A}"];
 
