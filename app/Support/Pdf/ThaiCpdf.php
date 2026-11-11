@@ -17,6 +17,8 @@ class ThaiCpdf extends Cpdf
 
     private const MAX_BLOCK_LINES = 100;
 
+    private static ?string $thaiMap = null;
+
     /** Carries on the document dompdf's canvas has just set up (info, PDF/A, first page). */
     public static function takeOver(Cpdf $pdf): self
     {
@@ -25,6 +27,8 @@ class ThaiCpdf extends Cpdf
             foreach (get_object_vars($from) as $name => $value) {
                 $this->{$name} = $value;
             }
+            // The copy owns the temp images now
+            $from->imageCache = [];
         };
         Closure::bind($copyState, $thai, Cpdf::class)($pdf);
 
@@ -68,6 +72,10 @@ class ThaiCpdf extends Cpdf
 
     private static function thaiMap(): string
     {
+        if (self::$thaiMap !== null) {
+            return self::$thaiMap;
+        }
+
         $originals = ThaiPua::originals();
         ksort($originals);
 
@@ -81,7 +89,7 @@ class ThaiCpdf extends Cpdf
             $originals,
         );
 
-        return implode("\n", [...self::blocks('bfrange', $ranges), ...self::blocks('bfchar', $chars)]);
+        return self::$thaiMap = implode("\n", [...self::blocks('bfrange', $ranges), ...self::blocks('bfchar', $chars)]);
     }
 
     /**

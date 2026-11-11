@@ -20,7 +20,7 @@ class ThaiPuaTest extends TestCase
         yield 'tone over an upper vowel stays high' => ['ที่ เรื่อง ตั้ง สิทธิ์', 'ที่ เรื่อง ตั้ง สิทธิ์'];
         yield 'tone after a lower vowel goes down' => ['ผู้ใช้', "ผู\u{F70B}ใช\u{F70B}"];
         yield 'tone before sara am stays high' => ['น้ำ ค่ำ', 'น้ำ ค่ำ'];
-        yield 'tone before a typed nikhahit and sara aa stays high' => ["น\u{0E49}\u{0E4D}\u{0E32} ป\u{0E48}\u{0E4D}\u{0E32}", "น\u{0E49}\u{0E4D}\u{0E32} ป\u{0E48}\u{0E4D}\u{0E32}"];
+        yield 'tone before a typed nikhahit stays high' => ["น\u{0E49}\u{0E4D}\u{0E32} ก\u{0E48}\u{0E4D}", "น\u{0E49}\u{0E4D}\u{0E32} ก\u{0E48}\u{0E4D}"];
         yield 'mai taikhu and nikhahit stay' => ['ก็ กํ', 'ก็ กํ'];
         yield 'lo chula is not a tall consonant' => ['ฬี่ ฬ่', "ฬี่ ฬ\u{F70A}"];
 
@@ -29,6 +29,7 @@ class ThaiPuaTest extends TestCase
         yield 'upper vowel and its tone shift left' => ['ปี่ ฝึ่ง ฟื้น ปิ์', "ป\u{F702}\u{F713} ฝ\u{F703}\u{F713}ง ฟ\u{F704}\u{F714}น ป\u{F701}\u{F717}"];
         yield 'mai han-akat, mai taikhu, nikhahit shift left' => ['ปั้ ป็ ปํ', "ป\u{F710}\u{F714} ป\u{F712} ป\u{F711}"];
         yield 'tone after a lower vowel on a tall consonant' => ['ปุ่น', "ปุ\u{F705}น"];
+        yield 'typed nikhahit and the tone before it shift left' => ["ป\u{0E48}\u{0E4D}\u{0E32} ฟ\u{0E49}\u{0E4D}\u{0E32}", "ป\u{F713}\u{F711}\u{0E32} ฟ\u{F714}\u{F711}\u{0E32}"];
 
         // Below the line
         yield 'yo ying and tho than drop their tail' => ['ญุ ฐู', "\u{F70F}ุ \u{F700}ู"];

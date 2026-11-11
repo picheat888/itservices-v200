@@ -66,7 +66,8 @@ final class ThaiPua
         $base = 0;
         [$above, $below] = self::START['other'];
 
-        foreach ($chars as $i => $char) {
+        foreach (self::shapingOrder($chars) as $i) {
+            $char = $chars[$i];
             $mark = self::markType(mb_ord($char));
 
             if ($mark === null) {
@@ -80,8 +81,8 @@ final class ThaiPua
             [$belowAction, $below] = self::BELOW[$below][$mark];
             $action = $aboveAction ?? $belowAction;
 
-            // A tone before ำ, or a typed ํ + า, stays high over the ring
-            if ($mark === 'tone' && in_array($chars[$i + 1] ?? '', ["\u{0E33}", "\u{0E4D}"], true)) {
+            // A tone before ำ stays high over its ring
+            if ($mark === 'tone' && ($chars[$i + 1] ?? '') === "\u{0E33}") {
                 $action = null;
             }
 
@@ -106,6 +107,29 @@ final class ThaiPua
         }
 
         return $originals;
+    }
+
+    /**
+     * Character indexes in shaping order: a ํ typed after a tone goes first, as HarfBuzz does with the ํ of ำ.
+     *
+     * @param  list<string>  $chars
+     * @return list<int>
+     */
+    private static function shapingOrder(array $chars): array
+    {
+        $order = [];
+        $count = count($chars);
+        for ($i = 0; $i < $count; $i++) {
+            if (self::markType(mb_ord($chars[$i])) === 'tone' && ($chars[$i + 1] ?? '') === "\u{0E4D}") {
+                array_push($order, $i + 1, $i);
+                $i++;
+
+                continue;
+            }
+            $order[] = $i;
+        }
+
+        return $order;
     }
 
     private static function swap(string $char, string $action): string

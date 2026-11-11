@@ -13,12 +13,10 @@ class ThaiPdfCanvas extends CPDF
     /** @var array<string, bool> dompdf font path => whether it carries the PUA glyphs */
     private array $thaiFonts = [];
 
-    private ThaiCpdf $thaiPdf;
-
     public function __construct($paper = 'letter', string $orientation = 'portrait', ?Dompdf $dompdf = null)
     {
         parent::__construct($paper, $orientation, $dompdf);
-        $this->_pdf = $this->thaiPdf = ThaiCpdf::takeOver($this->_pdf);
+        $this->_pdf = ThaiCpdf::takeOver($this->_pdf);
     }
 
     public function text($x, $y, $text, $font, $size, $color = [0, 0, 0], $word_space = 0.0, $char_space = 0.0, $angle = 0.0): void
@@ -33,10 +31,18 @@ class ThaiPdfCanvas extends CPDF
     private function fontHasThaiPuaGlyphs(string $font): bool
     {
         if (! isset($this->thaiFonts[$font])) {
-            $this->thaiPdf->selectFont($font, '', true, $this->_dompdf->getOptions()->getIsFontSubsettingEnabled());
-            $this->thaiFonts[$font] = $this->thaiPdf->hasThaiPuaGlyphs($this->thaiPdf->currentFont);
+            $pdf = $this->thaiPdf();
+            $pdf->selectFont($font, '', true, $this->_dompdf->getOptions()->getIsFontSubsettingEnabled());
+            $this->thaiFonts[$font] = $pdf->hasThaiPuaGlyphs($pdf->currentFont);
         }
 
         return $this->thaiFonts[$font];
+    }
+
+    private function thaiPdf(): ThaiCpdf
+    {
+        assert($this->_pdf instanceof ThaiCpdf);
+
+        return $this->_pdf;
     }
 }

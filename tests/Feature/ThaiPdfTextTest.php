@@ -74,7 +74,11 @@ class ThaiPdfTextTest extends TestCase
     {
         $pdf = $this->render('<p>ค่า</p>');
 
-        preg_match_all('/(\d+) beginbfrange\n(.*?)\nendbfrange/s', $pdf, $blocks, PREG_SET_ORDER);
+        preg_match_all('/begincmap.*?endcmap/s', $pdf, $cmaps);
+        $thaiMaps = array_values(array_filter($cmaps[0], fn (string $cmap) => str_contains($cmap, '<F70A> <0E48>')));
+        $this->assertCount(1, $thaiMaps);
+
+        preg_match_all('/(\d+) beginbfrange\n(.*?)\nendbfrange/s', $thaiMaps[0], $blocks, PREG_SET_ORDER);
         $this->assertNotEmpty($blocks);
         foreach ($blocks as [, $count, $body]) {
             $lines = explode("\n", $body);
