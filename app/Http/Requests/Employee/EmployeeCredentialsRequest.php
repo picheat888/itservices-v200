@@ -10,8 +10,7 @@ use Illuminate\Validation\Rules\Password;
 abstract class EmployeeCredentialsRequest extends EmployeeActionRequest
 {
     /**
-     * English letters only: starts with a letter, ends with a letter or digit, . _ - in between.
-     * The forms mirror this for instant feedback; this copy is the authority.
+     * English letters only: starts with a letter, ends with a letter or digit, . _ - in between (the forms mirror it).
      *
      * @var list<string>
      */
@@ -26,8 +25,9 @@ abstract class EmployeeCredentialsRequest extends EmployeeActionRequest
     /** Logins are case-insensitive, so "John_Do" must not slip past an existing "john_do". */
     protected function prepareForValidation(): void
     {
-        if ($this->has('username')) {
-            $this->merge(['username' => Str::lower(trim((string) $this->input('username')))]);
+        $username = $this->input('username');
+        if (is_string($username)) {
+            $this->merge(['username' => Str::lower(trim($username))]);
         }
     }
 }

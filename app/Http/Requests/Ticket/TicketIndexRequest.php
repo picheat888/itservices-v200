@@ -29,7 +29,8 @@ class TicketIndexRequest extends GatedPermissionRequest
     public function filters(): array
     {
         $canSeeInternals = TicketResource::showsDeskInternals($this);
-        $sort = (string) $this->query('sort');
+        $sort = $this->query('sort');
+        $sort = is_string($sort) ? $sort : '';
         if (! $canSeeInternals && in_array($sort, ['priority_desc', 'sla_due'], true)) {
             $sort = '';
         }

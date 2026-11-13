@@ -25,7 +25,8 @@ class StoreSoftwareRequest extends FormRequest
             $this->merge(['seats' => null]);
         }
 
-        if ($this->has('product_key') && trim((string) $this->input('product_key')) === '') {
+        $productKey = $this->input('product_key');
+        if (is_string($productKey) && trim($productKey) === '') {
             $this->merge(['product_key' => null]);
         }
     }

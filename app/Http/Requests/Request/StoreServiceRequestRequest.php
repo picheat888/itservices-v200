@@ -23,7 +23,7 @@ class StoreServiceRequestRequest extends FormRequest
         }
 
         // An unknown or missing type is left to rules(), so it answers 422 rather than 403.
-        $type = RequestType::tryFrom((string) $this->input('type'));
+        $type = $this->submittedType();
 
         return $type === null || $user->hasPermission("requests.submit_{$type->value}");
     }
@@ -38,14 +38,12 @@ class StoreServiceRequestRequest extends FormRequest
             'type' => ['required', Rule::enum(RequestType::class)],
             'reason' => ['required', 'string', 'min:10', 'max:5000'],
             'fields' => ['array'],
-            // Files ride along with the submit rather than following it, because a
-            // service that requires one (see RequestSchemas::attachmentsRequired)
-            // cannot be held to that rule by a second call that may never arrive.
+            // Files ride with the submit; a later upload call could skip RequestSchemas::attachmentsRequired
             'files' => ['array', 'max:'.RequestAttachmentService::MAX_FILES],
             'files.*' => ['file', 'mimes:'.RequestAttachmentService::ALLOWED_EXTENSIONS, 'max:'.RequestAttachmentService::MAX_SIZE_KB],
         ];
 
-        $type = RequestType::tryFrom((string) $this->input('type'));
+        $type = $this->submittedType();
         if ($type !== null) {
             $rules += RequestSchemas::rules($type);
             if (RequestSchemas::attachmentsRequired($type)) {
@@ -54,5 +52,13 @@ class StoreServiceRequestRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /** The submitted type, or null when it is missing, unknown or not text. */
+    private function submittedType(): ?RequestType
+    {
+        $type = $this->input('type');
+
+        return is_string($type) ? RequestType::tryFrom($type) : null;
     }
 }

@@ -124,7 +124,8 @@ class StockItemController extends Controller
     {
         $this->gateView($request);
 
-        $file = $histories->pdf($stockItem, (string) $request->query('v', 'summary'), $request->user());
+        $view = $request->query('v', 'summary');
+        $file = $histories->pdf($stockItem, is_string($view) ? $view : 'summary', $request->user());
 
         // A real StreamedResponse (the tests read streamedContent())
         return new StreamedResponse(function () use ($file) {
