@@ -368,6 +368,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
     Route::post('assets/bulk-transfer', [AssetController::class, 'bulkTransfer'])->name('api.assets.bulk-transfer');
     Route::post('assets/bulk-location', [AssetController::class, 'bulkLocation'])->name('api.assets.bulk-location');
+    Route::post('assets/bulk-contract', [AssetController::class, 'bulkContract'])->name('api.assets.bulk-contract');
     Route::post('assets/bulk-recall', [AssetController::class, 'bulkRecall'])->name('api.assets.bulk-recall');
     Route::post('assets/bulk-receive', [AssetController::class, 'bulkReceive'])->name('api.assets.bulk-receive');
     Route::post('assets/bulk-return-to-vendor', [AssetController::class, 'bulkReturnToVendor'])->name('api.assets.bulk-return-to-vendor');

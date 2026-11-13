@@ -7,6 +7,7 @@ namespace App\Services\Asset;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Contract\Contract;
 use App\Models\Settings\Location;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
@@ -75,6 +76,23 @@ class AssetBulkActionService
             }
 
             return $moved;
+        });
+    }
+
+    /**
+     * Puts rented assets that have no contract onto one contract. Returns how many were linked.
+     *
+     * @param  Collection<int, Asset>  $assets
+     */
+    public function linkContract(Collection $assets, Contract $contract): int
+    {
+        return DB::transaction(function () use ($assets, $contract) {
+            foreach ($assets as $asset) {
+                $asset->update(['contract_id' => $contract->id]);
+                AuditLog::record('Linked asset to contract', "{$asset->asset_code} → {$contract->code}", subject: $asset);
+            }
+
+            return $assets->count();
         });
     }
 

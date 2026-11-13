@@ -7,6 +7,7 @@ use App\Http\Requests\Asset\BulkRecallAssetRequest;
 use App\Http\Requests\Asset\BulkReceiveAssetRequest;
 use App\Http\Requests\Asset\BulkTransferAssetRequest;
 use App\Http\Requests\Asset\BulkWriteoffAssetRequest;
+use App\Http\Requests\Asset\LinkContractRequest;
 use App\Http\Requests\Asset\RecallAssetRequest;
 use App\Http\Requests\Asset\ReceiveAssetRequest;
 use App\Http\Requests\Asset\RelocateAssetsRequest;
@@ -18,6 +19,7 @@ use App\Http\Resources\Asset\AssetResource;
 use App\Http\Resources\Contract\ContractResource;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Contract\Contract;
 use App\Models\Settings\Location;
 use App\Services\Asset\AssetActionGuard;
 use App\Services\Asset\AssetBulkActionService;
@@ -272,6 +274,15 @@ class AssetController extends Controller
         $moved = $this->bulk->relocate($request->assets(), $location, $request->user(), $data['note'] ?? null);
 
         return response()->json(['message' => 'success', 'updated' => $moved->count()]);
+    }
+
+    /** Put rented assets that have no contract onto one open hardware contract (assets.edit). */
+    public function bulkContract(LinkContractRequest $request): JsonResponse
+    {
+        $contract = Contract::findOrFail($request->validated('contract_id'));
+        $count = $this->bulk->linkContract($request->assets(), $contract);
+
+        return response()->json(['message' => 'success', 'updated' => $count]);
     }
 
     /** Hand many Ready assets to one owner (assets.transfer). */

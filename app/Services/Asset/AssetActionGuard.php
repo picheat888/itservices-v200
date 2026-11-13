@@ -5,6 +5,7 @@
 
 namespace App\Services\Asset;
 
+use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\User;
@@ -153,6 +154,18 @@ class AssetActionGuard
     {
         return $assets->contains(fn (Asset $a) => ! in_array($a->status, [AssetStatus::Deployed, AssetStatus::Common], true))
             ? $this->refused('relocate_not_in_use')
+            : Response::allow();
+    }
+
+    /**
+     * Only rented assets with no contract that are still in the register take a contract in bulk.
+     *
+     * @param  Collection<int, Asset>  $assets
+     */
+    public function canLinkContract(Collection $assets): Response
+    {
+        return $assets->contains(fn (Asset $a) => $a->source !== AssetSource::Rented || $a->contract_id !== null || $a->status === AssetStatus::Writeoff)
+            ? $this->refused('link_not_free_rental')
             : Response::allow();
     }
 
