@@ -21,13 +21,16 @@ use Illuminate\Support\Collection;
 
 class AssetListService
 {
+    /** The source filter's extra value: rented assets that still need a contract (Asset::rentedUnlinked). */
+    public const SOURCE_RENTED_UNLINKED = 'rented_unlinked';
+
     /** What an asset row renders with. */
     private const ROW_RELATIONS = ['contract.vendor', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department', 'latestHandover'];
 
     /**
      * The register, newest first, searched and filtered by type / source / status / warehouse (type and warehouse by name).
      *
-     * @param  array{search: mixed, type: ?string, source: ?string, status: ?string, warehouse: ?string, per_page: int}  $filters
+     * @param  array{search: mixed, type: ?string, source: mixed, status: ?string, warehouse: ?string, per_page: int}  $filters
      */
     public function page(array $filters): LengthAwarePaginator
     {
@@ -46,8 +49,11 @@ class AssetListService
         if ($filters['type'] !== null) {
             $query->whereHas('category', fn ($c) => $c->where('name', $filters['type']));
         }
-        if ($filters['source'] !== null) {
-            $query->where('source', $filters['source']);
+        $source = is_string($filters['source']) ? $filters['source'] : null;
+        if ($source === self::SOURCE_RENTED_UNLINKED) {
+            $query->rentedUnlinked();
+        } elseif ($source !== null) {
+            $query->where('source', $source);
         }
         if ($filters['status'] !== null) {
             $query->where('status', $filters['status']);
@@ -112,6 +118,7 @@ class AssetListService
                 'vendor' => $c->vendor?->name,
                 'vendor_th' => $c->vendor?->name_th,
                 'details' => $c->details,
+                'end_date' => $c->end_date?->toDateString(),
                 'closed' => $c->cancelled_at !== null || $c->expired_at !== null,
             ]);
     }

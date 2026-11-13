@@ -18,6 +18,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Database\Factories\AssetFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -213,6 +214,14 @@ class Asset extends Model
             ->max() ?? 0;
 
         return sprintf('%s%04d', $prefix, $last + 1);
+    }
+
+    /** Rented assets with no contract yet that are still in the register (a return to the lessor is a write-off too). */
+    public function scopeRentedUnlinked(Builder $query): void
+    {
+        $query->where('source', AssetSource::Rented)
+            ->whereNull('contract_id')
+            ->where('status', '!=', AssetStatus::Writeoff);
     }
 
     /** True when the asset is actively deployed to an owner (blocks a direct transfer). */

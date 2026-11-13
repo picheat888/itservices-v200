@@ -34,7 +34,7 @@ class SidebarBadgeService
     /**
      * All badge counts for one user, keyed by the sidebar nav item id.
      *
-     * @return array{employees: int, access: int, tickets: int, requests: int, assets: int, my_assets: int, contracts: int, stock: int}
+     * @return array{employees: int, access: int, tickets: int, requests: int, assets: int, assets_rented_unlinked: int, my_assets: int, contracts: int, stock: int}
      */
     public function forUser(?User $user): array
     {
@@ -46,6 +46,8 @@ class SidebarBadgeService
             'tickets' => $this->gatedAny($user, ['tickets.module', 'tickets.create', 'tickets.my'], fn () => $this->ticketsNeedingAttention($user)),
             // assets.view plus the nav item's assets.receive.
             'assets' => $this->gated($user, ['assets.view', 'assets.receive'], fn () => $this->assetsPendingReturn()),
+            // Not a menu badge: the asset page's "rented, no contract" shortcut.
+            'assets_rented_unlinked' => $this->gated($user, ['assets.view', 'assets.edit'], fn () => Asset::rentedUnlinked()->count()),
             'my_assets' => $this->myAssetsPendingAcceptance($user),
             'contracts' => $this->gated($user, ['contracts.view'], fn () => $this->contractsNeedingRenewal()),
             'stock' => $this->gated($user, ['stock.view'], fn () => $this->stockNeedingAttention($user)),

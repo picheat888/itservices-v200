@@ -208,12 +208,27 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(0, $badges['employees']);
         $this->assertSame(0, $badges['contracts']);
         $this->assertSame(0, $badges['assets']);
+        $this->assertSame(0, $badges['assets_rented_unlinked']);
         $this->assertSame(0, $badges['my_assets']);
         $this->assertSame(0, $badges['access']);
         $this->assertSame(0, $badges['stock']);
         $this->assertSame(0, $badges['requests']);
         // tickets.create is granted, but this user filed nothing and may not take cases.
         $this->assertSame(0, $badges['tickets']);
+    }
+
+    public function test_the_rented_unlinked_count_needs_the_edit_right(): void
+    {
+        Asset::factory()->rented()->create(['contract_id' => null, 'status' => 'deployed']);
+        Asset::factory()->rented()->create(['contract_id' => null, 'status' => 'writeoff']);
+        Asset::factory()->rented()->create(['status' => 'deployed']);
+
+        $super = User::factory()->create(['role' => 'super']);
+        $this->assertSame(1, $this->actingAs($super)->getJson('/api/sidebar-badges')->assertOk()->json('data.assets_rented_unlinked'));
+
+        $viewer = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'assets.view', 'allowed' => true]);
+        $this->assertSame(0, $this->actingAs($viewer)->getJson('/api/sidebar-badges')->assertOk()->json('data.assets_rented_unlinked'));
     }
 
     public function test_the_tickets_badge_opens_on_any_key_that_shows_the_tickets_menu(): void
