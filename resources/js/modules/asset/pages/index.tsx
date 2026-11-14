@@ -116,7 +116,17 @@ const RENTED_UNLINKED = 'rented_unlinked';
 // Rented, no contract yet and still in the register (Asset::rentedUnlinked)
 const isFreeRental = (a: Asset) => a.source === 'rented' && a.contract_id === null && a.status !== 'writeoff';
 
-// "By type" buckets in stack order, colored by the status badge palette; one list drives legend, segments and counts
+/**
+ * The three lifecycle buckets the "By type" bars are split into, in stack order.
+ *
+ * `status` is the bucket's representative status, and it is what colors the bar segment: the
+ * card reads the same palette the status badges do (Settings -> Assets, so an admin who
+ * recolors "Ready" recolors this chart too) instead of picking colors of its own. Anything
+ * else would have the bar disagree with the badges sitting right below it on the same page.
+ *
+ * One list drives the legend, the bar segments and the per-row counts, so the three can
+ * never fall out of step.
+ */
 const TYPE_BUCKETS = [
     { key: 'ready', labelKey: 'asset_bucket_ready', status: 'ready' },
     { key: 'used', labelKey: 'asset_bucket_used', status: 'deployed' },
@@ -234,7 +244,12 @@ function AssetCoverCell({ asset }: { asset: Asset }) {
     return <span className="text-xs">{fmt.date(asset.cover_end)}</span>;
 }
 
-// "Warehouse / Place" cell: the warehouse while pooled or awaiting receipt, else the location (or the warehouse)
+/**
+ * Where an asset is, for the inventory's "Warehouse / Place" column: the warehouse while it sits
+ * in the pool (Ready, or waiting to be received back), otherwise where it was put to use (the
+ * location), falling back to the warehouse. The icon tells the two apart; the words say it to a
+ * screen reader too.
+ */
 function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) {
     const inPool = asset.status === 'ready' || asset.status === 'pending_return';
     const place = inPool
