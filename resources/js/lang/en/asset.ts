@@ -218,6 +218,13 @@ export const asset: Dict = {
     asset_location_save: 'Save location',
     asset_location_failed: 'Could not update the location',
 
+    // asset-link-contract-dialog.tsx — linking rented assets to a contract
+    asset_link_contract: 'Link contract',
+    asset_link_contract_title: 'Link a lease contract',
+    asset_link_contract_hint: 'Only open hardware contracts are listed',
+    asset_link_contract_failed: 'Could not link the contract',
+    asset_contract_ends: 'Ends {date}',
+
     // asset-writeoff-dialog.tsx — writing off with a disposal note
     asset_writeoff_title: 'Write off selected assets',
     asset_writeoff_reason: 'Write-off reason',
@@ -274,6 +281,7 @@ export const asset: Dict = {
     asset_refusal_lessor_not_ready: 'Only assets that are Ready to deploy can go back to the lessor. Recall or return these first: {codes}',
     asset_refusal_writeoff_not_ready: 'Only assets that are Ready to deploy can be written off. Recall or return these first: {codes}',
     asset_refusal_relocate_not_in_use: 'Only assets in use can have their location updated.',
+    asset_refusal_link_not_free_rental: 'Only rented assets without a contract can be linked.',
     asset_refusal_transfer_not_transferable: 'Only assets that are Ready or Common can be transferred.',
 
     // empty states — การ์ดและตารางที่ไม่มีข้อมูล

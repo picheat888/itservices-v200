@@ -202,6 +202,10 @@ export function useAssetMutations() {
             mutationFn: (v: { ids: number[]; location_id: number; note?: string }) => assetApi.updateLocation(v),
             onSuccess: invalidate,
         }),
+        linkContract: useMutation({
+            mutationFn: (v: { ids: number[]; contract_id: number }) => assetApi.linkContract(v),
+            onSuccess: invalidate,
+        }),
         bulkRecall: useMutation({
             mutationFn: (v: { ids: number[]; warehouse: string; reason?: string }) => assetApi.bulkRecall(v.ids, v.warehouse, v.reason),
             onSuccess: invalidate,

@@ -58,6 +58,7 @@ import {
     Filter,
     FlaskConicalOff,
     Layers,
+    Link2,
     Lock,
     MapPin,
     MoreHorizontal,
@@ -78,6 +79,7 @@ import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetEventBadge } from '../components/asset-event-badge';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { Party } from '../components/asset-history-tab';
+import { AssetLinkContractDialog } from '../components/asset-link-contract-dialog';
 import { AssetLocationDialog } from '../components/asset-location-dialog';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
@@ -91,7 +93,7 @@ import { PendingReturnButton } from '../components/pending-return-button';
 import { RentedUnlinkedButton } from '../components/rented-unlinked-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 import { coverDaysLeft } from '../lib/cover-days';
-import { bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
+import { allFreeRentals, bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -104,6 +106,8 @@ const LIST_KEYS = ['search', 'type', 'source', 'status', 'warehouse', 'page'];
 const ALL = '__all__';
 // The source filter's extra value (AssetListService::SOURCE_RENTED_UNLINKED)
 const RENTED_UNLINKED = 'rented_unlinked';
+// Rented, no contract yet and still in the register (Asset::rentedUnlinked)
+const isFreeRental = (a: Asset) => a.source === 'rented' && a.contract_id === null && a.status !== 'writeoff';
 
 /**
  * The three lifecycle buckets the "By type" bars are split into, in stack order.
@@ -360,7 +364,11 @@ export default function AssetsPage() {
     // Where each ticked asset came from, kept as rows are ticked (the selection spans pages, so
     // the rows themselves may no longer be loaded): Return to lessor is offered only for rented ones.
     const [selectedSource, setSelectedSource] = useState<Record<number, Asset['source']>>({});
-    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor'>(null);
+    // Ticked rented assets that have no contract yet (the link button needs all of them to be)
+    const [selectedFree, setSelectedFree] = useState<Record<number, boolean>>({});
+    const [bulkDialog, setBulkDialog] = useState<
+        null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor' | 'linkContract'
+    >(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
     // One asset leaving from its detail dialog — the same dialogs the bulk bar opens, for one id.
     // Closing only clears open: the id stays so the dialog keeps its content while it fades out.
@@ -550,6 +558,7 @@ export default function AssetsPage() {
     const toggleRow = (a: Asset, on: boolean) => {
         setSelectedIds((prev) => (on ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id)));
         if (on) setSelectedSource((prev) => ({ ...prev, [a.id]: a.source }));
+        if (on) setSelectedFree((prev) => ({ ...prev, [a.id]: isFreeRental(a) }));
         if (on) setSelectionStatus((s) => s ?? a.status);
     };
 
@@ -570,9 +579,11 @@ export default function AssetsPage() {
         // From the latest ticks, not this render's; the lock clears in the effect above once nothing is ticked
         setSelectedIds((prev) => toggleGroup(prev, groupIds, on, null, groupStatus).ids);
         if (on) setSelectedSource((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, a.source])) }));
+        if (on) setSelectedFree((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, isFreeRental(a)])) }));
         if (on) setSelectionStatus((locked) => locked ?? groupStatus);
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
+    const allSelectedFree = allFreeRentals(selectedIds, selectedFree);
 
     // Skeleton rows on a first load or a page/filter change, never on a background refresh
     const tableLoading = isLoading || (isFetching && isPlaceholderData);
@@ -1098,6 +1109,12 @@ export default function AssetsPage() {
                                         {t('asset_location_update')}
                                     </Button>
                                 )}
+                                {canEdit && allSelectedFree && (
+                                    <Button size="sm" onClick={() => setBulkDialog('linkContract')}>
+                                        <Link2 className="h-4 w-4" />
+                                        {t('asset_link_contract')}
+                                    </Button>
+                                )}
                                 {/* Write-off only once back in the pool (Ready) — anything still out must be
                                     recalled / returned to Ready first. */}
                                 {/* A rented asset goes back to its lessor through its own action (same permission as
@@ -1550,6 +1567,15 @@ export default function AssetsPage() {
             <AssetLocationDialog
                 ids={selectedIds}
                 open={bulkDialog === 'location'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetLinkContractDialog
+                ids={selectedIds}
+                open={bulkDialog === 'linkContract'}
                 onClose={() => setBulkDialog(null)}
                 onDone={() => {
                     setBulkDialog(null);
