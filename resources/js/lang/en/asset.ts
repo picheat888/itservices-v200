@@ -281,7 +281,7 @@ export const asset: Dict = {
     asset_refusal_lessor_not_ready: 'Only assets that are Ready to deploy can go back to the lessor. Recall or return these first: {codes}',
     asset_refusal_writeoff_not_ready: 'Only assets that are Ready to deploy can be written off. Recall or return these first: {codes}',
     asset_refusal_relocate_not_in_use: 'Only assets in use can have their location updated.',
-    asset_refusal_link_not_free_rental: 'Only rented assets without a contract can be linked. Clear the selection and pick again.',
+    asset_refusal_link_not_free_rental: 'Only rented assets without a contract can be linked. Take these out of the selection first: {codes}',
     asset_refusal_link_contract_not_open: 'This contract has closed. Pick another one.',
     asset_refusal_link_asset_missing: 'A selected asset no longer exists. Clear the selection and pick again.',
     asset_refusal_transfer_not_transferable: 'Only assets that are Ready or Common can be transferred.',

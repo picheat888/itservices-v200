@@ -42,6 +42,6 @@ class LinkContractRequest extends AssetActionRequest
 
     protected function passedValidation(): void
     {
-        $this->guard()->canLinkContract($this->assets())->authorize();
+        $this->guard()->assertLinkable($this->assets());
     }
 }

@@ -202,9 +202,10 @@ export function useAssetMutations() {
             mutationFn: (v: { ids: number[]; location_id: number; note?: string }) => assetApi.updateLocation(v),
             onSuccess: invalidate,
         }),
+        // A refusal also refreshes: assets someone else linked drop out of the "no contract" list
         linkContract: useMutation({
             mutationFn: (v: { ids: number[]; contract_id: number }) => assetApi.linkContract(v),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         bulkRecall: useMutation({
             mutationFn: (v: { ids: number[]; warehouse: string; reason?: string }) => assetApi.bulkRecall(v.ids, v.warehouse, v.reason),

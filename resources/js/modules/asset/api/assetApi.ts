@@ -126,7 +126,7 @@ export const assetApi = {
     // keeps the asset, only the place changes. Gated by assets.edit.
     updateLocation: (payload: { ids: number[]; location_id: number; note?: string }) => mutate<void>('post', '/assets/bulk-location', payload),
     // Put rented assets that have no contract onto one open hardware contract (assets.edit).
-    linkContract: (payload: { ids: number[]; contract_id: number }) => mutate<{ updated: number }>('post', '/assets/bulk-contract', payload),
+    linkContract: (payload: { ids: number[]; contract_id: number }) => mutate<void>('post', '/assets/bulk-contract', payload),
     // Bulk recall (Common → pool, or force-recall any out asset) into a warehouse.
     bulkRecall: (ids: number[], warehouse: string, reason?: string) => mutate<void>('post', '/assets/bulk-recall', { ids, warehouse, reason }),
     // Bulk receive many pending-return assets back into a warehouse.

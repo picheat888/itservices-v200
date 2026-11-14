@@ -116,17 +116,7 @@ const RENTED_UNLINKED = 'rented_unlinked';
 // Rented, no contract yet and still in the register (Asset::rentedUnlinked)
 const isFreeRental = (a: Asset) => a.source === 'rented' && a.contract_id === null && a.status !== 'writeoff';
 
-/**
- * The three lifecycle buckets the "By type" bars are split into, in stack order.
- *
- * `status` is the bucket's representative status, and it is what colors the bar segment: the
- * card reads the same palette the status badges do (Settings -> Assets, so an admin who
- * recolors "Ready" recolors this chart too) instead of picking colors of its own. Anything
- * else would have the bar disagree with the badges sitting right below it on the same page.
- *
- * One list drives the legend, the bar segments and the per-row counts, so the three can
- * never fall out of step.
- */
+// "By type" buckets in stack order, colored by the status badge palette; one list drives legend, segments and counts
 const TYPE_BUCKETS = [
     { key: 'ready', labelKey: 'asset_bucket_ready', status: 'ready' },
     { key: 'used', labelKey: 'asset_bucket_used', status: 'deployed' },
@@ -176,8 +166,7 @@ function AssetOverviewSkeleton() {
                     <div className={cn(CARD_HEADING, 'border-border border-b px-5 py-3.5')}>
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                     </div>
-                    {/* By type: one line per row — name, the split bar under its counts, the total —
-                        for the rows shown folded (TYPE_ROWS_SHOWN and the "others" row), then the toggle. */}
+                    {/* By type: name, split bar and total per folded row, then the toggle */}
                     <div className="space-y-4 p-5">
                         {Array.from({ length: TYPE_ROWS_SHOWN + 1 }).map((_, i) => (
                             <div key={i} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3">
@@ -189,8 +178,7 @@ function AssetOverviewSkeleton() {
                         <div className="bg-muted mx-auto h-3 w-24 animate-pulse rounded" />
                     </div>
                 </Card>
-                {/* Activity chart: header with its view switch, then twelve bars of
-                    staggered height so the placeholder reads as a chart, not a block. */}
+                {/* Activity chart: header with its view switch, then twelve staggered placeholder bars */}
                 <Card className="flex flex-col overflow-hidden">
                     <div className={cn(CARD_HEADING, 'border-border flex items-center justify-between border-b px-5 py-3.5')}>
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
@@ -246,12 +234,7 @@ function AssetCoverCell({ asset }: { asset: Asset }) {
     return <span className="text-xs">{fmt.date(asset.cover_end)}</span>;
 }
 
-/**
- * Where an asset is, for the inventory's "Warehouse / Place" column: the warehouse while it sits
- * in the pool (Ready, or waiting to be received back), otherwise where it was put to use (the
- * location), falling back to the warehouse. The icon tells the two apart; the words say it to a
- * screen reader too.
- */
+// "Warehouse / Place" cell: the warehouse while pooled or awaiting receipt, else the location (or the warehouse)
 function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) {
     const inPool = asset.status === 'ready' || asset.status === 'pending_return';
     const place = inPool
@@ -263,9 +246,7 @@ function AssetPlace({ asset, t }: { asset: Asset; t: (key: string) => string }) 
     const Icon = place.kind === 'warehouse' ? Warehouse : MapPin;
     const kindLabel = t(place.kind === 'warehouse' ? 'asset_place_warehouse' : 'asset_place_location');
 
-    // `relative` anchors the sr-only label to this cell. Without it the label's position:absolute
-    // resolves against the document (nothing up to the app's scrolling <main> is positioned), so
-    // labels in lower rows stretched the page and added a second, outer scrollbar.
+    // `relative` keeps the sr-only label inside this cell, or lower rows stretch the page with a second scrollbar
     return (
         <span className="relative flex max-w-[7rem] min-w-0 items-center gap-1.5">
             <Icon className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -296,8 +277,7 @@ export default function AssetsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     // The tab lives in ?tab= (useTabParam): reloads / shared links are exact, Back steps through tabs.
     const [tab, setTab] = useTabParam(isAssetTab, 'overview');
-    // Unfolds the "Assets in the system" card — a way of looking at one card, so component
-    // state rather than a URL parameter.
+    // Unfolds the "Assets in the system" card (view state, not a URL param)
     const [showAllTypes, setShowAllTypes] = useState(false);
 
     // A tab switch drops the list keys of the tab being left (rows-per-page stays).
@@ -306,8 +286,7 @@ export default function AssetsPage() {
         setTab(next, { extra: (p) => LIST_KEYS.forEach((key) => p.delete(key)) });
     };
 
-    // The Overview tab is gated by assets.view_dashboard — bounce a role without it to Inventory
-    // (replace: the reader never chose Overview, so Back must not bounce them into it again).
+    // Overview needs assets.view_dashboard: others go to Inventory with replace, so Back does not bounce
     useEffect(() => {
         if (tab === 'overview' && !canViewOverview) {
             setTab('inventory', { replace: true });
@@ -367,8 +346,7 @@ export default function AssetsPage() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
-    // Where each ticked asset came from, kept as rows are ticked (the selection spans pages, so
-    // the rows themselves may no longer be loaded): Return to lessor is offered only for rented ones.
+    // Each ticked asset's source, kept across pages: Return to lessor is offered for rented ones only
     const [selectedSource, setSelectedSource] = useState<Record<number, Asset['source']>>({});
     // Which ticked assets are rented with no contract; the link button needs every one
     const [selectedFree, setSelectedFree] = useState<Record<number, boolean>>({});
@@ -376,8 +354,7 @@ export default function AssetsPage() {
         null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor' | 'linkContract'
     >(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
-    // One asset leaving from its detail dialog — the same dialogs the bulk bar opens, for one id.
-    // Closing only clears open: the id stays so the dialog keeps its content while it fades out.
+    // One asset leaving from its detail dialog; closing keeps the id so the dialog holds its content while fading
     const [exitAsset, setExitAsset] = useState<{ id: number; kind: 'writeoff' | 'returnToVendor'; open: boolean } | null>(null);
     const closeExit = () => setExitAsset((e) => (e ? { ...e, open: false } : e));
 
@@ -388,12 +365,9 @@ export default function AssetsPage() {
     const warehouses = useMemo(() => warehousesQuery.data ?? [], [warehousesQuery.data]);
     const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
-    // The detail drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
-    // drops the param. Opening seeds the query cache with the clicked row so the drawer shows
-    // instantly; a deep-link (id not on the current page) fetches by id. URL = single source of truth.
+    // Detail drawer lives in ?view=<id>; opening seeds the cache from the row, a deep link fetches by id
     const qc = useQueryClient();
-    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
-    // `!= null` guard and used to fetch /assets/NaN.
+    // Only a real record id opens the drawer (Number('abc') is NaN, which passes `!= null`)
     const openId = toRecordId(searchParams.get('view'));
     const detailQuery = useAsset(openId);
     const detail = detailQuery.data;
@@ -448,13 +422,11 @@ export default function AssetsPage() {
     const { data: transferLog, isLoading: transfersLoading, isFetching: transfersFetching, isPlaceholderData: transfersPlaceholder } = transfersQuery;
     const marks = useTabFreshness(tab, { overview: [summaryQuery], inventory: [listQuery], transfers: [transfersQuery] });
     const transfers = transferLog?.data ?? [];
-    // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
-    // by ProtectedRoute before any page draws).
+    // Header counts come from the sidebar badge query, loaded before any page draws
     const pendingReturnCount = useSidebarBadge('assets');
     const rentedUnlinkedCount = useSidebarBadge('assets_rented_unlinked');
 
-    // Transfer log — the same columns the asset's own History tab uses, plus the asset itself,
-    // since this list spans every asset in the system.
+    // Transfer log: the History tab's columns plus the asset itself
     const transferLogColumns: Column<AssetTransferLog>[] = [
         {
             key: 'date',
@@ -499,9 +471,7 @@ export default function AssetsPage() {
     });
     const tableRows = [...newAssets.pinned, ...splitPinned(rows, newAssets.pinned, (a) => a.id)];
 
-    // Pagination footer values with fallbacks so the footer (incl. "Rows per page") renders
-    // even during the initial load on a fresh reload, when `meta` is not yet available —
-    // matching the Stock/Contract tables whose footers stay visible.
+    // Footer values with fallbacks so the footer shows during the first load too
     const totalRows = meta?.total ?? 0;
     const perPageDisplay = meta?.per_page ?? perPage;
     const currentPage = meta?.current_page ?? page;
@@ -563,9 +533,7 @@ export default function AssetsPage() {
     const rowSelectable = (a: Asset) => canTickRow(a.status, selectionStatus, bulkPerms);
     // A status that can never take part in any bulk action (e.g. written-off) shows no checkbox at all.
     const rowActionable = (a: Asset) => bulkActionFor(a.status) != null;
-    // A group is locked and this row could normally be bulk-actioned, but its status differs from the
-    // locked group — so it is temporarily off-limits. These rows get a lock icon + dimmed treatment
-    // (as opposed to write-off rows, which are never selectable and show nothing).
+    // Actionable but outside the locked status group: lock icon and dimmed (write-off rows show nothing)
     const rowLockedOut = (a: Asset) => selectionStatus != null && rowActionable(a) && a.status !== selectionStatus;
 
     const toggleRow = (a: Asset, on: boolean) => {
@@ -600,8 +568,7 @@ export default function AssetsPage() {
 
     // Skeleton rows on a first load or a page/filter change, never on a background refresh
     const tableLoading = isLoading || (isFetching && isPlaceholderData);
-    // Steady pager + sticky header (see the hooks): hold the height while a page loads; let the
-    // header stick while the table fits its width.
+    // Hold the table height while a page loads; the header sticks while the table fits its width
     const tableBoxRef = useRef<HTMLDivElement>(null);
     const heldTableHeight = useHeldHeight(tableBoxRef, tableLoading);
     const tableFitsWidth = useTableFitsWidth(tableBoxRef);
@@ -632,8 +599,7 @@ export default function AssetsPage() {
 
     const sourceLabel = (value: string) =>
         value === 'purchased' ? t('asset_purchase') : value === RENTED_UNLINKED ? t('asset_source_rented_unlinked') : t('asset_lease');
-    // Active filter chips (Stock pattern): one removable chip per set filter; also drives
-    // the FilterPopover's count badge. Search has its own input, so it is not a chip.
+    // One removable chip per set filter (search excluded); also the FilterPopover's count
     const activeChips = [
         typeFilter ? { key: 'type', label: typeFilter, clear: () => setTypeFilter('') } : null,
         sourceFilter ? { key: 'source', label: sourceLabel(sourceFilter), clear: () => setSourceFilter('') } : null,
@@ -642,10 +608,7 @@ export default function AssetsPage() {
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
     const activeFilterCount = activeChips.length;
 
-    // The card grows a row per category, and categories are master data an admin can keep
-    // adding to — so it shows the biggest few and folds the rest into one "other" row, which
-    // keeps every asset in the picture at a fixed height. Folding only pays off from two
-    // leftover types up; a single one is shown as itself. The list arrives sorted by count.
+    // Biggest few categories, the rest folded into one "other" row from two leftovers up; the list arrives sorted
     const allTypeBars = summary?.by_type ?? [];
     const foldTypes = !showAllTypes && allTypeBars.length > TYPE_ROWS_SHOWN + 1;
     const typeBars: TypeBar[] = foldTypes
@@ -658,8 +621,7 @@ export default function AssetsPage() {
         const c = categories.find((x) => x.name === type);
         return c ? localName(c, lang) : type;
     };
-    // Spoken/hover description of a bar — the row's counts are marked by color alone, so the
-    // written-out split is what a screen reader and a hover both get.
+    // Spoken and hover text of a bar, since its counts are marked by color alone
     const typeLabel = (b: TypeBar) => (b.type === OTHER_TYPES ? t('asset_type_others').replace('{n}', fmtN(b.folded ?? 0)) : catLabel(b.type));
     const typeBarTitle = (b: TypeBar) => `${typeLabel(b)}: ${TYPE_BUCKETS.map((s) => `${fmtN(b[s.key])} ${t(s.labelKey)}`).join(', ')}`;
 
@@ -741,9 +703,7 @@ export default function AssetsPage() {
                             />
                         </div>
 
-                        {/* The two cards stand the same height: the row stretches both to the taller,
-                            and the activity chart grows into whatever height "By type" takes —
-                            folded or opened to every category. */}
+                        {/* Both cards stretch to the taller; the activity chart grows into the "By type" height */}
                         <div className="grid gap-4 lg:grid-cols-2">
                             <Card className="overflow-hidden">
                                 <div className={cn(CARD_HEADING, 'border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3.5')}>
@@ -751,8 +711,7 @@ export default function AssetsPage() {
                                         <Layers className="text-muted-foreground h-4 w-4" />
                                         <span className="text-sm font-semibold">{t('asset_by_type')}</span>
                                     </div>
-                                    {/* Legend — the one place the three colors are named (the counts over the bars
-                                        wear them), then what the number closing each row is. */}
+                                    {/* Legend: the one place the three colors are named, then what each row's last number is */}
                                     <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
                                         {TYPE_BUCKETS.map((s) => (
                                             <span key={s.key} className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -765,8 +724,7 @@ export default function AssetsPage() {
                                 </div>
                                 <div className="space-y-4 p-5">
                                     {typeBars.map((b, i) => (
-                                        // One line per type: icon + name, the bar with each bucket's count over its
-                                        // piece, then the total — name and total sit level with the bar itself.
+                                        // One line per type: icon + name, the bar with counts over each piece, then the total
                                         <div
                                             key={b.type}
                                             className="row-in grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-end gap-3"
@@ -1081,8 +1039,7 @@ export default function AssetsPage() {
                                     {t('asset_clear')}
                                 </button>
                                 <div className="flex-1" />
-                                {/* Contextual bulk actions per locked status group. A Common (shared)
-                                    group can be re-assigned to a person (Transfer) or pulled to the pool (Recall). */}
+                                {/* Bulk actions per locked status group; a Common group can be transferred or recalled */}
                                 {(selectionStatus === 'ready' || selectionStatus === 'common') && canTransfer && (
                                     <Button size="sm" onClick={() => setBulkDialog('transfer')}>
                                         <Share2 className="h-4 w-4" />
@@ -1114,8 +1071,7 @@ export default function AssetsPage() {
                                         {t('asset_mark_received')}
                                     </Button>
                                 )}
-                                {/* A desk move: the holder keeps the asset, only the place changes. Offered
-                                    for both in-use groups and gated by assets.edit, not assets.transfer. */}
+                                {/* Desk move: the holder keeps the asset; in-use groups, assets.edit not assets.transfer */}
                                 {(selectionStatus === 'deployed' || selectionStatus === 'common') && canEdit && (
                                     <Button size="sm" variant="outline" onClick={() => setBulkDialog('location')}>
                                         <MapPin className="h-4 w-4" />
@@ -1128,10 +1084,7 @@ export default function AssetsPage() {
                                         {t('asset_link_contract')}
                                     </Button>
                                 )}
-                                {/* Write-off only once back in the pool (Ready) — anything still out must be
-                                    recalled / returned to Ready first. */}
-                                {/* A rented asset goes back to its lessor through its own action (same permission as
-                                    a write-off), so the return is recorded as such — not as a reason anyone could rename. */}
+                                {/* Write-off and return to lessor only from Ready; the return is its own action, not a reason */}
                                 {canRetire && selectionStatus === 'ready' && allSelectedRented && (
                                     <Button size="sm" variant="outline" onClick={() => setBulkDialog('returnToVendor')}>
                                         <Undo2 className="h-4 w-4" />
@@ -1206,9 +1159,7 @@ export default function AssetsPage() {
                                     </thead>
                                     <tbody>
                                         {tableLoading ? (
-                                            // As many rows as the page on screen, each as tall as a real two-line row,
-                                            // so the table keeps its height while the next page loads — a shorter
-                                            // table pulled the scroll position up and the page jumped.
+                                            // As many two-line skeleton rows as the page, so the table keeps its height (no scroll jump)
                                             Array.from({ length: rows.length || 8 }).map((_, r) => (
                                                 <tr key={`skeleton-${r}`} aria-hidden="true" className="border-border/60 border-b last:border-0">
                                                     {Array.from({ length: 14 }).map((_, c) => (
@@ -1316,8 +1267,7 @@ export default function AssetsPage() {
                                                         <td className="max-w-[8rem] truncate px-3 py-2.5 text-xs" title={a.serial ?? undefined}>
                                                             {a.serial || <span className="text-muted-foreground">—</span>}
                                                         </td>
-                                                        {/* Holder with their department under it (the department alone was a column
-                                                        empty for every pool and shared asset). */}
+                                                        {/* Holder with their department under it */}
                                                         <td className="max-w-[8.5rem] px-3 py-2.5">
                                                             {a.owner_name ? (
                                                                 <>
@@ -1361,8 +1311,7 @@ export default function AssetsPage() {
                                                         </td>
                                                         <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap tabular-nums">
                                                             {a.source === 'rented' ? (
-                                                                // The contract's rent is for the whole contract — repeated on every unit it read as
-                                                                // each one's value. A "Rented" badge with the contract code under it instead.
+                                                                // Rent belongs to the contract, so a "Rented" badge with its code, not a per-unit value
                                                                 <div className="flex flex-col items-end">
                                                                     <StatusBadge tone="violet" dot={false}>
                                                                         {t('asset_rented_badge')}
@@ -1510,8 +1459,7 @@ export default function AssetsPage() {
                 )}
             </Card>
 
-            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
-                render and said nothing. This says it instead. */}
+            {/* A dead ?view= link: the drawer renders nothing for a null record, so this says so */}
             <RecordMissingDialog open={detailMissing || editMissing} onClose={() => dialogs.close(['view', 'edit'])} />
             <AssetDetailDrawer
                 asset={detail ?? null}
@@ -1556,8 +1504,7 @@ export default function AssetsPage() {
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />
 
-            {/* Bulk actions on the current selection (locked to one status group) — reuse the
-                single-asset dialogs in their `ids` mode. */}
+            {/* Bulk actions on the selection, reusing the single-asset dialogs in their `ids` mode */}
             <AssetTransferDialog
                 ids={selectedIds}
                 open={bulkDialog === 'transfer'}

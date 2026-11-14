@@ -279,7 +279,7 @@ export const asset: Dict = {
     asset_refusal_lessor_not_ready: 'คืนผู้ให้เช่าได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ เรียกคืนหรือรับคืนรายการเหล่านี้ก่อน {codes}',
     asset_refusal_writeoff_not_ready: 'ตัดจำหน่ายได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ เรียกคืนหรือรับคืนรายการเหล่านี้ก่อน {codes}',
     asset_refusal_relocate_not_in_use: 'เปลี่ยนที่ตั้งได้เฉพาะทรัพย์สินที่ใช้งานอยู่',
-    asset_refusal_link_not_free_rental: 'ผูกสัญญาได้เฉพาะของเช่าที่ยังไม่มีสัญญา ยกเลิกการเลือกแล้วเลือกใหม่',
+    asset_refusal_link_not_free_rental: 'ผูกสัญญาได้เฉพาะของเช่าที่ยังไม่มีสัญญา เอารายการเหล่านี้ออกจากที่เลือกก่อน {codes}',
     asset_refusal_link_contract_not_open: 'สัญญานี้ปิดไปแล้ว เลือกสัญญาฉบับอื่น',
     asset_refusal_link_asset_missing: 'มีทรัพย์สินที่เลือกไว้ถูกลบไปแล้ว ยกเลิกการเลือกแล้วเลือกใหม่',
     asset_refusal_transfer_not_transferable: 'โอนได้เฉพาะทรัพย์สินที่พร้อมส่งมอบหรือใช้ร่วม',

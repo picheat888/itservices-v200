@@ -9,8 +9,10 @@ use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\User;
+use App\Support\Refusal;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class AssetActionGuard
 {
@@ -158,15 +160,18 @@ class AssetActionGuard
     }
 
     /**
-     * Only rented assets with no contract that are still in the register take a contract in bulk.
+     * Bulk linking takes only rented assets with no contract that are still in the register; the refusal names the rest.
      *
      * @param  Collection<int, Asset>  $assets
+     *
+     * @throws ValidationException
      */
-    public function canLinkContract(Collection $assets): Response
+    public function assertLinkable(Collection $assets): void
     {
-        return $assets->contains(fn (Asset $a) => $a->source !== AssetSource::Rented || $a->contract_id !== null || $a->status === AssetStatus::Writeoff)
-            ? $this->refused('link_not_free_rental')
-            : Response::allow();
+        $blocked = $assets->filter(fn (Asset $a) => $a->source !== AssetSource::Rented || $a->contract_id !== null || $a->status === AssetStatus::Writeoff);
+        if ($blocked->isNotEmpty()) {
+            Refusal::fail('link_not_free_rental', ['codes' => $blocked->pluck('asset_code')->implode(', ')]);
+        }
     }
 
     public function canEdit(?User $user): Response

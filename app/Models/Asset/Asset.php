@@ -34,10 +34,7 @@ class Asset extends Model
 
     use RecordsActors;
 
-    /**
-     * Bind to the flat AssetFactory explicitly — factory auto-discovery would look for
-     * Database\Factories\Asset\AssetFactory under this domain sub-namespace and miss it.
-     */
+    /** The flat AssetFactory: auto-discovery would look under Database\Factories\Asset and miss it. */
     protected static function newFactory(): AssetFactory
     {
         return AssetFactory::new();
@@ -78,10 +75,7 @@ class Asset extends Model
         return $this->belongsTo(User::class, 'written_off_by');
     }
 
-    /**
-     * Who handed a rented asset back to its lessor (returned_to_vendor_by, stamped with
-     * returned_to_vendor_at by AssetService::returnToVendor); null for any other asset.
-     */
+    /** Who returned a rented asset to its lessor (stamped by AssetService::returnToVendor); null otherwise. */
     public function returnedToVendorBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'returned_to_vendor_by');
@@ -135,11 +129,7 @@ class Asset extends Model
         return $this->belongsTo(AssetModel::class, 'model_id');
     }
 
-    /**
-     * The employee who currently holds this asset (null for pooled or shared assets).
-     * Named ownerEmployee, not owner, because the `owner` string column would shadow
-     * an owner() relation.
-     */
+    /** The employee holding this asset (null when pooled or shared); not owner(), which the `owner` column would shadow. */
     public function ownerEmployee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'owner_employee_id');
@@ -166,14 +156,7 @@ class Asset extends Model
         return $this->hasMany(Ticket::class, 'related_asset_id')->latest();
     }
 
-    /**
-     * Auto-generate an INK-IT-YY-NNNN Asset code on create, and stamp the write-off:
-     * written_off_at / written_off_by (who) are set when the status becomes writeoff (created written
-     * off, retired, or edited to it) and cleared, with the write-off reason, when it leaves it (a
-     * write-off cancelled). A return to the lessor (returned_to_vendor_at / _by) is a kind of
-     * write-off and is cleared with it. The bulk write-off and the return are query updates, so
-     * AssetService::bulkSetStatus / returnToVendor stamp them themselves.
-     */
+    /** Asset code on create; write-off stamps set on entering writeoff and cleared (with the return to lessor) on leaving it. */
     protected static function booted(): void
     {
         static::creating(function (Asset $asset) {
@@ -199,10 +182,7 @@ class Asset extends Model
         });
     }
 
-    /**
-     * Build the Asset code as INK-IT-YY-NNNN: a fixed INK-IT prefix, the 2-digit
-     * year, and a 4-digit running number that restarts each year.
-     */
+    /** INK-IT-YY-NNNN: fixed prefix, 2-digit year, and a running number that restarts each year. */
     public function generateAssetCode(): string
     {
         $prefix = 'INK-IT-'.now()->format('y').'-';
@@ -236,34 +216,22 @@ class Asset extends Model
         return $this->owner_employee_id !== null;
     }
 
-    /**
-     * The current holder's identifier for display: the employee's code when an employee
-     * holds it (read from the FK — never stored), else the free-text shared/common-use
-     * label, else null (pooled). Employee data is never duplicated onto the asset.
-     */
+    /** Holder for display: the employee's code (read through the FK, never stored), else the shared label, else null. */
     public function ownerCode(): ?string
     {
         return $this->owner_employee_id ? $this->ownerEmployee?->code : $this->owner;
     }
 
-    /**
-     * The relevant cover end date: for a rented asset this is the linked contract's
-     * end date (read live — never stored on the asset); for a purchased asset it's
-     * the warranty end.
-     */
+    /** Cover end: the contract's end date for a rented asset (read live), the warranty end for a purchased one. */
     public function coverEndsOn(): ?Carbon
     {
         return $this->source === AssetSource::Rented ? $this->contract?->end_date : $this->warranty_end;
     }
 
-    /**
-     * Annualised value: a rented asset's monthly fee ×12 (taken from the linked
-     * contract), otherwise the raw purchase price stored on the asset.
-     */
+    /** Value per year: a rented asset's contract fee over its billing cycle, otherwise the stored purchase price. */
     public function annualValue(): float
     {
-        // A rented asset's value is its contract's per-period fee, so the year is whatever
-        // that contract's billing cycle makes it — not always twelve months of it.
+        // The fee is per billing cycle, so the year depends on the contract's cycle
         return $this->source === AssetSource::Rented ? ($this->contract?->annualValue() ?? 0.0) : (float) $this->value;
     }
 }

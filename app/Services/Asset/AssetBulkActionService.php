@@ -89,7 +89,7 @@ class AssetBulkActionService
         return DB::transaction(function () use ($assets, $contract) {
             // Re-read under lock so an asset someone linked after the check is refused, not overwritten
             $assets = Asset::whereKey($assets->map(fn (Asset $a) => $a->getKey())->all())->lockForUpdate()->get();
-            $this->guard->canLinkContract($assets)->authorize();
+            $this->guard->assertLinkable($assets);
 
             foreach ($assets as $asset) {
                 $asset->update(['contract_id' => $contract->id]);

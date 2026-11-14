@@ -10,10 +10,10 @@ use App\Models\Contract\Contract;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Services\Asset\AssetBulkActionService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class AssetLinkContractTest extends TestCase
@@ -50,8 +50,13 @@ class AssetLinkContractTest extends TestCase
     public function test_an_array_source_is_ignored_not_a_500(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
+        $bought = Asset::factory()->create(['source' => 'purchased', 'status' => 'deployed']);
+        $rented = $this->freeRental();
 
-        $this->getJson('/api/assets?source[]=rented')->assertOk();
+        // Ignored, not applied: the purchased asset is still listed
+        $ids = collect($this->getJson('/api/assets?source[]=rented')->assertOk()->json('data'))->pluck('id')->sort()->values()->all();
+
+        $this->assertSame(collect([$bought->id, $rented->id])->sort()->values()->all(), $ids);
     }
 
     public function test_contract_options_carry_the_end_date(): void
@@ -94,7 +99,9 @@ class AssetLinkContractTest extends TestCase
         $linked = Asset::factory()->rented()->create(['status' => 'deployed']);
 
         $this->postJson('/api/assets/bulk-contract', ['ids' => [$free->id, $linked->id], 'contract_id' => $lease->id])
-            ->assertStatus(422)->assertJsonPath('message', 'link_not_free_rental');
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'link_not_free_rental')
+            ->assertJsonPath('codes', $linked->asset_code);
 
         $this->assertNull($free->fresh()->contract_id);
     }
@@ -106,10 +113,10 @@ class AssetLinkContractTest extends TestCase
         $bought = Asset::factory()->create(['source' => 'purchased', 'status' => 'deployed']);
         $gone = $this->freeRental('writeoff');
 
-        foreach ([$bought, $gone] as $asset) {
-            $this->postJson('/api/assets/bulk-contract', ['ids' => [$asset->id], 'contract_id' => $lease->id])
-                ->assertStatus(422)->assertJsonPath('message', 'link_not_free_rental');
-        }
+        $this->postJson('/api/assets/bulk-contract', ['ids' => [$bought->id, $gone->id], 'contract_id' => $lease->id])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'link_not_free_rental')
+            ->assertJsonPath('codes', "{$bought->asset_code}, {$gone->asset_code}");
     }
 
     public function test_only_an_open_hardware_contract_is_accepted(): void
@@ -155,8 +162,8 @@ class AssetLinkContractTest extends TestCase
         try {
             app(AssetBulkActionService::class)->linkContract($checked, $second);
             $this->fail('A stale free rental must be refused.');
-        } catch (AuthorizationException $e) {
-            $this->assertSame('link_not_free_rental', $e->getMessage());
+        } catch (ValidationException $e) {
+            $this->assertSame(['message' => 'link_not_free_rental', 'codes' => $asset->asset_code], $e->response->getData(true));
         }
 
         $this->assertSame($first->id, $asset->fresh()->contract_id);
