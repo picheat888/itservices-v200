@@ -9,7 +9,7 @@ export interface BulkPermissions {
     forceRecall: boolean;
     edit: boolean;
     retire: boolean;
-    /** The list shows rented assets without a contract and the viewer may edit: every row in it can take one. */
+    /** True while the list shows rented assets without a contract to a viewer who may edit; every row there can be linked. */
     linkContract: boolean;
 }
 

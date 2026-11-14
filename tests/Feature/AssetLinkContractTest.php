@@ -122,10 +122,23 @@ class AssetLinkContractTest extends TestCase
 
         foreach ([$expired, $cancelled, $software] as $contract) {
             $this->postJson('/api/assets/bulk-contract', ['ids' => [$asset->id], 'contract_id' => $contract->id])
-                ->assertUnprocessable()->assertJsonValidationErrors('contract_id');
+                ->assertUnprocessable()
+                ->assertJsonPath('message', 'link_contract_not_open')
+                ->assertJsonPath('errors.contract_id.0', 'link_contract_not_open');
         }
 
         $this->assertNull($asset->fresh()->contract_id);
+    }
+
+    public function test_a_selected_asset_that_no_longer_exists_answers_a_code(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease();
+
+        $this->postJson('/api/assets/bulk-contract', ['ids' => [999999], 'contract_id' => $lease->id])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'link_asset_missing')
+            ->assertJsonValidationErrors(['ids.0' => 'link_asset_missing']);
     }
 
     public function test_an_asset_linked_after_the_check_is_not_overwritten(): void

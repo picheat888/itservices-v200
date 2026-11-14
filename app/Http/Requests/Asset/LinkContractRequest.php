@@ -31,6 +31,15 @@ class LinkContractRequest extends AssetActionRequest
         ];
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'contract_id.exists' => 'link_contract_not_open',
+            'ids.*.exists' => 'link_asset_missing',
+        ];
+    }
+
     protected function passedValidation(): void
     {
         $this->guard()->canLinkContract($this->assets())->authorize();

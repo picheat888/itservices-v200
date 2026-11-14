@@ -11,7 +11,7 @@ export interface AssetContractOption {
     vendor: string | null;
     vendor_th?: string | null;
     details: string | null;
-    /** Y-m-d */
+    /** End date, Y-m-d */
     end_date?: string | null;
     /** Cancelled or expired: listed only as the asset's current contract. */
     closed?: boolean;

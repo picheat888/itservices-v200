@@ -341,8 +341,7 @@ export default function AssetsPage() {
     const setSourceFilter = (value: string) => setListParams({ source: value });
     const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
     const setWarehouseFilter = (value: string) => setListParams({ warehouse: value });
-    // The header shortcuts: list one slice of the inventory, or — if already listed — show all again.
-    // Switching tab and filter is one URL write (tab change is a history step, like any tab click).
+    // Header shortcuts list one slice of the inventory; pressed again, they show everything
     const toggleShortcut = (key: 'status' | 'source', value: string) => {
         const listed = tab === 'inventory' && searchParams.get(key) === value;
         if (listed) {
@@ -371,7 +370,7 @@ export default function AssetsPage() {
     // Where each ticked asset came from, kept as rows are ticked (the selection spans pages, so
     // the rows themselves may no longer be loaded): Return to lessor is offered only for rented ones.
     const [selectedSource, setSelectedSource] = useState<Record<number, Asset['source']>>({});
-    // Ticked rented assets that have no contract yet (the link button needs all of them to be)
+    // Which ticked assets are rented with no contract; the link button needs every one
     const [selectedFree, setSelectedFree] = useState<Record<number, boolean>>({});
     const [bulkDialog, setBulkDialog] = useState<
         null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor' | 'linkContract'
