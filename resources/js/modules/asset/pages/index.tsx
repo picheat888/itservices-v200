@@ -88,6 +88,7 @@ import { TopPurchasedCard, TopRentedCard } from '../components/asset-top-tables'
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { PendingReturnButton } from '../components/pending-return-button';
+import { RentedUnlinkedButton } from '../components/rented-unlinked-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 import { coverDaysLeft } from '../lib/cover-days';
 import { bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
@@ -101,6 +102,8 @@ const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]
 const LIST_KEYS = ['search', 'type', 'source', 'status', 'warehouse', 'page'];
 
 const ALL = '__all__';
+// The source filter's extra value (AssetListService::SOURCE_RENTED_UNLINKED)
+const RENTED_UNLINKED = 'rented_unlinked';
 
 /**
  * The three lifecycle buckets the "By type" bars are split into, in stack order.
@@ -327,23 +330,25 @@ export default function AssetsPage() {
     const setSourceFilter = (value: string) => setListParams({ source: value });
     const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
     const setWarehouseFilter = (value: string) => setListParams({ warehouse: value });
-    // The strip's button: list the assets awaiting receipt, or — if already listed — show all again.
+    // The header shortcuts: list one slice of the inventory, or — if already listed — show all again.
     // Switching tab and filter is one URL write (tab change is a history step, like any tab click).
-    const showPendingReturns = () => {
-        const listed = tab === 'inventory' && searchParams.get('status') === 'pending_return';
+    const toggleShortcut = (key: 'status' | 'source', value: string) => {
+        const listed = tab === 'inventory' && searchParams.get(key) === value;
         if (listed) {
-            setListParams({ status: null, page: null });
+            setListParams({ [key]: null, page: null });
             return;
         }
         setSearchParams((sp) => {
             const next = new URLSearchParams(sp);
-            if (tab !== 'inventory') LIST_KEYS.forEach((key) => next.delete(key));
+            if (tab !== 'inventory') LIST_KEYS.forEach((k) => next.delete(k));
             next.set('tab', 'inventory');
-            next.set('status', 'pending_return');
+            next.set(key, value);
             next.delete('page');
             return next;
         });
     };
+    const showPendingReturns = () => toggleShortcut('status', 'pending_return');
+    const showRentedUnlinked = () => toggleShortcut('source', RENTED_UNLINKED);
     const setPage = (value: number | ((current: number) => number)) => {
         const next = typeof value === 'function' ? value(page) : value;
         setListParams({ page: next > 1 ? String(next) : null });
@@ -432,6 +437,7 @@ export default function AssetsPage() {
     // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
     // by ProtectedRoute before any page draws).
     const pendingReturnCount = useSidebarBadge('assets');
+    const rentedUnlinkedCount = useSidebarBadge('assets_rented_unlinked');
 
     // Transfer log — the same columns the asset's own History tab uses, plus the asset itself,
     // since this list spans every asset in the system.
@@ -513,10 +519,18 @@ export default function AssetsPage() {
     };
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
+    const linkFilterOn = canEdit && sourceFilter === RENTED_UNLINKED;
     const bulkActionFor = useCallback(
         (status: AssetStatus | null) =>
-            assetBulkAction(status, { transfer: canTransfer, receive: canReceive, forceRecall: canForceRecall, edit: canEdit, retire: canRetire }),
-        [canTransfer, canReceive, canForceRecall, canEdit, canRetire],
+            assetBulkAction(status, {
+                transfer: canTransfer,
+                receive: canReceive,
+                forceRecall: canForceRecall,
+                edit: canEdit,
+                retire: canRetire,
+                linkContract: linkFilterOn,
+            }),
+        [canTransfer, canReceive, canForceRecall, canEdit, canRetire, linkFilterOn],
     );
 
     const clearSelection = () => {
@@ -592,13 +606,13 @@ export default function AssetsPage() {
         setPage(1);
     };
 
+    const sourceLabel = (value: string) =>
+        value === 'purchased' ? t('asset_purchase') : value === RENTED_UNLINKED ? t('asset_source_rented_unlinked') : t('asset_lease');
     // Active filter chips (Stock pattern): one removable chip per set filter; also drives
     // the FilterPopover's count badge. Search has its own input, so it is not a chip.
     const activeChips = [
         typeFilter ? { key: 'type', label: typeFilter, clear: () => setTypeFilter('') } : null,
-        sourceFilter
-            ? { key: 'source', label: sourceFilter === 'purchased' ? t('asset_purchase') : t('asset_lease'), clear: () => setSourceFilter('') }
-            : null,
+        sourceFilter ? { key: 'source', label: sourceLabel(sourceFilter), clear: () => setSourceFilter('') } : null,
         statusFilter ? { key: 'status', label: t(ASSET_STATUS_META[statusFilter].key), clear: () => setStatusFilter('') } : null,
         warehouseFilter ? { key: 'warehouse', label: warehouseFilter, clear: () => setWarehouseFilter('') } : null,
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
@@ -638,6 +652,14 @@ export default function AssetsPage() {
                             count={pendingReturnCount}
                             active={tab === 'inventory' && statusFilter === 'pending_return'}
                             onToggle={showPendingReturns}
+                            t={t}
+                        />
+                    )}
+                    {canEdit && (
+                        <RentedUnlinkedButton
+                            count={rentedUnlinkedCount}
+                            active={tab === 'inventory' && sourceFilter === RENTED_UNLINKED}
+                            onToggle={showRentedUnlinked}
                             t={t}
                         />
                     )}
@@ -911,6 +933,12 @@ export default function AssetsPage() {
                                                         value: 'rented',
                                                         label: t('asset_lease'),
                                                         search: t('asset_lease'),
+                                                        icon: <ToneDot tone="violet" />,
+                                                    },
+                                                    {
+                                                        value: RENTED_UNLINKED,
+                                                        label: t('asset_source_rented_unlinked'),
+                                                        search: t('asset_source_rented_unlinked'),
                                                         icon: <ToneDot tone="violet" />,
                                                     },
                                                 ]}

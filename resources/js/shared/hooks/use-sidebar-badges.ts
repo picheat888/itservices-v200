@@ -2,8 +2,11 @@ import { http } from '@/shared/lib/http';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-/** "Needs attention" counts keyed by sidebar nav item id (my_assets: the avatar's pill); 0 for anything the user may not see. */
-export type SidebarBadges = Record<'employees' | 'access' | 'tickets' | 'requests' | 'assets' | 'my_assets' | 'contracts' | 'stock', number>;
+/** "Needs attention" counts keyed by sidebar nav item id (my_assets: the avatar's pill; assets_rented_unlinked: the asset page's shortcut); 0 for anything the user may not see. */
+export type SidebarBadges = Record<
+    'employees' | 'access' | 'tickets' | 'requests' | 'assets' | 'assets_rented_unlinked' | 'my_assets' | 'contracts' | 'stock',
+    number
+>;
 
 /** Query key for the combined badge counts — modules invalidate it after an action changes a count. */
 export const SIDEBAR_BADGES_KEY = ['sidebar-badges'] as const;
