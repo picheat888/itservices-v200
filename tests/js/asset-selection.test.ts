@@ -1,7 +1,14 @@
 // Asset list multi-select: which statuses can be ticked per permission (AST-11), and the status lock across pages (AST-10).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { allFreeRentals, bulkActionFor, toggleGroup, type BulkPermissions } from '../../resources/js/modules/asset/lib/selection.ts';
+import {
+    allFreeRentals,
+    bulkActionFor,
+    canTickRow,
+    selectionStillValid,
+    toggleGroup,
+    type BulkPermissions,
+} from '../../resources/js/modules/asset/lib/selection.ts';
 
 const none: BulkPermissions = { transfer: false, receive: false, forceRecall: false, edit: false, retire: false, linkContract: false };
 
@@ -29,6 +36,24 @@ test('with the link filter on, an edit-only role can tick every status but writt
     assert.equal(bulkActionFor('deployed', link), 'relocate');
     assert.equal(bulkActionFor('writeoff', link), null);
     assert.equal(bulkActionFor('ready', { ...none, edit: true }), null);
+});
+
+test('a row with no action has no tick, even when it matches the locked group', () => {
+    const editOnly = { ...none, edit: true };
+    const link = { ...editOnly, linkContract: true };
+    assert.equal(canTickRow('ready', null, link), true);
+    assert.equal(canTickRow('ready', 'ready', link), true);
+    assert.equal(canTickRow('ready', 'deployed', link), false);
+    // The link filter was removed with Ready rows ticked: no blank cell may still tick a Ready row
+    assert.equal(canTickRow('ready', 'ready', editOnly), false);
+});
+
+test('a selection whose status lost its action is dropped', () => {
+    const editOnly = { ...none, edit: true };
+    assert.equal(selectionStillValid(null, editOnly), true);
+    assert.equal(selectionStillValid('ready', { ...editOnly, linkContract: true }), true);
+    assert.equal(selectionStillValid('ready', editOnly), false);
+    assert.equal(selectionStillValid('deployed', editOnly), true);
 });
 
 test('the link button needs every ticked asset to be a free rental', () => {

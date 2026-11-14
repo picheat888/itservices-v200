@@ -93,7 +93,14 @@ import { PendingReturnButton } from '../components/pending-return-button';
 import { RentedUnlinkedButton } from '../components/rented-unlinked-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 import { coverDaysLeft } from '../lib/cover-days';
-import { allFreeRentals, bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
+import {
+    allFreeRentals,
+    bulkActionFor as assetBulkAction,
+    canTickRow,
+    selectionStillValid,
+    toggleGroup,
+    type BulkPermissions,
+} from '../lib/selection';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -528,26 +535,33 @@ export default function AssetsPage() {
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
     const linkFilterOn = canEdit && sourceFilter === RENTED_UNLINKED;
-    const bulkActionFor = useCallback(
-        (status: AssetStatus | null) =>
-            assetBulkAction(status, {
-                transfer: canTransfer,
-                receive: canReceive,
-                forceRecall: canForceRecall,
-                edit: canEdit,
-                retire: canRetire,
-                linkContract: linkFilterOn,
-            }),
+    const bulkPerms = useMemo<BulkPermissions>(
+        () => ({
+            transfer: canTransfer,
+            receive: canReceive,
+            forceRecall: canForceRecall,
+            edit: canEdit,
+            retire: canRetire,
+            linkContract: linkFilterOn,
+        }),
         [canTransfer, canReceive, canForceRecall, canEdit, canRetire, linkFilterOn],
     );
+    const bulkActionFor = useCallback((status: AssetStatus | null) => assetBulkAction(status, bulkPerms), [bulkPerms]);
 
     const clearSelection = () => {
         setSelectedIds([]);
         setSelectionStatus(null);
     };
 
-    // A row is tickable only if it starts (or matches) the active status group.
-    const rowSelectable = (a: Asset) => (selectionStatus ? a.status === selectionStatus : bulkActionFor(a.status) != null);
+    // Removing the link filter can leave the locked group with no action: drop that selection
+    useEffect(() => {
+        if (selectionStillValid(selectionStatus, bulkPerms)) return;
+        setSelectedIds([]);
+        setSelectionStatus(null);
+    }, [selectionStatus, bulkPerms]);
+
+    // A row is tickable only if its status has an action and starts (or matches) the active status group.
+    const rowSelectable = (a: Asset) => canTickRow(a.status, selectionStatus, bulkPerms);
     // A status that can never take part in any bulk action (e.g. written-off) shows no checkbox at all.
     const rowActionable = (a: Asset) => bulkActionFor(a.status) != null;
     // A group is locked and this row could normally be bulk-actioned, but its status differs from the

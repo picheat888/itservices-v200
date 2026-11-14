@@ -20,6 +20,16 @@ export function bulkActionFor(status: AssetStatus | null, can: BulkPermissions):
     return can.linkContract && status !== null && status !== 'writeoff' ? 'link_contract' : null;
 }
 
+/** A row's checkbox works when its status offers an action and matches the group a selection is locked to. */
+export function canTickRow(status: AssetStatus, locked: AssetStatus | null, can: BulkPermissions): boolean {
+    return bulkActionFor(status, can) !== null && (locked === null || status === locked);
+}
+
+/** False once the locked group's status offers no action (the link filter was removed), so the selection is dropped. */
+export function selectionStillValid(locked: AssetStatus | null, can: BulkPermissions): boolean {
+    return locked === null || bulkActionFor(locked, can) !== null;
+}
+
 /** True when something is ticked and every ticked asset is a rented one with no contract. */
 export function allFreeRentals(ids: readonly number[], free: Readonly<Record<number, boolean>>): boolean {
     return ids.length > 0 && ids.every((id) => free[id] === true);
