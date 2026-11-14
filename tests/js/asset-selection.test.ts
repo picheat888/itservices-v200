@@ -16,7 +16,10 @@ test('the other statuses keep their bulk actions', () => {
     assert.equal(bulkActionFor('common', { ...none, edit: true }), 'relocate');
     assert.equal(bulkActionFor('deployed', { ...none, forceRecall: true }), 'force_recall');
     assert.equal(bulkActionFor('pending_return', { ...none, receive: true }), 'receive');
-    assert.equal(bulkActionFor('writeoff', { transfer: true, receive: true, forceRecall: true, edit: true, retire: true, linkContract: false }), null);
+    assert.equal(
+        bulkActionFor('writeoff', { transfer: true, receive: true, forceRecall: true, edit: true, retire: true, linkContract: false }),
+        null,
+    );
 });
 
 test('with the link filter on, an edit-only role can tick every status but written off', () => {
