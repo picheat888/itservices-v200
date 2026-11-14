@@ -9,6 +9,8 @@ use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Services\Asset\AssetBulkActionService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
@@ -124,6 +126,27 @@ class AssetLinkContractTest extends TestCase
         }
 
         $this->assertNull($asset->fresh()->contract_id);
+    }
+
+    public function test_an_asset_linked_after_the_check_is_not_overwritten(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $first = $this->lease();
+        $second = $this->lease();
+        $asset = $this->freeRental();
+        $checked = collect([Asset::find($asset->id)]);
+
+        // Someone else links it between the request's check and the update
+        Asset::whereKey($asset->id)->update(['contract_id' => $first->id]);
+
+        try {
+            app(AssetBulkActionService::class)->linkContract($checked, $second);
+            $this->fail('A stale free rental must be refused.');
+        } catch (AuthorizationException $e) {
+            $this->assertSame('link_not_free_rental', $e->getMessage());
+        }
+
+        $this->assertSame($first->id, $asset->fresh()->contract_id);
     }
 
     public function test_linking_needs_the_edit_permission(): void

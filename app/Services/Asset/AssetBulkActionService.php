@@ -87,6 +87,10 @@ class AssetBulkActionService
     public function linkContract(Collection $assets, Contract $contract): int
     {
         return DB::transaction(function () use ($assets, $contract) {
+            // Re-read under lock: one linked by someone else since the request's check is refused, not overwritten
+            $assets = Asset::whereKey($assets->map(fn (Asset $a) => $a->getKey())->all())->lockForUpdate()->get();
+            $this->guard->canLinkContract($assets)->authorize();
+
             foreach ($assets as $asset) {
                 $asset->update(['contract_id' => $contract->id]);
                 AuditLog::record('Linked asset to contract', "{$asset->asset_code} → {$contract->code}", subject: $asset);
