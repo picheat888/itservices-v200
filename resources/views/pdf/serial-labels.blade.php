@@ -53,6 +53,11 @@
                                         <td>@if ($label['lot_no'])<span class="lbl">Lot:</span> {{ $label['lot_no'] }}@endif</td>
                                         <td class="cat">{{ $date }}</td>
                                     </tr>
+                                    @if ($warehouse ?? null)
+                                        <tr>
+                                            <td colspan="2"><span class="lbl">Warehouse:</span> {{ \Illuminate\Support\Str::limit($warehouse, 34) }}</td>
+                                        </tr>
+                                    @endif
                                 </table>
                             </div>
                         </td>

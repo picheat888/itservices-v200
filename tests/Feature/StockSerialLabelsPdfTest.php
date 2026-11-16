@@ -147,7 +147,8 @@ class StockSerialLabelsPdfTest extends TestCase
         $html = view('pdf.serial-labels', $seen[0])->render();
         $this->assertSame(2, substr_count($html, 'Lot:</span> '.$lotNo));
         $this->assertStringContainsString('21/10/2026', $html);
-        $this->assertStringNotContainsString('Main', $html);
+        // UAT STK-05-01: "…วันที่ของรายการ และคลัง" — the warehouse of the movement (received into Main)
+        $this->assertSame(2, substr_count($html, 'Warehouse:</span> Main'));
     }
 
     public function test_history_writes_month_names_in_english_like_the_rest_of_the_document(): void

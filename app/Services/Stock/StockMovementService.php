@@ -112,6 +112,8 @@ class StockMovementService
             'item' => $movement->item,
             'labels' => $labels,
             'date' => DateDisplay::date($movement->moved_at, null, 'en'),
+            // The movement's warehouse: where a receipt/return/transfer put the stock, where an issue took it from
+            'warehouse' => in_array($movement->type, StockMovement::TO_WAREHOUSE, true) ? $movement->to_label : $movement->from_label,
         ])->setPaper('a4', 'portrait');
 
         return ['bytes' => $pdf->output(), 'filename' => DocumentName::make('SerialLabels', [$movement->item?->sku])];
