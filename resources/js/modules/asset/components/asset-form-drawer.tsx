@@ -65,22 +65,31 @@ const EMPTY: FormState = {
     notes: '',
 };
 
-const toForm = (a: Asset): FormState => ({
-    category_id: a.category_id ? String(a.category_id) : '',
-    source: a.source,
-    model_id: a.model_id ? String(a.model_id) : '',
-    brand_id: a.brand_id ? String(a.brand_id) : '',
-    serial: a.serial ?? '',
-    tag: a.tag ?? '',
-    warehouse_id: a.warehouse_id ? String(a.warehouse_id) : '',
-    value: toMoneyText(a.value),
-    vendor_id: a.vendor_id ? String(a.vendor_id) : '',
-    purchase_date: a.purchase_date ?? '',
-    warranty_end: a.warranty_end ?? '',
-    warranty_lifetime: a.warranty_lifetime ?? false,
-    contract_id: a.contract_id ? String(a.contract_id) : '',
-    notes: a.notes ?? '',
-});
+/**
+ * The form copy of a saved asset. A rented asset's fee and lessor are its contract's, so they
+ * never seed the purchase fields: switching it to "purchased" starts them empty and the user
+ * enters the real price, vendor, purchase date and warranty.
+ */
+const toForm = (a: Asset): FormState => {
+    const bought = a.source !== 'rented';
+
+    return {
+        category_id: a.category_id ? String(a.category_id) : '',
+        source: a.source,
+        model_id: a.model_id ? String(a.model_id) : '',
+        brand_id: a.brand_id ? String(a.brand_id) : '',
+        serial: a.serial ?? '',
+        tag: a.tag ?? '',
+        warehouse_id: a.warehouse_id ? String(a.warehouse_id) : '',
+        value: bought ? toMoneyText(a.value) : '',
+        vendor_id: bought && a.vendor_id ? String(a.vendor_id) : '',
+        purchase_date: bought ? (a.purchase_date ?? '') : '',
+        warranty_end: bought ? (a.warranty_end ?? '') : '',
+        warranty_lifetime: bought ? (a.warranty_lifetime ?? false) : false,
+        contract_id: a.contract_id ? String(a.contract_id) : '',
+        notes: a.notes ?? '',
+    };
+};
 
 /** Small uppercase section heading (mirrors the View Details dialog). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
