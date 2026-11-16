@@ -133,13 +133,17 @@ class SidebarBadgeService
             $empty += $model::query()->whereDoesntHave('memberships', fn ($q) => $q->active())->count();
         }
 
-        // Only email groups and file shares carry an owner.
+        // Only email groups and file shares carry an owner: none, or one who has left (UC-ACC-08 rule 14).
+        $ownerLeft = fn ($q) => $q->where('status', EmployeeStatus::Resigned->value);
         $noOwner = FileShare::whereNull('owner_employee_id')->count()
-            + EmailGroup::whereNull('owner_employee_id')->count();
+            + EmailGroup::whereNull('owner_employee_id')->count()
+            + FileShare::whereHas('owner', $ownerLeft)->count()
+            + EmailGroup::whereHas('owner', $ownerLeft)->count();
 
+        // One per grant a leaver still holds, not one per person, as the panel lists them
         $resignedHolders = AccessMembership::query()->active()
             ->whereHas('employee', fn ($q) => $q->where('status', EmployeeStatus::Resigned->value))
-            ->distinct()->count('employee_id');
+            ->count();
 
         return $empty + $noOwner + $resignedHolders;
     }

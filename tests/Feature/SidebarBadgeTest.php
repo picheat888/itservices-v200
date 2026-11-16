@@ -117,6 +117,33 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(3, $badges['access']);
     }
 
+    /** UAT ACC-08-01: the menu number counts what the "needs review" panel lists — a resigned owner, and each grant (not each person) a leaver still holds. */
+    public function test_the_access_badge_counts_resigned_owners_and_every_grant_a_leaver_holds(): void
+    {
+        $user = $this->seedWorkForEveryBadge();
+        $this->actingAs($user);
+        $access = app(AccessService::class);
+
+        // A share whose owner has left (it has a member, so it is not also "empty")
+        $leftOwner = Employee::create(['code' => 'SB-0101', 'first_name' => 'Left', 'last_name' => 'Owner', 'status' => 'resigned']);
+        $owned = FileShare::create(['name' => 'Owned by a leaver', 'path' => '\\\\F\\O', 'owner_employee_id' => $leftOwner->id]);
+        $stays = Employee::create(['code' => 'SB-0102', 'first_name' => 'Still', 'last_name' => 'Here', 'status' => 'active']);
+        $access->grant($owned, $stays->id, ['access_level' => 'Member']);
+        // One leaver holding two grants
+        $twoGrants = Employee::create(['code' => 'SB-0103', 'first_name' => 'Two', 'last_name' => 'Grants', 'status' => 'resigned']);
+        $access->grant($owned, $twoGrants->id, ['access_level' => 'Member']);
+        $access->grant(FileShare::where('name', 'Shared')->firstOrFail(), $twoGrants->id, ['access_level' => 'Member']);
+
+        $badges = $this->getJson('/api/sidebar-badges')->assertOk()->json('data');
+        $panel = $this->getJson('/api/access/dashboard')->assertOk()->json('data.governance');
+
+        // Empty: Orphan. To find an owner: Orphan + the leaver's share. Leaver grants: 1 from the seed + 2.
+        $this->assertSame(1, $panel['empty_resources']);
+        $this->assertSame(2, $panel['no_owner']);
+        $this->assertSame(3, $panel['resigned_holders']);
+        $this->assertSame($panel['empty_resources'] + $panel['no_owner'] + $panel['resigned_holders'], $badges['access']);
+    }
+
     public function test_an_approval_waiting_on_me_counts_towards_the_requests_badge(): void
     {
         $user = $this->seedWorkForEveryBadge();
