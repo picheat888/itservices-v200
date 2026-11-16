@@ -305,4 +305,22 @@ class AccessResourceMembersReportTest extends TestCase
         $this->assertStringContainsString('25/09/2026', $html);
         $this->assertDoesNotMatchRegularExpression('/\b20\d\d-\d\d-\d\d\b/', $html);
     }
+
+    /** UAT RPT-23-01: the sheet has the owner's, the reviewer's and IT's sign-off; a social account has no owner, so two. */
+    public function test_the_review_sheet_has_owner_reviewer_and_it_sign_off(): void
+    {
+        $seen = $this->capturePdfView('pdf.reports.access-review-sheet');
+        $user = $this->userWith();
+        $this->actingAs($user)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('fs1'))->assertOk();
+        $this->actingAs($user)->get('/api/reports/access/resource-members/sheet?resource='.$this->pick('sp1'))->assertOk();
+
+        $share = view('pdf.reports.access-review-sheet', $seen[0])->render();
+        foreach (['ลงชื่อเจ้าของ', 'ลงชื่อผู้ทบทวน', 'ลงชื่อผู้ดำเนินการ IT'] as $who) {
+            $this->assertStringContainsString($who, $share);
+        }
+        $social = view('pdf.reports.access-review-sheet', $seen[1])->render();
+        $this->assertStringNotContainsString('ลงชื่อเจ้าของ', $social);
+        $this->assertStringContainsString('ลงชื่อผู้ทบทวน', $social);
+        $this->assertStringContainsString('ลงชื่อผู้ดำเนินการ IT', $social);
+    }
 }

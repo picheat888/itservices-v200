@@ -6,6 +6,8 @@
     $dept = fn ($d) => $d ? (($d['name_th'] ?? null) ?: $d['name']) : '—';
     $isFile = $sheet['type'] === 'file_share';
     $ownable = in_array($sheet['type'], ['email_group', 'file_share'], true);
+    // Sign-off: the owner (where the resource has one), the reviewer and IT
+    $signers = [...($ownable ? ['ลงชื่อเจ้าของ'] : []), 'ลงชื่อผู้ทบทวน', 'ลงชื่อผู้ดำเนินการ IT'];
 @endphp
 <!DOCTYPE html>
 <html>
@@ -39,7 +41,9 @@
         .tot { text-align: right; margin-top: 6px; color: #333; }
         @page { margin: 30px 34px 46px; }
         table.sign { width: 100%; margin-top: 34px; }
-        table.sign td { width: 50%; text-align: center; padding: 0 20px; }
+        table.sign td { text-align: center; padding: 0 14px; }
+        table.sign td.of2 { width: 50%; }
+        table.sign td.of3 { width: 33.33%; }
         .line { border-bottom: 1px dotted #111; height: 26px; margin-bottom: 4px; }
     </style>
 </head>
@@ -97,8 +101,9 @@
 
     <table class="sign">
         <tr>
-            <td><div class="line"></div>ลงชื่อ{{ $ownable ? 'เจ้าของ' : 'ผู้ทบทวน' }}<div class="muted">วันที่ ........ / ........ / ........</div></td>
-            <td><div class="line"></div>ลงชื่อผู้ดำเนินการ IT<div class="muted">วันที่ ........ / ........ / ........</div></td>
+            @foreach ($signers as $who)
+                <td class="of{{ count($signers) }}"><div class="line"></div>{{ $who }}<div class="muted">วันที่ ........ / ........ / ........</div></td>
+            @endforeach
         </tr>
     </table>
 </body>

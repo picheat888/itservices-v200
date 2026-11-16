@@ -665,8 +665,9 @@ function SheetPaper({ sheet }: { sheet: Sheet }) {
                 </tbody>
             </table>
             <p className="mt-2 text-right text-slate-600">{t('rep_ac_people_n').replace('{n}', count(sheet.list.length, lang))}</p>
-            <footer className="mt-9 grid grid-cols-2 gap-10 text-center">
-                {[ownable ? t('rep_ar_sheet_sign_owner') : t('rep_ar_sheet_sign_reviewer'), t('rep_ar_sheet_sign_it')].map((who) => (
+            {/* Sign-off as on the PDF: the owner (where there is one), the reviewer and IT */}
+            <footer className={cn('mt-9 grid gap-8 text-center', ownable ? 'grid-cols-3' : 'grid-cols-2')}>
+                {[...(ownable ? [t('rep_ar_sheet_sign_owner')] : []), t('rep_ar_sheet_sign_reviewer'), t('rep_ar_sheet_sign_it')].map((who) => (
                     <div key={who}>
                         <div className="mx-auto mb-1 h-7 w-4/5 border-b border-dotted border-slate-900" />
                         {who}
