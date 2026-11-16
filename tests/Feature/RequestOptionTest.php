@@ -255,6 +255,47 @@ class RequestOptionTest extends TestCase
         $this->assertSame('Analogue handset', $option->fresh()->label_en);
     }
 
+    /** UAT SET-06-03: "เปลี่ยนชื่อได้ คำขอเก่าจะแสดงชื่อใหม่ตามไปด้วย" — an earlier request that chose the option shows the new name, in both languages. */
+    public function test_renaming_a_choice_renames_it_on_the_requests_that_chose_it(): void
+    {
+        $hardware = RequestOption::where('request_type', 'hardware')->where('field_key', 'device_id')->orderBy('id')->get();
+        $renamed = $hardware[0];
+        $untouched = $hardware[1];
+        $request = $this->submitHardwareRequest($renamed->id);
+        $other = $this->submitHardwareRequest($untouched->id);
+        $stampedAt = $request->fresh()->updated_at;
+        $otherDisplay = $other->fresh()->fields['_display'];
+
+        $this->travel(5)->minutes();
+        $this->actingAs($this->admin)->putJson("/api/request-options/{$renamed->id}", [
+            'label_en' => 'Second monitor (renamed)',
+            'label_th' => 'จอที่สอง (ชื่อใหม่)',
+            'active' => true,
+        ])->assertOk();
+
+        $row = collect($request->fresh()->fields['_display'])->firstWhere('key', 'device_id');
+        $this->assertSame('Second monitor (renamed)', $row['value']);
+        $this->assertSame('จอที่สอง (ชื่อใหม่)', $row['value_th']);
+        // Only the requests of that option, and the rename is not an edit of the request
+        $this->assertSame($otherDisplay, $other->fresh()->fields['_display']);
+        $this->assertTrue($stampedAt->equalTo($request->fresh()->updated_at));
+    }
+
+    public function test_hiding_a_choice_keeps_its_name_on_earlier_requests(): void
+    {
+        $option = RequestOption::where('request_type', 'hardware')->where('field_key', 'device_id')->orderBy('id')->firstOrFail();
+        $request = $this->submitHardwareRequest($option->id);
+        $before = $request->fresh()->fields['_display'];
+
+        $this->actingAs($this->admin)->putJson("/api/request-options/{$option->id}", [
+            'label_en' => $option->label_en,
+            'label_th' => $option->label_th,
+            'active' => false,
+        ])->assertOk();
+
+        $this->assertSame($before, $request->fresh()->fields['_display']);
+    }
+
     public function test_a_new_choice_lands_at_the_end_of_its_list(): void
     {
         $this->actingAs($this->admin)->postJson('/api/request-options', [

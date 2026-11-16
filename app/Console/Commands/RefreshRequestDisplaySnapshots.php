@@ -9,7 +9,8 @@ use Illuminate\Console\Command;
 
 /**
  * Brings the `_display` snapshots on existing requests back in step with the schema —
- * the field LABELS and the Thai twin of a chosen value. Never the value itself.
+ * the field LABELS and the Thai twin of a chosen value. Never the value itself (a managed
+ * choice renamed in Settings is carried into the snapshot at rename time by RequestOptionService).
  *
  * `_display` is written at submit time so a decided request always shows the words it was
  * decided on. That is right for the value (what the requester chose) and wrong for the

@@ -654,7 +654,9 @@ class RequestService
      *
      * Snapshotting both is the point: re-resolving the id at render time would show
      * today's label on a request decided months ago, which is what _display exists to
-     * prevent. A label that was half-translated (Thai on the field, English on its
+     * prevent. The one exception is a managed choice renamed in Settings: the request
+     * points at it by id, so RequestOptionService carries the new name into this
+     * snapshot ("เปลี่ยนชื่อได้ คำขอเก่าจะแสดงชื่อใหม่ตามไปด้วย"). A label that was half-translated (Thai on the field, English on its
      * value) read like a bug rather than like a policy.
      *
      * @param  array<string, mixed>  $field

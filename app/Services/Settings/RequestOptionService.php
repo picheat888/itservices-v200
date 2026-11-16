@@ -35,7 +35,12 @@ class RequestOptionService
     public function update(RequestOption $option, array $data): RequestOption
     {
         $before = $option->getOriginal();
-        $option->update($data);
+        DB::transaction(function () use ($option, $data) {
+            $option->update($data);
+            if ($option->wasChanged(['label_en', 'label_th'])) {
+                $this->renameOnRequests($option);
+            }
+        });
         RequestSchemas::flushManagedCache();
         AuditLog::record(
             'Updated request option',
@@ -45,6 +50,42 @@ class RequestOptionService
         );
 
         return $option;
+    }
+
+    /**
+     * Carries a renamed choice into the `_display` snapshot of every request that chose it, so an earlier
+     * request shows the new name in both languages ("เปลี่ยนชื่อได้ คำขอเก่าจะแสดงชื่อใหม่ตามไปด้วย").
+     *
+     * A request points at its choice by request_option_id (a real foreign key), so a rename is the same
+     * choice under a better name; the snapshot otherwise keeps what was submitted (RequestService::displayValue).
+     * Hiding a choice leaves its name as it was, and a choice any request uses cannot be deleted.
+     * The rename is not an edit of the request: its updated_at stays.
+     */
+    private function renameOnRequests(RequestOption $option): void
+    {
+        ServiceRequest::query()
+            ->where('request_option_id', $option->id)
+            ->where('type', $option->request_type)
+            ->select(['id', 'fields'])
+            ->chunkById(200, function (Collection $requests) use ($option) {
+                foreach ($requests as $request) {
+                    $fields = $request->fields ?? [];
+                    $rows = $fields['_display'] ?? [];
+                    foreach ($rows as $i => $row) {
+                        if (($row['key'] ?? null) === $option->field_key) {
+                            $rows[$i]['value'] = $option->label_en;
+                            $rows[$i]['value_th'] = $option->label_th ?: null;
+                        }
+                    }
+                    if ($rows === ($fields['_display'] ?? [])) {
+                        continue;
+                    }
+                    $fields['_display'] = $rows;
+                    $request->timestamps = false;
+                    $request->fields = $fields;
+                    $request->saveQuietly();
+                }
+            });
     }
 
     /**
