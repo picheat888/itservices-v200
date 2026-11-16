@@ -72,7 +72,7 @@ export default function PermissionsPage() {
     const tab: Tab | null = allowed.length > 0 ? allowedTab : null;
     // Unsaved role-permission draft; leaving the matrix tab asks first.
     const [rolesDirty, setRolesDirty] = useState(false);
-    const guardTabSwitch = useDiscardGuard(tab === 'templates' && rolesDirty);
+    const guardTabSwitch = useDiscardGuard(tab === 'templates' && rolesDirty, t('perm_discard_title'));
     const changeTab = (next: Tab) => {
         if (next === tab) return;
         guardTabSwitch(() => setTab(next, { extra: (params) => TAB_LIST_KEYS.forEach((key) => params.delete(key)) }));
@@ -215,9 +215,9 @@ function RolesTab({ onDirtyChange }: { onDirtyChange: (dirty: boolean) => void }
         return keys;
     }, [draft, original]);
     const dirty = changedKeys.size > 0;
-    const guardRoleSwitch = useDiscardGuard(dirty);
+    const guardRoleSwitch = useDiscardGuard(dirty, t('perm_discard_title'));
     // Links, Back and Forward that leave the page, the tab or the role ask first
-    useNavigationGuard(dirty, ['tab', 'role']);
+    useNavigationGuard(dirty, ['tab', 'role'], t('perm_discard_title'));
     useEffect(() => {
         onDirtyChange(dirty);
         return () => onDirtyChange(false);

@@ -38,12 +38,12 @@ async function askOnce(guard: NavigationGuard, onDiscard: () => void) {
     if (discard) onDiscard();
 }
 
-/** While `active`, leaving the page (or changing one of `watchParams`) asks with the discard words first. */
-export function useNavigationGuard(active: boolean, watchParams: readonly string[] = []) {
+/** While `active`, leaving the page (or changing one of `watchParams`) asks with the discard words first; `title` replaces their title. */
+export function useNavigationGuard(active: boolean, watchParams: readonly string[] = [], title?: string) {
     const confirm = useConfirm();
     const t = useT();
-    const askRef = useRef(() => confirm(discardConfirmOptions(t)));
-    askRef.current = () => confirm(discardConfirmOptions(t));
+    const askRef = useRef(() => confirm(discardConfirmOptions(t, title)));
+    askRef.current = () => confirm(discardConfirmOptions(t, title));
     const watchKey = watchParams.join('&');
 
     useEffect(() => {

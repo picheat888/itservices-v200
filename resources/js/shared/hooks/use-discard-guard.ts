@@ -11,10 +11,11 @@ export { discardConfirmOptions };
 /** The query params page modals live in; Back or a link that changes one asks first while a form is dirty. */
 const MODAL_PARAMS = ['view', 'edit', 'add', 'count', 'dialog'] as const;
 
-export function useDiscardGuard(isDirty: boolean) {
+/** `title` replaces the shared prompt title (discardConfirmOptions), for the close and the Back/link prompt alike. */
+export function useDiscardGuard(isDirty: boolean, title?: string) {
     const confirm = useConfirm();
     const t = useT();
-    useNavigationGuard(isDirty, MODAL_PARAMS);
+    useNavigationGuard(isDirty, MODAL_PARAMS, title);
 
     // Reload / closing the tab with unsaved input gets the browser's own "leave site?" prompt.
     useEffect(() => {
@@ -27,11 +28,11 @@ export function useDiscardGuard(isDirty: boolean) {
     return useCallback(
         async (close: () => void) => {
             if (isDirty) {
-                const discard = await confirm(discardConfirmOptions(t));
+                const discard = await confirm(discardConfirmOptions(t, title));
                 if (!discard) return;
             }
             close();
         },
-        [isDirty, confirm, t],
+        [isDirty, confirm, t, title],
     );
 }
