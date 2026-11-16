@@ -31,6 +31,7 @@ import { useRequestTrail, useStockItem, useStockRequest } from '../hooks/use-sto
 import { LOT_INK } from '../lib/lot-accent';
 import { toPickableLots } from '../lib/lot-pick';
 import { previewLotPicks, REQ_TONE, requestSteps, shownRequest, type RequestStep } from '../lib/request-detail';
+import { warehouseLabel } from '../lib/warehouse-label';
 import { LotLink } from './lot-link';
 
 const LABEL = 'text-muted-foreground text-xs';
@@ -42,7 +43,6 @@ const ROOMY_ROWS = 3;
 const TABLE_FRAME = 'border-border min-h-0 rounded-lg border';
 // Short tables keep their full height; longer ones shrink down to `min`
 const scrollSection = (rows: number, min: string) => (rows > ROOMY_ROWS ? cn('flex min-h-0 flex-col', min) : 'flex shrink-0 flex-col');
-const UNASSIGNED = 'Unassigned';
 
 export interface RequestDetailActions {
     onApprove: (r: StockRequest) => void;
@@ -661,4 +661,4 @@ function DetailFooter({
     );
 }
 
-const warehouseName = (name: string, t: ReturnType<typeof useT>) => (name === UNASSIGNED ? t('stock_lot_unassigned') : name);
+const warehouseName = (name: string, t: ReturnType<typeof useT>) => warehouseLabel(name, t('stock_lot_unassigned'));

@@ -16,6 +16,7 @@ import { Check } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useReturnableRequests } from '../hooks/use-stock';
 import { fillAllLeft, returnLines } from '../lib/movement-form';
+import { warehouseLabel } from '../lib/warehouse-label';
 
 export type ReturnFieldErrors = { stock_request_id?: string; lots?: string; serial_ids?: string };
 
@@ -261,7 +262,7 @@ function LotReturnRow({
                     </div>
                 )}
             </td>
-            <td className={CELL}>{lot.warehouse}</td>
+            <td className={CELL}>{warehouseLabel(lot.warehouse, t('stock_lot_unassigned'))}</td>
             <td className={cn(CELL, 'text-right tabular-nums')}>{fmtN(lot.issued)}</td>
             <td className={cn(CELL, 'text-muted-foreground text-right tabular-nums')}>{fmtN(lot.returned)}</td>
             <td className={cn(CELL, 'py-1.5 text-right')}>
