@@ -368,13 +368,18 @@ export default function TicketOverviewReportPage() {
                         <Card className="flex flex-col overflow-hidden">
                             {/* The goal is Settings → SLA (TicketSla::goalPercent), the marker drawn on each bar. */}
                             <SectionHeading title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub').replace('{n}', fmtN(data.sla_goal))} />
+                            {/* No closed case measured in any priority: the empty text, as the "ปิดทัน SLA" card shows "—" */}
                             <HorizontalBars
-                                bars={data.sla_by_priority.map((p) => ({
-                                    key: p.priority,
-                                    label: t(priorityKey(p.priority)),
-                                    value: p.rate,
-                                    tone: PRIORITY_FILL[p.priority],
-                                }))}
+                                bars={
+                                    data.sla_by_priority.every((p) => p.measured === 0)
+                                        ? []
+                                        : data.sla_by_priority.map((p) => ({
+                                              key: p.priority,
+                                              label: t(priorityKey(p.priority)),
+                                              value: p.rate,
+                                              tone: PRIORITY_FILL[p.priority],
+                                          }))
+                                }
                                 max={100}
                                 unit="%"
                                 goal={data.sla_goal}
