@@ -200,6 +200,10 @@ return [
 
     'attributes' => [
         'cidr' => 'IP or IP range',
+        'brand_name' => 'application name',
+        'brand_sub' => 'secondary name',
+        'label_en' => 'name (English)',
+        'label_th' => 'name (Thai)',
     ],
 
 ];
