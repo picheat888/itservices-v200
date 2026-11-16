@@ -26,7 +26,9 @@ export function ColumnPicker({
     onReset: () => void;
 }) {
     const t = useT();
-    const lastVisible = hidden.length + 1 >= definition.columns.length;
+    // Counts the listed columns only: `hidden` also holds columns drawn inside another cell.
+    const shownCount = definition.columns.filter((c) => !hidden.includes(c.key)).length;
+    const lastVisible = shownCount <= 1;
     // Columns shown or hidden differently from the report's default.
     const changed = definition.columns.filter((c) => hidden.includes(c.key) !== !!c.hidden).length;
 
