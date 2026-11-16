@@ -9,18 +9,20 @@ import { useAuth } from '../hooks/use-auth';
 /**
  * Gates a route's content. The user passes when they are the super admin, hold at
  * least one of the `anyOf` permission keys, hold every `allOf` key (a report page, as
- * its server gate), or have one of the `roles`. Otherwise an inline NoAccess screen is
- * shown (the URL is left unchanged — no redirect).
+ * its server gate), or have one of the `roles`. Otherwise `fallback` is shown, or the
+ * inline NoAccess screen when there is none (the URL is left unchanged — no redirect).
  */
 export function RequirePermission({
     anyOf,
     allOf,
     roles,
+    fallback,
     children,
 }: {
     anyOf?: string[];
     allOf?: string[];
     roles?: Role[];
+    fallback?: React.ReactNode;
     children: React.ReactNode;
 }) {
     const { user, can } = useAuth();
@@ -33,7 +35,7 @@ export function RequirePermission({
         return <>{children}</>;
     }
 
-    return <NoAccess />;
+    return <>{fallback ?? <NoAccess />}</>;
 }
 
 /** Inline 403 screen for a failed RequirePermission gate; it stays until the reader leaves (WCAG 2.2.1). */

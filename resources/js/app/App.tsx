@@ -12,7 +12,7 @@ import { EmployeesPage } from '@/modules/employee';
 import { MonitorPage } from '@/modules/monitor';
 import { useServiceWorkerBridge } from '@/modules/notification';
 import { PermissionsPage } from '@/modules/permission';
-import { preloadReportPage, ReportDateScope, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
+import { preloadReportPage, ReportDateScope, ReportNoAccess, reportPageRoutes, reportSlug, ReportsPage, UnknownReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, LotHistoryPage, StockPage } from '@/modules/stock';
@@ -174,7 +174,7 @@ function App() {
                                     key={path}
                                     path={`reports/${path}`}
                                     element={
-                                        <RequirePermission allOf={allOf}>
+                                        <RequirePermission allOf={allOf} fallback={<ReportNoAccess />}>
                                             <ReportDateScope>
                                                 <Page />
                                             </ReportDateScope>
