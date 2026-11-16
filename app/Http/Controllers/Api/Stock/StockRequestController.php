@@ -155,7 +155,9 @@ class StockRequestController extends Controller
     {
         $user = $request->user();
         $this->requests->assertCancellable($stockRequest);
-        abort_unless($stockRequest->canBeCancelledBy($user), 403);
+        // The requester of a request approved meanwhile reaches the service, which refuses with its status (422), not a 403
+        $isRequester = (int) $stockRequest->user_id === (int) $user?->id;
+        abort_unless($isRequester || $stockRequest->canBeCancelledBy($user), 403);
 
         $this->requests->cancel($stockRequest, $user);
 

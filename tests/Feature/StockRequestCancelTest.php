@@ -71,13 +71,27 @@ class StockRequestCancelTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_requester_cannot_cancel_after_approval(): void
+    /** UAT STK-11-04: approved meanwhile, the requester is told the request moved on ("ตอนนี้เป็น อนุมัติแล้ว"), not that they lack the right. */
+    public function test_requester_cannot_cancel_after_approval_and_is_told_its_status(): void
     {
         $owner = $this->userWith(['stock.module', 'stock.request', 'stock.view_request']);
         $request = $this->requestBy($owner, 'approved');
 
-        $this->actingAs($owner)->postJson("/api/stock-requests/{$request->id}/cancel")->assertForbidden();
+        $this->actingAs($owner)->postJson("/api/stock-requests/{$request->id}/cancel")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'request_not_cancellable')
+            ->assertJsonPath('current', 'approved');
         $this->assertSame('approved', $request->fresh()->status);
+    }
+
+    public function test_requester_of_a_finished_request_is_told_its_status_too(): void
+    {
+        $owner = $this->userWith(['stock.module', 'stock.request', 'stock.view_request']);
+        $request = $this->requestBy($owner, 'fulfilled');
+
+        $this->actingAs($owner)->postJson("/api/stock-requests/{$request->id}/cancel")
+            ->assertStatus(422)
+            ->assertJsonPath('current', 'fulfilled');
     }
 
     public function test_someone_else_without_rights_cannot_cancel_a_pending_request(): void
