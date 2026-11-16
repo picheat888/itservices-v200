@@ -228,7 +228,7 @@ function ByTypeCard({
     const fmtN = useNumberFormat();
     const total = requests.by_type.reduce((sum, item) => sum + item.count, 0);
     const scale = Math.max(1, ...requests.by_type.map((item) => item.count));
-    const { folds, shown } = fold(requests.by_type, TYPES_TOP, open);
+    const { folds, shown } = fold(requests.by_type, TYPES_TOP, open, 0);
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={NARROW}>

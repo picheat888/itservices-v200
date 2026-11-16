@@ -74,8 +74,8 @@ function DepartmentsCard({
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
     const scale = Math.max(1, hr.no_department, ...hr.by_department.map((d) => d.count));
-    // Up to 11 show in full; more fold to the top 10, as on the other Dashboard cards.
-    const { folds, shown } = fold(hr.by_department, DEPARTMENTS_TOP, open);
+    // More than 10 fold to the top 10.
+    const { folds, shown } = fold(hr.by_department, DEPARTMENTS_TOP, open, 0);
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={className}>

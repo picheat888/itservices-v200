@@ -30,7 +30,7 @@ export function WorkloadCard({
     const links = useDashLinks();
     const total = it.backlog.open + it.backlog.in_progress;
     const scale = Math.max(it.unassigned, ...it.workload.map((row) => row.open), 1);
-    const { folds, shown } = fold(it.workload, WORKLOAD_TOP, open);
+    const { folds, shown } = fold(it.workload, WORKLOAD_TOP, open, 0);
 
     return (
         <Card ref={cardRef} style={heldStyle(heldHeight)} className={NARROW}>
