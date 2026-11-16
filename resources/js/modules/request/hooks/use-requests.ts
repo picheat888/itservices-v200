@@ -60,7 +60,7 @@ export const useRequestFieldOptions = <T extends RequestSourceOption | RequestMa
 
 /** Load one of those lists again now (Next on the details step), so a choice removed since it loaded is caught there. */
 export const reloadRequestFieldOptions = (qc: QueryClient, type: string, field: string) =>
-    qc.fetchQuery({ queryKey: requestFieldOptionsKey(type, field), queryFn: () => requestApi.fieldOptions(type, field), staleTime: 0 });
+    qc.fetchQuery({ queryKey: requestFieldOptionsKey(type, field), queryFn: () => requestApi.fieldOptions(type, field), staleTime: 0, retry: false });
 
 export function useRequestMutations() {
     const qc = useQueryClient();

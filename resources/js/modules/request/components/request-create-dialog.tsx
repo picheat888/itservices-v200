@@ -109,6 +109,10 @@ export function RequestCreateDialog({
         }
     }
     const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    /** Counts step moves, so a move that waited on a reload knows a later one came first. */
+    const stepMove = useRef(0);
+    /** The picked lists are reloading before leaving the details step (Next and the stepper wait). */
+    const [checking, setChecking] = useState(false);
     useEffect(() => () => clearTimeout(closeTimer.current), []);
 
     const selected: RequestTypeOption | null = useMemo(() => options?.types.find((o) => o.type === type) ?? null, [options, type]);
@@ -199,13 +203,23 @@ export function RequestCreateDialog({
     const stepOwns = (s: number, key: string): boolean => (s === 0 ? key === 'type' : s === 1 ? key !== 'type' : false);
 
     const goToStep = async (target: number) => {
+        const move = ++stepMove.current;
         const clamped = Math.max(0, Math.min(target, LAST_STEP));
         if (clamped <= step) {
             setErr({});
             setStep(clamped);
             return;
         }
-        if (step <= 1 && clamped > 1) await reloadPickedLists();
+        if (step <= 1 && clamped > 1) {
+            setChecking(true);
+            try {
+                await reloadPickedLists();
+            } finally {
+                setChecking(false);
+            }
+            // A Back or step click made while the lists reloaded wins over this move
+            if (move !== stepMove.current) return;
+        }
         const all = buildErrors();
         for (let s = step; s < clamped; s++) {
             const bad = Object.keys(all).filter((k) => stepOwns(s, k));
@@ -331,6 +345,7 @@ export function RequestCreateDialog({
                                 type="button"
                                 aria-current={active ? 'step' : undefined}
                                 onClick={() => goToStep(i)}
+                                disabled={checking}
                                 className="relative flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
                             >
                                 {i < steps.length - 1 && (
@@ -636,7 +651,7 @@ export function RequestCreateDialog({
                     <div className="flex-1" />
                     {/* Step ① has no Next: picking a service moves on */}
                     {step === 1 && (
-                        <Button onClick={() => goToStep(2)}>
+                        <Button onClick={() => goToStep(2)} disabled={checking}>
                             {t('next')}
                             <ChevronRight className="h-4 w-4" />
                         </Button>

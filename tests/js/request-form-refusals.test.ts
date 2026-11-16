@@ -13,15 +13,26 @@ const hooks = readFileSync(join(root, 'hooks/use-requests.ts'), 'utf8');
 test('Next on the details step loads the picked lists again before checking them', () => {
     assert.match(
         hooks,
-        /export const reloadRequestFieldOptions = \(qc: QueryClient, type: string, field: string\) =>\s*qc\.fetchQuery\(\{[^}]*staleTime: 0 \}\)/,
+        /export const reloadRequestFieldOptions = \(qc: QueryClient, type: string, field: string\) =>\s*qc\.fetchQuery\(\{[^}]*staleTime: 0, retry: false \}\)/,
     );
     assert.match(dialog, /const goToStep = async \(target: number\) => \{/);
-    assert.match(dialog, /if \(step <= 1 && clamped > 1\) await reloadPickedLists\(\);\s*const all = buildErrors\(\);/);
+    assert.match(dialog, /if \(step <= 1 && clamped > 1\) \{\s*setChecking\(true\);\s*try \{\s*await reloadPickedLists\(\);/);
     // Only the lists of fields that hold a pick and were loaded before
     assert.match(
         dialog,
         /\.filter\(\s*\(f\) => \(fields\[f\.key\] \?\? ''\)\.trim\(\) !== '' && queryClient\.getQueryData\(requestFieldOptionsKey\(type \?\? '', f\.key\)\) !== undefined,?\s*\)/,
     );
+});
+
+test('a Back or step click made while the lists reload wins over the waiting Next', () => {
+    assert.match(dialog, /const move = \+\+stepMove\.current;/);
+    assert.match(
+        dialog,
+        /\} finally \{\s*setChecking\(false\);\s*\}\s*\/\/[^\n]*\n\s*if \(move !== stepMove\.current\) return;\s*\}\s*const all = buildErrors\(\);/,
+    );
+    // Next and the stepper wait for the reload; Back stays free and cancels the waiting move
+    assert.match(dialog, /onClick=\{\(\) => goToStep\(i\)\}\s*disabled=\{checking\}/);
+    assert.match(dialog, /<Button onClick=\{\(\) => goToStep\(2\)\} disabled=\{checking\}>/);
 });
 
 test('a choice removed after Next comes back from the server as the same words', () => {
