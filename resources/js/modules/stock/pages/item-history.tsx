@@ -283,7 +283,13 @@ function CategoryView({
         const list = serialsOf(m, ev);
         return list.length ? <span className="text-xs">{list.join(', ')}</span> : '—';
     };
-    const qtyCell = (m: Movement) => <span className="tabular-nums">{fmtN(m.qty)}</span>;
+    // The count & adjust view signs each row, so its totals row adds up (as on the PDF)
+    const signed = view === 'adjust';
+    const qtyCell = (m: Movement) => (
+        <span className="tabular-nums">{signed ? `${m.type === 'adjust_down' ? '−' : '+'}${fmtN(m.qty)}` : fmtN(m.qty)}</span>
+    );
+    const total = movements.reduce((sum, m) => sum + (signed && m.type === 'adjust_down' ? -m.qty : m.qty), 0);
+    const totalText = signed ? `${total >= 0 ? '+' : '−'}${fmtN(Math.abs(total))}` : fmtN(total);
     const lotsByNo = new Map(data.lots.map((l) => [l.lot_no, l]));
     // A count overage opens a Lot under the adjustment's own document
     const isNewLot = (m: Movement, lotNo: string | null) => m.type === 'adjust_up' && !!m.doc_no && lotsByNo.get(lotNo)?.doc_no === m.doc_no;
@@ -478,6 +484,7 @@ function CategoryView({
                 rows={rows}
                 wrapColumns={wrapColumns}
                 empty={{ title: t(VIEW_EMPTY[view].title), hint: t(VIEW_EMPTY[view].hint) }}
+                total={{ label: t('stock_mv_total'), column: headers.indexOf(t('stock_qty')), value: totalText }}
             />
         </>
     );
@@ -489,11 +496,14 @@ function Table({
     rows,
     wrapColumns = [],
     empty,
+    total,
 }: {
     headers: string[];
     rows: ReactNode[][];
     wrapColumns?: number[];
     empty: EmptyStateProps;
+    /** The totals row: its label across the columns before `column`, the value under it. */
+    total?: { label: string; column: number; value: ReactNode };
 }) {
     return (
         <div className="border-border overflow-x-auto rounded-xl border">
@@ -528,6 +538,15 @@ function Table({
                             <td colSpan={headers.length}>
                                 <EmptyState {...empty} />
                             </td>
+                        </tr>
+                    )}
+                    {total && rows.length > 0 && (
+                        <tr className="border-border bg-muted/40 border-t font-semibold">
+                            <td colSpan={total.column} className="px-3 py-2 whitespace-nowrap">
+                                {total.label}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap tabular-nums">{total.value}</td>
+                            {total.column < headers.length - 1 && <td colSpan={headers.length - total.column - 1} />}
                         </tr>
                     )}
                 </tbody>
