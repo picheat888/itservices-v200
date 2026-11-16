@@ -425,7 +425,7 @@ export function ResourceModal({
                 const mapped: Partial<Record<keyof FormState, string>> = {};
                 for (const [k, msgs] of Object.entries(fieldErrors)) {
                     const key = k as keyof FormState;
-                    if (key === 'email' && /taken/i.test(msgs[0] ?? '')) mapped[key] = t('access_err_email_taken');
+                    if (key === 'email' && msgs[0] === 'email_taken') mapped[key] = t('access_err_email_taken');
                     else if (key === 'seats' && msgs[0] === 'seats_below_in_use')
                         mapped[key] = t('access_err_seats_below_used').replaceAll('{n}', String(refusalReason(err)?.body.in_use ?? seatsInUse));
                     else mapped[key] = msgs[0] ?? t('access_err_required');

@@ -30,4 +30,14 @@ class StoreEmailGroupRequest extends FormRequest
             'owner_employee_id' => $this->isMethod('post') ? ['required', 'exists:employees,id'] : ['prohibited'],
         ];
     }
+
+    /**
+     * A taken address is a code the register form words itself ("This email is already in use"), whatever the language.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['email.unique' => 'email_taken'];
+    }
 }

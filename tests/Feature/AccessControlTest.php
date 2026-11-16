@@ -127,6 +127,25 @@ class AccessControlTest extends TestCase
             ->assertJsonPath('data.department_id', $dept->id);
     }
 
+    /** UAT ACC-02-07, ACC-03-05: a taken email comes back as a code in any language, worded "อีเมลนี้ถูกใช้แล้ว" by the form. */
+    public function test_a_taken_email_comes_back_as_a_code_on_create_and_edit(): void
+    {
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $owner = Employee::create(['first_name' => 'Ap', 'last_name' => 'Prover']);
+        $dept = Department::create(['name' => 'Quality', 'tag' => 'QC']);
+        $group = ['name' => 'QA', 'email' => 'qa@x.co', 'owner_employee_id' => $owner->id, 'department_id' => $dept->id];
+        $this->postJson('/api/email-groups', $group)->assertStatus(201);
+        $other = EmailGroup::create(['name' => 'Ops', 'email' => 'ops@x.co', 'department_id' => $dept->id]);
+
+        foreach (['th', 'en'] as $lang) {
+            $this->postJson('/api/email-groups', ['name' => 'QA 2'] + $group, ['X-Locale' => $lang])
+                ->assertStatus(422)->assertJsonPath('errors.email', ['email_taken']);
+            $this->putJson("/api/email-groups/{$other->id}", ['name' => 'Ops', 'email' => 'qa@x.co', 'department_id' => $dept->id], ['X-Locale' => $lang])
+                ->assertStatus(422)->assertJsonPath('errors.email', ['email_taken']);
+        }
+    }
+
     public function test_grant_and_soft_revoke_member(): void
     {
         $this->seedDefaultPermissions();
