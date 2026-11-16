@@ -171,6 +171,8 @@ export function notificationMessage(n: AppNotification, t: Translate, lang: Lang
 export function notificationTarget(n: AppNotification): string {
     // Straight back to the tab a test was sent from
     if (n.data.type === 'test') return '/email-notifications?tab=notification';
+    // A new case waiting for a taker opens over the All tab, as its email does (ticket.new_case)
+    if (n.data.type === 'ticket_new') return `/tickets?tab=all&view=${n.data.ticket_id}`;
     if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
     // The reader's own asset list opens in the profile drawer; IT jobs open the Assets module
     if (n.data.type === 'asset_assigned') return PROFILE_ASSETS_SEARCH;
