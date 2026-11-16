@@ -46,6 +46,8 @@ export function useMonitorBoard(token: string | null) {
             }
         },
         enabled: token !== null,
+        // Polls while the browser says it is offline, so failures add up and the "ขาดการเชื่อมต่อ" label shows
+        networkMode: 'always',
         refetchInterval: (q) => (isUnpaired(q.state.error) ? false : BOARD_EVERY_MS),
         refetchIntervalInBackground: true,
         refetchOnWindowFocus: false,
