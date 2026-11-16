@@ -95,6 +95,7 @@ function ScheduleDetailPanel({ item, onClose }: { item: ManagedScheduleItem | nu
             description: t('rep_manage_delete_desc'),
             entity: { name: title, sub: item.owner.name ?? undefined },
             action: () => remove.mutateAsync(item.id),
+            errorMessage: (e) => refusalText(e, t, REFUSAL),
         });
         if (ok) {
             onClose();
@@ -117,6 +118,7 @@ function ScheduleDetailPanel({ item, onClose }: { item: ManagedScheduleItem | nu
                     .replace('{owner}', item.owner.name ?? '-'),
             },
             action: () => removeRecipient.mutateAsync({ id: item.id, email }),
+            errorMessage: (e) => refusalText(e, t, REFUSAL),
         });
         if (ok) toast(t('rep_manage_removed').replace('{email}', email), 'error', undefined, 'trash', { duration: 4000 });
     };
