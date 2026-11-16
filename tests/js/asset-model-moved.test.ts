@@ -22,6 +22,11 @@ test('a save refused as model_moved drops the model the same way', () => {
 });
 
 test("the note names the brand the model went to, and the words are the book's", () => {
-    assert.match(drawer, /brands\.find\(\(b\) => String\(b\.id\) === modelGone\.brandId\)\?\.name/);
+    // The model's own brand first (reloaded with the model list), the brand list's only after it
+    assert.match(
+        drawer,
+        /String\(goneModel\.brand_id\) === modelGone\.brandId \? goneModel\.brand\?\.name : undefined\)\s*\?\?\s*brands\.find\(\(b\) => String\(b\.id\) === modelGone\.brandId\)\?\.name/,
+    );
+    assert.match(drawer, /t\('asset_model_gone'\)\s*\.replace\('\{brand\}', goneBrandName\)/);
     assert.equal(th.asset_model_gone, 'ยี่ห้อถูกเปลี่ยนเป็น {brand} จากที่อื่น เอารุ่น {model} ที่เลือกไว้ออกแล้ว เลือกรุ่นใหม่');
 });

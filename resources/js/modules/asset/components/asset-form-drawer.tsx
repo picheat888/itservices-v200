@@ -248,6 +248,16 @@ export function AssetFormDrawer({
         [models, selectedBrand, form.model_id],
     );
 
+    // A dropped model's note names the brand it went to: the model's own (reloaded with the model list, so a brand
+    // created meanwhile is known), else the brand list's (a rebase, where the form's brand is already the new one)
+    const goneModel = modelGone ? models.find((m) => String(m.id) === modelGone.id) : undefined;
+    const goneBrandName = modelGone
+        ? ((goneModel?.brand_id != null && String(goneModel.brand_id) === modelGone.brandId ? goneModel.brand?.name : undefined) ??
+          brands.find((b) => String(b.id) === modelGone.brandId)?.name ??
+          selectedBrand?.name ??
+          '')
+        : '';
+
     // Contracts to choose from when linking a rented asset to its vendor contract.
     // Uses the asset-scoped endpoint (gated by assets.register/edit), so an asset admin
     // without contracts.view still gets the picker. Fetched only while the drawer is open.
@@ -437,11 +447,8 @@ export function AssetFormDrawer({
                                         note={
                                             modelGone && !form.model_id
                                                 ? t('asset_model_gone')
-                                                      .replace(
-                                                          '{brand}',
-                                                          brands.find((b) => String(b.id) === modelGone.brandId)?.name ?? selectedBrand?.name ?? '',
-                                                      )
-                                                      .replace('{model}', models.find((m) => String(m.id) === modelGone.id)?.name ?? '')
+                                                      .replace('{brand}', goneBrandName)
+                                                      .replace('{model}', goneModel?.name ?? '')
                                                 : null
                                         }
                                         onChange={(v) => {
