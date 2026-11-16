@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Request\RequestType;
+use App\Models\Access\SocialPlatform;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
@@ -219,5 +220,41 @@ class RequestAttachmentTest extends TestCase
             ->assertJsonValidationErrors('files.0');
 
         $this->assertSame(0, ServiceRequest::count());
+    }
+
+    /** UAT RQS-01-17: each refused file comes back as a code, so the form names every file in the reader's words. */
+    public function test_each_refused_file_comes_back_as_a_code(): void
+    {
+        $errors = $this->actingAs($this->requester)->post('/api/service-requests', [
+            'type' => RequestType::Cctv->value,
+            'reason' => 'The packing bay has no camera covering the loading door.',
+            'files' => [
+                UploadedFile::fake()->create('uat-11mb.pdf', 11 * 1024, 'application/pdf'),
+                UploadedFile::fake()->create('uat-fake.png', 1, 'text/plain'),
+            ],
+        ], ['Accept' => 'application/json', 'X-Locale' => 'th'])
+            ->assertStatus(422)
+            ->json('errors');
+
+        $this->assertSame(['file_too_large'], $errors['files.0'] ?? null);
+        $this->assertSame(['file_type'], $errors['files.1'] ?? null);
+        $this->assertSame(0, ServiceRequest::count());
+    }
+
+    /** UAT RQS-01-15: a picked platform removed before submit comes back as item_removed, not "fields.social platform id". */
+    public function test_a_removed_choice_comes_back_as_item_removed(): void
+    {
+        $platform = SocialPlatform::create(['name' => 'UAT No Delete']);
+        $platform->delete();
+
+        $errors = $this->actingAs($this->requester)->postJson('/api/service-requests', [
+            'type' => RequestType::Social->value,
+            'reason' => 'Posting the plant open day on the company page.',
+            'fields' => ['social_platform_id' => $platform->id],
+        ], ['X-Locale' => 'th'])
+            ->assertStatus(422)
+            ->json('errors');
+
+        $this->assertSame(['item_removed'], $errors['fields.social_platform_id'] ?? null);
     }
 }

@@ -2,7 +2,7 @@ import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { FRESH_MS } from '@/shared/lib/freshness';
 import type { RequestSourceOption } from '@/shared/types';
 import { markNew } from '@/stores/new-rows';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { requestApi, type RequestListParams, type RequestManagedChoice, type SubmitRequestPayload } from '../api/requestApi';
 
 /** Server-paginated request list (KPI meta rides along). */
@@ -57,6 +57,10 @@ export const useRequestFieldOptions = <T extends RequestSourceOption | RequestMa
         staleTime: FRESH_MS,
         enabled: false,
     });
+
+/** Load one of those lists again now (Next on the details step), so a choice removed since it loaded is caught there. */
+export const reloadRequestFieldOptions = (qc: QueryClient, type: string, field: string) =>
+    qc.fetchQuery({ queryKey: requestFieldOptionsKey(type, field), queryFn: () => requestApi.fieldOptions(type, field), staleTime: 0 });
 
 export function useRequestMutations() {
     const qc = useQueryClient();

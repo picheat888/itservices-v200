@@ -54,6 +54,21 @@ class StoreServiceRequestRequest extends FormRequest
         return $rules;
     }
 
+    /**
+     * Refusals the New Request form words itself, sent as codes: a file's by its name, a removed choice as "no longer exists".
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'files.*.max' => 'file_too_large',
+            'files.*.mimes' => 'file_type',
+            'files.*.uploaded' => 'file_upload_failed',
+            'fields.*.exists' => 'item_removed',
+        ];
+    }
+
     /** The submitted type, or null when it is missing, unknown or not text. */
     private function submittedType(): ?RequestType
     {

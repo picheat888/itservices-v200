@@ -31,13 +31,26 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Send, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { type RequestManagedChoice, type RequestTypeOption } from '../api/requestApi';
-import { requestFieldOptionsKey, useRequestFieldOptions, useRequestMutations, useRequestOptions } from '../hooks/use-requests';
+import {
+    reloadRequestFieldOptions,
+    requestFieldOptionsKey,
+    useRequestFieldOptions,
+    useRequestMutations,
+    useRequestOptions,
+} from '../hooks/use-requests';
 import { choiceGone, findChoice } from '../lib/field-choices';
 
 const LAST_STEP = 2;
 
 /** Total upload size the wizard will send; PHP's post_max_size would refuse more without a readable answer. */
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
+
+/** The words for each per-file refusal code of StoreServiceRequestRequest::messages(). */
+const FILE_REFUSAL: Record<string, 'req_file_too_large' | 'req_file_bad_type' | 'req_file_upload_failed'> = {
+    file_too_large: 'req_file_too_large',
+    file_type: 'req_file_bad_type',
+    file_upload_failed: 'req_file_upload_failed',
+};
 
 // Non-empty field values only, so a blanked field compares equal to an untouched one.
 const filledKey = (values: Record<string, string>) =>
@@ -138,6 +151,16 @@ export function RequestCreateDialog({
     const choiceLost = (f: RequestFieldSchema) =>
         choiceGone((fields[f.key] ?? '').trim(), queryClient.getQueryData(requestFieldOptionsKey(type ?? '', f.key)));
 
+    /** Load the lists of the picked choices again, so leaving the details step catches one removed since they loaded. */
+    const reloadPickedLists = () =>
+        Promise.all(
+            schema
+                .filter(
+                    (f) => (fields[f.key] ?? '').trim() !== '' && queryClient.getQueryData(requestFieldOptionsKey(type ?? '', f.key)) !== undefined,
+                )
+                .map((f) => reloadRequestFieldOptions(queryClient, type ?? '', f.key).catch(() => undefined)),
+        );
+
     const buildErrors = (): Record<string, string> => {
         const e: Record<string, string> = {};
         if (!type) e.type = t('req_err_pick_service');
@@ -175,13 +198,14 @@ export function RequestCreateDialog({
     };
     const stepOwns = (s: number, key: string): boolean => (s === 0 ? key === 'type' : s === 1 ? key !== 'type' : false);
 
-    const goToStep = (target: number) => {
+    const goToStep = async (target: number) => {
         const clamped = Math.max(0, Math.min(target, LAST_STEP));
         if (clamped <= step) {
             setErr({});
             setStep(clamped);
             return;
         }
+        if (step <= 1 && clamped > 1) await reloadPickedLists();
         const all = buildErrors();
         for (let s = step; s < clamped; s++) {
             const bad = Object.keys(all).filter((k) => stepOwns(s, k));
@@ -228,13 +252,31 @@ export function RequestCreateDialog({
             const onScreen = new Set(['type', 'reason', 'files', ...schema.map((f) => `field_${f.key}`)]);
             const serverErrs: Record<string, string> = {};
             const offScreen: string[] = [];
+            const fileLines: string[] = [];
             // A refusal code (type_closed, no_employee) is worded; a validation sentence shows as sent
-            const worded = (message: string) => (t(`req_refusal_${message}`) !== `req_refusal_${message}` ? t(`req_refusal_${message}`) : message);
+            const worded = (message: string) =>
+                message === 'item_removed'
+                    ? t('cmn_item_removed')
+                    : t(`req_refusal_${message}`) !== `req_refusal_${message}`
+                      ? t(`req_refusal_${message}`)
+                      : message;
+            // One line per refused file, by its name (files.N is the Nth file sent)
+            const maxMb = fmtN(Math.round((options?.attachments.max_size_kb ?? 10240) / 1024));
+            const fileLine = (name: string, code: string) => {
+                const key = FILE_REFUSAL[code];
+                return key ? t(key).replace('{name}', name).replace('{mb}', maxMb) : `${name} ${code}`;
+            };
             for (const [key, msgs] of Object.entries(resp?.errors ?? {})) {
+                const fileIndex = /^files\.(\d+)$/.exec(key);
+                if (fileIndex) {
+                    fileLines.push(fileLine(files[Number(fileIndex[1])]?.name ?? '', msgs[0] ?? ''));
+                    continue;
+                }
                 const local = key.startsWith('fields.') ? `field_${key.slice(7)}` : key.startsWith('files') ? 'files' : key;
                 if (onScreen.has(local)) serverErrs[local] = worded(msgs[0] ?? '');
                 else if (msgs[0]) offScreen.push(worded(msgs[0]));
             }
+            if (fileLines.length) serverErrs.files = [serverErrs.files, ...fileLines].filter(Boolean).join('\n');
             if (Object.keys(serverErrs).length) {
                 showErrors(serverErrs);
                 setStep(serverErrs.type ? 0 : 1);
@@ -483,10 +525,14 @@ export function RequestCreateDialog({
                                     )}
 
                                     {err.files && (
-                                        <p className="text-destructive mt-2 flex items-center gap-1.5 text-xs">
-                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                            {err.files}
-                                        </p>
+                                        <div className="mt-2 space-y-1">
+                                            {err.files.split('\n').map((line, i) => (
+                                                <p key={`${i}-${line}`} className="text-destructive flex items-center gap-1.5 text-xs">
+                                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                                    {line}
+                                                </p>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </div>
