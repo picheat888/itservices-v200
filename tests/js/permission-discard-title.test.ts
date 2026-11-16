@@ -19,8 +19,8 @@ test('the discard prompt takes a page title and keeps the shared words otherwise
 
 test('both guards pass the title on, the close guard to its Back/link guard too', () => {
     const close = read('shared/hooks/use-discard-guard.ts');
-    assert.match(close, /export function useDiscardGuard\(isDirty: boolean, title\?: string\)/);
-    assert.match(close, /useNavigationGuard\(isDirty, MODAL_PARAMS, title\);/);
+    assert.match(close, /export function useDiscardGuard\(isDirty: boolean, title\?: string, extraWatch: readonly string\[\] = \[\]\)/);
+    assert.match(close, /useNavigationGuard\(isDirty, \[\.\.\.MODAL_PARAMS, \.\.\.extraWatch\], title\);/);
     assert.match(close, /confirm\(discardConfirmOptions\(t, title\)\)/);
     const nav = read('shared/hooks/use-navigation-guard.ts');
     assert.match(nav, /export function useNavigationGuard\(active: boolean, watchParams: readonly string\[\] = \[\], title\?: string\)/);
@@ -29,8 +29,17 @@ test('both guards pass the title on, the close guard to its Back/link guard too'
 
 test('the permissions page asks with its own title on a role switch, a tab switch and a page leave', () => {
     const page = read('modules/permission/pages/index.tsx');
-    assert.match(page, /useDiscardGuard\(tab === 'templates' && rolesDirty, t\('perm_discard_title'\)\)/);
+    assert.match(page, /useDiscardGuard\(tab === 'templates' && rolesDirty, t\('perm_discard_title'\), \['tab', 'role'\]\)/);
     assert.match(page, /useDiscardGuard\(dirty, t\('perm_discard_title'\)\)/);
     assert.match(page, /useNavigationGuard\(dirty, \['tab', 'role'\], t\('perm_discard_title'\)\)/);
     assert.equal(th.perm_discard_title, 'ทิ้งสิทธิ์ที่ยังไม่บันทึก?');
+});
+
+test('Back with an unsaved draft asks whichever guard is newest: the page guard watches the tab and the role too', () => {
+    // The page's guard turns on after RolesTab's (rolesDirty comes from RolesTab's effect), so it is the newest and the one that asks
+    const page = read('modules/permission/pages/index.tsx');
+    const pageGuard = page.indexOf("useDiscardGuard(tab === 'templates' && rolesDirty");
+    const rolesTab = page.indexOf('function RolesTab(');
+    assert.ok(pageGuard > 0 && rolesTab > pageGuard, 'the page guard lives in the page, above RolesTab');
+    assert.match(read('shared/hooks/use-discard-guard.ts'), /const MODAL_PARAMS = \['view', 'edit', 'add', 'count', 'dialog'\] as const;/);
 });

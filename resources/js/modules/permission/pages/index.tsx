@@ -72,7 +72,8 @@ export default function PermissionsPage() {
     const tab: Tab | null = allowed.length > 0 ? allowedTab : null;
     // Unsaved role-permission draft; leaving the matrix tab asks first.
     const [rolesDirty, setRolesDirty] = useState(false);
-    const guardTabSwitch = useDiscardGuard(tab === 'templates' && rolesDirty, t('perm_discard_title'));
+    // Registered after RolesTab's guard, so it is the one that asks: it watches the tab and the role too
+    const guardTabSwitch = useDiscardGuard(tab === 'templates' && rolesDirty, t('perm_discard_title'), ['tab', 'role']);
     const changeTab = (next: Tab) => {
         if (next === tab) return;
         guardTabSwitch(() => setTab(next, { extra: (params) => TAB_LIST_KEYS.forEach((key) => params.delete(key)) }));
