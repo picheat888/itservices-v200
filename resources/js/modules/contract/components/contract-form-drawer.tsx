@@ -17,6 +17,7 @@ import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useSeedOnce } from '@/shared/hooks/use-seed-once';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { FRESH_LIST } from '@/shared/lib/freshness';
+import { isServerFailure } from '@/shared/lib/http-errors';
 import { localName } from '@/shared/lib/local-name';
 import { toMoneyText } from '@/shared/lib/money';
 import { reasonWords } from '@/shared/lib/reason-words';
@@ -426,13 +427,15 @@ export function ContractFormDrawer({
                 focusFirstError(Object.fromEntries(Object.entries(fieldErrors).filter(([field]) => FIELD_STEP[field] === firstStep)));
                 return;
             }
+            // A 5xx's own text is the server's ("Server Error"): the form keeps its words, the toast carries the reference
+            const serverText = isServerFailure(e) ? undefined : data?.message;
             if (fileError || savingFiles) {
                 // Attachments live on the contract-info step
-                setFileErr(fileError || reasonWords(e, t, 'contract_refusal_') || data?.message || t('attachment_upload_failed'));
+                setFileErr(fileError || reasonWords(e, t, 'contract_refusal_') || serverText || t('attachment_upload_failed'));
                 setStep(1);
                 return;
             }
-            setFormError(reasonWords(e, t, 'contract_refusal_') || data?.message || t('contract_save_failed'));
+            setFormError(reasonWords(e, t, 'contract_refusal_') || serverText || t('contract_save_failed'));
             setFormErrorCount((n) => n + 1);
         }
     };

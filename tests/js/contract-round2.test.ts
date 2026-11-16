@@ -49,7 +49,10 @@ test('the link picker searches and pages on the server and names a kept write-of
 
 test('a refused expire and the peek dialog speak the round 2 words', () => {
     assert.match(read('modules/contract/hooks/use-contract-actions.tsx'), /errorMessage: \(e\) => reasonWords\(e, t, 'contract_refusal_'\)/);
-    assert.match(read('modules/asset/components/contract-peek-dialog.tsx'), /c\.days_remaining === 0\s*\? t\('contract_due_today'\)\s*: t\('active'\)/);
+    assert.match(
+        read('modules/asset/components/contract-peek-dialog.tsx'),
+        /c\.days_remaining === 0\s*\? t\('contract_due_today'\)\s*: t\('active'\)/,
+    );
     for (const lang of ['th', 'en']) assert.match(read(`lang/${lang}/contract.ts`), /contract_link_asset_on_contract: '/);
 });
 
@@ -66,6 +69,14 @@ test('the cancel reason stops at 500 characters and a refusal shows its own word
 
 test('a save refused because the contract closed meanwhile says so in Thai, not as a code', () => {
     const form = read('modules/contract/components/contract-form-drawer.tsx');
-    assert.match(form, /setFormError\(reasonWords\(e, t, 'contract_refusal_'\) \|\| data\?\.message \|\| t\('contract_save_failed'\)\);/);
+    assert.match(form, /setFormError\(reasonWords\(e, t, 'contract_refusal_'\) \|\| serverText \|\| t\('contract_save_failed'\)\);/);
     for (const lang of ['th', 'en']) assert.match(read(`lang/${lang}/contract.ts`), /contract_refusal_contract_closed: '/);
+});
+
+test('UAT CTR-01-13: a 5xx on save shows the form\'s own words, never the server\'s "Server Error"', () => {
+    const form = read('modules/contract/components/contract-form-drawer.tsx');
+    assert.match(form, /const serverText = isServerFailure\(e\) \? undefined : data\?\.message;/);
+    assert.match(form, /setFileErr\(fileError \|\| reasonWords\(e, t, 'contract_refusal_'\) \|\| serverText \|\| t\('attachment_upload_failed'\)\);/);
+    assert.doesNotMatch(form, /\|\| data\?\.message \|\|/);
+    assert.match(read('lang/th/contract.ts'), /contract_save_failed: 'บันทึกสัญญาไม่สำเร็จ กรุณาลองใหม่',/);
 });
