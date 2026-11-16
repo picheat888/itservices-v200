@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePresence } from '@/shared/hooks/use-presence';
+import { pagePanelSpot } from '@/shared/lib/panel-placement';
 import { cn } from '@/shared/lib/utils';
 import { SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
@@ -23,9 +24,16 @@ const MIN_PANEL = 160;
 const inOpenMenu = (el: Element, panel: HTMLElement | null) =>
     el !== panel && (!!el.closest('[role="combobox"][aria-expanded="true"]') || !!el.querySelector('[role="listbox"]'));
 
+/** Height the panel needs to show everything without scrolling: its header, body content and footer plus the 1px borders. */
+const naturalHeight = (panel: HTMLElement) => {
+    const body = panel.children[1];
+    return Array.from(panel.children).reduce((sum, part) => sum + (part === body ? part.scrollHeight : (part as HTMLElement).offsetHeight), 2);
+};
+
 /**
  * "Filters" trigger with a count badge and a floating panel (a labelled group, not a dialog); `children` gets `close`.
  * The panel portals to <body>, or into the nearest dialog so a modal still lets it be clicked and focused.
+ * It opens below the trigger, or above it when it does not fit below and above has more room.
  */
 export function FilterPopover({
     count,
@@ -61,11 +69,11 @@ export function FilterPopover({
     const fmtN = useNumberFormat();
     const [open, setOpen] = useState(false);
     const { mounted, closing } = usePresence(open);
-    // maxHeight and bottom (opening upward) only inside a dialog; on a page the panel keeps its natural height below the trigger
+    // `bottom` when the panel opens upward; maxHeight caps it to the room on that side
     const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight?: number }>({ top: 0, left: 0 });
     // The dialog the trigger sits in, if any: the panel portals into it
     const [host, setHost] = useState<HTMLElement | null>(null);
-    // Set when a panel in a dialog is taller than the room below, so its body scrolls
+    // Set when the panel is taller than the room on its side, so its body scrolls
     const [scrolls, setScrolls] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -122,7 +130,7 @@ export function FilterPopover({
         }
     };
 
-    // Position the panel just under the trigger, inside the window or the dialog box it portals into
+    // Position the panel by the trigger, inside the window or the dialog box it portals into
     const place = () => {
         const trigger = triggerRef.current;
         const r = trigger?.getBoundingClientRect();
@@ -136,7 +144,8 @@ export function FilterPopover({
         const top = r.bottom + 4;
         setHost(dialog);
         if (!dialog) {
-            setPos({ top, left });
+            const panel = panelRef.current;
+            setPos({ left, ...pagePanelSpot(r, window.innerHeight, panel ? naturalHeight(panel) : null, 4, EDGE) });
             return;
         }
         // In a dialog: below by default, above when below is too cramped and above has more room
@@ -152,7 +161,13 @@ export function FilterPopover({
         });
     };
 
-    // In a dialog, a panel taller than its room scrolls its body; measured from the content (scrolling or not), and again as it grows
+    // Placed again once drawn, so a page panel knows its height before the first paint
+    useLayoutEffect(() => {
+        if (open) place();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+
+    // A panel taller than its room scrolls its body; measured from the content (scrolling or not), and again as it grows
     useLayoutEffect(() => {
         const panel = panelRef.current;
         const maxHeight = pos.maxHeight;
@@ -160,16 +175,9 @@ export function FilterPopover({
             setScrolls(false);
             return;
         }
-        const body = panel.children[1];
-        const measure = () => {
-            const natural = Array.from(panel.children).reduce(
-                (sum, part) => sum + (part === body ? part.scrollHeight : (part as HTMLElement).offsetHeight),
-                2,
-            );
-            setScrolls(natural > maxHeight);
-        };
+        const measure = () => setScrolls(naturalHeight(panel) > maxHeight);
         measure();
-        const content = body?.firstElementChild;
+        const content = panel.children[1]?.firstElementChild;
         if (!content || typeof ResizeObserver === 'undefined') return;
         const observer = new ResizeObserver(measure);
         observer.observe(content);
@@ -261,7 +269,8 @@ export function FilterPopover({
                         style={{ top: pos.top, bottom: pos.bottom, left: pos.left, width, maxHeight: pos.maxHeight }}
                         className={cn(
                             'border-border bg-popover rounded-lg border shadow-md',
-                            host ? 'absolute z-50 flex flex-col' : 'fixed z-[9999]',
+                            'flex flex-col',
+                            host ? 'absolute z-50' : 'fixed z-[9999]',
                             closing ? 'motion-pop-out' : 'motion-pop-in',
                         )}
                     >

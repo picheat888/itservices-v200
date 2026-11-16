@@ -94,13 +94,14 @@ test('a filter panel inside a dialog opens in that dialog, fits the room below a
     const popover = read('js/shared/components/filter-popover.tsx');
     assert.match(popover, /const dialog = trigger\.closest<HTMLElement>\('\[role="dialog"\]'\);/);
     assert.match(popover, /host \?\? document\.body,/);
-    assert.match(popover, /host \? 'absolute z-50 flex flex-col' : 'fixed z-\[9999\]'/);
+    assert.match(popover, /'flex flex-col',\s*host \? 'absolute z-50' : 'fixed z-\[9999\]'/);
     assert.doesNotMatch(popover, /position: host|zIndex/, 'placement classes, not inline style');
     // In a dialog: opens upward when below is cramped and above is roomier, capped to the side it opens on
     assert.match(popover, /const up = below < MIN_PANEL && above > below;/);
     assert.match(popover, /bottom: up \? box\.bottom - r\.top \+ 4 : undefined/);
     assert.match(popover, /maxHeight: up \? above : below/);
-    assert.match(popover, /if \(!dialog\) \{\s*setPos\(\{ top, left \}\);/);
+    // On a page: the page rule (tests/js/panel-placement.test.ts)
+    assert.match(popover, /if \(!dialog\) \{\s*const panel = panelRef\.current;\s*setPos\(\{ left, \.\.\.pagePanelSpot\(/);
     // Grows after opening (late options): measured again
     assert.match(popover, /new ResizeObserver\(measure\)/);
     assert.match(popover, /scrolls && 'min-h-0 overflow-y-auto'/);
