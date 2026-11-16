@@ -570,7 +570,7 @@ export const report: Dict = {
     rep_n_wo_rented_overdue_none: 'No ended contract has units still out',
     rep_fl_contract: 'Contract',
     rep_c_contract: 'Contract',
-    rep_c_outcome: 'Left by',
+    rep_c_outcome: 'Exit type',
     rep_c_warranty: 'Warranty at write-off',
     rep_c_warranty_months: 'Warranty left (months)',
     rep_wo_outcome_written_off: 'Written off',

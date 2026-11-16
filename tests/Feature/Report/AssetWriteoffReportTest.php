@@ -421,7 +421,8 @@ class AssetWriteoffReportTest extends TestCase
         $this->assertSame(['CT-2026-901', 'CT-2026-902', 'CT-2026-903', 'CT-2026-904'], array_column($contractFilter['options'], 'label'));
 
         $hidden = collect($definition['columns'])->where('hidden', true)->pluck('key')->all();
-        $this->assertSame(['brand', 'model', 'outcome', 'reason_note', 'written_off_by', 'serial', 'warehouse', 'purchase_date', 'warranty_months'], $hidden);
+        // UAT RPT-13-01: "ประเภทการออก" is one of the list's own columns
+        $this->assertSame(['brand', 'model', 'reason_note', 'written_off_by', 'serial', 'warehouse', 'purchase_date', 'warranty_months'], $hidden);
         $this->assertFalse($definition['has_charts']);
     }
 

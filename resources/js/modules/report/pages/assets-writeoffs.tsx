@@ -1,6 +1,7 @@
 // "การตัดจำหน่ายทรัพย์สิน" report page (/reports/assets-writeoffs): shared tabular body + WriteoffCards + its own list cells.
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { formatNumber } from '@/shared/lib/number';
 import { useUiStore } from '@/stores/ui';
 import { Link } from 'react-router-dom';
@@ -9,7 +10,6 @@ import { TabularReportView } from '../components/tabular-report-view';
 import { WriteoffCards } from '../components/writeoff-cards';
 import { YearsTip } from '../components/years-tip';
 import { useCanOpen } from '../hooks/use-can-open';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 type Row = Record<string, unknown> & { _links?: Record<string, string> };
 
@@ -94,8 +94,7 @@ function WarrantyCell({ row }: { row: Row }) {
 }
 
 function ReasonCell({ row }: { row: Row }) {
-    const t = useT();
-    const reason = row.outcome === 'returned' ? t('rep_wo_outcome_returned') : str(row.reason);
+    const reason = str(row.reason);
     return reason ? (
         <span className="block max-w-[16rem] truncate" title={reason}>
             {reason}
@@ -130,7 +129,7 @@ export default function AssetsWriteoffsReportPage() {
             reportKey="assets.writeoffs"
             extras={{
                 tiles: 5,
-                innerColumns: ['brand', 'model', 'contract', 'warranty_months', 'outcome'],
+                innerColumns: ['brand', 'model', 'contract', 'warranty_months'],
                 beforeTable: ({ filters }) => <WriteoffCards filters={filters} />,
                 rowsTitle: 'rep_wo_rows_title',
                 renderCell: writeoffCell,

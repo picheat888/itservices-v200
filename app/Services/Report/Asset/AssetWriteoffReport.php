@@ -140,8 +140,7 @@ class AssetWriteoffReport extends TabularReport
                 ->labelKey('rep_c_asset_category')->withCode('รหัสหมวดหมู่', 'เลข ID ของหมวดหมู่ในระบบ ไม่ซ้ำกันและไม่เปลี่ยนแม้มีการแก้ชื่อ ใช้เชื่อมตารางหมวดหมู่ใน Power BI', fn (Asset $a) => $a->category_id),
             ReportColumn::enum('source', 'ที่มา', fn (Asset $a) => $a->source, self::SOURCE_KEYS, self::SOURCE_TH),
             ReportColumn::text('contract', 'สัญญา', fn (Asset $a) => $a->contract?->code)->linkTo('/contracts', fn (Asset $a) => $a->contract_id),
-            // The page reads this into the reason cell: a return to the lessor carries no reason of its own.
-            ReportColumn::enum('outcome', 'ประเภทการออก', fn (Asset $a) => self::outcome($a), self::OUTCOME_KEYS, self::OUTCOME_TH)->hiddenByDefault(),
+            ReportColumn::enum('outcome', 'ประเภทการออก', fn (Asset $a) => self::outcome($a), self::OUTCOME_KEYS, self::OUTCOME_TH),
             ReportColumn::text('reason', 'เหตุผล', fn (Asset $a) => $a->writeoffReason?->name),
             ReportColumn::text('reason_note', 'หมายเหตุ', fn (Asset $a) => $a->last_reason)->hiddenByDefault(),
             ReportColumn::text('written_off_by', 'ผู้ตัดจำหน่าย', fn (Asset $a) => $a->writtenOffBy?->name)->hiddenByDefault(),
