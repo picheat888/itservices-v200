@@ -1,5 +1,5 @@
 // Audit Logs tab: the server-paged log on the shared DataTable, with filters and an expandable detail per entry.
-import { translate, useT } from '@/lang';
+import { dictionaries, translate, useT } from '@/lang';
 import { useDepartments, useEmployeesByIds, usePositions, useSections } from '@/modules/employee';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { LoadFailed } from '@/shared/components/load-failed';
@@ -23,7 +23,7 @@ import { auditEmployeeIds } from '../lib/audit-employee-ids';
 import { auditFieldLabel, auditValueText, type AuditLookups } from '../lib/audit-format';
 import { splitAuditEntries } from '../lib/audit-members';
 import { SECURITY_SETTINGS_ACTION, securitySettingsTarget } from '../lib/audit-security';
-import { auditEventLabel } from '../lib/audit-words';
+import { auditEventKeysMatching, auditEventLabel } from '../lib/audit-words';
 import { actionLabel, moduleLabel } from '../lib/permission-labels';
 import { AuditMemberChanges } from './audit-member-changes';
 
@@ -160,7 +160,9 @@ export function AuditLogTab() {
     const category = AUDIT_CATEGORIES.includes(categoryParam) ? categoryParam : 'all';
     const user = list.get('user') || 'all';
     const sentSearch = useDebouncedSearch(search);
-    const filters: AuditFilters = { search: sentSearch, category, user };
+    // The action names on screen are translations of stored English actions; the matching ones go along by key
+    const eventKeys = useMemo(() => auditEventKeysMatching(dictionaries[lang], sentSearch), [lang, sentSearch]);
+    const filters: AuditFilters = { search: sentSearch, eventKeys, category, user };
     const hasSearchOrFilter = search !== '' || category !== 'all' || user !== 'all';
 
     const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useAuditLogs(page, perPage, filters);

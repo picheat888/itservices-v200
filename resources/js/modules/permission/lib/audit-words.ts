@@ -11,6 +11,22 @@ export function auditEventKey(action: string): string {
     return `audit_ev_${slug}`;
 }
 
+/** More matches than this means the search is too broad to name actions (a letter or two); none are sent then. */
+const MAX_EVENT_KEYS = 60;
+
+/**
+ * The keys (without `audit_ev_`) of the action names in `dict` that hold every word of `search`, for the
+ * server to match against the stored English actions (AuditLogListService). Empty when nothing or too much matches.
+ */
+export function auditEventKeysMatching(dict: Readonly<Record<string, string>>, search: string): string[] {
+    const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [];
+    const keys = Object.entries(dict)
+        .filter(([key, name]) => key.startsWith('audit_ev_') && words.every((word) => name.toLowerCase().includes(word)))
+        .map(([key]) => key.slice('audit_ev_'.length));
+    return keys.length > MAX_EVENT_KEYS ? [] : keys;
+}
+
 /** The stored subject_type is a morph alias or a class name; an asset is stored by class name. */
 export function isAssetSubject(subjectType: string | null | undefined): boolean {
     return typeof subjectType === 'string' && /(^|\\)asset$/i.test(subjectType);

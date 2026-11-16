@@ -88,6 +88,8 @@ export interface AuditMeta {
 
 export interface AuditFilters {
     search?: string;
+    /** Keys of the on-screen action names that match `search` (auditEventKeysMatching). */
+    eventKeys?: string[];
     category?: string;
     user?: string;
 }
@@ -202,6 +204,7 @@ export const permissionApi = {
                     page,
                     per_page: perPage,
                     search: filters.search || undefined,
+                    event_keys: filters.eventKeys?.length ? filters.eventKeys.join(',') : undefined,
                     category: filters.category && filters.category !== 'all' ? filters.category : undefined,
                     user: filters.user && filters.user !== 'all' ? filters.user : undefined,
                 },

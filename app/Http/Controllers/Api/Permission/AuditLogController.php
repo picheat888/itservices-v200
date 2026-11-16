@@ -19,6 +19,8 @@ class AuditLogController extends Controller
 
         $filters = $request->validate([
             'search' => ['nullable', 'string'],
+            // Keys of the on-screen action names that match the search (audit-words.ts), comma-separated
+            'event_keys' => ['nullable', 'string', 'max:3000', 'regex:/^[a-z0-9_]+(,[a-z0-9_]+)*$/'],
             'category' => ['nullable', 'string', Rule::in(AuditLogListService::categories())],
             'user' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],

@@ -9,6 +9,7 @@ use App\Support\SearchTerms;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class AuditLogListService
 {
@@ -35,6 +36,12 @@ class AuditLogListService
 
     private const OTHER = 'other';
 
+    /**
+     * A stored action as the screen keys its name (audit-words.ts auditEventKey): lower case, spaces and
+     * hyphens as underscores. Stored actions hold only letters, spaces and hyphens, so this is the same key.
+     */
+    private const ACTION_KEY_SQL = "replace(replace(lower(action), ' ', '_'), '-', '_')";
+
     /** @return list<string> */
     public static function categories(): array
     {
@@ -42,14 +49,26 @@ class AuditLogListService
     }
 
     /**
-     * @param  array{search?: ?string, category?: ?string, user?: ?string, per_page?: ?int}  $filters
+     * `event_keys` are the keys of the action names the screen shows that match the search (comma-separated),
+     * so a Thai name finds the English action it stands for.
+     *
+     * @param  array{search?: ?string, event_keys?: ?string, category?: ?string, user?: ?string, per_page?: ?int}  $filters
      */
     public function page(array $filters): LengthAwarePaginator
     {
         // Newest first; id breaks ties between entries written in the same second.
         $query = AuditLog::query()->latest()->latest('id');
 
-        SearchTerms::apply($query, $filters['search'] ?? null, ['action', 'target', 'user_name']);
+        $search = $filters['search'] ?? null;
+        $eventKeys = array_values(array_filter(explode(',', (string) ($filters['event_keys'] ?? ''))));
+        if ($eventKeys === []) {
+            SearchTerms::apply($query, $search, ['action', 'target', 'user_name']);
+        } else {
+            // The stored text matches, or the action is one whose on-screen name matched
+            $query->where(fn (Builder $either) => $either
+                ->where(fn (Builder $terms) => SearchTerms::apply($terms, $search, ['action', 'target', 'user_name']))
+                ->orWhereIn(DB::raw(self::ACTION_KEY_SQL), $eventKeys));
+        }
 
         if ($category = $filters['category'] ?? null) {
             $this->whereCategory($query, $category);

@@ -75,6 +75,29 @@ class AuditDetailTest extends TestCase
             ->assertJsonPath('meta.users.0', 'Boss');
     }
 
+    /** UAT PRM-12-01: the screen sends the keys of the action names it shows that match the search, so a Thai name finds the stored English action. */
+    public function test_audit_search_finds_an_action_by_the_name_the_screen_shows(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        AuditLog::create(['user_name' => 'admin', 'action' => 'Updated permissions', 'target' => 'UAT A Role']);
+        AuditLog::create(['user_name' => 'admin', 'action' => 'Force-recalled asset', 'target' => 'INK-IT-26-0001']);
+        AuditLog::create(['user_name' => 'admin', 'action' => 'Created brand', 'target' => 'Acme']);
+
+        // "แก้ไขสิทธิ์ของบทบาท" is the screen's name for audit_ev_updated_permissions
+        $this->getJson('/api/audit-logs?search='.urlencode('แก้ไขสิทธิ์ของบทบาท').'&event_keys=updated_permissions')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.action', 'Updated permissions');
+        // Hyphens fold into the key the same way as on the screen
+        $this->getJson('/api/audit-logs?search='.urlencode('เรียกคืนแบบบังคับ').'&event_keys=force_recalled_asset,updated_permissions')
+            ->assertOk()->assertJsonCount(2, 'data');
+        // The stored text still matches alongside the keys (target, actor, English action)
+        $this->getJson('/api/audit-logs?search=Acme&event_keys=updated_permissions')
+            ->assertOk()->assertJsonCount(2, 'data');
+        // Without keys nothing changes: a Thai name alone finds nothing
+        $this->getJson('/api/audit-logs?search='.urlencode('แก้ไขสิทธิ์ของบทบาท'))->assertOk()->assertJsonCount(0, 'data');
+        // Keys are the screen's slugs only
+        $this->getJson('/api/audit-logs?search=x&event_keys='.urlencode("updated_permissions') or 1=1 --"))->assertUnprocessable();
+    }
+
     public function test_audit_actor_list_is_distinct_sorted_and_user_name_is_indexed(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
