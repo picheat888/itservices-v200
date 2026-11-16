@@ -5,6 +5,7 @@ namespace App\Http\Requests\Asset;
 use App\Enums\Asset\AssetSource;
 use App\Enums\Contract\ContractType;
 use App\Models\Contract\Contract;
+use App\Models\Settings\AssetModel;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,7 +37,7 @@ class StoreAssetRequest extends FormRequest
             // Asset type is a Master Data category (managed under Settings → Master Data).
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
-            'model_id' => ['required', 'integer', 'exists:asset_models,id'],
+            'model_id' => ['required', 'integer', 'exists:asset_models,id', $this->modelOfTheBrandUnlessKept()],
             'serial' => ['nullable', 'string', 'max:120'],
             'source' => ['required', Rule::enum(AssetSource::class)],
             // No `status` / `owner`: custody changes only through the trail actions; unlisted keys are dropped.
@@ -66,6 +67,29 @@ class StoreAssetRequest extends FormRequest
     public function attributes(): array
     {
         return ['tag' => 'Tag'];
+    }
+
+    /**
+     * The model must belong to the chosen brand: one moved to another brand while the form was open is refused
+     * as model_moved, which the form words "ยี่ห้อถูกเปลี่ยนเป็น … เลือกรุ่นใหม่". An edit that keeps the asset's
+     * own brand and model saves as before.
+     */
+    private function modelOfTheBrandUnlessKept(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            $brandId = $this->input('brand_id');
+            if (blank($value) || blank($brandId)) {
+                return;
+            }
+            $asset = $this->route('asset');
+            if ($asset && (int) $value === (int) $asset->model_id && (int) $brandId === (int) $asset->brand_id) {
+                return;
+            }
+            $modelBrand = AssetModel::whereKey($value)->value('brand_id');
+            if ($modelBrand !== null && (int) $modelBrand !== (int) $brandId) {
+                $fail('model_moved');
+            }
+        };
     }
 
     /** A cancelled or expired contract takes no new assets; an asset already on one may keep it. */

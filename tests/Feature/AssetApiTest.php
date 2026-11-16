@@ -101,6 +101,33 @@ class AssetApiTest extends TestCase
         $this->getJson('/api/assets')->assertOk()->assertJsonCount(1, 'data');
     }
 
+    /** UAT AST-01-04: a model moved to another brand while the form was open is refused as model_moved; an edit that keeps brand and model as they are still saves. */
+    public function test_a_model_of_another_brand_is_refused_unless_the_asset_already_had_it(): void
+    {
+        $this->actingAs($this->super());
+        $brandA = Brand::create(['name' => 'UAT Brand A']);
+        $brandB = Brand::create(['name' => 'UAT Brand B']);
+        $model = AssetModel::create(['name' => 'Moving Model', 'brand_id' => $brandA->id]);
+        $payload = [
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'brand_id' => $brandA->id, 'model_id' => $model->id,
+            'vendor_id' => $this->vendorId(), 'value' => 1000, 'purchase_date' => '2026-01-10', 'warranty_end' => '2027-01-10',
+        ];
+        $id = $this->postJson('/api/assets', $payload)->assertCreated()->json('data.id');
+
+        // Someone moves the model to brand B meanwhile
+        $model->update(['brand_id' => $brandB->id]);
+
+        $this->postJson('/api/assets', $payload)->assertStatus(422)->assertJsonPath('errors.model_id', ['model_moved']);
+        // Editing other fields of the asset that already holds that pair keeps working
+        $this->putJson("/api/assets/{$id}", ['serial' => 'SN-KEPT'] + $payload)->assertOk();
+        // Choosing the pair anew on an edit is refused like a new one
+        $other = AssetModel::create(['name' => 'Other Model', 'brand_id' => $brandA->id]);
+        $this->putJson("/api/assets/{$id}", ['model_id' => $other->id] + $payload)->assertOk();
+        $this->putJson("/api/assets/{$id}", ['model_id' => $model->id] + $payload)->assertStatus(422)->assertJsonPath('errors.model_id', ['model_moved']);
+        // The model under its new brand is fine
+        $this->postJson('/api/assets', ['brand_id' => $brandB->id] + $payload)->assertCreated();
+    }
+
     public function test_asset_code_is_auto_generated_when_blank(): void
     {
         $this->actingAs($this->super());

@@ -27,7 +27,7 @@ import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Check, FileText, Infinity as InfinityIcon, PackagePlus, ShoppingBag, Tag } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
 
@@ -163,8 +163,8 @@ export function AssetFormDrawer({
         setForm(next);
         setInitial(next);
     });
-    // Id of a chosen model taken out because the brand moved elsewhere
-    const [modelGone, setModelGone] = useState<string | null>(null);
+    // A chosen model taken out because a brand changed elsewhere, and the brand the note names
+    const [modelGone, setModelGone] = useState<{ id: string; brandId: string } | null>(null);
     useFormRebase({
         fresh: live ? toForm(live) : null,
         base: initial,
@@ -173,9 +173,20 @@ export function AssetFormDrawer({
         links: [{ child: 'model_id', parent: 'brand_id', empty: '' }],
         onDrop: (drops) => {
             const drop = drops.find((d) => d.child === 'model_id');
-            if (drop) setModelGone(String(drop.value));
+            if (drop) setModelGone({ id: String(drop.value), brandId: String(drop.parentValue) });
         },
     });
+    // Registering: a reloaded model list that puts the chosen model under another brand drops it and says so
+    useEffect(() => {
+        if (editing || !form.model_id || !form.brand_id) return;
+        const chosen = models.find((m) => String(m.id) === form.model_id);
+        if (chosen?.brand_id != null && String(chosen.brand_id) !== form.brand_id) {
+            setForm((f) => ({ ...f, model_id: '' }));
+            setModelGone({ id: String(chosen.id), brandId: String(chosen.brand_id) });
+        }
+        // Only a reloaded list starts the check, not each pick
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [models]);
 
     /** Form field → validation-error key (they don't always share a name). */
     const ERR_KEY: Partial<Record<keyof FormState, string>> = {
@@ -311,6 +322,13 @@ export function AssetFormDrawer({
                 else onClose();
             }, 600);
         } catch (error) {
+            // The chosen model moved to another brand meanwhile (the server checks): drop it and name where it went
+            if (fieldError(error, 'model_id') === 'model_moved') {
+                const moved = ((await modelsQuery.refetch()).data ?? models).find((m) => String(m.id) === form.model_id);
+                setForm((f) => ({ ...f, model_id: '' }));
+                setModelGone({ id: form.model_id, brandId: moved?.brand_id != null ? String(moved.brand_id) : form.brand_id });
+                return;
+            }
             // Each server validation message goes under its own field
             const fieldErrors: Record<string, string> = {};
             for (const [field, errKey] of Object.entries(ERR_KEY)) {
@@ -419,8 +437,11 @@ export function AssetFormDrawer({
                                         note={
                                             modelGone && !form.model_id
                                                 ? t('asset_model_gone')
-                                                      .replace('{brand}', selectedBrand?.name ?? '')
-                                                      .replace('{model}', models.find((m) => String(m.id) === modelGone)?.name ?? '')
+                                                      .replace(
+                                                          '{brand}',
+                                                          brands.find((b) => String(b.id) === modelGone.brandId)?.name ?? selectedBrand?.name ?? '',
+                                                      )
+                                                      .replace('{model}', models.find((m) => String(m.id) === modelGone.id)?.name ?? '')
                                                 : null
                                         }
                                         onChange={(v) => {
