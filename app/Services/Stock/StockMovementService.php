@@ -99,13 +99,13 @@ class StockMovementService
         $movement->loadMissing('item.category');
         $serials = $this->serialsOf($movement)->with('lot:id,lot_no')->get();
 
-        // Fixed width (~47 mm ≈ 177 px) to fill the sticker
+        // Fixed width (~47 mm ≈ 177 px) to fill the sticker; 24 px (~6.4 mm) tall leaves room for the warehouse line
         $type = new TypeCode128;
         $renderer = new HtmlRenderer;
         $labels = $serials->map(fn (StockItemSerial $serial) => [
             'serial' => $serial->serial,
             'lot_no' => $serial->lot?->lot_no,
-            'barcode' => $renderer->render($type->getBarcode($serial->serial), 177, 30),
+            'barcode' => $renderer->render($type->getBarcode($serial->serial), 177, 24),
         ])->all();
 
         $pdf = Pdf::loadView('pdf.serial-labels', [

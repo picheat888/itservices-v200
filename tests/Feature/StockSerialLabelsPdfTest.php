@@ -10,6 +10,8 @@ use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Dompdf\Frame;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
@@ -149,6 +151,43 @@ class StockSerialLabelsPdfTest extends TestCase
         $this->assertStringContainsString('21/10/2026', $html);
         // UAT STK-05-01: "…วันที่ของรายการ และคลัง" — the warehouse of the movement (received into Main)
         $this->assertSame(2, substr_count($html, 'Warehouse:</span> Main'));
+    }
+
+    public function test_every_line_of_a_label_prints_inside_the_sticker(): void
+    {
+        $this->actingAs($this->super());
+        Warehouse::create(['name' => 'คลังอะไหล่อาคาร 3 ชั้น 2 ห้องเก็บของฝั่งตะวันออก']);
+        $item = StockItem::create([
+            'sku' => 'SSD-2TB', 'name' => 'Kingston Fury Renegade NVMe 2TB Gen4 Heatsink', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
+            'category_id' => Category::create(['name' => 'Computer parts'])->id,
+        ]);
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-ABCDEFGHIJ-0042'],
+            'to_label' => 'คลังอะไหล่อาคาร 3 ชั้น 2 ห้องเก็บของฝั่งตะวันออก',
+        ])->assertCreated();
+        $movementId = StockMovement::where('type', 'receive')->value('id');
+        $seen = $this->capturePdfView('pdf.serial-labels');
+        $this->get("/pdf/stock-movements/{$movementId}/labels")->assertOk();
+
+        // Laid out by dompdf itself: the lowest line of text must end inside the 25 mm label box
+        $label = null;
+        $lowestText = 0.0;
+        $dompdf = Pdf::loadView('pdf.serial-labels', $seen[0])->setPaper('a4', 'portrait')->getDomPDF();
+        $dompdf->setCallbacks([['event' => 'end_frame', 'f' => function (Frame $frame) use (&$label, &$lowestText) {
+            $node = $frame->get_node();
+            if ($label === null && $node->nodeName === 'div' && $node->getAttribute('class') === 'label') {
+                $label = $frame->get_padding_box();
+            }
+            if ($node->nodeName === '#text' && trim($node->nodeValue) !== '') {
+                $box = $frame->get_border_box();
+                $lowestText = max($lowestText, $box['y'] + $box['h']);
+            }
+        }]]);
+        $dompdf->render();
+
+        $this->assertNotNull($label);
+        $this->assertLessThanOrEqual($label['y'] + $label['h'], $lowestText, 'a line of the label prints below the sticker');
     }
 
     public function test_history_writes_month_names_in_english_like_the_rest_of_the_document(): void

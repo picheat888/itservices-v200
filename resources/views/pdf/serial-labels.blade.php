@@ -19,13 +19,13 @@
         table.sheet td.cell { width: 33.33%; padding: 0 3mm 4mm 0; vertical-align: top; }
         .label { width: 50mm; height: 25mm; border: 0.4mm solid #bbb; border-radius: 1.5mm; padding: 1.5mm; }
         .line { width: 100%; border-collapse: collapse; }
-        .line td { padding: 0; font-size: 7pt; vertical-align: top; }
+        .line td { padding: 0; font-size: 7pt; line-height: 1.1; vertical-align: top; }
         .lbl { color: #555; font-weight: normal; }
         .cat { text-align: right; color: #555; }
-        .name { font-size: 7pt; white-space: nowrap; overflow: hidden; }
-        .bc { margin-top: 1mm; }
-        .serial { text-align: center; font-weight: bold; font-size: 6pt; letter-spacing: 0.3pt; margin-top: 0.5mm; }
-        .foot td { font-size: 6.5pt; color: #555; }
+        .name { font-size: 7pt; line-height: 1.1; white-space: nowrap; overflow: hidden; }
+        .bc { margin-top: 0.6mm; }
+        .serial { text-align: center; font-weight: bold; font-size: 6pt; letter-spacing: 0.3pt; margin-top: 0.3mm; line-height: 1.1; }
+        .foot td { font-size: 6.5pt; line-height: 1.1; color: #555; }
         .empty { width: 33.33%; }
     </style>
 </head>
