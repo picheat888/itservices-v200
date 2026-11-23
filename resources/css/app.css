@@ -310,8 +310,9 @@
         -webkit-font-smoothing: antialiased;
     }
 
-    /* Tables: headings stay on one line; a narrow table scrolls in its frame */
-    table th {
+    /* Tables: column headings stay on one line; a narrow table scrolls in its frame. A row heading wraps like any cell */
+    table thead th,
+    table th[scope='col'] {
         white-space: nowrap;
     }
 

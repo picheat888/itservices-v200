@@ -30,6 +30,12 @@ test('a data cell of a table with column widths breaks a long word rather than s
     assert.doesNotMatch(src, /py-\[var\(--row-py\)\] \[overflow-wrap:anywhere\]/);
 });
 
+test('only column headings are kept on one line; a row heading wraps like any cell', () => {
+    const css = readFileSync(new URL('../../resources/css/app.css', import.meta.url), 'utf8');
+    assert.match(css, /table thead th,\s*table th\[scope='col'\] \{\s*white-space: nowrap;\s*\}/);
+    assert.doesNotMatch(css, /\n\s*table th \{\s*white-space: nowrap;/);
+});
+
 test('a long contract number wraps in a wider column, and the billing cycle sits under the value', () => {
     const src = read('modules/contract/pages/index.tsx');
     const code = column(src, 'code');
