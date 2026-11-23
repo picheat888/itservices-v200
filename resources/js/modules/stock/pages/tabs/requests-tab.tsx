@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { EmptyState } from '@/shared/components/empty-state';
@@ -8,6 +9,7 @@ import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
@@ -64,6 +66,8 @@ export function RequestsTab({
     onReturn?: (requestId: number, returnFocus?: (e: Event) => void) => void;
 }) {
     const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
+    const dateTimeLineWidth = useDateColumnWidth('text-xs', { oneLine: true });
     const t = useT();
     const fmtN = useNumberFormat();
     const pairOf = useLocalPair();
@@ -269,9 +273,9 @@ export function RequestsTab({
         {
             key: 'requested_at',
             header: t('stock_requested_at'),
-            width: '130px',
+            width: dateWidth,
             className: 'whitespace-nowrap',
-            render: (r) => <span className="text-xs">{fmt.dateTime(r.created_at)}</span>,
+            render: (r) => <DateTimeCell value={r.created_at} />,
         },
         {
             key: 'requester',
@@ -324,7 +328,7 @@ export function RequestsTab({
         {
             key: 'decided',
             header: t('stock_approver'),
-            width: '176px',
+            width: `max(176px, ${dateTimeLineWidth})`,
             render: (r) => {
                 const decidedAt = r.approved_at ?? r.rejected_at;
                 return (
@@ -338,7 +342,7 @@ export function RequestsTab({
         {
             key: 'fulfilled',
             header: t('stock_fulfilled_by'),
-            width: '176px',
+            width: `max(176px, ${dateTimeLineWidth})`,
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={pairOf(r.fulfilled_by, r.fulfilled_by_th)} className="text-sm" />

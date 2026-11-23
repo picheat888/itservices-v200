@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
 import { NEW_ROW_CLASS, NewBadge } from '@/shared/components/new-badge';
@@ -8,6 +9,7 @@ import { ScrollTable } from '@/shared/components/scroll-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
@@ -37,6 +39,7 @@ const EYEBROW = 'text-muted-foreground text-xs font-semibold';
 
 export function MovementsTab() {
     const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
     const t = useT();
     const fmtN = useNumberFormat();
     const pairOf = useLocalPair();
@@ -101,9 +104,9 @@ export function MovementsTab() {
         {
             key: 'moved_at',
             header: t('audit_time'),
-            width: '130px',
+            width: dateWidth,
             className: 'whitespace-nowrap',
-            render: (m) => <span className="text-xs">{fmt.dateTime(m.moved_at)}</span>,
+            render: (m) => <DateTimeCell value={m.moved_at} />,
         },
         {
             key: 'type',
