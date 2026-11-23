@@ -61,3 +61,12 @@ test('free-text codes and money amounts are not forced onto one line', () => {
     const directoryCode = employees.lastIndexOf("key: 'code'", employees.indexOf("header: t('tbl_emp_id')"));
     assert.doesNotMatch(settings(column(employees, 'code', directoryCode)), /whitespace-nowrap/, 'employee code');
 });
+
+test('an asset or contract code heading a report row stays whole now that row headings may wrap', () => {
+    const transfers = read('modules/report/components/transfer-cards.tsx');
+    assert.match(transfers, /<Link to=\{href\} className=\{cn\(CODE_LINK, 'whitespace-nowrap'\)\} translate="no">\s*\{r\.code\}/);
+    assert.match(transfers, /<span className="text-xs font-semibold whitespace-nowrap" translate="no">\s*\{r\.code\}/);
+    const writeoffs = read('modules/report/components/writeoff-cards.tsx');
+    assert.match(writeoffs, /<Link to=\{href\} className=\{cn\(CODE_LINK, 'whitespace-nowrap'\)\}>\s*\{c\.code\}/);
+    assert.match(writeoffs, /<span className="text-xs font-semibold whitespace-nowrap">\{c\.code\}<\/span>/);
+});

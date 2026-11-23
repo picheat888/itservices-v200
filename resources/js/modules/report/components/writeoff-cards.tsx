@@ -614,11 +614,11 @@ function ContractCard({ contracts }: { contracts: Contract[] }) {
                                     <tr key={c.id} className="border-border/60 border-b last:border-b-0">
                                         <th scope="row" className={cn(TD, 'text-left font-normal')}>
                                             {canOpen(href) ? (
-                                                <Link to={href} className={CODE_LINK}>
+                                                <Link to={href} className={cn(CODE_LINK, 'whitespace-nowrap')}>
                                                     {c.code}
                                                 </Link>
                                             ) : (
-                                                <span className="text-xs font-semibold">{c.code}</span>
+                                                <span className="text-xs font-semibold whitespace-nowrap">{c.code}</span>
                                             )}
                                             {c.name && (
                                                 <div className="text-muted-foreground max-w-[16rem] truncate text-xs" title={c.name}>

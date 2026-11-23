@@ -444,11 +444,11 @@ function RelocationCard({ relocations }: { relocations: AssetTransferBreakdown['
                                             <td className={cn(TD, 'whitespace-nowrap')}>{shortDate(r.at, lang)}</td>
                                             <th scope="row" className={cn(TD, 'text-left font-normal')}>
                                                 {canOpen(href) ? (
-                                                    <Link to={href} className={CODE_LINK} translate="no">
+                                                    <Link to={href} className={cn(CODE_LINK, 'whitespace-nowrap')} translate="no">
                                                         {r.code}
                                                     </Link>
                                                 ) : (
-                                                    <span className="text-xs font-semibold" translate="no">
+                                                    <span className="text-xs font-semibold whitespace-nowrap" translate="no">
                                                         {r.code}
                                                     </span>
                                                 )}
