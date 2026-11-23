@@ -12,6 +12,7 @@ import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useKeyFreshness } from '@/shared/hooks/use-key-freshness';
@@ -331,6 +332,7 @@ export default function StockPage() {
 
     const { format } = useCurrency();
     const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
 
     const statusBadge = (s: StockItemStatus) => (
         <StatusBadge tone={STOCK_STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>
@@ -421,7 +423,7 @@ export default function StockPage() {
         {
             key: 'last_move',
             header: t('stock_last_move'),
-            width: '130px',
+            width: dateWidth,
             className: 'whitespace-nowrap',
             render: (i) => <span className="text-muted-foreground text-xs">{i.last_move_at ? fmt.date(i.last_move_at) : '—'}</span>,
         },

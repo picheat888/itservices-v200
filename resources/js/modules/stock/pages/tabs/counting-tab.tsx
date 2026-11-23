@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -24,6 +25,7 @@ import { stockRefusalText } from '../../lib/refusal';
 /** Stock Count tab: the list of count sheets; opening, counting and confirming happen in the count dialogs. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
     const t = useT();
     const fmtN = useNumberFormat();
     const lang = useUiStore((s) => s.lang);
@@ -79,7 +81,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         {
             key: 'created_at',
             header: t('audit_time'),
-            width: '110px',
+            width: dateWidth,
             className: 'whitespace-nowrap',
             render: (s) => <span className="text-muted-foreground text-xs">{fmt.date(s.created_at)}</span>,
         },
