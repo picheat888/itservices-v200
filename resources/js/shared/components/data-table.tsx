@@ -16,6 +16,11 @@ export interface Column<T> {
     key: string;
     header: React.ReactNode;
     render?: (row: T) => React.ReactNode;
+    /**
+     * Classes for every cell of the column. A cell wraps text too long for it, breaking inside a
+     * word when it has to, so nothing spills into the next column; add whitespace-nowrap only for
+     * values of a known width (a date sized by useDateColumnWidth, a badge, a fixed-format number).
+     */
     className?: string;
     align?: 'left' | 'right' | 'center';
     /**
@@ -412,7 +417,7 @@ export function DataTable<T>({
                                                 key={c.key}
                                                 style={stickyStyle(c)}
                                                 className={cn(
-                                                    'px-[var(--row-px)] py-[var(--row-py)]',
+                                                    'px-[var(--row-px)] py-[var(--row-py)] [overflow-wrap:anywhere]',
                                                     alignClass(c.align),
                                                     c.className,
                                                     hideClass(c),
