@@ -82,6 +82,8 @@ export const report: Dict = {
     rep_err_no_access: 'คุณไม่มีสิทธิ์ดูรายงานนี้',
     rep_err_range_invalid: 'ตรวจสอบช่วงวันที่ (ไม่เกิน 366 วัน)',
     rep_err_load_failed: 'โหลดรายงานไม่สำเร็จ ลองอีกครั้ง',
+    rep_load_failed: 'โหลดรายงานไม่สำเร็จ',
+    rep_try_again: 'ลองอีกครั้ง',
 
     // pages/tickets-overview.tsx — charts and breakdowns
     rep_weekly_title: 'ภาพรวม Ticket',

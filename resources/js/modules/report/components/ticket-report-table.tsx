@@ -134,7 +134,7 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
     if (isError && !data) {
         return (
             <Card className="border-dashed">
-                <LoadFailedPanel onRetry={() => void refetch()} />
+                <LoadFailedPanel onRetry={() => void refetch()} message={t('rep_load_failed')} retryLabel={t('rep_try_again')} />
             </Card>
         );
     }

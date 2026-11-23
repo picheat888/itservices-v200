@@ -31,6 +31,14 @@ test('the Ticket and SLA report retries a plain failure and its table never read
     assert.match(read('components/ticket-report-table.tsx'), /if \(isError && !data\) \{/);
 });
 
+test('the Ticket and SLA report says the report failed and offers to try again, in the use case words (TC-RPT-03-09)', () => {
+    const words = /<LoadFailedPanel onRetry=\{\(\) => void refetch\(\)\} message=\{t\('rep_load_failed'\)\} retryLabel=\{t\('rep_try_again'\)\} \/>/;
+    assert.match(read('pages/tickets-overview.tsx'), words);
+    assert.match(read('components/ticket-report-table.tsx'), words);
+    assert.equal(`${th.rep_load_failed} ${th.rep_try_again}`, 'โหลดรายงานไม่สำเร็จ ลองอีกครั้ง');
+    assert.ok(en.rep_load_failed && en.rep_try_again);
+});
+
 test('a failed review-sheet download says so', () => {
     assert.match(read('hooks/use-reports.ts'), /onError: \(\) => useToastStore\.getState\(\)\.push\(t\('rep_ar_sheet_download_failed'\), 'error'\)/);
     assert.equal(th.rep_ar_sheet_download_failed, 'ดาวน์โหลดใบทบทวนไม่สำเร็จ ลองอีกครั้ง');

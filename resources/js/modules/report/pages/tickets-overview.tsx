@@ -194,7 +194,7 @@ export default function TicketOverviewReportPage() {
 
             {loadFailed ? (
                 <Card className="border-dashed">
-                    <LoadFailedPanel onRetry={() => void refetch()} />
+                    <LoadFailedPanel onRetry={() => void refetch()} message={t('rep_load_failed')} retryLabel={t('rep_try_again')} />
                 </Card>
             ) : errorMessage ? (
                 <Card role="alert" className="flex flex-col items-center gap-2 border-dashed p-10 text-center">

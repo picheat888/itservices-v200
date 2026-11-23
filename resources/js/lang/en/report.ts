@@ -82,6 +82,8 @@ export const report: Dict = {
     rep_err_no_access: 'You do not have access to this report',
     rep_err_range_invalid: 'Check the date range (at most 366 days)',
     rep_err_load_failed: 'The report could not be loaded. Try again.',
+    rep_load_failed: 'The report could not be loaded',
+    rep_try_again: 'Try again',
 
     // pages/tickets-overview.tsx — charts and breakdowns
     rep_weekly_title: 'Ticket overview',
