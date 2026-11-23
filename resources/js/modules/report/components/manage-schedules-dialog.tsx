@@ -49,9 +49,10 @@ function useLabels() {
     };
 }
 
-/** The last send in a word: sent, failed, paused, or never. */
-function LastSend({ item }: { item: ManagedScheduleItem }) {
+/** The last send in a word: sent, failed, paused, or never. `stacked` puts the date over the time, for a table column. */
+function LastSend({ item, stacked = false }: { item: ManagedScheduleItem; stacked?: boolean }) {
     const t = useT();
+    const fmt = useDateFormat();
     if (!item.active) return <StatusBadge tone="gray">{t('rep_schedules_paused')}</StatusBadge>;
     if (!item.last_run_at) return <span className="text-muted-foreground text-xs">{t('rep_manage_never')}</span>;
     const failed = item.last_status === 'failed';
@@ -59,7 +60,11 @@ function LastSend({ item }: { item: ManagedScheduleItem }) {
     return (
         <div className="space-y-0.5">
             <StatusBadge tone={failed ? 'red' : 'green'}>{t(failed ? 'rep_manage_status_failed' : 'rep_manage_status_ok')}</StatusBadge>
-            <DateTimeCell value={item.last_run_at} className="text-muted-foreground" />
+            {stacked ? (
+                <DateTimeCell value={item.last_run_at} className="text-muted-foreground" />
+            ) : (
+                <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(item.last_run_at)}</div>
+            )}
         </div>
     );
 }
@@ -297,7 +302,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
                 </div>
             ),
         },
-        { key: 'last', header: t('rep_manage_col_last'), width: `max(136px, ${dateWidth})`, render: (item) => <LastSend item={item} /> },
+        { key: 'last', header: t('rep_manage_col_last'), width: `max(136px, ${dateWidth})`, render: (item) => <LastSend item={item} stacked /> },
     ];
 
     const statusOptions: { value: StatusFilter; label: string; tone: 'gray' | 'green' | 'red' | 'violet' }[] = [

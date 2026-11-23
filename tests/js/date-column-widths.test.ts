@@ -75,3 +75,10 @@ test("a stock request's approver and fulfiller columns fit their one-line date a
         assert.match(column.block, new RegExp(`width: \`max\\(176px, \\$\\{${oneLine}\\}\\)\``), key);
     }
 });
+
+test('the schedules table stacks the last send; its detail panel keeps it on one line like the next send', () => {
+    const src = read('modules/report/components/manage-schedules-dialog.tsx');
+    assert.match(src, /render: \(item\) => <LastSend item=\{item\} stacked \/>/);
+    assert.match(src, /\{stacked \? \(\s*<DateTimeCell value=\{item\.last_run_at\}/);
+    assert.match(src, /^\s*<LastSend item=\{item\} \/>$/m);
+});
