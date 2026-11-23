@@ -76,11 +76,12 @@ function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
 }
 
 /**
- * The request list at full width needs a 1686px screen beside the sidebar. Below that its text columns
- * (title, requester, department, waiting on) narrow with the screen and cut their text, so every column
- * stays in view down to 1440px instead of the status and approver sliding under the pinned buttons.
+ * The request list at full width needs a 1701px screen beside the sidebar when its date column is at
+ * its widest (English month names, cozy rows). Below that its text columns (title, requester,
+ * department, waiting on) narrow with the screen and cut their text, so every column stays in view
+ * down to 1440px instead of the status and approver sliding under the pinned buttons.
  */
-const listColumn = (full: number, min: number) => narrowingWidth(full, min, 1686, 1440);
+const listColumn = (full: number, min: number) => narrowingWidth(full, min, 1701, 1440);
 
 /** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */
 const ALL = '__all__';
@@ -259,7 +260,7 @@ export default function RequestsPage() {
         {
             key: 'title',
             header: t('req_col_title'),
-            minWidth: listColumn(224, 148),
+            minWidth: listColumn(224, 144),
             render: (r) => {
                 const Icon = REQUEST_TYPE_META[r.type].icon;
                 return (
@@ -283,8 +284,8 @@ export default function RequestsPage() {
                     <TruncText text={r.requester.position} className="text-muted-foreground text-xs" />
                     {/* A new hire has no login of their own */}
                     {isOnBehalfRequest(r) && (
-                        <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="mt-1">
-                            {t(REQUEST_ONBOARDING_BADGE.labelKey)}
+                        <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="mt-1 max-w-full">
+                            <span className="min-w-0 truncate">{t(REQUEST_ONBOARDING_BADGE.labelKey)}</span>
                         </StatusBadge>
                     )}
                 </div>
@@ -293,7 +294,7 @@ export default function RequestsPage() {
         {
             key: 'department',
             header: t('req_department'),
-            width: listColumn(176, 104),
+            width: listColumn(176, 100),
             render: (r) => <TruncText text={localPair(r.requester.department, r.requester.department_th, lang)} className="text-sm" />,
         },
         {
@@ -313,7 +314,7 @@ export default function RequestsPage() {
         {
             key: 'waiting',
             header: t('req_col_waiting'),
-            width: listColumn(200, 148),
+            width: listColumn(200, 143),
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
