@@ -344,7 +344,6 @@ export default function StockPage() {
             sticky: 'left',
             header: t('stock_sku'),
             width: '110px',
-            className: 'whitespace-nowrap',
             render: (i) => (
                 <div className="flex flex-col items-start gap-0.5">
                     <span className="text-xs">{i.sku}</span>
@@ -380,7 +379,6 @@ export default function StockPage() {
             header: t('stock_current'),
             align: 'right',
             width: '120px',
-            className: 'whitespace-nowrap',
             render: (i) => (
                 <div>
                     <span className="text-sm font-bold tabular-nums">{formatNumber(i.current_stock, lang)}</span>
@@ -408,7 +406,6 @@ export default function StockPage() {
             header: t('stock_unit_cost_short'),
             align: 'right',
             width: '110px',
-            className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs tabular-nums">{format(i.cost)}</span>,
         },
         {
@@ -416,7 +413,6 @@ export default function StockPage() {
             header: t('stock_value'),
             align: 'right',
             width: '120px',
-            className: 'whitespace-nowrap',
             render: (i) => <span className="text-xs tabular-nums">{format(i.total_value)}</span>,
         },
         { key: 'status', header: t('status'), width: '110px', className: 'whitespace-nowrap', render: (i) => statusBadge(i.status) },

@@ -36,3 +36,13 @@ test('a long contract number wraps in a wider column, and the billing cycle sits
     assert.match(value, /<div className="text-muted-foreground text-\[11px\]">\{cycle\}<\/div>/);
     assert.doesNotMatch(settings(column(src, 'total')), /whitespace-nowrap/);
 });
+
+test('free-text codes and money amounts are not forced onto one line', () => {
+    const stock = read('modules/stock/pages/index.tsx');
+    for (const key of ['sku', 'current', 'cost', 'value']) assert.doesNotMatch(settings(column(stock, key)), /whitespace-nowrap/, `stock ${key}`);
+    const movements = read('modules/stock/pages/tabs/movements-tab.tsx');
+    for (const key of ['unit_cost', 'value']) assert.doesNotMatch(settings(column(movements, key)), /whitespace-nowrap/, `movement ${key}`);
+    const employees = read('modules/employee/pages/index.tsx');
+    const directoryCode = employees.lastIndexOf("key: 'code'", employees.indexOf("header: t('tbl_emp_id')"));
+    assert.doesNotMatch(settings(column(employees, 'code', directoryCode)), /whitespace-nowrap/, 'employee code');
+});

@@ -877,7 +877,7 @@ function DirectoryTab({
             header: t('tbl_emp_id'),
             width: '96px',
             sticky: 'left',
-            className: 'text-xs whitespace-nowrap',
+            className: 'text-xs',
             render: (e) => (
                 <div className="flex flex-col items-start gap-0.5">
                     <span>{e.code}</span>

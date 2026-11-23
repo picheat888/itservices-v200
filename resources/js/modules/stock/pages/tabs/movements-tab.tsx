@@ -147,7 +147,6 @@ export function MovementsTab() {
             header: t('stock_unit_cost_short'),
             align: 'right',
             width: '100px',
-            className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost) : '—'}</span>,
         },
         {
@@ -155,7 +154,6 @@ export function MovementsTab() {
             header: t('stock_value'),
             align: 'right',
             width: '110px',
-            className: 'whitespace-nowrap',
             render: (m) => <span className="text-xs tabular-nums">{m.unit_cost != null ? format(m.unit_cost * m.qty) : '—'}</span>,
         },
         { key: 'from', header: t('stock_events_from'), width: '130px', render: (m) => <TruncText text={m.from} className="text-sm" /> },
