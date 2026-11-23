@@ -21,8 +21,13 @@ function column(src: string, key: string, from = 0): string {
 /** A column's own settings, before its render function. */
 const settings = (block: string) => block.slice(0, block.indexOf('render:'));
 
-test('a data cell breaks a long word rather than spill over its border', () => {
-    assert.match(read('shared/components/data-table.tsx'), /'px-\[var\(--row-px\)\] py-\[var\(--row-py\)\] \[overflow-wrap:anywhere\]'/);
+test('a data cell of a table with column widths breaks a long word rather than spill over its border', () => {
+    const src = read('shared/components/data-table.tsx');
+    assert.match(src, /const fixedLayout = columns\.some\(\(c\) => c\.width\);/);
+    assert.match(src, /fixedLayout && 'table-fixed'/);
+    // A table without widths sizes columns to their text, so its codes and emails stay whole
+    assert.match(src, /'px-\[var\(--row-px\)\] py-\[var\(--row-py\)\]',\s*fixedLayout && '\[overflow-wrap:anywhere\]',/);
+    assert.doesNotMatch(src, /py-\[var\(--row-py\)\] \[overflow-wrap:anywhere\]/);
 });
 
 test('a long contract number wraps in a wider column, and the billing cycle sits under the value', () => {

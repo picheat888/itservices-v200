@@ -17,9 +17,10 @@ export interface Column<T> {
     header: React.ReactNode;
     render?: (row: T) => React.ReactNode;
     /**
-     * Classes for every cell of the column. A cell wraps text too long for it, breaking inside a
-     * word when it has to, so nothing spills into the next column; add whitespace-nowrap only for
-     * values of a known width (a date sized by useDateColumnWidth, a badge, a fixed-format number).
+     * Classes for every cell of the column. In a table with column widths a cell wraps text too long
+     * for it, breaking inside a word when it has to, so nothing spills into the next column; add
+     * whitespace-nowrap only for values of a known width (a date sized by useDateColumnWidth, a
+     * badge, a fixed-format number). A table without widths sizes its columns to the text instead.
      */
     className?: string;
     align?: 'left' | 'right' | 'center';
@@ -247,6 +248,9 @@ export function DataTable<T>({
     // Pinned cells: solid so scrolled cells do not show through; body cells follow the row's tint (.pin-cell)
     const stickyClass = (c: Column<T>, head: boolean) => (c.sticky ? cn('z-[1]', head ? 'pin-head' : 'pin-cell') : undefined);
 
+    // Any column width switches the table to a fixed layout (see Column.width)
+    const fixedLayout = columns.some((c) => c.width);
+
     // Fixed widths plus room for each flexible column among the columns a screen shows, so a narrow screen scrolls instead of squeezing it to 0
     const floorOf = (visible: Column<T>[]) => {
         const flexible = visible.filter((c) => !c.width);
@@ -335,7 +339,7 @@ export function DataTable<T>({
                     className={cn(
                         'w-full text-sm',
                         fillHeight && 'h-full',
-                        columns.some((c) => c.width) && 'table-fixed',
+                        fixedLayout && 'table-fixed',
                         // A caller's own min-w-* (at any breakpoint) wins over the floor
                         flexFloor && 'min-w-(--flex-floor) lg:min-w-(--flex-floor-lg) xl:min-w-(--flex-floor-xl) 2xl:min-w-(--flex-floor-2xl)',
                         tableClassName,
@@ -417,7 +421,8 @@ export function DataTable<T>({
                                                 key={c.key}
                                                 style={stickyStyle(c)}
                                                 className={cn(
-                                                    'px-[var(--row-px)] py-[var(--row-py)] [overflow-wrap:anywhere]',
+                                                    'px-[var(--row-px)] py-[var(--row-py)]',
+                                                    fixedLayout && '[overflow-wrap:anywhere]',
                                                     alignClass(c.align),
                                                     c.className,
                                                     hideClass(c),
