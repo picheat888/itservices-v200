@@ -199,7 +199,8 @@ test('each step says its state to screen readers; a request with no ISS has no i
 });
 
 test('requests tab: the three name columns are wide enough for a full name', () => {
-    const col = (key: string) => tab.match(new RegExp(`key: '${key}',[\\s\\S]*?width: '(\\d+)px'`))?.[1];
+    // A fixed width, or the least of a `max(…px, …)` width that grows with the date format
+    const col = (key: string) => tab.match(new RegExp(`key: '${key}',[^}]*?width: (?:'|\`max\\()(\\d+)px`))?.[1];
     assert.equal(col('requester'), '180');
     assert.equal(col('decided'), '176');
     assert.equal(col('fulfilled'), '176');
