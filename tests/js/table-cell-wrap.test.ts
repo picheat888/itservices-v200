@@ -45,7 +45,11 @@ test('a long contract number wraps in a wider column, and the billing cycle sits
     assert.doesNotMatch(settings(value), /whitespace-nowrap/);
     assert.match(value, /cycleSuffix\(c\.billing_cycle, t\)/);
     assert.match(value, /<div className="text-muted-foreground text-\[11px\]">\{cycle\}<\/div>/);
-    assert.doesNotMatch(settings(column(src, 'total')), /whitespace-nowrap/);
+    const total = column(src, 'total');
+    assert.doesNotMatch(settings(total), /whitespace-nowrap/);
+    // "฿11,000,000,000.00" is about 109px of text-xs: 140px leaves 112px
+    assert.match(value, /width: '140px'/);
+    assert.match(total, /width: '140px'/);
 });
 
 test('free-text codes and money amounts are not forced onto one line', () => {

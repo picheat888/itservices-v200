@@ -602,7 +602,7 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
         {
             key: 'value',
             header: t('contract_value'),
-            width: '130px',
+            width: '140px',
             className: 'text-xs',
             render: (c) => {
                 const cycle = cycleSuffix(c.billing_cycle, t);
@@ -617,7 +617,7 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
         {
             key: 'total',
             header: t('contract_total_value'),
-            width: '130px',
+            width: '140px',
             className: 'text-xs',
             render: (c) => c.total_value_display ?? '—',
         },
