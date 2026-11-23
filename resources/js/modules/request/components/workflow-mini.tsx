@@ -37,10 +37,11 @@ function ticksOf(request: ServiceRequest): Tick[] {
 }
 
 /**
- * Compact chain progress for table rows. The track is a fixed width shared by the steps,
- * so a long chain gets thinner ticks rather than a longer bar; the count keeps a fixed width too.
+ * Compact chain progress. The steps share one track, so a long chain gets thinner ticks rather
+ * than a longer bar; the count keeps a fixed width. The track is a fixed 96px so the rows of a list
+ * line up; with `fit` (a table cell) it takes the room the cell has left, so the count stays inside the cell.
  */
-export function WorkflowMini({ request }: { request: ServiceRequest }) {
+export function WorkflowMini({ request, fit = false }: { request: ServiceRequest; fit?: boolean }) {
     const ticks = ticksOf(request);
     const rejected = request.status === 'rejected';
     const cancelled = request.status === 'cancelled';
@@ -50,7 +51,7 @@ export function WorkflowMini({ request }: { request: ServiceRequest }) {
 
     return (
         <div className="flex items-center gap-1.5">
-            <div className="flex w-24 shrink-0 items-center gap-[3px]">
+            <div className={cn('flex items-center gap-[3px]', fit ? 'min-w-0 flex-1' : 'w-24 shrink-0')}>
                 {ticks.map((tick, i) => (
                     <span key={i} className={cn('h-[5px] min-w-[2px] flex-1 rounded-full', TICK_CLASS[tick])} />
                 ))}

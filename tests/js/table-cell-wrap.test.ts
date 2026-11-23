@@ -62,6 +62,15 @@ test('free-text codes and money amounts are not forced onto one line', () => {
     assert.doesNotMatch(settings(column(employees, 'code', directoryCode)), /whitespace-nowrap/, 'employee code');
 });
 
+test("the request list's approval track takes the room its column has left, so the count stays clear of the next column", () => {
+    const mini = read('modules/request/components/workflow-mini.tsx');
+    assert.match(mini, /fit \? 'min-w-0 flex-1' : 'w-24 shrink-0'/);
+    const list = read('modules/request/pages/index.tsx');
+    assert.match(column(list, 'workflow'), /<WorkflowMini request=\{r\} fit \/>/);
+    // The waiting-for-you list keeps a fixed track so its rows line up
+    assert.match(list, /^\s*<WorkflowMini request=\{r\} \/>$/m);
+});
+
 test('an asset or contract code heading a report row stays whole now that row headings may wrap', () => {
     const transfers = read('modules/report/components/transfer-cards.tsx');
     assert.match(transfers, /<Link to=\{href\} className=\{cn\(CODE_LINK, 'whitespace-nowrap'\)\} translate="no">\s*\{r\.code\}/);

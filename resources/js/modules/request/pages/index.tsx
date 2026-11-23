@@ -300,7 +300,7 @@ export default function RequestsPage() {
             header: t('req_col_workflow'),
             width: '140px',
             className: 'whitespace-nowrap',
-            render: (r) => <WorkflowMini request={r} />,
+            render: (r) => <WorkflowMini request={r} fit />,
         },
         {
             key: 'waiting',
