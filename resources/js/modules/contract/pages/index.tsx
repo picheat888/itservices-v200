@@ -25,7 +25,7 @@ import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
-import { perCycle } from '@/shared/lib/currency';
+import { cycleSuffix } from '@/shared/lib/currency';
 import { isRecordMissing } from '@/shared/lib/http-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
@@ -558,8 +558,7 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
             key: 'code',
             sticky: 'left',
             header: t('contract_code'),
-            width: '104px',
-            className: 'whitespace-nowrap',
+            width: '140px',
             render: (c) => (
                 <div className="flex flex-col items-start gap-0.5">
                     <span className="text-muted-foreground text-xs">{c.code}</span>
@@ -604,14 +603,22 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
             key: 'value',
             header: t('contract_value'),
             width: '130px',
-            className: 'whitespace-nowrap text-xs',
-            render: (c) => perCycle(c.value_display, c.billing_cycle, t),
+            className: 'text-xs',
+            render: (c) => {
+                const cycle = cycleSuffix(c.billing_cycle, t);
+                return (
+                    <div className="leading-snug">
+                        <div>{c.value_display}</div>
+                        {cycle && <div className="text-muted-foreground text-[11px]">{cycle}</div>}
+                    </div>
+                );
+            },
         },
         {
             key: 'total',
             header: t('contract_total_value'),
             width: '130px',
-            className: 'whitespace-nowrap text-xs',
+            className: 'text-xs',
             render: (c) => c.total_value_display ?? '—',
         },
         {

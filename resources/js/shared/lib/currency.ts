@@ -17,8 +17,13 @@ const CYCLE_SUFFIX_KEYS: Record<string, string> = {
     yearly: 'contract_per_year',
 };
 
+/** What one payment covers ("/mo", "/เดือน"); empty when there is no cycle. */
+export function cycleSuffix(cycle: string | null | undefined, t: (key: string) => string): string {
+    const key = cycle ? CYCLE_SUFFIX_KEYS[cycle] : undefined;
+    return key ? t(key) : '';
+}
+
 /** An amount followed by what one payment covers ("/mo", "/เดือน"); an amount with no cycle as it is. */
 export function perCycle(amount: string, cycle: string | null | undefined, t: (key: string) => string): string {
-    const key = cycle ? CYCLE_SUFFIX_KEYS[cycle] : undefined;
-    return key ? `${amount}${t(key)}` : amount;
+    return `${amount}${cycleSuffix(cycle, t)}`;
 }

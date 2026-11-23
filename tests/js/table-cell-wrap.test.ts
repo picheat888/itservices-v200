@@ -5,6 +5,34 @@ import { test } from 'node:test';
 
 const read = (path: string) => readFileSync(new URL(`../../resources/js/${path}`, import.meta.url), 'utf8');
 
+/** The `{ key: '…', header: … }` column literal with this key, the first one at or after `from`. */
+function column(src: string, key: string, from = 0): string {
+    const start = src.indexOf(`key: '${key}'`, from);
+    assert.ok(start >= 0, key);
+    let depth = 1;
+    let end = start;
+    for (; end < src.length; end++) {
+        if (src[end] === '{') depth++;
+        else if (src[end] === '}' && --depth === 0) break;
+    }
+    return src.slice(start, end);
+}
+
+/** A column's own settings, before its render function. */
+const settings = (block: string) => block.slice(0, block.indexOf('render:'));
+
 test('a data cell breaks a long word rather than spill over its border', () => {
     assert.match(read('shared/components/data-table.tsx'), /'px-\[var\(--row-px\)\] py-\[var\(--row-py\)\] \[overflow-wrap:anywhere\]'/);
+});
+
+test('a long contract number wraps in a wider column, and the billing cycle sits under the value', () => {
+    const src = read('modules/contract/pages/index.tsx');
+    const code = column(src, 'code');
+    assert.match(code, /width: '140px'/);
+    assert.doesNotMatch(settings(code), /whitespace-nowrap/);
+    const value = column(src, 'value');
+    assert.doesNotMatch(settings(value), /whitespace-nowrap/);
+    assert.match(value, /cycleSuffix\(c\.billing_cycle, t\)/);
+    assert.match(value, /<div className="text-muted-foreground text-\[11px\]">\{cycle\}<\/div>/);
+    assert.doesNotMatch(settings(column(src, 'total')), /whitespace-nowrap/);
 });
