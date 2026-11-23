@@ -20,6 +20,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { usePageDialogs } from '@/shared/hooks/use-page-dialogs';
 import { useRefreshMark } from '@/shared/hooks/use-refresh-mark';
 import { useTabParam } from '@/shared/hooks/use-tab-param';
+import { narrowingWidth } from '@/shared/lib/column-width';
 import { localName, localPair } from '@/shared/lib/local-name';
 import { formatNumber } from '@/shared/lib/number';
 import {
@@ -73,6 +74,13 @@ function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
 
     return localPair(row.value, row.value_th, lang) ?? row.value;
 }
+
+/**
+ * The request list at full width needs a 1686px screen beside the sidebar. Below that its text columns
+ * (title, requester, department, waiting on) narrow with the screen and cut their text, so every column
+ * stays in view down to 1440px instead of the status and approver sliding under the pinned buttons.
+ */
+const listColumn = (full: number, min: number) => narrowingWidth(full, min, 1686, 1440);
 
 /** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */
 const ALL = '__all__';
@@ -251,7 +259,7 @@ export default function RequestsPage() {
         {
             key: 'title',
             header: t('req_col_title'),
-            minWidth: '14rem',
+            minWidth: listColumn(224, 148),
             render: (r) => {
                 const Icon = REQUEST_TYPE_META[r.type].icon;
                 return (
@@ -268,7 +276,7 @@ export default function RequestsPage() {
         {
             key: 'requester',
             header: t('req_col_requester'),
-            width: '180px',
+            width: listColumn(180, 130),
             render: (r) => (
                 <div className="min-w-0">
                     <TruncText text={localPair(r.requester.name, r.requester.name_th, lang)} className="text-sm font-medium" />
@@ -285,7 +293,7 @@ export default function RequestsPage() {
         {
             key: 'department',
             header: t('req_department'),
-            width: '176px',
+            width: listColumn(176, 104),
             render: (r) => <TruncText text={localPair(r.requester.department, r.requester.department_th, lang)} className="text-sm" />,
         },
         {
@@ -305,7 +313,7 @@ export default function RequestsPage() {
         {
             key: 'waiting',
             header: t('req_col_waiting'),
-            width: '200px',
+            width: listColumn(200, 148),
             render: (r) =>
                 r.status === 'pending' && r.progress.current_label ? (
                     <div className="min-w-0">
