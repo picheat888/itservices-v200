@@ -117,13 +117,18 @@ export function EditTicketDrawer({
 
     const submit = async () => {
         if (!ticket) return;
+        // Nothing changed: back to the ticket's detail with nothing to confirm or send
+        if (!isDirty) {
+            (onSaved ?? onClose)();
+            return;
+        }
         const e: Record<string, string> = {};
         if (subject.trim().length < 5) e.subject = t('ticket_err_subject');
         if (description.trim().length < 10) e.description = t('ticket_err_description');
         if (phone.replace(/\D/g, '').length < 3) e.phone = t('ticket_err_phone');
         setErrors(e);
         if (Object.keys(e).length) return;
-        if (isDirty && !(await confirmEdit({ name: ticket.subject, sub: ticket.ticket_no }))) return;
+        if (!(await confirmEdit({ name: ticket.subject, sub: ticket.ticket_no }))) return;
 
         setDeleted(0);
         formError.clear();
@@ -345,7 +350,7 @@ export function EditTicketDrawer({
                     <Button variant="outline" onClick={() => guardClose(onClose)} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton onClick={submit} loading={saving} disabled={!isDirty}>
+                    <SaveButton onClick={submit} loading={saving}>
                         <Save className="h-4 w-4" />
                         {t('save')}
                     </SaveButton>
