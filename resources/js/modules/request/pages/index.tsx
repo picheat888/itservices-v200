@@ -12,6 +12,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams } from '@/shared/hooks/use-list-params';
 import { useNewRows } from '@/shared/hooks/use-new-rows';
@@ -106,6 +107,7 @@ const fieldLabel = (htmlFor: string, icon: ReactNode, label: string) => (
 export default function RequestsPage() {
     const t = useT();
     const fmtN = useNumberFormat();
+    const dateWidth = useDateColumnWidth();
     const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
     const canSubmit = canFileAnyRequest(can);
@@ -289,7 +291,7 @@ export default function RequestsPage() {
         {
             key: 'submitted',
             header: t('req_col_submitted'),
-            width: '130px',
+            width: dateWidth,
             className: 'whitespace-nowrap',
             render: (r) => <DateTimeCell value={r.created_at} className="text-muted-foreground" />,
         },
