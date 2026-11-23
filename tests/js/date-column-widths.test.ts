@@ -32,13 +32,26 @@ function columnsOf(src: string): { key: string; block: string; line: number }[] 
     return columns;
 }
 
+const PRINTS_DATE = /fmt\.(date|dateTime)\(|<DateTimeCell\b/;
+
+/** Components declared at the top level of a file that print a date themselves (a column rendering one prints a date too). */
+function datePrinters(src: string): string[] {
+    return src
+        .split(/\n(?=\S)/)
+        .map((chunk) => ({ name: chunk.match(/^(?:export )?function ([A-Z]\w*)\(/)?.[1], chunk }))
+        .filter(({ name, chunk }) => name && PRINTS_DATE.test(chunk))
+        .map(({ name }) => name!);
+}
+
 test('every table column that prints a date is as wide as the date setting needs', () => {
     const fixedWidth: string[] = [];
     for (const file of [...tsxFiles(join(root, 'modules')), ...tsxFiles(join(root, 'shared'))]) {
         const src = readFileSync(file, 'utf8');
         const measured = [...src.matchAll(/const (\w+) = useDateColumnWidth\(/g)].map((m) => m[1]);
+        const printers = datePrinters(src);
         for (const column of columnsOf(src)) {
-            if (!/fmt\.(date|dateTime)\(|<DateTimeCell\b/.test(column.block)) continue;
+            const printsDate = PRINTS_DATE.test(column.block) || printers.some((name) => column.block.includes(`<${name}`));
+            if (!printsDate) continue;
             const width = column.block.match(/\bwidth:\s*([^\n]+)/)?.[1];
             if (width && !measured.some((name) => new RegExp(`\\b${name}\\b`).test(width))) {
                 fixedWidth.push(`${relative(root, file)}:${column.line} ${column.key} ${width}`);

@@ -5,11 +5,13 @@
  */
 import { useT } from '@/lang';
 import { DataTable, type Column } from '@/shared/components/data-table';
+import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DisabledReason } from '@/shared/components/disabled-reason';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useRefetchOnOpen } from '@/shared/hooks/use-refetch-on-open';
@@ -50,7 +52,6 @@ function useLabels() {
 /** The last send in a word: sent, failed, paused, or never. */
 function LastSend({ item }: { item: ManagedScheduleItem }) {
     const t = useT();
-    const fmt = useDateFormat();
     if (!item.active) return <StatusBadge tone="gray">{t('rep_schedules_paused')}</StatusBadge>;
     if (!item.last_run_at) return <span className="text-muted-foreground text-xs">{t('rep_manage_never')}</span>;
     const failed = item.last_status === 'failed';
@@ -58,7 +59,7 @@ function LastSend({ item }: { item: ManagedScheduleItem }) {
     return (
         <div className="space-y-0.5">
             <StatusBadge tone={failed ? 'red' : 'green'}>{t(failed ? 'rep_manage_status_failed' : 'rep_manage_status_ok')}</StatusBadge>
-            <div className="text-muted-foreground text-xs whitespace-nowrap">{fmt.dateTime(item.last_run_at)}</div>
+            <DateTimeCell value={item.last_run_at} className="text-muted-foreground" />
         </div>
     );
 }
@@ -213,6 +214,7 @@ function ScheduleDetailPanel({ item, onClose }: { item: ManagedScheduleItem | nu
 export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const dateWidth = useDateColumnWidth();
     const labels = useLabels();
     const manageQuery = useManagedSchedules(open);
     const { data: items = [], isLoading } = manageQuery;
@@ -295,7 +297,7 @@ export function ManageSchedulesDialog({ open, onOpenChange }: { open: boolean; o
                 </div>
             ),
         },
-        { key: 'last', header: t('rep_manage_col_last'), width: '136px', render: (item) => <LastSend item={item} /> },
+        { key: 'last', header: t('rep_manage_col_last'), width: `max(136px, ${dateWidth})`, render: (item) => <LastSend item={item} /> },
     ];
 
     const statusOptions: { value: StatusFilter; label: string; tone: 'gray' | 'green' | 'red' | 'violet' }[] = [
