@@ -15,6 +15,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatCard } from '@/shared/components/stat-card';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { TruncText } from '@/shared/components/trunc-text';
+import { useDateColumnWidth } from '@/shared/hooks/use-date-column-width';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDebouncedSearch } from '@/shared/hooks/use-debounced-search';
 import { useListParams, usePageInRange } from '@/shared/hooks/use-list-params';
@@ -550,6 +551,7 @@ function TimelineDotNote({ dot, onOpen }: { dot: ContractSummary['timeline'][num
 function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contract) => React.ReactNode): Column<Contract>[] {
     const t = useT();
     const fmt = useDateFormat();
+    const dateWidth = useDateColumnWidth();
     const lang = useUiStore((s) => s.lang);
     return [
         {
@@ -589,8 +591,8 @@ function useContractColumns(isNew: (c: Contract) => boolean, rowMenu: (c: Contra
             className: 'whitespace-nowrap',
             render: (c) => <StatusBadge tone={CONTRACT_TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>,
         },
-        { key: 'start', header: t('contract_start'), width: '100px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.start) },
-        { key: 'end', header: t('contract_end'), width: '100px', className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.end) },
+        { key: 'start', header: t('contract_start'), width: dateWidth, className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.start) },
+        { key: 'end', header: t('contract_end'), width: dateWidth, className: 'whitespace-nowrap text-xs', render: (c) => fmt.date(c.end) },
         {
             key: 'days',
             header: t('contract_days_remaining'),
