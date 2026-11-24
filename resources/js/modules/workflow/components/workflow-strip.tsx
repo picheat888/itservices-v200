@@ -68,7 +68,7 @@ export function WorkflowStrip({ steps }: { steps: Pick<WorkflowStep, 'label' | '
                                 </span>
                             )}
                         </div>
-                        {i < nodes.length - 1 && <span className="bg-border mt-3.5 h-0.5 min-w-5 flex-1 rounded-full" />}
+                        {i < nodes.length - 1 && <span className="bg-border mt-[13px] h-0.5 min-w-5 flex-1 rounded-full" />}
                     </Fragment>
                 );
             })}

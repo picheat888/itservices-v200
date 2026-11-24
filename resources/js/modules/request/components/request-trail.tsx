@@ -125,7 +125,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                 ) : isCompletion ? (
                     <Flag className="h-3 w-3" />
                 ) : (
-                    <span className="text-[11px] font-bold">{row.position}</span>
+                    <span className="text-[11px] leading-none font-bold [text-box:trim-both_cap_alphabetic]">{row.position}</span>
                 ),
             // An untaken group step names its people, or its department and positions
             title: isCompletion
@@ -175,7 +175,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             {items.map((item, i) => (
                 <div key={i} className="relative flex items-start gap-3">
                     {/* Connector to the next marker */}
-                    {i < items.length - 1 && <span aria-hidden className="bg-border absolute top-[26px] -bottom-3 left-[11px] w-px" />}
+                    {i < items.length - 1 && <span aria-hidden className="bg-border absolute top-[27px] -bottom-3 left-[11px] w-px" />}
                     {/* Opaque disc so the rail does not show through tinted markers */}
                     <span className="bg-background relative z-[1] shrink-0 rounded-full">
                         {/* Live step halo */}
