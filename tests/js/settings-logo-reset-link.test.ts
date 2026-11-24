@@ -1,4 +1,4 @@
-// Settings → System: the logo's "Reset to default" reads as theme-coloured text with an icon, not as a grey caption.
+// Settings → System: the logo's "Reset to default" reads as red text with an icon, not as a grey caption.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -12,10 +12,10 @@ const resetButton = (): string => {
     return page.slice(start, end + "{t('reset_default')}".length);
 };
 
-test('the logo reset is theme-coloured text with a reset icon and the ghost grey hover', () => {
+test('the logo reset is red text with a reset icon and the ghost grey hover', () => {
     const button = resetButton();
     assert.match(button, /variant="ghost"/);
-    assert.match(button, /text-brand-ink hover:text-brand-ink/);
+    assert.match(button, /text-destructive hover:text-destructive/);
     assert.match(button, /<RotateCcw className="h-4 w-4" aria-hidden="true" \/>/);
 });
 
@@ -24,9 +24,8 @@ test('upload and reset wrap onto two lines when the logo column is narrow (iPad)
     assert.match(page.slice(row, row + 60), /<div className="flex flex-wrap items-center gap-2">/);
 });
 
-test('the logo reset no longer looks like small grey help text or a delete', () => {
+test('the logo reset no longer looks like small grey help text', () => {
     const button = resetButton();
     assert.doesNotMatch(button, /text-muted-foreground/);
     assert.doesNotMatch(button, /text-xs/);
-    assert.doesNotMatch(button, /hover:text-destructive/);
 });
