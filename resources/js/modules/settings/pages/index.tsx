@@ -2064,8 +2064,8 @@ function BrandingSection({
                                     </Button>
                                     {showReset && (
                                         <Button
-                                            variant="link"
-                                            className="text-brand-ink gap-1.5 px-2"
+                                            variant="ghost"
+                                            className="text-brand-ink hover:text-brand-ink gap-1.5 px-3"
                                             onClick={() => {
                                                 setFile(null);
                                                 setPendingReset(true);
