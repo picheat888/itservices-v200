@@ -45,6 +45,7 @@ import {
     MonitorSmartphone,
     Pencil,
     Plus,
+    RotateCcw,
     Send,
     Shield,
     SlidersHorizontal,
@@ -2040,7 +2041,7 @@ function BrandingSection({
                             <div className="border-border bg-muted/30 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
                                 <img src={previewUrl} alt="" className="h-full w-full object-contain" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <input
                                     name="logo"
                                     ref={inputRef}
@@ -2049,7 +2050,7 @@ function BrandingSection({
                                     className="hidden"
                                     onChange={(e) => pick(e.target.files?.[0])}
                                 />
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <Button
                                         id={control.id}
                                         variant="outline"
@@ -2063,15 +2064,15 @@ function BrandingSection({
                                     </Button>
                                     {showReset && (
                                         <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-muted-foreground hover:text-destructive text-xs"
+                                            variant="link"
+                                            className="text-brand-ink gap-1.5 px-2"
                                             onClick={() => {
                                                 setFile(null);
                                                 setPendingReset(true);
                                                 if (inputRef.current) inputRef.current.value = '';
                                             }}
                                         >
+                                            <RotateCcw className="h-4 w-4" aria-hidden="true" />
                                             {t('reset_default')}
                                         </Button>
                                     )}
