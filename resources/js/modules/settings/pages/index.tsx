@@ -275,7 +275,7 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground text-sm">{t('settings_sub')}</p>
             </div>
 
-            <Card className="grid grid-cols-1 overflow-clip p-0 lg:grid-cols-[220px_1fr]">
+            <Card className="grid grid-cols-1 overflow-clip p-0 lg:grid-cols-[220px_minmax(0,1fr)]">
                 <nav
                     ref={navRef}
                     aria-label={t('settings_sections')}
