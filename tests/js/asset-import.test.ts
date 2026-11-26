@@ -1,5 +1,7 @@
 // Asset import dialog logic: steps, row edits, local checks, dropdown options, summary groups and the run payload.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import type { CheckedRow, ImportOptions, Issue } from '../../resources/js/modules/asset/api/assetImportApi.ts';
 import { IMPORT_COLUMNS } from '../../resources/js/modules/asset/lib/import-columns.ts';
@@ -265,4 +267,44 @@ test('typed dates follow the date-format setting, accept Buddhist years and refu
     const edited = rowsWithEdits(rows, { 2: { purchase_date: '12/11/2569' } }, options, 'purchased', 'dmy_slash');
     assert.equal(edited[0].values.purchase_date, '2026-11-12');
     assert.equal(importRunPayload('purchased', edited, null, 'dmy_slash').rows[0].purchase_date, '2026-11-12');
+});
+
+const read = (rel: string) => readFileSync(join(import.meta.dirname, '../../resources/js', rel), 'utf8');
+
+test('the import button sits with the register button and opens ?dialog=import', () => {
+    const page = read('modules/asset/pages/index.tsx');
+    assert.match(page, /t\('asset_import'\)/);
+    assert.match(page, /<AssetImportDialog/);
+    assert.match(page, /\{canCreate && \(\s*<>[\s\S]*t\('asset_import'\)[\s\S]*t\('register_asset'\)/);
+    assert.match(read('modules/asset/components/import/asset-import-dialog.tsx'), /useDialogParam\(\[\s*'import'\s*\]/);
+});
+
+test('the dialog guards a chosen file and the stepper marks the current step', () => {
+    const dialog = read('modules/asset/components/import/asset-import-dialog.tsx');
+    assert.match(dialog, /useDiscardGuard\(/);
+    assert.match(dialog, /focusDialogContentClass/);
+    assert.match(read('modules/asset/components/import/import-stepper.tsx'), /aria-current=\{[^}]*'step'[^}]*\}/);
+});
+
+test('the kind step uses real radios in a fieldset', () => {
+    assert.match(read('modules/asset/components/import/import-kind-step.tsx'), /<fieldset[\s\S]*type="radio"/);
+});
+
+test('the upload step takes one .xlsx and shows the chosen file inside the drop zone', () => {
+    const up = read('modules/asset/components/import/import-upload-step.tsx');
+    assert.match(up, /accept=\{\['xlsx'\]\}/);
+    assert.match(up, /asset_import_one_file_only/);
+    assert.match(up, /InfoPopover/);
+    assert.match(up, /translate="no"/);
+});
+
+test('every column help text the import columns name exists in both languages', () => {
+    const th = read('lang/th/asset.ts');
+    const en = read('lang/en/asset.ts');
+    for (const kind of ['rented', 'purchased'] as const) {
+        for (const column of IMPORT_COLUMNS[kind]) {
+            assert.ok(th.includes(`${column.howKey}:`), `th ${column.howKey}`);
+            assert.ok(en.includes(`${column.howKey}:`), `en ${column.howKey}`);
+        }
+    }
 });

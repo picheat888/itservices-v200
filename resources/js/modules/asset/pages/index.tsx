@@ -69,6 +69,7 @@ import {
     Share2,
     Tag,
     Undo2,
+    Upload,
     Warehouse,
     X,
 } from 'lucide-react';
@@ -91,6 +92,7 @@ import { TopPurchasedCard, TopRentedCard } from '../components/asset-top-tables'
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { AwaitingContractButton } from '../components/awaiting-contract-button';
+import { AssetImportDialog, useAssetImportDialog } from '../components/import/asset-import-dialog';
 import { PendingReturnButton } from '../components/pending-return-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 import { AWAITING_CONTRACT, isAwaitingContract, statusFilterValue } from '../lib/awaiting-contract';
@@ -501,6 +503,11 @@ export default function AssetsPage() {
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
     const openCreate = () => dialogs.open({ add: '1' });
+    const importDialog = useAssetImportDialog();
+    // Lists the assets waiting for a contract; already listed stays listed
+    const showAwaiting = () => {
+        if (!(tab === 'inventory' && searchParams.get('status') === AWAITING_CONTRACT)) showStatus(AWAITING_CONTRACT);
+    };
     // The clicked row opens the form at once; a link or reload fetches it
     const openEdit = (a: Asset) => {
         setEditing(a);
@@ -700,10 +707,16 @@ export default function AssetsPage() {
                         />
                     )}
                     {canCreate && (
-                        <Button onClick={openCreate}>
-                            <Plus className="h-4 w-4" />
-                            {t('register_asset')}
-                        </Button>
+                        <>
+                            <Button variant="outline" onClick={importDialog.openImport}>
+                                <Upload className="h-4 w-4" />
+                                {t('asset_import')}
+                            </Button>
+                            <Button onClick={openCreate}>
+                                <Plus className="h-4 w-4" />
+                                {t('register_asset')}
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -1577,6 +1590,7 @@ export default function AssetsPage() {
                 onClose={closeForm}
                 onSaved={showSaved}
             />
+            <AssetImportDialog open={importDialog.open} onClose={importDialog.closeImport} onShowAwaiting={showAwaiting} />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />
