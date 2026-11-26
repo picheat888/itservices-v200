@@ -476,4 +476,14 @@ export const settings: Dict = {
     set_monitor_repair_desc: 'The screen paired now drops off at once and goes back to the code screen. Then type the code from the new TV',
     set_monitor_unpair_title: 'Unpair the screen?',
     set_monitor_unpair_desc: 'The TV drops off at once and goes back to the code screen. Pair it again to keep using it',
+
+    // model-modal.tsx — the model photo
+    md_photo: 'Photo',
+    md_photo_add: 'Add photo',
+    md_photo_note: 'PNG, JPG, WebP\nUp to 10MB',
+    md_photo_none: 'No photo yet',
+    md_photo_remove: 'Remove photo',
+    md_photo_shared_hint: 'Every asset of this model uses this photo, so there is no need to attach one to each asset.',
+    md_photo_err_type: 'Only PNG, JPG or WebP files are allowed',
+    md_photo_err_size: 'File exceeds 10 MB',
 };

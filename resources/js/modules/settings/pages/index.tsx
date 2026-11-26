@@ -3,6 +3,7 @@ import { NoAccess, useAuth } from '@/modules/auth';
 import { useLocationMutations, useLocations } from '@/modules/employee';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
+import { ModelPhoto } from '@/shared/components/model-photo';
 import { PageTabs, type PageTab } from '@/shared/components/page-tabs';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -36,6 +37,7 @@ import {
     Box,
     Boxes,
     Building2,
+    ImageIcon,
     Inbox,
     Info,
     Loader2,
@@ -527,7 +529,23 @@ function ModelsList() {
         {
             key: 'name',
             header: t('md_model_name'),
-            render: (m) => <span className="text-sm font-medium">{displayName(m)}</span>,
+            render: (m) => (
+                <div className="flex min-w-0 items-center gap-3">
+                    {/* A dashed tile marks a model still without a photo */}
+                    <ModelPhoto
+                        src={m.photo_url}
+                        size={32}
+                        alt={displayName(m)}
+                        fallback={
+                            <span className="border-input text-muted-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md border border-dashed">
+                                <ImageIcon className="h-3.5 w-3.5" aria-hidden />
+                                <span className="sr-only">{t('md_photo_none')}</span>
+                            </span>
+                        }
+                    />
+                    <span className="truncate text-sm font-medium">{displayName(m)}</span>
+                </div>
+            ),
         },
         {
             key: 'brand',

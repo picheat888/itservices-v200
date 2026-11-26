@@ -11,6 +11,7 @@ import {
     warehouseApi,
     warrantyTypeApi,
     writeoffReasonApi,
+    type AssetModelPayload,
     type RequestOptionOrder,
     type RequestOptionPayload,
 } from '../api/masterDataApi';
@@ -97,12 +98,11 @@ export function useAssetModelMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: MODELS });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; brand_id?: number | null; description?: string | null }) => assetModelApi.create(p),
+            mutationFn: (p: AssetModelPayload) => assetModelApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; brand_id?: number | null; description?: string | null }) =>
-                assetModelApi.update(v.id, { name: v.name, brand_id: v.brand_id, description: v.description }),
+            mutationFn: ({ id, ...payload }: { id: number } & AssetModelPayload) => assetModelApi.update(id, payload),
             onSuccess: inv,
         }),
         remove: useMutation({ mutationFn: (id: number) => assetModelApi.remove(id), onSuccess: inv }),

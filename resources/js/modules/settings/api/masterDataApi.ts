@@ -1,3 +1,4 @@
+import { hasFile, toFormData } from '@/shared/lib/form-data';
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type {
     ApiEnvelope,
@@ -26,12 +27,17 @@ export const brandApi = {
     remove: (id: number) => mutate<void>('delete', `/brands/${id}`),
 };
 
+/** A model save; `photo` is the cropped file, `remove_photo` drops the saved one. */
+export type AssetModelPayload = { name: string; brand_id?: number | null; description?: string | null; photo?: File; remove_photo?: boolean };
+
 export const assetModelApi = {
     list: () => http.get<ApiEnvelope<AssetModel[]>>('/asset-models').then((r) => r.data.data),
-    create: (payload: { name: string; brand_id?: number | null; description?: string | null }) =>
-        mutate<AssetModel>('post', '/asset-models', payload),
-    update: (id: number, payload: { name: string; brand_id?: number | null; description?: string | null }) =>
-        mutate<AssetModel>('put', `/asset-models/${id}`, payload),
+    create: (payload: AssetModelPayload) => mutate<AssetModel>('post', '/asset-models', hasFile(payload) ? toFormData(payload) : payload),
+    // A file has to go multipart, which only POST carries, so the PUT rides along as _method
+    update: (id: number, payload: AssetModelPayload) =>
+        hasFile(payload)
+            ? mutate<AssetModel>('post', `/asset-models/${id}`, toFormData({ ...payload, _method: 'PUT' }))
+            : mutate<AssetModel>('put', `/asset-models/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/asset-models/${id}`),
 };
 

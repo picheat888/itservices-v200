@@ -472,4 +472,14 @@ export const settings: Dict = {
     set_monitor_repair_desc: 'จอที่จับคู่อยู่ตอนนี้จะหลุดทันที แล้วกลับไปขึ้นหน้ารหัส จากนั้นกรอกรหัสจากทีวีเครื่องใหม่ได้เลย',
     set_monitor_unpair_title: 'ยกเลิกการจับคู่จอไหม',
     set_monitor_unpair_desc: 'ทีวีจะหลุดทันทีแล้วกลับไปขึ้นหน้ารหัส ถ้าจะใช้ต่อต้องจับคู่ใหม่',
+
+    // model-modal.tsx — รูปของรุ่น
+    md_photo: 'รูป',
+    md_photo_add: 'เพิ่มรูป',
+    md_photo_note: 'PNG, JPG, WebP\nไม่เกิน 10MB',
+    md_photo_none: 'ยังไม่มีรูป',
+    md_photo_remove: 'ลบรูป',
+    md_photo_shared_hint: 'ทรัพย์สินทุกชิ้นของรุ่นนี้ใช้รูปนี้ ไม่ต้องแนบที่ทรัพย์สินทีละชิ้น',
+    md_photo_err_type: 'รองรับเฉพาะไฟล์ PNG, JPG หรือ WebP',
+    md_photo_err_size: 'ไฟล์เกิน 10 MB',
 };

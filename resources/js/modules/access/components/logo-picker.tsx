@@ -1,5 +1,5 @@
 // Round 96px logo picker shared by the Software and Social / Internet forms: opens the file
-// picker itself (the parent runs the crop flow), with a camera badge and a remove button.
+// picker itself (the parent runs the crop flow), with a camera badge while empty and a quiet remove button once set.
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Camera, X, type LucideIcon } from 'lucide-react';
@@ -39,9 +39,11 @@ export function LogoPicker({
                     ) : (
                         <Icon className="h-7 w-7" aria-hidden />
                     )}
-                    <span className="border-border bg-background text-foreground absolute right-0.5 bottom-0.5 grid h-7 w-7 place-items-center rounded-full border shadow-sm">
-                        <Camera className="h-3.5 w-3.5" aria-hidden />
-                    </span>
+                    {!preview && (
+                        <span className="border-border bg-background text-foreground absolute right-0.5 bottom-0.5 grid h-7 w-7 place-items-center rounded-full border shadow-sm">
+                            <Camera className="h-3.5 w-3.5" aria-hidden />
+                        </span>
+                    )}
                     <input
                         name="logo"
                         type="file"
@@ -60,13 +62,15 @@ export function LogoPicker({
                         onClick={onRemove}
                         aria-label={t('access_logo_remove_logo')}
                         title={t('access_logo_remove_logo')}
-                        className="bg-destructive text-destructive-foreground focus-visible:ring-brand/40 absolute top-0.5 right-0.5 grid h-6 w-6 place-items-center rounded-full shadow-sm hover:opacity-90 focus-visible:ring-[3px] focus-visible:outline-hidden"
+                        className="focus-visible:ring-brand/40 absolute top-0.5 right-0.5 grid h-[22px] w-[22px] place-items-center rounded-full border border-zinc-200 bg-white/90 text-zinc-500 hover:text-zinc-800 focus-visible:ring-[3px] focus-visible:outline-hidden"
                     >
-                        <X className="h-3.5 w-3.5" aria-hidden />
+                        <X className="h-3 w-3" strokeWidth={2.25} aria-hidden />
                     </button>
                 )}
             </div>
-            <p className="text-muted-foreground text-center text-[11.5px] leading-snug whitespace-pre-line">{t('access_logo_note')}</p>
+            <p className="text-muted-foreground text-center text-[11.5px] leading-snug whitespace-pre-line">
+                {preview ? t('photo_tap_to_change') : t('access_logo_note')}
+            </p>
         </div>
     );
 }
