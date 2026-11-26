@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
 import type { ImportKind } from '../../api/assetImportApi';
 
 const CARDS: { kind: ImportKind; icon: LucideIcon; titleKey: string; subKey: string }[] = [
-    { kind: 'purchased', icon: ShoppingBag, titleKey: 'asset_import_kind_purchased', subKey: 'asset_source_purchased_sub' },
-    { kind: 'rented', icon: FileText, titleKey: 'asset_import_kind_rented', subKey: 'asset_source_rented_sub' },
+    { kind: 'purchased', icon: ShoppingBag, titleKey: 'asset_import_card_purchased', subKey: 'asset_source_purchased_sub' },
+    { kind: 'rented', icon: FileText, titleKey: 'asset_import_card_rented', subKey: 'asset_source_rented_sub' },
 ];
 
 export function ImportKindStep({ kind, onChange }: { kind: ImportKind | null; onChange: (kind: ImportKind) => void }) {
@@ -22,7 +22,9 @@ export function ImportKindStep({ kind, onChange }: { kind: ImportKind | null; on
     return (
         <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
             <div>
-                <h3 className="text-lg font-bold tracking-tight text-balance">{t('asset_import_kind_heading')}</h3>
+                <h3 tabIndex={-1} className="text-lg font-bold tracking-tight text-balance">
+                    {t('asset_import_kind_heading')}
+                </h3>
                 <p className="text-muted-foreground mt-0.5 text-sm">{t('asset_import_kind_sub')}</p>
             </div>
 
@@ -37,7 +39,7 @@ export function ImportKindStep({ kind, onChange }: { kind: ImportKind | null; on
                 {CARDS.map(({ kind: value, icon: Icon, titleKey, subKey }) => (
                     <label
                         key={value}
-                        className="border-border hover:border-brand/50 has-[:checked]:border-brand has-[:checked]:ring-brand/20 has-[:focus-visible]:ring-ring group relative flex min-h-16 cursor-pointer gap-4 rounded-lg border p-4 transition-colors has-[:checked]:ring-[3px] has-[:focus-visible]:ring-2"
+                        className="border-border hover:border-brand/50 has-[:checked]:border-brand has-[:focus-visible]:ring-ring group relative flex min-h-16 cursor-pointer gap-4 rounded-lg border p-4 transition-colors has-[:focus-visible]:ring-2"
                     >
                         <input
                             type="radio"

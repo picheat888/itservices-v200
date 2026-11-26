@@ -1590,7 +1590,7 @@ export default function AssetsPage() {
                 onClose={closeForm}
                 onSaved={showSaved}
             />
-            <AssetImportDialog open={importDialog.open} onClose={importDialog.closeImport} onShowAwaiting={showAwaiting} />
+            <AssetImportDialog open={canCreate && importDialog.open} onClose={importDialog.closeImport} onShowAwaiting={showAwaiting} />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />

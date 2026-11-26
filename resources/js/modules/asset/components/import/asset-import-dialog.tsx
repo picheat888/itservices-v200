@@ -4,7 +4,8 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
-import { serverFailureText } from '@/shared/lib/api-errors';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
+import { serverMessage } from '@/shared/lib/api-errors';
 import { isServerFailure } from '@/shared/lib/http-errors';
 import { reasonWords } from '@/shared/lib/reason-words';
 import { Button } from '@/shared/ui/button';
@@ -12,10 +13,9 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Upload } from 'lucide-react';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ImportKind, ImportPreview, ImportResult } from '../../api/assetImportApi';
 import { useAssetImport } from '../../hooks/use-asset-import';
-import { IMPORT_COLUMNS } from '../../lib/import-columns';
 import { rowsWithEdits, type RowEdits } from '../../lib/import-rows';
 import { canLeaveStep, importSteps, type StepId, type WizardState } from '../../lib/import-wizard';
 import { ImportKindStep } from './import-kind-step';
@@ -78,6 +78,7 @@ interface DialogProps {
 
 export function AssetImportDialog({ open, onClose }: DialogProps) {
     const t = useT();
+    const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const dateFormat = useUiStore((s) => s.dateConfig.format);
     const { preview: previewFile, run, downloadTemplate } = useAssetImport();
@@ -88,8 +89,8 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
     // Answers of a file that was replaced or removed meanwhile are dropped
     const pickToken = useRef(0);
 
-    // A fresh wizard each time the dialog opens
-    useEffect(() => {
+    // A fresh wizard each time the dialog opens, before the first paint so no old step shows
+    useLayoutEffect(() => {
         if (!open) return;
         dispatch({ type: 'reset' });
         setRefusal(null);
@@ -106,7 +107,7 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
     const wizard: WizardState = { kind, file: state.file, rows, linkContract: state.linkContract, contractId: state.contractId };
     const busy = previewFile.isPending || run.isPending;
     const hasEdits = Object.keys(state.edits).length > 0;
-    const guardClose = useDiscardGuard(state.file !== null && state.result === null);
+    const guardClose = useDiscardGuard(open && state.file !== null && state.result === null);
 
     // Asks before edits from the check step are thrown away
     const confirmLoseEdits = async () =>
@@ -140,22 +141,27 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
         );
     };
 
+    /** True when the file was removed; false when the user kept it. */
     const removeFile = async () => {
-        if (!(await confirmLoseEdits())) return;
+        if (!(await confirmLoseEdits())) return false;
         dropFile();
         dispatch({ type: 'clearFile' });
+        return true;
     };
 
-    // The server's file refusal in words; a wrong-template file names the kind it is, a missing column its header
+    // The server's file refusal in words; a wrong-template file names the kind it is, counts are formatted
     const refusalWords = (error: unknown): string => {
-        const header = (key: string) => IMPORT_COLUMNS[kind ?? 'rented'].find((column) => column.key === key)?.header ?? key;
         const words = reasonWords(error, t, 'asset_refusal_', (name, value) => {
             if (name === 'kind') return t(`asset_import_kind_${String(value)}`);
-            if (name === 'columns') return String(value).split(', ').map(header).join(', ');
-            return String(value ?? '');
+            return typeof value === 'number' ? fmtN(value) : String(value ?? '');
         });
-        return words ?? (isServerFailure(error) ? serverFailureText(error) : t('asset_refusal_import_unreadable'));
+        return words ?? (isServerFailure(error) ? (serverMessage(error) ?? '') : t('asset_refusal_import_unreadable'));
     };
+
+    // Focus follows the user to the heading of each new step
+    useEffect(() => {
+        if (step !== 'kind') body.current?.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
+    }, [step]);
 
     const goNext = () => {
         const next = steps[steps.indexOf(step) + 1];

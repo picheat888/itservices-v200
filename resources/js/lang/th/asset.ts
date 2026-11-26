@@ -321,6 +321,8 @@ export const asset: Dict = {
     asset_import_title_rented: 'นำเข้าทรัพย์สินเช่า',
     asset_import_title_purchased: 'นำเข้าทรัพย์สินซื้อ',
     asset_import_kind_rented: 'ทรัพย์สินเช่า',
+    asset_import_card_rented: 'ทรัพย์สินเช่า',
+    asset_import_card_purchased: 'ทรัพย์สินซื้อ',
     asset_import_kind_purchased: 'ทรัพย์สินซื้อ',
     asset_import_sub: 'ลงทะเบียนทรัพย์สินใหม่หลายรายการพร้อมกันจากไฟล์ Excel',
     asset_import_step_kind: 'ซื้อหรือเช่า',

@@ -308,3 +308,14 @@ test('every column help text the import columns name exists in both languages', 
         }
     }
 });
+
+test('the discard guard and the page gate only count while the dialog is open', () => {
+    assert.match(read('modules/asset/components/import/asset-import-dialog.tsx'), /useDiscardGuard\(open && /);
+    assert.match(read('modules/asset/pages/index.tsx'), /open=\{canCreate && importDialog\.open\}/);
+});
+
+test('the upload step words a wrong file type and a failed template download', () => {
+    const up = read('modules/asset/components/import/import-upload-step.tsx');
+    assert.match(up, /asset_refusal_import_unreadable/);
+    assert.match(up, /import_template_failed/);
+});

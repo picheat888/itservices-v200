@@ -21,7 +21,8 @@ interface Props {
     /** Why the server refused the file, in words. */
     refusal: string | null;
     onPick: (file: File) => void;
-    onRemove: () => void;
+    /** Resolves true when the file was removed. */
+    onRemove: () => Promise<boolean>;
     onDownload: () => Promise<void>;
 }
 
@@ -31,6 +32,8 @@ export function ImportUploadStep({ kind, file, rowCount, busy, refusal, onPick, 
     const [onlyOne, setOnlyOne] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [said, setSaid] = useState('');
+    const [notXlsx, setNotXlsx] = useState(false);
+    const [downloadFailed, setDownloadFailed] = useState(false);
     const kindWord = t(`asset_import_kind_${kind}`);
 
     const meta = (rows: number) => t('asset_import_file_meta').replace('{rows}', fmtN(rows)).replace('{cols}', fmtN(IMPORT_COLUMNS[kind].length));
@@ -38,23 +41,27 @@ export function ImportUploadStep({ kind, file, rowCount, busy, refusal, onPick, 
     const pick = (files: FileList | File[]) => {
         const list = Array.from(files);
         setOnlyOne(list.length > 1);
-        if (list.length !== 1 || !list[0].name.toLowerCase().endsWith('.xlsx')) return;
+        if (list.length !== 1) return;
+        const isXlsx = list[0].name.toLowerCase().endsWith('.xlsx');
+        setNotXlsx(!isXlsx);
+        if (!isXlsx) return;
         setSaid('');
         onPick(list[0]);
     };
 
-    const remove = () => {
+    const remove = async () => {
         setOnlyOne(false);
-        setSaid(t('asset_import_remove_file'));
-        onRemove();
+        setNotXlsx(false);
+        if (await onRemove()) setSaid(t('asset_import_remove_file'));
     };
 
     const download = async () => {
         setDownloading(true);
+        setDownloadFailed(false);
         try {
             await onDownload();
         } catch {
-            // The shared request handler words the failure
+            setDownloadFailed(true);
         } finally {
             setDownloading(false);
         }
@@ -65,7 +72,9 @@ export function ImportUploadStep({ kind, file, rowCount, busy, refusal, onPick, 
             <div>
                 {/* Heading with the column guide */}
                 <div className="relative flex items-center gap-1">
-                    <h3 className="text-lg font-bold tracking-tight text-balance">{t('asset_import_upload_heading')}</h3>
+                    <h3 tabIndex={-1} className="text-lg font-bold tracking-tight text-balance">
+                        {t('asset_import_upload_heading')}
+                    </h3>
                     <ColumnGuide kind={kind} />
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-sm">{t('asset_import_upload_sub')}</p>
@@ -100,10 +109,10 @@ export function ImportUploadStep({ kind, file, rowCount, busy, refusal, onPick, 
                     {t('asset_import_one_file_only')}
                 </p>
             )}
-            {refusal !== null && (
+            {(notXlsx || refusal !== null || downloadFailed) && (
                 <p role="alert" className="text-destructive flex items-start gap-1.5 text-sm">
                     <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    {refusal}
+                    {notXlsx ? t('asset_refusal_import_unreadable') : (refusal ?? t('import_template_failed'))}
                 </p>
             )}
 
@@ -152,33 +161,36 @@ function ChosenFile({
             onDragLeave={() => setDragOver(false)}
             onDrop={drop}
             className={cn(
-                'bg-card flex min-h-[132px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-4 text-center transition-colors',
+                'bg-card flex h-36 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-3 text-center transition-colors',
                 dragOver ? 'border-brand bg-brand/10' : 'border-border',
             )}
         >
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                <FileSpreadsheet className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div className="max-w-full min-w-0">
-                <div className="truncate text-sm font-semibold" translate="no">
-                    {file.name}
-                </div>
-                <div className="text-muted-foreground mt-0.5 flex min-h-4 items-center justify-center gap-1.5 text-xs tabular-nums">
-                    {busy ? (
-                        <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                            {t('import_checking')}
-                        </>
-                    ) : (
-                        metaText
-                    )}
+            {/* File name and sheet size */}
+            <div className="flex max-w-full min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                    <FileSpreadsheet className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 text-left">
+                    <div className="truncate text-sm font-semibold" translate="no">
+                        {file.name}
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 flex min-h-4 items-center justify-center gap-1.5 text-xs tabular-nums">
+                        {busy ? (
+                            <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                                {t('import_checking')}
+                            </>
+                        ) : (
+                            metaText
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" size="sm" className="min-h-8" disabled={busy} onClick={() => input.current?.click()}>
+                <Button type="button" variant="outline" size="sm" className="h-8" disabled={busy} onClick={() => input.current?.click()}>
                     {t('asset_import_change_file')}
                 </Button>
-                <Button type="button" variant="ghost" size="sm" className="min-h-8" disabled={busy} onClick={onRemove}>
+                <Button type="button" variant="ghost" size="sm" className="h-8" disabled={busy} onClick={onRemove}>
                     <X className="h-4 w-4" aria-hidden="true" />
                     {t('asset_import_remove_file')}
                 </Button>
