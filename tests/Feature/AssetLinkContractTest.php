@@ -1,6 +1,6 @@
 <?php
 
-// Linking rented assets that have no contract: the list filter, the bulk endpoint and its refusals.
+// Linking rented assets that have no contract: the bulk endpoint and its refusals.
 
 namespace Tests\Feature;
 

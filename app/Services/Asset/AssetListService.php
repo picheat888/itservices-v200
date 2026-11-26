@@ -49,8 +49,12 @@ class AssetListService
         if ($filters['source'] !== null) {
             $query->where('source', $filters['source']);
         }
-        if ($filters['status'] !== null) {
-            $query->where('status', $filters['status']);
+        if (is_string($filters['status'] ?? null)) {
+            if ($filters['status'] === 'awaiting_contract') {
+                $query->rentedUnlinked();
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
         if ($filters['warehouse'] !== null) {
             $query->whereHas('warehouse', fn ($w) => $w->where('name', $filters['warehouse']));
