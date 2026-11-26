@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Access\MyAccessController;
 use App\Http\Controllers\Api\Access\SocialPlatformController;
 use App\Http\Controllers\Api\Access\SoftwareController;
 use App\Http\Controllers\Api\Asset\AssetController;
+use App\Http\Controllers\Api\Asset\AssetImportController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\LoginDeviceController;
 use App\Http\Controllers\Api\Auth\MyDeviceController;
@@ -379,6 +380,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::post('assets/{asset}/recall', [AssetController::class, 'recall'])->name('api.assets.recall');
     Route::post('assets/{asset}/cancel-writeoff', [AssetController::class, 'cancelWriteoff'])->name('api.assets.cancel-writeoff');
     Route::get('assets/{asset}/contract', [AssetController::class, 'contract'])->name('api.assets.contract');
+    Route::get('assets/import-template', [AssetImportController::class, 'template'])->name('api.assets.import-template');
     Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module
