@@ -381,6 +381,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::post('assets/{asset}/cancel-writeoff', [AssetController::class, 'cancelWriteoff'])->name('api.assets.cancel-writeoff');
     Route::get('assets/{asset}/contract', [AssetController::class, 'contract'])->name('api.assets.contract');
     Route::get('assets/import-template', [AssetImportController::class, 'template'])->name('api.assets.import-template');
+    Route::post('assets/import/preview', [AssetImportController::class, 'preview'])->name('api.assets.import.preview');
     Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module
