@@ -180,6 +180,21 @@ class AssetImportReadTest extends TestCase
         $this->assertSame(['สี'], $this->reader()->read($small, 'rented')['ignored']);
     }
 
+    public function test_non_breaking_spaces_are_trimmed_and_nbsp_only_rows_are_skipped(): void
+    {
+        $nbsp = "\u{A0}";
+        $file = $this->xlsxUpload([self::RENTED => [
+            $this->rentedHeader(),
+            ['Notebook', 'Lenovo', 'E14', "PF4XK101{$nbsp}", '', 'Main'],
+            [$nbsp, $nbsp, $nbsp, $nbsp, $nbsp, $nbsp],
+        ]]);
+
+        $rows = $this->reader()->read($file, 'rented')['rows'];
+
+        $this->assertSame([2], array_column($rows, 'line'));
+        $this->assertSame('PF4XK101', $rows[0]['cells']['serial']);
+    }
+
     public function test_an_empty_template_is_refused(): void
     {
         $file = $this->xlsxUpload([self::RENTED => [$this->rentedHeader()]]);

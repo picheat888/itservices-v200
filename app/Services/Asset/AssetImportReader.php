@@ -175,8 +175,6 @@ class AssetImportReader
             return $value ? '1' : '0';
         }
         if (is_int($value) || is_float($value)) {
-            file_put_contents(getenv('TEMP').'/dbg.txt', $cell->getCoordinate().' '.var_export($value, true).' '.var_export(Date::isDateTime($cell), true).' '.$cell->getWorksheetOrNull()?->getParent()::class.'
-');
             if (Date::isDateTime($cell)) {
                 return Date::excelToDateTimeObject($value)->format('Y-m-d');
             }
@@ -186,6 +184,6 @@ class AssetImportReader
                 : (string) $value;
         }
 
-        return trim((string) $value);
+        return (string) preg_replace('/^[\s\x{A0}]+|[\s\x{A0}]+$/u', '', (string) $value);
     }
 }
