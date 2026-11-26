@@ -9,6 +9,7 @@ use App\Services\Report\Access\AccessResourceMembersReport;
 use App\Services\Report\Access\SoftwareLicenseReport;
 use App\Services\Report\Asset\AssetOverviewReport;
 use App\Services\Report\Asset\AssetTransferHistoryReport;
+use App\Services\Report\Employee\EmployeeDirectoryReport;
 use App\Services\Report\Employee\EmployeeOpenItemsReport;
 use App\Services\Report\Request\ItPendingRequestReport;
 use App\Services\Report\Request\RequestOverviewReport;
@@ -28,6 +29,7 @@ class ReportSearchPlaceholderTest extends TestCase
         TicketBacklogReport::class => 'rep_ph_ticket_backlog',
         ItPendingRequestReport::class => 'rep_ph_it_pending',
         EmployeeOpenItemsReport::class => 'rep_ph_open_items',
+        EmployeeDirectoryReport::class => 'rep_ph_employee_directory',
         AssetTransferHistoryReport::class => 'rep_ph_transfer_history',
         AccessResourceMembersReport::class => 'rep_ph_resource_members',
         SoftwareLicenseReport::class => 'rep_ph_software_licenses',

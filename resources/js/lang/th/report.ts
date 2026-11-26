@@ -406,6 +406,7 @@ export const report: Dict = {
     rep_ph_ticket_backlog: 'ค้นหาเลขที่ Ticket, หัวข้อ หรือผู้แจ้ง…',
     rep_ph_it_pending: 'ค้นหาเลขที่, เรื่อง หรือผู้ขอ…',
     rep_ph_open_items: 'ค้นหาชื่อ, รหัส, รหัสทรัพย์สิน หรือ Serial…',
+    rep_ph_employee_directory: 'ค้นหารหัส, ชื่อ, อีเมล หรือ Username…',
     rep_ph_transfer_history: 'ค้นหารหัสทรัพย์สิน, รุ่น หรือชื่อพนักงาน…',
     rep_ph_resource_members: 'ค้นหา Resource, รหัส หรือสมาชิก…',
     rep_ph_software_licenses: 'ค้นหาซอฟต์แวร์ หรือผู้ใช้ License…',
@@ -415,6 +416,9 @@ export const report: Dict = {
     rep_ph_requests_overview: 'ค้นหาเลขที่, ประเภท หรือผู้ขอ…',
     rep_ph_assets_overview: 'ค้นหารหัส, Tag, Serial, ยี่ห้อ หรือผู้ถือครอง…',
     rep_k_total: 'ทั้งหมด',
+    rep_k_active: 'ใช้งาน',
+    rep_k_resigned: 'ลาออก',
+    rep_k_no_thai_name: 'ยังไม่มีชื่อไทย',
     rep_k_overdue: 'เกินกำหนดแล้ว',
     rep_k_within_30: 'หมดภายใน 30 วัน',
     rep_k_in_use: 'ใช้งาน (รวมส่วนกลาง)',
@@ -492,6 +496,8 @@ export const report: Dict = {
     rep_employees_overview_desc: 'อัตรากำลังแต่ละแผนก คนที่เข้าและออกในช่วงที่เลือก และผู้ลาออกที่ยังถือสิทธิ์',
     rep_employees_open_items_title: 'สรุปเรื่องค้างของพนักงาน',
     rep_employees_open_items_desc: 'ทรัพย์สินค้างคืน สิทธิ์ค้างถอน บัญชีเข้าใช้งาน และข้อมูลพนักงานไม่ครบ',
+    rep_employees_directory_title: 'รายชื่อพนักงาน',
+    rep_employees_directory_desc: 'พนักงานทุกคนพร้อมตำแหน่ง แผนก ข้อมูลติดต่อ หัวหน้างาน และบัญชีเข้าระบบ ตามข้อมูล ณ วันนี้',
     rep_access_software_licenses_title: 'การใช้ License ซอฟต์แวร์',
     rep_access_software_licenses_desc: 'License ที่ซื้อ และใช้อยู่ ใครถือ และคำขอที่รอ',
     rep_access_overview_title: 'ภาพรวมสิทธิ์การเข้าถึง',
@@ -1621,6 +1627,14 @@ export const report: Dict = {
     rep_eo_starts_today: 'เริ่มงานวันนี้',
     rep_eo_started_ago: 'เริ่มงานแล้ว {n} วัน',
 
+    // pages/employees-directory.tsx · components/employee-directory-cells.tsx — รายชื่อพนักงาน
+    rep_ed_status_active: 'ใช้งาน',
+    rep_ed_status_resigned: 'ลาออก',
+    rep_n_ed_departments: 'ใน {n} แผนก',
+    rep_n_ed_share: '{pct}% ของทั้งหมด',
+    rep_n_ed_left_this_year: 'ลาออกปีนี้ {n} คน',
+    rep_n_ed_active_only: 'นับเฉพาะคนที่ใช้งาน',
+
     // components/contract-month-card.tsx — กราฟรายเดือนของรายงานสัญญา
     rep_cmc_open_list: 'กดที่แท่งเพื่อดูรายการสัญญา',
     rep_cmc_now: 'เดือนนี้',
@@ -2283,6 +2297,11 @@ export const report: Dict = {
         'จำนวนบัญชีที่ต้องจัดการตอนนี้ ได้แก่บัญชีของผู้ลาออก บัญชีที่ยังไม่เปลี่ยนรหัสผ่านครั้งแรก และรหัสผ่านหมดอายุเมื่อเปิดนโยบาย',
     rep_info_employees_open_items_open_data:
         'จำนวนพนักงานที่ข้อมูลขาดหรือขัดกันตอนนี้ เช่นไม่มีหัวหน้า อีเมล แผนก หน่วยงาน ตำแหน่ง (นับคนที่ยังทำงาน) หรือวันที่ไม่สอดคล้อง (นับทุกคน)',
+    rep_info_employees_directory_total: 'พนักงานทุกคนตามแผนก หน่วยงาน และคำค้นที่เลือก รวมคนที่ลาออกแล้ว',
+    rep_info_employees_directory_active: 'พนักงานที่ยังไม่ได้บันทึกลาออก ณ วันนี้',
+    rep_info_employees_directory_resigned:
+        'พนักงานที่บันทึกลาออกแล้ว รวมคนที่วันทำงานวันสุดท้ายยังมาไม่ถึง บรรทัดล่างนับคนที่วันทำงานวันสุดท้ายอยู่ในปีนี้',
+    rep_info_employees_directory_no_thai_name: 'พนักงานที่ใช้งานอยู่แต่ชื่อหรือนามสกุลภาษาไทยยังว่าง',
     rep_info_access_overview_ac_active: 'จำนวนสิทธิ์ที่ยังไม่ถอนตอนนี้ รวมสิทธิ์ที่ผู้ลาออกยังถือ แยกตามประเภท Resource ไม่ขึ้นกับช่วงวันที่',
     rep_info_access_overview_ac_holders:
         'จำนวนพนักงานที่ยังทำงานและถือสิทธิ์อย่างน้อย 1 สิทธิ์ตอนนี้ เปอร์เซ็นต์คิดจากพนักงานที่ยังทำงานทั้งหมดในแผนกที่เลือก',

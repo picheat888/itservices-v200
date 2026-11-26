@@ -56,7 +56,7 @@ class EmployeeReportsTest extends TestCase
     {
         $assetsOnly = $this->userWith([...$this->reportRights('assets')]);
 
-        foreach (['employees.overview', 'employees.open_items'] as $key) {
+        foreach (['employees.overview', 'employees.open_items', 'employees.directory'] as $key) {
             $this->actingAs($assetsOnly)->getJson("/api/reports/tabular/{$key}/rows")->assertForbidden();
         }
     }
@@ -67,7 +67,7 @@ class EmployeeReportsTest extends TestCase
         Asset::factory()->create(['owner_employee_id' => $leaver->id, 'owner' => null, 'status' => 'pending_return']);
         $user = $this->userWith([...$this->reportRights('employees')]);
 
-        foreach (['employees.overview', 'employees.open_items'] as $key) {
+        foreach (['employees.overview', 'employees.open_items', 'employees.directory'] as $key) {
             $response = $this->actingAs($user)->exportReport("/api/reports/tabular/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);

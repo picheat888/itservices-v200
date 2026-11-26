@@ -13,6 +13,7 @@ use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractOverviewReport;
 use App\Services\Report\Contract\ContractRenewalsReport;
 use App\Services\Report\Contract\ContractRentalsReport;
+use App\Services\Report\Employee\EmployeeDirectoryReport;
 use App\Services\Report\Employee\EmployeeOpenItemsReport;
 use App\Services\Report\Employee\EmployeeOverviewReport;
 use App\Services\Report\Request\ItPendingRequestReport;
@@ -77,6 +78,8 @@ class ReportCatalogue
     public const EMPLOYEES_OVERVIEW = 'employees.overview';
 
     public const EMPLOYEES_OPEN_ITEMS = 'employees.open_items';
+
+    public const EMPLOYEES_DIRECTORY = 'employees.directory';
 
     public const ACCESS_OVERVIEW = 'access.overview';
 
@@ -241,6 +244,13 @@ class ReportCatalogue
                 'domain' => 'employees',
                 'kind' => 'tabular',
                 'class' => EmployeeOpenItemsReport::class,
+                'requires' => ['reports.module', 'reports.employees'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::EMPLOYEES_DIRECTORY => [
+                'domain' => 'employees',
+                'kind' => 'tabular',
+                'class' => EmployeeDirectoryReport::class,
                 'requires' => ['reports.module', 'reports.employees'],
                 'formats' => ['xlsx', 'pdf'],
             ],

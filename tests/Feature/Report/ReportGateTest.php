@@ -70,7 +70,7 @@ class ReportGateTest extends TestCase
             'tickets' => ['tickets.overview', 'tickets.backlog', 'tickets.request_sla', 'tickets.manual_sla'],
             'stock' => ['stock.movements', 'stock.below_min', 'stock.valuation'],
             'requests' => ['requests.overview', 'requests.approvals', 'requests.it_pending'],
-            'employees' => ['employees.overview', 'employees.open_items'],
+            'employees' => ['employees.overview', 'employees.open_items', 'employees.directory'],
             'access' => ['access.overview', 'access.resource_members', 'access.software_licenses'],
         ];
 

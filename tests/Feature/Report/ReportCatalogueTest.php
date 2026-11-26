@@ -71,7 +71,7 @@ class ReportCatalogueTest extends TestCase
             $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
         $this->assertSame(['requests.overview', 'requests.approvals', 'requests.it_pending'], $keysFor([...$this->reportRights('requests')]));
-        $this->assertSame(['employees.overview', 'employees.open_items'], $keysFor([...$this->reportRights('employees')]));
+        $this->assertSame(['employees.overview', 'employees.open_items', 'employees.directory'], $keysFor([...$this->reportRights('employees')]));
         $this->assertSame(['access.overview', 'access.resource_members', 'access.software_licenses'], $keysFor([...$this->reportRights('access')]));
         // Submitting or completing requests is not reading them all.
         $this->assertSame([], $keysFor(['requests.submit', 'requests.complete']));
@@ -111,7 +111,7 @@ class ReportCatalogueTest extends TestCase
             ['assets.overview', 'assets.warranty_expiring', 'assets.transfer_history', 'assets.writeoffs'],
             $keysFor([...$this->reportRights('assets')]),
         );
-        $this->assertCount(22, $keysFor([...$this->reportRights('tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access')]));
+        $this->assertCount(23, $keysFor([...$this->reportRights('tickets', 'assets', 'contracts', 'stock', 'requests', 'employees', 'access')]));
     }
 
     public function test_workspace_ticket_rights_are_not_enough(): void

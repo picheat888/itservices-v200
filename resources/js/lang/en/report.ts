@@ -406,6 +406,7 @@ export const report: Dict = {
     rep_ph_ticket_backlog: 'Search ticket no., subject or requester…',
     rep_ph_it_pending: 'Search number, title or requester…',
     rep_ph_open_items: 'Search name, ID, asset code or serial…',
+    rep_ph_employee_directory: 'Search code, name, email or username…',
     rep_ph_transfer_history: 'Search asset code, model or employee…',
     rep_ph_resource_members: 'Search resource, code or member…',
     rep_ph_software_licenses: 'Search software or license user…',
@@ -415,6 +416,9 @@ export const report: Dict = {
     rep_ph_requests_overview: 'Search number, type or requester…',
     rep_ph_assets_overview: 'Search code, tag, serial, brand or holder…',
     rep_k_total: 'Total',
+    rep_k_active: 'Active',
+    rep_k_resigned: 'Resigned',
+    rep_k_no_thai_name: 'No Thai name',
     rep_k_overdue: 'Overdue',
     rep_k_within_30: 'Within 30 days',
     rep_k_in_use: 'In use',
@@ -492,6 +496,8 @@ export const report: Dict = {
     rep_employees_overview_desc: 'Headcount by department, who joined and left in the period, and leavers still holding access',
     rep_employees_open_items_title: 'Employee open items',
     rep_employees_open_items_desc: 'Assets not returned, access not revoked, login accounts and incomplete employee data',
+    rep_employees_directory_title: 'Employee directory',
+    rep_employees_directory_desc: 'Every employee with position, department, contact details, manager and sign-in account, as of today',
     rep_access_software_licenses_title: 'Software license usage',
     rep_access_software_licenses_desc: 'Licenses bought and used, who holds them, and requests waiting',
     rep_access_overview_title: 'Access overview',
@@ -1629,6 +1635,14 @@ export const report: Dict = {
     rep_eo_starts_today: 'Starts today',
     rep_eo_started_ago: 'Started {n} days ago',
 
+    // pages/employees-directory.tsx · components/employee-directory-cells.tsx — รายชื่อพนักงาน
+    rep_ed_status_active: 'Active',
+    rep_ed_status_resigned: 'Resigned',
+    rep_n_ed_departments: 'In {n} departments',
+    rep_n_ed_share: '{pct}% of all',
+    rep_n_ed_left_this_year: '{n} left this year',
+    rep_n_ed_active_only: 'Active employees only',
+
     // components/contract-month-card.tsx — กราฟรายเดือนของรายงานสัญญา
     rep_cmc_open_list: 'Select a bar to see its contracts',
     rep_cmc_now: 'This month',
@@ -2303,6 +2317,11 @@ export const report: Dict = {
         'Accounts to deal with now: leavers’ accounts, first passwords not changed, and expired passwords when the policy is on.',
     rep_info_employees_open_items_open_data:
         'Staff with missing or clashing data now: no manager, email, department, section or position (working staff), or dates that do not fit (everyone).',
+    rep_info_employees_directory_total: 'Every employee in the chosen department, section and search, including those who resigned',
+    rep_info_employees_directory_active: 'Employees with no resignation recorded as of today',
+    rep_info_employees_directory_resigned:
+        'Employees with a recorded resignation, including those whose last day is still ahead. The line below counts last days in this year',
+    rep_info_employees_directory_no_thai_name: 'Active employees whose Thai first or last name is still empty',
     rep_info_access_overview_ac_active: 'Access grants not revoked now, leavers’ included, by resource type, whatever the dates.',
     rep_info_access_overview_ac_holders:
         'Working staff holding at least one grant now. The percent is of all working staff in the chosen department.',

@@ -4,6 +4,7 @@ namespace App\Services\Report\Tabular;
 
 use App\Models\Contract\Contract;
 use App\Models\Employee\Department;
+use App\Models\Employee\Section;
 use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\Settings\WriteoffReason;
@@ -31,6 +32,15 @@ final class Options
     {
         return Department::query()->orderBy('name')->get(['id', 'name', 'name_th'])
             ->map(fn (Department $d) => ['value' => $d->id, 'label' => $d->name, 'label_th' => $d->name_th])->all();
+    }
+
+    /**
+     * @return list<array{value: int, label: string, label_th: ?string}>
+     */
+    public static function sections(): array
+    {
+        return Section::query()->orderBy('name')->get(['id', 'name', 'name_th'])
+            ->map(fn (Section $s) => ['value' => $s->id, 'label' => $s->name, 'label_th' => $s->name_th])->all();
     }
 
     /**
