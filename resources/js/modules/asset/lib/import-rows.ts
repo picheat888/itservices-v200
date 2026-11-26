@@ -146,18 +146,31 @@ function firstLineOf(line: number, column: ImportColumnKey, text: string, rows: 
     return null;
 }
 
-// Replaces every row's dup_in_file flags with the first-occurrence rule, so fixing one row clears the ones that pointed at it
+// Replaces every row's dup_in_file flags with the first-occurrence rule, so fixing one row clears the ones that pointed at it.
+// One pass builds the first line of each text; a row whose flags are unchanged keeps its identity.
 function withDuplicateFlags(rows: CheckedRow[]): CheckedRow[] {
+    const firstSeen = new Map<ImportColumnKey, Map<string, number>>();
+    for (const column of DUPLICATE_COLUMNS) {
+        const seen = new Map<string, number>();
+        for (const row of rows) {
+            const key = sameKey(String(row.values[column as keyof CheckedValues] ?? ''));
+            if (key !== '' && !seen.has(key)) seen.set(key, row.line);
+        }
+        firstSeen.set(column, seen);
+    }
+    const isFlag = (issue: Issue) => issue.code === 'dup_in_file' && DUPLICATE_COLUMNS.includes(issue.column as ImportColumnKey);
     return rows.map((row) => {
-        const kept = row.issues.filter((issue) => !(issue.code === 'dup_in_file' && DUPLICATE_COLUMNS.includes(issue.column as ImportColumnKey)));
         const flags: Issue[] = [];
         for (const column of DUPLICATE_COLUMNS) {
-            const text = String(row.values[column as keyof CheckedValues] ?? '');
-            if (sameKey(text) === '') continue;
-            const first = firstLineOf(row.line, column, text, rows);
-            if (first !== null) flags.push({ code: 'dup_in_file', column, line: first });
+            const key = sameKey(String(row.values[column as keyof CheckedValues] ?? ''));
+            const first = key === '' ? undefined : firstSeen.get(column)?.get(key);
+            if (first !== undefined && first !== row.line) flags.push({ code: 'dup_in_file', column, line: first });
         }
-        return flags.length === 0 && kept.length === row.issues.length ? row : { ...row, issues: [...kept, ...flags] };
+        const current = row.issues.filter(isFlag);
+        const same =
+            current.length === flags.length &&
+            current.every((issue) => flags.some((flag) => flag.column === issue.column && flag.line === issue.line));
+        return same ? row : { ...row, issues: [...row.issues.filter((issue) => !isFlag(issue)), ...flags] };
     });
 }
 
@@ -287,4 +300,26 @@ export function importRunPayload(kind: ImportKind, rows: CheckedRow[], contractI
     };
     if (kind === 'rented' && contractId !== null) payload.contract_id = contractId;
     return payload;
+}
+
+/** One issue in words: the template's placeholders filled from the issue, the row and the list names. */
+export function fillIssueWords(
+    template: string,
+    issue: Issue,
+    row: CheckedRow,
+    options: ImportOptions,
+    columnName: (column: string) => string,
+    formatNumber: (value: number) => string,
+): string {
+    const fill: Record<string, string | number | undefined> = {
+        ...issue,
+        column: columnName(issue.column),
+        brand: issue.brand ?? options.brands.find((brand) => brand.id === row.values.brand_id)?.name ?? '',
+        // The server sends no value for a taken code; the cell's own text is the code
+        value: issue.value ?? row.values.asset_code ?? row.cells.asset_code ?? '',
+    };
+    return template.replace(/\{(\w+)\}/g, (_, name: string) => {
+        const value = fill[name];
+        return typeof value === 'number' ? formatNumber(value) : String(value ?? '');
+    });
 }

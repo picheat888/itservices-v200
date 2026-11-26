@@ -7,6 +7,7 @@ import type { CheckedRow, ImportOptions, Issue } from '../../resources/js/module
 import { IMPORT_COLUMNS } from '../../resources/js/modules/asset/lib/import-columns.ts';
 import {
     badRowCount,
+    fillIssueWords,
     foldAt,
     importRunPayload,
     localIssues,
@@ -384,4 +385,34 @@ test('the dialog renders the check step and handles the edit action', () => {
     const dialog = read('modules/asset/components/import/asset-import-dialog.tsx');
     assert.match(dialog, /ImportCheckStep/);
     assert.match(dialog, /type: 'edit'/);
+});
+
+test('issue words fill the code, brand name, line and counts', () => {
+    const fmt = (n: number) => `#${n}`;
+    const name = (c: string) => c;
+    const r = row(4, { asset_code: 'INK-1', brand_id: 10 });
+    assert.equal(
+        fillIssueWords('รหัส {value} มีในระบบแล้ว', { code: 'code_taken', column: 'asset_code' }, r, options, name, fmt),
+        'รหัส INK-1 มีในระบบแล้ว',
+    );
+    assert.equal(fillIssueWords('{brand}', { code: 'model_not_in_brand', column: 'model' }, r, options, name, fmt), 'Lenovo');
+    assert.equal(fillIssueWords('{column} {line}', { code: 'dup_in_file', column: 'serial', line: 3 }, r, options, name, fmt), 'serial #3');
+    assert.equal(fillIssueWords('{length}/{max}', { code: 'too_long', column: 'tag', length: 13, max: 10 }, r, options, name, fmt), '#13/#10');
+});
+
+test('rows an edit did not touch keep their identity', () => {
+    const rows = [row(2), row(3), row(4, { serial: 'SN2' })];
+    const result = rowsWithEdits(rows, { 3: { serial: 'X' } }, options, 'rented', 'dmy_slash');
+    assert.equal(result[0], rows[0]);
+    assert.notEqual(result[1], rows[1]);
+    const flagged = rowsWithEdits(rows, {}, options, 'rented', 'dmy_slash');
+    assert.notEqual(flagged[2], rows[2]);
+    assert.equal(rowsWithEdits(flagged, {}, options, 'rented', 'dmy_slash')[2], flagged[2]);
+});
+
+test('the check table marks list cells red, keys issue lines by index and does not read live codes', () => {
+    const table = read('modules/asset/components/import/import-check-table.tsx');
+    assert.match(table, /\[&_\[role=combobox\]\]:border-destructive/);
+    assert.doesNotMatch(table, /key=\{words\}/);
+    assert.match(read('modules/asset/components/import/import-check-step.tsx'), /row\.cells\.asset_code/);
 });

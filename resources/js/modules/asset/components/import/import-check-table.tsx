@@ -9,7 +9,7 @@ import { Check, CircleAlert, CircleCheck } from 'lucide-react';
 import { memo } from 'react';
 import type { CheckedRow, CheckedValues, ImportOption, ImportOptions, Issue } from '../../api/assetImportApi';
 import type { ImportColumn, ImportColumnKey, ImportListName } from '../../lib/import-columns';
-import { optionsFor, type CellEdit, type RowEdits } from '../../lib/import-rows';
+import { fillIssueWords, optionsFor, type CellEdit, type RowEdits } from '../../lib/import-rows';
 
 /** Lang key of each column's name; the same words as the asset form. */
 const COLUMN_LABEL: Record<ImportColumnKey, string> = {
@@ -38,7 +38,7 @@ const LIST_COLUMN: Partial<Record<ImportColumnKey, { idField: keyof CheckedValue
 };
 
 const cellDomId = (line: number, column: string) => `asset-import-cell-${line}-${column}`;
-const isCodeColumn = (column: ImportColumnKey) => column === 'serial' || column === 'asset_code';
+const isCodeColumn = (column: ImportColumnKey) => column === 'serial' || column === 'asset_code' || column === 'tag';
 
 // Scrolls the cell into view past the pinned columns and puts the cursor in it
 function focusCell(line: number, column: string) {
@@ -49,7 +49,7 @@ function focusCell(line: number, column: string) {
 }
 
 const stickyRow = 'sticky left-0 z-[1] w-16 min-w-16 bg-card';
-const stickyResult = 'sticky left-16 z-[1] min-w-36 border-r border-border bg-card';
+const stickyResult = 'sticky left-16 z-[1] min-w-36 shadow-[1px_0_0_var(--color-border)] bg-card';
 
 type EditHandler = (line: number, column: ImportColumnKey, value: CellEdit) => void;
 
@@ -75,7 +75,10 @@ export function ImportCheckTable({ columns, rows, options, edits, onEdit }: Tabl
                             <th scope="col" className={cn(headClass, 'left-0 z-20 w-16 min-w-16')}>
                                 {t('asset_import_col_row')}
                             </th>
-                            <th scope="col" className={cn(headClass, 'border-border left-16 z-20 min-w-36 border-r')}>
+                            <th
+                                scope="col"
+                                className={cn(headClass, 'left-16 z-20 min-w-36 shadow-[1px_0_0_var(--color-border),0_1px_0_var(--color-border)]')}
+                            >
                                 {t('asset_import_col_result')}
                             </th>
                             {columns.map((column) => (
@@ -104,21 +107,13 @@ interface RowProps {
     onEdit: EditHandler;
 }
 
-// Memoised: an edit changes only its own row's props, so 500 rows do not all render again
+// Memoised: rows without edits keep their identity across edits, so only the touched row renders again
 const CheckRow = memo(function CheckRow({ row, rowEdits, columns, options, onEdit }: RowProps) {
     const t = useT();
     const fmtN = useNumberFormat();
     const labelOf = (column: string) => (column in COLUMN_LABEL ? t(COLUMN_LABEL[column as ImportColumnKey]) : column);
 
-    // The issue in words, with the column, brand, counts and codes filled in
-    const issueWords = (issue: Issue): string => {
-        const brand = issue.brand ?? options.brands.find((b) => b.id === row.values.brand_id)?.name ?? '';
-        const fill: Record<string, string | number | undefined> = { ...issue, column: labelOf(issue.column), brand };
-        return t(`asset_import_issue_${issue.code}`).replace(/\{(\w+)\}/g, (_, name: string) => {
-            const value = fill[name];
-            return typeof value === 'number' ? fmtN(value) : String(value ?? '');
-        });
-    };
+    const issueWords = (issue: Issue) => fillIssueWords(t(`asset_import_issue_${issue.code}`), issue, row, options, labelOf, fmtN);
 
     const firstBad = columns.find((column) => row.issues.some((issue) => issue.column === column.key))?.key ?? row.issues[0]?.column;
 
@@ -211,6 +206,8 @@ function EditableCell({ row, column, label, edit, edited, options, issues, close
     const errorId = `${id}-error`;
     const invalid = issues.length > 0;
     const describedBy = invalid ? errorId : undefined;
+    // A lifetime flag the file wrote as something else stays as the current choice, so picking blank is a change
+    const unresolved = invalid && !edited && column === 'warranty_lifetime';
 
     return (
         <div className="min-w-44">
@@ -220,13 +217,18 @@ function EditableCell({ row, column, label, edit, edited, options, issues, close
                     aria-label={label}
                     aria-invalid={invalid}
                     aria-describedby={describedBy}
-                    value={(edited ? edit === true : row.values.warranty_lifetime) ? 'yes' : ''}
+                    value={unresolved ? 'file' : (edited ? edit === true : row.values.warranty_lifetime) ? 'yes' : ''}
                     onChange={(event) => onEdit(row.line, column, event.target.value === 'yes')}
                     className={cn(
                         'border-input bg-background focus-visible:border-brand focus-visible:ring-brand/15 h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-[3px] focus-visible:outline-hidden',
                         invalid && 'border-destructive',
                     )}
                 >
+                    {unresolved && (
+                        <option value="file" disabled>
+                            {row.cells.warranty_lifetime}
+                        </option>
+                    )}
                     <option value="" />
                     <option value="yes">{t('yes')}</option>
                 </select>
@@ -257,8 +259,8 @@ function EditableCell({ row, column, label, edit, edited, options, issues, close
             )}
             {invalid && (
                 <div id={errorId} className="text-destructive mt-1 space-y-0.5 text-xs">
-                    {issues.map((words) => (
-                        <p key={words} className="flex items-start gap-1">
+                    {issues.map((words, index) => (
+                        <p key={index} className="flex items-start gap-1">
                             <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                             {words}
                         </p>
@@ -292,30 +294,47 @@ function ListCell({ row, column, label, id, invalid, describedBy, options, close
     const listed = LIST_COLUMN[column];
     if (!listed) return null;
     const brandId = row.values.brand_id;
-    const scoped: ImportOptions =
-        column === 'model' && brandId !== null ? { ...options, models: options.models.filter((model) => model.brand_id === brandId) } : options;
-    const choices = optionsFor(column, scoped, closest);
+    const choices = choicesFor(column, options, brandId, closest);
     const current = row.values[listed.idField];
     const value = typeof current === 'number' ? String(current) : '';
     // A model of another brand is no longer a choice but must still show on the trigger
     const kept = value !== '' && !choices.some((choice) => choice.value === value) ? pickedOption(options[listed.list], Number(value)) : undefined;
 
     return (
-        <SearchableSelect
-            id={id}
-            aria-label={label}
-            aria-invalid={invalid}
-            aria-describedby={describedBy}
-            value={value}
-            options={choices}
-            selectedOption={kept}
-            searchPlaceholder={label}
-            onChange={(next) => onEdit(row.line, column, next === '' ? null : Number(next))}
-        />
+        <div className={cn(invalid && '[&_[role=combobox]]:border-destructive')}>
+            <SearchableSelect
+                id={id}
+                aria-label={label}
+                aria-invalid={invalid}
+                aria-describedby={describedBy}
+                value={value}
+                options={choices}
+                selectedOption={kept}
+                searchPlaceholder={label}
+                onChange={(next) => onEdit(row.line, column, next === '' ? null : Number(next))}
+            />
+        </div>
     );
 }
 
 function pickedOption(list: ImportOption[], id: number): SearchOption | undefined {
     const found = list.find((option) => option.id === id);
     return found ? { value: String(found.id), label: found.name, search: found.name } : undefined;
+}
+
+// Choices per option set, column and (for models) brand are built once; the closest name is moved to the top per cell
+const choiceCache = new WeakMap<ImportOptions, Map<string, SearchOption[]>>();
+
+function choicesFor(column: ImportColumnKey, options: ImportOptions, brandId: number | null, closest: number | undefined): SearchOption[] {
+    let cache = choiceCache.get(options);
+    if (!cache) choiceCache.set(options, (cache = new Map()));
+    const key = `${column}:${column === 'model' ? brandId : ''}`;
+    let base = cache.get(key);
+    if (!base) {
+        const scoped: ImportOptions =
+            column === 'model' && brandId !== null ? { ...options, models: options.models.filter((model) => model.brand_id === brandId) } : options;
+        cache.set(key, (base = optionsFor(column, scoped)));
+    }
+    const at = closest === undefined ? -1 : base.findIndex((choice) => choice.value === String(closest));
+    return at > 0 ? [base[at], ...base.slice(0, at), ...base.slice(at + 1)] : base;
 }

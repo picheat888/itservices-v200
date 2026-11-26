@@ -40,12 +40,10 @@ export function ImportCheckStep({ kind, fileName, rows, options, edits, onEdit }
         [rows],
     );
 
-    const shown = useMemo(() => (onlyBad ? rows.filter((row) => pinned.has(row.line)) : rows), [onlyBad, pinned, rows]);
-    // The code column is left out when no row has a code
-    const columns = useMemo(
-        () => IMPORT_COLUMNS[kind].filter((column) => column.key !== 'asset_code' || rows.some((row) => (row.values.asset_code ?? '') !== '')),
-        [kind, rows],
-    );
+    const shown = useMemo(() => (onlyBad ? rows.filter((row) => pinned.has(row.line) || row.issues.length > 0) : rows), [onlyBad, pinned, rows]);
+    // The code column is left out when the file has no code; judged on the file's own text, which edits never change
+    const hasCode = useMemo(() => rows.some((row) => (row.cells.asset_code ?? '').trim() !== ''), [rows]);
+    const columns = useMemo(() => IMPORT_COLUMNS[kind].filter((column) => column.key !== 'asset_code' || hasCode), [kind, hasCode]);
     const total = useMemo(() => rows.reduce((sum, row) => sum + (Number(row.values.value) || 0), 0), [rows]);
 
     const summary = t('asset_import_summary_line')
