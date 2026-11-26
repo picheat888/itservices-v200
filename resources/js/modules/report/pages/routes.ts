@@ -14,6 +14,7 @@ const AssetsWriteoffsReportPage = lazyPage(() => import('./assets-writeoffs'));
 const ContractsOverviewReportPage = lazyPage(() => import('./contracts-overview'));
 const ContractsRenewalsReportPage = lazyPage(() => import('./contracts-renewals'));
 const ContractsRentalsReportPage = lazyPage(() => import('./contracts-rentals'));
+const EmployeesDirectoryReportPage = lazyPage(() => import('./employees-directory'));
 const EmployeesOpenItemsReportPage = lazyPage(() => import('./employees-open-items'));
 const EmployeesOverviewReportPage = lazyPage(() => import('./employees-overview'));
 const RequestsApprovalsReportPage = lazyPage(() => import('./requests-approvals'));
@@ -60,6 +61,7 @@ export const reportPageRoutes: ReportPageRoute[] = [
     // Employees
     { path: 'employees-overview', allOf: ['reports.module', 'reports.employees'], Page: EmployeesOverviewReportPage },
     { path: 'employees-open-items', allOf: ['reports.module', 'reports.employees'], Page: EmployeesOpenItemsReportPage },
+    { path: 'employees-directory', allOf: ['reports.module', 'reports.employees'], Page: EmployeesDirectoryReportPage },
     // Access
     { path: 'access-overview', allOf: ['reports.module', 'reports.access'], Page: AccessOverviewReportPage },
     { path: 'access-resource-members', allOf: ['reports.module', 'reports.access'], Page: AccessResourceMembersReportPage },
