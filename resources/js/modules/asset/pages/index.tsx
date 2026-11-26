@@ -510,12 +510,16 @@ export default function AssetsPage() {
     };
     // The import's done screen closes the dialog first (an async history pop), so its choice waits until ?dialog= is gone
     const [afterImport, setAfterImport] = useState<'awaiting' | 'imported' | null>(null);
+    const latest = useRef({ showAwaiting, tab, setTab });
+    useEffect(() => {
+        latest.current = { showAwaiting, tab, setTab };
+    });
     useEffect(() => {
         if (afterImport === null || importDialog.open) return;
         setAfterImport(null);
-        if (afterImport === 'awaiting') showAwaiting();
-        else if (tab !== 'inventory') setTab('inventory');
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const current = latest.current;
+        if (afterImport === 'awaiting') current.showAwaiting();
+        else if (current.tab !== 'inventory') current.setTab('inventory');
     }, [afterImport, importDialog.open]);
     // The clicked row opens the form at once; a link or reload fetches it
     const openEdit = (a: Asset) => {

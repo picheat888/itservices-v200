@@ -45,7 +45,7 @@ export function ImportContractStep({ count, linkContract, contractId, options, l
     return (
         <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
             <div>
-                <h3 tabIndex={-1} className="text-lg font-bold tracking-tight text-balance">
+                <h3 tabIndex={-1} className="text-lg font-bold tracking-tight text-balance tabular-nums">
                     {t('asset_import_contract_heading').replace('{count}', fmtN(count))}
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-sm">{t('asset_import_contract_sub')}</p>

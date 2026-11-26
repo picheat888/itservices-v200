@@ -12,6 +12,7 @@ import {
     importRunPayload,
     localIssues,
     optionsFor,
+    overlayFromRefusal,
     rowsWithEdits,
     summaryGroups,
     withServerIssues,
@@ -513,4 +514,25 @@ test('a server issue on a list column clears when another option is picked', () 
     const overlay = { 2: { issues: [{ code: 'not_found', column: 'warehouse' }], sent: sent.values } };
     assert.equal(badRowCount(withServerIssues([row(2, { warehouse_id: 5 })], overlay)), 1);
     assert.equal(badRowCount(withServerIssues([row(2, { warehouse_id: 6 })], overlay)), 0);
+});
+
+test('a refusal becomes an overlay keyed by sheet line with the values sent, skipping lines that are gone', () => {
+    const rows = [row(2), row(3, { serial: 'SN-DUP' })];
+    const issue = { code: 'serial_taken', column: 'serial', asset_code: 'INK-9' };
+    const overlay = overlayFromRefusal(
+        [
+            { row: 3, issues: [issue] },
+            { row: 99, issues: [issue] },
+        ],
+        rows,
+    );
+    assert.deepEqual(Object.keys(overlay), ['3']);
+    assert.equal(overlay[3].sent, rows[1].values);
+    assert.deepEqual(overlay[3].issues, [issue]);
+});
+
+test('only the newest 20 imported rows are pinned', () => {
+    const hook = read('modules/asset/hooks/use-asset-import.ts');
+    assert.match(hook, /const PIN_LIMIT = 20/);
+    assert.match(hook, /markNew\('assets', \[\.\.\.result\.ids\]\.sort\(\(a, b\) => b - a\)\.slice\(0, PIN_LIMIT\)\)/);
 });

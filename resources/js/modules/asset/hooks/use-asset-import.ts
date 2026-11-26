@@ -5,6 +5,9 @@ import { markNew } from '@/stores/new-rows';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { assetImportApi, IMPORT_TEMPLATE_FILES, type ImportKind, type ImportRunPayload } from '../api/assetImportApi';
 
+/** How many imported rows get the new-row pin: each one outside the page is fetched on its own, so a 500-row import must not pin them all. */
+const PIN_LIMIT = 20;
+
 export function useAssetImport() {
     const qc = useQueryClient();
 
@@ -15,7 +18,7 @@ export function useAssetImport() {
     const run = useMutation({
         mutationFn: (payload: ImportRunPayload) => assetImportApi.run(payload),
         onSuccess: (result) => {
-            markNew('assets', result.ids);
+            markNew('assets', [...result.ids].sort((a, b) => b - a).slice(0, PIN_LIMIT));
             return Promise.all([
                 qc.invalidateQueries({ queryKey: ['assets'] }),
                 qc.invalidateQueries({ queryKey: ['assets-list'] }),

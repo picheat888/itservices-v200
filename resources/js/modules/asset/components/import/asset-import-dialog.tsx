@@ -19,11 +19,20 @@ import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from 
 import { useUiStore } from '@/stores/ui';
 import { Upload } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
+import type { AssetContractOption } from '../../api/assetApi';
 import type { ImportKind, ImportPreview, ImportResult, Issue } from '../../api/assetImportApi';
 import { useAssetImport } from '../../hooks/use-asset-import';
 import { useAssetContractOptions } from '../../hooks/use-assets';
 import type { ImportColumnKey } from '../../lib/import-columns';
-import { importRunPayload, rowsWithEdits, withServerIssues, type CellEdit, type RowEdits, type ServerIssueOverlay } from '../../lib/import-rows';
+import {
+    importRunPayload,
+    overlayFromRefusal,
+    rowsWithEdits,
+    withServerIssues,
+    type CellEdit,
+    type RowEdits,
+    type ServerIssueOverlay,
+} from '../../lib/import-rows';
 import { canLeaveStep, importSteps, stepAfterRefusal, type StepId, type WizardState } from '../../lib/import-wizard';
 import { ImportCheckStep, NEXT_BLOCKED_ID } from './import-check-step';
 import { ImportContractStep } from './import-contract-step';
@@ -158,17 +167,19 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
     const contractsQuery = useAssetContractOptions(open && kind === 'rented');
     const refreshContracts = useSelectRefresh(contractsQuery);
     const openContracts = useMemo(() => (contractsQuery.data ?? []).filter((c) => !c.closed), [contractsQuery.data]);
+    const contractLabel = useCallback((c: AssetContractOption) => `${c.code} - ${localPair(c.vendor, c.vendor_th, lang) ?? ''}`, [lang]);
     const contractChoices = useMemo<SearchOption[]>(
         () =>
             openContracts.map((c) => ({
                 value: String(c.id),
-                label: `${c.code} - ${localPair(c.vendor, c.vendor_th, lang) ?? ''}`,
+                label: contractLabel(c),
                 search: `${c.code} ${c.vendor ?? ''} ${c.vendor_th ?? ''} ${c.details ?? ''}`,
                 sub: c.end_date ? t('asset_contract_ends').replace('{date}', fmtDate.date(c.end_date)) : undefined,
             })),
-        [openContracts, lang, t, fmtDate],
+        [openContracts, contractLabel, t, fmtDate],
     );
-    const chosenContract = state.linkContract ? (openContracts.find((c) => c.id === state.contractId) ?? null) : null;
+    // Looked up among all contracts so a refetch that drops it does not make the summary say it is not linked
+    const chosenContract = state.linkContract ? ((contractsQuery.data ?? []).find((c) => c.id === state.contractId) ?? null) : null;
     const steps = importSteps(kind ?? 'rented');
     const rows = useMemo(
         () =>
@@ -264,15 +275,7 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
             onSuccess: (result) => dispatch({ type: 'done', result }),
             onError: (error) => {
                 const { code, lines } = refusalBody(error);
-                const overlay: ServerIssueOverlay | null =
-                    code === 'import_rows_invalid'
-                        ? Object.fromEntries(
-                              lines.flatMap(({ row: line, issues }) => {
-                                  const sent = rows.find((r) => r.line === line)?.values;
-                                  return sent ? [[line, { issues, sent }]] : [];
-                              }),
-                          )
-                        : null;
+                const overlay = code === 'import_rows_invalid' ? overlayFromRefusal(lines, rows) : null;
                 if (code === 'link_contract_not_open') void contractsQuery.refetch();
                 setRunRefusal({ message: serverMessage(error, t, 'asset_refusal_') ?? serverFailureText(error), key: Date.now() });
                 dispatch({ type: 'refused', step: stepAfterRefusal(code), overlay, clearContract: code === 'link_contract_not_open' });
@@ -401,7 +404,10 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
                         options={contractChoices}
                         loading={contractsQuery.isLoading}
                         refresh={refreshContracts}
-                        onChange={(link, id) => dispatch({ type: 'contract', link, id })}
+                        onChange={(link, id) => {
+                            setRunRefusal(null);
+                            dispatch({ type: 'contract', link, id });
+                        }}
                     />
                 );
             case 'summary':
@@ -411,7 +417,8 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
                         fileName={state.file?.name ?? ''}
                         rows={rows}
                         options={state.preview.options}
-                        contractCode={chosenContract?.code ?? null}
+                        contractLabel={chosenContract ? contractLabel(chosenContract) : null}
+                        totalValue={totalValue}
                         running={run.isPending}
                         onChangeContract={() => goTo('contract')}
                     />

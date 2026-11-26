@@ -247,6 +247,16 @@ export function withServerIssues(rows: CheckedRow[], overlay: ServerIssueOverlay
     });
 }
 
+/** The overlay for a refused import: the server's issues per sheet line with the values sent for that line. Lines no longer in the rows are dropped. */
+export function overlayFromRefusal(lines: { row: number; issues: Issue[] }[], rows: CheckedRow[]): ServerIssueOverlay {
+    const overlay: ServerIssueOverlay = {};
+    for (const { row: line, issues } of lines) {
+        const sent = rows.find((r) => r.line === line)?.values;
+        if (sent) overlay[line] = { issues, sent };
+    }
+    return overlay;
+}
+
 /** Rows that still have at least one issue. */
 export function badRowCount(rows: CheckedRow[]): number {
     return rows.filter((row) => row.issues.length > 0).length;

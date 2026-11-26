@@ -412,7 +412,7 @@ export const asset: Dict = {
     asset_import_contract_hint: 'Only hardware contracts that are not closed can be chosen',
     // import-summary-step.tsx — summary and import step
     asset_import_summary_heading: 'Review before importing',
-    asset_import_summary_lead: '{title} {count} assets from file {file}',
+    asset_import_summary_lead: '{title}, {count} assets from file {file}',
     asset_import_summary_one_wh: 'All assets go into {warehouse} as "Ready to hand over". The system issues the asset codes',
     asset_import_summary_many_wh: 'All assets go into the warehouse named in the file as "Ready to hand over". The system issues the asset codes',
     asset_import_summary_contract: 'Contract',

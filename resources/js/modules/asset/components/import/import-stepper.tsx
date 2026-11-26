@@ -61,7 +61,7 @@ export function ImportStepper({ steps, current, locked, finished = false, onGo }
                                     aria-hidden="true"
                                     className={cn(
                                         'absolute top-[13px] right-[calc(-50%+17px)] left-[calc(50%+17px)] h-0.5 rounded-full',
-                                        done ? 'bg-brand' : 'bg-border',
+                                        done ? (finished ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-brand') : 'bg-border',
                                     )}
                                 />
                             )}

@@ -25,7 +25,7 @@ export function ImportDone({ kind, result, totalValue, onShowImported, onShowAwa
         <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-4 text-center">
             <CircleCheck className="h-12 w-12 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
             <div className="space-y-1">
-                <h3 tabIndex={-1} className="text-xl font-bold tracking-tight text-balance">
+                <h3 tabIndex={-1} className="text-xl font-bold tracking-tight text-balance tabular-nums">
                     {t(`asset_import_done_title_${kind}`).replace('{count}', count)}
                 </h3>
                 {result.first_code !== null && result.last_code !== null && (

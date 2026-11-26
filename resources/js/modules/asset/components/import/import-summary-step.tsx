@@ -15,8 +15,10 @@ interface Props {
     fileName: string;
     rows: CheckedRow[];
     options: ImportOptions;
-    /** Code of the chosen contract, or null when the assets are left waiting. */
-    contractCode: string | null;
+    /** Name of the chosen contract as the picker shows it, or null when the assets are left waiting. */
+    contractLabel: string | null;
+    /** Price total of the rows, for purchases. */
+    totalValue: number;
     running: boolean;
     onChangeContract: () => void;
 }
@@ -38,11 +40,10 @@ interface TableSpec {
     values: boolean;
 }
 
-export function ImportSummaryStep({ kind, fileName, rows, options, contractCode, running, onChangeContract }: Props) {
+export function ImportSummaryStep({ kind, fileName, rows, options, contractLabel, totalValue, running, onChangeContract }: Props) {
     const t = useT();
     const fmtN = useNumberFormat();
     const groups = useMemo(() => summaryGroups(rows, options, kind), [rows, options, kind]);
-    const total = useMemo(() => rows.reduce((sum, row) => sum + (Number(row.values.value) || 0), 0), [rows]);
     const money = (value: number) => fmtN(value, { decimals: 2 });
 
     const purchased = kind === 'purchased';
@@ -94,8 +95,8 @@ export function ImportSummaryStep({ kind, fileName, rows, options, contractCode,
                 {kind === 'rented' ? (
                     <>
                         <span className="text-muted-foreground">{t('asset_import_summary_contract')}</span>
-                        <span className="font-semibold" translate={contractCode === null ? undefined : 'no'}>
-                            {contractCode ?? t('asset_import_summary_contract_none')}
+                        <span className="font-semibold" translate={contractLabel === null ? undefined : 'no'}>
+                            {contractLabel ?? t('asset_import_summary_contract_none')}
                         </span>
                         <button
                             type="button"
@@ -107,12 +108,12 @@ export function ImportSummaryStep({ kind, fileName, rows, options, contractCode,
                         </button>
                     </>
                 ) : (
-                    <span className="font-semibold tabular-nums">{t('asset_import_summary_value').replace('{value}', money(total))}</span>
+                    <span className="font-semibold tabular-nums">{t('asset_import_summary_value').replace('{value}', money(totalValue))}</span>
                 )}
             </div>
 
             {/* Small tables, two columns on wide screens; an odd last one spans the row */}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
                 {tables.map((table, i) => (
                     <SummaryTable
                         key={table.key}
@@ -157,7 +158,7 @@ function SummaryTable({ head, entries, values, money, wide }: TableProps) {
     );
 
     return (
-        <div className={cn('border-border overflow-hidden rounded-lg border', wide && 'sm:col-span-2')}>
+        <div className={cn('border-border overflow-hidden rounded-lg border', wide && 'lg:col-span-2')}>
             <table className="w-full table-fixed text-sm">
                 <caption className="sr-only">{head}</caption>
                 <thead>
