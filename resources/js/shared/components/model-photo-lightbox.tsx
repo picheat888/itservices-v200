@@ -20,7 +20,7 @@ export function ModelPhotoLightbox({ photo, onClose }: { photo: LightboxPhoto | 
 
     return (
         <Dialog open={!!photo} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="w-[calc(100vw-2rem)] max-w-[480px] gap-0 p-0">
+            <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] gap-0 p-0">
                 <div className="px-5 pt-4 pr-12 pb-3">
                     {shown?.brand && <div className="text-muted-foreground text-xs font-semibold">{shown.brand}</div>}
                     <DialogTitle className="mt-0.5 text-base font-extrabold">{shown?.model}</DialogTitle>

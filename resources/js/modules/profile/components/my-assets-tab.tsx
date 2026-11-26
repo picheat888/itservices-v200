@@ -4,7 +4,10 @@ import { useT } from '@/lang';
 import { ACCEPT_KEY, AssetTagBadge, AssetTypeIcon, useAssetMutations } from '@/modules/asset';
 import { HELD_STATUS_META } from '@/modules/employee';
 import { EmptyPane } from '@/shared/components/empty-pane';
+import { ModelPhoto } from '@/shared/components/model-photo';
+import { ModelPhotoLightbox, type LightboxPhoto } from '@/shared/components/model-photo-lightbox';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
@@ -15,7 +18,6 @@ import { useMutationState } from '@tanstack/react-query';
 import { Check, CheckCheck, Inbox, Loader2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { HeadRow, LoadingRows, PAGE, SectionHeading, ShowAllRow, TableCard } from './profile-table';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 // Accepted rows hold their place this long after the last accept finishes
 const SETTLE_MS = 3000;
@@ -72,6 +74,10 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
     const { accept, requestReturn } = useAssetMutations();
     const [showAllPending, setShowAllPending] = useState(false);
     const [showAllHeld, setShowAllHeld] = useState(false);
+    const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
+    const openPhoto = (a: Asset) => {
+        if (a.model_photo_url) setLightbox({ src: a.model_photo_url, model: a.model ?? a.asset_code, brand: a.brand });
+    };
     // Accepted while this tab is open: the row stays put so the rows below never shift under a click
     const [settledIds, setSettledIds] = useState<Set<number>>(() => new Set());
 
@@ -166,9 +172,17 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
                                 )}
                             >
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                                        <AssetTypeIcon type={a.type} className="h-4 w-4" />
-                                    </div>
+                                    <ModelPhoto
+                                        size={40}
+                                        src={a.model_photo_url}
+                                        alt={a.model ?? a.asset_code}
+                                        onOpen={() => openPhoto(a)}
+                                        fallback={
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                                                <AssetTypeIcon type={a.type} className="h-4 w-4" />
+                                            </div>
+                                        }
+                                    />
                                     <div className="flex min-w-0 flex-col gap-0.5">
                                         <div className="flex min-w-0 items-center gap-1.5">
                                             <span className="truncate text-xs font-bold">{a.model ?? a.asset_code}</span>
@@ -233,9 +247,17 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
                         return (
                             <div key={a.id} className={cn(ROW_GRID, 'min-h-12 py-2', i > 0 && 'border-border/60 border-t')}>
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                    <div className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                                        <AssetTypeIcon type={a.type} className="h-4 w-4" />
-                                    </div>
+                                    <ModelPhoto
+                                        size={40}
+                                        src={a.model_photo_url}
+                                        alt={a.model ?? a.asset_code}
+                                        onOpen={() => openPhoto(a)}
+                                        fallback={
+                                            <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                                                <AssetTypeIcon type={a.type} className="h-4 w-4" />
+                                            </div>
+                                        }
+                                    />
                                     <div className="flex min-w-0 flex-col gap-0.5">
                                         <span className="truncate text-xs font-medium">{a.model ?? a.asset_code}</span>
                                         <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px] font-medium">
@@ -268,6 +290,7 @@ export function MyAssetsTab({ assets, loading, canReturn }: { assets: Asset[]; l
                     <ShowAllRow total={held.length} expanded={showAllHeld} onToggle={() => setShowAllHeld((v) => !v)} />
                 </TableCard>
             )}
+            <ModelPhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
         </div>
     );
 }

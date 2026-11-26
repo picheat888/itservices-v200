@@ -5,8 +5,10 @@ import { TicketCategoryIcon, TicketStatusBadge } from '@/modules/ticket';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { DateTimeCell } from '@/shared/components/date-time-cell';
 import { EmptyPane } from '@/shared/components/empty-pane';
+import { ModelPhoto } from '@/shared/components/model-photo';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
+import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { localPair } from '@/shared/lib/local-name';
 import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
@@ -16,7 +18,6 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Folder, Globe, Laptop, Mail, Package, Tag, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
 import { HELD_STATUS_META } from '../lib/held-assets';
-import { useNumberFormat } from '@/shared/hooks/use-number-format';
 
 /** Title and hint a pane shows when its list is empty; the caller owns the words. */
 export interface PaneEmpty {
@@ -233,9 +234,16 @@ export function AssetsPane({ assets, lang, loading, empty }: { assets: EmployeeH
                 const type = localPair(a.type, a.type_th, lang) ?? '—';
                 return (
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <div className="bg-accent text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                            <Laptop className="h-4 w-4" />
-                        </div>
+                        <ModelPhoto
+                            size={32}
+                            src={a.model_photo_url}
+                            alt={a.model ?? a.asset_code}
+                            fallback={
+                                <div className="bg-accent text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                                    <Laptop className="h-4 w-4" />
+                                </div>
+                            }
+                        />
                         <div className="min-w-0">
                             <div className="truncate text-xs font-medium">{a.model ?? a.asset_code}</div>
                             {/* Type, then the status with its dot */}

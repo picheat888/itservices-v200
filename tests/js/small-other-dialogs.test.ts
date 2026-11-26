@@ -54,7 +54,7 @@ test('photo crop keeps its 384 frame without a cross, and takes the 4ข header 
     assert.match(src, /<DialogContent className="[^"]*max-w-sm[^"]*\[&>button\]:hidden/);
     assert.match(
         src,
-        /<FocusDialogHeader\s+icon=\{Crop\}\s+eyebrow=\{t\('employees'\)\}\s+title=\{t\('photo_crop_title'\)\}\s+srDescription=\{t\('photo_crop_hint'\)\}/,
+        /<FocusDialogHeader\s+icon=\{Crop\}\s+eyebrow=\{eyebrow \?\? t\('employees'\)\}\s+title=\{t\('photo_crop_title'\)\}\s+srDescription=\{t\('photo_crop_hint'\)\}/,
     );
     assert.match(src, /<DialogFooterBar\b/);
     assert.doesNotMatch(src, /size="sm"/, 'small footer buttons');

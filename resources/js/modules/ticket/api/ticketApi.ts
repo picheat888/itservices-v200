@@ -2,6 +2,18 @@ import { overviewPeriodParams, type OverviewPeriod } from '@/shared/components/o
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary, TicketWorkClass } from '@/shared/types';
 
+/** An asset offered when linking a case to a device: the requester's own, or a search hit. */
+export interface TicketAssetOption {
+    id: number;
+    asset_code: string;
+    model: string | null;
+    model_photo_url?: string | null;
+    brand?: string | null;
+    tag?: string | null;
+    type?: string | null;
+    type_th?: string | null;
+}
+
 export interface TicketPageMeta {
     total: number;
     per_page: number;
@@ -68,12 +80,9 @@ export const ticketApi = {
             }>('/tickets/staff', { params: { category } })
             .then((r) => r.data.data),
     badge: () => http.get<{ count: number }>('/tickets/badge').then((r) => r.data.count),
-    requesterAssets: (id: number) =>
-        http.get<{ data: { id: number; asset_code: string; model: string | null }[] }>(`/tickets/${id}/requester-assets`).then((r) => r.data.data),
+    requesterAssets: (id: number) => http.get<{ data: TicketAssetOption[] }>(`/tickets/${id}/requester-assets`).then((r) => r.data.data),
     assetOptions: (search: string) =>
-        http
-            .get<{ data: { id: number; asset_code: string; model: string | null }[] }>('/tickets/asset-options', { params: { search } })
-            .then((r) => r.data.data),
+        http.get<{ data: TicketAssetOption[] }>('/tickets/asset-options', { params: { search } }).then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Ticket>>(`/tickets/${id}`).then((r) => r.data.data),
     create: (payload: CreateTicketPayload) => mutate<Ticket>('post', '/tickets', payload),
     update: (id: number, payload: UpdateTicketPayload) => mutate<Ticket>('put', `/tickets/${id}`, payload),

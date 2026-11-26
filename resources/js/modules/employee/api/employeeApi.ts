@@ -39,6 +39,7 @@ export interface EmployeeHeldAsset {
     asset_code: string;
     tag: string | null;
     model: string | null;
+    model_photo_url?: string | null;
     type: string | null;
     type_th: string | null;
     serial: string | null;

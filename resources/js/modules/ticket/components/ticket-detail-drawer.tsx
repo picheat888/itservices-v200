@@ -5,6 +5,8 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
 import { formatFileSize } from '@/shared/components/file-drop-zone';
+import { ModelPhoto } from '@/shared/components/model-photo';
+import { ModelPhotoLightbox, type LightboxPhoto } from '@/shared/components/model-photo-lightbox';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -328,6 +330,7 @@ export function TicketDetailDrawer({
     const marks = useTabFreshness(tab, { details: [source], progress: [source], files: [source] });
     // In-app preview (lightbox) for image and PDF attachments instead of opening a new tab.
     const [preview, setPreview] = useState<TicketAttachment | null>(null);
+    const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
     useEffect(() => {
         setPreview(null);
         setTab('details');
@@ -445,9 +448,23 @@ export function TicketDetailDrawer({
                                                 <div className="space-y-3">
                                                     {/* Device kind: the ASSET's type icon + category name (not the ticket category). */}
                                                     <div className="flex items-center gap-2.5">
-                                                        <span className="bg-muted text-muted-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md">
-                                                            <AssetTypeIcon type={view.related_asset_type ?? ''} className="h-4 w-4" />
-                                                        </span>
+                                                        <ModelPhoto
+                                                            size={56}
+                                                            src={view.related_asset_model_photo_url}
+                                                            alt={view.related_asset_model ?? view.related_asset_tag}
+                                                            onOpen={() =>
+                                                                setLightbox({
+                                                                    src: view.related_asset_model_photo_url ?? '',
+                                                                    model: view.related_asset_model ?? view.related_asset_tag ?? '',
+                                                                    brand: view.related_asset_brand,
+                                                                })
+                                                            }
+                                                            fallback={
+                                                                <span className="bg-muted text-muted-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md">
+                                                                    <AssetTypeIcon type={view.related_asset_type ?? ''} className="h-4 w-4" />
+                                                                </span>
+                                                            }
+                                                        />
                                                         <span className="text-sm font-semibold">
                                                             {localPair(view.related_asset_type, view.related_asset_type_th, lang) ?? '—'}
                                                         </span>
@@ -793,6 +810,7 @@ export function TicketDetailDrawer({
 
             {/* Attachment lightbox — images zoom/pan, PDFs embed the browser's viewer, the rest show a file card. */}
             <AttachmentPreview file={preview} onClose={() => setPreview(null)} meta={(f) => (f.created_at ? fmtWhen(f.created_at) : '')} />
+            <ModelPhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
         </>
     );
 }

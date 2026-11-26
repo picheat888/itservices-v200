@@ -2,6 +2,8 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
+import { ModelPhoto } from '@/shared/components/model-photo';
+import { ModelPhotoLightbox, type LightboxPhoto } from '@/shared/components/model-photo-lightbox';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useTabFreshness } from '@/shared/hooks/use-tab-freshness';
@@ -179,6 +181,7 @@ export function AssetDetailDrawer({
     // contract peek): a desk move is a small correction, and closing the whole record to make
     // it lost the reader their place — they were looking at this asset for a reason.
     const [relocating, setRelocating] = useState(false);
+    const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
 
     const a = asset ?? shown;
     const TypeIcon = useAssetTypeIcon(a?.type ?? '');
@@ -207,6 +210,21 @@ export function AssetDetailDrawer({
                     {/* Header */}
                     <FocusDialogHeader
                         icon={TypeIcon}
+                        media={
+                            a.model_photo_url ? (
+                                <ModelPhoto
+                                    size={56}
+                                    src={a.model_photo_url}
+                                    alt={a.model ?? a.asset_code}
+                                    onOpen={() => setLightbox({ src: a.model_photo_url ?? '', model: a.model ?? a.asset_code, brand: a.brand })}
+                                    fallback={
+                                        <div className="text-brand flex h-10 w-10 shrink-0 items-center justify-center" aria-hidden>
+                                            <TypeIcon className="h-8 w-8" strokeWidth={1.75} />
+                                        </div>
+                                    }
+                                />
+                            ) : undefined
+                        }
                         eyebrow={t('asset_label')}
                         title={a.model ?? ''}
                         code={a.asset_code}
@@ -506,6 +524,7 @@ export function AssetDetailDrawer({
             </Dialog>
             <ContractPeekDialog assetId={peekAssetId} onClose={() => setPeekAssetId(null)} />
             <AssetLocationDialog asset={relocating ? a : null} onClose={() => setRelocating(false)} />
+            <ModelPhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
         </>
     );
 }
