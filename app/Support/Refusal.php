@@ -21,7 +21,7 @@ use Illuminate\Validation\ValidationException;
 final class Refusal
 {
     /**
-     * @param  array<string, scalar|null>  $details  values the sentence quotes, keyed by its placeholder
+     * @param  array<string, mixed>  $details  values the sentence quotes, keyed by its placeholder
      *
      * @throws ValidationException
      */

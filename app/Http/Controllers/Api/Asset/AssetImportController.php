@@ -1,15 +1,17 @@
 <?php
 
-// Asset import endpoints: template download and the row-by-row check of an uploaded file.
+// Asset import endpoints: template download, the row-by-row check of an uploaded file and the import of the checked rows.
 
 namespace App\Http\Controllers\Api\Asset;
 
 use App\Exports\Asset\AssetImportTemplate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Asset\AssetImportPreviewRequest;
+use App\Http\Requests\Asset\AssetImportRequest;
 use App\Http\Requests\Asset\AssetImportTemplateRequest;
 use App\Services\Asset\AssetImportChecker;
 use App\Services\Asset\AssetImportReader;
+use App\Services\Asset\AssetImportService;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -26,5 +28,13 @@ class AssetImportController extends Controller
         $read = $reader->read($request->file('file'), $kind);
 
         return response()->json(['data' => $checker->check($kind, $read['rows'], $read['ignored'])]);
+    }
+
+    public function import(AssetImportRequest $request, AssetImportService $importer): JsonResponse
+    {
+        $contract = $request->contract();
+        $result = $importer->run($request->string('kind')->toString(), $request->validated('rows'), $contract, $request->user());
+
+        return response()->json(['data' => $result + ['contract_code' => $contract?->code]]);
     }
 }

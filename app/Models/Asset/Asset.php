@@ -216,6 +216,34 @@ class Asset extends Model
         return sprintf('%s%04d', $prefix, $last + 1);
     }
 
+    /**
+     * Issue `$count` consecutive asset codes after the year's highest one, skipping any code
+     * in `$reserved` (codes typed in the same batch). Call it inside the code-sequence lock.
+     *
+     * @param  list<string>  $reserved
+     * @return list<string>
+     */
+    public static function nextFreeCodes(int $count, array $reserved = []): array
+    {
+        $prefix = 'INK-IT-'.now()->format('y').'-';
+        $skip = array_flip(array_map('strtolower', $reserved));
+
+        $next = (static::where('asset_code', 'like', $prefix.'%')
+            ->pluck('asset_code')
+            ->map(fn (string $assetCode) => (int) substr($assetCode, strlen($prefix)))
+            ->max() ?? 0) + 1;
+
+        $codes = [];
+        while (count($codes) < $count) {
+            $code = sprintf('%s%04d', $prefix, $next++);
+            if (! isset($skip[strtolower($code)])) {
+                $codes[] = $code;
+            }
+        }
+
+        return $codes;
+    }
+
     /** Rented assets with no contract yet that are still in the register (a return to the lessor is a write-off too). */
     public function scopeRentedUnlinked(Builder $query): void
     {

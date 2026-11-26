@@ -382,6 +382,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, TrackDevice::clas
     Route::get('assets/{asset}/contract', [AssetController::class, 'contract'])->name('api.assets.contract');
     Route::get('assets/import-template', [AssetImportController::class, 'template'])->name('api.assets.import-template');
     Route::post('assets/import/preview', [AssetImportController::class, 'preview'])->name('api.assets.import.preview');
+    Route::post('assets/import', [AssetImportController::class, 'import'])->name('api.assets.import');
     Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module
