@@ -654,6 +654,7 @@ export const permission: Dict = {
     audit_ev_returned_asset_to_lessor: 'Returned asset to lessor',
     audit_ev_cancelled_asset_return_to_lessor: 'Cancelled asset return to lessor',
     audit_ev_updated_asset_location: 'Updated asset location',
+    audit_ev_linked_asset_to_contract: 'Linked asset to contract',
     audit_ev_bulk_asset_writeoff: 'Wrote off assets in bulk',
     audit_ev_created_contract: 'Created contract',
     audit_ev_updated_contract: 'Updated contract',

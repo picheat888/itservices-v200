@@ -645,6 +645,7 @@ export const permission: Dict = {
     audit_ev_returned_asset_to_lessor: 'คืนทรัพย์สินให้ผู้ให้เช่า',
     audit_ev_cancelled_asset_return_to_lessor: 'ยกเลิกการคืนผู้ให้เช่า',
     audit_ev_updated_asset_location: 'อัปเดตที่ติดตั้งทรัพย์สิน',
+    audit_ev_linked_asset_to_contract: 'ผูกทรัพย์สินกับสัญญา',
     audit_ev_bulk_asset_writeoff: 'ตัดจำหน่ายทรัพย์สินหลายรายการ',
     audit_ev_created_contract: 'เพิ่มสัญญา',
     audit_ev_updated_contract: 'แก้ไขสัญญา',

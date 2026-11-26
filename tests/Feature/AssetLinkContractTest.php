@@ -1,0 +1,163 @@
+<?php
+
+// Linking rented assets that have no contract: the list filter, the bulk endpoint and its refusals.
+
+namespace Tests\Feature;
+
+use App\Models\Asset\Asset;
+use App\Models\AuditLog;
+use App\Models\Contract\Contract;
+use App\Models\Permission\RolePermission;
+use App\Models\User;
+use App\Services\Asset\AssetBulkActionService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
+use Tests\TestCase;
+
+class AssetLinkContractTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function lease(array $extra = []): Contract
+    {
+        return Contract::create([
+            'name' => 'Lease', 'type' => 'hardware', 'start_date' => '2026-01-01',
+            'end_date' => '2028-12-31', 'value' => 100, 'billing_cycle' => 'monthly', ...$extra,
+        ]);
+    }
+
+    private function freeRental(string $status = 'deployed'): Asset
+    {
+        return Asset::factory()->rented()->create(['contract_id' => null, 'status' => $status]);
+    }
+
+    public function test_contract_options_carry_the_end_date(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease(['end_date' => '2028-03-31']);
+
+        $option = collect($this->getJson('/api/assets/contract-options')->assertOk()->json('data'))->firstWhere('id', $lease->id);
+
+        $this->assertSame('2028-03-31', $option['end_date']);
+    }
+
+    public function test_it_links_several_free_rentals_without_telling_anyone(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease();
+        $one = $this->freeRental();
+        $two = $this->freeRental('ready');
+
+        $this->postJson('/api/assets/bulk-contract', ['ids' => [$one->id, $two->id], 'contract_id' => $lease->id])
+            ->assertOk()->assertJsonPath('updated', 2);
+
+        $this->assertSame($lease->id, $one->fresh()->contract_id);
+        $this->assertSame($lease->id, $two->fresh()->contract_id);
+        $this->assertSame(
+            ["{$one->asset_code} → {$lease->code}", "{$two->asset_code} → {$lease->code}"],
+            AuditLog::where('action', 'Linked asset to contract')->orderBy('id')->pluck('target')->all(),
+        );
+        Notification::assertNothingSent();
+        Bus::assertNothingDispatched();
+    }
+
+    public function test_one_asset_with_a_contract_refuses_the_whole_batch(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease();
+        $free = $this->freeRental();
+        $linked = Asset::factory()->rented()->create(['status' => 'deployed']);
+
+        $this->postJson('/api/assets/bulk-contract', ['ids' => [$free->id, $linked->id], 'contract_id' => $lease->id])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'link_not_free_rental')
+            ->assertJsonPath('codes', $linked->asset_code);
+
+        $this->assertNull($free->fresh()->contract_id);
+    }
+
+    public function test_purchased_and_written_off_assets_are_refused(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease();
+        $bought = Asset::factory()->create(['source' => 'purchased', 'status' => 'deployed']);
+        $gone = $this->freeRental('writeoff');
+
+        $this->postJson('/api/assets/bulk-contract', ['ids' => [$bought->id, $gone->id], 'contract_id' => $lease->id])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'link_not_free_rental')
+            ->assertJsonPath('codes', "{$bought->asset_code}, {$gone->asset_code}");
+    }
+
+    public function test_only_an_open_hardware_contract_is_accepted(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $asset = $this->freeRental();
+        $expired = $this->lease(['expired_at' => now()]);
+        $cancelled = $this->lease(['cancelled_at' => now(), 'cancel_reason' => 'Ended']);
+        $software = $this->lease(['type' => 'software']);
+
+        foreach ([$expired, $cancelled, $software] as $contract) {
+            $this->postJson('/api/assets/bulk-contract', ['ids' => [$asset->id], 'contract_id' => $contract->id])
+                ->assertUnprocessable()
+                ->assertJsonPath('message', 'link_contract_not_open')
+                ->assertJsonPath('errors.contract_id.0', 'link_contract_not_open');
+        }
+
+        $this->assertNull($asset->fresh()->contract_id);
+    }
+
+    public function test_a_selected_asset_that_no_longer_exists_answers_a_code(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease();
+
+        $this->postJson('/api/assets/bulk-contract', ['ids' => [999999], 'contract_id' => $lease->id])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'link_asset_missing')
+            ->assertJsonValidationErrors(['ids.0' => 'link_asset_missing']);
+    }
+
+    public function test_an_asset_linked_after_the_check_is_not_overwritten(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $first = $this->lease();
+        $second = $this->lease();
+        $asset = $this->freeRental();
+        $checked = collect([Asset::find($asset->id)]);
+
+        // Someone else links it between the request's check and the update
+        Asset::whereKey($asset->id)->update(['contract_id' => $first->id]);
+
+        try {
+            app(AssetBulkActionService::class)->linkContract($checked, $second);
+            $this->fail('A stale free rental must be refused.');
+        } catch (ValidationException $e) {
+            $this->assertSame(['message' => 'link_not_free_rental', 'codes' => $asset->asset_code], $e->response->getData(true));
+        }
+
+        $this->assertSame($first->id, $asset->fresh()->contract_id);
+    }
+
+    public function test_linking_needs_the_edit_permission(): void
+    {
+        $lease = $this->lease();
+        $asset = $this->freeRental();
+
+        $viewer = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'assets.view', 'allowed' => true]);
+        $this->actingAs($viewer)
+            ->postJson('/api/assets/bulk-contract', ['ids' => [$asset->id], 'contract_id' => $lease->id])
+            ->assertForbidden();
+
+        $editor = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $editor->role_id, 'permission' => 'assets.edit', 'allowed' => true]);
+        $this->actingAs($editor)
+            ->postJson('/api/assets/bulk-contract', ['ids' => [$asset->id], 'contract_id' => $lease->id])
+            ->assertOk();
+    }
+}

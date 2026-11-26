@@ -112,6 +112,7 @@ class AssetListService
                 'vendor' => $c->vendor?->name,
                 'vendor_th' => $c->vendor?->name_th,
                 'details' => $c->details,
+                'end_date' => $c->end_date?->toDateString(),
                 'closed' => $c->cancelled_at !== null || $c->expired_at !== null,
             ]);
     }
