@@ -28,6 +28,7 @@ export function FocusDialogHeader({
     tone = 'brand',
     accent,
     image,
+    media,
     tileSize = 'md',
 }: {
     icon: LucideIcon;
@@ -48,6 +49,8 @@ export function FocusDialogHeader({
     accent?: string;
     /** Optional logo URL; a round image replaces the icon. */
     image?: string | null;
+    /** A node that takes the icon slot instead (e.g. a model photo tile); wins over `image` and `icon`. */
+    media?: React.ReactNode;
     /** Icon slot: `md` (default, 40px, 32px icon) or `lg` (56px, 44px icon). */
     tileSize?: 'md' | 'lg';
 }) {
@@ -71,21 +74,22 @@ export function FocusDialogHeader({
     const iconCls = tileSize === 'lg' ? 'h-11 w-11' : 'h-8 w-8';
     return (
         <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-            {image ? (
-                <img src={image} alt="" className={cn('shrink-0 rounded-full object-cover', boxCls)} />
-            ) : (
-                <div
-                    className={cn(
-                        'flex shrink-0 items-center justify-center',
-                        boxCls,
-                        accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : TONE[tone],
-                    )}
-                    style={iconStyle}
-                    aria-hidden
-                >
-                    <Icon className={iconCls} strokeWidth={1.75} />
-                </div>
-            )}
+            {media ??
+                (image ? (
+                    <img src={image} alt="" className={cn('shrink-0 rounded-full object-cover', boxCls)} />
+                ) : (
+                    <div
+                        className={cn(
+                            'flex shrink-0 items-center justify-center',
+                            boxCls,
+                            accent ? 'text-[var(--ink)] dark:text-[var(--ink-dark)]' : TONE[tone],
+                        )}
+                        style={iconStyle}
+                        aria-hidden
+                    >
+                        <Icon className={iconCls} strokeWidth={1.75} />
+                    </div>
+                ))}
             <div className="min-w-0">
                 <div
                     className={cn(

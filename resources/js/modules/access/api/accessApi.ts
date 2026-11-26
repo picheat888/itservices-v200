@@ -11,7 +11,7 @@ import type {
     SocialPlatform,
     Software,
 } from '@/shared/types';
-import { hasFile, toFormData } from '../lib/form-data';
+import { hasFile, toFormData } from '@/shared/lib/form-data';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();

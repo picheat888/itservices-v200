@@ -314,6 +314,8 @@ export interface Asset {
     brand_id: number | null;
     model: string | null;
     model_id: number | null;
+    /** Photo of the asset's model, or null when the model has none. */
+    model_photo_url?: string | null;
     serial: string | null;
     source: AssetSource;
     status: AssetStatus;
@@ -538,6 +540,7 @@ export interface Ticket {
     related_asset_type_th?: string | null;
     related_asset_brand?: string | null;
     related_asset_model?: string | null;
+    related_asset_model_photo_url?: string | null;
     related_asset_serial?: string | null;
     take_note: string | null;
     resolution: string | null;
@@ -670,6 +673,7 @@ export interface AssetModel {
     brand_id?: number | null;
     brand?: Brand | null;
     description?: string | null;
+    photo_url?: string | null;
 }
 
 export interface Category {
@@ -775,6 +779,7 @@ export interface StockItem {
     brand_id: number | null;
     model: string | null;
     model_id: number | null;
+    model_photo_url?: string | null;
     unit: string | null;
     unit_id: number | null;
     cost: number;
@@ -949,6 +954,10 @@ export interface StockRequest {
     stock_item_id: number;
     sku: string | null;
     item_name: string | null;
+    /** Present when the item's model came with the request (the detail endpoint). */
+    model?: string | null;
+    brand?: string | null;
+    model_photo_url?: string | null;
     requester_name: string;
     requester_name_th?: string | null;
     unit?: string | null;

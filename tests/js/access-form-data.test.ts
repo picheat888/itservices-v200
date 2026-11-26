@@ -1,7 +1,7 @@
 // Saving a software or social platform with a new logo goes multipart; a cleared field must still reach the server (PRM-5).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { hasFile, toFormData } from '../../resources/js/modules/access/lib/form-data.ts';
+import { hasFile, toFormData } from '../../resources/js/shared/lib/form-data.ts';
 
 test('a cleared field goes as an empty value, not left out', () => {
     const fd = toFormData({ name: 'LINE', url: null, notes: null, logo: new File(['x'], 'line.png') });
