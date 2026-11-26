@@ -27,7 +27,7 @@ test('no module barrel exports a page statically, except the login page', () => 
 test('report pages load one file each', () => {
     const routes = read('resources/js/modules/report/pages/routes.ts');
     assert.doesNotMatch(routes, /^import \w+ from '\.\//m);
-    assert.equal(routes.match(/= lazyPage\(\(\) => import\('\.\/[a-z-]+'\)\);/g)?.length, 22);
+    assert.equal(routes.match(/= lazyPage\(\(\) => import\('\.\/[a-z-]+'\)\);/g)?.length, 23);
 });
 
 test('the shell and the standalone pages wait for page code inside Suspense', () => {
