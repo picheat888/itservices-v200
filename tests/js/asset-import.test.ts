@@ -1,0 +1,233 @@
+// Asset import dialog logic: steps, row edits, local checks, dropdown options, summary groups and the run payload.
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import type { CheckedRow, ImportOptions, Issue } from '../../resources/js/modules/asset/api/assetImportApi.ts';
+import { IMPORT_COLUMNS } from '../../resources/js/modules/asset/lib/import-columns.ts';
+import {
+    badRowCount,
+    foldAt,
+    importRunPayload,
+    localIssues,
+    optionsFor,
+    rowsWithEdits,
+    summaryGroups,
+} from '../../resources/js/modules/asset/lib/import-rows.ts';
+import { canLeaveStep, importSteps, stepAfterRefusal } from '../../resources/js/modules/asset/lib/import-wizard.ts';
+
+const options: ImportOptions = {
+    categories: [{ id: 1, name: 'Notebook', name_th: 'โน้ตบุ๊ก' }],
+    brands: [
+        { id: 10, name: 'Lenovo' },
+        { id: 11, name: 'Dell' },
+    ],
+    models: [
+        { id: 100, name: 'ThinkPad E14', brand_id: 10 },
+        { id: 101, name: 'Latitude 5440', brand_id: 11 },
+    ],
+    warehouses: [
+        { id: 5, name: 'Main', name_th: 'คลังกลาง' },
+        { id: 6, name: 'Branch' },
+    ],
+    vendors: [{ id: 7, name: 'IT City' }],
+};
+
+function row(line: number, over: Partial<CheckedRow['values']> = {}, issues: Issue[] = []): CheckedRow {
+    return {
+        line,
+        cells: {},
+        values: {
+            category_id: 1,
+            brand_id: 10,
+            model_id: 100,
+            warehouse_id: 5,
+            vendor_id: 7,
+            serial: `SN${line}`,
+            asset_code: null,
+            tag: null,
+            notes: null,
+            value: '28500.00',
+            purchase_date: '2026-11-12',
+            warranty_end: '2029-11-11',
+            warranty_lifetime: false,
+            ...over,
+        },
+        issues,
+    };
+}
+
+test('rented has five steps and purchased four', () => {
+    assert.deepEqual(importSteps('rented'), ['kind', 'upload', 'check', 'contract', 'summary']);
+    assert.deepEqual(importSteps('purchased'), ['kind', 'upload', 'check', 'summary']);
+});
+
+test('the next button needs a file, then clean rows, then a contract when linking', () => {
+    const clean = [row(2)];
+    const bad = [row(2, {}, [{ code: 'required', column: 'serial' }])];
+    const base = { kind: 'rented' as const, file: null, rows: [], linkContract: false, contractId: null };
+    assert.equal(canLeaveStep('kind', { ...base, kind: null }), false);
+    assert.equal(canLeaveStep('kind', base), true);
+    assert.equal(canLeaveStep('upload', base), false);
+    assert.equal(canLeaveStep('upload', { ...base, file: new Blob([]), rows: clean }), true);
+    assert.equal(canLeaveStep('check', { ...base, rows: bad }), false);
+    assert.equal(canLeaveStep('check', { ...base, rows: [] }), false);
+    assert.equal(canLeaveStep('check', { ...base, rows: clean }), true);
+    assert.equal(canLeaveStep('contract', { ...base, rows: clean, linkContract: true, contractId: null }), false);
+    assert.equal(canLeaveStep('contract', { ...base, rows: clean, linkContract: true, contractId: 9 }), true);
+    assert.equal(canLeaveStep('contract', { ...base, rows: clean, linkContract: false }), true);
+});
+
+test('fixing a cell clears its issue and the bad-row count follows', () => {
+    const rows = [row(2, { serial: null }, [{ code: 'required', column: 'serial' }]), row(3, {}, [{ code: 'not_found', column: 'brand' }]), row(4)];
+    assert.equal(badRowCount(rows), 2);
+    const fixed = rowsWithEdits(rows, { 2: { serial: 'ABC123' } });
+    assert.equal(fixed[0].values.serial, 'ABC123');
+    assert.deepEqual(fixed[0].issues, []);
+    assert.equal(badRowCount(fixed), 1);
+    // The input rows are left untouched
+    assert.equal(rows[0].values.serial, null);
+    const picked = rowsWithEdits(fixed, { 3: { brand: 11, model: 101 } }, options);
+    assert.equal(picked[1].values.brand_id, 11);
+    assert.equal(picked[1].values.model_id, 101);
+    assert.equal(badRowCount(picked), 0);
+    // An edit that is still wrong keeps the row bad
+    const still = rowsWithEdits(rows, { 2: { serial: 'x'.repeat(121) } });
+    assert.deepEqual(still[0].issues, [{ code: 'too_long', column: 'serial', max: 120, length: 121 }]);
+});
+
+test('a tag over 10, a repeated serial, a bad price and an impossible date are caught while typing', () => {
+    const rows = [row(2, { serial: 'PF4XK101' }), row(3)];
+    const ctx = { kind: 'purchased' as const, rows };
+    assert.deepEqual(localIssues(rows[1], 'tag', 'ABCDEFGHIJK', ctx), [{ code: 'too_long', column: 'tag', max: 10, length: 11 }]);
+    assert.deepEqual(localIssues(rows[1], 'tag', 'ABCDEFGHIJ', ctx), []);
+    assert.deepEqual(localIssues(rows[1], 'serial', 'pf4xk101', ctx), [{ code: 'dup_in_file', column: 'serial', line: 2 }]);
+    assert.deepEqual(localIssues(rows[0], 'serial', 'pf4xk101', ctx), []);
+    assert.deepEqual(localIssues(rows[1], 'serial', '', ctx), [{ code: 'required', column: 'serial' }]);
+    assert.deepEqual(localIssues(rows[1], 'value', '28,500.00', ctx), []);
+    assert.deepEqual(localIssues(rows[1], 'value', '28,5OO', ctx), [{ code: 'not_a_number', column: 'value', value: '28,5OO' }]);
+    assert.deepEqual(localIssues(rows[1], 'value', '1.234', ctx), [{ code: 'not_a_number', column: 'value', value: '1.234' }]);
+    assert.deepEqual(localIssues(rows[1], 'purchase_date', '2026-02-31', ctx), [{ code: 'bad_date', column: 'purchase_date', value: '2026-02-31' }]);
+    assert.deepEqual(localIssues(rows[1], 'purchase_date', '2026-11-12', ctx), []);
+    assert.deepEqual(localIssues(rows[1], 'purchase_date', '', ctx), [{ code: 'required', column: 'purchase_date' }]);
+    // Rented files have no price, so an empty price is fine there
+    assert.deepEqual(localIssues(rows[1], 'value', '', { kind: 'rented', rows }), []);
+    // Lifetime warranty makes the end date optional
+    const lifetime = row(4, { warranty_lifetime: true });
+    assert.deepEqual(localIssues(lifetime, 'warranty_end', '', { kind: 'purchased', rows: [lifetime] }), []);
+});
+
+test('the closest name is the first dropdown option', () => {
+    const list = optionsFor('brand', options, 11);
+    assert.deepEqual(
+        list.map((o) => o.value),
+        ['11', '10'],
+    );
+    assert.equal(list[0].label, 'Dell');
+    assert.deepEqual(
+        optionsFor('brand', options).map((o) => o.value),
+        ['10', '11'],
+    );
+    // A closest id that is not in the list changes nothing
+    assert.deepEqual(
+        optionsFor('brand', options, 999).map((o) => o.value),
+        ['10', '11'],
+    );
+    assert.equal(optionsFor('category', options)[0].search.includes('โน้ตบุ๊ก'), true);
+    assert.deepEqual(
+        optionsFor('warehouse', options, 6).map((o) => o.value),
+        ['6', '5'],
+    );
+});
+
+test('the summary groups by model, by warehouse and by vendor with values, folding past five', () => {
+    const rows = [row(2), row(3), row(4, { model_id: 101, brand_id: 11, warehouse_id: 6, vendor_id: null, value: '1000.50' })];
+    const purchased = summaryGroups(rows, options, 'purchased');
+    assert.deepEqual(purchased.byModel, [
+        ['ThinkPad E14', 2, 57000],
+        ['Latitude 5440', 1, 1000.5],
+    ]);
+    assert.deepEqual(purchased.byWarehouse, [
+        ['Main', 2, 57000],
+        ['Branch', 1, 1000.5],
+    ]);
+    assert.deepEqual(purchased.byVendor, [['IT City', 2, 57000]]);
+    const rented = summaryGroups(rows, options, 'rented');
+    assert.equal(rented.byVendor, undefined);
+    assert.deepEqual(summaryGroups([], options, 'purchased').byModel, []);
+
+    const seven = Array.from({ length: 7 }, (_, i) => [`m${i}`, 1, 0] as [string, number, number]);
+    const folded = foldAt(seven, 5);
+    assert.equal(folded.shown.length, 5);
+    assert.equal(folded.rest.length, 2);
+    assert.deepEqual(foldAt(seven.slice(0, 5), 5), { shown: seven.slice(0, 5), rest: [] });
+    assert.deepEqual(foldAt([], 5), { shown: [], rest: [] });
+});
+
+test('a closed contract sends the user back to the contract step; a taken serial to the check step', () => {
+    assert.equal(stepAfterRefusal('link_contract_not_open'), 'contract');
+    assert.equal(stepAfterRefusal('import_rows_invalid'), 'check');
+    assert.equal(stepAfterRefusal('import_conflict'), 'check');
+    assert.equal(stepAfterRefusal('something_else'), 'summary');
+});
+
+test('the import payload carries matched ids and the contract only for rentals', () => {
+    const rows = [row(2, { value: '28,500.5', asset_code: 'INK-1', warranty_lifetime: true, warranty_end: null })];
+    const purchased = importRunPayload('purchased', rows, 9);
+    assert.equal('contract_id' in purchased, false);
+    assert.deepEqual(purchased.rows[0], {
+        line: 2,
+        category_id: 1,
+        brand_id: 10,
+        model_id: 100,
+        serial: 'SN2',
+        warehouse_id: 5,
+        asset_code: 'INK-1',
+        tag: null,
+        notes: null,
+        value: '28500.50',
+        vendor_id: 7,
+        purchase_date: '2026-11-12',
+        warranty_end: null,
+        warranty_lifetime: true,
+    });
+    assert.equal(importRunPayload('rented', rows, 9).contract_id, 9);
+    assert.equal('contract_id' in importRunPayload('rented', rows, null), false);
+    assert.equal(importRunPayload('rented', rows, null).kind, 'rented');
+});
+
+test('the column lists match the template headers', () => {
+    assert.deepEqual(
+        IMPORT_COLUMNS.rented.map((c) => c.header),
+        [
+            'รหัสทรัพย์สิน (Asset No.)',
+            'Tag',
+            'ประเภท (Type)',
+            'ยี่ห้อ (Brand)',
+            'รุ่น (Model)',
+            'Serial (Serial No.)',
+            'คลัง (Warehouse)',
+            'หมายเหตุ (Remark)',
+        ],
+    );
+    assert.deepEqual(
+        IMPORT_COLUMNS.purchased.map((c) => c.key),
+        [
+            'asset_code',
+            'category',
+            'brand',
+            'model',
+            'serial',
+            'warehouse',
+            'tag',
+            'value',
+            'vendor',
+            'purchase_date',
+            'warranty_end',
+            'warranty_lifetime',
+            'notes',
+        ],
+    );
+    const serial = IMPORT_COLUMNS.rented.find((c) => c.key === 'serial');
+    assert.equal(serial?.howKey, 'asset_import_how_serial');
+    assert.equal(serial?.required, true);
+    assert.equal(IMPORT_COLUMNS.rented.find((c) => c.key === 'brand')?.list, 'brands');
+});
