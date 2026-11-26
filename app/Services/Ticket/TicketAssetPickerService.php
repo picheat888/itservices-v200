@@ -14,12 +14,12 @@ class TicketAssetPickerService
     /**
      * Assets the ticket's requester holds now, latest handover first.
      *
-     * @return Collection<int, array{id: int, asset_code: string, model: ?string}>
+     * @return Collection<int, array{id: int, asset_code: string, model: ?string, model_photo_url: ?string, brand: ?string, tag: ?string, type: ?string, type_th: ?string}>
      */
     public function heldByRequester(Ticket $ticket): Collection
     {
         return Asset::query()
-            ->with('model')
+            ->with(['model', 'brand', 'category'])
             ->where('owner_employee_id', $ticket->requester_id)
             ->orderByDesc('owned_since')
             ->get()
@@ -29,11 +29,11 @@ class TicketAssetPickerService
     /**
      * Any asset matching the same search as the asset list, 20 at a time.
      *
-     * @return Collection<int, array{id: int, asset_code: string, model: ?string}>
+     * @return Collection<int, array{id: int, asset_code: string, model: ?string, model_photo_url: ?string, brand: ?string, tag: ?string, type: ?string, type_th: ?string}>
      */
     public function search(mixed $search): Collection
     {
-        $query = Asset::query()->with('model')->latest('id');
+        $query = Asset::query()->with(['model', 'brand', 'category'])->latest('id');
         SearchTerms::apply($query, $search, [
             'asset_code', 'tag', 'serial',
             SearchTerms::related('model', ['name']),
@@ -44,13 +44,18 @@ class TicketAssetPickerService
         return $query->limit(20)->get()->map(fn (Asset $a) => $this->option($a));
     }
 
-    /** @return array{id: int, asset_code: string, model: ?string} */
+    /** @return array{id: int, asset_code: string, model: ?string, model_photo_url: ?string, brand: ?string, tag: ?string, type: ?string, type_th: ?string} */
     private function option(Asset $asset): array
     {
         return [
             'id' => $asset->id,
             'asset_code' => $asset->asset_code,
             'model' => $asset->model?->name,
+            'model_photo_url' => $asset->model?->photo_url,
+            'brand' => $asset->brand?->name,
+            'tag' => $asset->tag,
+            'type' => $asset->category?->name,
+            'type_th' => $asset->category?->name_th,
         ];
     }
 }

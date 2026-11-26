@@ -36,6 +36,7 @@ class StockItemResource extends JsonResource
             'brand' => $this->brand?->name,
             'brand_id' => $this->brand_id,
             'model' => $this->model?->name,
+            'model_photo_url' => $this->model?->photo_url,
             'model_id' => $this->model_id,
             'unit' => $this->unit?->name,
             'unit_id' => $this->unit_id,

@@ -62,6 +62,7 @@ class EmployeeListService
                 'asset_code' => $a->asset_code,
                 'tag' => $a->tag,
                 'model' => $a->model?->name,
+                'model_photo_url' => $a->model?->photo_url,
                 'type' => $a->category?->name,
                 'type_th' => $a->category?->name_th,
                 'serial' => $a->serial,

@@ -23,6 +23,12 @@ class StockRequestResource extends JsonResource
             'sku' => $this->whenLoaded('item', fn () => $this->item?->sku),
             'item_name' => $this->whenLoaded('item', fn () => $this->item?->name),
             'unit' => $this->whenLoaded('item', fn () => $this->item?->unit?->name),
+            // Only where the item's model came loaded, so list rows never fetch it one by one
+            $this->mergeWhen($this->itemModelLoaded(), fn () => [
+                'model' => $this->item->model?->name,
+                'brand' => $this->item->brand?->name,
+                'model_photo_url' => $this->item->model?->photo_url,
+            ]),
             'requester_name' => $this->requester_name,
             'requester_name_th' => $this->whenLoaded('user', fn () => $this->user?->name_th),
             'qty' => $this->qty,
@@ -47,5 +53,11 @@ class StockRequestResource extends JsonResource
             'can_cancel' => $this->canBeCancelledBy($request->user()),
             'is_own' => (int) $this->user_id === (int) $request->user()?->id,
         ];
+    }
+
+    /** True when the stock item and its model were loaded with the request. */
+    private function itemModelLoaded(): bool
+    {
+        return $this->relationLoaded('item') && $this->item !== null && $this->item->relationLoaded('model');
     }
 }

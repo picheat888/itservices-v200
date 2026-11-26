@@ -42,6 +42,7 @@ class AssetResource extends JsonResource
             'brand' => $this->brand?->name,
             'brand_id' => $this->brand_id,
             'model' => $this->model?->name,
+            'model_photo_url' => $this->model?->photo_url,
             'model_id' => $this->model_id,
             'serial' => $this->serial,
             'source' => $this->source?->value,

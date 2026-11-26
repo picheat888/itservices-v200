@@ -60,7 +60,7 @@ class StockRequestController extends Controller
 
         abort_unless($stockRequest->isVisibleTo($user), 404);
 
-        return (new StockRequestResource($stockRequest->load(['item.unit', 'user.employee', 'approver.employee', 'fulfiller.employee', 'issueMovements'])))->response();
+        return (new StockRequestResource($stockRequest->load(['item.unit', 'item.model', 'item.brand', 'user.employee', 'approver.employee', 'fulfiller.employee', 'issueMovements'])))->response();
     }
 
     /** A request's issue and returns with their lots, behind the same gate and visibility as show. */
