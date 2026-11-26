@@ -44,7 +44,7 @@ class EmployeeEndpointsBehaviourTest extends TestCase
         ServiceRequest::create(['reference' => 'RQ-2026-0001', 'type' => 'computer', 'origin' => 'direct', 'requester_name' => 'Somchai',
             'title' => 'Request', 'reason' => 'Needed.', 'status' => 'pending', 'employee_id' => $employee->id]);
 
-        $this->assertSame(['id', 'asset_code', 'tag', 'model', 'type', 'type_th', 'serial', 'status', 'owned_since'], array_keys($this->getJson("/api/employees/{$employee->id}/assets")->assertOk()->json('data.0')));
+        $this->assertSame(['id', 'asset_code', 'tag', 'model', 'model_photo_url', 'type', 'type_th', 'serial', 'status', 'owned_since'], array_keys($this->getJson("/api/employees/{$employee->id}/assets")->assertOk()->json('data.0')));
         $this->assertSame(['id', 'ticket_no', 'subject', 'category', 'priority', 'status', 'created_at'], array_keys($this->getJson("/api/employees/{$employee->id}/tickets")->assertOk()->json('data.0')));
         $this->assertSame(['id', 'reference', 'type', 'origin', 'status', 'created_at'], array_keys($this->getJson("/api/employees/{$employee->id}/requests")->assertOk()->json('data.0')));
         $this->getJson("/api/employees/{$employee->id}/access")->assertOk();
