@@ -45,6 +45,12 @@ test('the large view shows the whole square photo, never cut by its frame', () =
     assert.doesNotMatch(lightbox, /aspect-\[4\/3\]/);
 });
 
+test('the product crop measures again once the open animation ends, so a wide picture is never cut', () => {
+    assert.match(crop, /onAnimationEnd=\{/);
+    assert.match(crop, /cropper\.computeSizes\(\)/);
+    assert.match(crop, /fitWholeZoom\(cropper\.mediaSize, PRODUCT_FRAME\)/);
+});
+
 test('a product crop dragged fully off the picture cannot be applied', () => {
     assert.match(crop, /const offPicture = /);
     assert.match(crop, /disabled=\{applying \|\| !croppedPixels \|\| offPicture\}/);

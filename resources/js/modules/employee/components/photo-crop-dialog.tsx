@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { AlertCircle, Crop, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Area, MediaSize, Point } from 'react-easy-crop';
 import Cropper from 'react-easy-crop';
 import { clipToImage, fallbackType, fitWholeZoom, photoFileName } from '../lib/crop-math';
@@ -82,6 +82,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
     const [failed, setFailed] = useState(false);
     // Keep the last image so the cropper still renders during the close (fade-out) animation.
     const [src, setSrc] = useState<string | null>(imageSrc);
+    const cropperRef = useRef<Cropper>(null);
 
     useEffect(() => {
         if (!imageSrc) return; // closing → retain `src` so content stays visible while it animates out
@@ -111,6 +112,20 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
         [product],
     );
 
+    // Product: measure again once the open animation ends; measured mid-zoom the picture reads 5% small and its edges get cut
+    const refit = () => {
+        const cropper = cropperRef.current;
+        if (!product || !cropper) return;
+        cropper.computeSizes();
+        if (!cropper.mediaSize.width || !cropper.mediaSize.height) return;
+        const whole = fitWholeZoom(cropper.mediaSize, PRODUCT_FRAME);
+        setMinZoom(whole);
+        setZoom(whole);
+    };
+    const onOpened = (e: React.AnimationEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) refit();
+    };
+
     // A product frame dragged fully off the picture would save a plain white square
     const offPicture = product && !!croppedPixels && !!natural && clipToImage(croppedPixels, natural, 1) === null;
 
@@ -130,7 +145,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
     return (
         // Nested Radix dialog: portals above the parent and becomes the active layer
         <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm gap-0 overflow-y-auto p-0 [&>button]:hidden">
+            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm gap-0 overflow-y-auto p-0 [&>button]:hidden" onAnimationEnd={onOpened}>
                 <FocusDialogHeader
                     icon={Crop}
                     eyebrow={eyebrow ?? t('employees')}
@@ -141,6 +156,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
                 {/* Cropper — fixed square */}
                 <div className={cn('relative h-72 w-full border-t', product ? 'bg-white' : 'bg-muted/30')}>
                     <Cropper
+                        ref={cropperRef}
                         image={src ?? ''}
                         crop={crop}
                         zoom={zoom}
