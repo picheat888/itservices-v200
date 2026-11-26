@@ -59,30 +59,95 @@ class AssetImportChecker
     }
 
     /**
-     * Checks rows whose names are already matched to ids (the import step).
+     * Re-checks rows already matched to ids (the import step, after the client may have edited them).
+     * Returns only the rows that have issues, with the same issue codes as check().
      *
-     * @param  list<array{line:int, values: array<string, mixed>}>  $values
+     * @param  list<array{line:int, category_id?:mixed, brand_id?:mixed, model_id?:mixed, serial?:mixed, warehouse_id?:mixed, asset_code?:mixed, tag?:mixed, notes?:mixed, value?:mixed, vendor_id?:mixed, purchase_date?:mixed, warranty_end?:mixed, warranty_lifetime?:mixed}>  $rows
      * @return list<array{line:int, issues: list<array<string, mixed>>}>
      */
-    public function recheck(string $kind, array $values): array
+    public function recheck(string $kind, array $rows): array
     {
+        $this->loadMaster();
         $required = $this->requiredKeys($kind);
-        $rows = [];
-        foreach ($values as $row) {
-            $issues = [];
-            foreach ($required as $key) {
-                $idKey = in_array($key, ['category', 'brand', 'model', 'warehouse', 'vendor'], true) ? "{$key}_id" : $key;
-                if (($row['values'][$idKey] ?? null) === null || $row['values'][$idKey] === '') {
-                    if ($key === 'warranty_end' && ! empty($row['values']['warranty_lifetime'])) {
-                        continue;
-                    }
-                    $issues[] = ['code' => 'required', 'column' => $key];
-                }
-            }
-            $rows[] = ['line' => $row['line'], 'cells' => [], 'values' => $row['values'], 'issues' => $issues];
+        $lists = ['category' => 'categories', 'brand' => 'brands', 'warehouse' => 'warehouses', 'vendor' => 'vendors', 'model' => 'models'];
+        $modelBrands = array_column($this->master['models'], 'brand_id', 'id');
+        $known = [];
+        foreach ($lists as $key => $list) {
+            $known[$key] = array_flip(array_column($this->master[$list], 'id'));
         }
 
-        return array_map(fn (array $row) => ['line' => $row['line'], 'issues' => $row['issues']], $this->withClashes($rows));
+        $checked = [];
+        foreach ($rows as $row) {
+            $issues = [];
+            $values = ['serial' => null, 'asset_code' => null];
+            $lifetime = ($row['warranty_lifetime'] ?? false) === true;
+            if (! in_array($row['warranty_lifetime'] ?? false, [true, false, null], true)) {
+                $issues[] = ['code' => 'not_yes_no', 'column' => 'warranty_lifetime'];
+            }
+
+            foreach ($lists as $key => $list) {
+                $id = $row["{$key}_id"] ?? null;
+                if ($id === null || $id === '') {
+                    if (in_array($key, $required, true)) {
+                        $issues[] = ['code' => 'required', 'column' => $key];
+                    }
+                } elseif (! is_numeric($id) || ! isset($known[$key][(int) $id])) {
+                    $issues[] = ['code' => 'not_found', 'column' => $key, 'value' => (string) $id];
+                }
+            }
+            $brandId = $row['brand_id'] ?? null;
+            $modelId = $row['model_id'] ?? null;
+            if (is_numeric($brandId) && is_numeric($modelId) && isset($modelBrands[(int) $modelId]) && $modelBrands[(int) $modelId] !== (int) $brandId) {
+                $issues[] = ['code' => 'model_not_in_brand', 'column' => 'model', 'value' => (string) $modelId];
+            }
+
+            foreach (['serial' => self::SERIAL_MAX, 'asset_code' => self::CODE_MAX, 'tag' => self::TAG_MAX, 'notes' => self::NOTES_MAX] as $key => $max) {
+                $text = trim((string) ($row[$key] ?? ''));
+                if ($key === 'serial' || $key === 'asset_code') {
+                    $values[$key] = $text === '' ? null : $text;
+                }
+                if ($text === '' && in_array($key, $required, true)) {
+                    $issues[] = ['code' => 'required', 'column' => $key];
+                } elseif (mb_strlen($text) > $max) {
+                    $issues[] = ['code' => 'too_long', 'column' => $key, 'max' => $max, 'length' => mb_strlen($text)];
+                }
+            }
+
+            $this->price(trim((string) ($row['value'] ?? '')), in_array('value', $required, true), $issues);
+            $this->strictDate('purchase_date', $row['purchase_date'] ?? null, in_array('purchase_date', $required, true), $issues);
+            $this->strictDate('warranty_end', $row['warranty_end'] ?? null, in_array('warranty_end', $required, true) && ! $lifetime, $issues);
+
+            $checked[] = ['line' => (int) $row['line'], 'cells' => [], 'values' => $values, 'issues' => $issues];
+        }
+
+        $result = [];
+        foreach ($this->withClashes($checked) as $row) {
+            if ($row['issues'] !== []) {
+                $result[] = ['line' => $row['line'], 'issues' => $row['issues']];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * A stored date must be a real Y-m-d with a Gregorian year; nothing else is guessed at import.
+     *
+     * @param  list<array<string, mixed>>  $issues
+     */
+    private function strictDate(string $column, mixed $text, bool $required, array &$issues): void
+    {
+        $text = trim((string) ($text ?? ''));
+        if ($text === '') {
+            if ($required) {
+                $issues[] = ['code' => 'required', 'column' => $column];
+            }
+
+            return;
+        }
+        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $text, $m) || (int) $m[1] > 2400 || ! checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            $issues[] = ['code' => 'bad_date', 'column' => $column, 'value' => $text];
+        }
     }
 
     /** @return list<string> */

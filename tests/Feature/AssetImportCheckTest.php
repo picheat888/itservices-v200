@@ -15,6 +15,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Asset\AssetImportChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\Concerns\MakesXlsxUploads;
 use Tests\TestCase;
 
@@ -29,7 +30,7 @@ class AssetImportCheckTest extends TestCase
 
     private AssetModel $thinkpad;
 
-    private Warehouse $main;
+    private Warehouse $warehouse;
 
     private Vendor $vendor;
 
@@ -41,7 +42,7 @@ class AssetImportCheckTest extends TestCase
         Category::create(['name' => 'Printer']);
         $this->lenovo = Brand::create(['name' => 'Lenovo']);
         $this->thinkpad = AssetModel::create(['name' => 'ThinkPad E14 Gen 6', 'brand_id' => $this->lenovo->id]);
-        $this->main = Warehouse::create(['name' => 'Main']);
+        $this->warehouse = Warehouse::create(['name' => 'Main']);
         $this->vendor = Vendor::create(['name' => 'IT City', 'name_th' => 'ไอทีซิตี้']);
     }
 
@@ -194,6 +195,94 @@ class AssetImportCheckTest extends TestCase
 
         $this->assertTrue($this->check('purchased', [$this->purchasedCells(['warranty_lifetime' => 'Yes'])])[0]['values']['warranty_lifetime']);
         $this->assertSame('not_yes_no', $this->issuesOf('purchased', $this->purchasedCells(['warranty_lifetime' => 'maybe']), 'warranty_lifetime')[0]['code']);
+    }
+
+    public function test_dates_follow_the_date_format_setting_and_the_buddhist_era(): void
+    {
+        $date = fn (string $text): array => $this->check('purchased', [$this->purchasedCells(['purchase_date' => $text])])[0];
+
+        $this->assertSame('2026-11-12', $date('12/11/2026')['values']['purchase_date']);
+        $this->assertSame('2026-11-12', $date('12-11-2026')['values']['purchase_date']);
+        $this->assertSame('2026-11-12', $date('12/11/2569')['values']['purchase_date']);
+
+        AppSetting::put('date_format', 'ymd_slash');
+        $this->assertSame('2026-11-12', $date('2026/11/12')['values']['purchase_date']);
+        $this->assertSame('bad_date', $date('12/11/2026')['issues'][0]['code']);
+        AppSetting::put('date_format', 'dmy_slash');
+    }
+
+    public function test_a_file_that_is_not_xlsx_is_refused_as_unreadable(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.register', 'allowed' => true]);
+        $file = UploadedFile::fake()->createWithContent('assets.csv', "a,b\n1,2\n");
+
+        $this->actingAs($user)->post('/api/assets/import/preview', ['file' => $file, 'kind' => 'rented'], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'import_unreadable');
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function flatRow(array $row = []): array
+    {
+        return $row + [
+            'line' => 2, 'category_id' => $this->notebook->id, 'brand_id' => $this->lenovo->id, 'model_id' => $this->thinkpad->id,
+            'serial' => 'RC-1', 'warehouse_id' => $this->warehouse->id,
+        ];
+    }
+
+    /** @return list<string> codes of the issues for column on the only row, or [] */
+    private function recheckCodes(string $kind, array $row, string $column): array
+    {
+        $result = $this->checker()->recheck($kind, [$row]);
+
+        return array_values(array_map(fn (array $i) => $i['code'], array_filter($result[0]['issues'] ?? [], fn (array $i) => $i['column'] === $column)));
+    }
+
+    public function test_recheck_passes_a_clean_row_and_reports_only_rows_with_issues(): void
+    {
+        $this->assertSame([], $this->checker()->recheck('rented', [$this->flatRow()]));
+
+        $result = $this->checker()->recheck('rented', [$this->flatRow(), $this->flatRow(['line' => 3, 'serial' => ''])]);
+        $this->assertSame([3], array_column($result, 'line'));
+        $this->assertSame('required', $result[0]['issues'][0]['code']);
+    }
+
+    public function test_recheck_catches_stale_ids_and_a_model_of_another_brand(): void
+    {
+        $dell = Brand::create(['name' => 'Dell']);
+
+        $this->assertSame(['not_found'], $this->recheckCodes('rented', $this->flatRow(['category_id' => 99999]), 'category'));
+        $this->assertSame(['not_found'], $this->recheckCodes('rented', $this->flatRow(['warehouse_id' => '99999']), 'warehouse'));
+        $this->assertSame(['model_not_in_brand'], $this->recheckCodes('rented', $this->flatRow(['brand_id' => $dell->id]), 'model'));
+    }
+
+    public function test_recheck_catches_a_serial_taken_meanwhile_and_bad_cells(): void
+    {
+        $held = Asset::factory()->create(['serial' => 'RC-1', 'status' => 'ready']);
+
+        $result = $this->checker()->recheck('purchased', [$this->flatRow([
+            'value' => '12x', 'vendor_id' => $this->vendor->id, 'purchase_date' => '2026-02-31', 'warranty_end' => '2029-11-12',
+            'tag' => 'ABCDEFGHIJKLM', 'warranty_lifetime' => 'yes',
+        ])]);
+        $issues = collect($result[0]['issues']);
+
+        $this->assertSame($held->asset_code, $issues->firstWhere('code', 'serial_taken')['asset_code']);
+        $this->assertNotNull($issues->firstWhere('code', 'not_a_number'));
+        $this->assertSame('purchase_date', $issues->firstWhere('code', 'bad_date')['column']);
+        $this->assertSame(10, $issues->firstWhere('code', 'too_long')['max']);
+        $this->assertNotNull($issues->firstWhere('code', 'not_yes_no'));
+    }
+
+    public function test_recheck_requires_warranty_end_unless_lifetime(): void
+    {
+        $purchased = $this->flatRow(['value' => '100.00', 'vendor_id' => $this->vendor->id, 'purchase_date' => '2026-11-12']);
+
+        $this->assertSame(['required'], $this->recheckCodes('purchased', $purchased, 'warranty_end'));
+        $this->assertSame([], $this->checker()->recheck('purchased', [$purchased + ['warranty_lifetime' => true]]));
     }
 
     public function test_the_preview_endpoint_answers_rows_options_and_counts(): void
