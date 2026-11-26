@@ -7,7 +7,7 @@ export type StepId = 'kind' | 'upload' | 'check' | 'contract' | 'summary';
 export interface WizardState {
     kind: ImportKind | null;
     /** The chosen file, or null before one is picked. */
-    file: unknown;
+    file: File | null;
     /** Checked rows with the user's edits applied. */
     rows: CheckedRow[];
     /** The user chose to link the new assets to a contract (rented only). */

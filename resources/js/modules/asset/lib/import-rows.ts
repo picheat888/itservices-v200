@@ -1,6 +1,7 @@
 // Rows of the asset import dialog: applying edits, the checks the page can run while typing (same rules and issue codes
 // as app/Services/Asset/AssetImportChecker.php), dropdown options, summary groups and the request payload. Pure logic.
 import type { SearchOption } from '@/shared/components/searchable-select';
+import type { DateFormat } from '@/shared/lib/datetime';
 import type {
     CheckedRow,
     CheckedValues,
@@ -24,7 +25,9 @@ export interface IssueContext {
     /** Every row, edits applied, for the repeated-in-file check. */
     rows: CheckedRow[];
     /** Needed for the model-belongs-to-brand check. */
-    options?: ImportOptions;
+    options: ImportOptions;
+    /** The date-format setting: decides whether typed dates are day-first or year-first. */
+    dateFormat: DateFormat;
 }
 
 export type SummaryEntry = [label: string, count: number, value: number];
@@ -59,13 +62,23 @@ export function normalizePrice(text: string): string | null {
     return match ? `${match[1]}.${(match[2] ?? '').padEnd(2, '0')}` : null;
 }
 
-/** Y-m-d of a real calendar date (Buddhist years over 2400 count back 543), or null. */
-export function normalizeDate(text: string): string | null {
-    const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text.trim());
-    if (!match) return null;
-    let year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
+/**
+ * Y-m-d of a real calendar date, or null. Y-m-d is always read; other texts follow the date-format setting
+ * (ymd_* year-first Y/m/d, any other day-first d/m/Y). Years over 2400 are Buddhist and count back 543.
+ */
+export function normalizeDate(text: string, format: DateFormat): string | null {
+    const trimmed = text.trim();
+    let parts = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
+    let order: [number, number, number] = [1, 2, 3];
+    if (!parts && format.startsWith('ymd_')) parts = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(trimmed);
+    if (!parts && !format.startsWith('ymd_')) {
+        parts = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(trimmed);
+        order = [3, 2, 1];
+    }
+    if (!parts) return null;
+    let year = Number(parts[order[0]]);
+    const month = Number(parts[order[1]]);
+    const day = Number(parts[order[2]]);
     if (year > 2400) year -= 543;
     const real = new Date(Date.UTC(year, month - 1, day));
     if (real.getUTCFullYear() !== year || real.getUTCMonth() !== month - 1 || real.getUTCDate() !== day) return null;
@@ -99,13 +112,13 @@ export function localIssues(row: CheckedRow, column: ImportColumnKey, value: Cel
 
     if (column === 'value') return normalizePrice(text) === null ? [{ code: 'not_a_number', column, value: text }] : [];
     if (column === 'purchase_date' || column === 'warranty_end')
-        return normalizeDate(text) === null ? [{ code: 'bad_date', column, value: text }] : [];
+        return normalizeDate(text, ctx.dateFormat) === null ? [{ code: 'bad_date', column, value: text }] : [];
 
     const max = TEXT_MAX[column];
     const length = [...text].length;
     if (max !== undefined && length > max) return [{ code: 'too_long', column, max, length }];
     if (DUPLICATE_COLUMNS.includes(column)) {
-        const first = firstRepeat(row, column, text, ctx.rows);
+        const first = firstLineOf(row.line, column, text, ctx.rows);
         if (first !== null) return [{ code: 'dup_in_file', column, line: first }];
     }
     return [];
@@ -113,27 +126,42 @@ export function localIssues(row: CheckedRow, column: ImportColumnKey, value: Cel
 
 function modelBrandIssues(row: CheckedRow, modelId: number, ctx: IssueContext): Issue[] {
     const brandId = row.values.brand_id;
-    const model = ctx.options?.models.find((m) => m.id === modelId);
+    const model = ctx.options.models.find((m) => m.id === modelId);
     if (!model || brandId === null || model.brand_id === brandId) return [];
     return [{ code: 'model_not_in_brand', column: 'model', value: String(modelId) }];
 }
 
-// Earliest other row holding the same text (case-insensitive), or null
-function firstRepeat(row: CheckedRow, column: ImportColumnKey, text: string, rows: CheckedRow[]): number | null {
-    const needle = text.toLowerCase();
-    const lines = rows
-        .filter(
-            (other) =>
-                other.line !== row.line &&
-                String(other.values[column as keyof CheckedValues] ?? '')
-                    .trim()
-                    .toLowerCase() === needle,
-        )
-        .map((other) => other.line);
-    return lines.length > 0 ? Math.min(...lines) : null;
+// Same comparison as the server: whitespace runs collapse to one space, trimmed, case-insensitive
+function sameKey(text: string): string {
+    return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-function applyEdit(values: CheckedValues, column: ImportColumnKey, edit: CellEdit): CheckedValues {
+// Line of the first row holding `text` when that row is not `line` itself (the server flags only later occurrences)
+function firstLineOf(line: number, column: ImportColumnKey, text: string, rows: CheckedRow[]): number | null {
+    const needle = sameKey(text);
+    for (const other of rows) {
+        const key = other.line === line ? needle : sameKey(String(other.values[column as keyof CheckedValues] ?? ''));
+        if (key === needle) return other.line === line ? null : other.line;
+    }
+    return null;
+}
+
+// Replaces every row's dup_in_file flags with the first-occurrence rule, so fixing one row clears the ones that pointed at it
+function withDuplicateFlags(rows: CheckedRow[]): CheckedRow[] {
+    return rows.map((row) => {
+        const kept = row.issues.filter((issue) => !(issue.code === 'dup_in_file' && DUPLICATE_COLUMNS.includes(issue.column as ImportColumnKey)));
+        const flags: Issue[] = [];
+        for (const column of DUPLICATE_COLUMNS) {
+            const text = String(row.values[column as keyof CheckedValues] ?? '');
+            if (sameKey(text) === '') continue;
+            const first = firstLineOf(row.line, column, text, rows);
+            if (first !== null) flags.push({ code: 'dup_in_file', column, line: first });
+        }
+        return flags.length === 0 && kept.length === row.issues.length ? row : { ...row, issues: [...kept, ...flags] };
+    });
+}
+
+function applyEdit(values: CheckedValues, column: ImportColumnKey, edit: CellEdit, dateFormat: DateFormat): CheckedValues {
     const idField = ID_FIELD[column];
     if (idField) return { ...values, [idField]: edit === null || edit === '' ? null : Number(edit) };
     if (column === 'warranty_lifetime') return { ...values, warranty_lifetime: edit === true };
@@ -141,7 +169,7 @@ function applyEdit(values: CheckedValues, column: ImportColumnKey, edit: CellEdi
     if (text === '') return { ...values, [column]: null };
     // A valid price or date is stored in the server's form; a wrong one stays as typed so the cell shows it back
     if (column === 'value') return { ...values, value: normalizePrice(text) ?? text };
-    if (column === 'purchase_date' || column === 'warranty_end') return { ...values, [column]: normalizeDate(text) ?? text };
+    if (column === 'purchase_date' || column === 'warranty_end') return { ...values, [column]: normalizeDate(text, dateFormat) ?? text };
     return { ...values, [column]: text };
 }
 
@@ -154,17 +182,17 @@ function valueOf(values: CheckedValues, column: ImportColumnKey): CellEdit {
  * Rows with the user's edits applied. An edited cell drops the issues the server gave it and gets the
  * page-side check instead; the input rows are not changed.
  */
-export function rowsWithEdits(rows: CheckedRow[], edits: RowEdits, options?: ImportOptions, kind: ImportKind = 'purchased'): CheckedRow[] {
+export function rowsWithEdits(rows: CheckedRow[], edits: RowEdits, options: ImportOptions, kind: ImportKind, dateFormat: DateFormat): CheckedRow[] {
     const applied = rows.map((row) => {
         const rowEdits = edits[row.line];
         if (!rowEdits) return row;
         let values = row.values;
-        for (const [column, edit] of Object.entries(rowEdits) as [ImportColumnKey, CellEdit][]) values = applyEdit(values, column, edit);
+        for (const [column, edit] of Object.entries(rowEdits) as [ImportColumnKey, CellEdit][]) values = applyEdit(values, column, edit, dateFormat);
         return { ...row, values };
     });
-    const ctx: IssueContext = { kind, rows: applied, options };
+    const ctx: IssueContext = { kind, rows: applied, options, dateFormat };
 
-    return applied.map((row, index) => {
+    const judged = applied.map((row, index) => {
         const rowEdits = edits[row.line];
         if (!rowEdits) return row;
         let issues = row.issues;
@@ -182,6 +210,7 @@ export function rowsWithEdits(rows: CheckedRow[], edits: RowEdits, options?: Imp
         }
         return { ...applied[index], issues };
     });
+    return withDuplicateFlags(judged);
 }
 
 /** Rows that still have at least one issue. */
@@ -234,7 +263,7 @@ export function foldAt<T>(entries: T[], limit: number): { shown: T[]; rest: T[] 
 }
 
 /** Body of the import request: ids and normalised text; the contract goes with rentals only. */
-export function importRunPayload(kind: ImportKind, rows: CheckedRow[], contractId: number | null): ImportRunPayload {
+export function importRunPayload(kind: ImportKind, rows: CheckedRow[], contractId: number | null, dateFormat: DateFormat): ImportRunPayload {
     const payload: ImportRunPayload = {
         kind,
         rows: rows.map(
@@ -250,8 +279,8 @@ export function importRunPayload(kind: ImportKind, rows: CheckedRow[], contractI
                 notes: v.notes,
                 value: v.value === null ? null : normalizePrice(v.value),
                 vendor_id: v.vendor_id,
-                purchase_date: v.purchase_date === null ? null : normalizeDate(v.purchase_date),
-                warranty_end: v.warranty_end === null ? null : normalizeDate(v.warranty_end),
+                purchase_date: v.purchase_date === null ? null : normalizeDate(v.purchase_date, dateFormat),
+                warranty_end: v.warranty_end === null ? null : normalizeDate(v.warranty_end, dateFormat),
                 warranty_lifetime: v.warranty_lifetime === true,
             }),
         ),

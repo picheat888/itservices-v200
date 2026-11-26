@@ -67,7 +67,7 @@ test('the next button needs a file, then clean rows, then a contract when linkin
     assert.equal(canLeaveStep('kind', { ...base, kind: null }), false);
     assert.equal(canLeaveStep('kind', base), true);
     assert.equal(canLeaveStep('upload', base), false);
-    assert.equal(canLeaveStep('upload', { ...base, file: new Blob([]), rows: clean }), true);
+    assert.equal(canLeaveStep('upload', { ...base, file: new File([], 'a.xlsx'), rows: clean }), true);
     assert.equal(canLeaveStep('check', { ...base, rows: bad }), false);
     assert.equal(canLeaveStep('check', { ...base, rows: [] }), false);
     assert.equal(canLeaveStep('check', { ...base, rows: clean }), true);
@@ -79,24 +79,24 @@ test('the next button needs a file, then clean rows, then a contract when linkin
 test('fixing a cell clears its issue and the bad-row count follows', () => {
     const rows = [row(2, { serial: null }, [{ code: 'required', column: 'serial' }]), row(3, {}, [{ code: 'not_found', column: 'brand' }]), row(4)];
     assert.equal(badRowCount(rows), 2);
-    const fixed = rowsWithEdits(rows, { 2: { serial: 'ABC123' } });
+    const fixed = rowsWithEdits(rows, { 2: { serial: 'ABC123' } }, options, 'purchased', 'dmy_slash');
     assert.equal(fixed[0].values.serial, 'ABC123');
     assert.deepEqual(fixed[0].issues, []);
     assert.equal(badRowCount(fixed), 1);
     // The input rows are left untouched
     assert.equal(rows[0].values.serial, null);
-    const picked = rowsWithEdits(fixed, { 3: { brand: 11, model: 101 } }, options);
+    const picked = rowsWithEdits(fixed, { 3: { brand: 11, model: 101 } }, options, 'purchased', 'dmy_slash');
     assert.equal(picked[1].values.brand_id, 11);
     assert.equal(picked[1].values.model_id, 101);
     assert.equal(badRowCount(picked), 0);
     // An edit that is still wrong keeps the row bad
-    const still = rowsWithEdits(rows, { 2: { serial: 'x'.repeat(121) } });
+    const still = rowsWithEdits(rows, { 2: { serial: 'x'.repeat(121) } }, options, 'purchased', 'dmy_slash');
     assert.deepEqual(still[0].issues, [{ code: 'too_long', column: 'serial', max: 120, length: 121 }]);
 });
 
 test('a tag over 10, a repeated serial, a bad price and an impossible date are caught while typing', () => {
     const rows = [row(2, { serial: 'PF4XK101' }), row(3)];
-    const ctx = { kind: 'purchased' as const, rows };
+    const ctx = { kind: 'purchased' as const, rows, options, dateFormat: 'dmy_slash' as const };
     assert.deepEqual(localIssues(rows[1], 'tag', 'ABCDEFGHIJK', ctx), [{ code: 'too_long', column: 'tag', max: 10, length: 11 }]);
     assert.deepEqual(localIssues(rows[1], 'tag', 'ABCDEFGHIJ', ctx), []);
     assert.deepEqual(localIssues(rows[1], 'serial', 'pf4xk101', ctx), [{ code: 'dup_in_file', column: 'serial', line: 2 }]);
@@ -109,10 +109,10 @@ test('a tag over 10, a repeated serial, a bad price and an impossible date are c
     assert.deepEqual(localIssues(rows[1], 'purchase_date', '2026-11-12', ctx), []);
     assert.deepEqual(localIssues(rows[1], 'purchase_date', '', ctx), [{ code: 'required', column: 'purchase_date' }]);
     // Rented files have no price, so an empty price is fine there
-    assert.deepEqual(localIssues(rows[1], 'value', '', { kind: 'rented', rows }), []);
+    assert.deepEqual(localIssues(rows[1], 'value', '', { ...ctx, kind: 'rented' }), []);
     // Lifetime warranty makes the end date optional
     const lifetime = row(4, { warranty_lifetime: true });
-    assert.deepEqual(localIssues(lifetime, 'warranty_end', '', { kind: 'purchased', rows: [lifetime] }), []);
+    assert.deepEqual(localIssues(lifetime, 'warranty_end', '', { ...ctx, rows: [lifetime] }), []);
 });
 
 test('the closest name is the first dropdown option', () => {
@@ -171,7 +171,7 @@ test('a closed contract sends the user back to the contract step; a taken serial
 
 test('the import payload carries matched ids and the contract only for rentals', () => {
     const rows = [row(2, { value: '28,500.5', asset_code: 'INK-1', warranty_lifetime: true, warranty_end: null })];
-    const purchased = importRunPayload('purchased', rows, 9);
+    const purchased = importRunPayload('purchased', rows, 9, 'dmy_slash');
     assert.equal('contract_id' in purchased, false);
     assert.deepEqual(purchased.rows[0], {
         line: 2,
@@ -189,9 +189,9 @@ test('the import payload carries matched ids and the contract only for rentals',
         warranty_end: null,
         warranty_lifetime: true,
     });
-    assert.equal(importRunPayload('rented', rows, 9).contract_id, 9);
-    assert.equal('contract_id' in importRunPayload('rented', rows, null), false);
-    assert.equal(importRunPayload('rented', rows, null).kind, 'rented');
+    assert.equal(importRunPayload('rented', rows, 9, 'dmy_slash').contract_id, 9);
+    assert.equal('contract_id' in importRunPayload('rented', rows, null, 'dmy_slash'), false);
+    assert.equal(importRunPayload('rented', rows, null, 'dmy_slash').kind, 'rented');
 });
 
 test('the column lists match the template headers', () => {
@@ -230,4 +230,39 @@ test('the column lists match the template headers', () => {
     assert.equal(serial?.howKey, 'asset_import_how_serial');
     assert.equal(serial?.required, true);
     assert.equal(IMPORT_COLUMNS.rented.find((c) => c.key === 'brand')?.list, 'brands');
+});
+
+test('fixing the first of a duplicate pair clears the later row, and a new clash flags the later row with the earlier line', () => {
+    const rows = [row(2, { serial: 'AB 1' }), row(3), row(5, { serial: 'ab  1' }, [{ code: 'dup_in_file', column: 'serial', line: 2 }])];
+    // The server's flag on line 5 stays right when nothing changes for it
+    const fixedOriginal = rowsWithEdits(rows, { 2: { serial: 'UNIQUE-1' } }, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(fixedOriginal[2].issues, []);
+    assert.equal(badRowCount(fixedOriginal), 0);
+    // Editing an earlier row into a clash flags the later row, not itself
+    const clash = rowsWithEdits(fixedOriginal, { 2: { serial: 'sn3' } }, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(clash[0].issues, []);
+    assert.deepEqual(clash[1].issues, [{ code: 'dup_in_file', column: 'serial', line: 2 }]);
+    // Editing a later row into a clash flags that row
+    const later = rowsWithEdits(fixedOriginal, { 5: { serial: 'SN3' } }, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(later[2].issues, [{ code: 'dup_in_file', column: 'serial', line: 3 }]);
+    assert.deepEqual(later[1].issues, []);
+});
+
+test('typed dates follow the date-format setting, accept Buddhist years and refuse impossible days', () => {
+    const rows = [row(2)];
+    const ctx = { kind: 'purchased' as const, rows, options, dateFormat: 'dmy_slash' as const };
+    const check = (text: string, dateFormat: 'dmy_slash' | 'ymd_slash' | 'd_mon_y') =>
+        localIssues(rows[0], 'purchase_date', text, { ...ctx, dateFormat }).length;
+    assert.equal(check('12/11/2026', 'dmy_slash'), 0);
+    assert.equal(check('12-11-2026', 'dmy_slash'), 0);
+    assert.equal(check('2026/11/12', 'dmy_slash'), 1);
+    assert.equal(check('2026/11/12', 'ymd_slash'), 0);
+    assert.equal(check('12/11/2026', 'ymd_slash'), 1);
+    assert.equal(check('2026-11-12', 'ymd_slash'), 0);
+    assert.equal(check('12/11/2569', 'dmy_slash'), 0);
+    assert.equal(check('31/02/2026', 'dmy_slash'), 1);
+    assert.equal(check('12 Nov 2026', 'd_mon_y'), 1);
+    const edited = rowsWithEdits(rows, { 2: { purchase_date: '12/11/2569' } }, options, 'purchased', 'dmy_slash');
+    assert.equal(edited[0].values.purchase_date, '2026-11-12');
+    assert.equal(importRunPayload('purchased', edited, null, 'dmy_slash').rows[0].purchase_date, '2026-11-12');
 });
