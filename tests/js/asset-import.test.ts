@@ -319,3 +319,69 @@ test('the upload step words a wrong file type and a failed template download', (
     assert.match(up, /asset_refusal_import_unreadable/);
     assert.match(up, /import_template_failed/);
 });
+
+test('every issue code has words in both languages', () => {
+    const th = read('lang/th/asset.ts');
+    const en = read('lang/en/asset.ts');
+    for (const code of [
+        'required',
+        'not_found',
+        'model_not_in_brand',
+        'too_long',
+        'dup_in_file',
+        'serial_taken',
+        'code_taken',
+        'not_a_number',
+        'bad_date',
+        'not_yes_no',
+    ]) {
+        assert.ok(th.includes(`asset_import_issue_${code}:`), `th ${code}`);
+        assert.ok(en.includes(`asset_import_issue_${code}:`), `en ${code}`);
+    }
+});
+
+test('the check step words exist in both languages', () => {
+    const th = read('lang/th/asset.ts');
+    const en = read('lang/en/asset.ts');
+    for (const key of [
+        'summary_line',
+        'summary_value',
+        'bad_rows',
+        'show_all',
+        'show_bad',
+        'col_row',
+        'col_result',
+        'fix_column',
+        'row_ready',
+        'cell_fixed',
+        'check_note',
+        'next_blocked',
+    ]) {
+        assert.ok(th.includes(`asset_import_${key}:`), `th ${key}`);
+        assert.ok(en.includes(`asset_import_${key}:`), `en ${key}`);
+    }
+});
+
+test('the check table pins row number and result, and the result names the column to fix', () => {
+    const table = read('modules/asset/components/import/import-check-table.tsx');
+    assert.match(table, /<th scope="row"/);
+    assert.match(table, /sticky/);
+    assert.match(table, /asset_import_fix_column/);
+    assert.match(table, /aria-invalid/);
+    assert.match(table, /aria-describedby/);
+    assert.match(table, /scrollIntoView/);
+});
+
+test('nothing is written beside the next button, whose reason is read by screen readers only', () => {
+    const step = read('modules/asset/components/import/import-check-step.tsx');
+    assert.doesNotMatch(step, /asset_import_rows_left/);
+    assert.match(step, /asset_import_next_blocked/);
+    assert.match(step, /sr-only/);
+    assert.match(read('modules/asset/components/import/asset-import-dialog.tsx'), /aria-describedby=/);
+});
+
+test('the dialog renders the check step and handles the edit action', () => {
+    const dialog = read('modules/asset/components/import/asset-import-dialog.tsx');
+    assert.match(dialog, /ImportCheckStep/);
+    assert.match(dialog, /type: 'edit'/);
+});

@@ -13,11 +13,13 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Upload } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ImportKind, ImportPreview, ImportResult } from '../../api/assetImportApi';
 import { useAssetImport } from '../../hooks/use-asset-import';
-import { rowsWithEdits, type RowEdits } from '../../lib/import-rows';
+import type { ImportColumnKey } from '../../lib/import-columns';
+import { rowsWithEdits, type CellEdit, type RowEdits } from '../../lib/import-rows';
 import { canLeaveStep, importSteps, type StepId, type WizardState } from '../../lib/import-wizard';
+import { ImportCheckStep, NEXT_BLOCKED_ID } from './import-check-step';
 import { ImportKindStep } from './import-kind-step';
 import { ImportStepper } from './import-stepper';
 import { ImportUploadStep } from './import-upload-step';
@@ -41,6 +43,7 @@ type Action =
     | { type: 'file'; file: File }
     | { type: 'clearFile' }
     | { type: 'previewed'; preview: ImportPreview }
+    | { type: 'edit'; line: number; column: ImportColumnKey; value: CellEdit }
     | { type: 'go'; step: StepId };
 
 const INITIAL: State = { step: 'kind', kind: 'rented', file: null, preview: null, edits: {}, linkContract: false, contractId: null, result: null };
@@ -58,6 +61,9 @@ function reducer(state: State, action: Action): State {
             return { ...state, file: null, preview: null, edits: {} };
         case 'previewed':
             return { ...state, preview: action.preview };
+        // Only the edited row gets a new object, so the other rows keep their place
+        case 'edit':
+            return { ...state, edits: { ...state.edits, [action.line]: { ...state.edits[action.line], [action.column]: action.value } } };
         case 'go':
             return { ...state, step: action.step };
     }
@@ -163,6 +169,8 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
         if (step !== 'kind') body.current?.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
     }, [step]);
 
+    const editCell = useCallback((line: number, column: ImportColumnKey, value: CellEdit) => dispatch({ type: 'edit', line, column, value }), []);
+
     const goNext = () => {
         const next = steps[steps.indexOf(step) + 1];
         if (next) dispatch({ type: 'go', step: next });
@@ -200,7 +208,7 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
                 />
 
                 {/* Body, top-aligned */}
-                <div ref={body} className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+                <div ref={body} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6">
                     {renderStep()}
                 </div>
 
@@ -215,7 +223,12 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
                             {t('asset_import_back')}
                         </Button>
                     )}
-                    <Button type="button" disabled={busy || !canLeaveStep(step, wizard)} onClick={goNext}>
+                    <Button
+                        type="button"
+                        disabled={busy || !canLeaveStep(step, wizard)}
+                        aria-describedby={step === 'check' && !canLeaveStep(step, wizard) ? NEXT_BLOCKED_ID : undefined}
+                        onClick={goNext}
+                    >
                         {step === 'upload' ? t('asset_import_check_files') : t('asset_import_next')}
                     </Button>
                 </DialogFooterBar>
@@ -239,6 +252,17 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
                         onPick={pickFile}
                         onRemove={removeFile}
                         onDownload={() => downloadTemplate(kind)}
+                    />
+                );
+            case 'check':
+                return kind === null || state.preview === null ? null : (
+                    <ImportCheckStep
+                        kind={kind}
+                        fileName={state.file?.name ?? ''}
+                        rows={rows}
+                        options={state.preview.options}
+                        edits={state.edits}
+                        onEdit={editCell}
                     />
                 );
             default:
