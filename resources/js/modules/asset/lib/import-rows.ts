@@ -226,6 +226,27 @@ export function rowsWithEdits(rows: CheckedRow[], edits: RowEdits, options: Impo
     return withDuplicateFlags(judged);
 }
 
+/** What the server refused per sheet line: its issues and the values that were sent when it refused. */
+export type ServerIssueOverlay = Record<number, { issues: Issue[]; sent: CheckedValues }>;
+
+/**
+ * Rows with the server's issues laid over them. An issue stays on its cell until that cell's value differs
+ * from the one sent, because the page-side checks cannot produce serial_taken, code_taken or not_found.
+ * A row the overlay does not change keeps its identity.
+ */
+export function withServerIssues(rows: CheckedRow[], overlay: ServerIssueOverlay): CheckedRow[] {
+    return rows.map((row) => {
+        const refused = overlay[row.line];
+        if (!refused) return row;
+        const kept = refused.issues.filter(
+            (issue) =>
+                valueOf(row.values, issue.column as ImportColumnKey) === valueOf(refused.sent, issue.column as ImportColumnKey) &&
+                !row.issues.some((own) => own.code === issue.code && own.column === issue.column),
+        );
+        return kept.length === 0 ? row : { ...row, issues: [...row.issues, ...kept] };
+    });
+}
+
 /** Rows that still have at least one issue. */
 export function badRowCount(rows: CheckedRow[]): number {
     return rows.filter((row) => row.issues.length > 0).length;

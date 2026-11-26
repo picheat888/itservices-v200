@@ -1,12 +1,22 @@
 // Stepper of the asset import dialog: finished steps go back with a click, the next ones wait, the current one is marked.
+// After the import every step is ticked in green and none can be clicked.
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Check } from 'lucide-react';
 import type { StepId } from '../../lib/import-wizard';
 
-export function ImportStepper({ steps, current, locked, onGo }: { steps: StepId[]; current: StepId; locked: boolean; onGo: (step: StepId) => void }) {
+interface Props {
+    steps: StepId[];
+    current: StepId;
+    locked: boolean;
+    /** The import ran: every step is ticked and none is clickable. */
+    finished?: boolean;
+    onGo: (step: StepId) => void;
+}
+
+export function ImportStepper({ steps, current, locked, finished = false, onGo }: Props) {
     const t = useT();
-    const at = steps.indexOf(current);
+    const at = finished ? steps.length : steps.indexOf(current);
 
     return (
         <nav aria-label={t('asset_import_title')} className="border-border/60 flex items-start border-b px-6 pb-4">
@@ -21,7 +31,9 @@ export function ImportStepper({ steps, current, locked, onGo }: { steps: StepId[
                                 className={cn(
                                     'bg-background z-[1] flex h-[26px] w-[26px] items-center justify-center rounded-full border-[1.5px] text-xs font-bold tabular-nums transition-colors',
                                     active && 'border-brand bg-brand text-brand-foreground',
-                                    done && 'border-brand/40 bg-brand/10 text-brand',
+                                    done && !finished && 'border-brand/40 bg-brand/10 text-brand',
+                                    finished &&
+                                        'border-emerald-600/40 bg-emerald-50 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-950/30 dark:text-emerald-400',
                                     !active && !done && 'border-input text-muted-foreground',
                                 )}
                             >
@@ -53,7 +65,7 @@ export function ImportStepper({ steps, current, locked, onGo }: { steps: StepId[
                                     )}
                                 />
                             )}
-                            {done ? (
+                            {done && !finished ? (
                                 <button
                                     type="button"
                                     disabled={locked}

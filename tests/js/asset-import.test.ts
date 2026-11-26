@@ -14,6 +14,7 @@ import {
     optionsFor,
     rowsWithEdits,
     summaryGroups,
+    withServerIssues,
 } from '../../resources/js/modules/asset/lib/import-rows.ts';
 import { canLeaveStep, importSteps, stepAfterRefusal } from '../../resources/js/modules/asset/lib/import-wizard.ts';
 
@@ -415,4 +416,101 @@ test('the check table marks list cells red, keys issue lines by index and does n
     assert.match(table, /\[&_\[role=combobox\]\]:border-destructive/);
     assert.doesNotMatch(table, /key=\{words\}/);
     assert.match(read('modules/asset/components/import/import-check-step.tsx'), /row\.cells\.asset_code/);
+});
+
+test('the contract step is two radios and shows the contract picker only when linking', () => {
+    const step = read('modules/asset/components/import/import-contract-step.tsx');
+    assert.match(step, /type="radio"[\s\S]*type="radio"/);
+    assert.match(step, /asset_import_contract_hint/);
+    assert.doesNotMatch(step, /asset_rented_from_contract/);
+});
+
+test('the summary button says only "นำเข้า"', () => {
+    assert.match(read('lang/th/asset.ts'), /asset_import_run: 'นำเข้า'/);
+    assert.match(read('modules/asset/components/import/import-summary-step.tsx'), /t\('asset_import_run'\)/);
+});
+
+test('the done screen pins the imported rows and can jump to the awaiting list', () => {
+    const done = read('modules/asset/components/import/import-done.tsx');
+    assert.match(done, /onShowAwaiting/);
+    assert.match(read('modules/asset/hooks/use-asset-import.ts'), /markNew\('assets'/);
+});
+
+test('the contract, summary and done words exist in both languages', () => {
+    const th = read('lang/th/asset.ts');
+    const en = read('lang/en/asset.ts');
+    for (const key of [
+        'contract_heading',
+        'contract_sub',
+        'contract_later',
+        'contract_later_desc',
+        'contract_link',
+        'contract_link_desc',
+        'contract_field',
+        'contract_hint',
+        'summary_heading',
+        'summary_lead',
+        'summary_one_wh',
+        'summary_many_wh',
+        'summary_contract',
+        'summary_contract_none',
+        'summary_change',
+        'by_model',
+        'by_warehouse',
+        'by_vendor',
+        'count',
+        'value',
+        'total',
+        'more',
+        'run',
+        'done_title_rented',
+        'done_title_purchased',
+        'done_codes',
+        'done_waiting',
+        'done_waiting_sub',
+        'done_show_waiting',
+        'done_linked',
+        'done_show_imported',
+        'done_close',
+    ]) {
+        assert.ok(th.includes(`asset_import_${key}:`), `th ${key}`);
+        assert.ok(en.includes(`asset_import_${key}:`), `en ${key}`);
+    }
+    for (const code of ['import_rows_invalid', 'import_conflict']) {
+        assert.ok(th.includes(`asset_refusal_${code}:`), `th ${code}`);
+        assert.ok(en.includes(`asset_refusal_${code}:`), `en ${code}`);
+    }
+});
+
+test('a server issue stays on its cell until the cell changes, and other rows are untouched', () => {
+    const sent = row(3, { serial: 'SN-DUP' });
+    const rows = [row(2), row(3, { serial: 'SN-DUP' }), row(4)];
+    const overlay = { 3: { issues: [{ code: 'serial_taken', column: 'serial', asset_code: 'INK-9' }], sent: sent.values } };
+
+    const shown = withServerIssues(rows, overlay);
+    assert.deepEqual(shown[1].issues, [{ code: 'serial_taken', column: 'serial', asset_code: 'INK-9' }]);
+    assert.equal(badRowCount(shown), 1);
+    assert.equal(shown[0], rows[0]);
+    assert.equal(shown[2], rows[2]);
+
+    // The cell changed: the issue is gone and the row keeps its identity from the edited rows
+    const edited = [row(2), row(3, { serial: 'SN-NEW' }), row(4)];
+    const after = withServerIssues(edited, overlay);
+    assert.equal(after[1], edited[1]);
+    assert.equal(badRowCount(after), 0);
+
+    // Another column of the same row changing does not clear it
+    const other = [row(2), row(3, { serial: 'SN-DUP', tag: 'A1' }), row(4)];
+    assert.equal(withServerIssues(other, overlay)[1].issues.length, 1);
+
+    // Never added twice when the same issue is already there
+    const again = withServerIssues(withServerIssues(rows, overlay), overlay);
+    assert.equal(again[1].issues.length, 1);
+});
+
+test('a server issue on a list column clears when another option is picked', () => {
+    const sent = row(2, { warehouse_id: 5 });
+    const overlay = { 2: { issues: [{ code: 'not_found', column: 'warehouse' }], sent: sent.values } };
+    assert.equal(badRowCount(withServerIssues([row(2, { warehouse_id: 5 })], overlay)), 1);
+    assert.equal(badRowCount(withServerIssues([row(2, { warehouse_id: 6 })], overlay)), 0);
 });

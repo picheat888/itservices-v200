@@ -508,6 +508,15 @@ export default function AssetsPage() {
     const showAwaiting = () => {
         if (!(tab === 'inventory' && searchParams.get('status') === AWAITING_CONTRACT)) showStatus(AWAITING_CONTRACT);
     };
+    // The import's done screen closes the dialog first (an async history pop), so its choice waits until ?dialog= is gone
+    const [afterImport, setAfterImport] = useState<'awaiting' | 'imported' | null>(null);
+    useEffect(() => {
+        if (afterImport === null || importDialog.open) return;
+        setAfterImport(null);
+        if (afterImport === 'awaiting') showAwaiting();
+        else if (tab !== 'inventory') setTab('inventory');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [afterImport, importDialog.open]);
     // The clicked row opens the form at once; a link or reload fetches it
     const openEdit = (a: Asset) => {
         setEditing(a);
@@ -1590,7 +1599,12 @@ export default function AssetsPage() {
                 onClose={closeForm}
                 onSaved={showSaved}
             />
-            <AssetImportDialog open={canCreate && importDialog.open} onClose={importDialog.closeImport} onShowAwaiting={showAwaiting} />
+            <AssetImportDialog
+                open={canCreate && importDialog.open}
+                onClose={importDialog.closeImport}
+                onShowAwaiting={() => setAfterImport('awaiting')}
+                onShowImported={() => setAfterImport('imported')}
+            />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />

@@ -2,11 +2,16 @@
 // Open state lives in the URL as ?dialog=import; a chosen file is guarded against an accidental close.
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { FormErrorBanner } from '@/shared/components/field';
+import type { SearchOption } from '@/shared/components/searchable-select';
+import { useDateFormat } from '@/shared/hooks/use-date-format';
 import { useDialogParam } from '@/shared/hooks/use-dialog-param';
 import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
-import { serverMessage } from '@/shared/lib/api-errors';
+import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
+import { serverFailureText, serverMessage } from '@/shared/lib/api-errors';
 import { isServerFailure } from '@/shared/lib/http-errors';
+import { localPair } from '@/shared/lib/local-name';
 import { reasonWords } from '@/shared/lib/reason-words';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -14,14 +19,18 @@ import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from 
 import { useUiStore } from '@/stores/ui';
 import { Upload } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { ImportKind, ImportPreview, ImportResult } from '../../api/assetImportApi';
+import type { ImportKind, ImportPreview, ImportResult, Issue } from '../../api/assetImportApi';
 import { useAssetImport } from '../../hooks/use-asset-import';
+import { useAssetContractOptions } from '../../hooks/use-assets';
 import type { ImportColumnKey } from '../../lib/import-columns';
-import { rowsWithEdits, type CellEdit, type RowEdits } from '../../lib/import-rows';
-import { canLeaveStep, importSteps, type StepId, type WizardState } from '../../lib/import-wizard';
+import { importRunPayload, rowsWithEdits, withServerIssues, type CellEdit, type RowEdits, type ServerIssueOverlay } from '../../lib/import-rows';
+import { canLeaveStep, importSteps, stepAfterRefusal, type StepId, type WizardState } from '../../lib/import-wizard';
 import { ImportCheckStep, NEXT_BLOCKED_ID } from './import-check-step';
+import { ImportContractStep } from './import-contract-step';
+import { ImportDone } from './import-done';
 import { ImportKindStep } from './import-kind-step';
 import { ImportStepper } from './import-stepper';
+import { ImportRunButton, ImportSummaryStep } from './import-summary-step';
 import { ImportUploadStep } from './import-upload-step';
 
 interface State {
@@ -31,6 +40,8 @@ interface State {
     /** What the server made of the chosen file; null until its check passes. */
     preview: ImportPreview | null;
     edits: RowEdits;
+    /** What the server refused per line; shown on the cells until they change. */
+    serverIssues: ServerIssueOverlay;
     linkContract: boolean;
     contractId: number | null;
     /** Set once the import ran; later steps read it for the done screen. */
@@ -44,9 +55,22 @@ type Action =
     | { type: 'clearFile' }
     | { type: 'previewed'; preview: ImportPreview }
     | { type: 'edit'; line: number; column: ImportColumnKey; value: CellEdit }
+    | { type: 'contract'; link: boolean; id: number | null }
+    | { type: 'refused'; step: StepId; overlay: ServerIssueOverlay | null; clearContract: boolean }
+    | { type: 'done'; result: ImportResult }
     | { type: 'go'; step: StepId };
 
-const INITIAL: State = { step: 'kind', kind: 'rented', file: null, preview: null, edits: {}, linkContract: false, contractId: null, result: null };
+const INITIAL: State = {
+    step: 'kind',
+    kind: 'rented',
+    file: null,
+    preview: null,
+    edits: {},
+    serverIssues: {},
+    linkContract: false,
+    contractId: null,
+    result: null,
+};
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
@@ -56,14 +80,26 @@ function reducer(state: State, action: Action): State {
         case 'kind':
             return { ...INITIAL, kind: action.kind, step: state.step };
         case 'file':
-            return { ...state, file: action.file, preview: null, edits: {} };
+            return { ...state, file: action.file, preview: null, edits: {}, serverIssues: {} };
         case 'clearFile':
-            return { ...state, file: null, preview: null, edits: {} };
+            return { ...state, file: null, preview: null, edits: {}, serverIssues: {} };
         case 'previewed':
             return { ...state, preview: action.preview };
         // Only the edited row gets a new object, so the other rows keep their place
         case 'edit':
             return { ...state, edits: { ...state.edits, [action.line]: { ...state.edits[action.line], [action.column]: action.value } } };
+        case 'contract':
+            return { ...state, linkContract: action.link, contractId: action.link ? action.id : null };
+        // A refusal moves the wizard; a refused contract is forgotten so the picker asks again
+        case 'refused':
+            return {
+                ...state,
+                step: action.step,
+                serverIssues: action.overlay ?? state.serverIssues,
+                contractId: action.clearContract ? null : state.contractId,
+            };
+        case 'done':
+            return { ...state, result: action.result };
         case 'go':
             return { ...state, step: action.step };
     }
@@ -78,19 +114,32 @@ export function useAssetImportDialog() {
 interface DialogProps {
     open: boolean;
     onClose: () => void;
-    /** Shows the assets waiting for a contract on the list; the done screen calls it. */
+    /** Shows the assets waiting for a contract on the list; the done screen calls it after closing the dialog. */
     onShowAwaiting: () => void;
+    /** Shows the asset list with the imported rows; the done screen calls it after closing the dialog. */
+    onShowImported: () => void;
 }
 
-export function AssetImportDialog({ open, onClose }: DialogProps) {
+/** The refusal body the server sent: its code and, for invalid rows, the issues per sheet line. */
+function refusalBody(error: unknown): { code: string; lines: { row: number; issues: Issue[] }[] } {
+    const data = (error as { response?: { data?: { message?: unknown; errors?: unknown } } })?.response?.data;
+    const lines = Array.isArray(data?.errors) ? (data.errors as { row: number; issues: Issue[] }[]) : [];
+    return { code: typeof data?.message === 'string' ? data.message : '', lines };
+}
+
+export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImported }: DialogProps) {
     const t = useT();
     const fmtN = useNumberFormat();
     const confirm = useConfirm();
     const dateFormat = useUiStore((s) => s.dateConfig.format);
+    const lang = useUiStore((s) => s.lang);
+    const fmtDate = useDateFormat();
     const { preview: previewFile, run, downloadTemplate } = useAssetImport();
     const resetPreview = previewFile.reset;
     const [state, dispatch] = useReducer(reducer, INITIAL);
     const [refusal, setRefusal] = useState<string | null>(null);
+    // A refusal of the import itself, shown above the step it sent the user to
+    const [runRefusal, setRunRefusal] = useState<{ message: string; key: number } | null>(null);
     const body = useRef<HTMLDivElement>(null);
     // Answers of a file that was replaced or removed meanwhile are dropped
     const pickToken = useRef(0);
@@ -100,16 +149,35 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
         if (!open) return;
         dispatch({ type: 'reset' });
         setRefusal(null);
+        setRunRefusal(null);
         pickToken.current += 1;
         resetPreview();
     }, [open, resetPreview]);
 
     const { kind, step } = state;
+    const contractsQuery = useAssetContractOptions(open && kind === 'rented');
+    const refreshContracts = useSelectRefresh(contractsQuery);
+    const openContracts = useMemo(() => (contractsQuery.data ?? []).filter((c) => !c.closed), [contractsQuery.data]);
+    const contractChoices = useMemo<SearchOption[]>(
+        () =>
+            openContracts.map((c) => ({
+                value: String(c.id),
+                label: `${c.code} - ${localPair(c.vendor, c.vendor_th, lang) ?? ''}`,
+                search: `${c.code} ${c.vendor ?? ''} ${c.vendor_th ?? ''} ${c.details ?? ''}`,
+                sub: c.end_date ? t('asset_contract_ends').replace('{date}', fmtDate.date(c.end_date)) : undefined,
+            })),
+        [openContracts, lang, t, fmtDate],
+    );
+    const chosenContract = state.linkContract ? (openContracts.find((c) => c.id === state.contractId) ?? null) : null;
     const steps = importSteps(kind ?? 'rented');
     const rows = useMemo(
-        () => (state.preview && kind ? rowsWithEdits(state.preview.rows, state.edits, state.preview.options, kind, dateFormat) : []),
-        [state.preview, state.edits, kind, dateFormat],
+        () =>
+            state.preview && kind
+                ? withServerIssues(rowsWithEdits(state.preview.rows, state.edits, state.preview.options, kind, dateFormat), state.serverIssues)
+                : [],
+        [state.preview, state.edits, state.serverIssues, kind, dateFormat],
     );
+    const totalValue = useMemo(() => rows.reduce((sum, row) => sum + (Number(row.values.value) || 0), 0), [rows]);
     const wizard: WizardState = { kind, file: state.file, rows, linkContract: state.linkContract, contractId: state.contractId };
     const busy = previewFile.isPending || run.isPending;
     const hasEdits = Object.keys(state.edits).length > 0;
@@ -164,20 +232,58 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
         return words ?? (isServerFailure(error) ? (serverMessage(error) ?? '') : t('asset_refusal_import_unreadable'));
     };
 
-    // Focus follows the user to the heading of each new step
+    // Focus follows the user to the heading of each new step, and of the done screen
     useEffect(() => {
         if (step !== 'kind') body.current?.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
-    }, [step]);
+    }, [step, state.result]);
 
-    const editCell = useCallback((line: number, column: ImportColumnKey, value: CellEdit) => dispatch({ type: 'edit', line, column, value }), []);
+    const editCell = useCallback((line: number, column: ImportColumnKey, value: CellEdit) => {
+        setRunRefusal(null);
+        dispatch({ type: 'edit', line, column, value });
+    }, []);
 
+    const goTo = (target: StepId) => {
+        setRunRefusal(null);
+        dispatch({ type: 'go', step: target });
+    };
     const goNext = () => {
         const next = steps[steps.indexOf(step) + 1];
-        if (next) dispatch({ type: 'go', step: next });
+        if (next) goTo(next);
     };
     const goBack = () => {
         const before = steps[steps.indexOf(step) - 1];
-        if (before) dispatch({ type: 'go', step: before });
+        if (before) goTo(before);
+    };
+
+    // Runs the import; a refusal moves to the step that can fix it and says why above that step
+    const runImport = () => {
+        if (kind === null || run.isPending) return;
+        setRunRefusal(null);
+        const contractId = kind === 'rented' && state.linkContract ? state.contractId : null;
+        run.mutate(importRunPayload(kind, rows, contractId, dateFormat), {
+            onSuccess: (result) => dispatch({ type: 'done', result }),
+            onError: (error) => {
+                const { code, lines } = refusalBody(error);
+                const overlay: ServerIssueOverlay | null =
+                    code === 'import_rows_invalid'
+                        ? Object.fromEntries(
+                              lines.flatMap(({ row: line, issues }) => {
+                                  const sent = rows.find((r) => r.line === line)?.values;
+                                  return sent ? [[line, { issues, sent }]] : [];
+                              }),
+                          )
+                        : null;
+                if (code === 'link_contract_not_open') void contractsQuery.refetch();
+                setRunRefusal({ message: serverMessage(error, t, 'asset_refusal_') ?? serverFailureText(error), key: Date.now() });
+                dispatch({ type: 'refused', step: stepAfterRefusal(code), overlay, clearContract: code === 'link_contract_not_open' });
+            },
+        });
+    };
+
+    // The done screen closes the dialog first; the page applies the choice once the dialog is gone
+    const finish = (then?: () => void) => {
+        onClose();
+        then?.();
     };
 
     return (
@@ -200,21 +306,27 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
                 />
 
                 {/* Stepper */}
-                <ImportStepper
-                    steps={steps}
-                    current={step}
-                    locked={busy || state.result !== null}
-                    onGo={(target) => dispatch({ type: 'go', step: target })}
-                />
+                <ImportStepper steps={steps} current={step} locked={busy || state.result !== null} finished={state.result !== null} onGo={goTo} />
 
                 {/* Body, top-aligned */}
                 <div ref={body} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6">
+                    {runRefusal && (
+                        <FormErrorBanner
+                            message={runRefusal.message}
+                            shakeKey={runRefusal.key}
+                            className="mx-auto mb-4 w-full max-w-[760px] shrink-0"
+                        />
+                    )}
                     {renderStep()}
                 </div>
 
                 {/* Footer nav */}
-                <DialogFooterBar className="justify-between">
-                    {step === 'kind' ? (
+                <DialogFooterBar className={state.result ? 'justify-end' : 'justify-between'}>
+                    {state.result ? (
+                        <Button type="button" onClick={() => finish()}>
+                            {t('asset_import_done_close')}
+                        </Button>
+                    ) : step === 'kind' ? (
                         <Button type="button" variant="ghost" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
@@ -223,21 +335,36 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
                             {t('asset_import_back')}
                         </Button>
                     )}
-                    <Button
-                        type="button"
-                        disabled={busy || !canLeaveStep(step, wizard)}
-                        aria-describedby={step === 'check' && !canLeaveStep(step, wizard) ? NEXT_BLOCKED_ID : undefined}
-                        onClick={goNext}
-                    >
-                        {step === 'upload' ? t('asset_import_check_files') : t('asset_import_next')}
-                    </Button>
+                    {!state.result &&
+                        (step === 'summary' ? (
+                            <ImportRunButton running={run.isPending} onRun={runImport} />
+                        ) : (
+                            <Button
+                                type="button"
+                                disabled={busy || !canLeaveStep(step, wizard)}
+                                aria-describedby={step === 'check' && !canLeaveStep(step, wizard) ? NEXT_BLOCKED_ID : undefined}
+                                onClick={goNext}
+                            >
+                                {step === 'upload' ? t('asset_import_check_files') : t('asset_import_next')}
+                            </Button>
+                        ))}
                 </DialogFooterBar>
             </DialogContent>
         </Dialog>
     );
 
-    // Step switch: the check, contract and summary steps join here
+    // Step switch
     function renderStep() {
+        if (state.result !== null && kind !== null)
+            return (
+                <ImportDone
+                    kind={kind}
+                    result={state.result}
+                    totalValue={totalValue}
+                    onShowImported={() => finish(onShowImported)}
+                    onShowAwaiting={() => finish(onShowAwaiting)}
+                />
+            );
         switch (step) {
             case 'kind':
                 return <ImportKindStep kind={kind} onChange={changeKind} />;
@@ -263,6 +390,30 @@ export function AssetImportDialog({ open, onClose }: DialogProps) {
                         options={state.preview.options}
                         edits={state.edits}
                         onEdit={editCell}
+                    />
+                );
+            case 'contract':
+                return (
+                    <ImportContractStep
+                        count={rows.length}
+                        linkContract={state.linkContract}
+                        contractId={state.contractId}
+                        options={contractChoices}
+                        loading={contractsQuery.isLoading}
+                        refresh={refreshContracts}
+                        onChange={(link, id) => dispatch({ type: 'contract', link, id })}
+                    />
+                );
+            case 'summary':
+                return kind === null || state.preview === null ? null : (
+                    <ImportSummaryStep
+                        kind={kind}
+                        fileName={state.file?.name ?? ''}
+                        rows={rows}
+                        options={state.preview.options}
+                        contractCode={chosenContract?.code ?? null}
+                        running={run.isPending}
+                        onChangeContract={() => goTo('contract')}
                     />
                 );
             default:
