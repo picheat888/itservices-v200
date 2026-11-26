@@ -482,4 +482,5 @@ export const settings: Dict = {
     md_photo_shared_hint: 'ทรัพย์สินทุกชิ้นของรุ่นนี้ใช้รูปนี้ ไม่ต้องแนบที่ทรัพย์สินทีละชิ้น',
     md_photo_err_type: 'รองรับเฉพาะไฟล์ PNG, JPG หรือ WebP',
     md_photo_err_size: 'ไฟล์เกิน 10 MB',
+    md_photo_err_upload: 'อัปโหลดรูปไม่สำเร็จ ลองครอปใหม่หรือเลือกรูปอื่น',
 };

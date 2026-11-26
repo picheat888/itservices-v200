@@ -17,17 +17,18 @@ export function ModelPhotoLightbox({ photo, onClose }: { photo: LightboxPhoto | 
     useEffect(() => {
         if (photo) setShown(photo);
     }, [photo]);
+    const view = photo ?? shown;
 
     return (
         <Dialog open={!!photo} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] gap-0 p-0">
                 <div className="px-5 pt-4 pr-12 pb-3">
-                    {shown?.brand && <div className="text-muted-foreground text-xs font-semibold">{shown.brand}</div>}
-                    <DialogTitle className="mt-0.5 text-base font-extrabold">{shown?.model}</DialogTitle>
+                    {view?.brand && <div className="text-muted-foreground text-xs font-semibold">{view.brand}</div>}
+                    <DialogTitle className="mt-0.5 text-base font-extrabold">{view?.model}</DialogTitle>
                 </div>
                 <div className="px-5 pb-5">
                     <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-[10px] border border-black/10 bg-white">
-                        {shown && <img src={shown.src} alt={shown.model} className="h-full w-full object-contain" />}
+                        {view && <img src={view.src} alt={view.model} className="h-full w-full object-contain" />}
                     </div>
                     <DialogDescription className="mt-3 text-xs">{t('model_photo_sample_note')}</DialogDescription>
                 </div>

@@ -7,7 +7,7 @@ import { AlertCircle, Crop, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { Area, MediaSize, Point } from 'react-easy-crop';
 import Cropper from 'react-easy-crop';
-import { clipToImage, fitWholeZoom } from '../lib/crop-math';
+import { clipToImage, fallbackType, fitWholeZoom, photoFileName } from '../lib/crop-math';
 
 interface Props {
     /** Object URL to crop, or null when closed. Kept mounted so the close animation can play. */
@@ -45,18 +45,20 @@ async function getCroppedFile(imageSrc: string, pixelCrop: Area, product: boolea
             } else {
                 ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, SIZE, SIZE);
             }
-            // WebP (q≈0.9) keeps transparency at a fraction of a canvas PNG's size
-            canvas.toBlob(
-                (blob) => {
+            // WebP (q≈0.9) keeps transparency small; iPad Safari cannot write it and hands back PNG
+            const encode = (type: string) => new Promise<Blob | null>((done) => canvas.toBlob(done, type, 0.9));
+            encode('image/webp')
+                .then((blob) => {
+                    const retry = blob ? fallbackType(product, blob.type) : null;
+                    return retry ? encode(retry) : blob;
+                })
+                .then((blob) => {
                     if (!blob) {
                         reject(new Error('toBlob failed'));
                         return;
                     }
-                    resolve(new File([blob], 'photo.webp', { type: 'image/webp' }));
-                },
-                'image/webp',
-                0.9,
-            );
+                    resolve(new File([blob], photoFileName(blob.type), { type: blob.type }));
+                }, reject);
         };
         img.onerror = reject;
         img.src = imageSrc;
@@ -74,6 +76,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [minZoom, setMinZoom] = useState(1);
+    const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
     const [croppedPixels, setCroppedPixels] = useState<Area | null>(null);
     const [applying, setApplying] = useState(false);
     const [failed, setFailed] = useState(false);
@@ -86,6 +89,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
         setCrop({ x: 0, y: 0 });
         setZoom(1);
         setMinZoom(1);
+        setNatural(null);
         setCroppedPixels(null);
         setApplying(false);
         setFailed(false);
@@ -99,12 +103,16 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
     const onMediaLoaded = useCallback(
         (media: MediaSize) => {
             if (!product) return;
+            setNatural({ width: media.naturalWidth, height: media.naturalHeight });
             const whole = fitWholeZoom(media, PRODUCT_FRAME);
             setMinZoom(whole);
             setZoom(whole);
         },
         [product],
     );
+
+    // A product frame dragged fully off the picture would save a plain white square
+    const offPicture = product && !!croppedPixels && !!natural && clipToImage(croppedPixels, natural, 1) === null;
 
     const apply = async () => {
         if (!croppedPixels || !src) return;
@@ -182,7 +190,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, varian
                     <Button variant="outline" onClick={onCancel} disabled={applying}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={apply} disabled={applying || !croppedPixels}>
+                    <Button onClick={apply} disabled={applying || !croppedPixels || offPicture}>
                         {applying && <Loader2 className="h-4 w-4 animate-spin" />}
                         {applying ? t('photo_crop_applying') : t('photo_crop_apply')}
                     </Button>

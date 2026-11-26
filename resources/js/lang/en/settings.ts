@@ -486,4 +486,5 @@ export const settings: Dict = {
     md_photo_shared_hint: 'Every asset of this model uses this photo, so there is no need to attach one to each asset.',
     md_photo_err_type: 'Only PNG, JPG or WebP files are allowed',
     md_photo_err_size: 'File exceeds 10 MB',
+    md_photo_err_upload: 'The photo could not be uploaded. Crop it again or choose another photo.',
 };

@@ -29,7 +29,7 @@ test('only the 56 and 72 tiles get the expand badge, and only the 20 tile is rou
 });
 
 test('the lightbox hides the brand line when the model has none', () => {
-    assert.match(lightbox, /\{shown\?\.brand && /);
+    assert.match(lightbox, /\{view\?\.brand && /);
     assert.equal(th.model_photo_sample_note, 'รูปตัวอย่างของรุ่นนี้ เครื่องจริงอาจต่างกันเล็กน้อย');
     assert.equal(th.photo_tap_to_change, 'แตะรูปเพื่อเปลี่ยน');
     assert.equal(th.model_photo_view, 'ดูรูปใหญ่');

@@ -146,7 +146,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                 setNameError(t('md_name_taken'));
                 nameRef.current?.focus();
             } else if (hasFieldError(err, 'photo')) {
-                setPhotoError(t('md_photo_err_type'));
+                setPhotoError(t('md_photo_err_upload'));
             } else {
                 formError.show(serverMessage(err) ?? t('cd_error'));
             }
