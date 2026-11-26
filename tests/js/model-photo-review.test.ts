@@ -39,6 +39,12 @@ test('the large view never paints empty or the previous photo while it opens', (
     assert.doesNotMatch(lightbox, /shown\?\.model|shown\.src/);
 });
 
+test('the large view shows the whole square photo, never cut by its frame', () => {
+    assert.match(lightbox, /relative aspect-square/);
+    assert.match(lightbox, /absolute inset-0 h-full w-full object-contain/);
+    assert.doesNotMatch(lightbox, /aspect-\[4\/3\]/);
+});
+
 test('a product crop dragged fully off the picture cannot be applied', () => {
     assert.match(crop, /const offPicture = /);
     assert.match(crop, /disabled=\{applying \|\| !croppedPixels \|\| offPicture\}/);

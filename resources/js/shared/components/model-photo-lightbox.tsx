@@ -21,14 +21,15 @@ export function ModelPhotoLightbox({ photo, onClose }: { photo: LightboxPhoto | 
 
     return (
         <Dialog open={!!photo} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="w-[calc(100vw-2rem)] max-w-[560px] gap-0 p-0">
+            <DialogContent className="max-h-[min(860px,calc(100dvh-72px))] w-[calc(100vw-2rem)] max-w-[560px] gap-0 overflow-y-auto p-0">
                 <div className="px-5 pt-4 pr-12 pb-3">
                     {view?.brand && <div className="text-muted-foreground text-xs font-semibold">{view.brand}</div>}
                     <DialogTitle className="mt-0.5 text-base font-extrabold">{view?.model}</DialogTitle>
                 </div>
                 <div className="px-5 pb-5">
-                    <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-[10px] border border-black/10 bg-white">
-                        {view && <img src={view.src} alt={view.model} className="h-full w-full object-contain" />}
+                    {/* Square like the saved photo, so the whole photo shows */}
+                    <div className="relative aspect-square w-full overflow-hidden rounded-[10px] border border-black/10 bg-white">
+                        {view && <img src={view.src} alt={view.model} className="absolute inset-0 h-full w-full object-contain" />}
                     </div>
                     <DialogDescription className="mt-3 text-xs">{t('model_photo_sample_note')}</DialogDescription>
                 </div>
