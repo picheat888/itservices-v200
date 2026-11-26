@@ -2336,7 +2336,7 @@ export const report: Dict = {
     rep_info_employees_directory_total: 'Every employee in the chosen department, section and search, including those who resigned',
     rep_info_employees_directory_active: 'Employees with no resignation recorded as of today',
     rep_info_employees_directory_resigned:
-        'Employees with a recorded resignation, including those whose last day is still ahead. The line below counts those whose last day has passed this year, not counting today',
+        'Employees with a recorded resignation, including those whose last day is still ahead. The line below counts those whose last day has passed this year',
     rep_info_employees_directory_no_thai_name: 'Active employees whose Thai first or last name is still empty',
     rep_info_access_overview_ac_active: 'Access grants not revoked now, leavers’ included, by resource type, whatever the dates.',
     rep_info_access_overview_ac_holders:
