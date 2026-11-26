@@ -12,6 +12,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\ReportCatalogue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Tests\Concerns\ExportsReports;
@@ -164,10 +165,89 @@ class EmployeeDirectoryReportTest extends TestCase
         $this->assertSame(2, $all['no_thai_name']['value']);
         $this->assertSame('amber', $all['no_thai_name']['tone']);
         $this->assertSame('rep_n_ed_active_only', $all['no_thai_name']['note']['label_key']);
-        $this->assertSame(3, $tiles('?status=resigned')['total']['value']);
 
         $report = ReportCatalogue::tabular('employees.directory');
         $this->assertContains(['สถานะ', 'ลาออก'], $report->scopeLines($report->resolveFilters(['status' => 'resigned'])));
+    }
+
+    /** @return Collection<string, array<string, mixed>> */
+    private function tiles(string $query = ''): Collection
+    {
+        return collect($this->actingAs($this->reader())
+            ->getJson('/api/reports/tabular/employees.directory/summary'.$query)->assertOk()->json('data.summary'))->keyBy('key');
+    }
+
+    public function test_tiles_ignore_the_status_switch_so_files_count_like_the_page(): void
+    {
+        [, , , $it] = $this->team();
+
+        $this->assertEquals($this->tiles("?department_id={$it->id}"), $this->tiles("?department_id={$it->id}&status=resigned"));
+        $this->assertSame(3, $this->tiles('?status=resigned')['total']['value']);
+        $this->assertSame(2, $this->tiles('?status=active')['active']['value']);
+    }
+
+    public function test_leavers_this_year_count_only_last_days_already_passed(): void
+    {
+        $this->employee('A', ['status' => 'resigned', 'last_day' => '2026-03-31']);
+        $this->employee('B', ['status' => 'resigned', 'last_day' => '2026-11-25']);
+        $this->employee('C', ['status' => 'resigned', 'last_day' => '2026-11-26']);
+        $this->employee('D', ['status' => 'resigned', 'last_day' => '2026-12-15']);
+
+        $resigned = $this->tiles()['resigned'];
+
+        $this->assertSame(4, $resigned['value']);
+        $this->assertSame(['n' => 2], $resigned['note']['values']);
+    }
+
+    public function test_one_department_reads_in_the_singular(): void
+    {
+        [, , , $it] = $this->team();
+        $this->employee('900009', ['department_id' => Department::create(['code' => 'HR', 'name' => 'HR'])->id]);
+
+        $this->assertSame(['label_key' => 'rep_n_ed_departments_one', 'values' => ['n' => 1]], $this->tiles("?department_id={$it->id}")['total']['note']);
+        $this->assertSame('rep_n_ed_departments', $this->tiles()['total']['note']['label_key']);
+    }
+
+    public function test_a_half_filled_thai_name_shows_the_part_there_is(): void
+    {
+        $this->employee('A');
+        $this->employee('B', ['first_name_th' => 'สมชาย', 'last_name_th' => null]);
+        $this->employee('C', ['first_name_th' => ' ', 'last_name_th' => 'ใจดี']);
+        $this->employee('D', ['first_name_th' => null, 'last_name_th' => null]);
+
+        $rows = array_column($this->rows(), null, 'code');
+
+        $this->assertSame(['ชื่อ สกุล', false], [$rows['A']['name_th'], $rows['A']['_thai_name_missing']]);
+        $this->assertSame(['สมชาย', true], [$rows['B']['name_th'], $rows['B']['_thai_name_missing']]);
+        $this->assertSame(['ใจดี', true], [$rows['C']['name_th'], $rows['C']['_thai_name_missing']]);
+        $this->assertSame([null, true], [$rows['D']['name_th'], $rows['D']['_thai_name_missing']]);
+    }
+
+    public function test_a_thai_name_of_only_tabs_or_line_breaks_counts_as_missing_on_the_row_and_the_tile(): void
+    {
+        $this->employee('A');
+        $this->employee('B', ['first_name_th' => "\t"]);
+        $this->employee('C', ['last_name_th' => " \r\n"]);
+
+        $rows = array_column($this->rows(), null, 'code');
+
+        $this->assertSame(2, $this->tiles()['no_thai_name']['value']);
+        $this->assertSame([false, true, true], [$rows['A']['_thai_name_missing'], $rows['B']['_thai_name_missing'], $rows['C']['_thai_name_missing']]);
+        $this->assertSame('สกุล', $rows['B']['name_th']);
+        $this->assertSame('ชื่อ', $rows['C']['name_th']);
+    }
+
+    public function test_section_options_name_their_department(): void
+    {
+        [, , , , $infra] = $this->team();
+        $hr = Department::create(['code' => 'HR', 'name' => 'Human Resources']);
+        $hrInfra = Section::create(['code' => 'INF2', 'department_id' => $hr->id, 'name' => 'Infra']);
+
+        $filters = $this->actingAs($this->reader())->getJson('/api/reports/tabular/employees.directory')->assertOk()->json('data.filters');
+        $options = array_column(collect($filters)->firstWhere('name', 'section_id')['options'], null, 'value');
+
+        $this->assertSame(['Information Technology', 'ฝ่ายเทคโนโลยีสารสนเทศ'], [$options[$infra->id]['hint'], $options[$infra->id]['hint_th']]);
+        $this->assertSame(['Human Resources', null], [$options[$hrInfra->id]['hint'], $options[$hrInfra->id]['hint_th']]);
     }
 
     public function test_sheet_carries_fourteen_columns_in_order_with_blank_missing_values(): void

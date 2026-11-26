@@ -163,8 +163,8 @@ export function TabularFilterBar({
                                                 return {
                                                     value: String(o.value),
                                                     label: text,
-                                                    hint: o.hint ?? undefined,
-                                                    search: `${text} ${o.label ?? ''} ${o.label_th ?? ''} ${o.hint ?? ''}`,
+                                                    hint: (lang === 'th' ? o.hint_th || o.hint : o.hint) ?? undefined,
+                                                    search: `${text} ${o.label ?? ''} ${o.label_th ?? ''} ${o.hint ?? ''} ${o.hint_th ?? ''}`,
                                                 };
                                             }),
                                         )}

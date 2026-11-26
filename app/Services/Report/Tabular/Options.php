@@ -35,12 +35,18 @@ final class Options
     }
 
     /**
-     * @return list<array{value: int, label: string, label_th: ?string}>
+     * Sections, each with its department's name as `hint` / `hint_th` for the picker's second line —
+     * two departments may name a section alike.
+     *
+     * @return list<array{value: int, label: string, label_th: ?string, hint: ?string, hint_th: ?string}>
      */
     public static function sections(): array
     {
-        return Section::query()->orderBy('name')->get(['id', 'name', 'name_th'])
-            ->map(fn (Section $s) => ['value' => $s->id, 'label' => $s->name, 'label_th' => $s->name_th])->all();
+        return Section::query()->with('department:id,name,name_th')->orderBy('name')->get(['id', 'department_id', 'name', 'name_th'])
+            ->map(fn (Section $s) => [
+                'value' => $s->id, 'label' => $s->name, 'label_th' => $s->name_th,
+                'hint' => $s->department?->name, 'hint_th' => $s->department?->name_th,
+            ])->all();
     }
 
     /**

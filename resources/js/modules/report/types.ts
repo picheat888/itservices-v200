@@ -219,6 +219,8 @@ export interface FilterOption {
     label_key?: string;
     /** A second line under the option in the picker (a contract's name under its code). */
     hint?: string | null;
+    /** The second line on the Thai page, when it has its own (a section's department); else `hint`. */
+    hint_th?: string | null;
 }
 
 export interface TabularFilterDef {

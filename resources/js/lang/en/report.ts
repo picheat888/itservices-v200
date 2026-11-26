@@ -1648,12 +1648,14 @@ export const report: Dict = {
     rep_ed_status_active: 'Active',
     rep_ed_status_resigned: 'Resigned',
     rep_n_ed_departments: 'In {n} departments',
+    rep_n_ed_departments_one: 'In {n} department',
     rep_n_ed_share: '{pct}% of all',
     rep_n_ed_left_this_year: '{n} left this year',
     rep_n_ed_active_only: 'Active employees only',
     rep_ed_rows_title: 'Employees',
     rep_ed_status_all: 'All',
     rep_ed_no_thai_name: 'No Thai name',
+    rep_ed_thai_name_incomplete: 'Thai name incomplete',
     rep_ed_no_phone: 'No phone',
     rep_ed_no_account: 'No account',
 
@@ -2334,7 +2336,7 @@ export const report: Dict = {
     rep_info_employees_directory_total: 'Every employee in the chosen department, section and search, including those who resigned',
     rep_info_employees_directory_active: 'Employees with no resignation recorded as of today',
     rep_info_employees_directory_resigned:
-        'Employees with a recorded resignation, including those whose last day is still ahead. The line below counts last days in this year',
+        'Employees with a recorded resignation, including those whose last day is still ahead. The line below counts those whose last day has passed this year, not counting today',
     rep_info_employees_directory_no_thai_name: 'Active employees whose Thai first or last name is still empty',
     rep_info_access_overview_ac_active: 'Access grants not revoked now, leavers’ included, by resource type, whatever the dates.',
     rep_info_access_overview_ac_holders:

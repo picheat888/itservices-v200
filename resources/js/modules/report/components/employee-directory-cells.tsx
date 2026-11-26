@@ -4,6 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { TriangleAlert } from 'lucide-react';
 import { useTabularSummary } from '../hooks/use-reports';
 import { withoutFilters } from '../lib/filter-scope';
+import { thaiNameNote } from '../lib/thai-name-note';
 import type { TabularFilters } from '../types';
 import { Segments } from './access-overview-cards';
 import { DepartmentCell } from './employee-overview-cards';
@@ -35,17 +36,31 @@ export function StatusSegments({ filters, patch }: { filters: TabularFilters; pa
     );
 }
 
-/** The Thai full name, or an amber note when it is still missing. */
-function ThaiNameCell({ value }: { value: unknown }) {
-    const t = useT();
-    const name = text(value);
-    if (name) return <span title={name}>{name}</span>;
-
+function AmberNote({ children }: { children: React.ReactNode }) {
     return (
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-300">
             <TriangleAlert aria-hidden className="h-3.5 w-3.5 shrink-0" />
-            {t('rep_ed_no_thai_name')}
+            {children}
         </span>
+    );
+}
+
+/** The Thai name, or the part there is; an amber note on the active rows the "no Thai name" tile counts. */
+function ThaiNameCell({ row }: { row: Row }) {
+    const t = useT();
+    const name = text(row.name_th);
+    const note = thaiNameNote(row);
+
+    if (note === 'missing') return <AmberNote>{t('rep_ed_no_thai_name')}</AmberNote>;
+    if (!name) return <>—</>;
+
+    return (
+        <div className="min-w-0">
+            <div className="truncate" title={name}>
+                {name}
+            </div>
+            {note === 'incomplete' && <AmberNote>{t('rep_ed_thai_name_incomplete')}</AmberNote>}
+        </div>
     );
 }
 
@@ -88,7 +103,7 @@ function UsernameCell({ value }: { value: unknown }) {
 export function directoryCell(key: string, row: Row): React.ReactNode | undefined {
     switch (key) {
         case 'name_th':
-            return <ThaiNameCell value={row.name_th} />;
+            return <ThaiNameCell row={row} />;
         case 'department':
             return <DepartmentCell row={row} />;
         case 'email':

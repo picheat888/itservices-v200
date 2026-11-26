@@ -27,6 +27,7 @@ import {
 } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import { withoutFilters } from '../lib/filter-scope';
+import { pdfColumnKeys } from '../lib/inner-columns';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
 import { CARD_HEADING_TINT } from './card-heading';
 import { ColumnPicker } from './column-picker';
@@ -228,10 +229,15 @@ function TabularReportBody({
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
     const scheduleMut = useCreateSchedule();
-    // Only sent when something is hidden, so a full export stays a plain request. A report with
-    // no table on screen has no column picker either, so its files always carry every column —
-    // even if columns were hidden in this browser before the table went.
-    const exportColumns = definition.shows_table && hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
+    // Only sent when something is hidden; a report with no table on screen always exports every column.
+    const exportColumns =
+        definition.shows_table && hidden.length > 0
+            ? pdfColumnKeys(
+                  visibleColumns.map((c) => c.key),
+                  hidden,
+                  extras.innerHosts ?? {},
+              )
+            : undefined;
     // View settings (ReportFilter::viewOnly — what a table groups by) live on the page's own control:
     // out of the filter bar, never "filtered", and kept when the filters are cleared.
     const viewFilters = definition.filters.filter((f) => f.view).map((f) => f.name);
@@ -297,7 +303,7 @@ function TabularReportBody({
                 title={t(`rep_${stem}_title`)}
                 total={rowsTotal}
                 formats={definition.formats}
-                note={exportColumns ? t('rep_export_columns_note').replace('{n}', fmtN(exportColumns.length)) : undefined}
+                note={exportColumns ? t('rep_export_columns_note').replace('{n}', fmtN(drawnColumns.length)) : undefined}
                 filterChips={tabularFilterChips(definition, filters, t, lang, true)}
                 onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format, columns: exportColumns })}
                 isPending={exportMut.isPending}
@@ -339,6 +345,8 @@ export interface TabularReportExtras {
     /** Columns the page draws inside another column's cell (a ticket number under its subject) — kept in
      *  each row and in the files, left out of the table's own columns and the column picker. */
     innerColumns?: string[];
+    /** Inner column → the column whose cell draws it; hiding that column drops the inner one from the PDF too. */
+    innerHosts?: Record<string, string>;
     filterLead?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;
     /** Something at the end of the bar, after its controls (a "data as of" note). */
     filterTrail?: (ctx: { filters: TabularFilters; patch: (next: TabularFilters) => void }) => React.ReactNode;

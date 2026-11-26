@@ -1640,12 +1640,14 @@ export const report: Dict = {
     rep_ed_status_active: 'ใช้งาน',
     rep_ed_status_resigned: 'ลาออก',
     rep_n_ed_departments: 'ใน {n} แผนก',
+    rep_n_ed_departments_one: 'ใน {n} แผนก',
     rep_n_ed_share: '{pct}% ของทั้งหมด',
     rep_n_ed_left_this_year: 'ลาออกปีนี้ {n} คน',
     rep_n_ed_active_only: 'นับเฉพาะคนที่ใช้งาน',
     rep_ed_rows_title: 'รายชื่อพนักงาน',
     rep_ed_status_all: 'ทั้งหมด',
     rep_ed_no_thai_name: 'ยังไม่มีชื่อไทย',
+    rep_ed_thai_name_incomplete: 'ชื่อไทยไม่ครบ',
     rep_ed_no_phone: 'ไม่มีเบอร์โทร',
     rep_ed_no_account: 'ยังไม่มีบัญชี',
 
@@ -2314,7 +2316,7 @@ export const report: Dict = {
     rep_info_employees_directory_total: 'พนักงานทุกคนตามแผนก หน่วยงาน และคำค้นที่เลือก รวมคนที่ลาออกแล้ว',
     rep_info_employees_directory_active: 'พนักงานที่ยังไม่ได้บันทึกลาออก ณ วันนี้',
     rep_info_employees_directory_resigned:
-        'พนักงานที่บันทึกลาออกแล้ว รวมคนที่วันทำงานวันสุดท้ายยังมาไม่ถึง บรรทัดล่างนับคนที่วันทำงานวันสุดท้ายอยู่ในปีนี้',
+        'พนักงานที่บันทึกลาออกแล้ว รวมคนที่วันทำงานวันสุดท้ายยังมาไม่ถึง บรรทัดล่างนับคนที่ทำงานวันสุดท้ายไปแล้วในปีนี้ ไม่นับวันนี้',
     rep_info_employees_directory_no_thai_name: 'พนักงานที่ใช้งานอยู่แต่ชื่อหรือนามสกุลภาษาไทยยังว่าง',
     rep_info_access_overview_ac_active: 'จำนวนสิทธิ์ที่ยังไม่ถอนตอนนี้ รวมสิทธิ์ที่ผู้ลาออกยังถือ แยกตามประเภท Resource ไม่ขึ้นกับช่วงวันที่',
     rep_info_access_overview_ac_holders:

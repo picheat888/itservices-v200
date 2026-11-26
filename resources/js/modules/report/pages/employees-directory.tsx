@@ -2,8 +2,8 @@
 import { directoryCell, StatusSegments } from '../components/employee-directory-cells';
 import { TabularReportView } from '../components/tabular-report-view';
 
-/** Columns drawn inside another column's cell — kept in the rows and files. */
-const INNER = ['section', 'phone'];
+/** Columns drawn inside another column's cell, by the column that draws them — kept in the rows and files. */
+const INNER_HOSTS = { section: 'department', phone: 'email' };
 
 export default function EmployeesDirectoryReportPage() {
     return (
@@ -14,7 +14,8 @@ export default function EmployeesDirectoryReportPage() {
                 // สถานะ narrows only the list, so it sits on the list's heading and the tiles ignore it.
                 hiddenFilters: ['status'],
                 rowsOnlyFilters: ['status'],
-                innerColumns: INNER,
+                innerColumns: Object.keys(INNER_HOSTS),
+                innerHosts: INNER_HOSTS,
                 rowsLead: ({ filters, patch }) => <StatusSegments filters={filters} patch={patch} />,
                 rowsTitle: 'rep_ed_rows_title',
                 renderCell: directoryCell,
