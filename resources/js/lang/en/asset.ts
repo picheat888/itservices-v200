@@ -216,6 +216,17 @@ export const asset: Dict = {
     asset_location_save: 'Save location',
     asset_location_failed: 'Could not update the location',
 
+    // asset-link-contract-dialog.tsx — linking rented assets to a contract
+    asset_link_contract: 'Link contract',
+    asset_link_contract_title: 'Link a lease contract',
+    asset_link_contract_hint: 'Only open hardware contracts can be chosen',
+    asset_link_contract_failed: 'Could not link the contract',
+    asset_contract_ends: 'Ends {date}',
+    asset_refusal_link_not_free_rental: 'Only rented assets without a contract can be linked. Take these out of the selection first: {codes}',
+    asset_refusal_link_contract_not_open: 'This contract has closed. Pick another one.',
+    asset_refusal_link_asset_missing: 'A selected asset no longer exists. Clear the selection and pick again.',
+    asset_awaiting_contract_strip: '{count} awaiting a contract',
+
     // asset-writeoff-dialog.tsx — writing off with a disposal note
     asset_writeoff_title: 'Write off selected assets',
     asset_writeoff_reason: 'Write-off reason',

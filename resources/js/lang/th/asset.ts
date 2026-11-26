@@ -214,6 +214,17 @@ export const asset: Dict = {
     asset_location_save: 'บันทึกที่ตั้ง',
     asset_location_failed: 'อัปเดตที่ตั้งไม่สำเร็จ',
 
+    // asset-link-contract-dialog.tsx — linking rented assets to a contract
+    asset_link_contract: 'ผูกสัญญา',
+    asset_link_contract_title: 'ผูกสัญญาเช่า',
+    asset_link_contract_hint: 'เลือกได้เฉพาะสัญญาฮาร์ดแวร์ที่ยังไม่ปิด',
+    asset_link_contract_failed: 'ผูกสัญญาไม่สำเร็จ',
+    asset_contract_ends: 'สิ้นสุด {date}',
+    asset_refusal_link_not_free_rental: 'ผูกสัญญาได้เฉพาะของเช่าที่ยังไม่มีสัญญา เอารายการเหล่านี้ออกจากที่เลือกก่อน {codes}',
+    asset_refusal_link_contract_not_open: 'สัญญานี้ปิดไปแล้ว เลือกสัญญาฉบับอื่น',
+    asset_refusal_link_asset_missing: 'มีทรัพย์สินที่เลือกไว้ถูกลบไปแล้ว ยกเลิกการเลือกแล้วเลือกใหม่',
+    asset_awaiting_contract_strip: 'รอผูกสัญญา {count} รายการ',
+
     // asset-writeoff-dialog.tsx — writing off with a disposal note
     asset_writeoff_title: 'ตัดจำหน่ายทรัพย์สินที่เลือก',
     asset_writeoff_reason: 'เหตุผลการตัดจำหน่าย',

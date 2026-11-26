@@ -1,7 +1,7 @@
 // Multi-select rules of the asset list: which bulk action a status offers, and the status group a selection is locked to.
 import type { AssetStatus } from '@/shared/types';
 
-export type BulkAction = 'transfer' | 'recall' | 'force_recall' | 'receive' | 'relocate' | 'writeoff';
+export type BulkAction = 'transfer' | 'recall' | 'force_recall' | 'receive' | 'relocate' | 'writeoff' | 'link_contract';
 
 export interface BulkPermissions {
     transfer: boolean;
@@ -9,10 +9,33 @@ export interface BulkPermissions {
     forceRecall: boolean;
     edit: boolean;
     retire: boolean;
+    /** True while the awaiting-contract filter is on for a viewer who may edit; every row there can be linked. */
+    linkContract: boolean;
 }
 
 /** The bulk action a status offers this viewer; null when its rows cannot be ticked at all. */
 export function bulkActionFor(status: AssetStatus | null, can: BulkPermissions): BulkAction | null {
+    const action = statusAction(status, can);
+    if (action) return action;
+    return can.linkContract && status !== null && status !== 'writeoff' ? 'link_contract' : null;
+}
+
+/** A row's checkbox works when its status offers an action and matches the group a selection is locked to. */
+export function canTickRow(status: AssetStatus, locked: AssetStatus | null, can: BulkPermissions): boolean {
+    return bulkActionFor(status, can) !== null && (locked === null || status === locked);
+}
+
+/** False once the locked group's status offers no action (the filter was removed), so the selection is dropped. */
+export function selectionStillValid(locked: AssetStatus | null, can: BulkPermissions): boolean {
+    return locked === null || bulkActionFor(locked, can) !== null;
+}
+
+/** True when something is ticked and every ticked asset is a rented one with no contract. */
+export function allFreeRentals(ids: readonly number[], free: Readonly<Record<number, boolean>>): boolean {
+    return ids.length > 0 && ids.every((id) => free[id] === true);
+}
+
+function statusAction(status: AssetStatus | null, can: BulkPermissions): BulkAction | null {
     switch (status) {
         case 'ready':
             return can.transfer ? 'transfer' : can.retire ? 'writeoff' : null;

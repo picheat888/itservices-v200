@@ -55,9 +55,11 @@ import {
     ChevronRight,
     CircleDot,
     Clock,
+    FileText,
     Filter,
     FlaskConicalOff,
     Layers,
+    Link2,
     Lock,
     MapPin,
     MoreHorizontal,
@@ -78,6 +80,7 @@ import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetEventBadge } from '../components/asset-event-badge';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { Party } from '../components/asset-history-tab';
+import { AssetLinkContractDialog } from '../components/asset-link-contract-dialog';
 import { AssetLocationDialog } from '../components/asset-location-dialog';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
@@ -87,10 +90,12 @@ import { AssetTagBadge } from '../components/asset-tag-badge';
 import { TopPurchasedCard, TopRentedCard } from '../components/asset-top-tables';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
+import { AwaitingContractButton } from '../components/awaiting-contract-button';
 import { PendingReturnButton } from '../components/pending-return-button';
 import { useAsset, useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
+import { AWAITING_CONTRACT, isAwaitingContract, statusFilterValue } from '../lib/awaiting-contract';
 import { coverDaysLeft } from '../lib/cover-days';
-import { bulkActionFor as assetBulkAction, toggleGroup } from '../lib/selection';
+import { allFreeRentals, bulkActionFor as assetBulkAction, canTickRow, selectionStillValid, toggleGroup } from '../lib/selection';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
@@ -308,7 +313,7 @@ export default function AssetsPage() {
     const typeFilter = (searchParams.get('type') ?? '') as AssetType | '';
     const sourceFilter = searchParams.get('source') ?? '';
     const statusParam = searchParams.get('status');
-    const statusFilter: AssetStatus | '' = statusParam && statusParam in ASSET_STATUS_META ? (statusParam as AssetStatus) : '';
+    const statusFilter = statusFilterValue(statusParam);
     const warehouseFilter = searchParams.get('warehouse') ?? '';
     const { page, perPage } = list;
     // Typing only writes ?search; the page returns to 1 when the debounced search is sent.
@@ -325,12 +330,12 @@ export default function AssetsPage() {
     }, [searchChanged, sentSearch, page]); // eslint-disable-line react-hooks/exhaustive-deps
     const setTypeFilter = (value: AssetType | '') => setListParams({ type: value });
     const setSourceFilter = (value: string) => setListParams({ source: value });
-    const setStatusFilter = (value: AssetStatus | '') => setListParams({ status: value });
+    const setStatusFilter = (value: AssetStatus | typeof AWAITING_CONTRACT | '') => setListParams({ status: value });
     const setWarehouseFilter = (value: string) => setListParams({ warehouse: value });
-    // The strip's button: list the assets awaiting receipt, or — if already listed — show all again.
+    // A strip's button: list the assets of one status, or — if already listed — show all again.
     // Switching tab and filter is one URL write (tab change is a history step, like any tab click).
-    const showPendingReturns = () => {
-        const listed = tab === 'inventory' && searchParams.get('status') === 'pending_return';
+    const showStatus = (status: string) => {
+        const listed = tab === 'inventory' && searchParams.get('status') === status;
         if (listed) {
             setListParams({ status: null, page: null });
             return;
@@ -339,7 +344,7 @@ export default function AssetsPage() {
             const next = new URLSearchParams(sp);
             if (tab !== 'inventory') LIST_KEYS.forEach((key) => next.delete(key));
             next.set('tab', 'inventory');
-            next.set('status', 'pending_return');
+            next.set('status', status);
             next.delete('page');
             return next;
         });
@@ -355,7 +360,11 @@ export default function AssetsPage() {
     // Where each ticked asset came from, kept as rows are ticked (the selection spans pages, so
     // the rows themselves may no longer be loaded): Return to lessor is offered only for rented ones.
     const [selectedSource, setSelectedSource] = useState<Record<number, Asset['source']>>({});
-    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor'>(null);
+    // Which ticked assets are rented ones awaiting a contract (the link button needs all of them to be).
+    const [selectedFree, setSelectedFree] = useState<Record<number, boolean>>({});
+    const [bulkDialog, setBulkDialog] = useState<
+        null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff' | 'returnToVendor' | 'linkContract'
+    >(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
     // One asset leaving from its detail dialog — the same dialogs the bulk bar opens, for one id.
     // Closing only clears open: the id stays so the dialog keeps its content while it fades out.
@@ -432,6 +441,7 @@ export default function AssetsPage() {
     // Assets sent back and awaiting IT receipt — the sidebar badge's count (same query, loaded
     // by ProtectedRoute before any page draws).
     const pendingReturnCount = useSidebarBadge('assets');
+    const awaitingContractCount = useSidebarBadge('assets_awaiting_contract');
 
     // Transfer log — the same columns the asset's own History tab uses, plus the asset itself,
     // since this list spans every asset in the system.
@@ -513,11 +523,19 @@ export default function AssetsPage() {
     };
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
-    const bulkActionFor = useCallback(
-        (status: AssetStatus | null) =>
-            assetBulkAction(status, { transfer: canTransfer, receive: canReceive, forceRecall: canForceRecall, edit: canEdit, retire: canRetire }),
-        [canTransfer, canReceive, canForceRecall, canEdit, canRetire],
+    const linkFilterOn = canEdit && statusFilter === AWAITING_CONTRACT;
+    const bulkPerms = useMemo(
+        () => ({
+            transfer: canTransfer,
+            receive: canReceive,
+            forceRecall: canForceRecall,
+            edit: canEdit,
+            retire: canRetire,
+            linkContract: linkFilterOn,
+        }),
+        [canTransfer, canReceive, canForceRecall, canEdit, canRetire, linkFilterOn],
     );
+    const bulkActionFor = useCallback((status: AssetStatus | null) => assetBulkAction(status, bulkPerms), [bulkPerms]);
 
     const clearSelection = () => {
         setSelectedIds([]);
@@ -525,7 +543,7 @@ export default function AssetsPage() {
     };
 
     // A row is tickable only if it starts (or matches) the active status group.
-    const rowSelectable = (a: Asset) => (selectionStatus ? a.status === selectionStatus : bulkActionFor(a.status) != null);
+    const rowSelectable = (a: Asset) => canTickRow(a.status, selectionStatus, bulkPerms);
     // A status that can never take part in any bulk action (e.g. written-off) shows no checkbox at all.
     const rowActionable = (a: Asset) => bulkActionFor(a.status) != null;
     // A group is locked and this row could normally be bulk-actioned, but its status differs from the
@@ -536,6 +554,7 @@ export default function AssetsPage() {
     const toggleRow = (a: Asset, on: boolean) => {
         setSelectedIds((prev) => (on ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id)));
         if (on) setSelectedSource((prev) => ({ ...prev, [a.id]: a.source }));
+        if (on) setSelectedFree((prev) => ({ ...prev, [a.id]: isAwaitingContract(a) }));
         if (on) setSelectionStatus((s) => s ?? a.status);
     };
 
@@ -543,6 +562,11 @@ export default function AssetsPage() {
     useEffect(() => {
         if (selectedIds.length === 0 && selectionStatus !== null) setSelectionStatus(null);
     }, [selectedIds, selectionStatus]);
+
+    // Drop a selection whose status lost its action (the awaiting-contract filter was removed)
+    useEffect(() => {
+        if (!selectionStillValid(selectionStatus, bulkPerms)) clearSelection();
+    }, [selectionStatus, bulkPerms]);
 
     // The status group "select all" acts on: the active group, or the first bulk-actionable row.
     const eligibleStatus: AssetStatus | null = selectionStatus ?? rows.find((a) => bulkActionFor(a.status) != null)?.status ?? null;
@@ -556,9 +580,11 @@ export default function AssetsPage() {
         // From the latest ticks, not this render's; the lock clears in the effect above once nothing is ticked
         setSelectedIds((prev) => toggleGroup(prev, groupIds, on, null, groupStatus).ids);
         if (on) setSelectedSource((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, a.source])) }));
+        if (on) setSelectedFree((prev) => ({ ...prev, ...Object.fromEntries(groupRows.map((a) => [a.id, isAwaitingContract(a)])) }));
         if (on) setSelectionStatus((locked) => locked ?? groupStatus);
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
+    const allSelectedFree = allFreeRentals(selectedIds, selectedFree);
 
     // Skeleton rows on a first load or a page/filter change, never on a background refresh
     const tableLoading = isLoading || (isFetching && isPlaceholderData);
@@ -599,7 +625,13 @@ export default function AssetsPage() {
         sourceFilter
             ? { key: 'source', label: sourceFilter === 'purchased' ? t('asset_purchase') : t('asset_lease'), clear: () => setSourceFilter('') }
             : null,
-        statusFilter ? { key: 'status', label: t(ASSET_STATUS_META[statusFilter].key), clear: () => setStatusFilter('') } : null,
+        statusFilter
+            ? {
+                  key: 'status',
+                  label: t(statusFilter === AWAITING_CONTRACT ? 'asset_awaiting_contract' : ASSET_STATUS_META[statusFilter].key),
+                  clear: () => setStatusFilter(''),
+              }
+            : null,
         warehouseFilter ? { key: 'warehouse', label: warehouseFilter, clear: () => setWarehouseFilter('') } : null,
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
     const activeFilterCount = activeChips.length;
@@ -633,11 +665,19 @@ export default function AssetsPage() {
                     <p className="text-muted-foreground text-sm">{t('assets_sub')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    {canEdit && (
+                        <AwaitingContractButton
+                            count={awaitingContractCount}
+                            active={tab === 'inventory' && statusFilter === AWAITING_CONTRACT}
+                            onToggle={() => showStatus(AWAITING_CONTRACT)}
+                            t={t}
+                        />
+                    )}
                     {canReceive && (
                         <PendingReturnButton
                             count={pendingReturnCount}
                             active={tab === 'inventory' && statusFilter === 'pending_return'}
-                            onToggle={showPendingReturns}
+                            onToggle={() => showStatus('pending_return')}
                             t={t}
                         />
                     )}
@@ -929,7 +969,7 @@ export default function AssetsPage() {
                                                 active={!!statusFilter}
                                                 value={statusFilter || ALL}
                                                 onChange={(v) => {
-                                                    setStatusFilter(v === ALL ? '' : (v as AssetStatus));
+                                                    setStatusFilter(v === ALL ? '' : (v as AssetStatus | typeof AWAITING_CONTRACT));
                                                     setPage(1);
                                                 }}
                                                 options={[
@@ -940,6 +980,12 @@ export default function AssetsPage() {
                                                         search: t(ASSET_STATUS_META[s].key),
                                                         icon: <AssetStatusDot status={s} />,
                                                     })),
+                                                    {
+                                                        value: AWAITING_CONTRACT,
+                                                        label: t('asset_awaiting_contract'),
+                                                        search: t('asset_awaiting_contract'),
+                                                        icon: <ToneDot tone="amber" />,
+                                                    },
                                                 ]}
                                             />
                                         </div>
@@ -1016,9 +1062,11 @@ export default function AssetsPage() {
                                 {/* Which status group the selection is locked to — explains why other rows can't be ticked. */}
                                 {selectionStatus && (
                                     <span className="border-border bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs">
-                                        <AssetStatusDot status={selectionStatus} />
+                                        {linkFilterOn ? <ToneDot tone="amber" /> : <AssetStatusDot status={selectionStatus} />}
                                         <span className="text-muted-foreground">{t('asset_selection_only')}</span>
-                                        <span className="text-foreground font-medium">{t(ASSET_STATUS_META[selectionStatus].key)}</span>
+                                        <span className="text-foreground font-medium">
+                                            {t(linkFilterOn ? 'asset_awaiting_contract' : ASSET_STATUS_META[selectionStatus].key)}
+                                        </span>
                                     </span>
                                 )}
                                 <button
@@ -1029,62 +1077,73 @@ export default function AssetsPage() {
                                     {t('asset_clear')}
                                 </button>
                                 <div className="flex-1" />
-                                {/* Contextual bulk actions per locked status group. A Common (shared)
+                                {/* Awaiting-contract filter: the only action is linking a contract */}
+                                {linkFilterOn && allSelectedFree && (
+                                    <Button size="sm" onClick={() => setBulkDialog('linkContract')}>
+                                        <Link2 className="h-4 w-4" />
+                                        {t('asset_link_contract')}
+                                    </Button>
+                                )}
+                                {!linkFilterOn && (
+                                    <>
+                                        {/* Contextual bulk actions per locked status group. A Common (shared)
                                     group can be re-assigned to a person (Transfer) or pulled to the pool (Recall). */}
-                                {(selectionStatus === 'ready' || selectionStatus === 'common') && canTransfer && (
-                                    <Button size="sm" onClick={() => setBulkDialog('transfer')}>
-                                        <Share2 className="h-4 w-4" />
-                                        {t('asset_transfer_action')}
-                                    </Button>
-                                )}
-                                {/* Pending acceptance → cancel the not-yet-accepted hand-over (recall to pool). */}
-                                {selectionStatus === 'pending_acceptance' && (canTransfer || canForceRecall) && (
-                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('recall')}>
-                                        <RefreshCcw className="h-4 w-4" />
-                                        {t('asset_recall')}
-                                    </Button>
-                                )}
-                                {selectionStatus === 'common' && (canTransfer || canForceRecall) && (
-                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('recall')}>
-                                        <RefreshCcw className="h-4 w-4" />
-                                        {t('asset_recall_action')}
-                                    </Button>
-                                )}
-                                {selectionStatus === 'deployed' && canForceRecall && (
-                                    <Button size="sm" variant="destructive" onClick={() => setBulkDialog('recall')}>
-                                        <RefreshCcw className="h-4 w-4" />
-                                        {t('asset_force_recall')}
-                                    </Button>
-                                )}
-                                {selectionStatus === 'pending_return' && canReceive && (
-                                    <Button size="sm" onClick={() => setBulkDialog('receive')}>
-                                        <Check className="h-4 w-4" />
-                                        {t('asset_mark_received')}
-                                    </Button>
-                                )}
-                                {/* A desk move: the holder keeps the asset, only the place changes. Offered
+                                        {(selectionStatus === 'ready' || selectionStatus === 'common') && canTransfer && (
+                                            <Button size="sm" onClick={() => setBulkDialog('transfer')}>
+                                                <Share2 className="h-4 w-4" />
+                                                {t('asset_transfer_action')}
+                                            </Button>
+                                        )}
+                                        {/* Pending acceptance → cancel the not-yet-accepted hand-over (recall to pool). */}
+                                        {selectionStatus === 'pending_acceptance' && (canTransfer || canForceRecall) && (
+                                            <Button size="sm" variant="outline" onClick={() => setBulkDialog('recall')}>
+                                                <RefreshCcw className="h-4 w-4" />
+                                                {t('asset_recall')}
+                                            </Button>
+                                        )}
+                                        {selectionStatus === 'common' && (canTransfer || canForceRecall) && (
+                                            <Button size="sm" variant="outline" onClick={() => setBulkDialog('recall')}>
+                                                <RefreshCcw className="h-4 w-4" />
+                                                {t('asset_recall_action')}
+                                            </Button>
+                                        )}
+                                        {selectionStatus === 'deployed' && canForceRecall && (
+                                            <Button size="sm" variant="destructive" onClick={() => setBulkDialog('recall')}>
+                                                <RefreshCcw className="h-4 w-4" />
+                                                {t('asset_force_recall')}
+                                            </Button>
+                                        )}
+                                        {selectionStatus === 'pending_return' && canReceive && (
+                                            <Button size="sm" onClick={() => setBulkDialog('receive')}>
+                                                <Check className="h-4 w-4" />
+                                                {t('asset_mark_received')}
+                                            </Button>
+                                        )}
+                                        {/* A desk move: the holder keeps the asset, only the place changes. Offered
                                     for both in-use groups and gated by assets.edit, not assets.transfer. */}
-                                {(selectionStatus === 'deployed' || selectionStatus === 'common') && canEdit && (
-                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('location')}>
-                                        <MapPin className="h-4 w-4" />
-                                        {t('asset_location_update')}
-                                    </Button>
-                                )}
-                                {/* Write-off only once back in the pool (Ready) — anything still out must be
+                                        {(selectionStatus === 'deployed' || selectionStatus === 'common') && canEdit && (
+                                            <Button size="sm" variant="outline" onClick={() => setBulkDialog('location')}>
+                                                <MapPin className="h-4 w-4" />
+                                                {t('asset_location_update')}
+                                            </Button>
+                                        )}
+                                        {/* Write-off only once back in the pool (Ready) — anything still out must be
                                     recalled / returned to Ready first. */}
-                                {/* A rented asset goes back to its lessor through its own action (same permission as
+                                        {/* A rented asset goes back to its lessor through its own action (same permission as
                                     a write-off), so the return is recorded as such — not as a reason anyone could rename. */}
-                                {canRetire && selectionStatus === 'ready' && allSelectedRented && (
-                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('returnToVendor')}>
-                                        <Undo2 className="h-4 w-4" />
-                                        {t('asset_return_vendor')}
-                                    </Button>
-                                )}
-                                {canRetire && selectionStatus === 'ready' && (
-                                    <Button size="sm" variant="destructive" onClick={() => setBulkDialog('writeoff')}>
-                                        <FlaskConicalOff className="h-4 w-4" />
-                                        {t('asset_writeoff')}
-                                    </Button>
+                                        {canRetire && selectionStatus === 'ready' && allSelectedRented && (
+                                            <Button size="sm" variant="outline" onClick={() => setBulkDialog('returnToVendor')}>
+                                                <Undo2 className="h-4 w-4" />
+                                                {t('asset_return_vendor')}
+                                            </Button>
+                                        )}
+                                        {canRetire && selectionStatus === 'ready' && (
+                                            <Button size="sm" variant="destructive" onClick={() => setBulkDialog('writeoff')}>
+                                                <FlaskConicalOff className="h-4 w-4" />
+                                                {t('asset_writeoff')}
+                                            </Button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}
@@ -1279,7 +1338,15 @@ export default function AssetsPage() {
                                                             <AssetPlace asset={a} t={t} />
                                                         </td>
                                                         <td className="px-3 py-2.5 whitespace-nowrap">
-                                                            <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
+                                                            <div className="flex flex-col items-start gap-1">
+                                                                <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
+                                                                {isAwaitingContract(a) && (
+                                                                    <StatusBadge tone="amber">
+                                                                        <FileText className="h-3 w-3" aria-hidden="true" />
+                                                                        {t('asset_awaiting_contract')}
+                                                                    </StatusBadge>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="px-3 py-2.5 whitespace-nowrap">
                                                             <AssetCoverCell asset={a} />
@@ -1552,6 +1619,15 @@ export default function AssetsPage() {
             <AssetWriteoffDialog
                 ids={selectedIds}
                 open={bulkDialog === 'writeoff'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetLinkContractDialog
+                ids={selectedIds}
+                open={bulkDialog === 'linkContract'}
                 onClose={() => setBulkDialog(null)}
                 onDone={() => {
                     setBulkDialog(null);
