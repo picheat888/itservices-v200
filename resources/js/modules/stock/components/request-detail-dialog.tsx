@@ -4,6 +4,8 @@ import { useCurrency } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { EmptyState } from '@/shared/components/empty-state';
 import { LoadFailedPanel } from '@/shared/components/load-failed';
+import { ModelPhoto } from '@/shared/components/model-photo';
+import { ModelPhotoLightbox, type LightboxPhoto } from '@/shared/components/model-photo-lightbox';
 import { ScrollTable } from '@/shared/components/scroll-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useDateFormat } from '@/shared/hooks/use-date-format';
@@ -25,7 +27,7 @@ import {
 } from '@/shared/ui/dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { ArrowUpFromLine, Ban, Check, ClipboardList, Printer, RotateCcw, TriangleAlert, X } from 'lucide-react';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { issuePdfUrl } from '../api/stockApi';
 import { useRequestTrail, useStockItem, useStockRequest } from '../hooks/use-stock';
 import { LOT_INK } from '../lib/lot-accent';
@@ -204,8 +206,21 @@ function StepDot({ step }: { step: RequestStep }) {
 function ItemCard({ request }: { request: StockRequest }) {
     const t = useT();
     const fmtN = useNumberFormat();
+    const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
     return (
         <div className="border-border flex items-center gap-4 rounded-lg border px-4 py-3">
+            {request.model_photo_url && (
+                <ModelPhoto
+                    size={40}
+                    src={request.model_photo_url}
+                    alt={request.model ?? request.item_name ?? ''}
+                    onOpen={() =>
+                        setLightbox({ src: request.model_photo_url ?? '', model: request.model ?? request.item_name ?? '', brand: request.brand })
+                    }
+                    fallback={null}
+                />
+            )}
+            <ModelPhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
             <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{request.item_name}</div>
                 <div className={LABEL} translate="no">

@@ -3,6 +3,8 @@ import { useCurrency } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs, type DialogTab } from '@/shared/components/dialog-tabs';
 import { EmptyState } from '@/shared/components/empty-state';
+import { ModelPhoto } from '@/shared/components/model-photo';
+import { ModelPhotoLightbox, type LightboxPhoto } from '@/shared/components/model-photo-lightbox';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { RecordStamps } from '@/shared/components/record-stamps';
 import { SectionLabel } from '@/shared/components/section-label';
@@ -160,6 +162,7 @@ export function StockItemDetailModal({
     const [tab, setTab] = useState<TabId>('overview');
     const marks = useTabFreshness(tab, { overview: [itemQuery], movements: [historyQuery], lots: [itemQuery], serials: [itemQuery] });
     const [serialPage, setSerialPage] = useState(0);
+    const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
     useEffect(() => {
         setTab('overview');
         setSerialPage(0);
@@ -198,6 +201,23 @@ export function StockItemDetailModal({
                         {/* Header */}
                         <FocusDialogHeader
                             icon={Package}
+                            media={
+                                item.model_photo_url ? (
+                                    <ModelPhoto
+                                        size={56}
+                                        src={item.model_photo_url}
+                                        alt={item.model ?? item.name}
+                                        onOpen={() =>
+                                            setLightbox({ src: item.model_photo_url ?? '', model: item.model ?? item.name, brand: item.brand })
+                                        }
+                                        fallback={
+                                            <div className="text-brand flex h-10 w-10 shrink-0 items-center justify-center" aria-hidden>
+                                                <Package className="h-8 w-8" strokeWidth={1.75} />
+                                            </div>
+                                        }
+                                    />
+                                ) : undefined
+                            }
                             eyebrow={t('stock_item_eyebrow')}
                             title={item.name}
                             code={item.sku}
@@ -416,6 +436,7 @@ export function StockItemDetailModal({
                     </>
                 )}
             </DialogContent>
+            <ModelPhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
         </Dialog>
     );
 }
