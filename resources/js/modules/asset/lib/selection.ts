@@ -20,9 +20,9 @@ export function bulkActionFor(status: AssetStatus | null, can: BulkPermissions):
     return can.linkContract && status !== null && status !== 'writeoff' ? 'link_contract' : null;
 }
 
-/** A row's checkbox works when its status offers an action and matches the group a selection is locked to. */
+/** A row's checkbox works when its status offers an action and matches the locked group; the link filter ignores the lock. */
 export function canTickRow(status: AssetStatus, locked: AssetStatus | null, can: BulkPermissions): boolean {
-    return bulkActionFor(status, can) !== null && (locked === null || status === locked);
+    return bulkActionFor(status, can) !== null && (can.linkContract || locked === null || status === locked);
 }
 
 /** False once the locked group's status offers no action (the filter was removed), so the selection is dropped. */

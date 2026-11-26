@@ -64,6 +64,7 @@ export const asset: Dict = {
     asset_selected: 'เลือกแล้ว',
     asset_clear: 'ยกเลิกการเลือก',
     asset_selection_only: 'เฉพาะสถานะ',
+    asset_selection_only_short: 'เฉพาะ',
     asset_locked_hint: 'เลือกได้เฉพาะสถานะที่กำลังเลือกอยู่ - ยกเลิกการเลือกก่อนเพื่อเลือกสถานะอื่น',
     asset_cannot_transfer: 'อุปกรณ์ถูกใช้งานอยู่ ต้องรับคืนก่อนจึงจะโอนได้',
     asset_by_type: 'ทรัพย์สินทั้งหมดในระบบ',
@@ -223,6 +224,8 @@ export const asset: Dict = {
     asset_refusal_link_not_free_rental: 'ผูกสัญญาได้เฉพาะของเช่าที่ยังไม่มีสัญญา เอารายการเหล่านี้ออกจากที่เลือกก่อน {codes}',
     asset_refusal_link_contract_not_open: 'สัญญานี้ปิดไปแล้ว เลือกสัญญาฉบับอื่น',
     asset_refusal_link_asset_missing: 'มีทรัพย์สินที่เลือกไว้ถูกลบไปแล้ว ยกเลิกการเลือกแล้วเลือกใหม่',
+
+    // awaiting-contract-button.tsx — header alert
     asset_awaiting_contract_strip: 'รอผูกสัญญา {count} รายการ',
 
     // asset-writeoff-dialog.tsx — writing off with a disposal note

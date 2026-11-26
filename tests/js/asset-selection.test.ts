@@ -43,9 +43,17 @@ test('a row with no action has no tick, even when it matches the locked group', 
     const link = { ...editOnly, linkContract: true };
     assert.equal(canTickRow('ready', null, link), true);
     assert.equal(canTickRow('ready', 'ready', link), true);
-    assert.equal(canTickRow('ready', 'deployed', link), false);
+    assert.equal(canTickRow('ready', 'deployed', link), true);
+    assert.equal(canTickRow('ready', 'deployed', editOnly), false);
     // The filter was removed with Ready rows ticked: no blank cell may still tick a Ready row
     assert.equal(canTickRow('ready', 'ready', editOnly), false);
+});
+
+test('with the link filter on, a deployed row ticks while the selection is locked to ready', () => {
+    const editOnly = { ...none, edit: true };
+    assert.equal(canTickRow('deployed', 'ready', { ...editOnly, linkContract: true }), true);
+    assert.equal(canTickRow('deployed', 'ready', editOnly), false);
+    assert.equal(canTickRow('writeoff', 'ready', { ...editOnly, linkContract: true }), false);
 });
 
 test('a selection whose status lost its action is dropped', () => {

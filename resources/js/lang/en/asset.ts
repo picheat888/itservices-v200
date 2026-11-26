@@ -64,6 +64,7 @@ export const asset: Dict = {
     asset_selected: 'selected',
     asset_clear: 'Clear',
     asset_selection_only: 'Only',
+    asset_selection_only_short: 'Only',
     asset_locked_hint: 'Only the status you started selecting can be picked - clear the selection to choose another.',
     asset_cannot_transfer: 'This asset is in use. Mark it returned first.',
     asset_by_type: 'Assets in the system',
@@ -225,6 +226,8 @@ export const asset: Dict = {
     asset_refusal_link_not_free_rental: 'Only rented assets without a contract can be linked. Take these out of the selection first: {codes}',
     asset_refusal_link_contract_not_open: 'This contract has closed. Pick another one.',
     asset_refusal_link_asset_missing: 'A selected asset no longer exists. Clear the selection and pick again.',
+
+    // awaiting-contract-button.tsx — header alert
     asset_awaiting_contract_strip: '{count} awaiting a contract',
 
     // asset-writeoff-dialog.tsx — writing off with a disposal note

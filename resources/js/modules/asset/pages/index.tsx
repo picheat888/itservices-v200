@@ -549,7 +549,7 @@ export default function AssetsPage() {
     // A group is locked and this row could normally be bulk-actioned, but its status differs from the
     // locked group — so it is temporarily off-limits. These rows get a lock icon + dimmed treatment
     // (as opposed to write-off rows, which are never selectable and show nothing).
-    const rowLockedOut = (a: Asset) => selectionStatus != null && rowActionable(a) && a.status !== selectionStatus;
+    const rowLockedOut = (a: Asset) => selectionStatus != null && rowActionable(a) && !rowSelectable(a);
 
     const toggleRow = (a: Asset, on: boolean) => {
         setSelectedIds((prev) => (on ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id)));
@@ -585,6 +585,8 @@ export default function AssetsPage() {
     };
     const allSelectedRented = selectedIds.length > 0 && selectedIds.every((id) => selectedSource[id] === 'rented');
     const allSelectedFree = allFreeRentals(selectedIds, selectedFree);
+    // Link mode follows the selection: the filter is on and every ticked asset is a free rental
+    const linkMode = linkFilterOn && allSelectedFree;
 
     // Skeleton rows on a first load or a page/filter change, never on a background refresh
     const tableLoading = isLoading || (isFetching && isPlaceholderData);
@@ -628,7 +630,10 @@ export default function AssetsPage() {
         statusFilter
             ? {
                   key: 'status',
-                  label: t(statusFilter === AWAITING_CONTRACT ? 'asset_awaiting_contract' : ASSET_STATUS_META[statusFilter].key),
+                  label:
+                      statusFilter === AWAITING_CONTRACT
+                          ? `${t('asset_status')} ${t('asset_awaiting_contract')}`
+                          : t(ASSET_STATUS_META[statusFilter].key),
                   clear: () => setStatusFilter(''),
               }
             : null,
@@ -1062,10 +1067,12 @@ export default function AssetsPage() {
                                 {/* Which status group the selection is locked to — explains why other rows can't be ticked. */}
                                 {selectionStatus && (
                                     <span className="border-border bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs">
-                                        {linkFilterOn ? <ToneDot tone="amber" /> : <AssetStatusDot status={selectionStatus} />}
-                                        <span className="text-muted-foreground">{t('asset_selection_only')}</span>
+                                        {linkMode ? <ToneDot tone="amber" /> : <AssetStatusDot status={selectionStatus} />}
+                                        <span className="text-muted-foreground">
+                                            {t(linkMode ? 'asset_selection_only_short' : 'asset_selection_only')}
+                                        </span>
                                         <span className="text-foreground font-medium">
-                                            {t(linkFilterOn ? 'asset_awaiting_contract' : ASSET_STATUS_META[selectionStatus].key)}
+                                            {t(linkMode ? 'asset_awaiting_contract' : ASSET_STATUS_META[selectionStatus].key)}
                                         </span>
                                     </span>
                                 )}
@@ -1078,16 +1085,15 @@ export default function AssetsPage() {
                                 </button>
                                 <div className="flex-1" />
                                 {/* Awaiting-contract filter: the only action is linking a contract */}
-                                {linkFilterOn && allSelectedFree && (
+                                {linkMode && (
                                     <Button size="sm" onClick={() => setBulkDialog('linkContract')}>
                                         <Link2 className="h-4 w-4" />
                                         {t('asset_link_contract')}
                                     </Button>
                                 )}
-                                {!linkFilterOn && (
+                                {!linkMode && (
                                     <>
-                                        {/* Contextual bulk actions per locked status group. A Common (shared)
-                                    group can be re-assigned to a person (Transfer) or pulled to the pool (Recall). */}
+                                        {/* Bulk actions per locked status group */}
                                         {(selectionStatus === 'ready' || selectionStatus === 'common') && canTransfer && (
                                             <Button size="sm" onClick={() => setBulkDialog('transfer')}>
                                                 <Share2 className="h-4 w-4" />
@@ -1119,18 +1125,15 @@ export default function AssetsPage() {
                                                 {t('asset_mark_received')}
                                             </Button>
                                         )}
-                                        {/* A desk move: the holder keeps the asset, only the place changes. Offered
-                                    for both in-use groups and gated by assets.edit, not assets.transfer. */}
+                                        {/* Desk move: the place changes, the holder keeps the asset (assets.edit) */}
                                         {(selectionStatus === 'deployed' || selectionStatus === 'common') && canEdit && (
                                             <Button size="sm" variant="outline" onClick={() => setBulkDialog('location')}>
                                                 <MapPin className="h-4 w-4" />
                                                 {t('asset_location_update')}
                                             </Button>
                                         )}
-                                        {/* Write-off only once back in the pool (Ready) — anything still out must be
-                                    recalled / returned to Ready first. */}
-                                        {/* A rented asset goes back to its lessor through its own action (same permission as
-                                    a write-off), so the return is recorded as such — not as a reason anyone could rename. */}
+                                        {/* Write-off only from Ready */}
+                                        {/* Rented assets go back to the lessor through their own action */}
                                         {canRetire && selectionStatus === 'ready' && allSelectedRented && (
                                             <Button size="sm" variant="outline" onClick={() => setBulkDialog('returnToVendor')}>
                                                 <Undo2 className="h-4 w-4" />
@@ -1341,10 +1344,10 @@ export default function AssetsPage() {
                                                             <div className="flex flex-col items-start gap-1">
                                                                 <AssetStatusBadge status={a.status} t={t} returned={!!a.returned_to_vendor_at} />
                                                                 {isAwaitingContract(a) && (
-                                                                    <StatusBadge tone="amber">
-                                                                        <FileText className="h-3 w-3" aria-hidden="true" />
+                                                                    <span className="flex items-center gap-1 text-xs font-medium text-amber-800 dark:text-amber-300">
+                                                                        <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                                                         {t('asset_awaiting_contract')}
-                                                                    </StatusBadge>
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         </td>
