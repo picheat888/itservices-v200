@@ -477,7 +477,7 @@ export const settings: Dict = {
     set_monitor_unpair_title: 'Unpair the screen?',
     set_monitor_unpair_desc: 'The TV drops off at once and goes back to the code screen. Pair it again to keep using it',
 
-    // model-modal.tsx — the model photo
+    // model-modal.tsx, model-photo-picker.tsx, pages/index.tsx — the model photo
     md_photo: 'Photo',
     md_photo_add: 'Add photo',
     md_photo_note: 'PNG, JPG, WebP\nUp to 10MB',

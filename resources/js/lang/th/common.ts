@@ -306,8 +306,10 @@ export const common: Dict = {
     cmn_item_removed: 'รายการนี้ไม่มีในระบบแล้ว เลือกใหม่',
     cmn_no_longer_available: 'ไม่มีในระบบแล้ว',
 
-    // model-photo.tsx — รูปของรุ่นและหน้าต่างดูรูปใหญ่
+    // model-photo.tsx, model-photo-lightbox.tsx — รูปของรุ่นและหน้าต่างดูรูปใหญ่
     model_photo_view: 'ดูรูปใหญ่',
     model_photo_sample_note: 'รูปตัวอย่างของรุ่นนี้ เครื่องจริงอาจต่างกันเล็กน้อย',
+
+    // logo-picker.tsx, model-photo-picker.tsx — คำใต้รูปที่แนบแล้ว
     photo_tap_to_change: 'แตะรูปเพื่อเปลี่ยน',
 };

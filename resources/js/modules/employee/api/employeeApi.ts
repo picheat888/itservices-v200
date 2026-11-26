@@ -300,9 +300,7 @@ export const employeeApi = {
     remove: (id: number) => mutate<void>('delete', `/employees/${id}`),
     /** Manage an existing account: change username and/or reset the password (returns new_password when reset). */
     updateCredentials: async (id: number, payload: UpdateCredentialsPayload) => {
-        // NOTE: this endpoint returns { message, new_password } at the top level
-        // (not wrapped in an ApiEnvelope `data` key), so it must NOT go through
-        // mutate() — that unwraps `.data` and would yield undefined.
+        // Answers { message, new_password } at the top level, so it must skip mutate() (which unwraps .data)
         await ensureCsrf();
         const { data } = await http.put<{ message: string; new_password?: string }>(`/employees/${id}/credentials`, payload);
         return data;

@@ -176,8 +176,7 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
         };
     }
     if (kind === 'software') {
-        // product_key + logo + remove_logo are appended in submit() (they depend on the
-        // key switch and the logo File, which live outside FormState).
+        // product_key, logo and remove_logo join in submit(); they live outside FormState
         return {
             name: form.name.trim(),
             brand_id: form.brand_id ? Number(form.brand_id) : null,

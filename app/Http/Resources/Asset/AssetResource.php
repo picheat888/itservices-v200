@@ -20,9 +20,7 @@ class AssetResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Rented assets don't store fee / vendor / lease term — those live on the linked
-        // contract and are read from it here (single source of truth). Purchased assets
-        // carry their own value and supplier.
+        // Rented assets read fee, vendor and lease term from their contract; purchased ones carry their own
         $rented = $this->source === AssetSource::Rented;
         $contract = $rented ? $this->contract : null;
         $vendor = $rented ? $contract?->vendor : $this->vendor;
@@ -37,8 +35,7 @@ class AssetResource extends JsonResource
             // Thai category name for locale-aware display; falls back to `type` when unset.
             'type_th' => $this->category?->name_th,
             'category_id' => $this->category_id,
-            // Brand / model names resolved through their master relations (auto-reflect renames);
-            // the *_id feed the forms.
+            // Brand and model names come through their master rows; the *_id fields feed the forms
             'brand' => $this->brand?->name,
             'brand_id' => $this->brand_id,
             'model' => $this->model?->name,
@@ -50,12 +47,10 @@ class AssetResource extends JsonResource
             // Holder identifier: employee code (from the FK) or shared label — never stored.
             'owner' => $this->ownerCode(),
             'owner_employee_id' => $this->owner_employee_id,
-            // Display name of the holder: the employee's full name in employee mode,
-            // else the free-text shared label, else null (pool).
+            // Holder name: the employee in employee mode, else the shared label, else null (pool)
             'owner_name' => $this->owner_employee_id ? $this->ownerEmployee?->name : $this->owner,
             'owner_name_th' => $this->owner_employee_id ? $this->ownerEmployee?->name_th : null,
-            // Job title + department of the holding employee (read from the employee;
-            // null for pool / shared assets that have no employee).
+            // Holder's job title and department; null for pool and shared assets
             'owner_position' => $this->ownerEmployee?->position?->title,
             'department' => $this->ownerEmployee?->department?->name,
             'department_th' => $this->ownerEmployee?->department?->name_th,
@@ -79,8 +74,7 @@ class AssetResource extends JsonResource
             'lease_start' => $rented ? $contract?->start_date?->toDateString() : null,
             'lease_end' => $rented ? $contract?->end_date?->toDateString() : null,
             'cover_end' => $this->coverEndsOn()?->toDateString(),
-            // "Registered" = when the asset was created in this system (created_at);
-            // the acquisition/purchase origin lives in purchase_date.
+            // Registered = created in this system; the purchase itself is purchase_date
             'registered_date' => SystemTime::date($this->created_at),
             'owned_since' => $this->owned_since?->toDateString(),
             // Only while the asset is still out of the pool; once back in a warehouse the old hand-over no longer applies
@@ -115,11 +109,9 @@ class AssetResource extends JsonResource
 
                 return $this->transfers->map(fn ($tr) => [
                     'id' => $tr->id,
-                    // Down to the minute: a recall and the hand-over it undid can land seconds
-                    // apart, and a date alone leaves the two rows looking identical.
+                    // To the minute, so a recall and the hand-over it undid never look identical
                     'date' => SystemTime::dateTime($tr->created_at),
-                    // A `relocate` row carries location names in from/to, not people — the
-                    // History tab reads this to label the row and pick the right icon.
+                    // A relocate row carries location names in from/to; the History tab labels it from this
                     'kind' => $tr->kind?->value,
                     'from_owner' => $tr->from_owner,
                     'to_owner' => $tr->to_owner,

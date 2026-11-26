@@ -473,7 +473,7 @@ export const settings: Dict = {
     set_monitor_unpair_title: 'ยกเลิกการจับคู่จอไหม',
     set_monitor_unpair_desc: 'ทีวีจะหลุดทันทีแล้วกลับไปขึ้นหน้ารหัส ถ้าจะใช้ต่อต้องจับคู่ใหม่',
 
-    // model-modal.tsx — รูปของรุ่น
+    // model-modal.tsx, model-photo-picker.tsx, pages/index.tsx — รูปของรุ่น
     md_photo: 'รูป',
     md_photo_add: 'เพิ่มรูป',
     md_photo_note: 'PNG, JPG, WebP\nไม่เกิน 10MB',

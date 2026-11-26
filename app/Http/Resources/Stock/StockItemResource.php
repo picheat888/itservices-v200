@@ -31,8 +31,7 @@ class StockItemResource extends JsonResource
             'category' => $this->category?->name,
             'category_th' => $this->category?->name_th,
             'category_id' => $this->category_id,
-            // Brand / model / unit / warranty names are resolved through their master
-            // relations so renaming a master propagates here; the *_id feeds the forms/filters.
+            // Master names come through their relations so renames show here; the *_id fields feed forms and filters
             'brand' => $this->brand?->name,
             'brand_id' => $this->brand_id,
             'model' => $this->model?->name,
@@ -51,8 +50,7 @@ class StockItemResource extends JsonResource
             'days_since_move' => $this->daysSinceLastMove(),
             'status' => $this->status(),
             'total_value' => $this->stockValue(),
-            // Qty committed by approved-but-unfulfilled requests (present on the list
-            // endpoint via withSum). available-to-request = current_stock − reserved.
+            // Qty held by approved, unfulfilled requests (list endpoint, withSum); available = current_stock - reserved
             'reserved' => (int) ($this->reserved_qty ?? 0),
             // When and by whom it was added / last changed. The names ride on the single-record endpoint only.
             'created_at' => SystemTime::date($this->created_at),
@@ -61,8 +59,7 @@ class StockItemResource extends JsonResource
             'created_by_name_th' => $this->whenLoaded('creator', fn () => $this->creator?->name_th),
             'updated_by_name' => $this->whenLoaded('updater', fn () => $this->updater?->name),
             'updated_by_name_th' => $this->whenLoaded('updater', fn () => $this->updater?->name_th),
-            // Per-unit serials are only attached when the relation is eager-loaded
-            // (i.e. on the show endpoint), so list/summary payloads stay lean.
+            // Serials only when eager-loaded (show endpoint), so list payloads stay lean
             'serials' => $this->whenLoaded('serials', fn () => $this->serials->map(fn ($s) => [
                 'id' => $s->id,
                 'serial' => $s->serial,
@@ -96,8 +93,7 @@ class StockItemResource extends JsonResource
                 'qty_remaining' => $l->qty_remaining,
                 'value' => round($l->qty_remaining * (float) $l->unit_cost, 2),
                 'received_at' => $l->received_at?->toDateTimeString(),
-                // Receive-movement details for the per-lot drill-down (null for
-                // seeded lots that were created without a movement).
+                // Receive-movement details for the lot drill-down; null for seeded lots
                 'doc_no' => $l->movement?->doc_no,
                 'reference' => $l->movement?->reference,
                 'supplier' => $l->movement?->from_label,

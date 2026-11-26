@@ -219,8 +219,7 @@ export function AccessPane({ access, loading, empty }: { access: EmployeeAccess 
 export function AssetsPane({ assets, lang, loading, empty }: { assets: EmployeeHeldAsset[]; lang: string; loading?: boolean; empty: PaneEmpty }) {
     const t = useT();
     const fmt = useDateFormat();
-    // Empty only counts once this person's list has actually arrived; while it is on
-    // its way the table shows its own loading rows (below).
+    // Empty only once this person's list has arrived; until then the table shows loading rows
     if (assets.length === 0 && !loading) {
         return <EmptyPane kind="empty" title={empty.title} hint={empty.hint} />;
     }
@@ -282,8 +281,7 @@ export function AssetsPane({ assets, lang, loading, empty }: { assets: EmployeeH
         },
     ];
 
-    // Same compact treatment as the Tickets tab: fillHeight sizes rows to the pane and the
-    // wrapper tightens the density token so both tabs read as one table style.
+    // Same compact rows as the Tickets tab, so both tabs read as one table style
     return (
         <div className="flex min-h-0 flex-1 flex-col [--row-py:0.375rem]">
             <DataTable fillHeight rowHeight={48} columns={columns} rows={assets} rowKey={(a) => a.id} loading={loading} />
@@ -316,8 +314,7 @@ export function TicketsPane({
         {
             key: 'subject',
             header: t('ticket_subject'),
-            // max-w-0 stops the no-wrap truncate text from stretching the column past its
-            // 50% share (auto table layout sizes columns by content otherwise).
+            // max-w-0 keeps the truncated text from stretching the column past its 50% share
             className: 'w-[50%] max-w-0',
             // Two-line cell: subject on top, ticket number underneath.
             render: (tk) => (
@@ -346,9 +343,7 @@ export function TicketsPane({
         },
     ];
 
-    // fillHeight sizes rows-per-page to the pane's real height, so the tab never scrolls
-    // on any screen — extra tickets flow to the pager. The wrapper keeps the height chain
-    // intact (flex-1/min-h-0) and tightens the density token so compact rows fit more.
+    // fillHeight fits rows-per-page to the pane so the tab never scrolls; extra tickets go to the pager
     return (
         <div className="flex min-h-0 flex-1 flex-col [--row-py:0.375rem]">
             <DataTable fillHeight rowHeight={44} columns={columns} rows={tickets} rowKey={(tk) => tk.id} loading={loading} />
@@ -376,8 +371,7 @@ export function RequestsPane({ requests, loading, empty }: { requests: EmployeeS
             // max-w-0 keeps the truncating cell inside its share of the table (see TicketsPane).
             className: 'w-[50%] max-w-0',
             header: t('req_col_title'),
-            // The service name is written in the reader's language, never the filer's; the
-            // reference underneath is what both of them would quote to each other.
+            // The service name is in the reader's language; the reference below is what both sides quote
             render: (r) => (
                 <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-1.5">

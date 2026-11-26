@@ -96,8 +96,7 @@ export function AssetDetailDrawer({
     const confirm = useConfirm();
     const [tab, setTab] = useState<TabId>('overview');
 
-    // Recall from the footer asks for confirmation first (force recall pulls an asset an
-    // employee still holds), then hands off to the warehouse-picker modal via onRecall.
+    // Footer recall: confirm first (force recall pulls an asset someone holds), then the warehouse picker
     const askRecall = async (target: Asset, force: boolean) => {
         if (!onRecall) return;
         const ok = await confirm({
@@ -129,8 +128,7 @@ export function AssetDetailDrawer({
     const { user } = useAuth();
     const { accept, cancelWriteoff, remove } = useAssetMutations();
 
-    // Undo a write-off (wrong-retire fix) — restores the asset to the Ready pool. A return to the
-    // lessor is undone the same way, under its own name.
+    // Undo a write-off or a return to the lessor: the asset goes back to the Ready pool
     const askCancelWriteoff = async (target: Asset) => {
         const returned = !!target.returned_to_vendor_at;
         await confirm({
@@ -147,10 +145,7 @@ export function AssetDetailDrawer({
         });
     };
 
-    // Permanently delete an asset — guarded to Ready + not contract-linked (mirrors the
-    // server rule in AssetController@destroy). Irreversible, so it uses the danger variant.
-    // An asset that has ever been handed over is refused by the server; the dialog stays
-    // open and names that reason instead of showing the generic failure.
+    // Permanent delete: Ready and not contract-linked only (as AssetController@destroy); a refusal keeps the dialog open with its reason
     const askDelete = async (target: Asset) => {
         await confirm({
             variant: 'danger',
@@ -173,13 +168,10 @@ export function AssetDetailDrawer({
         });
     };
 
-    // Linked-contract peek — fetched via GET /assets/{id}/contract, which is gated by assets.view.
-    // Anyone who can open this asset can peek its linked contract; no contracts.view needed.
+    // Linked-contract peek via GET /assets/{id}/contract, gated by assets.view (no contracts.view needed)
     const [peekAssetId, setPeekAssetId] = useState<number | null>(null);
 
-    // The location dialog opens ON TOP of this drawer rather than replacing it (same as the
-    // contract peek): a desk move is a small correction, and closing the whole record to make
-    // it lost the reader their place — they were looking at this asset for a reason.
+    // The location dialog opens on top of this drawer, like the contract peek
     const [relocating, setRelocating] = useState(false);
     const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
 
@@ -360,8 +352,7 @@ export function AssetDetailDrawer({
                                         <KV label={t('asset_brand')} value={a.brand} />
                                         <KV label={t('asset_model')} value={a.model} />
                                         <KV label={t('asset_serial')} value={a.serial} />
-                                        {/* Purchase date, supplier, value & warranty are owned-only. For leased assets
-                                        these belong to the contract — open Contract Details to view them. */}
+                                        {/* Purchase date, supplier, value and warranty are owned-only; a leased asset's live on its contract */}
                                         {!rented && (
                                             <>
                                                 <KV label={t('asset_purchase_date')} value={fmt.date(a.purchase_date)} />
@@ -453,8 +444,7 @@ export function AssetDetailDrawer({
                                     {t('asset_recall_action')}
                                 </Button>
                             )}
-                            {/* Force recall (super / assets.force_recall) — override to pull back an asset an
-                                employee still holds; normally they'd return it themselves. */}
+                            {/* Force recall (super / assets.force_recall): pull back an asset an employee still holds */}
                             {onRecall && canForceRecall && a.status === 'deployed' && !!a.owner_employee_id && (
                                 <Button
                                     variant="outline"
@@ -465,8 +455,7 @@ export function AssetDetailDrawer({
                                     {t('asset_recall_action')}
                                 </Button>
                             )}
-                            {/* The holder moved desk and took the asset along — correct the place without
-                                touching custody. Only for an asset already in use somewhere. */}
+                            {/* The holder moved desk with the asset: correct the place, not custody (in-use assets only) */}
                             {canUpdateLocation && (a.status === 'deployed' || a.status === 'common') && (
                                 <Button variant="outline" onClick={() => setRelocating(true)}>
                                     <MapPin className="h-4 w-4" />
@@ -480,8 +469,7 @@ export function AssetDetailDrawer({
                                     {t(a.returned_to_vendor_at ? 'asset_cancel_return_vendor' : 'asset_cancel_writeoff')}
                                 </Button>
                             )}
-                            {/* Its way out of the register, once back in the pool (Ready) — the same rule as the bulk
-                                bar. A rented asset goes back to its lessor; it can still be written off (lost, broken). */}
+                            {/* Way out of the register once Ready, same rule as the bulk bar; a rented asset goes back to its lessor */}
                             {canRetire && a.status === 'ready' && a.source === 'rented' && onReturnToVendor && (
                                 <Button variant="outline" onClick={() => onReturnToVendor(a)}>
                                     <Undo2 className="h-4 w-4" />
@@ -498,8 +486,7 @@ export function AssetDetailDrawer({
                                     {t('asset_writeoff')}
                                 </Button>
                             )}
-                            {/* Permanent delete — only for an in-pool (Ready) asset with no contract link.
-                                Anything deployed / pending / written-off, or tied to a contract, is blocked. */}
+                            {/* Permanent delete: only a Ready asset with no contract link */}
                             {canDelete && a.status === 'ready' && !a.contract_id && (
                                 <Button
                                     variant="outline"

@@ -306,8 +306,10 @@ export const common: Dict = {
     cmn_item_removed: 'This item no longer exists. Choose again.',
     cmn_no_longer_available: 'No longer available',
 
-    // model-photo.tsx — model photos and their large view
+    // model-photo.tsx, model-photo-lightbox.tsx — model photos and their large view
     model_photo_view: 'View larger photo',
     model_photo_sample_note: 'Sample photo of this model. The actual unit may look slightly different.',
+
+    // logo-picker.tsx, model-photo-picker.tsx — caption under an attached photo
     photo_tap_to_change: 'Tap the photo to change it',
 };
