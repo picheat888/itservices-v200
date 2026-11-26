@@ -20,7 +20,9 @@ use App\Models\Settings\WriteoffReason;
 use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Asset\AssetService;
 use Database\Seeders\WriteoffReasonSeeder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -136,6 +138,51 @@ class AssetApiTest extends TestCase
             'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100,
         ])->assertCreated()
             ->assertJsonPath('data.asset_code', fn ($assetCode) => is_string($assetCode) && str_starts_with($assetCode, 'INK-IT-'));
+    }
+
+    /** An import holding the next codes in its transaction: the register's insert clashes once and takes a fresh code. */
+    public function test_a_generated_code_taken_meanwhile_is_generated_again_once(): void
+    {
+        $this->actingAs($this->super());
+        $taken = Asset::factory()->create(['asset_code' => 'INK-IT-TAKEN-1']);
+        $attempts = 0;
+        Asset::creating(function (Asset $asset) use (&$attempts, $taken): void {
+            if (++$attempts === 1) {
+                $asset->asset_code = $taken->asset_code;
+            }
+        });
+
+        $code = $this->postJson('/api/assets', [
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100,
+        ])->assertCreated()->json('data.asset_code');
+
+        $this->assertSame(2, $attempts);
+        $this->assertNotSame($taken->asset_code, $code);
+        $this->assertStringStartsWith('INK-IT-', $code);
+        $this->assertSame(2, Asset::count());
+    }
+
+    public function test_a_code_clash_is_retried_only_once_and_never_for_a_typed_code(): void
+    {
+        $taken = Asset::factory()->create(['asset_code' => 'INK-IT-TAKEN-1']);
+        $attempts = 0;
+        Asset::creating(function (Asset $asset) use (&$attempts, $taken): void {
+            $attempts++;
+            $asset->asset_code = $taken->asset_code;
+        });
+        $data = ['category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100];
+        $service = app(AssetService::class);
+
+        foreach ([[$data, 2], [$data + ['asset_code' => 'MY-CODE-1'], 1]] as [$payload, $expected]) {
+            $attempts = 0;
+            try {
+                $service->register($payload);
+                $this->fail('Expected the clash to be thrown.');
+            } catch (UniqueConstraintViolationException) {
+                $this->assertSame($expected, $attempts);
+            }
+        }
+        $this->assertSame(1, Asset::count());
     }
 
     public function test_tag_is_at_most_ten_characters(): void

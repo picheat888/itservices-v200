@@ -8,6 +8,8 @@ namespace App\Services\Asset;
 use App\Support\AssetImportColumns;
 use App\Support\Refusal;
 use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\Calculation\Functions;
+use PhpOffice\PhpSpreadsheet\Calculation\Information\ExcelError;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
@@ -43,14 +45,21 @@ class AssetImportReader
         return ['rows' => $rows, 'ignored' => $ignored];
     }
 
+    /** Loads only the first sheet, without empty cells; styles stay so dates are recognised by their format. */
     private function load(UploadedFile $file): Spreadsheet
     {
         try {
             $reader = new Xlsx;
             $reader->setReadDataOnly(false);
+            $reader->setReadEmptyCells(false);
             if (! $reader->canRead($file->getRealPath())) {
                 throw new \RuntimeException('Not an xlsx file.');
             }
+            $firstSheet = $reader->listWorksheetNames($file->getRealPath())[0] ?? null;
+            if ($firstSheet === null) {
+                throw new \RuntimeException('The file has no sheet.');
+            }
+            $reader->setLoadSheetsOnly([$firstSheet]);
 
             return $reader->load($file->getRealPath());
         } catch (Throwable) {
@@ -166,16 +175,22 @@ class AssetImportReader
         return [$m[1], (int) $m[2]];
     }
 
-    /** The cell as the user sees it, trimmed: dates as Y-m-d, numbers without exponent, formulas as their value. */
+    /**
+     * The cell as the user sees it, trimmed: dates as Y-m-d, numbers without exponent, formulas as the result Excel
+     * showed. A cell showing an Excel error (#N/A, #REF! …) has no value.
+     */
     private function cellText(Cell $cell): string
     {
-        $value = $cell->isFormula() ? $cell->getCalculatedValue() : $cell->getValue();
+        $value = $cell->isFormula() ? $this->formulaResult($cell) : $cell->getValue();
 
         if (is_bool($value)) {
             return $value ? '1' : '0';
         }
+        if (is_string($value) && $this->isExcelError($value)) {
+            return '';
+        }
         if (is_int($value) || is_float($value)) {
-            if (Date::isDateTime($cell)) {
+            if (Date::isDateTime($cell, $value)) {
                 return Date::excelToDateTimeObject($value)->format('Y-m-d');
             }
 
@@ -185,5 +200,28 @@ class AssetImportReader
         }
 
         return (string) preg_replace('/^[\s\x{A0}]+|[\s\x{A0}]+$/u', '', (string) $value);
+    }
+
+    /**
+     * The result Excel saved with the formula. PhpSpreadsheet recalculates only when the file holds none, because its
+     * engine lacks newer functions (XLOOKUP, LET …) and throws on a broken formula; a failed calculation reads as blank.
+     */
+    private function formulaResult(Cell $cell): mixed
+    {
+        $cached = $cell->getOldCalculatedValue();
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        try {
+            return $cell->getCalculatedValue();
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
+    private function isExcelError(string $value): bool
+    {
+        return $value === Functions::DUMMY() || in_array($value, ExcelError::ERROR_CODES, true);
     }
 }

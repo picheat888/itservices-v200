@@ -134,7 +134,7 @@ class AssetController extends Controller
 
     public function store(StoreAssetRequest $request): JsonResponse
     {
-        $asset = $this->service->create($request->validated());
+        $asset = $this->service->register($request->validated());
         AuditLog::record('Registered asset', "{$asset->asset_code} - {$asset->model?->name}", subject: $asset);
 
         return (new AssetResource($asset->load('contract.vendor', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department')))

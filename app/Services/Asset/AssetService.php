@@ -22,6 +22,7 @@ use App\Services\Email\EmailNotificationService;
 use App\Support\DateDisplay;
 use App\Support\EmailTable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -212,6 +213,26 @@ class AssetService
         $data = $this->resolveOwnerEmployee($data);
 
         return Asset::create($this->normalizeAcquisition($data));
+    }
+
+    /**
+     * Register one asset from the form. A code left blank is generated outside the import's code lock, so an
+     * import still writing its batch can hold the same code; on that clash the code is generated again, once.
+     * A code the user typed is never changed.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function register(array $data): Asset
+    {
+        try {
+            return $this->create($data);
+        } catch (UniqueConstraintViolationException $clash) {
+            if (filled($data['asset_code'] ?? null)) {
+                throw $clash;
+            }
+
+            return $this->create($data);
+        }
     }
 
     /**

@@ -248,6 +248,22 @@ class AssetImportRunTest extends TestCase
         $this->assertSame(0, Asset::count());
     }
 
+    public function test_a_code_clash_while_writing_answers_import_conflict_and_writes_nothing(): void
+    {
+        $taken = Asset::factory()->create(['asset_code' => 'INK-IT-TAKEN-1', 'serial' => 'OTHER-1']);
+        Asset::creating(function (Asset $asset) use ($taken): void {
+            if ($asset->serial === 'SN-3') {
+                $asset->asset_code = $taken->asset_code;
+            }
+        });
+
+        $this->import(['kind' => 'rented', 'rows' => [$this->row(2), $this->row(3)]])
+            ->assertStatus(422)->assertJsonPath('message', 'import_conflict');
+
+        $this->assertSame(1, Asset::count());
+        $this->assertSame(0, AuditLog::where('action', 'Registered asset')->count());
+    }
+
     public function test_a_purchased_row_without_a_lifetime_flag_is_stored_as_not_lifetime(): void
     {
         $this->import(['kind' => 'purchased', 'rows' => [$this->purchasedRow(2, ['warranty_lifetime' => null])]])->assertOk();

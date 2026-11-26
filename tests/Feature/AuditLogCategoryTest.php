@@ -88,7 +88,7 @@ class AuditLogCategoryTest extends TestCase
             'access' => ['Added member to software', 'Changed file share owner', 'Removed member from email group'],
             'requests' => ['Approved service request step', 'Cancelled stock request', 'Completed request via ticket', 'Filed onboarding requests', 'Fulfilled stock request', 'Rejected service request', 'Submitted service request'],
             'tickets' => ['Assigned ticket', 'Auto-ticket skipped', 'Classified ticket work', 'Forwarded ticket', 'Resolved ticket', 'Took ticket'],
-            'assets' => ['Bulk asset writeoff', 'Cancelled asset write-off', 'Committed stock count', 'Force-recalled asset', 'Recalled asset', 'Requested asset return', 'Returned asset to lessor', 'Stock receive', 'Transferred asset', 'Wrote off asset'],
+            'assets' => ['Bulk asset writeoff', 'Cancelled asset write-off', 'Committed stock count', 'Force-recalled asset', 'Linked asset to contract', 'Recalled asset', 'Requested asset return', 'Returned asset to lessor', 'Stock receive', 'Transferred asset', 'Wrote off asset'],
             'updated' => ['Cancelled contract', 'Changed username', 'Paused scheduled report', 'Reactivated contract', 'Reordered request options', 'Resumed scheduled report'],
             'deleted' => ['Deleted scheduled report', 'Removed logo'],
         ];

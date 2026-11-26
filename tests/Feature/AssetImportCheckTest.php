@@ -207,7 +207,23 @@ class AssetImportCheckTest extends TestCase
 
         AppSetting::put('date_format', 'ymd_slash');
         $this->assertSame('2026-11-12', $date('2026/11/12')['values']['purchase_date']);
-        $this->assertSame('bad_date', $date('12/11/2026')['issues'][0]['code']);
+        $this->assertSame('2026-11-12', $date('2026-11-12')['values']['purchase_date']);
+        AppSetting::put('date_format', 'dmy_slash');
+        $this->assertSame('bad_date', $date('2026/11/12')['issues'][0]['code']);
+    }
+
+    public function test_day_first_dates_are_read_under_every_date_format_setting(): void
+    {
+        $date = fn (string $text): array => $this->check('purchased', [$this->purchasedCells(['purchase_date' => $text])])[0];
+
+        foreach (['dmy_slash', 'dmy_dash', 'ymd_slash', 'ymd_dash', 'd_mon_y', 'd_month_y'] as $format) {
+            AppSetting::put('date_format', $format);
+            $this->assertSame('2026-11-12', $date('12/11/2026')['values']['purchase_date'], $format);
+            $this->assertSame('2026-11-12', $date('12-11-2026')['values']['purchase_date'], $format);
+            $this->assertSame('2026-11-12', $date('12/11/2569')['values']['purchase_date'], $format);
+            $this->assertSame('2026-11-12', $date('2026-11-12')['values']['purchase_date'], $format);
+            $this->assertSame('bad_date', $date('31/02/2026')['issues'][0]['code'], $format);
+        }
         AppSetting::put('date_format', 'dmy_slash');
     }
 
@@ -283,6 +299,26 @@ class AssetImportCheckTest extends TestCase
 
         $this->assertSame(['required'], $this->recheckCodes('purchased', $purchased, 'warranty_end'));
         $this->assertSame([], $this->checker()->recheck('purchased', [$purchased + ['warranty_lifetime' => true]]));
+    }
+
+    public function test_a_required_cell_showing_an_excel_error_or_a_broken_formula_answers_required(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.register', 'allowed' => true]);
+        $file = $this->xlsxWithFormulas(['ทรัพย์สินเช่า' => [
+            ['ประเภท', 'ยี่ห้อ', 'รุ่น', 'Serial', 'คลัง'],
+            ['placeholder', 'Lenovo', 'ThinkPad E14 Gen 6', 'placeholder', 'Main'],
+        ]], [
+            'A2' => ['NA()', '#N/A', 'e'],
+            'D2' => ['SUM(', null],
+        ]);
+
+        $response = $this->actingAs($user)->post('/api/assets/import/preview', ['file' => $file, 'kind' => 'rented'], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.meta.invalid', 1);
+
+        $issues = collect($response->json('data.rows.0.issues'))->pluck('code', 'column')->all();
+        $this->assertSame(['category' => 'required', 'serial' => 'required'], $issues);
     }
 
     public function test_the_preview_endpoint_answers_rows_options_and_counts(): void

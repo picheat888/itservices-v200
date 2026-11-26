@@ -410,7 +410,12 @@ class AssetImportChecker
         return sprintf('%04d-%02d-%02d', $year, $month, $day);
     }
 
-    /** @return array{int,int,int}|null year, month, day */
+    /**
+     * Y-m-d and the template's day-first d/m/Y or d-m-Y are read under every date-format setting (no setting is
+     * month-first); a year-first Y/m/d only under the year-first settings.
+     *
+     * @return array{int,int,int}|null year, month, day
+     */
     private function dateParts(string $text, string $format): ?array
     {
         if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $text, $m)) {
@@ -419,7 +424,7 @@ class AssetImportChecker
         if (str_starts_with($format, 'ymd_') && preg_match('/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/', $text, $m)) {
             return [(int) $m[1], (int) $m[2], (int) $m[3]];
         }
-        if (! str_starts_with($format, 'ymd_') && preg_match('/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/', $text, $m)) {
+        if (preg_match('/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/', $text, $m)) {
             return [(int) $m[3], (int) $m[2], (int) $m[1]];
         }
 

@@ -119,6 +119,66 @@ class AssetImportReadTest extends TestCase
         $this->assertSame('SN-1', $rows[1]['cells']['serial']);
     }
 
+    public function test_formulas_read_the_result_excel_saved_not_a_recalculation(): void
+    {
+        $file = $this->xlsxWithFormulas([self::RENTED => [
+            $this->rentedHeader(),
+            ['Notebook', 'Lenovo', 'E14', 'placeholder', 'T-1', 'Main'],
+            ['Notebook', 'Lenovo', 'E14', 'placeholder', 'T-2', 'Main'],
+        ]], [
+            'D2' => ['_xlfn.LET(_xlpm.x,"SN-LET",_xlpm.x)', 'SN-LET'],
+            'D3' => ['_xlfn.XLOOKUP("T-2",E2:E3,E2:E3)', 'SN-LOOKUP'],
+        ]);
+
+        $rows = $this->reader()->read($file, 'rented')['rows'];
+
+        $this->assertSame('SN-LET', $rows[0]['cells']['serial']);
+        $this->assertSame('SN-LOOKUP', $rows[1]['cells']['serial']);
+    }
+
+    public function test_excel_errors_and_broken_formulas_read_as_blank(): void
+    {
+        $file = $this->xlsxWithFormulas([self::RENTED => [
+            $this->rentedHeader(),
+            ['placeholder', 'Lenovo', 'E14', 'placeholder', 'T-1', 'Main'],
+            ['placeholder', 'Lenovo', 'E14', 'placeholder', 'T-2', 'Main'],
+            ['placeholder', 'Lenovo', 'E14', 'SN-4', 'T-3', 'placeholder'],
+        ]], [
+            'A2' => ['NA()', '#N/A', 'e'],
+            'D2' => ['NOSUCHFN()', null],
+            'A3' => ['1/0', null],
+            'D3' => ['SUM(', null],
+            'A4' => ['_xlfn.LET(x,1,x)', '#NAME?', 'e'],
+            'F4' => ['Lists!A1', '#REF!', 'e'],
+        ]);
+
+        $rows = $this->reader()->read($file, 'rented')['rows'];
+
+        $this->assertSame(['', ''], [$rows[0]['cells']['category'], $rows[0]['cells']['serial']]);
+        $this->assertSame(['', ''], [$rows[1]['cells']['category'], $rows[1]['cells']['serial']]);
+        $this->assertSame(['', 'SN-4', ''], [$rows[2]['cells']['category'], $rows[2]['cells']['serial'], $rows[2]['cells']['warehouse']]);
+    }
+
+    public function test_only_the_first_sheet_is_loaded(): void
+    {
+        $file = $this->xlsxWithFormulas([
+            self::RENTED => [
+                $this->rentedHeader(),
+                ['Notebook', 'Lenovo', 'E14', 'placeholder', 'T-1', 'Main'],
+                ['Notebook', 'Lenovo', 'E14', 'placeholder', 'T-2', 'Main'],
+            ],
+            'Lists' => [['SN-FROM-LISTS']],
+        ], [
+            'D2' => ['Lists!A1', 'SN-FROM-LISTS'],
+            'D3' => ['Lists!A1', null],
+        ]);
+
+        $rows = $this->reader()->read($file, 'rented')['rows'];
+
+        $this->assertSame('SN-FROM-LISTS', $rows[0]['cells']['serial']);
+        $this->assertSame('', $rows[1]['cells']['serial']);
+    }
+
     public function test_a_sheet_without_its_header_row_is_refused_by_name(): void
     {
         $file = $this->xlsxUpload([self::RENTED => [
