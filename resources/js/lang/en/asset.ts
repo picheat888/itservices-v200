@@ -170,6 +170,7 @@ export const asset: Dict = {
     asset_selected_count: '{n} selected',
     asset_inventory_table: 'Asset inventory',
     asset_select_page_group: 'Select every asset with this status on this page',
+    asset_select_page_all: 'Select every asset on this page',
     asset_select_row: 'Select',
     asset_rows_per_page: 'Rows per page',
     asset_prev_page: 'Previous page',

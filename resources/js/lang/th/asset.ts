@@ -169,6 +169,7 @@ export const asset: Dict = {
     asset_selected_count: 'เลือกแล้ว {n} รายการ',
     asset_inventory_table: 'รายการทรัพย์สิน',
     asset_select_page_group: 'เลือกทุกเครื่องในหน้านี้ที่สถานะเดียวกัน',
+    asset_select_page_all: 'เลือกทุกเครื่องในหน้านี้',
     asset_select_row: 'เลือก',
     asset_rows_per_page: 'แสดง',
     asset_prev_page: 'หน้าก่อนหน้า',

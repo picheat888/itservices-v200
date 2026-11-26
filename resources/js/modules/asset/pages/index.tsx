@@ -563,6 +563,14 @@ export default function AssetsPage() {
         if (selectedIds.length === 0 && selectionStatus !== null) setSelectionStatus(null);
     }, [selectedIds, selectionStatus]);
 
+    // Turning the awaiting-contract filter on or off starts a fresh selection
+    const linkFilterPrev = useRef(linkFilterOn);
+    useEffect(() => {
+        if (linkFilterPrev.current === linkFilterOn) return;
+        linkFilterPrev.current = linkFilterOn;
+        clearSelection();
+    }, [linkFilterOn]);
+
     // Drop a selection whose status lost its action (the awaiting-contract filter was removed)
     useEffect(() => {
         if (!selectionStillValid(selectionStatus, bulkPerms)) clearSelection();
@@ -570,7 +578,12 @@ export default function AssetsPage() {
 
     // The status group "select all" acts on: the active group, or the first bulk-actionable row.
     const eligibleStatus: AssetStatus | null = selectionStatus ?? rows.find((a) => bulkActionFor(a.status) != null)?.status ?? null;
-    const groupRows = eligibleStatus ? rows.filter((a) => a.status === eligibleStatus) : [];
+    // Under the awaiting-contract filter select-all takes every tickable row; otherwise one status group
+    const groupRows = linkFilterOn
+        ? rows.filter((a) => canTickRow(a.status, null, bulkPerms))
+        : eligibleStatus
+          ? rows.filter((a) => a.status === eligibleStatus)
+          : [];
     const allGroupSelected = groupRows.length > 0 && groupRows.every((a) => selectedIds.includes(a.id));
 
     const toggleAllOnPage = (on: boolean) => {
@@ -1183,7 +1196,7 @@ export default function AssetsPage() {
                                             >
                                                 <div className="flex items-center justify-center px-2 py-1.5">
                                                     <Checkbox
-                                                        aria-label={t('asset_select_page_group')}
+                                                        aria-label={t(linkFilterOn ? 'asset_select_page_all' : 'asset_select_page_group')}
                                                         checked={allGroupSelected}
                                                         disabled={!eligibleStatus}
                                                         onCheckedChange={(v) => toggleAllOnPage(v === true)}
