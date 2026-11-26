@@ -12,6 +12,7 @@ import type {
     ImportRunRow,
     Issue,
 } from '../api/assetImportApi';
+import { fillWords } from './fill-words.ts';
 import { IMPORT_COLUMNS, type ImportColumnKey, type ImportListName } from './import-columns.ts';
 
 /** Value typed or picked for a cell: an id for dropdown columns, text for the rest, a boolean for lifetime warranty. */
@@ -63,15 +64,16 @@ export function normalizePrice(text: string): string | null {
 }
 
 /**
- * Y-m-d of a real calendar date, or null. Y-m-d is always read; other texts follow the date-format setting
- * (ymd_* year-first Y/m/d, any other day-first d/m/Y). Years over 2400 are Buddhist and count back 543.
+ * Y-m-d of a real calendar date, or null. Y-m-d and the template's day-first d/m/Y or d-m-Y are read under every
+ * date-format setting (no setting is month-first); a year-first Y/m/d only under the ymd_* settings.
+ * Years over 2400 are Buddhist and count back 543.
  */
 export function normalizeDate(text: string, format: DateFormat): string | null {
     const trimmed = text.trim();
     let parts = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
     let order: [number, number, number] = [1, 2, 3];
     if (!parts && format.startsWith('ymd_')) parts = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(trimmed);
-    if (!parts && !format.startsWith('ymd_')) {
+    if (!parts) {
         parts = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(trimmed);
         order = [3, 2, 1];
     }
@@ -333,7 +335,7 @@ export function importRunPayload(kind: ImportKind, rows: CheckedRow[], contractI
     return payload;
 }
 
-/** One issue in words: the template's placeholders filled from the issue, the row and the list names. */
+/** One issue in words: the template's placeholders filled from the issue, the row and the list names (spaced by fillWords). */
 export function fillIssueWords(
     template: string,
     issue: Issue,
@@ -349,8 +351,9 @@ export function fillIssueWords(
         // The server sends no value for a taken code; the cell's own text is the code
         value: issue.value ?? row.values.asset_code ?? row.cells.asset_code ?? '',
     };
-    return template.replace(/\{(\w+)\}/g, (_, name: string) => {
-        const value = fill[name];
-        return typeof value === 'number' ? formatNumber(value) : String(value ?? '');
-    });
+    const words: Record<string, string> = {};
+    for (const [name, value] of Object.entries(fill)) {
+        if (value !== undefined) words[name] = typeof value === 'number' ? formatNumber(value) : String(value);
+    }
+    return fillWords(template, words);
 }

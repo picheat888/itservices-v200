@@ -228,7 +228,8 @@ export const asset: Dict = {
     asset_refusal_link_contract_not_open: 'This contract has closed. Pick another one.',
     asset_refusal_link_asset_missing: 'A selected asset no longer exists. Clear the selection and pick again.',
 
-    // awaiting-contract-button.tsx — header alert
+    // pages/index.tsx, asset-detail-drawer.tsx, awaiting-contract-button.tsx — awaiting-contract label and header alert
+    asset_awaiting_contract: 'Awaiting contract',
     asset_awaiting_contract_strip: '{count} awaiting a contract',
 
     // asset-writeoff-dialog.tsx — writing off with a disposal note
@@ -269,7 +270,6 @@ export const asset: Dict = {
     asset_contract: 'Contract',
 
     // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
-    asset_awaiting_contract: 'Awaiting contract',
     asset_refusal_contract_keep:
         'This asset is on a contract. You can switch it to another contract; to take it off the contract, edit it on the contract page.',
     asset_refusal_writeoff_locked: 'A written-off asset cannot be edited. Cancel the write-off first.',
@@ -318,7 +318,7 @@ export const asset: Dict = {
     asset_empty_contract_peek_assets_search: 'No asset matches',
     asset_empty_contract_peek_assets_search_hint: 'Try other words.',
 
-    // asset-import-dialog.tsx — หน้าต่างนำเข้าทรัพย์สิน ขั้นซื้อหรือเช่าและอัปโหลดไฟล์
+    // asset-import-dialog.tsx — asset import dialog, buy-or-rent and upload steps
     asset_import: 'Import',
     asset_import_title: 'Import assets',
     asset_import_title_rented: 'Import rented assets',
@@ -378,7 +378,8 @@ export const asset: Dict = {
     asset_import_how_warranty_end: 'A date; leave empty for a lifetime warranty',
     asset_import_how_warranty_lifetime: 'Type "ใช่" (yes) or leave empty',
     asset_import_how_notes: 'Free text',
-    // import-check-step.tsx, import-check-table.tsx — ขั้นตรวจและแก้ไขของหน้าต่างนำเข้าทรัพย์สิน
+
+    // import-check-step.tsx, import-check-table.tsx — check-and-fix step of the asset import dialog
     asset_import_summary_line: '{rows} rows, {ready} ready to import',
     asset_import_summary_value: 'Total value {value} baht',
     asset_import_bad_rows: '{count} rows to fix',
@@ -401,6 +402,7 @@ export const asset: Dict = {
     asset_import_issue_not_a_number: 'Purchase price must be a number, such as 28500 or 28,500.00',
     asset_import_issue_bad_date: 'There is no date {value}, pick a new date',
     asset_import_issue_not_yes_no: 'Type "ใช่" (yes) or leave empty',
+
     // import-contract-step.tsx — contract step of the asset import dialog
     asset_import_contract_heading: 'Link all {count} assets to a contract?',
     asset_import_contract_sub: 'Optional. If the contract is not in the system yet, choose "Not yet"',
@@ -410,11 +412,12 @@ export const asset: Dict = {
     asset_import_contract_link_desc: 'Every asset is linked to the chosen contract as soon as it is imported',
     asset_import_contract_field: 'Lease contract',
     asset_import_contract_hint: 'Only hardware contracts that are not closed can be chosen',
-    // import-summary-step.tsx — summary and import step
+
+    // import-summary-step.tsx — summary and import step of the asset import dialog
     asset_import_summary_heading: 'Review before importing',
     asset_import_summary_lead: '{title}, {count} assets from file {file}',
-    asset_import_summary_one_wh: 'All assets go into {warehouse} as "Ready to hand over". The system issues the asset codes',
-    asset_import_summary_many_wh: 'All assets go into the warehouse named in the file as "Ready to hand over". The system issues the asset codes',
+    asset_import_summary_one_wh: 'All assets go into {warehouse} as "Ready to deploy". The system issues the asset codes',
+    asset_import_summary_many_wh: 'All assets go into the warehouse named in the file as "Ready to deploy". The system issues the asset codes',
     asset_import_summary_contract: 'Contract',
     asset_import_summary_contract_none: 'Not linked. All assets get the "Awaiting contract" tag',
     asset_import_summary_change: 'Change',
@@ -428,10 +431,11 @@ export const asset: Dict = {
     asset_import_run: 'Import',
     asset_refusal_import_rows_invalid: 'Some rows need fixing. Check the data again',
     asset_refusal_import_conflict: 'Some assets were just registered by someone else. Check the data again',
+
     // import-done.tsx — after the import
     asset_import_done_title_rented: 'Imported {count} rented assets',
     asset_import_done_title_purchased: 'Imported {count} purchased assets',
-    asset_import_done_codes: 'Codes {first} to {last}. All assets are in the warehouse as "Ready to hand over"',
+    asset_import_done_codes: 'Codes {first} to {last}. All assets are in the warehouse as "Ready to deploy"',
     asset_import_done_waiting: '{count} assets awaiting a contract',
     asset_import_done_waiting_sub: 'Link them from the asset list when the contract is ready',
     asset_import_done_show_waiting: 'Show assets awaiting a contract',

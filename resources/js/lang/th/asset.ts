@@ -226,7 +226,8 @@ export const asset: Dict = {
     asset_refusal_link_contract_not_open: 'สัญญานี้ปิดไปแล้ว เลือกสัญญาฉบับอื่น',
     asset_refusal_link_asset_missing: 'มีทรัพย์สินที่เลือกไว้ถูกลบไปแล้ว ยกเลิกการเลือกแล้วเลือกใหม่',
 
-    // awaiting-contract-button.tsx — header alert
+    // pages/index.tsx, asset-detail-drawer.tsx, awaiting-contract-button.tsx — awaiting-contract label and header alert
+    asset_awaiting_contract: 'รอผูกสัญญา',
     asset_awaiting_contract_strip: 'รอผูกสัญญา {count} รายการ',
 
     // asset-writeoff-dialog.tsx — writing off with a disposal note
@@ -267,7 +268,6 @@ export const asset: Dict = {
     asset_contract: 'สัญญา',
 
     // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
-    asset_awaiting_contract: 'รอผูกสัญญา',
     asset_refusal_contract_keep: 'ทรัพย์สินนี้ผูกสัญญาอยู่ เปลี่ยนเป็นสัญญาอื่นได้ ถ้าจะเอาออกจากสัญญา ให้แก้ที่หน้าสัญญา',
     asset_refusal_writeoff_locked: 'ทรัพย์สินที่ตัดจำหน่ายแล้วแก้ไขไม่ได้ ยกเลิกการตัดจำหน่ายก่อน',
     asset_refusal_not_writeoff: 'ทรัพย์สินนี้ยังไม่ได้ตัดจำหน่าย',
@@ -315,7 +315,7 @@ export const asset: Dict = {
     asset_empty_contract_peek_assets_search: 'ไม่พบทรัพย์สินที่ตรงกับคำค้น',
     asset_empty_contract_peek_assets_search_hint: 'ลองค้นด้วยคำอื่น',
 
-    // asset-import-dialog.tsx — หน้าต่างนำเข้าทรัพย์สิน ขั้นซื้อหรือเช่าและอัปโหลดไฟล์
+    // asset-import-dialog.tsx — asset import dialog, buy-or-rent and upload steps
     asset_import: 'นำเข้า',
     asset_import_title: 'นำเข้าทรัพย์สิน',
     asset_import_title_rented: 'นำเข้าทรัพย์สินเช่า',
@@ -374,7 +374,8 @@ export const asset: Dict = {
     asset_import_how_warranty_end: 'วันที่ ไม่ต้องกรอกถ้าประกันตลอดชีพ',
     asset_import_how_warranty_lifetime: 'ใส่ "ใช่" หรือเว้นว่าง',
     asset_import_how_notes: 'ข้อความอิสระ',
-    // import-check-step.tsx, import-check-table.tsx — ขั้นตรวจและแก้ไขของหน้าต่างนำเข้าทรัพย์สิน
+
+    // import-check-step.tsx, import-check-table.tsx — check-and-fix step of the asset import dialog
     asset_import_summary_line: '{rows} แถว พร้อมนำเข้า {ready}',
     asset_import_summary_value: 'มูลค่ารวม {value} บาท',
     asset_import_bad_rows: 'ต้องแก้ {count} แถว',
@@ -397,7 +398,8 @@ export const asset: Dict = {
     asset_import_issue_not_a_number: 'ราคาซื้อต้องเป็นตัวเลข เช่น 28500 หรือ 28,500.00',
     asset_import_issue_bad_date: 'ไม่มีวันที่ {value} เลือกวันที่ใหม่',
     asset_import_issue_not_yes_no: 'ใส่ "ใช่" หรือเว้นว่าง',
-    // import-contract-step.tsx — ขั้นผูกสัญญาของหน้าต่างนำเข้าทรัพย์สิน
+
+    // import-contract-step.tsx — contract step of the asset import dialog
     asset_import_contract_heading: 'ผูกสัญญาให้ทั้ง {count} รายการเลยไหม',
     asset_import_contract_sub: 'ไม่บังคับ ถ้าสัญญายังไม่อยู่ในระบบ เลือก "ยังไม่ผูก"',
     asset_import_contract_later: 'ยังไม่ผูก',
@@ -406,7 +408,8 @@ export const asset: Dict = {
     asset_import_contract_link_desc: 'ทุกรายการผูกกับสัญญาที่เลือกทันทีที่นำเข้า',
     asset_import_contract_field: 'สัญญาเช่า',
     asset_import_contract_hint: 'เลือกได้เฉพาะสัญญาฮาร์ดแวร์ที่ยังไม่ปิด',
-    // import-summary-step.tsx — ขั้นสรุปและนำเข้า
+
+    // import-summary-step.tsx — summary and import step of the asset import dialog
     asset_import_summary_heading: 'ตรวจสรุปก่อนนำเข้า',
     asset_import_summary_lead: '{title} {count} รายการ จากไฟล์ {file}',
     asset_import_summary_one_wh: 'ทุกรายการเข้า{warehouse} สถานะ "พร้อมส่งมอบ" ระบบออกรหัสทรัพย์สินให้',
@@ -424,7 +427,8 @@ export const asset: Dict = {
     asset_import_run: 'นำเข้า',
     asset_refusal_import_rows_invalid: 'มีแถวที่ต้องแก้ ตรวจข้อมูลอีกครั้ง',
     asset_refusal_import_conflict: 'มีรายการที่เพิ่งถูกลงทะเบียนไปก่อน ตรวจข้อมูลอีกครั้ง',
-    // import-done.tsx — หน้าหลังนำเข้า
+
+    // import-done.tsx — after the import
     asset_import_done_title_rented: 'นำเข้าทรัพย์สินเช่า {count} รายการแล้ว',
     asset_import_done_title_purchased: 'นำเข้าทรัพย์สินซื้อ {count} รายการแล้ว',
     asset_import_done_codes: 'ได้รหัส {first} ถึง {last} ทุกรายการอยู่ในคลังเป็น "พร้อมส่งมอบ"',

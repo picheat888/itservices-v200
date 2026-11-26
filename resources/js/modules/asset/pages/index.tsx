@@ -317,6 +317,8 @@ export default function AssetsPage() {
     const statusParam = searchParams.get('status');
     const statusFilter = statusFilterValue(statusParam);
     const warehouseFilter = searchParams.get('warehouse') ?? '';
+    // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.
+    const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter || !!warehouseFilter;
     const { page, perPage } = list;
     // Typing only writes ?search; the page returns to 1 when the debounced search is sent.
     const setSearch = (value: string) => setListParams({ search: value });
@@ -480,13 +482,13 @@ export default function AssetsPage() {
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
-    // An asset the user just registered stays on top for a minute; select-all still reads only `rows`
+    // A new asset stays on top for a minute, but a searched or filtered list pins only those it holds; select-all reads only `rows`
     const newAssets = useNewRows({
         scope: 'assets',
         rows,
         rowKey: (a) => a.id,
         detail: { key: (id) => ['asset', id], fetch: (id) => assetApi.get(Number(id)) },
-        active: tab === 'inventory',
+        active: tab === 'inventory' && !hasActiveFilters,
         waiting: isFetching,
     });
     const tableRows = [...newAssets.pinned, ...splitPinned(rows, newAssets.pinned, (a) => a.id)];
@@ -508,18 +510,28 @@ export default function AssetsPage() {
     const showAwaiting = () => {
         if (!(tab === 'inventory' && searchParams.get('status') === AWAITING_CONTRACT)) showStatus(AWAITING_CONTRACT);
     };
+    // Lists the imported rows on top: the inventory with no search or filter they might not match, in one URL write
+    const showImported = () => {
+        if (tab === 'inventory' && !hasActiveFilters) return;
+        setSearchParams((sp) => {
+            const next = new URLSearchParams(sp);
+            LIST_KEYS.forEach((key) => next.delete(key));
+            next.set('tab', 'inventory');
+            return next;
+        });
+    };
     // The import's done screen closes the dialog first (an async history pop), so its choice waits until ?dialog= is gone
     const [afterImport, setAfterImport] = useState<'awaiting' | 'imported' | null>(null);
-    const latest = useRef({ showAwaiting, tab, setTab });
+    const latest = useRef({ showAwaiting, showImported });
     useEffect(() => {
-        latest.current = { showAwaiting, tab, setTab };
+        latest.current = { showAwaiting, showImported };
     });
     useEffect(() => {
         if (afterImport === null || importDialog.open) return;
         setAfterImport(null);
         const current = latest.current;
         if (afterImport === 'awaiting') current.showAwaiting();
-        else if (current.tab !== 'inventory') current.setTab('inventory');
+        else current.showImported();
     }, [afterImport, importDialog.open]);
     // The clicked row opens the form at once; a link or reload fetches it
     const openEdit = (a: Asset) => {
@@ -639,9 +651,6 @@ export default function AssetsPage() {
     const perPageLabelId = `${filterIdBase}-per-page`;
     const formatCount = (n: number) => formatNumber(n, lang);
     const selectionCountText = t('asset_selected_count').replace('{n}', formatCount(selectedIds.length));
-
-    // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.
-    const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter || !!warehouseFilter;
 
     /** Reset the inventory search + type/source/status/warehouse filters back to their defaults. */
     const clearFilters = () => {

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { CheckedRow, ImportOptions, Issue } from '../../resources/js/modules/asset/api/assetImportApi.ts';
+import { fillWords } from '../../resources/js/modules/asset/lib/fill-words.ts';
 import { IMPORT_COLUMNS } from '../../resources/js/modules/asset/lib/import-columns.ts';
 import {
     badRowCount,
@@ -11,6 +12,7 @@ import {
     foldAt,
     importRunPayload,
     localIssues,
+    normalizeDate,
     optionsFor,
     overlayFromRefusal,
     rowsWithEdits,
@@ -18,6 +20,7 @@ import {
     withServerIssues,
 } from '../../resources/js/modules/asset/lib/import-rows.ts';
 import { canLeaveStep, importSteps, stepAfterRefusal } from '../../resources/js/modules/asset/lib/import-wizard.ts';
+import type { DateFormat } from '../../resources/js/shared/lib/datetime.ts';
 
 const options: ImportOptions = {
     categories: [{ id: 1, name: 'Notebook', name_th: 'โน้ตบุ๊ก' }],
@@ -256,14 +259,20 @@ test('fixing the first of a duplicate pair clears the later row, and a new clash
 test('typed dates follow the date-format setting, accept Buddhist years and refuse impossible days', () => {
     const rows = [row(2)];
     const ctx = { kind: 'purchased' as const, rows, options, dateFormat: 'dmy_slash' as const };
-    const check = (text: string, dateFormat: 'dmy_slash' | 'ymd_slash' | 'd_mon_y') =>
-        localIssues(rows[0], 'purchase_date', text, { ...ctx, dateFormat }).length;
+    const check = (text: string, dateFormat: DateFormat) => localIssues(rows[0], 'purchase_date', text, { ...ctx, dateFormat }).length;
     assert.equal(check('12/11/2026', 'dmy_slash'), 0);
     assert.equal(check('12-11-2026', 'dmy_slash'), 0);
     assert.equal(check('2026/11/12', 'dmy_slash'), 1);
     assert.equal(check('2026/11/12', 'ymd_slash'), 0);
-    assert.equal(check('12/11/2026', 'ymd_slash'), 1);
     assert.equal(check('2026-11-12', 'ymd_slash'), 0);
+    // Day-first is the template's form and no setting is month-first, so every setting reads it
+    for (const format of ['dmy_slash', 'dmy_dash', 'ymd_slash', 'ymd_dash', 'd_mon_y', 'd_month_y'] as const) {
+        assert.equal(normalizeDate('12/11/2026', format), '2026-11-12', format);
+        assert.equal(normalizeDate('12-11-2026', format), '2026-11-12', format);
+        assert.equal(normalizeDate('12/11/2569', format), '2026-11-12', format);
+        assert.equal(normalizeDate('2026-11-12', format), '2026-11-12', format);
+        assert.equal(normalizeDate('31/02/2026', format), null, format);
+    }
     assert.equal(check('12/11/2569', 'dmy_slash'), 0);
     assert.equal(check('31/02/2026', 'dmy_slash'), 1);
     assert.equal(check('12 Nov 2026', 'd_mon_y'), 1);
@@ -535,4 +544,85 @@ test('only the newest 20 imported rows are pinned', () => {
     const hook = read('modules/asset/hooks/use-asset-import.ts');
     assert.match(hook, /const PIN_LIMIT = 20/);
     assert.match(hook, /markNew\('assets', \[\.\.\.result\.ids\]\.sort\(\(a, b\) => b - a\)\.slice\(0, PIN_LIMIT\)\)/);
+});
+
+test('filled words space a Latin or digit value where it meets a Thai letter, and leave the copy as written', () => {
+    assert.equal(fillWords('ต้องกรอก{column}', { column: 'Serial' }), 'ต้องกรอก Serial');
+    assert.equal(fillWords('{column}ยาว {length} ตัวอักษร', { column: 'Tag', length: '14' }), 'Tag ยาว 14 ตัวอักษร');
+    assert.equal(fillWords('ไม่พบ{column}นี้ เลือกจากรายการ', { column: 'Serial' }), 'ไม่พบ Serial นี้ เลือกจากรายการ');
+    assert.equal(fillWords('ทุกรายการเข้า{warehouse} สถานะ', { warehouse: 'IT Store' }), 'ทุกรายการเข้า IT Store สถานะ');
+    assert.equal(fillWords('แถว{line}', { line: '3' }), 'แถว 3');
+    // A Thai value, English copy and a value already spaced stay as they are
+    assert.equal(fillWords('ต้องกรอก{column}', { column: 'ประเภท' }), 'ต้องกรอกประเภท');
+    assert.equal(fillWords('Fill in {column}', { column: 'Serial' }), 'Fill in Serial');
+    assert.equal(fillWords('ต้องแก้ {column}', { column: 'Serial' }), 'ต้องแก้ Serial');
+    assert.equal(fillWords('เข้า{warehouse}', { warehouse: 'คลัง IT' }), 'เข้าคลัง IT');
+    // A missing value is blank and the copy is never re-spaced
+    assert.equal(fillWords('Serialซ้ำ{x}กับ', {}), 'Serialซ้ำกับ');
+});
+
+test('issue words are spaced around Latin column names', () => {
+    const fmt = (n: number) => String(n);
+    const name = (c: string) => (c === 'serial' ? 'Serial' : c === 'tag' ? 'Tag' : c);
+    const r = row(4);
+    assert.equal(
+        fillIssueWords('{column}ซ้ำกับแถว {line} แก้ให้ไม่ซ้ำ', { code: 'dup_in_file', column: 'serial', line: 2 }, r, options, name, fmt),
+        'Serial ซ้ำกับแถว 2 แก้ให้ไม่ซ้ำ',
+    );
+    assert.equal(fillIssueWords('ต้องกรอก{column}', { code: 'required', column: 'serial' }, r, options, name, fmt), 'ต้องกรอก Serial');
+    assert.equal(
+        fillIssueWords('{column}ยาว {length} ตัวอักษร', { code: 'too_long', column: 'tag', length: 14, max: 10 }, r, options, name, fmt),
+        'Tag ยาว 14 ตัวอักษร',
+    );
+});
+
+test('names inserted in the check, summary and upload words go through fillWords', () => {
+    assert.match(read('modules/asset/components/import/import-check-table.tsx'), /fillWords\(t\('asset_import_fix_column'\)/);
+    assert.match(read('modules/asset/components/import/import-summary-step.tsx'), /fillWords\(t\('asset_import_summary_one_wh'\), \{ warehouse: /);
+    assert.match(read('modules/asset/components/import/import-upload-step.tsx'), /fillWords\(t\('asset_import_drop_hint'\), \{ kind: /);
+});
+
+test('the check step names the file columns it ignores, only when there are some', () => {
+    const step = read('modules/asset/components/import/import-check-step.tsx');
+    assert.match(step, /ignoredColumns\.length > 0 && \(/);
+    assert.match(step, /t\('import_ignored_columns'\)\} <span translate="no">\{ignoredColumns\.join\(', '\)\}/);
+    assert.match(read('modules/asset/components/import/asset-import-dialog.tsx'), /ignoredColumns=\{state\.preview\.meta\.ignored_columns\}/);
+});
+
+test('a list cell shows the file text until edited, and every control names its row', () => {
+    const table = read('modules/asset/components/import/import-check-table.tsx');
+    assert.match(table, /const typed = edited \? '' : \(row\.cells\[column\] \?\? ''\)\.trim\(\)/);
+    assert.match(table, /placeholder=\{typed \|\| undefined\}/);
+    assert.match(table, /`\$\{labelOf\(column\)\} \$\{t\('asset_import_col_row'\)\} \$\{fmtN\(row\.line\)\}`/);
+    assert.doesNotMatch(table, /aria-label=\{label\}/);
+    assert.equal((table.match(/aria-label=\{controlLabel\}/g) ?? []).length, 3);
+    // The search box inside the list still names only the column
+    assert.match(table, /searchPlaceholder=\{label\}/);
+});
+
+test('new-row pins fetch off-page rows only on the unfiltered list, and "show imported" clears the filters', () => {
+    const page = read('modules/asset/pages/index.tsx');
+    assert.match(page, /active: tab === 'inventory' && !hasActiveFilters,/);
+    // Declared before the pins read it
+    assert.ok(page.indexOf('const hasActiveFilters') < page.indexOf('useNewRows({'));
+    assert.match(
+        page,
+        /const showImported = \(\) => \{\s*if \(tab === 'inventory' && !hasActiveFilters\) return;[\s\S]*?LIST_KEYS\.forEach\(\(key\) => next\.delete\(key\)\)/,
+    );
+    assert.match(page, /else current\.showImported\(\);/);
+});
+
+test('en says "Ready to deploy" like the status, and the awaiting label sits with the awaiting keys', () => {
+    const en = read('lang/en/asset.ts');
+    assert.doesNotMatch(en, /Ready to hand over/);
+    for (const lang of ['th', 'en']) {
+        const text = read(`lang/${lang}/asset.ts`);
+        assert.match(
+            text,
+            /awaiting-contract label and header alert\n {4}asset_awaiting_contract: '[^']*',\n {4}asset_awaiting_contract_strip:/,
+            lang,
+        );
+    }
+    const comments = (lang: string) => read(`lang/${lang}/asset.ts`).match(/^ {4}\/\/ .*$/gm);
+    assert.deepEqual(comments('th'), comments('en'));
 });

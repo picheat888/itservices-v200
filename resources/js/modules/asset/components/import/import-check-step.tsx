@@ -1,4 +1,4 @@
-// Step 3 of the asset import dialog: one summary line, the rows with their problems, and the note under the table.
+// Step 3 of the asset import dialog: one summary line, the rows with their problems, and the notes under the table (how to fix, ignored columns).
 // The rows shown while filtered are the ones that were bad when the filter was applied, so a fixed row stays until it is toggled again.
 import { useT } from '@/lang';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
@@ -19,13 +19,15 @@ interface Props {
     /** Rows with the user's edits applied. */
     rows: CheckedRow[];
     options: ImportOptions;
+    /** Headers in the file the template does not know; their cells are not imported. */
+    ignoredColumns: string[];
     edits: RowEdits;
     onEdit: (line: number, column: ImportColumnKey, value: CellEdit) => void;
 }
 
 const badLines = (rows: CheckedRow[]) => new Set(rows.filter((row) => row.issues.length > 0).map((row) => row.line));
 
-export function ImportCheckStep({ kind, fileName, rows, options, edits, onEdit }: Props) {
+export function ImportCheckStep({ kind, fileName, rows, options, ignoredColumns, edits, onEdit }: Props) {
     const t = useT();
     const fmtN = useNumberFormat();
     const bad = badRowCount(rows);
@@ -101,8 +103,13 @@ export function ImportCheckStep({ kind, fileName, rows, options, edits, onEdit }
             {/* Table */}
             <ImportCheckTable columns={columns} rows={shown} options={options} edits={edits} onEdit={onEdit} />
 
-            {/* Note under the table */}
+            {/* Notes under the table */}
             <p className="text-muted-foreground text-xs">{t('asset_import_check_note')}</p>
+            {ignoredColumns.length > 0 && (
+                <p className="text-muted-foreground text-xs">
+                    {t('import_ignored_columns')} <span translate="no">{ignoredColumns.join(', ')}</span>
+                </p>
+            )}
             {bad > 0 && (
                 <span id={NEXT_BLOCKED_ID} className="sr-only">
                     {t('asset_import_next_blocked')}

@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/button';
 import { Check, CircleAlert, CircleHelp, Download, FileSpreadsheet, Loader2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import type { ImportKind } from '../../api/assetImportApi';
+import { fillWords } from '../../lib/fill-words';
 import { IMPORT_COLUMNS } from '../../lib/import-columns';
 
 interface Props {
@@ -98,7 +99,7 @@ export function ImportUploadStep({ kind, file, rowCount, busy, refusal, onPick, 
 
             {/* Drop zone, or the chosen file in the same place */}
             {file === null ? (
-                <FileDropZone accept={['xlsx']} hint={t('asset_import_drop_hint').replace('{kind}', kindWord)} onPick={pick} />
+                <FileDropZone accept={['xlsx']} hint={fillWords(t('asset_import_drop_hint'), { kind: kindWord })} onPick={pick} />
             ) : (
                 <ChosenFile file={file} busy={busy} metaText={!busy && rowCount !== null ? meta(rowCount) : null} onPick={pick} onRemove={remove} />
             )}

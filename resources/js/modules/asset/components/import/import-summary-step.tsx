@@ -6,6 +6,7 @@ import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
 import { useMemo } from 'react';
 import type { CheckedRow, ImportKind, ImportOptions } from '../../api/assetImportApi';
+import { fillWords } from '../../lib/fill-words';
 import { foldAt, summaryGroups, type SummaryEntry } from '../../lib/import-rows';
 
 const FOLD_AT = 5;
@@ -85,7 +86,7 @@ export function ImportSummaryStep({ kind, fileName, rows, options, contractLabel
                 <p className="text-base">{lead}</p>
                 <p className="text-muted-foreground text-sm">
                     {oneWarehouse !== null
-                        ? t('asset_import_summary_one_wh').replace('{warehouse}', oneWarehouse)
+                        ? fillWords(t('asset_import_summary_one_wh'), { warehouse: oneWarehouse })
                         : t('asset_import_summary_many_wh')}
                 </p>
             </div>

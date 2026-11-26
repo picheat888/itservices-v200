@@ -391,6 +391,7 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
                         fileName={state.file?.name ?? ''}
                         rows={rows}
                         options={state.preview.options}
+                        ignoredColumns={state.preview.meta.ignored_columns}
                         edits={state.edits}
                         onEdit={editCell}
                     />

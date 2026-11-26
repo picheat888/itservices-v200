@@ -8,6 +8,7 @@ import { Input } from '@/shared/ui/input';
 import { Check, CircleAlert, CircleCheck } from 'lucide-react';
 import { memo } from 'react';
 import type { CheckedRow, CheckedValues, ImportOption, ImportOptions, Issue } from '../../api/assetImportApi';
+import { fillWords } from '../../lib/fill-words';
 import type { ImportColumn, ImportColumnKey, ImportListName } from '../../lib/import-columns';
 import { fillIssueWords, optionsFor, type CellEdit, type RowEdits } from '../../lib/import-rows';
 
@@ -114,6 +115,8 @@ const CheckRow = memo(function CheckRow({ row, rowEdits, columns, options, onEdi
     const labelOf = (column: string) => (column in COLUMN_LABEL ? t(COLUMN_LABEL[column as ImportColumnKey]) : column);
 
     const issueWords = (issue: Issue) => fillIssueWords(t(`asset_import_issue_${issue.code}`), issue, row, options, labelOf, fmtN);
+    // Names the row too, so a control read out of context is not one of many with the same name
+    const controlLabel = (column: ImportColumnKey) => `${labelOf(column)} ${t('asset_import_col_row')} ${fmtN(row.line)}`;
 
     const firstBad = columns.find((column) => row.issues.some((issue) => issue.column === column.key))?.key ?? row.issues[0]?.column;
 
@@ -135,7 +138,7 @@ const CheckRow = memo(function CheckRow({ row, rowEdits, columns, options, onEdi
                         className="hover:bg-accent focus-visible:ring-ring inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-red-700 focus-visible:ring-2 focus-visible:outline-hidden dark:text-red-300"
                     >
                         <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        {t('asset_import_fix_column').replace('{column}', labelOf(firstBad))}
+                        {fillWords(t('asset_import_fix_column'), { column: labelOf(firstBad) })}
                     </button>
                 )}
             </td>
@@ -149,6 +152,7 @@ const CheckRow = memo(function CheckRow({ row, rowEdits, columns, options, onEdi
                                 row={row}
                                 column={column.key}
                                 label={labelOf(column.key)}
+                                controlLabel={controlLabel(column.key)}
                                 edit={rowEdits?.[column.key]}
                                 edited={edited}
                                 options={options}
@@ -189,7 +193,10 @@ function PlainCell({ row, column, options }: { row: CheckedRow; column: ImportCo
 interface CellProps {
     row: CheckedRow;
     column: ImportColumnKey;
+    /** The column's name, for the list's search box. */
     label: string;
+    /** The column's name with the row, for screen readers. */
+    controlLabel: string;
     edit: CellEdit | undefined;
     edited: boolean;
     options: ImportOptions;
@@ -200,7 +207,7 @@ interface CellProps {
 }
 
 /** A cell the user can change: a list for names, a yes or blank choice for lifetime warranty, a text box for the rest. */
-function EditableCell({ row, column, label, edit, edited, options, issues, closest, onEdit }: CellProps) {
+function EditableCell({ row, column, label, controlLabel, edit, edited, options, issues, closest, onEdit }: CellProps) {
     const t = useT();
     const id = cellDomId(row.line, column);
     const errorId = `${id}-error`;
@@ -214,7 +221,7 @@ function EditableCell({ row, column, label, edit, edited, options, issues, close
             {column === 'warranty_lifetime' ? (
                 <select
                     id={id}
-                    aria-label={label}
+                    aria-label={controlLabel}
                     aria-invalid={invalid}
                     aria-describedby={describedBy}
                     value={unresolved ? 'file' : (edited ? edit === true : row.values.warranty_lifetime) ? 'yes' : ''}
@@ -237,6 +244,8 @@ function EditableCell({ row, column, label, edit, edited, options, issues, close
                     row={row}
                     column={column}
                     label={label}
+                    controlLabel={controlLabel}
+                    edited={edited}
                     id={id}
                     invalid={invalid}
                     describedBy={describedBy}
@@ -247,7 +256,7 @@ function EditableCell({ row, column, label, edit, edited, options, issues, close
             ) : (
                 <Input
                     id={id}
-                    aria-label={label}
+                    aria-label={controlLabel}
                     aria-invalid={invalid}
                     aria-describedby={describedBy}
                     inputMode={column === 'value' ? 'decimal' : undefined}
@@ -281,6 +290,8 @@ interface ListCellProps {
     row: CheckedRow;
     column: ImportColumnKey;
     label: string;
+    controlLabel: string;
+    edited: boolean;
     id: string;
     invalid: boolean;
     describedBy: string | undefined;
@@ -290,7 +301,7 @@ interface ListCellProps {
 }
 
 // The choices of a name column; models are limited to the row's brand, the closest name first
-function ListCell({ row, column, label, id, invalid, describedBy, options, closest, onEdit }: ListCellProps) {
+function ListCell({ row, column, label, controlLabel, edited, id, invalid, describedBy, options, closest, onEdit }: ListCellProps) {
     const listed = LIST_COLUMN[column];
     if (!listed) return null;
     const brandId = row.values.brand_id;
@@ -299,17 +310,20 @@ function ListCell({ row, column, label, id, invalid, describedBy, options, close
     const value = typeof current === 'number' ? String(current) : '';
     // A model of another brand is no longer a choice but must still show on the trigger
     const kept = value !== '' && !choices.some((choice) => choice.value === value) ? pickedOption(options[listed.list], Number(value)) : undefined;
+    // Until the user picks, the trigger shows what the file had, so the name not found can be seen
+    const typed = edited ? '' : (row.cells[column] ?? '').trim();
 
     return (
         <div className={cn(invalid && '[&_[role=combobox]]:border-destructive')}>
             <SearchableSelect
                 id={id}
-                aria-label={label}
+                aria-label={controlLabel}
                 aria-invalid={invalid}
                 aria-describedby={describedBy}
                 value={value}
                 options={choices}
                 selectedOption={kept}
+                placeholder={typed || undefined}
                 searchPlaceholder={label}
                 onChange={(next) => onEdit(row.line, column, next === '' ? null : Number(next))}
             />
