@@ -427,19 +427,19 @@ export function MembersDrawer({
                             </div>
                         )}
 
-                        {/* Members — the one part that scrolls */}
-                        <div className="border-border min-h-0 flex-1 overflow-y-auto border-t px-6 py-4 [--sticky-top:-1rem]">
+                        {/* Members — fills the rest of the dialog */}
+                        <div className="border-border flex min-h-0 flex-1 flex-col overflow-hidden border-t px-6 py-4">
                             <SectionLabel>
                                 {t('access_members')} ({fmtN(members.length)})
                             </SectionLabel>
-                            <div>
+                            <div className="flex min-h-0 flex-1 flex-col">
                                 <DataTable
                                     columns={columns}
                                     rows={sortedMembers}
                                     rowKey={(m) => m.id}
                                     searchPlaceholder={t('access_members_search')}
                                     searchable={memberSearch}
-                                    pageSize={7}
+                                    fillHeight
                                     rowHeight={49}
                                     loading={isLoading}
                                     search={{ value: memberQuery, onChange: setMemberQuery }}
