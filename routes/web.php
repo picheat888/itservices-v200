@@ -40,6 +40,7 @@ Route::middleware([...$signedIn, 'throttle:files'])->prefix('files')->group(func
     Route::get('employees/{employee}/photo', [FileController::class, 'employeePhoto'])->name('files.employee-photo');
     Route::get('software/{software}/logo', [FileController::class, 'softwareLogo'])->name('files.software-logo');
     Route::get('social-platforms/{socialPlatform}/logo', [FileController::class, 'socialLogo'])->name('files.social-logo');
+    Route::get('asset-models/{assetModel}/photo', [FileController::class, 'modelPhoto'])->name('files.model-photo');
 });
 
 // Service worker and web app manifest, served from the root (before the SPA catch-all)

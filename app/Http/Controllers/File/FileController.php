@@ -8,6 +8,7 @@ use App\Models\Access\Software;
 use App\Models\Contract\ContractAttachment;
 use App\Models\Employee\Employee;
 use App\Models\Request\RequestAttachment;
+use App\Models\Settings\AssetModel;
 use App\Models\Ticket\TicketAttachment;
 use App\Services\Ticket\TicketActionGuard;
 use Illuminate\Http\Request;
@@ -58,6 +59,15 @@ class FileController extends Controller
         abort_if($software->logo_path === null, 404);
 
         return $this->stream($software->logo_path);
+    }
+
+    /** An asset model photo — any signed-in user, like software logos. */
+    public function modelPhoto(Request $request, AssetModel $assetModel): StreamedResponse
+    {
+        abort_if($request->user() === null, 403);
+        abort_if($assetModel->photo_path === null, 404);
+
+        return $this->stream($assetModel->photo_path);
     }
 
     /** A social-platform logo — any signed-in user, like employee photos. */
