@@ -777,6 +777,7 @@ export function ResourceModal({
             {/* Logo crop — shared 1:1 cropper, same as the employee photo flow. */}
             <PhotoCropDialog
                 imageSrc={cropSrc}
+                eyebrow={titleByKind[curKind]}
                 onConfirm={(cropped) => {
                     setLogo(cropped);
                     setRemoveLogo(false);

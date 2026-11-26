@@ -1,24 +1,33 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooterBar } from '@/shared/ui/dialog';
 import { AlertCircle, Crop, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import type { Area, Point } from 'react-easy-crop';
+import type { Area, MediaSize, Point } from 'react-easy-crop';
 import Cropper from 'react-easy-crop';
+import { clipToImage, fitWholeZoom } from '../lib/crop-math';
 
 interface Props {
     /** Object URL to crop, or null when closed. Kept mounted so the close animation can play. */
     imageSrc: string | null;
     onConfirm: (croppedFile: File) => void;
     onCancel: () => void;
+    /** Words above the title; the employee module's name when left out. */
+    eyebrow?: string;
+    /** `avatar`: round, fills the circle, 512px. `product`: square frame that opens on the whole picture, white bands, 800px. */
+    variant?: 'avatar' | 'product';
 }
 
-async function getCroppedFile(imageSrc: string, pixelCrop: Area): Promise<File> {
+/** Product crop frame, square, inside the 288px-tall cropper. */
+const PRODUCT_FRAME = 224;
+
+async function getCroppedFile(imageSrc: string, pixelCrop: Area, product: boolean): Promise<File> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-            const SIZE = 512;
+            const SIZE = product ? 800 : 512;
             const canvas = document.createElement('canvas');
             canvas.width = SIZE;
             canvas.height = SIZE;
@@ -27,7 +36,15 @@ async function getCroppedFile(imageSrc: string, pixelCrop: Area): Promise<File> 
                 reject(new Error('no 2d context'));
                 return;
             }
-            ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, SIZE, SIZE);
+            if (product) {
+                // The frame may reach past the picture: paint white, then only the part on the picture
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, SIZE, SIZE);
+                const part = clipToImage(pixelCrop, { width: img.naturalWidth, height: img.naturalHeight }, SIZE);
+                if (part) ctx.drawImage(img, part.sx, part.sy, part.sw, part.sh, part.dx, part.dy, part.dw, part.dh);
+            } else {
+                ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, SIZE, SIZE);
+            }
             // WebP (q≈0.9) keeps transparency at a fraction of a canvas PNG's size
             canvas.toBlob(
                 (blob) => {
@@ -48,12 +65,15 @@ async function getCroppedFile(imageSrc: string, pixelCrop: Area): Promise<File> 
 
 /**
  * Compact crop modal rendered via Portal so it always sits above Sheet overlays.
- * Locked to 1:1; displays a circular preview mask identical to the avatar shown in the form.
+ * Avatar: locked to 1:1 with a circular mask identical to the avatar shown in the form.
+ * Product: a square frame that starts on the whole picture so wide items are never cut; zoom in to trim the edges.
  */
-export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
+export function PhotoCropDialog({ imageSrc, onConfirm, onCancel, eyebrow, variant = 'avatar' }: Props) {
     const t = useT();
+    const product = variant === 'product';
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
+    const [minZoom, setMinZoom] = useState(1);
     const [croppedPixels, setCroppedPixels] = useState<Area | null>(null);
     const [applying, setApplying] = useState(false);
     const [failed, setFailed] = useState(false);
@@ -65,6 +85,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
         setSrc(imageSrc);
         setCrop({ x: 0, y: 0 });
         setZoom(1);
+        setMinZoom(1);
         setCroppedPixels(null);
         setApplying(false);
         setFailed(false);
@@ -74,12 +95,23 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
         setCroppedPixels(pixels);
     }, []);
 
+    // Product: the smallest zoom shows the whole picture inside the frame, and the dialog opens there
+    const onMediaLoaded = useCallback(
+        (media: MediaSize) => {
+            if (!product) return;
+            const whole = fitWholeZoom(media, PRODUCT_FRAME);
+            setMinZoom(whole);
+            setZoom(whole);
+        },
+        [product],
+    );
+
     const apply = async () => {
         if (!croppedPixels || !src) return;
         setApplying(true);
         setFailed(false);
         try {
-            const file = await getCroppedFile(src, croppedPixels);
+            const file = await getCroppedFile(src, croppedPixels, product);
             onConfirm(file);
         } catch {
             setApplying(false);
@@ -91,20 +123,30 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
         // Nested Radix dialog: portals above the parent and becomes the active layer
         <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
             <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-sm gap-0 overflow-y-auto p-0 [&>button]:hidden">
-                <FocusDialogHeader icon={Crop} eyebrow={t('employees')} title={t('photo_crop_title')} srDescription={t('photo_crop_hint')} />
+                <FocusDialogHeader
+                    icon={Crop}
+                    eyebrow={eyebrow ?? t('employees')}
+                    title={t('photo_crop_title')}
+                    srDescription={t('photo_crop_hint')}
+                />
 
                 {/* Cropper — fixed square */}
-                <div className="bg-muted/30 relative h-72 w-full border-t">
+                <div className={cn('relative h-72 w-full border-t', product ? 'bg-white' : 'bg-muted/30')}>
                     <Cropper
                         image={src ?? ''}
                         crop={crop}
                         zoom={zoom}
+                        minZoom={minZoom}
+                        maxZoom={minZoom * 3}
                         aspect={1}
-                        cropShape="round"
+                        cropShape={product ? 'rect' : 'round'}
+                        cropSize={product ? { width: PRODUCT_FRAME, height: PRODUCT_FRAME } : undefined}
+                        restrictPosition={!product}
                         showGrid={false}
                         onCropChange={setCrop}
                         onZoomChange={setZoom}
                         onCropComplete={onCropComplete}
+                        onMediaLoaded={onMediaLoaded}
                         classes={{ cropAreaClassName: '!border-2 !border-white !text-black/55' }}
                     />
                 </div>
@@ -116,9 +158,9 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                         <input
                             name="zoom"
                             type="range"
-                            min={1}
-                            max={3}
-                            step={0.1}
+                            min={minZoom}
+                            max={minZoom * 3}
+                            step={product ? 0.01 : 0.1}
                             value={zoom}
                             onChange={(e) => setZoom(Number(e.target.value))}
                             aria-label={t('photo_crop_zoom')}
