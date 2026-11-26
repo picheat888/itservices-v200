@@ -8,14 +8,20 @@ use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
+use App\Models\Settings\AssetModel;
 use App\Models\User;
 use App\Support\Refusal;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AssetImportService
 {
+    private const LOCK_SECONDS = 120;
+
+    private const LOCK_WAIT_SECONDS = 20;
+
     private const FIELDS = [
         'category_id', 'brand_id', 'model_id', 'serial', 'warehouse_id', 'asset_code', 'tag', 'notes',
         'value', 'vendor_id', 'purchase_date', 'warranty_end', 'warranty_lifetime',
@@ -32,12 +38,15 @@ class AssetImportService
      */
     public function run(string $kind, array $rows, ?Contract $contract, User $by): array
     {
-        $this->refuseInvalidRows($kind, $rows);
-        $this->refuseClosedContract($contract);
-
         try {
-            return Cache::lock('assets:code-sequence', 10)->block(10, fn () => DB::transaction(fn () => $this->createAll($kind, $rows, $contract)));
-        } catch (UniqueConstraintViolationException) {
+            return Cache::lock('assets:code-sequence', self::LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, fn () => DB::transaction(function () use ($kind, $rows, $contract) {
+                // Checked under the lock so rows committed by an earlier import are seen
+                $this->refuseInvalidRows($kind, $rows);
+                $this->refuseClosedContract($contract);
+
+                return $this->createAll($kind, $rows, $contract);
+            }));
+        } catch (UniqueConstraintViolationException|LockTimeoutException) {
             Refusal::fail('import_conflict');
         }
     }
@@ -80,14 +89,18 @@ class AssetImportService
         $typed = array_values(array_filter(array_map(fn (array $row) => trim((string) ($row['asset_code'] ?? '')), $rows)));
         $issued = Asset::nextFreeCodes(count($rows) - count($typed), $typed);
 
+        $modelNames = AssetModel::whereIn('id', array_column($rows, 'model_id'))->pluck('name', 'id');
+
         $ids = [];
         $codes = [];
         foreach ($rows as $row) {
             $values = array_intersect_key($row, array_flip(self::FIELDS));
             $values['asset_code'] = trim((string) ($values['asset_code'] ?? '')) ?: array_shift($issued);
 
+            $values['warranty_lifetime'] = (bool) ($values['warranty_lifetime'] ?? false);
+
             $asset = $this->assets->create($values + ['source' => $kind, 'contract_id' => $contract?->getKey()]);
-            AuditLog::record('Registered asset', "{$asset->asset_code} - {$asset->model?->name}", subject: $asset);
+            AuditLog::record('Registered asset', "{$asset->asset_code} - {$modelNames[$asset->model_id]}", subject: $asset);
 
             $ids[] = $asset->id;
             $codes[] = $asset->asset_code;

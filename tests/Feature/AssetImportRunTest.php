@@ -15,7 +15,9 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
@@ -141,7 +143,7 @@ class AssetImportRunTest extends TestCase
         $contract = $this->hardwareContract();
 
         $this->import(['kind' => 'purchased', 'contract_id' => $contract->id, 'rows' => [$this->purchasedRow(2)]])
-            ->assertStatus(422);
+            ->assertStatus(422)->assertJsonValidationErrors('contract_id');
 
         $this->assertSame(0, Asset::count());
     }
@@ -219,7 +221,37 @@ class AssetImportRunTest extends TestCase
         $this->actingAs($viewer)->postJson('/api/assets/import', ['kind' => 'rented', 'rows' => [$this->row(2)]])->assertForbidden();
 
         $rows = array_map(fn (int $i) => $this->row($i + 1), range(1, 501));
-        $this->import(['kind' => 'rented', 'rows' => $rows])->assertStatus(422);
+        $this->import(['kind' => 'rented', 'rows' => $rows])->assertStatus(422)->assertJsonValidationErrors('rows');
         $this->assertSame(0, Asset::count());
+    }
+
+    public function test_the_recheck_sees_rows_committed_by_an_earlier_import(): void
+    {
+        $payload = ['kind' => 'rented', 'rows' => [$this->row(2), $this->row(3)]];
+        $this->import($payload)->assertOk();
+        $this->assertSame(2, Asset::count());
+
+        $response = $this->import($payload)->assertStatus(422)->assertJsonPath('message', 'import_rows_invalid');
+        $this->assertSame('serial_taken', $response->json('errors.0.issues.0.code'));
+        $this->assertSame(2, Asset::count());
+    }
+
+    public function test_a_lock_wait_timeout_answers_import_conflict_and_writes_nothing(): void
+    {
+        $lock = \Mockery::mock();
+        $lock->shouldReceive('block')->andThrow(new LockTimeoutException);
+        Cache::shouldReceive('lock')->andReturn($lock);
+
+        $this->import(['kind' => 'rented', 'rows' => [$this->row(2)]])
+            ->assertStatus(422)->assertJsonPath('message', 'import_conflict');
+
+        $this->assertSame(0, Asset::count());
+    }
+
+    public function test_a_purchased_row_without_a_lifetime_flag_is_stored_as_not_lifetime(): void
+    {
+        $this->import(['kind' => 'purchased', 'rows' => [$this->purchasedRow(2, ['warranty_lifetime' => null])]])->assertOk();
+
+        $this->assertFalse(Asset::where('serial', 'SN-2')->first()->warranty_lifetime);
     }
 }

@@ -44,7 +44,7 @@ class AssetImportRequest extends FormRequest
             ],
             'rows' => ['required', 'array', 'min:1', 'max:500'],
             'rows.*' => ['array'],
-            'rows.*.line' => ['required', 'integer'],
+            'rows.*.line' => ['required', 'integer', 'distinct'],
             'rows.*.category_id' => ['nullable', 'integer'],
             'rows.*.brand_id' => ['nullable', 'integer'],
             'rows.*.model_id' => ['nullable', 'integer'],
