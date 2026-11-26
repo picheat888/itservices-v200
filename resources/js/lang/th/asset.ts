@@ -252,6 +252,8 @@ export const asset: Dict = {
     asset_contract: 'สัญญา',
 
     // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
+    asset_awaiting_contract: 'รอผูกสัญญา',
+    asset_refusal_contract_keep: 'ทรัพย์สินนี้ผูกสัญญาอยู่ เปลี่ยนเป็นสัญญาอื่นได้ ถ้าจะเอาออกจากสัญญา ให้แก้ที่หน้าสัญญา',
     asset_refusal_writeoff_locked: 'ทรัพย์สินที่ตัดจำหน่ายแล้วแก้ไขไม่ได้ ยกเลิกการตัดจำหน่ายก่อน',
     asset_refusal_not_writeoff: 'ทรัพย์สินนี้ยังไม่ได้ตัดจำหน่าย',
     asset_refusal_delete_not_ready: 'ลบได้เฉพาะทรัพย์สินที่พร้อมส่งมอบ',

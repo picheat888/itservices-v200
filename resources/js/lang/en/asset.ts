@@ -254,6 +254,9 @@ export const asset: Dict = {
     asset_contract: 'Contract',
 
     // asset-detail-drawer.tsx, หน้าต่างโอน รับคืน ตัดจำหน่าย — ข้อความปฏิเสธจาก server
+    asset_awaiting_contract: 'Awaiting contract',
+    asset_refusal_contract_keep:
+        'This asset is on a contract. You can switch it to another contract; to take it off the contract, edit it on the contract page.',
     asset_refusal_writeoff_locked: 'A written-off asset cannot be edited. Cancel the write-off first.',
     asset_refusal_not_writeoff: 'This asset is not written off.',
     asset_refusal_delete_not_ready: 'Only assets that are Ready to deploy can be deleted.',

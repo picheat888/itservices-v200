@@ -49,16 +49,23 @@ class StoreAssetRequest extends FormRequest
             'purchase_date' => ['nullable', 'date'],
             'warranty_end' => ['nullable', 'date'],
             'warranty_lifetime' => ['sometimes', 'boolean'],
-            // A rented asset must be linked to the vendor contract it's billed under;
-            // its lease term, fee and vendor are read from that contract (not stored here).
-            // Only hardware contracts may hold assets, so the linked contract must be one.
+            // A rented asset may wait for its contract; one already linked cannot drop it (contract_keep).
+            // Its lease term, fee and vendor are read from the contract. Only hardware contracts may hold assets.
             'contract_id' => [
-                'nullable', 'required_if:source,rented', 'integer',
+                $this->contractKeptWhenLinked() ? 'required' : 'nullable', 'integer',
                 Rule::exists('contracts', 'id')->where('type', ContractType::Hardware->value),
                 $this->contractStillOpenUnlessKept(),
             ],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['contract_id.required' => 'contract_keep'];
     }
 
     /**
@@ -90,6 +97,16 @@ class StoreAssetRequest extends FormRequest
                 $fail('model_moved');
             }
         };
+    }
+
+    /** Editing a rental that already has a contract: the contract may change but not be emptied. */
+    private function contractKeptWhenLinked(): bool
+    {
+        $asset = $this->route('asset');
+
+        return $asset !== null
+            && $this->input('source') === AssetSource::Rented->value
+            && $asset->contract_id !== null;
     }
 
     /** A cancelled or expired contract takes no new assets; an asset already on one may keep it. */

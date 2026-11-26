@@ -19,6 +19,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Eye, FlaskConicalOff, MapPin, RotateCcw, Share2, SquarePen, Tag, Trash2, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAsset, useAssetMutations } from '../hooks/use-assets';
+import { isAwaitingContract } from '../lib/awaiting-contract';
 import { AssetHistoryTab } from './asset-history-tab';
 import { AssetLocationDialog } from './asset-location-dialog';
 import { AssetStatusBadge, useAssetTypeIcon } from './asset-meta';
@@ -322,6 +323,16 @@ export function AssetDetailDrawer({
                                                 </span>
                                             }
                                         />
+                                        {isAwaitingContract(a) && (
+                                            <KV
+                                                label={t('asset_linked_contract')}
+                                                value={
+                                                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                                                        {t('asset_awaiting_contract')}
+                                                    </span>
+                                                }
+                                            />
+                                        )}
                                         {a.contract_id && (
                                             <div className="space-y-0.5">
                                                 <div className="text-muted-foreground text-xs">{t('asset_linked_contract')}</div>

@@ -30,6 +30,7 @@ import { Check, FileText, Infinity as InfinityIcon, PackagePlus, ShoppingBag, Ta
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
+import { contractRequired } from '../lib/awaiting-contract';
 
 type FormState = {
     category_id: string;
@@ -288,7 +289,7 @@ export function AssetFormDrawer({
         if (!form.serial.trim()) e.serial = required;
         if (warehouseApplies && !form.warehouse_id) e.warehouse = required;
         if (rented) {
-            if (!form.contract_id) e.contract_id = required;
+            if (contractRequired(editing, rented) && !form.contract_id) e.contract_id = required;
         } else {
             if (!form.value.trim()) e.value = required;
             if (!form.vendor_id) e.supplier = required;
@@ -342,7 +343,8 @@ export function AssetFormDrawer({
             // Each server validation message goes under its own field
             const fieldErrors: Record<string, string> = {};
             for (const [field, errKey] of Object.entries(ERR_KEY)) {
-                const message = fieldError(error, field);
+                const raw = fieldError(error, field);
+                const message = raw === 'contract_keep' ? t('asset_refusal_contract_keep') : raw;
                 if (message && !fieldErrors[errKey]) fieldErrors[errKey] = message;
             }
             if (Object.keys(fieldErrors).length) setErr(fieldErrors);
@@ -508,7 +510,12 @@ export function AssetFormDrawer({
                             {/* Acquisition fields (no separate heading — general asset info) */}
                             {rented ? (
                                 <div className="space-y-3">
-                                    <Field label={t('asset_linked_contract')} required error={err.contract_id} name="contract_id">
+                                    <Field
+                                        label={t('asset_linked_contract')}
+                                        required={contractRequired(editing, rented)}
+                                        error={err.contract_id}
+                                        name="contract_id"
+                                    >
                                         <SearchableSelect
                                             value={form.contract_id}
                                             onChange={(v) => upd('contract_id', v)}

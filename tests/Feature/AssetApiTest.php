@@ -361,13 +361,13 @@ class AssetApiTest extends TestCase
         );
     }
 
-    public function test_rented_asset_requires_a_contract(): void
+    public function test_rented_asset_does_not_require_a_contract(): void
     {
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
             'type' => 'network', 'source' => 'rented', 'model' => 'Cisco 9300',
-        ])->assertStatus(422)->assertJsonValidationErrors('contract_id');
+        ])->assertStatus(422)->assertJsonMissingValidationErrors('contract_id');
     }
 
     public function test_lifetime_warranty_clears_the_end_date(): void
