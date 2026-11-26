@@ -6,9 +6,11 @@ namespace Tests\Feature;
 
 use App\Models\Settings\AssetModel;
 use App\Models\User;
+use App\Services\Settings\AssetModelPhotoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class AssetModelPhotoTest extends TestCase
@@ -80,6 +82,36 @@ class AssetModelPhotoTest extends TestCase
 
         $this->assertSame('model-photos/keep.webp', $model->fresh()->photo_path);
         Storage::disk('local')->assertExists('model-photos/keep.webp');
+    }
+
+    public function test_a_failed_update_keeps_the_old_photo_and_drops_the_new_file(): void
+    {
+        Storage::disk('local')->put('model-photos/old.webp', 'x');
+        $model = AssetModel::create(['name' => 'P2422H', 'photo_path' => 'model-photos/old.webp']);
+        AssetModel::saving(fn () => throw new RuntimeException('save failed'));
+
+        try {
+            app(AssetModelPhotoService::class)->save($model, ['name' => 'P2422H'], $this->photo());
+            $this->fail('the save should have thrown');
+        } catch (RuntimeException) {
+        }
+
+        Storage::disk('local')->assertExists('model-photos/old.webp');
+        $this->assertSame(['model-photos/old.webp'], Storage::disk('local')->files('model-photos'));
+        $this->assertSame('model-photos/old.webp', $model->fresh()->photo_path);
+    }
+
+    public function test_a_failed_create_leaves_no_file_behind(): void
+    {
+        AssetModel::saving(fn () => throw new RuntimeException('save failed'));
+
+        try {
+            app(AssetModelPhotoService::class)->save(new AssetModel, ['name' => 'New'], $this->photo());
+            $this->fail('the save should have thrown');
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame([], Storage::disk('local')->files('model-photos'));
     }
 
     public function test_deleting_a_model_deletes_its_photo(): void

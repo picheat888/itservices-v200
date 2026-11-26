@@ -32,7 +32,7 @@ class AssetModelController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
             ...$this->photoRules(),
         ]);
-        $model = AssetModel::create($this->photos->apply($data, $request->file('photo')));
+        $model = $this->photos->save(new AssetModel, $data, $request->file('photo'));
         $model->load('brand');
         AuditLog::record('Created asset model', $model->name, subject: $model);
 
@@ -49,7 +49,7 @@ class AssetModelController extends Controller
             ...$this->photoRules(),
         ]);
         $before = $assetModel->getOriginal();
-        $assetModel->update($this->photos->apply($data, $request->file('photo'), $assetModel->photo_path));
+        $this->photos->save($assetModel, $data, $request->file('photo'));
         $assetModel->load('brand');
         AuditLog::record('Updated asset model', $assetModel->name, AuditLog::changes($before, $assetModel), subject: $assetModel);
 
