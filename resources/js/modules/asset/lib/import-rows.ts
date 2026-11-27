@@ -66,7 +66,7 @@ export function normalizePrice(text: string): string | null {
 /**
  * Y-m-d of a real calendar date, or null. Y-m-d and the template's day-first d/m/Y or d-m-Y are read under every
  * date-format setting (no setting is month-first); a year-first Y/m/d only under the ymd_* settings.
- * Years over 2400 are Buddhist and count back 543.
+ * Years over 2400 are Buddhist and count back 543; a year before 1900 after that is not a date.
  */
 export function normalizeDate(text: string, format: DateFormat): string | null {
     const trimmed = text.trim();
@@ -82,6 +82,7 @@ export function normalizeDate(text: string, format: DateFormat): string | null {
     const month = Number(parts[order[1]]);
     const day = Number(parts[order[2]]);
     if (year > 2400) year -= 543;
+    if (year < 1900) return null;
     const real = new Date(Date.UTC(year, month - 1, day));
     if (real.getUTCFullYear() !== year || real.getUTCMonth() !== month - 1 || real.getUTCDate() !== day) return null;
     return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -133,9 +134,9 @@ function modelBrandIssues(row: CheckedRow, modelId: number, ctx: IssueContext): 
     return [{ code: 'model_not_in_brand', column: 'model', value: String(modelId) }];
 }
 
-// Same comparison as the server: whitespace runs collapse to one space, trimmed, case-insensitive
+// Same comparison as the server for serials and codes: trimmed, case-insensitive, inner spaces kept
 function sameKey(text: string): string {
-    return text.replace(/\s+/g, ' ').trim().toLowerCase();
+    return text.trim().toLowerCase();
 }
 
 // Line of the first row holding `text` when that row is not `line` itself (the server flags only later occurrences)
@@ -212,12 +213,15 @@ export function rowsWithEdits(rows: CheckedRow[], edits: RowEdits, options: Impo
         if (!rowEdits) return row;
         let issues = row.issues;
         for (const column of Object.keys(rowEdits) as ImportColumnKey[]) {
+            // Back to the value the server checked: its issues for the column still stand
+            if (valueOf(rows[index].values, column) === valueOf(row.values, column)) continue;
             issues = issues.filter((issue) => issue.column !== column).concat(localIssues(row, column, valueOf(row.values, column), ctx));
         }
         // A new brand re-judges the model; a new lifetime flag re-judges the end date
         if ('brand' in rowEdits && !('model' in rowEdits)) {
             issues = issues.filter((issue) => issue.code !== 'model_not_in_brand');
             if (row.values.model_id !== null) issues = issues.concat(modelBrandIssues(row, row.values.model_id, ctx));
+            else if (!issues.some((issue) => issue.column === 'model')) issues = issues.concat(localIssues(row, 'model', null, ctx));
         }
         if ('warranty_lifetime' in rowEdits && !('warranty_end' in rowEdits)) {
             issues = issues.filter((issue) => !(issue.column === 'warranty_end' && issue.code === 'required'));

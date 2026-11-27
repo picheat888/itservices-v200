@@ -241,7 +241,7 @@ test('the column lists match the template headers', () => {
 });
 
 test('fixing the first of a duplicate pair clears the later row, and a new clash flags the later row with the earlier line', () => {
-    const rows = [row(2, { serial: 'AB 1' }), row(3), row(5, { serial: 'ab  1' }, [{ code: 'dup_in_file', column: 'serial', line: 2 }])];
+    const rows = [row(2, { serial: 'AB 1' }), row(3), row(5, { serial: 'ab 1' }, [{ code: 'dup_in_file', column: 'serial', line: 2 }])];
     // The server's flag on line 5 stays right when nothing changes for it
     const fixedOriginal = rowsWithEdits(rows, { 2: { serial: 'UNIQUE-1' } }, options, 'purchased', 'dmy_slash');
     assert.deepEqual(fixedOriginal[2].issues, []);
@@ -625,4 +625,37 @@ test('en says "Ready to deploy" like the status, and the awaiting label sits wit
     }
     const comments = (lang: string) => read(`lang/${lang}/asset.ts`).match(/^ {4}\/\/ .*$/gm);
     assert.deepEqual(comments('th'), comments('en'));
+});
+
+test('a year before 1900 is a bad date after the Buddhist-era subtraction', () => {
+    assert.equal(normalizeDate('12/11/0026', 'dmy_slash'), null);
+    assert.equal(normalizeDate('1899-12-31', 'dmy_slash'), null);
+    assert.equal(normalizeDate('1900-01-01', 'dmy_slash'), '1900-01-01');
+    assert.equal(normalizeDate('12/11/2569', 'dmy_slash'), '2026-11-12');
+    const rows = [row(2)];
+    const ctx = { kind: 'purchased' as const, rows, options, dateFormat: 'dmy_slash' as const };
+    assert.equal(localIssues(rows[0], 'purchase_date', '12/11/0026', ctx)[0].code, 'bad_date');
+});
+
+test('serial duplicates compare by trim and lowercase only, like the server', () => {
+    const rows = [row(2, { serial: 'AB  1' }), row(3, { serial: 'ab 1' }), row(4, { serial: ' ab  1 ' })];
+    const result = rowsWithEdits(rows, {}, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(result[1].issues, []);
+    assert.deepEqual(result[2].issues, [{ code: 'dup_in_file', column: 'serial', line: 2 }]);
+    const ctx = { kind: 'purchased' as const, rows, options, dateFormat: 'dmy_slash' as const };
+    assert.deepEqual(localIssues(rows[1], 'serial', 'ab 1', ctx), []);
+    assert.equal(localIssues(rows[1], 'serial', 'ab  1', ctx)[0].code, 'dup_in_file');
+});
+
+test('a brand-only edit that leaves the model empty makes the model required', () => {
+    const rows = [row(2, { model_id: null }, [{ code: 'model_not_in_brand', column: 'model', value: 'X' }])];
+    const result = rowsWithEdits(rows, { 2: { brand: 11 } }, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(result[0].issues, [{ code: 'required', column: 'model' }]);
+});
+
+test('editing a taken serial back to the value the server checked keeps the server issue', () => {
+    const taken: Issue = { code: 'serial_taken', column: 'serial', asset_code: 'INK-1' };
+    const rows = [row(2, { serial: 'SN2' }, [taken])];
+    assert.deepEqual(rowsWithEdits(rows, { 2: { serial: 'SN2' } }, options, 'purchased', 'dmy_slash')[0].issues, [taken]);
+    assert.deepEqual(rowsWithEdits(rows, { 2: { serial: 'sn-new' } }, options, 'purchased', 'dmy_slash')[0].issues, []);
 });
