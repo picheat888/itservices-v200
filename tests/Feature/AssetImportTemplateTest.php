@@ -102,6 +102,27 @@ class AssetImportTemplateTest extends TestCase
         }
     }
 
+    /** Excel reads showDropDown="1" as "hide the in-cell arrow", so a list column must never carry it. */
+    public function test_list_columns_show_the_dropdown_arrow_in_excel(): void
+    {
+        $this->actingAs($this->registrar ??= $this->userWith('assets.register'));
+
+        foreach (['rented' => 4, 'purchased' => 5] as $kind => $listColumns) {
+            $path = tempnam(sys_get_temp_dir(), 'xlsx');
+            file_put_contents($path, $this->get("/api/assets/import-template?kind={$kind}")->assertOk()->streamedContent());
+            $zip = new \ZipArchive;
+            $this->assertTrue($zip->open($path));
+            $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+            $zip->close();
+
+            preg_match_all('/<dataValidation [^>]*type="list"[^>]*>/', $sheetXml, $lists);
+            $this->assertCount($listColumns, $lists[0], $kind);
+            foreach ($lists[0] as $tag) {
+                $this->assertStringNotContainsString('showDropDown="1"', $tag, $kind);
+            }
+        }
+    }
+
     public function test_list_columns_have_dropdowns_from_the_lists_sheet(): void
     {
         Category::firstOrCreate(['name' => 'Notebook']);

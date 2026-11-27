@@ -139,7 +139,7 @@ class AssetImportTemplate
         $validation->setType(DataValidation::TYPE_LIST);
         $validation->setErrorStyle(DataValidation::STYLE_STOP);
         $validation->setAllowBlank(true);
-        $validation->setShowDropDown(false);
+        $validation->setShowDropDown(true);
         $validation->setShowErrorMessage(false);
         $validation->setFormula1($range);
         $sheet->setDataValidation("{$letter}2:{$letter}{$lastRow}", $validation);
