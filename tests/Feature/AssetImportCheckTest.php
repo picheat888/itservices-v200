@@ -358,6 +358,21 @@ class AssetImportCheckTest extends TestCase
         $this->assertSame([], $this->recheckCodes('purchased', $this->flatRow($purchased + ['purchase_date' => '1900-01-01']), 'purchase_date'));
     }
 
+    public function test_a_file_over_5_mb_is_refused_as_too_large_before_it_is_read(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.register', 'allowed' => true]);
+        $headers = ['Accept' => 'application/json'];
+
+        $this->actingAs($user)
+            ->post('/api/assets/import/preview', ['file' => UploadedFile::fake()->create('big.xlsx', 5121), 'kind' => 'rented'], $headers)
+            ->assertStatus(422)->assertJsonPath('message', 'import_too_large');
+
+        $this->actingAs($user)
+            ->post('/api/assets/import/preview', ['file' => UploadedFile::fake()->create('edge.xlsx', 5120), 'kind' => 'rented'], $headers)
+            ->assertStatus(422)->assertJsonPath('message', 'import_unreadable');
+    }
+
     public function test_the_preview_endpoint_answers_rows_options_and_counts(): void
     {
         $user = User::factory()->create(['role' => 'user']);

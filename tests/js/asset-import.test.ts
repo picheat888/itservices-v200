@@ -669,3 +669,18 @@ test('editing a taken serial or code to a case or space variant keeps the server
     const other = rowsWithEdits(rows, { 2: { serial: 'sn 2' } }, options, 'purchased', 'dmy_slash');
     assert.deepEqual(other[0].issues, [codeTaken]);
 });
+
+test('an oversize file and a missing permission have their own words, used before the generic one', () => {
+    const th = read('lang/th/asset.ts');
+    const en = read('lang/en/asset.ts');
+    assert.match(th, /asset_refusal_import_too_large: 'ไฟล์ใหญ่เกิน 5 MB'/);
+    assert.match(en, /asset_refusal_import_too_large: 'The file is over 5 MB'/);
+    assert.match(th, /asset_import_forbidden: 'คุณไม่มีสิทธิ์นำเข้าทรัพย์สิน'/);
+    assert.match(en, /asset_import_forbidden: 'You do not have permission to import assets'/);
+    const dialog = read('modules/asset/components/import/asset-import-dialog.tsx');
+    assert.match(dialog, /file\.size > MAX_FILE_BYTES[\s\S]*previewFile\.mutate/);
+    assert.match(dialog, /httpStatus\(error\) === 413/);
+    assert.equal(dialog.match(/asset_import_forbidden/g)?.length, 2);
+    assert.equal(IMPORT_COLUMNS.rented.find((c) => c.key === 'notes')?.example, 'ล็อตปี 2026');
+    assert.equal(IMPORT_COLUMNS.purchased.find((c) => c.key === 'notes')?.example, 'ล็อตปี 2026');
+});

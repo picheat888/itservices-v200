@@ -12,6 +12,9 @@ use Illuminate\Validation\Rule;
 
 class AssetImportPreviewRequest extends FormRequest
 {
+    /** Largest upload; a bigger file is refused as import_too_large. */
+    private const MAX_KILOBYTES = 5120;
+
     public function authorize(): bool
     {
         return (bool) $this->user()?->hasPermission('assets.register');
@@ -22,6 +25,9 @@ class AssetImportPreviewRequest extends FormRequest
     {
         return [function (): void {
             $file = $this->file('file');
+            if ($file !== null && $file->getSize() > self::MAX_KILOBYTES * 1024) {
+                Refusal::fail('import_too_large');
+            }
             if ($file !== null && strtolower($file->getClientOriginalExtension()) !== 'xlsx') {
                 Refusal::fail('import_unreadable');
             }
@@ -34,7 +40,7 @@ class AssetImportPreviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:5120'],
+            'file' => ['required', 'file'],
             'kind' => ['required', Rule::in(AssetImportColumns::KINDS)],
         ];
     }

@@ -44,7 +44,7 @@ export const IMPORT_COLUMNS: Record<ImportKind, ImportColumn[]> = {
         column('model', 'รุ่น (Model)', 'ThinkPad E14 Gen 6', true, 'models'),
         column('serial', 'Serial (Serial No.)', 'PF4XK101', true),
         column('warehouse', 'คลัง (Warehouse)', 'คลังกลาง สำนักงานใหญ่', true, 'warehouses'),
-        column('notes', 'หมายเหตุ (Remark)', 'ล็อตเช่าปี 2026', false),
+        column('notes', 'หมายเหตุ (Remark)', 'ล็อตปี 2026', false),
     ],
     purchased: [
         column('asset_code', 'รหัสทรัพย์สิน (Asset No.)', 'INK-IT-26-0150', false),
@@ -59,6 +59,6 @@ export const IMPORT_COLUMNS: Record<ImportKind, ImportColumn[]> = {
         column('purchase_date', 'วันที่ซื้อ (Purchase date)', '12/11/2026', true),
         column('warranty_end', 'สิ้นสุดวันรับประกัน (Warranty ends)', '11/11/2029', true),
         column('warranty_lifetime', 'ประกันตลอดชีพ (Lifetime warranty)', 'ใช่', false),
-        column('notes', 'หมายเหตุ (Remark)', 'ล็อตเช่าปี 2026', false),
+        column('notes', 'หมายเหตุ (Remark)', 'ล็อตปี 2026', false),
     ],
 };

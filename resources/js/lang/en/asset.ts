@@ -360,6 +360,8 @@ export const asset: Dict = {
     asset_import_change_file_title: 'Change the file?',
     asset_import_change_file_desc: 'What you fixed in the check step will be lost',
     asset_refusal_import_unreadable: 'This file cannot be opened. Use an .xlsx file from the template',
+    asset_refusal_import_too_large: 'The file is over 5 MB',
+    asset_import_forbidden: 'You do not have permission to import assets',
     asset_refusal_import_header_missing: 'Row 1 is not the template header. Download the template again and refill it',
     asset_refusal_import_wrong_template: 'This file is the {kind} template. Go back and pick the type that matches the file',
     asset_refusal_import_missing_columns: 'The file is missing the columns {columns}',

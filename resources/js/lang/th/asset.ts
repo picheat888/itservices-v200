@@ -356,6 +356,8 @@ export const asset: Dict = {
     asset_import_change_file_title: 'เปลี่ยนไฟล์ไหม',
     asset_import_change_file_desc: 'สิ่งที่แก้ไว้ในขั้นตรวจจะหาย',
     asset_refusal_import_unreadable: 'เปิดไฟล์นี้ไม่ได้ ใช้ไฟล์ .xlsx จากเทมเพลต',
+    asset_refusal_import_too_large: 'ไฟล์ใหญ่เกิน 5 MB',
+    asset_import_forbidden: 'คุณไม่มีสิทธิ์นำเข้าทรัพย์สิน',
     asset_refusal_import_header_missing: 'แถวที่ 1 ไม่ใช่หัวคอลัมน์ของเทมเพลต ดาวน์โหลดเทมเพลตใหม่แล้วกรอกอีกครั้ง',
     asset_refusal_import_wrong_template: 'ไฟล์นี้เป็นเทมเพลต{kind} กลับไปเลือกแบบให้ตรงกับไฟล์',
     asset_refusal_import_missing_columns: 'ไฟล์ไม่มีคอลัมน์ {columns}',

@@ -91,7 +91,7 @@ class AssetImportColumns
             'purchase_date' => ['th' => 'วันที่ซื้อ', 'en' => 'Purchase date', 'list' => null, 'how' => 'วันที่ของ Excel หรือ วว/ดด/ปปปป', 'example' => '12/11/2026'],
             'warranty_end' => ['th' => 'สิ้นสุดวันรับประกัน', 'en' => 'Warranty ends', 'list' => null, 'how' => 'วันที่ ไม่ต้องกรอกถ้าประกันตลอดชีพ', 'example' => '11/11/2029'],
             'warranty_lifetime' => ['th' => 'ประกันตลอดชีพ', 'en' => 'Lifetime warranty', 'list' => null, 'how' => 'ใส่ "ใช่" หรือเว้นว่าง', 'example' => 'ใช่'],
-            'notes' => ['th' => 'หมายเหตุ', 'en' => 'Remark', 'list' => null, 'how' => 'ข้อความอิสระ', 'example' => 'ล็อตเช่าปี 2026'],
+            'notes' => ['th' => 'หมายเหตุ', 'en' => 'Remark', 'list' => null, 'how' => 'ข้อความอิสระ', 'example' => 'ล็อตปี 2026'],
         ];
     }
 }

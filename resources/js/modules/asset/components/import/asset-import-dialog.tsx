@@ -10,7 +10,7 @@ import { useDiscardGuard } from '@/shared/hooks/use-discard-guard';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { useSelectRefresh } from '@/shared/hooks/use-select-refresh';
 import { serverFailureText, serverMessage } from '@/shared/lib/api-errors';
-import { isServerFailure } from '@/shared/lib/http-errors';
+import { httpStatus, isServerFailure } from '@/shared/lib/http-errors';
 import { localPair } from '@/shared/lib/local-name';
 import { reasonWords } from '@/shared/lib/reason-words';
 import { Button } from '@/shared/ui/button';
@@ -68,6 +68,9 @@ type Action =
     | { type: 'refused'; step: StepId; overlay: ServerIssueOverlay | null; clearContract: boolean }
     | { type: 'done'; result: ImportResult }
     | { type: 'go'; step: StepId };
+
+/** Same limit as the server: a bigger file is refused without sending it. */
+const MAX_FILE_BYTES = 5120 * 1024;
 
 const INITIAL: State = {
     step: 'kind',
@@ -215,6 +218,10 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
     const pickFile = async (file: File) => {
         if (kind === null || !(await confirmLoseEdits())) return;
         dropFile();
+        if (file.size > MAX_FILE_BYTES) {
+            setRefusal(t('asset_refusal_import_too_large'));
+            return;
+        }
         dispatch({ type: 'file', file });
         const token = pickToken.current;
         previewFile.mutate(
@@ -240,7 +247,10 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
             if (name === 'kind') return t(`asset_import_kind_${String(value)}`);
             return typeof value === 'number' ? fmtN(value) : String(value ?? '');
         });
-        return words ?? (isServerFailure(error) ? (serverMessage(error) ?? '') : t('asset_refusal_import_unreadable'));
+        if (words) return words;
+        if (httpStatus(error) === 413) return t('asset_refusal_import_too_large');
+        if (httpStatus(error) === 403) return t('asset_import_forbidden');
+        return isServerFailure(error) ? (serverMessage(error) ?? '') : t('asset_refusal_import_unreadable');
     };
 
     // Focus follows the user to the heading of each new step, and of the done screen
@@ -277,7 +287,9 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
                 const { code, lines } = refusalBody(error);
                 const overlay = code === 'import_rows_invalid' ? overlayFromRefusal(lines, rows) : null;
                 if (code === 'link_contract_not_open') void contractsQuery.refetch();
-                setRunRefusal({ message: serverMessage(error, t, 'asset_refusal_') ?? serverFailureText(error), key: Date.now() });
+                const message =
+                    httpStatus(error) === 403 ? t('asset_import_forbidden') : (serverMessage(error, t, 'asset_refusal_') ?? serverFailureText(error));
+                setRunRefusal({ message, key: Date.now() });
                 dispatch({ type: 'refused', step: stepAfterRefusal(code), overlay, clearContract: code === 'link_contract_not_open' });
             },
         });
