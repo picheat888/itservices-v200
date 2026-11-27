@@ -120,15 +120,15 @@ class AssetImportTemplateTest extends TestCase
         $this->assertSame(DataValidation::TYPE_LIST, $purchased->getSheet(0)->getCell('I2')->getDataValidation()->getType());
     }
 
-    public function test_the_template_has_no_example_rows_and_a_guide_sheet(): void
+    public function test_the_template_has_no_example_rows_and_only_the_data_and_lists_sheets(): void
     {
-        $book = $this->template('purchased');
+        foreach (['rented' => 'ทรัพย์สินเช่า', 'purchased' => 'ทรัพย์สินซื้อ'] as $kind => $dataSheet) {
+            $book = $this->template($kind);
 
-        $rows = $book->getSheet(0)->toArray(null, false, false);
-        $this->assertCount(0, array_filter(array_slice($rows, 1), fn (array $row) => array_filter($row, fn ($v) => $v !== null && $v !== '') !== []));
-        $guide = $book->getSheet(1);
-        $this->assertSame('คำอธิบาย', $guide->getTitle());
-        $this->assertSame(['คอลัมน์', 'ต้องกรอก', 'วิธีกรอก', 'ตัวอย่าง'], array_slice($guide->toArray(null, false, false)[0], 0, 4));
+            $rows = $book->getSheet(0)->toArray(null, false, false);
+            $this->assertCount(0, array_filter(array_slice($rows, 1), fn (array $row) => array_filter($row, fn ($v) => $v !== null && $v !== '') !== []));
+            $this->assertSame([$dataSheet, 'รายการที่ใช้ได้'], $book->getSheetNames());
+        }
     }
 
     public function test_the_template_needs_the_register_right(): void

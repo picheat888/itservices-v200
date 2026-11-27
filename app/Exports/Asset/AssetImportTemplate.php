@@ -1,6 +1,6 @@
 <?php
 
-// Builds the asset import .xlsx template (rented or purchased): data sheet with locked header, guide sheet, lists sheet and dropdowns.
+// Builds the asset import .xlsx template (rented or purchased): data sheet with locked header and dropdowns, and the lists sheet they read.
 
 namespace App\Exports\Asset;
 
@@ -48,11 +48,9 @@ class AssetImportTemplate
         $book = new Spreadsheet;
         $data = $book->getActiveSheet();
         $data->setTitle(Columns::DATA_SHEET[$kind]);
-        $guide = $book->createSheet();
         $lists = $book->createSheet();
 
         $listRanges = $this->writeLists($lists);
-        $this->writeGuide($guide, $kind);
         $this->writeData($data, $kind, $listRanges);
         $book->setActiveSheetIndex(0);
 
@@ -98,26 +96,6 @@ class AssetImportTemplate
         return AssetModel::query()->with('brand:id,name')->orderBy('name')->get()
             ->map(fn (AssetModel $model): string => $model->brand ? "{$model->name} ({$model->brand->name})" : $model->name)
             ->all();
-    }
-
-    /** Guide sheet: one row per column with required flag, how to fill and an example. */
-    private function writeGuide(Worksheet $sheet, string $kind): void
-    {
-        $sheet->setTitle(Columns::GUIDE_SHEET);
-        $sheet->fromArray(['คอลัมน์', 'ต้องกรอก', 'วิธีกรอก', 'ตัวอย่าง'], null, 'A1');
-        $sheet->getStyle('A1:D1')->getFont()->setBold(true);
-
-        $row = 2;
-        foreach (Columns::for($kind) as $column) {
-            $sheet->setCellValueExplicit("A{$row}", Columns::header($column), 'str');
-            $sheet->setCellValueExplicit("B{$row}", $column['required'] ? 'ต้องกรอก' : 'ไม่บังคับ', 'str');
-            $sheet->setCellValueExplicit("C{$row}", $column['how'], 'str');
-            $sheet->setCellValueExplicit("D{$row}", $column['example'], 'str');
-            $row++;
-        }
-        foreach (['A', 'B', 'C', 'D'] as $letter) {
-            $sheet->getColumnDimension($letter)->setAutoSize(true);
-        }
     }
 
     /**
