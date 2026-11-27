@@ -194,6 +194,14 @@ function valueOf(values: CheckedValues, column: ImportColumnKey): CellEdit {
     return values[idField ?? (column as keyof CheckedValues)] as CellEdit;
 }
 
+// Whether a cell holds the value the server checked; serial and code compare by the server's clash key
+function sameChecked(before: CheckedValues, after: CheckedValues, column: ImportColumnKey): boolean {
+    const a = valueOf(before, column);
+    const b = valueOf(after, column);
+    if (DUPLICATE_COLUMNS.includes(column)) return sameKey(String(a ?? '')) === sameKey(String(b ?? ''));
+    return a === b;
+}
+
 /**
  * Rows with the user's edits applied. An edited cell drops the issues the server gave it and gets the
  * page-side check instead; the input rows are not changed.
@@ -214,7 +222,7 @@ export function rowsWithEdits(rows: CheckedRow[], edits: RowEdits, options: Impo
         let issues = row.issues;
         for (const column of Object.keys(rowEdits) as ImportColumnKey[]) {
             // Back to the value the server checked: its issues for the column still stand
-            if (valueOf(rows[index].values, column) === valueOf(row.values, column)) continue;
+            if (sameChecked(rows[index].values, row.values, column)) continue;
             issues = issues.filter((issue) => issue.column !== column).concat(localIssues(row, column, valueOf(row.values, column), ctx));
         }
         // A new brand re-judges the model; a new lifetime flag re-judges the end date

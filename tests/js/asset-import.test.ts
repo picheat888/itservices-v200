@@ -659,3 +659,13 @@ test('editing a taken serial back to the value the server checked keeps the serv
     assert.deepEqual(rowsWithEdits(rows, { 2: { serial: 'SN2' } }, options, 'purchased', 'dmy_slash')[0].issues, [taken]);
     assert.deepEqual(rowsWithEdits(rows, { 2: { serial: 'sn-new' } }, options, 'purchased', 'dmy_slash')[0].issues, []);
 });
+
+test('editing a taken serial or code to a case or space variant keeps the server issue', () => {
+    const taken: Issue = { code: 'serial_taken', column: 'serial', asset_code: 'INK-1' };
+    const codeTaken: Issue = { code: 'code_taken', column: 'asset_code' };
+    const rows = [row(2, { serial: 'SN2', asset_code: 'Code-1' }, [taken, codeTaken])];
+    const same = rowsWithEdits(rows, { 2: { serial: ' sn2 ', asset_code: 'code-1' } }, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(same[0].issues, [taken, codeTaken]);
+    const other = rowsWithEdits(rows, { 2: { serial: 'sn 2' } }, options, 'purchased', 'dmy_slash');
+    assert.deepEqual(other[0].issues, [codeTaken]);
+});
