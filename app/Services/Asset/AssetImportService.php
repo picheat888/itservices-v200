@@ -34,7 +34,7 @@ class AssetImportService
 
     /**
      * @param  list<array<string, mixed>>  $rows  flat rows as the preview endpoint handed them out
-     * @return array{imported:int, ids:list<int>, first_code:string, last_code:string}
+     * @return array{imported:int, ids:list<int>, first_code:?string, last_code:?string} the code range is of system-issued codes only
      */
     public function run(string $kind, array $rows, ?Contract $contract, User $by): array
     {
@@ -92,10 +92,14 @@ class AssetImportService
         $modelNames = AssetModel::whereIn('id', array_column($rows, 'model_id'))->pluck('name', 'id');
 
         $ids = [];
-        $codes = [];
+        $issuedCodes = [];
         foreach ($rows as $row) {
             $values = array_intersect_key($row, array_flip(self::FIELDS));
-            $values['asset_code'] = trim((string) ($values['asset_code'] ?? '')) ?: array_shift($issued);
+            $values['asset_code'] = trim((string) ($values['asset_code'] ?? ''));
+            if ($values['asset_code'] === '') {
+                $values['asset_code'] = array_shift($issued);
+                $issuedCodes[] = $values['asset_code'];
+            }
 
             $values['warranty_lifetime'] = (bool) ($values['warranty_lifetime'] ?? false);
 
@@ -103,9 +107,13 @@ class AssetImportService
             AuditLog::record('Registered asset', "{$asset->asset_code} - {$modelNames[$asset->model_id]}", subject: $asset);
 
             $ids[] = $asset->id;
-            $codes[] = $asset->asset_code;
         }
 
-        return ['imported' => count($ids), 'ids' => $ids, 'first_code' => $codes[0], 'last_code' => $codes[count($codes) - 1]];
+        return [
+            'imported' => count($ids),
+            'ids' => $ids,
+            'first_code' => $issuedCodes[0] ?? null,
+            'last_code' => $issuedCodes === [] ? null : $issuedCodes[count($issuedCodes) - 1],
+        ];
     }
 }

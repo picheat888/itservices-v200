@@ -143,6 +143,26 @@ class AssetLinkContractTest extends TestCase
         $this->assertSame($first->id, $asset->fresh()->contract_id);
     }
 
+    public function test_a_contract_closed_after_the_check_links_nothing(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $lease = $this->lease();
+        $asset = $this->freeRental();
+        $checked = collect([Asset::find($asset->id)]);
+
+        // The contract is cancelled between the request's check and the write
+        Contract::whereKey($lease->id)->update(['cancelled_at' => now()]);
+
+        try {
+            app(AssetBulkActionService::class)->linkContract($checked, $lease);
+            $this->fail('A closed contract must be refused.');
+        } catch (ValidationException $e) {
+            $this->assertSame('link_contract_not_open', $e->response->getData(true)['message']);
+        }
+
+        $this->assertNull($asset->fresh()->contract_id);
+    }
+
     public function test_linking_needs_the_edit_permission(): void
     {
         $lease = $this->lease();

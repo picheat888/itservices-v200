@@ -145,7 +145,7 @@ class AssetImportChecker
 
             return;
         }
-        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $text, $m) || (int) $m[1] > 2400 || ! checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $text, $m) || (int) $m[1] > 2400 || (int) $m[1] < 1900 || ! checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
             $issues[] = ['code' => 'bad_date', 'column' => $column, 'value' => $text];
         }
     }
@@ -340,6 +340,12 @@ class AssetImportChecker
         return $bestScore >= self::SUGGEST_MIN_SIMILARITY ? $best : null;
     }
 
+    /** Serial and code key: trim and lowercase only, the same comparison as LOWER(TRIM(col)) in SQL. */
+    private function clashKey(string $text): string
+    {
+        return mb_strtolower(trim($text));
+    }
+
     private function normalize(string $text): string
     {
         return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $text)));
@@ -401,7 +407,7 @@ class AssetImportChecker
         if ($year > 2400) {
             $year -= 543;
         }
-        if (! checkdate($month, $day, $year)) {
+        if ($year < 1900 || ! checkdate($month, $day, $year)) {
             $issues[] = ['code' => 'bad_date', 'column' => $column, 'value' => $text];
 
             return null;
@@ -445,7 +451,7 @@ class AssetImportChecker
         $firstCode = [];
 
         foreach ($rows as $i => $row) {
-            $serial = $this->normalize((string) ($row['values']['serial'] ?? ''));
+            $serial = $this->clashKey((string) ($row['values']['serial'] ?? ''));
             if ($serial !== '') {
                 if (isset($firstSerial[$serial])) {
                     $rows[$i]['issues'][] = ['code' => 'dup_in_file', 'column' => 'serial', 'line' => $firstSerial[$serial]];
@@ -457,7 +463,7 @@ class AssetImportChecker
                 }
             }
 
-            $code = $this->normalize((string) ($row['values']['asset_code'] ?? ''));
+            $code = $this->clashKey((string) ($row['values']['asset_code'] ?? ''));
             if ($code !== '') {
                 if (isset($firstCode[$code])) {
                     $rows[$i]['issues'][] = ['code' => 'dup_in_file', 'column' => 'asset_code', 'line' => $firstCode[$code]];
@@ -479,7 +485,7 @@ class AssetImportChecker
      */
     private function heldSerials(array $rows): array
     {
-        $serials = array_values(array_unique(array_filter(array_map(fn (array $r) => $this->normalize((string) ($r['values']['serial'] ?? '')), $rows))));
+        $serials = array_values(array_unique(array_filter(array_map(fn (array $r) => $this->clashKey((string) ($r['values']['serial'] ?? '')), $rows))));
         if ($serials === []) {
             return [];
         }
@@ -491,7 +497,7 @@ class AssetImportChecker
             ->orderBy('id')
             ->get(['serial', 'asset_code'])
             ->each(function (Asset $asset) use (&$found): void {
-                $found[$this->normalize((string) $asset->serial)] ??= $asset->asset_code;
+                $found[$this->clashKey((string) $asset->serial)] ??= $asset->asset_code;
             });
 
         return $found;
@@ -503,14 +509,14 @@ class AssetImportChecker
      */
     private function usedCodes(array $rows): array
     {
-        $codes = array_values(array_unique(array_filter(array_map(fn (array $r) => $this->normalize((string) ($r['values']['asset_code'] ?? '')), $rows))));
+        $codes = array_values(array_unique(array_filter(array_map(fn (array $r) => $this->clashKey((string) ($r['values']['asset_code'] ?? '')), $rows))));
         if ($codes === []) {
             return [];
         }
 
         $found = [];
         foreach (Asset::query()->whereIn(DB::raw('LOWER(TRIM(asset_code))'), $codes)->pluck('asset_code') as $code) {
-            $found[$this->normalize((string) $code)] = true;
+            $found[$this->clashKey((string) $code)] = true;
         }
 
         return $found;

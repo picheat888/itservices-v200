@@ -5,12 +5,14 @@
 namespace App\Services\Asset;
 
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Settings\Location;
 use App\Models\Settings\WriteoffReason;
 use App\Models\User;
+use App\Support\Refusal;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -87,6 +89,17 @@ class AssetBulkActionService
     public function linkContract(Collection $assets, Contract $contract): int
     {
         return DB::transaction(function () use ($assets, $contract) {
+            $open = Contract::query()
+                ->whereKey($contract->getKey())
+                ->where('type', ContractType::Hardware->value)
+                ->whereNull('cancelled_at')
+                ->whereNull('expired_at')
+                ->lockForUpdate()
+                ->exists();
+            if (! $open) {
+                Refusal::fail('link_contract_not_open', field: 'contract_id');
+            }
+
             // Re-read under lock so an asset someone linked after the check is refused, not overwritten
             $assets = Asset::whereKey($assets->map(fn (Asset $a) => $a->getKey())->all())->lockForUpdate()->get();
             $this->guard->assertLinkable($assets);

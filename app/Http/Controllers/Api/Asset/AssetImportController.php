@@ -27,7 +27,7 @@ class AssetImportController extends Controller
         $kind = $request->string('kind')->toString();
         $read = $reader->read($request->file('file'), $kind);
 
-        return response()->json(['data' => $checker->check($kind, $read['rows'], $read['ignored'])]);
+        return response()->json(['data' => $checker->check($kind, $read['rows'], $read['ignored']), 'message' => 'success']);
     }
 
     public function import(AssetImportRequest $request, AssetImportService $importer): JsonResponse
@@ -35,6 +35,6 @@ class AssetImportController extends Controller
         $contract = $request->contract();
         $result = $importer->run($request->string('kind')->toString(), $request->validated('rows'), $contract, $request->user());
 
-        return response()->json(['data' => $result + ['contract_code' => $contract?->code]]);
+        return response()->json(['data' => $result + ['contract_code' => $contract?->code], 'message' => 'success']);
     }
 }

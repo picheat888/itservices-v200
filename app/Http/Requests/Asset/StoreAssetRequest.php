@@ -49,8 +49,7 @@ class StoreAssetRequest extends FormRequest
             'purchase_date' => ['nullable', 'date'],
             'warranty_end' => ['nullable', 'date'],
             'warranty_lifetime' => ['sometimes', 'boolean'],
-            // A rented asset may wait for its contract; one already linked cannot drop it (contract_keep).
-            // Its lease term, fee and vendor are read from the contract. Only hardware contracts may hold assets.
+            // Rented: may wait for its contract (contract_keep once linked); terms come from a hardware contract.
             'contract_id' => [
                 $this->contractKeptWhenLinked() ? 'required' : 'nullable', 'integer',
                 Rule::exists('contracts', 'id')->where('type', ContractType::Hardware->value),

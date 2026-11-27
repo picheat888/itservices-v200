@@ -156,6 +156,7 @@ class AssetImportRunTest extends TestCase
         $this->import(['kind' => 'rented', 'rows' => [
             $this->row(2), $this->row(3, ['asset_code' => 'MY-CODE-1']), $this->row(4), $this->row(5),
         ]])->assertOk()
+            ->assertJsonPath('message', 'success')
             ->assertJsonPath('data.first_code', 'INK-IT-26-0008')
             ->assertJsonPath('data.last_code', 'INK-IT-26-0010');
 
@@ -163,6 +164,23 @@ class AssetImportRunTest extends TestCase
             ['INK-IT-26-0008', 'MY-CODE-1', 'INK-IT-26-0009', 'INK-IT-26-0010'],
             Asset::whereIn('serial', ['SN-2', 'SN-3', 'SN-4', 'SN-5'])->orderBy('serial')->pluck('asset_code')->all(),
         );
+    }
+
+    public function test_the_code_range_covers_issued_codes_only_and_is_empty_when_all_are_typed(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 27));
+
+        $this->import(['kind' => 'rented', 'rows' => [
+            $this->row(2, ['asset_code' => 'TYPED-A']), $this->row(3), $this->row(4, ['asset_code' => 'TYPED-B']), $this->row(5), $this->row(6, ['asset_code' => 'TYPED-C']),
+        ]])->assertOk()
+            ->assertJsonPath('data.first_code', 'INK-IT-26-0001')
+            ->assertJsonPath('data.last_code', 'INK-IT-26-0002');
+
+        $this->import(['kind' => 'rented', 'rows' => [
+            $this->row(2, ['serial' => 'ALL-1', 'asset_code' => 'ONLY-A']), $this->row(3, ['serial' => 'ALL-2', 'asset_code' => 'ONLY-B']),
+        ]])->assertOk()
+            ->assertJsonPath('data.first_code', null)
+            ->assertJsonPath('data.last_code', null);
     }
 
     public function test_a_code_typed_in_the_same_batch_is_never_issued_to_a_blank_row(): void

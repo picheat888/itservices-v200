@@ -321,6 +321,43 @@ class AssetImportCheckTest extends TestCase
         $this->assertSame(['category' => 'required', 'serial' => 'required'], $issues);
     }
 
+    public function test_serial_and_code_keys_trim_and_lowercase_without_collapsing_inner_spaces(): void
+    {
+        $held = Asset::factory()->create(['serial' => 'SN  001', 'status' => 'ready']);
+
+        $rows = $this->check('rented', [
+            $this->rentedCells(['serial' => 'sn  001']),
+            $this->rentedCells(['serial' => 'SN 001']),
+            $this->rentedCells(['serial' => 'AB  1']),
+            $this->rentedCells(['serial' => 'ab 1']),
+        ]);
+
+        $this->assertSame('serial_taken', $rows[0]['issues'][0]['code']);
+        $this->assertSame($held->asset_code, $rows[0]['issues'][0]['asset_code']);
+        $this->assertSame([], $rows[1]['issues']);
+        $this->assertSame([], $rows[2]['issues']);
+        $this->assertSame([], $rows[3]['issues']);
+
+        $recheck = $this->checker()->recheck('rented', [$this->flatRow(['serial' => 'sn  001']), $this->flatRow(['line' => 3, 'serial' => 'SN 001'])]);
+        $this->assertSame([2], array_column($recheck, 'line'));
+        $this->assertSame('serial_taken', $recheck[0]['issues'][0]['code']);
+    }
+
+    public function test_years_before_1900_are_bad_dates_on_check_and_recheck(): void
+    {
+        $date = fn (string $text): array => $this->check('purchased', [$this->purchasedCells(['purchase_date' => $text])])[0];
+
+        $this->assertSame('bad_date', $date('12/11/0026')['issues'][0]['code']);
+        $this->assertSame('bad_date', $date('1899-12-31')['issues'][0]['code']);
+        $this->assertSame([], $date('1900-01-01')['issues']);
+        $this->assertSame('2026-11-12', $date('12/11/2569')['values']['purchase_date']);
+
+        $purchased = ['value' => '100.00', 'vendor_id' => $this->vendor->id, 'warranty_end' => '2029-11-12'];
+        $this->assertSame(['bad_date'], $this->recheckCodes('purchased', $this->flatRow($purchased + ['purchase_date' => '0026-11-12']), 'purchase_date'));
+        $this->assertSame(['bad_date'], $this->recheckCodes('purchased', $this->flatRow($purchased + ['purchase_date' => '1899-12-31']), 'purchase_date'));
+        $this->assertSame([], $this->recheckCodes('purchased', $this->flatRow($purchased + ['purchase_date' => '1900-01-01']), 'purchase_date'));
+    }
+
     public function test_the_preview_endpoint_answers_rows_options_and_counts(): void
     {
         $user = User::factory()->create(['role' => 'user']);
@@ -338,6 +375,7 @@ class AssetImportCheckTest extends TestCase
         $response = $this->actingAs($user)->post('/api/assets/import/preview', ['file' => $file, 'kind' => 'rented'], $headers);
 
         $response->assertOk()
+            ->assertJsonPath('message', 'success')
             ->assertJsonPath('data.meta.total', 3)
             ->assertJsonPath('data.meta.valid', 2)
             ->assertJsonPath('data.meta.invalid', 1)
