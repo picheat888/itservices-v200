@@ -291,7 +291,7 @@ function ColumnTable({ kind, onClose, onGone }: { kind: ImportKind; onClose: () 
                                 </td>
                                 <td className="text-muted-foreground px-3 py-2">{t(column.howKey)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap" translate="no">
-                                    {column.example}
+                                    {typeof column.example === 'string' ? column.example : t(column.example.key)}
                                 </td>
                             </tr>
                         ))}

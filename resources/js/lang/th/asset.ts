@@ -376,6 +376,9 @@ export const asset: Dict = {
     asset_import_how_warranty_end: 'วันที่ ไม่ต้องกรอกถ้าประกันตลอดชีพ',
     asset_import_how_warranty_lifetime: 'ใส่ "ใช่" หรือเว้นว่าง',
     asset_import_how_notes: 'ข้อความอิสระ',
+    asset_import_example_warehouse: 'คลังกลาง สำนักงานใหญ่',
+    asset_import_example_warranty_lifetime: 'ใช่',
+    asset_import_example_notes: 'ล็อตปี 2026',
 
     // import-check-step.tsx, import-check-table.tsx — check-and-fix step of the asset import dialog
     asset_import_summary_line: '{rows} แถว พร้อมนำเข้า {ready}',

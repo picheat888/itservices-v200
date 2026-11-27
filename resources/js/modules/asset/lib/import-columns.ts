@@ -28,10 +28,13 @@ export interface ImportColumn {
     list?: ImportListName;
     /** Lang key of the how-to-fill text. */
     howKey: string;
-    example: string;
+    example: ImportExample;
 }
 
-function column(key: ImportColumnKey, header: string, example: string, required: boolean, list?: ImportListName): ImportColumn {
+/** An example that reads the same in every language, or the lang key of one worded per language. */
+export type ImportExample = string | { key: string };
+
+function column(key: ImportColumnKey, header: string, example: ImportExample, required: boolean, list?: ImportListName): ImportColumn {
     return { key, header, required, list, howKey: `asset_import_how_${key}`, example };
 }
 
@@ -43,8 +46,8 @@ export const IMPORT_COLUMNS: Record<ImportKind, ImportColumn[]> = {
         column('brand', 'ยี่ห้อ (Brand)', 'Lenovo', true, 'brands'),
         column('model', 'รุ่น (Model)', 'ThinkPad E14 Gen 6', true, 'models'),
         column('serial', 'Serial (Serial No.)', 'PF4XK101', true),
-        column('warehouse', 'คลัง (Warehouse)', 'คลังกลาง สำนักงานใหญ่', true, 'warehouses'),
-        column('notes', 'หมายเหตุ (Remark)', 'ล็อตปี 2026', false),
+        column('warehouse', 'คลัง (Warehouse)', { key: 'asset_import_example_warehouse' }, true, 'warehouses'),
+        column('notes', 'หมายเหตุ (Remark)', { key: 'asset_import_example_notes' }, false),
     ],
     purchased: [
         column('asset_code', 'รหัสทรัพย์สิน (Asset No.)', 'INK-IT-26-0150', false),
@@ -52,13 +55,13 @@ export const IMPORT_COLUMNS: Record<ImportKind, ImportColumn[]> = {
         column('brand', 'ยี่ห้อ (Brand)', 'Lenovo', true, 'brands'),
         column('model', 'รุ่น (Model)', 'ThinkPad E14 Gen 6', true, 'models'),
         column('serial', 'Serial (Serial No.)', 'PF4XK101', true),
-        column('warehouse', 'คลัง (Warehouse)', 'คลังกลาง สำนักงานใหญ่', true, 'warehouses'),
+        column('warehouse', 'คลัง (Warehouse)', { key: 'asset_import_example_warehouse' }, true, 'warehouses'),
         column('tag', 'Tag', 'NB-RT-01', false),
         column('value', 'ราคาซื้อ (Price)', '28,500.00', true),
         column('vendor', 'ผู้ขาย (Vendor)', 'IT City Co., Ltd.', true, 'vendors'),
         column('purchase_date', 'วันที่ซื้อ (Purchase date)', '12/11/2026', true),
         column('warranty_end', 'สิ้นสุดวันรับประกัน (Warranty ends)', '11/11/2029', true),
-        column('warranty_lifetime', 'ประกันตลอดชีพ (Lifetime warranty)', 'ใช่', false),
-        column('notes', 'หมายเหตุ (Remark)', 'ล็อตปี 2026', false),
+        column('warranty_lifetime', 'ประกันตลอดชีพ (Lifetime warranty)', { key: 'asset_import_example_warranty_lifetime' }, false),
+        column('notes', 'หมายเหตุ (Remark)', { key: 'asset_import_example_notes' }, false),
     ],
 };

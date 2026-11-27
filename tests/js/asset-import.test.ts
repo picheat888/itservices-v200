@@ -681,6 +681,27 @@ test('an oversize file and a missing permission have their own words, used befor
     assert.match(dialog, /file\.size > MAX_FILE_BYTES[\s\S]*previewFile\.mutate/);
     assert.match(dialog, /httpStatus\(error\) === 413/);
     assert.equal(dialog.match(/asset_import_forbidden/g)?.length, 2);
-    assert.equal(IMPORT_COLUMNS.rented.find((c) => c.key === 'notes')?.example, 'ล็อตปี 2026');
-    assert.equal(IMPORT_COLUMNS.purchased.find((c) => c.key === 'notes')?.example, 'ล็อตปี 2026');
+    assert.match(th, /asset_import_example_notes: 'ล็อตปี 2026'/);
+});
+
+test('examples worded per language come from the lang files; the rest read the same in both', () => {
+    const th = read('lang/th/asset.ts');
+    const en = read('lang/en/asset.ts');
+    const worded = {
+        warehouse: ['คลังกลาง สำนักงานใหญ่', 'Main Store, Head Office'],
+        notes: ['ล็อตปี 2026', '2026 lot'],
+        warranty_lifetime: ['ใช่', 'yes'],
+    };
+    for (const [key, [thWords, enWords]] of Object.entries(worded)) {
+        assert.ok(th.includes(`asset_import_example_${key}: '${thWords}'`), key);
+        assert.ok(en.includes(`asset_import_example_${key}: '${enWords}'`), key);
+    }
+    for (const kind of ['rented', 'purchased'] as const) {
+        for (const column of IMPORT_COLUMNS[kind]) {
+            if (column.key in worded) assert.deepEqual(column.example, { key: `asset_import_example_${column.key}` }, column.key);
+            else assert.equal(typeof column.example, 'string', column.key);
+            if (typeof column.example === 'string') assert.doesNotMatch(column.example, /[฀-๿]/, column.key);
+        }
+    }
+    assert.match(read('modules/asset/components/import/import-upload-step.tsx'), /t\(column\.example\.key\)/);
 });

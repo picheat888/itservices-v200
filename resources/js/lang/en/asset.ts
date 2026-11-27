@@ -378,8 +378,11 @@ export const asset: Dict = {
     asset_import_how_vendor: 'Pick from the list in the file',
     asset_import_how_purchase_date: 'An Excel date or dd/mm/yyyy',
     asset_import_how_warranty_end: 'A date; leave empty for a lifetime warranty',
-    asset_import_how_warranty_lifetime: 'Type "ใช่" (yes) or leave empty',
+    asset_import_how_warranty_lifetime: 'Type "yes" or "ใช่", or leave empty',
     asset_import_how_notes: 'Free text',
+    asset_import_example_warehouse: 'Main Store, Head Office',
+    asset_import_example_warranty_lifetime: 'yes',
+    asset_import_example_notes: '2026 lot',
 
     // import-check-step.tsx, import-check-table.tsx — check-and-fix step of the asset import dialog
     asset_import_summary_line: '{rows} rows, {ready} ready to import',
