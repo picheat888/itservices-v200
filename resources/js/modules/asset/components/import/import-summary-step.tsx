@@ -4,6 +4,7 @@ import { useT } from '@/lang';
 import { SaveButton } from '@/shared/components/save-button';
 import { useNumberFormat } from '@/shared/hooks/use-number-format';
 import { cn } from '@/shared/lib/utils';
+import { Check } from 'lucide-react';
 import { useMemo } from 'react';
 import type { CheckedRow, ImportKind, ImportOptions } from '../../api/assetImportApi';
 import { fillWords } from '../../lib/fill-words';
@@ -28,7 +29,8 @@ interface Props {
 export function ImportRunButton({ running, onRun }: { running: boolean; onRun: () => void }) {
     const t = useT();
     return (
-        <SaveButton type="button" loading={running} loadingLabel={t('asset_import_run')} onClick={() => !running && onRun()}>
+        <SaveButton type="button" loading={running} loadingLabel={t('asset_import_running')} onClick={() => !running && onRun()}>
+            <Check className="h-4 w-4" aria-hidden="true" />
             {t('asset_import_run')}
         </SaveButton>
     );

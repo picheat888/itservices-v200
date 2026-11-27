@@ -430,6 +430,7 @@ export const asset: Dict = {
     asset_import_total: 'รวม',
     asset_import_more: 'ดูอีก {count} รายการ',
     asset_import_run: 'นำเข้า',
+    asset_import_running: 'กำลังนำเข้า…',
     asset_refusal_import_rows_invalid: 'มีแถวที่ต้องแก้ ตรวจข้อมูลอีกครั้ง',
     asset_refusal_import_conflict: 'มีรายการที่เพิ่งถูกลงทะเบียนไปก่อน ตรวจข้อมูลอีกครั้ง',
 

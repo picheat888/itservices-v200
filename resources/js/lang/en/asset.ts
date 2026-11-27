@@ -434,6 +434,7 @@ export const asset: Dict = {
     asset_import_total: 'Total',
     asset_import_more: 'Show {count} more',
     asset_import_run: 'Import',
+    asset_import_running: 'Importing…',
     asset_refusal_import_rows_invalid: 'Some rows need fixing. Check the data again',
     asset_refusal_import_conflict: 'Some assets were just registered by someone else. Check the data again',
 

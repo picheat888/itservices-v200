@@ -705,3 +705,18 @@ test('examples worded per language come from the lang files; the rest read the s
     }
     assert.match(read('modules/asset/components/import/import-upload-step.tsx'), /t\(column\.example\.key\)/);
 });
+
+test('the footer buttons look like the new-contract dialog: outline back with a left chevron, next with a right chevron, import with a check', () => {
+    const dialog = read('modules/asset/components/import/asset-import-dialog.tsx');
+    const footer = dialog.slice(dialog.indexOf('<DialogFooterBar'), dialog.indexOf('</DialogFooterBar>'));
+    assert.doesNotMatch(footer, /variant="ghost"/);
+    assert.equal(footer.match(/variant="outline"/g)?.length, 2);
+    assert.match(footer, /<ChevronLeft className="h-4 w-4" aria-hidden="true" \/>\s*\{t\('asset_import_back'\)\}/);
+    assert.match(footer, /asset_import_next'\)\}\s*<ChevronRight className="h-4 w-4" aria-hidden="true" \/>/);
+
+    const run = read('modules/asset/components/import/import-summary-step.tsx');
+    assert.match(run, /loadingLabel=\{t\('asset_import_running'\)\}/);
+    assert.match(run, /<Check className="h-4 w-4" aria-hidden="true" \/>\s*\{t\('asset_import_run'\)\}/);
+    assert.match(read('lang/th/asset.ts'), /asset_import_running: 'กำลังนำเข้า…'/);
+    assert.match(read('lang/en/asset.ts'), /asset_import_running: 'Importing…'/);
+});

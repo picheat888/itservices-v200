@@ -17,7 +17,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooterBar, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { AssetContractOption } from '../../api/assetApi';
 import type { ImportKind, ImportPreview, ImportResult, Issue } from '../../api/assetImportApi';
@@ -342,11 +342,12 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
                             {t('asset_import_done_close')}
                         </Button>
                     ) : step === 'kind' ? (
-                        <Button type="button" variant="ghost" onClick={() => guardClose(onClose)}>
+                        <Button type="button" variant="outline" onClick={() => guardClose(onClose)}>
                             {t('cancel')}
                         </Button>
                     ) : (
-                        <Button type="button" variant="ghost" disabled={busy} onClick={goBack}>
+                        <Button type="button" variant="outline" disabled={busy} onClick={goBack}>
+                            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                             {t('asset_import_back')}
                         </Button>
                     )}
@@ -361,6 +362,7 @@ export function AssetImportDialog({ open, onClose, onShowAwaiting, onShowImporte
                                 onClick={goNext}
                             >
                                 {step === 'upload' ? t('asset_import_check_files') : t('asset_import_next')}
+                                <ChevronRight className="h-4 w-4" aria-hidden="true" />
                             </Button>
                         ))}
                 </DialogFooterBar>
