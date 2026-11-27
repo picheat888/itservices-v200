@@ -135,7 +135,7 @@ class AssetImportTemplateTest extends TestCase
         $lists = $book->getSheetByName('รายการที่ใช้ได้');
         $this->assertNotNull($lists);
         $values = array_merge(...$lists->toArray(null, false, false));
-        foreach (['Notebook', 'Lenovo', 'ThinkPad E14 Gen 6 (Lenovo)', 'คลังกลาง สำนักงานใหญ่'] as $expected) {
+        foreach (['Notebook', 'Lenovo', 'ThinkPad E14 Gen 6', 'คลังกลาง สำนักงานใหญ่'] as $expected) {
             $this->assertContains($expected, $values);
         }
 
@@ -146,6 +146,42 @@ class AssetImportTemplateTest extends TestCase
 
         $purchased = $this->template('purchased');
         $this->assertSame(DataValidation::TYPE_LIST, $purchased->getSheet(0)->getCell('I2')->getDataValidation()->getType());
+    }
+
+    /** The model dropdown lists only the models of the brand picked in the same row. */
+    public function test_the_model_dropdown_follows_the_brand_of_its_row(): void
+    {
+        $lenovo = Brand::create(['name' => 'Lenovo']);
+        $dell = Brand::create(['name' => 'Dell']);
+        $hp = Brand::create(['name' => 'HP']);
+        foreach ([['ThinkPad E14', $lenovo], ['Latitude 5440', $dell], ['ThinkPad T14', $lenovo], ['EliteBook 840', $hp], ['Latitude 7440', $dell]] as [$name, $brand]) {
+            AssetModel::create(['name' => $name, 'brand_id' => $brand->id]);
+        }
+
+        foreach (['rented' => ['E', 'D'], 'purchased' => ['D', 'C']] as $kind => [$modelColumn, $brandColumn]) {
+            $book = $this->template($kind);
+            $formula = $book->getSheet(0)->getCell("{$modelColumn}2")->getDataValidation()->getFormula1();
+            $this->assertMatchesRegularExpression('/^OFFSET\(.+MATCH\(\$'.$brandColumn.'2,.+COUNTIF\(.+\$'.$brandColumn.'2\)/u', $formula, $kind);
+            $this->assertSame("{$modelColumn}2:{$modelColumn}501", $book->getSheet(0)->getCell("{$modelColumn}2")->getDataValidation()->getSqref());
+
+            // The formula's two list columns: each model's brand, then the model, grouped by brand
+            preg_match_all("/'รายการที่ใช้ได้'!\\$([A-Z]+)\\$2:\\$([A-Z]+)\\$(\d+)/u", $formula, $refs, PREG_SET_ORDER);
+            $brandOfModel = $refs[0][1];
+            preg_match("/OFFSET\('รายการที่ใช้ได้'!\\$([A-Z]+)\\$2,/u", $formula, $start);
+            $lists = $book->getSheetByName('รายการที่ใช้ได้');
+            $pairs = [];
+            for ($row = 2; $row <= (int) $refs[0][3]; $row++) {
+                $pairs[] = [$lists->getCell("{$brandOfModel}{$row}")->getValue(), $lists->getCell("{$start[1]}{$row}")->getValue()];
+            }
+
+            // What Excel computes for a row whose brand is Dell: MATCH gives the first Dell line, COUNTIF how many
+            $brands = array_column($pairs, 0);
+            $first = array_search('Dell', $brands, true);
+            $count = count(array_keys($brands, 'Dell', true));
+            $this->assertSame(['Latitude 5440', 'Latitude 7440'], array_column(array_slice($pairs, $first, $count), 1), $kind);
+            $this->assertSame(['ThinkPad E14', 'ThinkPad T14'], array_column(array_slice($pairs, array_search('Lenovo', $brands, true), 2), 1), $kind);
+            $this->assertSame($brands, collect($brands)->sort()->values()->all(), "{$kind}: models are grouped by brand");
+        }
     }
 
     public function test_the_template_has_no_example_rows_and_only_the_data_and_lists_sheets(): void

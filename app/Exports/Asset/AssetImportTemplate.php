@@ -56,17 +56,20 @@ class AssetImportTemplate
     }
 
     /**
-     * Lists sheet: one column per master list, header in row 1. Returns list name => absolute range.
+     * Lists sheet: one column per master list, header in row 1. Models sit beside their brand, grouped by brand,
+     * so the model dropdown can offer one brand's block. Returns list name => absolute range.
      *
      * @return array<string, string>
      */
     private function writeLists(Worksheet $sheet): array
     {
         $sheet->setTitle(Columns::LISTS_SHEET);
+        [$modelNames, $modelBrands] = $this->modelsByBrand();
         $lists = [
             'categories' => ['ประเภท', Category::query()->orderBy('name')->pluck('name')->all()],
             'brands' => ['ยี่ห้อ', Brand::query()->orderBy('name')->pluck('name')->all()],
-            'models' => ['รุ่น', $this->modelLabels()],
+            'models' => ['รุ่น', $modelNames],
+            'model_brands' => ['ยี่ห้อของรุ่น', $modelBrands],
             'warehouses' => ['คลัง', Warehouse::query()->orderBy('name')->pluck('name')->all()],
             'vendors' => ['ผู้ขาย', Vendor::query()->orderBy('name')->pluck('name')->all()],
         ];
@@ -87,12 +90,34 @@ class AssetImportTemplate
         return $ranges;
     }
 
-    /** @return list<string> models written as "Model (Brand)" */
-    private function modelLabels(): array
+    /**
+     * Models that have a brand, grouped by brand name then model name, as two parallel columns.
+     *
+     * @return array{0: list<string>, 1: list<string>} model names and the brand of each
+     */
+    private function modelsByBrand(): array
     {
-        return AssetModel::query()->with('brand:id,name')->orderBy('name')->get()
-            ->map(fn (AssetModel $model): string => $model->brand ? "{$model->name} ({$model->brand->name})" : $model->name)
-            ->all();
+        $models = AssetModel::query()->with('brand:id,name')->whereNotNull('brand_id')->get()
+            ->filter(fn (AssetModel $model): bool => $model->brand !== null)
+            ->sort(fn (AssetModel $a, AssetModel $b): int => [$a->brand->name, $a->name] <=> [$b->brand->name, $b->name])
+            ->values();
+
+        return [$models->pluck('name')->all(), $models->map(fn (AssetModel $model): string => $model->brand->name)->all()];
+    }
+
+    /**
+     * List formula for the model column: the block of models whose brand equals the brand cell of the same row.
+     * Excel shifts the relative row of the brand cell for every row of the validation range.
+     *
+     * @param  array<string, string>  $listRanges
+     */
+    private function modelsOfRowBrand(array $listRanges, string $brandLetter): string
+    {
+        $firstModel = strstr($listRanges['models'], ':', true);
+        $brands = $listRanges['model_brands'];
+        $brandCell = "\${$brandLetter}2";
+
+        return "OFFSET({$firstModel},MATCH({$brandCell},{$brands},0)-1,0,COUNTIF({$brands},{$brandCell}),1)";
     }
 
     /**
@@ -104,6 +129,7 @@ class AssetImportTemplate
     {
         $lastRow = Columns::MAX_ROWS + 1;
         $columns = Columns::for($kind);
+        $brandLetter = Coordinate::stringFromColumnIndex((int) array_search('brand', array_column($columns, 'key'), true) + 1);
 
         foreach ($columns as $i => $column) {
             $letter = Coordinate::stringFromColumnIndex($i + 1);
@@ -119,7 +145,9 @@ class AssetImportTemplate
             $sheet->getStyle("{$letter}1")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle("{$letter}1")->getProtection()->setLocked(Protection::PROTECTION_PROTECTED);
 
-            if ($column['list'] !== null) {
+            if ($column['list'] === 'models') {
+                $this->addDropdown($sheet, $letter, $lastRow, $this->modelsOfRowBrand($listRanges, $brandLetter));
+            } elseif ($column['list'] !== null) {
                 $this->addDropdown($sheet, $letter, $lastRow, $listRanges[$column['list']]);
             }
             $sheet->getColumnDimension($letter)->setWidth(max(14, mb_strlen(Columns::header($column)) + 4));
