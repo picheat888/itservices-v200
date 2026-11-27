@@ -68,14 +68,21 @@ class AssetImportTemplateTest extends TestCase
         ], $this->headerRow($book));
     }
 
-    public function test_required_headers_are_bold_red_and_row_one_is_frozen_and_locked(): void
+    public function test_headers_are_plain_black_text_and_row_one_is_frozen_and_locked(): void
     {
-        $sheet = $this->template('rented')->getSheet(0);
+        foreach (['rented', 'purchased'] as $kind) {
+            $book = $this->template($kind);
+            foreach ($book->getAllSheets() as $template) {
+                $lastColumn = $template->getHighestColumn(1);
+                foreach (range('A', $lastColumn) as $letter) {
+                    $font = $template->getStyle("{$letter}1")->getFont();
+                    $this->assertFalse($font->getBold(), "{$kind} {$template->getTitle()} {$letter}1");
+                    $this->assertSame('FF000000', $font->getColor()->getARGB(), "{$kind} {$template->getTitle()} {$letter}1");
+                }
+            }
+        }
 
-        // Required: category (C). Optional: tag (B)
-        $this->assertTrue($sheet->getStyle('C1')->getFont()->getBold());
-        $this->assertSame('FFC00000', $sheet->getStyle('C1')->getFont()->getColor()->getARGB());
-        $this->assertNotSame('FFC00000', $sheet->getStyle('B1')->getFont()->getColor()->getARGB());
+        $sheet = $this->template('rented')->getSheet(0);
         $this->assertSame('A2', $sheet->getFreezePane());
 
         $protection = $sheet->getProtection();

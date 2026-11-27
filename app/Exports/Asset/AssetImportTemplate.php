@@ -27,8 +27,6 @@ class AssetImportTemplate
         'purchased' => 'asset-import-purchase-template.xlsx',
     ];
 
-    private const REQUIRED_RED = 'FFC00000';
-
     private const TEXT_KEYS = ['asset_code', 'tag', 'serial'];
 
     /** Stream the template for one kind as a download. */
@@ -78,7 +76,6 @@ class AssetImportTemplate
         foreach ($lists as $key => [$title, $values]) {
             $letter = Coordinate::stringFromColumnIndex($index++);
             $sheet->setCellValue("{$letter}1", $title);
-            $sheet->getStyle("{$letter}1")->getFont()->setBold(true);
             foreach (array_values($values) as $i => $value) {
                 $sheet->setCellValueExplicit($letter.($i + 2), (string) $value, 'str');
             }
@@ -99,7 +96,7 @@ class AssetImportTemplate
     }
 
     /**
-     * Data sheet: header in row 1 (required ones bold red), rows 2..MAX_ROWS+1 unlocked with dropdowns.
+     * Data sheet: plain header in row 1, rows 2..MAX_ROWS+1 unlocked with dropdowns.
      *
      * @param  array<string, string>  $listRanges
      */
@@ -119,11 +116,6 @@ class AssetImportTemplate
             $header = $sheet->getCell("{$letter}1");
             $header->setValueExplicit(Columns::header($column), 'str');
 
-            $font = $sheet->getStyle("{$letter}1")->getFont();
-            $font->setBold($column['required']);
-            if ($column['required']) {
-                $font->getColor()->setARGB(self::REQUIRED_RED);
-            }
             $sheet->getStyle("{$letter}1")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle("{$letter}1")->getProtection()->setLocked(Protection::PROTECTION_PROTECTED);
 
